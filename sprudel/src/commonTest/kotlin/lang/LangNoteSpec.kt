@@ -5,8 +5,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.tones.Tones
 
@@ -45,7 +43,7 @@ class LangNoteSpec : StringSpec({
                     // base = 50
                     // saw value = offset
                     // expected = 50 + offset
-                    val e1 = events.find { it.part.begin == cycle.toRational() }!!
+                    val e1 = events.find { it.part.begin.toDouble() == cycle.toDouble() }!!
                     val expectedNote1 = 50.0 + offset
 
                     // We compare approximate frequency because float parsing in note() might have slight differences vs direct calculation
@@ -59,7 +57,7 @@ class LangNoteSpec : StringSpec({
                     // base = 60
                     // saw value at offset + 0.125 (since half cycle = 1/8 of 4-cycle period)
                     // expected = 60 + offset + 0.125
-                    val e2 = events.find { it.part.begin == cycle.toRational() + Rational.HALF }!!
+                    val e2 = events.find { it.part.begin.toDouble() == cycle.toDouble() + 0.5 }!!
                     val expectedNote2 = 60.0 + offset + 0.125
 
                     e2.data.note?.toDouble() shouldBe expectedNote2

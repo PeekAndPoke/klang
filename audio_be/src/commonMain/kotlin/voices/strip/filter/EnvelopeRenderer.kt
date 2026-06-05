@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
+import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
@@ -61,6 +62,7 @@ class EnvelopeRenderer(
                     AdsrCurve.Cube -> omp * omp * omp
                     AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
                     AdsrCurve.InvSquare -> omp * (2.0 - omp)
+                    AdsrCurve.Exponential -> adsrExpShape(omp)
                 }
                 currentEnv = env.releaseStartLevel * shape
             } else {
@@ -75,6 +77,7 @@ class EnvelopeRenderer(
                             AdsrCurve.Cube -> p * p * p
                             AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
                             AdsrCurve.InvSquare -> p * (2.0 - p)
+                            AdsrCurve.Exponential -> adsrExpShape(p)
                         }
                     }
                     // Decay: level = sustain + (1 - sustain) * shape(1 - p)
@@ -88,6 +91,7 @@ class EnvelopeRenderer(
                             AdsrCurve.Cube -> omp * omp * omp
                             AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
                             AdsrCurve.InvSquare -> omp * (2.0 - omp)
+                            AdsrCurve.Exponential -> adsrExpShape(omp)
                         }
                         sustain + (1.0 - sustain) * shape
                     }

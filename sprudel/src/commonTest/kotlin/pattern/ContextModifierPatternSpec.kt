@@ -2,12 +2,12 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern.Companion.withContext
 
@@ -18,18 +18,18 @@ class ContextModifierPatternSpec : StringSpec({
     "ContextModifierPattern: Direct Instantiation" {
         // A pattern that returns its context's 'test_key' value as the note name
         val contextAwarePattern = object : SprudelPattern.FixedWeight {
-            override val numSteps: Rational = Rational.ONE
+            override val numSteps: Double = 1.0
 
             override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
+                from: CycleTime,
+                to: CycleTime,
                 ctx: QueryContext,
             ): List<SprudelPatternEvent> {
                 val testVal = ctx.getOrNull(testKey) ?: "none"
                 return listOf(
                     SprudelPatternEvent(
-                        part = TimeSpan(from, to),
-                        whole = TimeSpan(from, to),
+                        part = CycleTimeSpan(from, to),
+                        whole = CycleTimeSpan(from, to),
                         data = SprudelVoiceData.empty.copy(note = testVal)
                     )
                 )
@@ -52,11 +52,11 @@ class ContextModifierPatternSpec : StringSpec({
         var capturedValue: String? = null
 
         val inspector = object : SprudelPattern.FixedWeight {
-            override val numSteps: Rational = Rational.ONE
+            override val numSteps: Double = 1.0
 
             override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
+                from: CycleTime,
+                to: CycleTime,
                 ctx: QueryContext,
             ): List<SprudelPatternEvent> {
                 capturedValue = ctx.getOrNull(flagKey)

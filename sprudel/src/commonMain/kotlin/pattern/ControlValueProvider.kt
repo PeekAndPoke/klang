@@ -1,8 +1,12 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.SourceLocation
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 
 /**
@@ -14,7 +18,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 sealed interface ControlValueProvider {
 
     companion object {
-        val DEFAULT_EPSILON = Rational(0.0001)
+        val DEFAULT_EPSILON = CycleTime.ofCycles(0.0001)
     }
 
     /**
@@ -25,23 +29,23 @@ sealed interface ControlValueProvider {
         val location: SourceLocation? = null,
     ) : ControlValueProvider {
         companion object {
-            val ONE = Static(Rational.ONE.asVoiceValue())
+            val ONE = Static(1.0.asVoiceValue())
         }
 
         override fun query(
-            from: Rational,
-            to: Rational,
+            from: CycleTime,
+            to: CycleTime,
             ctx: SprudelPattern.QueryContext,
         ): SprudelVoiceValue {
             return value
         }
 
         override fun queryEvents(
-            from: Rational,
-            to: Rational,
+            from: CycleTime,
+            to: CycleTime,
             ctx: SprudelPattern.QueryContext,
         ): List<SprudelPatternEvent> {
-            val timeSpan = TimeSpan(begin = from, end = to)
+            val timeSpan = CycleTimeSpan(begin = from, end = to)
 
             return listOf(
                 SprudelPatternEvent(
@@ -59,8 +63,8 @@ sealed interface ControlValueProvider {
      */
     data class Pattern(val pattern: SprudelPattern) : ControlValueProvider {
         override fun query(
-            from: Rational,
-            to: Rational,
+            from: CycleTime,
+            to: CycleTime,
             ctx: SprudelPattern.QueryContext,
         ): SprudelVoiceValue? {
             val events = pattern.queryArcContextual(from, to, ctx)
@@ -69,8 +73,8 @@ sealed interface ControlValueProvider {
         }
 
         override fun queryEvents(
-            from: Rational,
-            to: Rational,
+            from: CycleTime,
+            to: CycleTime,
             ctx: SprudelPattern.QueryContext,
         ): List<SprudelPatternEvent> {
             return pattern.queryArcContextual(from, to, ctx)
@@ -86,8 +90,8 @@ sealed interface ControlValueProvider {
      * @return The control value, or null if no value is available (for patterns)
      */
     fun query(
-        from: Rational,
-        to: Rational = from + DEFAULT_EPSILON,
+        from: CycleTime,
+        to: CycleTime = from + DEFAULT_EPSILON,
         ctx: SprudelPattern.QueryContext,
     ): SprudelVoiceValue?
 
@@ -98,8 +102,8 @@ sealed interface ControlValueProvider {
      * Pattern providers return their underlying events.
      */
     fun queryEvents(
-        from: Rational,
-        to: Rational = from + DEFAULT_EPSILON,
+        from: CycleTime,
+        to: CycleTime = from + DEFAULT_EPSILON,
         ctx: SprudelPattern.QueryContext,
     ): List<SprudelPatternEvent>
 }

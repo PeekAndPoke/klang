@@ -5,9 +5,9 @@ import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.math.abs
 
 /**
  * Voice Data used to create a Voice.
@@ -15,9 +15,9 @@ import kotlin.math.abs
 @Serializable
 data class SprudelPatternEvent(
     /** Visible portion after clipping */
-    val part: TimeSpan,
+    val part: CycleTimeSpan,
     /** Original complete even */
-    val whole: TimeSpan,
+    val whole: CycleTimeSpan,
     /** The voice data */
     val data: SprudelVoiceData,
     /**
@@ -30,18 +30,17 @@ data class SprudelPatternEvent(
     override val sourceLocations: SourceLocationChain? = null,
 ) : KlangPatternEvent {
 
-    override val startCycles: Double get() = whole.begin.toDouble()
-    override val durationCycles: Double get() = whole.duration.toDouble()
+    override val startCycles: Double get() = whole.begin.toCycles()
+    override val durationCycles: Double get() = whole.duration.toCycles()
     override val sound: SoundValue? get() = data.sound
     override fun toVoiceData(): VoiceData = data.toVoiceData()
 
-    /** Check if this event is an onset event (should be played) */
-    val isOnset: Boolean = whole.isValid && abs(whole.begin.toDouble() - part.begin.toDouble()) < ONSET_EPSILON
-
-    companion object {
-        /** Epsilon for onset detection to handle floating-point precision issues */
-        private const val ONSET_EPSILON = 1e-6
-    }
+    /**
+     * Check if this event is an onset event (should be played).
+     * With fixed-point [io.peekandpoke.klang.common.math.CycleTime] ticks, onset detection is an
+     * exact integer comparison — no floating-point epsilon needed.
+     */
+    val isOnset: Boolean = whole.isValid && whole.begin.ticks == part.begin.ticks
 
     fun prependLocation(location: SourceLocation?) = when (location) {
         null -> this

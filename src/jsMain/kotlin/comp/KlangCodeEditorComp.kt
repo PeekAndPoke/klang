@@ -11,6 +11,9 @@ import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
+import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
+import io.peekandpoke.kraft.addons.pixijs.pixiJs
+import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
@@ -87,6 +90,9 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         maxHighlightsPerEvent = props.maxHighlightsPerEvent,
     )
 
+    /** Lazily-loaded PixiJS addon backing the highlight overlay; arrives asynchronously after mount. */
+    private val pixiAddon: PixiJsAddon? by subscribingTo(addons.pixiJs)
+
     private val hoverPopup: HoverPopupCtrl by lazy { HoverPopupCtrl(popups = popups) }
 
     private val hoverContent: FlowContent.(KlangSymbol) -> Unit = { doc ->
@@ -121,6 +127,11 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 editorRef { editor -> editor.editorView?.let { highlightBuffer.attachTo(it) } }
                 highlightBuffer.maxHighlightsPerEvent = props.maxHighlightsPerEvent
                 highlightBuffer.currentSource = props.currentSource
+                highlightBuffer.setPixiAddon(pixiAddon)
+            }
+            onUpdate {
+                // The pixi addon loads lazily — feed it to the buffer once the subscription emits.
+                highlightBuffer.setPixiAddon(pixiAddon)
             }
             onUnmount {
                 highlightBuffer.detach()

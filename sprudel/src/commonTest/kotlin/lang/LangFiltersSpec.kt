@@ -178,10 +178,11 @@ class LangFiltersSpec : StringSpec({
         events[0].data.hcutoff shouldBe 300.0
         events[0].data.hresonance shouldBe 1.3
 
-        // Check converted VoiceData has both filters with correct Q values
+        // Check converted VoiceData carries each filter's resonance independently.
+        // toVoiceData() imposes the canonical HPF→…→LPF chain order, so look up by type, not index.
         val voiceData = events[0].data.toVoiceData()
-        (voiceData.filters[0] as FilterDef.LowPass).q shouldBe 0.7
-        (voiceData.filters[1] as FilterDef.HighPass).q shouldBe 1.3
+        voiceData.filters.getByType<FilterDef.LowPass>()?.q shouldBe 0.7
+        voiceData.filters.getByType<FilterDef.HighPass>()?.q shouldBe 1.3
     }
 
     "lpf() works within compiled code as top-level function" {

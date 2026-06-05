@@ -1,12 +1,13 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.math.floor
 
 @Serializable
 class StaticSprudelPattern(
@@ -22,27 +23,26 @@ class StaticSprudelPattern(
             codec.decodeFromString(serializer(), json)
     }
 
-    private val totalCycles: Rational = maxOf(
-        Rational.ONE,
-        events.maxOfOrNull { it.part.end } ?: Rational.ZERO
-    ).ceil()
+    /** Number of whole cycles this recording spans (at least 1). */
+    private val totalCyclesInt: Int = maxOf(
+        1,
+        (events.maxOfOrNull { it.part.end } ?: CycleTime.ZERO).ceilToCycle().cycleIndex()
+    )
 
-    override val numSteps: Rational = when (totalCycles) {
-        Rational.ZERO -> Rational.ZERO
-        else -> (events.size.toRational() / totalCycles)
-    }
+    override val numSteps: Double = events.size.toDouble() / totalCyclesInt.toDouble()
 
-    override fun estimateCycleDuration(): Rational = totalCycles
+    override fun estimateCycleDuration(): Double = totalCyclesInt.toDouble()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         if (events.isEmpty()) return emptyList()
 
-        val fromMod = from % totalCycles
+        val totalSpan = CycleTime.ofCycleIndex(totalCyclesInt)
+        val fromMod = from.modCycles(totalSpan)
         val toMod = fromMod + (to - from)
 
-        val offset = (from / totalCycles).floor() * totalCycles
-
-        // println("from=$from, to=$to, offset=$offset, fromMod=$fromMod, toMod=$toMod")
+        // Which full repetition of the recording does `from` fall into.
+        val loopIndex = floor(from.toCycles() / totalCyclesInt).toInt()
+        val offset = CycleTime.ofCycleIndex(loopIndex * totalCyclesInt)
 
         return events
             .filter { evt ->

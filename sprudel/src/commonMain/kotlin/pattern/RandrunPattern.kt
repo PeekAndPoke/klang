@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
  * Pattern that generates random sequences with varying length based on a control pattern.
@@ -22,13 +22,13 @@ internal class RandrunPattern(
 ) : SprudelPattern {
     override val weight = 1.0
 
-    override val numSteps: Rational? = null
+    override val numSteps: Double? = null
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
@@ -44,21 +44,22 @@ internal class RandrunPattern(
             val updatedCtx = ctx.update {
                 setIfAbsent(QueryContext.randomSeedKey, 0)
             }
-            val cycle = nEvent.part.begin.floor()
+            val cycle = nEvent.part.begin.cycleIndex()
             val random = updatedCtx.getSeededRandom(cycle, "randrun")
             val permutation = (0 until n).toMutableList()
             permutation.shuffle(random)
 
-            // Create n evenly-spaced events in the control event's timespan
+            // Create n evenly-spaced events in the control event's timespan, using absolute
+            // boundaries so the last event ends exactly at base+duration (no rounding gap).
             val duration = nEvent.part.duration
-            val stepSize = duration / Rational(n)
+            val base = nEvent.part.begin
 
             for (index in 0 until n) {
-                val eventBegin = nEvent.part.begin + (stepSize * Rational(index))
-                val eventEnd = eventBegin + stepSize
+                val eventBegin = base + duration.scaleBy(index.toDouble() / n)
+                val eventEnd = base + duration.scaleBy((index + 1).toDouble() / n)
                 val value = permutation[index].asVoiceValue()
 
-                val timeSpan = TimeSpan(begin = eventBegin, end = eventEnd)
+                val timeSpan = CycleTimeSpan(begin = eventBegin, end = eventEnd)
 
                 result.add(
                     SprudelPatternEvent(

@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices.strip
 
+import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
@@ -35,6 +36,7 @@ fun calculateControlRateEnvelope(
             AdsrCurve.Cube -> omp * omp * omp
             AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
             AdsrCurve.InvSquare -> omp * (2.0 - omp)
+            AdsrCurve.Exponential -> adsrExpShape(omp)
         }
         levelAtGateEnd * shape
     } else {
@@ -55,6 +57,7 @@ fun envelopeLevelAtPosition(env: Voice.Envelope, absPos: Int): Double = when {
             AdsrCurve.Cube -> p * p * p
             AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
             AdsrCurve.InvSquare -> p * (2.0 - p)
+            AdsrCurve.Exponential -> adsrExpShape(p)
         }
     }
 
@@ -69,6 +72,7 @@ fun envelopeLevelAtPosition(env: Voice.Envelope, absPos: Int): Double = when {
             AdsrCurve.Cube -> omp * omp * omp
             AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
             AdsrCurve.InvSquare -> omp * (2.0 - omp)
+            AdsrCurve.Exponential -> adsrExpShape(omp)
         }
         env.sustainLevel + (1.0 - env.sustainLevel) * shape
     }

@@ -45,24 +45,20 @@ private fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category tonal
  * @tags vowel, formant, vocal, filter, singing
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyVowel(this, listOfNotNull(vowel).asSprudelDslArgs(callInfo))
 
 /** Sets the vowel formant filter on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).vowel(vowel, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the vowel formant filter. */
-@SprudelDsl
 @KlangScript.Function
 fun vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.vowel(vowel, callInfo) }
 
 /** Chains a vowel step onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.vowel(vowel, callInfo) }

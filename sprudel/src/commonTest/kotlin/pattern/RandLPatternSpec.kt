@@ -2,29 +2,29 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 class RandLPatternSpec : StringSpec({
 
     "RandLPattern emits n events per control window" {
         val nPattern = object : SprudelPattern.FixedWeight {
-            override val numSteps: Rational = Rational.ONE
+            override val numSteps: Double = 1.0
 
             override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
+                from: CycleTime,
+                to: CycleTime,
                 ctx: QueryContext,
             ): List<SprudelPatternEvent> {
                 return listOf(
                     SprudelPatternEvent(
-                        part = TimeSpan(from, to),
-                        whole = TimeSpan(from, to),
+                        part = CycleTimeSpan(from, to),
+                        whole = CycleTimeSpan(from, to),
                         data = SprudelVoiceData.empty.copy(value = 4.asVoiceValue())
                     )
                 )
@@ -32,7 +32,7 @@ class RandLPatternSpec : StringSpec({
         }
 
         val pattern = RandLPattern(nPattern)
-        val events = pattern.queryArcContextual(Rational.ZERO, Rational.ONE, QueryContext.empty)
+        val events = pattern.queryArcContextual(0.0, 1.0, QueryContext.empty)
 
         events.size shouldBe 4
     }
@@ -41,7 +41,7 @@ class RandLPatternSpec : StringSpec({
         val nPattern = AtomicPattern.pure
         val pattern = RandLPattern.create(nPattern, staticN = 3)
 
-        val events = pattern.queryArcContextual(Rational.ZERO, Rational.ONE, QueryContext.empty)
+        val events = pattern.queryArcContextual(0.0, 1.0, QueryContext.empty)
         events.size shouldBe 3
     }
 })

@@ -3,20 +3,36 @@ package io.peekandpoke.klang.codemirror
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
+import io.peekandpoke.kraft.addons.pixijs.js.Application
+import io.peekandpoke.kraft.addons.pixijs.js.Graphics
+import io.peekandpoke.kraft.addons.pixijs.js.Ticker
+import io.peekandpoke.kraft.utils.jsObject
+import io.peekandpoke.kraft.utils.jsObjectOf
+import io.peekandpoke.kraft.utils.launch
 import kotlinx.browser.document
 import kotlinx.browser.window
-import org.w3c.dom.HTMLElement
+import kotlinx.coroutines.await
+import org.w3c.dom.events.Event
 import kotlin.js.Date
+import kotlin.math.min
 
 /**
- * Overlay-based playback highlight buffer for CodeMirror.
+ * PixiJS (WebGL) playback highlight buffer for CodeMirror.
  *
- * Renders absolutely-positioned `<mark>` elements in an overlay div inside
- * the editor's scroll container. Only lightweight DOM mutations are performed —
- * the CodeMirror state is never touched.
+ * Renders playback highlights as GPU-batched quads on a single transparent `<canvas>` overlaid on
+ * the editor — replacing the previous one-`<mark>`-per-event DOM overlay. The CodeMirror state is
+ * never touched.
  *
- * Pending show/remove operations are batched into a single `requestAnimationFrame`
- * loop so that highlights due at the same time appear in the same paint frame.
+ * The whole rendering surface is **one** WebGL canvas (one compositor layer), each highlight is a
+ * pooled [Graphics] drawn once, and a single Pixi [Ticker] handles both the start-time scheduling
+ * and the per-frame fade/scroll. The ticker is stopped while idle, so an editor that isn't playing
+ * costs zero `requestAnimationFrame`.
+ *
+ * Why this over the old DOM marks: the old `@keyframes pulse` animated `border-color` /
+ * `background-color` — paint-bound properties that force a re-rasterization of every active mark on
+ * every frame, the exact path weak GPUs choke on. Here the geometry is static; only `x/y/alpha`
+ * change per frame, and the fade is computed in JS rather than via CSS paint animation.
  */
 class CodeMirrorHighlightBuffer(
     private val maxRefreshRatePerLocation: Int = 300,
@@ -26,13 +42,12 @@ class CodeMirrorHighlightBuffer(
     /**
      * Source identity of the file currently displayed in the editor.
      *
-     * Highlight events whose [SourceLocation.source] doesn't match are silently
-     * dropped — that's how the editor avoids rendering ghost marks at line/column
-     * positions that come from imported libraries (e.g. `peekandpoke/tetris`)
-     * but don't exist in the file the user is currently looking at.
+     * Highlight events whose [SourceLocation.source] doesn't match are silently dropped — that's how
+     * the editor avoids rendering ghost marks at line/column positions that come from imported
+     * libraries (e.g. `peekandpoke/tetris`) but don't exist in the file the user is currently
+     * looking at.
      *
-     * `null` means "the main script" — matches main-script locations whose
-     * `source` field is `null`.
+     * `null` means "the main script" — matches main-script locations whose `source` field is `null`.
      */
     var currentSource: String? = null
 
@@ -40,44 +55,97 @@ class CodeMirrorHighlightBuffer(
 
     private var view: EditorView? = null
 
-    /** Overlay container — lazily created inside the editor's scroll container. */
-    private var overlay: HTMLElement? = null
+    // ── PixiJS state ────────────────────────────────────────────────────────
 
-    /** locationKey → mark element currently in the overlay. */
-    private val activeMarks = mutableMapOf<String, HTMLElement>()
+    private var addon: PixiJsAddon? = null
+    private var app: Application? = null
+    private var initializing = false
+    private var tickerRunning = false
+
+    /** Last left-clip applied to the canvas (px), so highlights never paint over the sticky gutter. */
+    private var lastClipLeftPx: Double = -1.0
+
+    /** Recycled [Graphics] objects, reused across highlights to avoid GC churn during dense playback. */
+    private val pool = ArrayDeque<Graphics>()
+
+    /** Fill / stroke styles, reused for every drawn highlight (matches the old gold pulse colours). */
+    private val fillStyle: dynamic = jsObjectOf("color" to 0xE8B84B, "alpha" to 0.1)
+    private val strokeStyle: dynamic = jsObjectOf("width" to 1.0, "color" to 0xFFDC64, "alpha" to 1.0)
+
+    /** Single ticker callback instance — stored so it can be `remove`d on [detach]. */
+    private val tickCallback: (Ticker) -> Unit = { tick() }
+
+    /** Window blur handler — stored so it can be removed on [detach]. */
+    private val blurHandler: (Event) -> Unit = { cancelAll() }
+
+    /** locationKey → the live highlight currently on the stage. */
+    private val activeMarks = mutableMapOf<String, ActiveMark>()
 
     /** locationKey → last highlight time for rate-limiting. */
     private val lastHighlightTime = mutableMapOf<String, Double>()
 
+    private class ActiveMark(
+        val graphics: Graphics,
+        /** Content-absolute position (independent of current scroll); offset by live scroll each frame. */
+        val contentX: Double,
+        val contentY: Double,
+        val w: Double,
+        val h: Double,
+        val startMs: Double,
+        val durationMs: Double,
+    )
+
     // ── Batched scheduling ──────────────────────────────────────────────────
 
-    private sealed class PendingOp(val timeMs: Double) {
-        class Show(timeMs: Double, val key: String, val location: SourceLocation, val durationMs: Double) :
-            PendingOp(timeMs)
+    private class PendingShow(
+        val timeMs: Double,
+        val key: String,
+        val location: SourceLocation,
+        val durationMs: Double,
+    )
 
-        class Remove(timeMs: Double, val key: String) : PendingOp(timeMs)
-    }
+    /** Pending show operations, drained by the ticker once their start time arrives. */
+    private val pendingOps = mutableListOf<PendingShow>()
 
-    /** All pending operations sorted by target time. */
-    private val pendingOps = mutableListOf<PendingOp>()
-
-    /** Whether the frame loop is currently running. */
-    private var frameLoopActive = false
-
-    /** Max age for a Show op before it is silently dropped (ms). */
+    /** Max age for a show op before it is silently dropped (ms) — drops marks that piled up while backgrounded. */
     private val maxOverdueMs = 300.0
+
+    /** Cap on the recycle pool so a one-off burst doesn't permanently retain thousands of Graphics. */
+    private val maxPoolSize = 64
 
     // ── Lifecycle ───────────────────────────────────────────────────────────
 
     fun attachTo(editorView: EditorView) {
         view = editorView
-        window.addEventListener("blur", { cancelAll() })
+        window.addEventListener("blur", blurHandler)
+        ensurePixiApp()
+    }
+
+    /**
+     * Supplies the lazily-loaded PixiJS addon. Called whenever the addon subscription emits — the
+     * addon arrives asynchronously after mount, so this may be invoked once the editor is already up.
+     * Idempotent.
+     */
+    fun setPixiAddon(newAddon: PixiJsAddon?) {
+        if (newAddon == null || addon === newAddon) return
+        addon = newAddon
+        ensurePixiApp()
     }
 
     fun detach() {
         cancelAll()
-        overlay?.parentNode?.removeChild(overlay!!)
-        overlay = null
+        window.removeEventListener("blur", blurHandler)
+        app?.let { application ->
+            application.ticker.remove(tickCallback)
+            val canvas = application.canvas
+            canvas.parentElement?.removeChild(canvas)
+            application.destroy(rendererDestroy = true)
+        }
+        pool.forEach { it.destroy() }
+        pool.clear()
+        app = null
+        tickerRunning = false
+        lastClipLeftPx = -1.0
         view = null
     }
 
@@ -96,13 +164,83 @@ class CodeMirrorHighlightBuffer(
 
     fun cancelAll() {
         pendingOps.clear()
-        frameLoopActive = false
+        activeMarks.values.forEach { recycleMark(it) }
         activeMarks.clear()
         lastHighlightTime.clear()
-        overlay?.let { it.innerHTML = "" }
+        if (tickerRunning) {
+            tickerRunning = false
+            app?.ticker?.stop()
+        }
     }
 
-    // ── Internals ───────────────────────────────────────────────────────────
+    // ── PixiJS setup ──────────────────────────────────────────────────────────
+
+    private fun ensurePixiApp() {
+        val view = this.view ?: return
+        val addon = this.addon ?: return
+        if (app != null || initializing) return
+
+        initializing = true
+        launch {
+            try {
+                val application = addon.createApplication()
+
+                val opts: dynamic = jsObject()
+                opts.width = view.dom.clientWidth
+                opts.height = view.dom.clientHeight
+                opts.backgroundAlpha = 0          // transparent — editor text shows through
+                opts.antialias = true
+                opts.preference = "webgl"         // broadest weak-GPU support
+                opts.autoDensity = true
+                opts.resolution = min(window.devicePixelRatio, 2.0)
+                opts.resizeTo = view.dom          // Pixi auto-resizes the renderer to the editor
+                application.init(opts).await()
+
+                // Bail if we were detached (or reattached elsewhere) while init was in flight.
+                if (this.view !== view) {
+                    application.destroy(rendererDestroy = true)
+                    initializing = false
+                    return@launch
+                }
+
+                // `.cm-editor` is the non-scrolling root; the canvas overlays it and is offset by
+                // scroll in software (keeps the WebGL framebuffer viewport-sized).
+                if (window.getComputedStyle(view.dom).position == "static") {
+                    view.dom.style.position = "relative"
+                }
+
+                val canvas = application.canvas
+                canvas.style.apply {
+                    position = "absolute"
+                    top = "0"
+                    left = "0"
+                    setProperty("pointer-events", "none")
+                    zIndex = "5"
+                }
+                view.dom.appendChild(canvas)
+
+                application.ticker.add(tickCallback)
+                application.ticker.stop()         // idle until a highlight appears
+                app = application
+                initializing = false
+
+                // Kick the ticker if work queued up while the addon was loading.
+                if (pendingOps.isNotEmpty() || activeMarks.isNotEmpty()) ensureTickerRunning()
+            } catch (t: Throwable) {
+                initializing = false
+                console.error("Failed to initialize PixiJS highlight overlay", t)
+            }
+        }
+    }
+
+    private fun ensureTickerRunning() {
+        val app = this.app ?: return
+        if (tickerRunning) return
+        tickerRunning = true
+        app.ticker.start()
+    }
+
+    // ── Scheduling ────────────────────────────────────────────────────────────
 
     private fun scheduleForLocation(
         location: SourceLocation,
@@ -125,130 +263,158 @@ class CodeMirrorHighlightBuffer(
         // Max simultaneous
         if (activeMarks.size >= maxSimultaneousHighlights) return
 
-        // Enqueue show + remove
-        pendingOps.add(PendingOp.Show(showAtMs, key, location, durationMs))
-        pendingOps.add(PendingOp.Remove(showAtMs + durationMs + 150.0, key))
-
-        ensureFrameLoop()
+        pendingOps.add(PendingShow(showAtMs, key, location, durationMs))
+        ensureTickerRunning()
     }
 
-    private fun ensureFrameLoop() {
-        if (frameLoopActive) return
-        frameLoopActive = true
-        window.requestAnimationFrame { tick() }
-    }
+    // ── Render loop ─────────────────────────────────────────────────────────
 
     private fun tick() {
-        if (!frameLoopActive) return
-        if (pendingOps.isEmpty()) {
-            frameLoopActive = false
+        val app = this.app ?: return
+        val view = this.view
+
+        if (view == null) {
+            if (tickerRunning) {
+                tickerRunning = false
+                app.ticker.stop()
+            }
             return
         }
 
         val now = Date.now()
 
-        // Process all ops that are due
-        val iter = pendingOps.iterator()
-        while (iter.hasNext()) {
-            val op = iter.next()
-            if (op.timeMs <= now) {
-                iter.remove()
-                when (op) {
-                    is PendingOp.Show -> {
-                        // Drop Show ops that are more than 1s overdue — they accumulated while backgrounded
-                        if (now - op.timeMs <= maxOverdueMs) {
-                            showHighlight(op.key, op.location, op.durationMs)
-                        }
+        // 1) Drain show ops whose start time has arrived.
+        if (pendingOps.isNotEmpty()) {
+            val iter = pendingOps.iterator()
+            while (iter.hasNext()) {
+                val op = iter.next()
+                if (op.timeMs <= now) {
+                    iter.remove()
+                    // Drop ops that piled up while backgrounded.
+                    if (now - op.timeMs <= maxOverdueMs) {
+                        showHighlight(op.key, op.location, op.durationMs, now)
                     }
-
-                    is PendingOp.Remove -> removeHighlight(op.key)
                 }
             }
         }
 
-        // Continue loop if there's more pending
-        if (pendingOps.isNotEmpty()) {
-            window.requestAnimationFrame { tick() }
-        } else {
-            frameLoopActive = false
+        // 2) Animate + expire active marks. Cached content rects are offset by live scroll — no
+        //    per-frame coordsAtPos (which would force a layout reflow).
+        if (activeMarks.isNotEmpty()) {
+            val scrollLeft = view.scrollDOM.scrollLeft
+            val scrollTop = view.scrollDOM.scrollTop
+            val canvasW = app.screen.width
+            val canvasH = app.screen.height
+
+            val expired = mutableListOf<String>()
+            activeMarks.forEach { (key, mark) ->
+                val elapsed = now - mark.startMs
+                if (elapsed >= mark.durationMs) {
+                    expired.add(key)
+                    return@forEach
+                }
+
+                val x = mark.contentX - scrollLeft
+                val y = mark.contentY - scrollTop
+                val visible = x + mark.w > 0 && x < canvasW && y + mark.h > 0 && y < canvasH
+
+                val g = mark.graphics
+                g.visible = visible
+                if (visible) {
+                    g.x = x
+                    g.y = y
+                    g.alpha = pulseAlpha(elapsed / mark.durationMs)
+                }
+            }
+            expired.forEach { key -> activeMarks.remove(key)?.let { recycleMark(it) } }
+        }
+
+        // 3) Idle-stop: nothing pending and nothing active → stop the rAF loop entirely.
+        if (pendingOps.isEmpty() && activeMarks.isEmpty()) {
+            tickerRunning = false
+            app.ticker.stop()
         }
     }
 
-    private fun showHighlight(key: String, location: SourceLocation, durationMs: Double) {
+    private fun showHighlight(key: String, location: SourceLocation, durationMs: Double, now: Double) {
         val view = this.view ?: return
+        val app = this.app ?: return
+        val addon = this.addon ?: return
 
         if (!document.hasFocus()) return
 
-        // Remove existing mark for this location (deduplication)
-        activeMarks.remove(key)?.let { it.parentNode?.removeChild(it) }
+        // Deduplicate: recycle any existing mark for this location.
+        activeMarks.remove(key)?.let { recycleMark(it) }
 
-        // Resolve document positions
+        // Resolve document positions.
         val from = lineColToPos(view, location.startLine, location.startColumn) ?: return
         val to = if (location.startLine == location.endLine) {
             lineColToPos(view, location.endLine, location.endColumn) ?: return
         } else {
-            // Multi-line: highlight to end of start line
+            // Multi-line: highlight to end of start line.
             lineColToPos(view, location.startLine, location.startColumn + 2) ?: return
         }
 
-        // Get pixel coordinates relative to the content
         val fromCoords = view.coordsAtPos(from) ?: return
         val toCoords = view.coordsAtPos(to) ?: return
 
-        // Get the overlay parent's bounding rect for relative positioning
-        val containerRect = view.contentDOM.parentElement?.getBoundingClientRect() ?: return
+        // Measure against the canvas's own box (not the editor's): the canvas is the Pixi world
+        // origin, so `viewport - canvasRect` is exactly the canvas-local draw position, immune to
+        // any border/padding on the editor root. Adding the current scroll back in makes the cached
+        // coords scroll-independent; the ticker subtracts live scroll each frame.
+        val canvasRect = app.canvas.getBoundingClientRect()
         val scrollLeft = view.scrollDOM.scrollLeft
+        val scrollTop = view.scrollDOM.scrollTop
 
-        // Position marks in content-relative coordinates (the overlay is shifted by -scrollLeft on scroll)
-        val left = (fromCoords.left - containerRect.left) + scrollLeft
-        val top = (fromCoords.top - containerRect.top) + 1
-        val width = (toCoords.right - fromCoords.left) + 5
-        val height = (fromCoords.bottom - fromCoords.top) + 2
+        // Nudge the box to sit snugly around the glyphs (3px left, 2px up).
+        val contentX = (fromCoords.left - canvasRect.left) + scrollLeft - 3.0
+        val contentY = (fromCoords.top - canvasRect.top) + scrollTop - 1.0
+        val w = (toCoords.right - fromCoords.left) + 5.0
+        val h = (fromCoords.bottom - fromCoords.top) + 2.0
+        if (w <= 0 || h <= 0) return
 
-        if (width <= 0 || height <= 0) return
-
-        // Create mark element
-        val mark = document.createElement("mark") as HTMLElement
-        mark.className = "cm-highlight-playing"
-        mark.style.apply {
-            position = "absolute"
-            this.left = "${left}px"
-            this.top = "${top}px"
-            this.width = "${width}px"
-            this.height = "${height}px"
-            setProperty("animation-duration", "${durationMs}ms")
-            setProperty("pointer-events", "none")
+        // Clip the canvas to the content area so highlights scrolled left don't paint over the
+        // sticky line-number gutter (the gutter's right edge is fixed w.r.t. horizontal scroll).
+        val clipLeft = maxOf(0.0, (view.contentDOM.getBoundingClientRect().left - canvasRect.left) + scrollLeft)
+        if (clipLeft != lastClipLeftPx) {
+            lastClipLeftPx = clipLeft
+            app.canvas.style.setProperty("clip-path", "inset(0 0 0 ${clipLeft}px)")
         }
 
-        ensureOverlay(view).appendChild(mark)
-        activeMarks[key] = mark
-        lastHighlightTime[key] = Date.now()
+        val g = pool.removeLastOrNull() ?: addon.createGraphics()
+        g.clear()
+        g.roundRect(0.0, 0.0, w, h, 3.0)
+        g.fill(fillStyle)
+        g.stroke(strokeStyle)
+        g.x = contentX - scrollLeft
+        g.y = contentY - scrollTop
+        g.alpha = 1.0
+        g.visible = true
+        app.stage.addChild(g)
+
+        activeMarks[key] = ActiveMark(g, contentX, contentY, w, h, now, durationMs)
+        lastHighlightTime[key] = now
     }
 
-    private fun removeHighlight(key: String) {
-        val mark = activeMarks.remove(key) ?: return
-        mark.parentNode?.removeChild(mark)
-    }
-
-    private fun ensureOverlay(view: EditorView): HTMLElement {
-        overlay?.let { return it }
-
-        val el = document.createElement("div") as HTMLElement
-        el.className = "cm-highlight-overlay"
-        el.style.apply {
-            position = "absolute"
-            this.top = "0"
-            this.left = "0"
-            this.right = "0"
-            this.bottom = "0"
-            setProperty("pointer-events", "none")
-            zIndex = "5"
+    private fun recycleMark(mark: ActiveMark) {
+        val g = mark.graphics
+        g.removeFromParent()
+        g.visible = false
+        if (pool.size < maxPoolSize) {
+            pool.addLast(g)
+        } else {
+            g.destroy()
         }
+    }
 
-        // Insert into contentDOM's parent so it scrolls with the content
-        view.contentDOM.parentElement?.appendChild(el)
-        overlay = el
-        return el
+    /**
+     * Reproduces the old ease-out gold pulse as a container alpha over normalized lifetime [t] in
+     * `[0, 1]`. The fill (0.1) and stroke (1.0) alphas are baked into the Graphics, so the border
+     * fades `1.0 → 0.4 → 0.0` and the fill tracks it proportionally.
+     */
+    private fun pulseAlpha(t: Double): Double {
+        val p = 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t)   // ease-out-cubic on the timeline
+        return if (p < 0.7) 1.0 - (p / 0.7) * 0.6 else 0.4 * (1.0 - (p - 0.7) / 0.3)
     }
 
     private fun lineColToPos(view: EditorView, line: Int, column: Int): Int? {

@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -29,7 +28,7 @@ internal class FastGapPattern(
         /**
          * Create a FastGapPattern with a static factor value.
          */
-        fun static(source: SprudelPattern, factor: Rational): FastGapPattern {
+        fun static(source: SprudelPattern, factor: Double): FastGapPattern {
             return FastGapPattern(
                 source = source,
                 factorProvider = ControlValueProvider.Static(factor.asVoiceValue())
@@ -39,22 +38,22 @@ internal class FastGapPattern(
 
     override val weight: Double get() = source.weight
 
-    override val numSteps: Rational? get() = source.numSteps
+    override val numSteps: Double? get() = source.numSteps
 
-    override fun estimateCycleDuration(): Rational {
+    override fun estimateCycleDuration(): Double {
         return source.estimateCycleDuration()
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
 
         val result = createEventList()
 
         for (factorEvent in factorEvents) {
-            // Read as Rational directly — avoids a Rational -> Double -> Rational round-trip
-            // that re-runs doubleToFractionBigInt per query (see TimeShiftPattern for details).
-            val factor = factorEvent.data.value?.asRational ?: Rational.ONE
+            // Read the factor as a Double directly (it is already stored as a value)
+            // — no per-query reconstruction needed.
+            val factor = factorEvent.data.value?.asDouble ?: 1.0
             val events = queryWithFactor(factorEvent.part.begin, factorEvent.part.end, ctx, factor)
             result.addAll(events)
         }
@@ -63,31 +62,32 @@ internal class FastGapPattern(
     }
 
     private fun queryWithFactor(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
-        factor: Rational,
+        factor: Double,
     ): List<SprudelPatternEvent> {
         // Handle edge case where factor <= 0
-        if (factor.toDouble() <= 0.0) {
+        if (factor <= 0.0) {
             return emptyList()
         }
 
         // If factor is 1.0, just return the source as-is
-        if (factor == Rational.ONE) {
+        if (factor == 1.0) {
             return source.queryArcContextual(from, to, ctx)
         }
 
-        val span = Rational.ONE / factor
+        val spanCycles = 1.0 / factor      // compressed-region width as a fraction of a cycle
+        val spanDuration = CycleTime.ofCycles(spanCycles)
         val result = createEventList()
 
         // Determine which cycles we need to query
         for (cycle in calculateCycleBounds(from, to)) {
-            val cycleRat = cycle.toRational()
+            val cycleStart = CycleTime.ofCycleIndex(cycle)
 
             // The compressed region in this cycle: [cycle, cycle + 1/factor)
-            val compressedStart = cycleRat
-            val compressedEnd = cycleRat + span
+            val compressedStart = cycleStart
+            val compressedEnd = cycleStart + spanDuration
 
             // Check if our query range intersects with the compressed region
             if (!cycleRegionIntersects(from, to, compressedStart, compressedEnd)) {
@@ -95,11 +95,11 @@ internal class FastGapPattern(
             }
 
             // Query the source pattern for the full cycle (0 to 1)
-            val sourceEvents = source.queryArcContextual(cycleRat, cycleRat + Rational.ONE, ctx)
+            val sourceEvents = source.queryArcContextual(cycleStart, cycleStart + CycleTime.ONE, ctx)
 
             // Map each event from source cycle [0,1) to compressed region [start, start+span)
             for (ev in sourceEvents) {
-                val (mappedPart, mappedWhole) = mapEventTimeBySpan(ev, cycleRat, compressedStart, span)
+                val (mappedPart, mappedWhole) = mapEventTimeBySpan(ev, cycleStart, compressedStart, spanCycles)
 
                 // Only include if it intersects with our query range
                 if (hasOverlap(mappedPart.begin, mappedPart.end, from, to)) {

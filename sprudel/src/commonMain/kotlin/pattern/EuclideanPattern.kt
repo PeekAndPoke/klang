@@ -1,14 +1,13 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.recursiveBjorklund
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.lang.struct
 import kotlin.math.abs
 import kotlin.math.max
@@ -39,16 +38,16 @@ internal class EuclideanPattern(
 
     override val weight: Double get() = inner.weight
 
-    override val numSteps: Rational?
+    override val numSteps: Double?
         get() {
             return if (stepsProvider is ControlValueProvider.Static) {
-                (stepsProvider.value.asInt ?: 0).toRational()
+                (stepsProvider.value.asInt ?: 0).toDouble()
             } else {
                 inner.numSteps
             }
         }
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     companion object {
         /**
@@ -63,9 +62,9 @@ internal class EuclideanPattern(
         ): EuclideanPattern {
             return EuclideanPattern(
                 inner = inner,
-                pulsesProvider = ControlValueProvider.Static(Rational(pulses).asVoiceValue()),
-                stepsProvider = ControlValueProvider.Static(Rational(steps).asVoiceValue()),
-                rotationProvider = ControlValueProvider.Static(Rational(rotation).asVoiceValue()),
+                pulsesProvider = ControlValueProvider.Static((pulses).asVoiceValue()),
+                stepsProvider = ControlValueProvider.Static((steps).asVoiceValue()),
+                rotationProvider = ControlValueProvider.Static((rotation).asVoiceValue()),
                 legato = legato
             )
         }
@@ -144,8 +143,8 @@ internal class EuclideanPattern(
 
             if (onsets.isEmpty()) return EmptyPattern
 
-            val ratSteps = steps.toRational()
-            val segments = ArrayList<Pair<Rational, Rational>>()
+            val ratSteps = steps.toDouble()
+            val segments = ArrayList<Pair<CycleTime, CycleTime>>()
 
             var i = 0
             while (i < steps) {
@@ -160,10 +159,10 @@ internal class EuclideanPattern(
                         safety++
                     }
 
-                    // Create segment relative to cycle start
-                    val start = i.toRational() / ratSteps
-                    val duration = dist.toRational() / ratSteps
-                    segments.add(start to (start + duration))
+                    // Create segment relative to cycle start: [i/steps, (i+dist)/steps)
+                    val start = CycleTime.ofSubdivision(i, steps)
+                    val end = CycleTime.ofSubdivision(i + dist, steps)
+                    segments.add(start to end)
 
                     // Advance by dist (skipping gaps covered by this event)
                     i += dist
@@ -178,37 +177,37 @@ internal class EuclideanPattern(
             // even if events overhang into the next cycle.
             val geometry = object : SprudelPattern {
                 override val weight = 1.0
-                override val numSteps: Rational = ratSteps
+                override val numSteps: Double = ratSteps
 
-                override fun estimateCycleDuration(): Rational = Rational.ONE
+                override fun estimateCycleDuration(): Double = 1.0
 
                 override fun queryArcContextual(
-                    from: Rational,
-                    to: Rational,
+                    from: CycleTime,
+                    to: CycleTime,
                     ctx: QueryContext,
                 ): List<SprudelPatternEvent> {
                     val results = createEventList()
 
-                    val startCycle = from.floor().toInt()
-                    val endCycle = to.ceil().toInt()
+                    val startCycle = from.cycleIndex()
+                    val endCycle = to.ceilToCycle().cycleIndex()
 
                     // Check from startCycle - 1 to handle events overlapping from previous cycle
                     for (cycle in (startCycle - 1) until endCycle) {
-                        val cycleRat = Rational(cycle)
+                        val cycleStart = CycleTime.ofCycleIndex(cycle)
 
                         for ((segStart, segEnd) in segments) {
-                            val absStart = cycleRat + segStart
-                            val absEnd = cycleRat + segEnd
+                            val absStart = cycleStart + segStart
+                            val absEnd = cycleStart + segEnd
 
                             // Check intersection with query arc
-                            val s = maxOf(from, absStart)
-                            val e = minOf(to, absEnd)
+                            val s = from.coerceAtLeast(absStart)
+                            val e = to.coerceAtMost(absEnd)
 
                             if (s < e) {
                                 results.add(
                                     SprudelPatternEvent(
-                                        part = TimeSpan(s, e),
-                                        whole = TimeSpan(absStart, absEnd),
+                                        part = CycleTimeSpan(s, e),
+                                        whole = CycleTimeSpan(absStart, absEnd),
                                         data = SprudelVoiceData.empty.copy(value = 1.asVoiceValue())
                                     )
                                 )
@@ -274,8 +273,8 @@ internal class EuclideanPattern(
     }
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         val pulsesEvents = pulsesProvider.queryEvents(from, to, ctx)
@@ -283,13 +282,13 @@ internal class EuclideanPattern(
 
         val rotationEvents = rotationProvider?.queryEvents(from, to, ctx)
             ?: run {
-                val timeSpan = TimeSpan(begin = from, end = to)
+                val timeSpan = CycleTimeSpan(begin = from, end = to)
 
                 listOf(
                     SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = SprudelVoiceData.empty.copy(value = Rational.ONE.asVoiceValue())
+                        data = SprudelVoiceData.empty.copy(value = 1.0.asVoiceValue())
                     )
                 )
             }
@@ -304,11 +303,11 @@ internal class EuclideanPattern(
         for (pulsesEvent in pulsesEvents) {
             for (stepsEvent in stepsEvents) {
                 for (rotationEvent in rotationEvents) {
-                    val overlapBegin: Rational =
-                        maxOf(pulsesEvent.part.begin, stepsEvent.part.begin, rotationEvent.part.begin)
+                    val overlapBegin: CycleTime = pulsesEvent.part.begin
+                        .coerceAtLeast(stepsEvent.part.begin).coerceAtLeast(rotationEvent.part.begin)
 
-                    val overlapEnd: Rational =
-                        minOf(pulsesEvent.part.end, stepsEvent.part.end, rotationEvent.part.end)
+                    val overlapEnd: CycleTime = pulsesEvent.part.end
+                        .coerceAtMost(stepsEvent.part.end).coerceAtMost(rotationEvent.part.end)
 
                     if (overlapEnd <= overlapBegin) continue
 
@@ -328,8 +327,8 @@ internal class EuclideanPattern(
     }
 
     private fun applyEuclideanRhythm(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
         pulses: Int,
         steps: Int,
@@ -343,8 +342,8 @@ internal class EuclideanPattern(
     }
 
     private fun queryStatic(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
         pulses: Int,
         steps: Int,
@@ -355,23 +354,22 @@ internal class EuclideanPattern(
         val events = createEventList()
         val rhythm = rotateJs(bjorklundSprudel(pulses, steps), -rotation)
 
-        val startCycle = from.floor().toInt()
-        val endCycle = to.ceil().toInt()
-
-        // EXACT step duration using rational arithmetic
-        val stepDuration = Rational.ONE / Rational(steps)
+        val startCycle = from.cycleIndex()
+        val endCycle = to.ceilToCycle().cycleIndex()
 
         for (cycle in startCycle until endCycle) {
-            val cycleOffset = Rational(cycle)
+            val cycleOffset = CycleTime.ofCycleIndex(cycle)
 
             rhythm.forEachIndexed { stepIndex, isActive ->
                 if (isActive == 1) {
-                    val stepStart = cycleOffset + (Rational(stepIndex) * stepDuration)
-                    val stepEnd = stepStart + stepDuration
+                    // Step boundaries [stepIndex/steps, (stepIndex+1)/steps), snapped to the tick
+                    // grid (exact when steps divides T = 2^13·3·5·7, else nearest tick).
+                    val stepStart = cycleOffset + CycleTime.ofSubdivision(stepIndex, steps)
+                    val stepEnd = cycleOffset + CycleTime.ofSubdivision(stepIndex + 1, steps)
 
                     // Check intersection with query arc
-                    val intersectStart = maxOf(from, stepStart)
-                    val intersectEnd = minOf(to, stepEnd)
+                    val intersectStart = from.coerceAtLeast(stepStart)
+                    val intersectEnd = to.coerceAtMost(stepEnd)
 
                     if (intersectEnd > intersectStart) {
                         val innerEvents = inner.queryArcContextual(intersectStart, intersectEnd, ctx)
@@ -379,7 +377,7 @@ internal class EuclideanPattern(
                             .take(1)
 
                         events.addAll(innerEvents.map { ev ->
-                            val timeSpan = TimeSpan(begin = intersectStart, end = intersectEnd)
+                            val timeSpan = CycleTimeSpan(begin = intersectStart, end = intersectEnd)
 
                             ev.copy(
                                 part = timeSpan,
@@ -395,8 +393,8 @@ internal class EuclideanPattern(
     }
 
     private fun queryLegatoStatic(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
         pulses: Int,
         steps: Int,

@@ -104,6 +104,7 @@ kotlin {
                 api(Deps.KotlinLibs.Kraft.semanticui)
                 api(Deps.KotlinLibs.Kraft.addons_browserdetect)
                 api(Deps.KotlinLibs.Kraft.addons_marked)
+                api(Deps.KotlinLibs.Kraft.addons_pixijs)
                 api(Deps.KotlinLibs.Kraft.addons_threejs)
             }
         }

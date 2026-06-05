@@ -14,7 +14,7 @@ internal val aTruthWorthLyingForSong = Song(
 import * from "stdlib"
 import * from "sprudel"
 
-let drive = 8 // <--- Do not put 11
+let drive = 3 // <--- Do not put 11
 
 let stay = 64
 let tp = "[0 1 2 3 -2 -5 -3 -1]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
@@ -23,26 +23,27 @@ let guitar = (() => {
 
   let pSpread     = Osc.param("spread", 0.05, "Supersaw voice detuning")
   let pAnalog     = Osc.param("analog", 1.00, "Analog pitch drift")
-  let pVoices     = Osc.param("voices", 8,    "Number of unison voices")
+  let pVoices     = Osc.param("voices", 7,    "Number of unison voices")
  
   let pDrive      = Osc.param("drive",         1.0,    "Primary distortion drive level")
   let pBrightness = Osc.param("brightness", 5000.0,    "Post-distortion lowpass cutoff in Hz")
   let pAttack     = Osc.param("attack",         0.005, "Attack time in seconds")
   let pSustain    = Osc.param("sustain",        0.8,  "Sustain level")
 
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, freqSpread = pSpread).analog(pAnalog).mul(0.2)
+  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, freqSpread = pSpread).analog(pAnalog).mul(0.15)
     // Zawtooth overtones for more grit
     .plus(Osc.superramp(freq = Osc.freq().mul(2), voices = pVoices, freqSpread = pSpread).analog(pAnalog).mul(0.05))
    
   return signal
     .lowpass(Osc.sine(0.50).plus(1).times(1500).plus(pBrightness), 1.50)            // Pre-distortion: sweeping lowpass adds dynamic character
     .plus(Osc.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.3))  // Noise burst
-    .bandpass(700, 0.30)                                                            // Gentle mid-focus before distortion
+    .bandpass(650, 0.30)                                                            // Gentle mid-focus before distortion
     .distort(pDrive, "tube", 4)                                                     // Overdrive + Oversample
-    .lowpass(pBrightness, 1.0, pAnalog)                                             // Post-distortion: control fizz + warmth roll-off
-    .highpass(Osc.freq(), 1.0, pAnalog)                                             // Cut away muddy low frequencies
-    //.warmth(12000) // TODO: impulse response
-    .adsr(pAttack, 0.15, pSustain, 0.05)                                            // Tight rhythm envelope
+    .coarse(2)
+    .lowpass(pBrightness, 1.5, pAnalog)                                             // Post-distortion: control fizz + warmth roll-off
+    .highpass(Osc.freq(), 1.05, pAnalog)                                            // Cut away muddy low frequencies
+    .adsr(pAttack, 10.0, pSustain, 0.07).adsrCurves("exp", "exp", "cube")            // Tight rhythm envelope
+    
 })()
 
 stack( // Gitarre! ----------------------------------------------------------------------------
@@ -51,30 +52,30 @@ stack( // Gitarre! -------------------------------------------------------------
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").notchf("1100").lpf(5200).clip(0.985) // .solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 4800).oscp("spread", 0.04).hpf(350).postgain(0.23)
+    .orbit(1).fast(4).scale("C3:chromatic").notchf("1200").lpf(2000).lpq(1.25).lpe(1.0).lpq(1.5).clip(0.98) // .solo()
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.04).hpf(400).postgain(0.25)
     .transpose(tp).pan(0.4).superimpose(pan(0.6)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").notchf("1100").lpf(5200).clip(0.985).late(0.002)  // . solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 4800).oscp("spread", 0.05).hpf(700).postgain(0.20)
+    .orbit(2).fast(4).scale("C4:chromatic").notchf("1200").lpf(4000).lpq(1.5).lpq(1.0).lpq(1.5).clip(0.98).late(0.002)  // . solo()
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.05).hpf(600).postgain(0.22)
     .transpose(tp).pan(0.16).superimpose(pan(0.84)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 2 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.999).lpf(5500).release(0.15).hpf(120).postgain(0.20)
-    .s(guitar).oscparam("drive", drive).oscp("brightness", 5000).oscp("spread", 0.08) //  . mute()
-    .transpose(tp).pan(0.33).superimpose(pan(0.66).late(0.001)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay >= 4) //  .solo()
+  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9925).hpf(180).hpq(1.0).lpf(3500).lpq(1.5).lpq(1.25).postgain(0.22)
+    .s(guitar).oscparam("drive", drive).oscp("brightness", 6000).oscp("spread", 0.08) //  . mute()
+    .transpose(tp).pan(0.4).superimpose(pan(0.6).late(0.001)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay >= 4) //  .solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0]                                     [[0]!3 ~                      ~!12]
           [0]                                     [[[8]@12        [8]@4]       [10]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 2 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8] [7]]                    [[[8]!4 [8]!3 [10]]          [10]*8]>`).repeat(2),
-  ).orbit(4).scale("C2:chromatic").clip(0.95).sound("sine").gain(1.5).warmth(0.2).distort("0.7:tube:4").analog(1).postgain(0.20)
-    .adsr("0.005:0.1:0.6:0.075").lpadsr("0.005:0.05:0.3:0.075").lpf(100).lpenv(1.0).hpf(80).velocity("<[1.0 0.95 0.975 0.95]>")
+  ).orbit(4).scale("C2:chromatic").clip(0.95).sound("sine").gain(1.5).warmth(0.2).distort("0.7:tube:4").analog(1).postgain(0.26)
+    .adsr("0.005:0.1:0.6:0.075").lpadsr("0.005:0.05:0.3:0.075").lpf(100).lpenv(1.0).hpf(80).hpq(1).velocity("<[1.0 0.95 0.975 0.95]>")
     .pan(0.55).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.075") // .solo()
@@ -84,11 +85,11 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).orbit(5).early(0.002).adsr("0.0065:0.2:0.3:0.2").gain(0.8).hpf(100).lpf(6500)
+  ).orbit(5).early(0.002).adsr("0.0065:0.2:0.3:0.2").gain(0.9).hpf(100).lpf(10000)
     .superimpose(bandf(195).bandq(1.1).gain(0.2)).filterWhen(t => t % stay >= 3.95)  // .solo()
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
-    .orbit(6).late(-0.003).adsr("0.01:0.2:0.8:0.7").gain(1.00).hpf(2000).lpf(6500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
+    .orbit(6).late(-0.003).adsr("0.01:0.2:0.8:0.7").gain(0.80).hpf(2000).lpf(10000).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
 ).room(0.02).rsize(3.0).compressor("-6:3:10:0.02:0.25") /*
 
 

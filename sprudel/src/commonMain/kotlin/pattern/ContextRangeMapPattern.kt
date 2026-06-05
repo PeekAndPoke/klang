@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -14,10 +15,10 @@ internal class ContextRangeMapPattern(
     private val transformMax: (Double) -> Double,
 ) : SprudelPattern {
     override val weight: Double get() = source.weight
-    override val numSteps: Rational? get() = source.numSteps
-    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    override val numSteps: Double? get() = source.numSteps
+    override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val min = ctx.getOrNull(ContinuousPattern.minKey)
         val max = ctx.getOrNull(ContinuousPattern.maxKey)
 

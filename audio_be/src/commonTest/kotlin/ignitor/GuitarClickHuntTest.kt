@@ -52,7 +52,7 @@ class GuitarClickHuntTest : StringSpec({
 
     fun zawtoothBranch(): IgnitorDsl = IgnitorDsl.Zawtooth().mulD(0.25)
 
-    fun squareBranch(): IgnitorDsl = IgnitorDsl.Square().mulD(0.15)
+    fun squareBranch(): IgnitorDsl = IgnitorDsl.Pulze().mulD(0.15)
 
     fun pickNoiseBranch(): IgnitorDsl =
         IgnitorDsl.PinkNoise()

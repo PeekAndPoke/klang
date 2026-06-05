@@ -5,12 +5,20 @@ import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.dust
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.pulze
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.readParam
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.sawtooth
-import io.peekandpoke.klang.audio_be.polyBlep
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.square
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSaw
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSawRaw
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.zawtooth
 import io.peekandpoke.klang.audio_be.smallNumFastMod
+import io.peekandpoke.klang.audio_be.waveTrapezoid
 import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
+import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -28,7 +36,7 @@ object Ignitors {
     // without that argument. Sprudel's oscParam lookup runs at the DSL layer
     // (IgnitorDslRuntime.buildIgnitor), upstream of these factories.
     private val analogDefault = ConstantIgnitor(0.0)
-    private val voicesDefault = ConstantIgnitor(8.0)
+    private val voicesDefault = ConstantIgnitor(7.0)
     private val freqSpreadDefault = ConstantIgnitor(0.2)
     private val dutyDefault = ConstantIgnitor(0.5)
     private val densityDefault = ConstantIgnitor(0.2)
@@ -91,260 +99,144 @@ object Ignitors {
         }
     }
 
-    /** Sawtooth wave oscillator with PolyBLEP anti-aliasing. Rich in harmonics, classic subtractive synth tone. */
+    // ── One waveform engine ──────────────────────────────────────────────────────
+    // saw / ramp / square / pulse / triangle (+ raw zaw / zamp / pulze) all render through the SAME
+    // shape ([waveTrapezoid] via [WaveVoiceState]) and the same hot loop — see [WaveIgnitor].
+
+    private enum class WaveKind { SAW, PULSE }
+
+    /**
+     * The single mono oscillator behind saw / ramp / square / pulse / triangle (and the raw
+     * zaw / zamp / pulze). A `±1` piecewise-linear [waveTrapezoid] in a [WaveVoiceState], finite-slope
+     * edges (no PolyBLEP). [kind] picks the shape config (SAW = rise + finite flyback; PULSE = min-flank
+     * rise/fall around a high plateau of width [duty]). [polarity] negates for ramp/zamp. [flankSamples]
+     * is the edge length in samples (`0` = raw / instant / aliased). [duty] may be audio-rate (PWM).
+     */
+    private class WaveIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+        private val kind: WaveKind,
+        private val polarity: Double,
+        private val flankSamples: Double,
+        private val duty: Ignitor = ConstantIgnitor(0.5),
+        private val riseFlank: Double = 0.0,
+        private val fallFlank: Double = 0.0,
+    ) : Ignitor {
+        private val voice = WaveVoiceState()
+        private var driftInit = false
+        private var lastDt: Double = Double.NaN
+        private var lastDuty: Double = Double.NaN
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val actualFreq = resolveFreq(freq, freqHz, ctx)
+            if (!driftInit) {
+                driftInit = true
+                val amt = readParam(analog, actualFreq, ctx)
+                voice.drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate) else null
+            }
+            val dt = actualFreq / ctx.sampleRateD
+            val pm = ctx.phaseMod
+            val off = ctx.offset
+            val end = off + ctx.length
+
+            if (kind == WaveKind.SAW) {
+                if (dt != lastDt) {
+                    lastDt = dt
+                    voice.setSawShape((flankSamples * dt).coerceAtMost(SAW_SHAPE_MAX))
+                }
+                renderHoisted(buffer, off, end, dt, pm)
+                return
+            }
+
+            // PULSE — constant duty: bake once + hoist; audio-rate duty (PWM): rebake per sample.
+            val dutyConst = duty.controlRateValueOrNull(actualFreq, ctx)
+            if (dutyConst != null) {
+                val d = dutyConst
+                if (d != lastDuty || dt != lastDt) {
+                    lastDuty = d; lastDt = dt
+                    voice.setPulseShape(d, riseFlank, fallFlank, flankSamples * dt)
+                }
+                renderHoisted(buffer, off, end, dt, pm)
+            } else {
+                if (dt != lastDt) {
+                    lastDt = dt; lastDuty = Double.NaN
+                }
+                val floor = flankSamples * dt
+                ctx.scratchBuffers.use { dutyBuf ->
+                    duty.generate(dutyBuf, actualFreq, ctx)
+                    var phase = voice.phase
+                    val drift = voice.drift
+                    val pol = polarity
+                    for (i in off until end) {
+                        val d = dutyBuf[i]
+                        if (d != lastDuty) {
+                            lastDuty = d; voice.setPulseShape(d, riseFlank, fallFlank, floor)
+                        }
+                        buffer[i] = pol * waveTrapezoid(
+                            phase, voice.riseEnd, voice.highEnd, voice.fallEnd, voice.riseSlope, voice.fallSlope,
+                        )
+                        var inc = dt
+                        if (pm != null) inc *= pm[i]
+                        if (drift != null) inc *= drift.nextMultiplier()
+                        phase += inc
+                        phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                    }
+                    voice.phase = phase
+                }
+            }
+        }
+
+        /** Tight loop with the shape hoisted into locals (constant within the block). */
+        private fun renderHoisted(buffer: AudioBuffer, off: Int, end: Int, dt: Double, pm: DoubleArray?) {
+            var phase = voice.phase
+            val drift = voice.drift
+            val pol = polarity
+            val riseEnd = voice.riseEnd
+            val highEnd = voice.highEnd
+            val fallEnd = voice.fallEnd
+            val riseSlope = voice.riseSlope
+            val fallSlope = voice.fallSlope
+            for (i in off until end) {
+                buffer[i] = pol * waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope)
+                var inc = dt
+                if (pm != null) inc *= pm[i]
+                if (drift != null) inc *= drift.nextMultiplier()
+                phase += inc
+                phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+            }
+            voice.phase = phase
+        }
+    }
+
+    /**
+     * Sawtooth — rise then a finite flyback ([SAW_RESET_SAMPLES] samples; no PolyBLEP, softens with
+     * pitch). Single-voice form of the shape shared with [superSaw]. Per-voice analog drift via [analog].
+     */
     fun sawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = SawtoothIgnitor(freq, analog)
+    ): Ignitor = WaveIgnitor(freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = SAW_RESET_SAMPLES)
 
-    private class SawtoothIgnitor(
-        private val freq: Ignitor,
-        private val analog: Ignitor,
-    ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * d.nextMultiplier()
-                        var out = 2.0 * phase - 1.0
-                        out -= phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i] * d.nextMultiplier()
-                        var out = 2.0 * phase - 1.0
-                        if (dt > BLEP_MIN_DT) out -= phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        var out = 2.0 * phase - 1.0
-                        out -= phase.polyBlep(inc)
-                        buffer[i] = out
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i]
-                        var out = 2.0 * phase - 1.0
-                        if (dt > BLEP_MIN_DT) out -= phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            }
-        }
-    }
-
-    /** Reverse sawtooth (ramp up) with PolyBLEP anti-aliasing. Inverted [sawtooth] waveform. */
+    /** Reverse sawtooth — the negated [sawtooth] (own `RAMP_RESET_SAMPLES` flyback knob). */
     fun ramp(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = RampIgnitor(freq, analog)
+    ): Ignitor = WaveIgnitor(freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = RAMP_RESET_SAMPLES)
 
-    private class RampIgnitor(
-        private val freq: Ignitor,
-        private val analog: Ignitor,
-    ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * d.nextMultiplier()
-                        var out = 1.0 - 2.0 * phase
-                        out += phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i] * d.nextMultiplier()
-                        var out = 1.0 - 2.0 * phase
-                        if (dt > BLEP_MIN_DT) out += phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        var out = 1.0 - 2.0 * phase
-                        out += phase.polyBlep(inc)
-                        buffer[i] = out
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i]
-                        var out = 1.0 - 2.0 * phase
-                        if (dt > BLEP_MIN_DT) out += phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            }
-        }
-    }
-
-    /** Square wave oscillator with dual PolyBLEP anti-aliasing at both transitions. */
+    /** Square wave — a 50%-duty [pulze] (Kotlin convenience; the DSL drives `duty` via an osc-param). */
     fun square(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = SquareIgnitor(freq, analog)
+    ): Ignitor = pulze(freq, ConstantIgnitor(0.5), analog)
 
-    private class SquareIgnitor(
-        private val freq: Ignitor,
-        private val analog: Ignitor,
-    ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * d.nextMultiplier()
-                        // PolyBLEP square: two sawtooths subtracted, shifted by half period
-                        var out = if (phase < 0.5) 1.0 else -1.0
-                        out += phase.polyBlep(dt)                  // transition at 0
-                        out -= (phase + 0.5).smallNumFastMod(1.0).polyBlep(dt)   // transition at 0.5
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i] * d.nextMultiplier()
-                        var out = if (phase < 0.5) 1.0 else -1.0
-                        if (dt > BLEP_MIN_DT) {
-                            out += phase.polyBlep(dt)
-                            out -= (phase + 0.5).smallNumFastMod(1.0).polyBlep(dt)
-                        }
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        var out = if (phase < 0.5) 1.0 else -1.0
-                        out += phase.polyBlep(inc)
-                        out -= (phase + 0.5).smallNumFastMod(1.0).polyBlep(inc)
-                        buffer[i] = out
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i]
-                        var out = if (phase < 0.5) 1.0 else -1.0
-                        if (dt > BLEP_MIN_DT) {
-                            out += phase.polyBlep(dt)
-                            out -= (phase + 0.5).smallNumFastMod(1.0).polyBlep(dt)
-                        }
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            }
-        }
-    }
-
-    /** Triangle wave oscillator. Piecewise linear, inherently band-limited. Softer tone than square or saw. */
+    /** Triangle wave — the pulse engine with both flanks fully open (duty 0.5, rise = fall = 1). */
     fun triangle(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = TriangleIgnitor(freq, analog)
-
-    private class TriangleIgnitor(
-        private val freq: Ignitor,
-        private val analog: Ignitor,
-    ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        // Piecewise linear: rising from -1 to +1 in first half, falling in second half
-                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        phase += inc * d.nextMultiplier()
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        phase += inc * phaseMod[i] * d.nextMultiplier()
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        phase += inc * phaseMod[i]
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = WaveIgnitor(
+        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
+        duty = ConstantIgnitor(0.5), riseFlank = 1.0, fallFlank = 1.0,
+    )
 
     /** White noise generator. Flat spectrum with equal energy at all frequencies. */
     fun whiteNoise(rng: Random): Ignitor = WhiteNoiseIgnitor(rng)
@@ -358,58 +250,27 @@ object Ignitors {
         }
     }
 
-    /** Naive sawtooth without anti-aliasing. Brighter/harsher than [sawtooth] (PolyBLEP). */
+    /** Naive sawtooth ("zaw") — the raw [sawtooth] (`flankSamples = 0` → instant reset, aliased/harsh). */
     fun zawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = ZawtoothIgnitor(freq, analog)
+    ): Ignitor = WaveIgnitor(freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = 0.0)
 
-    private class ZawtoothIgnitor(
-        private val freq: Ignitor,
-        private val analog: Ignitor,
-    ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
+    /** Raw ramp ("zamp") — the negated [zawtooth] (naive reverse saw, no anti-aliasing). */
+    fun zamp(
+        freq: Ignitor = FreqIgnitor,
+        analog: Ignitor = analogDefault,
+    ): Ignitor = WaveIgnitor(freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = 0.0)
 
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0)
-                        phase += inc * d.nextMultiplier()
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0)
-                        phase += inc * phaseMod[i] * d.nextMultiplier()
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0)
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0)
-                        phase += inc * phaseMod[i]
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            }
-        }
-    }
+    /** Raw pulse ("pulze") — naive aliased pulse with variable [duty] (the raw [square]/[pulse]). */
+    fun rawPulze(
+        freq: Ignitor = FreqIgnitor,
+        duty: Ignitor = dutyDefault,
+        analog: Ignitor = analogDefault,
+    ): Ignitor = WaveIgnitor(
+        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = 0.0,
+        duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK,
+    )
 
     /** Impulse: outputs 1.0 once per cycle (at phase wrap), 0.0 otherwise. */
     fun impulse(
@@ -469,87 +330,15 @@ object Ignitors {
         }
     }
 
-    /** Pulse wave with variable [duty] cycle (0.0..1.0) and dual PolyBLEP anti-aliasing at both transitions. */
+    /** Rounded pulse with variable [duty] cycle (square / pulse) — band-limited [WaveIgnitor], PWM-capable. */
     fun pulze(
         freq: Ignitor = FreqIgnitor,
         duty: Ignitor = dutyDefault,
         analog: Ignitor = analogDefault,
-    ): Ignitor = PulzeIgnitor(freq, duty, analog)
-
-    private class PulzeIgnitor(
-        private val freq: Ignitor,
-        private val duty: Ignitor,
-        private val analog: Ignitor,
-    ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val dr = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            ctx.scratchBuffers.use { dutyBuf ->
-                duty.generate(dutyBuf, actualFreq, ctx)
-
-                val inc = actualFreq / ctx.sampleRateD
-                val phaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
-
-                if (dr.active) {
-                    if (phaseMod == null) {
-                        for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
-                            val dt = inc * dr.nextMultiplier()
-                            var out = if (phase < d) 1.0 else -1.0
-                            out += phase.polyBlep(dt)
-                            out -= (phase + (1.0 - d)).smallNumFastMod(1.0).polyBlep(dt)
-                            buffer[i] = out
-                            phase += dt
-                            phase = phase.wrapPhase(1.0)
-                        }
-                    } else {
-                        for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
-                            val dt = inc * phaseMod[i] * dr.nextMultiplier()
-                            var out = if (phase < d) 1.0 else -1.0
-                            if (dt > BLEP_MIN_DT) {
-                                out += phase.polyBlep(dt)
-                                out -= (phase + (1.0 - d)).smallNumFastMod(1.0).polyBlep(dt)
-                            }
-                            buffer[i] = out
-                            phase += dt
-                            phase = phase.wrapPhase(1.0)
-                        }
-                    }
-                } else {
-                    if (phaseMod == null) {
-                        for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
-                            var out = if (phase < d) 1.0 else -1.0
-                            out += phase.polyBlep(inc)
-                            out -= (phase + (1.0 - d)).smallNumFastMod(1.0).polyBlep(inc)
-                            buffer[i] = out
-                            phase += inc
-                            phase = phase.wrapPhase(1.0)
-                        }
-                    } else {
-                        for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
-                            val dt = inc * phaseMod[i]
-                            var out = if (phase < d) 1.0 else -1.0
-                            if (dt > BLEP_MIN_DT) {
-                                out += phase.polyBlep(dt)
-                                out -= (phase + (1.0 - d)).smallNumFastMod(1.0).polyBlep(dt)
-                            }
-                            buffer[i] = out
-                            phase += dt
-                            phase = phase.wrapPhase(1.0)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = WaveIgnitor(
+        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
+        duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK,
+    )
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
     fun brownNoise(rng: Random): Ignitor = BrownNoiseIgnitor(rng)
@@ -668,167 +457,242 @@ object Ignitors {
     }
 
     /**
-     * Supersaw: multiple detuned PolyBLEP sawtooth oscillators summed together (mono).
-     * Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Supersaw: a detuned stack of the analog-flyback saw shape (mono). Voice count is read lazily
+     * from the [voices] Ignitor param on the first block. See [SawStackIgnitor].
      */
+    fun superSawRaw(
+        freq: Ignitor = FreqIgnitor,
+        voices: Ignitor = voicesDefault,
+        freqSpread: Ignitor = freqSpreadDefault,
+        analog: Ignitor = analogDefault,
+        rng: Random = Random
+    ): Ignitor = SawStackIgnitor(
+        freq, voices, freqSpread, analog, rng,
+        polarity = 1.0,
+        sideAtten = SUPERSAW_SIDE_ATTEN, gainJitter = SUPERSAW_GAIN_JITTER, detunePower = SUPERSAW_DETUNE_POWER,
+        resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX,
+    )
+
+    /** Super Saw (mono). Alias of [superSawRaw]; the historic pitch-tracking HPF wrapper was removed. */
     fun superSaw(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
         freqSpread: Ignitor = freqSpreadDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
-    ): Ignitor = SuperSawIgnitor(freq, voices, freqSpread, analog, rng)
+    ): Ignitor = superSawRaw(freq, voices, freqSpread, analog, rng)
 
-    private class SuperSawIgnitor(
+    /**
+     * Shared engine for every unison oscillator: a stack of detuned voices summed to mono with the
+     * super-saw character — center-dominant [sideAtten] gains, per-voice amplitude [gainJitter],
+     * independent per-voice [AnalogDrift], even [freqSpread] spacing (shaped by [detunePower]) with the
+     * **gain-weighted mean detune removed** so the pitch centroid sits exactly on the note. [polarity]
+     * flips the waveform and is baked into the voice gains (no per-sample sign flip).
+     *
+     * Subclasses supply only the per-voice shape — [configureShape] (control-rate, from the detuned
+     * increment) and [renderVoice] (the per-sample inner loop). Voice count is read lazily from the
+     * [voices] param; detune + shape are cached, recomputed only when freq / voice count / spread change.
+     */
+    private abstract class DetunedStackIgnitor(
         private val freq: Ignitor,
         private val voices: Ignitor,
         private val freqSpread: Ignitor,
         private val analog: Ignitor,
         private val rng: Random,
+        private val polarity: Double,
+        private val sideAtten: Double,
+        private val gainJitter: Double,
+        private val detunePower: Double,
     ) : Ignitor {
         private var v: Int = 0
-        private var phases: DoubleArray = DoubleArray(0)
+        private var voiceStates: Array<WaveVoiceState> = emptyArray()
 
-        // Hoisted out of the per-block loop — reused across blocks, resized only when v changes.
-        private var detunes: DoubleArray = DoubleArray(0)
-        private var voiceGain: Double = 0.0
-        private var drift: PolyAnalogDrift? = null
+        // Detune-recompute cache keys (NaN forces recompute).
+        private var lastFreq: Double = Double.NaN
+        private var lastSpread: Double = Double.NaN
 
-        // Per-voice detune jitter (unit range ±0.05, scaled by `spread` when applied).
-        // Constant per voice across the voice lifetime — breaks the exact-spacing symmetry
-        // that makes the unison cloud sound mechanical.
-        private var detuneJitter: DoubleArray = DoubleArray(0)
+        /** Set the per-voice shape from its detuned per-sample increment [dt] (control rate). */
+        protected abstract fun configureShape(vs: WaveVoiceState, dt: Double)
 
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        /** Render one voice's block: write the buffer when [first], else accumulate onto it. */
+        protected abstract fun renderVoice(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, first: Boolean, pm: DoubleArray?,
+        )
+
+        final override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
-            ctx.scratchBuffers.use { voicesBuf ->
-                voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
-                if (newV != v) {
-                    v = newV
-                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
-                    val old = phases
-                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
-                    detunes = DoubleArray(v)
-                    // ±5% unit detune jitter — applied as `det += detuneJitter[n] * spread`.
-                    detuneJitter = DoubleArray(v) { (rng.nextDouble() - 0.5) * 0.1 }
-                    drift = null  // force re-init with new voice count
+            val newV = maxOf(0, readParam(voices, actualFreq, ctx).toInt())
+            if (newV != v) {
+                v = newV
+                val old = voiceStates
+                // Reuse existing voice objects (preserve phase); random start phase for new ones —
+                // lush (phase-0 is thin; even spacing makes voice-count-dependent overtones). Innocent
+                // for tuning: a phase offset doesn't change frequency, and `p += dt` is unbiased.
+                voiceStates = Array(v) { i ->
+                    if (i < old.size) old[i] else WaveVoiceState().also { it.phase = rng.nextDouble() }
                 }
-                if (v <= 0) {
-                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
+                // Per-voice independent analog drift (amount read once, control rate). When off,
+                // leave drift null so the hot loop skips it with a single null check (no allocation).
+                val analogAmt = readParam(analog, actualFreq, ctx)
+                for (n in 0 until v) {
+                    voiceStates[n].drift = if (analogAmt > 0.0) AnalogDrift(analogAmt, ctx.sampleRate) else null
                 }
+                computeVoiceGains()
+                lastFreq = Double.NaN         // force detune/shape recompute
+                lastSpread = Double.NaN
+            }
+            if (v <= 0) {
+                buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return
+            }
 
-                val d = drift ?: initPolyAnalogDrift(analog, v, actualFreq, ctx, rng).also { drift = it }
+            val spread = readParam(freqSpread, actualFreq, ctx)
+            // Recompute per-voice detune increment + shape ONCE per (freq, spread).
+            if (actualFreq != lastFreq || spread != lastSpread) {
+                lastFreq = actualFreq
+                lastSpread = spread
+                computeDetunes(actualFreq, spread, ctx.sampleRateD)
+            }
 
-                ctx.scratchBuffers.use { spreadBuf ->
-                    freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset]
+            // Voice-major: each voice runs its whole sample block in one call (register residency);
+            // voice 0 writes the buffer, the rest accumulate. Voices are independent (each owns its
+            // drift). `pm` = phaseMod (vibrato/FM/pitch-env/accelerate), null when unmodulated.
+            val pm = ctx.phaseMod
+            val off = ctx.offset
+            val end = off + ctx.length
+            for (n in 0 until v) {
+                renderVoice(buffer, off, end, voiceStates[n], n == 0, pm)
+            }
+        }
 
-                    val sr = ctx.sampleRateD
-                    val phaseMod = ctx.phaseMod
-                    val end = ctx.offset + ctx.length
+        /**
+         * Center-dominant base gains × per-voice amplitude jitter, renormalized to sum 1, with
+         * [polarity] folded in (negated for the ramp) so the hot loop needs no per-sample sign flip.
+         */
+        private fun computeVoiceGains() {
+            val base = superSawVoiceGains(v, sideAtten)
+            var s = 0.0
+            for (n in 0 until v) {
+                val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter
+                val g = (base[n] * jit).coerceAtLeast(0.0)
+                voiceStates[n].gain = g; s += g
+            }
+            if (s > 0.0) {
+                val inv = polarity / s; for (n in 0 until v) voiceStates[n].gain *= inv
+            }
+        }
 
-                    if (phaseMod == null) {
-                        // Recompute the detune increments into the persistent buffer.
-                        for (n in 0 until v) {
-                            val det = getUnisonDetune(v, spread, n) + detuneJitter[n] * spread
-                            detunes[n] = actualFreq.applySemitoneDetuneToFrequency(det) / sr
-                        }
-
-                        if (d.active) {
-                            // Analog path: sample-major. drift.advanceAll() refreshes per-voice
-                            // multipliers each sample, then we sum all voices into one write.
-                            val muls = d.multipliers
-                            for (i in ctx.offset until end) {
-                                d.advanceAll()
-                                var sum = 0.0
-                                for (n in 0 until v) {
-                                    var p = phases[n]
-                                    val dt = detunes[n] * muls[n]
-                                    sum += if (dt <= BLEP_MIN_DT) {
-                                        2.0 * p - 1.0
-                                    } else {
-                                        2.0 * p - 1.0 - p.polyBlep(dt)
-                                    }
-                                    p += dt; p = p.wrapPhase(1.0)
-                                    phases[n] = p
-                                }
-                                buffer[i] = sum * voiceGain
-                            }
-                        } else {
-                            // Clean digital path: no per-sample drift. Voice-major preserves
-                            // per-voice register residency since dt is constant within a voice.
-                            // Voice 0: write (overwrite buffer)
-                            run {
-                                var p = phases[0]
-                                val dt = detunes[0]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((2.0 * p - 1.0) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((2.0 * p - 1.0 - p.polyBlep(dt)) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[0] = p
-                            }
-
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val dt = detunes[n]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0 - p.polyBlep(dt)) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[n] = p
-                            }
-                        }
-                    } else {
-                        // Modulated path: per-sample (jitter on top of modulation).
-                        // Already sample-major, just plug in advanceAll().
-                        val driftActive = d.active
-                        val muls = d.multipliers
-
-                        for (i in ctx.offset until end) {
-                            if (driftActive) d.advanceAll()
-                            val mod = phaseMod[i]
-                            var sum = 0.0
-                            for (n in 0 until v) {
-                                var p = phases[n]
-                                val det = getUnisonDetune(v, spread, n) + detuneJitter[n] * spread
-                                var dt = actualFreq.applySemitoneDetuneToFrequency(det) / sr * mod
-                                if (driftActive) dt *= muls[n]
-                                sum += if (dt <= BLEP_MIN_DT) {
-                                    2.0 * p - 1.0
-                                } else {
-                                    2.0 * p - 1.0 - p.polyBlep(dt)
-                                }
-                                p += dt; p = p.wrapPhase(1.0)
-                                phases[n] = p
-                            }
-                            buffer[i] = (sum * voiceGain)
-                        }
-                    }
-                }
+        /**
+         * Per-voice detune increment + analog flyback shape, with the gain-weighted mean detune
+         * removed so the perceived pitch centroid sits exactly on the note (anchors tuning despite
+         * gain jitter, curve shaping, or voice-count parity). Works for either polarity (the sign
+         * cancels in the weighted mean).
+         */
+        private fun computeDetunes(actualFreq: Double, spread: Double, sr: Double) {
+            // Gain-weighted mean detune (two cheap passes — avoids a per-call array allocation).
+            var wsum = 0.0
+            var gsum = 0.0
+            for (n in 0 until v) {
+                val g = voiceStates[n].gain
+                wsum += getUnisonDetune(v, spread, n, detunePower) * g; gsum += g
+            }
+            val mean = if (gsum != 0.0) wsum / gsum else 0.0
+            for (n in 0 until v) {
+                val vs = voiceStates[n]
+                vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(v, spread, n, detunePower) - mean) / sr
+                configureShape(vs, vs.dt)
             }
         }
     }
 
+    /** A [DetunedStackIgnitor] whose voices render the piecewise-linear [waveTrapezoid] shape. */
+    private abstract class TrapezoidStackIgnitor(
+        freq: Ignitor, voices: Ignitor, freqSpread: Ignitor, analog: Ignitor, rng: Random,
+        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double,
+    ) : DetunedStackIgnitor(freq, voices, freqSpread, analog, rng, polarity, sideAtten, gainJitter, detunePower) {
+        final override fun renderVoice(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, first: Boolean, pm: DoubleArray?,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            val gain = vs.gain
+            val riseEnd = vs.riseEnd
+            val highEnd = vs.highEnd
+            val fallEnd = vs.fallEnd
+            val riseSlope = vs.riseSlope
+            val fallSlope = vs.fallSlope
+            val drift = vs.drift
+            for (i in off until end) {
+                val s = waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
+                buffer[i] = if (first) s else buffer[i] + s
+                var inc = dt
+                if (pm != null) inc *= pm[i]
+                if (drift != null) inc *= drift.nextMultiplier()
+                phase += inc
+                // No phaseMod ⇒ inc is small & positive ⇒ one conditional subtract; with phaseMod,
+                // mod can be large/negative ⇒ keep the safe wrap.
+                phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+            }
+            vs.phase = phase
+        }
+    }
+
+    /** Unison saw / ramp ([polarity] ±1): the analog-flyback saw shape per voice. */
+    private class SawStackIgnitor(
+        freq: Ignitor, voices: Ignitor, freqSpread: Ignitor, analog: Ignitor, rng: Random,
+        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double,
+        private val resetSamples: Double, private val shapeMax: Double,
+    ) : TrapezoidStackIgnitor(freq, voices, freqSpread, analog, rng, polarity, sideAtten, gainJitter, detunePower) {
+        override fun configureShape(vs: WaveVoiceState, dt: Double) {
+            vs.setSawShape((resetSamples * dt).coerceAtMost(shapeMax))
+        }
+    }
+
+    /** Unison pulse / square / triangle: the [waveTrapezoid] pulse shape per voice ([duty] + flanks). */
+    private class PulseStackIgnitor(
+        freq: Ignitor, voices: Ignitor, freqSpread: Ignitor, analog: Ignitor, rng: Random,
+        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double,
+        private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
+        private val flankSamples: Double,
+    ) : TrapezoidStackIgnitor(freq, voices, freqSpread, analog, rng, polarity, sideAtten, gainJitter, detunePower) {
+        override fun configureShape(vs: WaveVoiceState, dt: Double) {
+            vs.setPulseShape(duty, riseFlank, fallFlank, flankSamples * dt)
+        }
+    }
+
+    /** Unison sine: a pure sine per voice (no shape config; inherently band-limited). */
+    private class SineStackIgnitor(
+        freq: Ignitor, voices: Ignitor, freqSpread: Ignitor, analog: Ignitor, rng: Random,
+        sideAtten: Double, gainJitter: Double, detunePower: Double,
+    ) : DetunedStackIgnitor(freq, voices, freqSpread, analog, rng, 1.0, sideAtten, gainJitter, detunePower) {
+        override fun configureShape(vs: WaveVoiceState, dt: Double) { /* sine carries no shape */
+        }
+
+        override fun renderVoice(
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, first: Boolean, pm: DoubleArray?,
+        ) {
+            var phase = vs.phase
+            val dt = vs.dt
+            val gain = vs.gain
+            val drift = vs.drift
+            for (i in off until end) {
+                val s = sin(phase * TWO_PI) * gain
+                buffer[i] = if (first) s else buffer[i] + s
+                var inc = dt
+                if (pm != null) inc *= pm[i]
+                if (drift != null) inc *= drift.nextMultiplier()
+                phase += inc
+                phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+            }
+            vs.phase = phase
+        }
+    }
+
     /**
-     * Supersine: multiple detuned sine oscillators summed together (mono).
-     * Inherently band-limited, no anti-aliasing needed. Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Supersine: a detuned stack of pure sines (mono) on the shared [SineStackIgnitor] / super-saw
+     * unison engine (center-dominant gains, per-voice drift, centroid-anchored detune; its own
+     * `SUPERSINE_*` knobs, seeded to the super-saw values). Inherently band-limited, no anti-aliasing
+     * needed. Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
     fun superSine(
         freq: Ignitor = FreqIgnitor,
@@ -836,126 +700,17 @@ object Ignitors {
         freqSpread: Ignitor = freqSpreadDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
-    ): Ignitor = SuperSineIgnitor(freq, voices, freqSpread, analog, rng)
-
-    private class SuperSineIgnitor(
-        private val freq: Ignitor,
-        private val voices: Ignitor,
-        private val freqSpread: Ignitor,
-        private val analog: Ignitor,
-        private val rng: Random,
-    ) : Ignitor {
-        private var v: Int = 0
-        private var phases: DoubleArray = DoubleArray(0)
-        private var detunes: DoubleArray = DoubleArray(0)
-        private var voiceGain: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            ctx.scratchBuffers.use { voicesBuf ->
-                voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
-                if (newV != v) {
-                    v = newV
-                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
-                    val old = phases
-                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() * TWO_PI }
-                    detunes = DoubleArray(v)
-                }
-                if (v <= 0) {
-                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
-                }
-
-                ctx.scratchBuffers.use { spreadBuf ->
-                    freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset]
-
-                    val sr = ctx.sampleRateD
-                    val phaseMod = ctx.phaseMod
-                    val end = ctx.offset + ctx.length
-
-                    if (phaseMod == null) {
-                        for (n in 0 until v) {
-                            val det = getUnisonDetune(v, spread, n)
-                            detunes[n] = TWO_PI * actualFreq.applySemitoneDetuneToFrequency(det) / sr
-                        }
-
-                        if (d.active) {
-                            // Analog path: per-sample per-voice jitter
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val baseInc = detunes[0]
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = (sin(p) * voiceGain)
-                                    p += baseInc * d.nextMultiplier()
-                                    p = p.wrapPhase(TWO_PI)
-                                }
-                                phases[0] = p
-                            }
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val baseInc = detunes[n]
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + sin(p) * voiceGain)
-                                    p += baseInc * d.nextMultiplier()
-                                    p = p.wrapPhase(TWO_PI)
-                                }
-                                phases[n] = p
-                            }
-                        } else {
-                            // Clean digital path
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val inc = detunes[0]
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = (sin(p) * voiceGain)
-                                    p += inc; p = p.wrapPhase(TWO_PI)
-                                }
-                                phases[0] = p
-                            }
-
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val inc = detunes[n]
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + sin(p) * voiceGain)
-                                    p += inc; p = p.wrapPhase(TWO_PI)
-                                }
-                                phases[n] = p
-                            }
-                        }
-                    } else {
-                        // Modulated path: per-sample (jitter on top of modulation)
-                        for (i in ctx.offset until end) {
-                            val mod = phaseMod[i]
-                            var sum = 0.0
-                            for (n in 0 until v) {
-                                var p = phases[n]
-                                val det = getUnisonDetune(v, spread, n)
-                                var inc = TWO_PI * actualFreq.applySemitoneDetuneToFrequency(det) / sr * mod
-                                if (d.active) inc *= d.nextMultiplier()
-                                sum += sin(p)
-                                p += inc; p = p.wrapPhase(TWO_PI)
-                                phases[n] = p
-                            }
-                            buffer[i] = (sum * voiceGain)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = SineStackIgnitor(
+        freq, voices, freqSpread, analog, rng,
+        sideAtten = SUPERSINE_SIDE_ATTEN, gainJitter = SUPERSINE_GAIN_JITTER, detunePower = SUPERSINE_DETUNE_POWER,
+    )
 
     /**
-     * Supersquare: multiple detuned square oscillators with dual PolyBLEP anti-aliasing, summed together (mono).
-     * Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Supersquare: a detuned stack of the finite-slope pulse shape (duty 0.5, mono) on the shared
+     * [PulseStackIgnitor] / super-saw unison engine (center-dominant gains, per-voice drift,
+     * centroid-anchored detune; its own `SUPERSQUARE_*` knobs, seeded to the super-saw values). Edges
+     * are finite-slope flanks (no PolyBLEP), like the mono square. Voice count is read lazily from the
+     * [voices] Ignitor param on the first block.
      */
     fun superSquare(
         freq: Ignitor = FreqIgnitor,
@@ -963,163 +718,18 @@ object Ignitors {
         freqSpread: Ignitor = freqSpreadDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
-    ): Ignitor = SuperSquareIgnitor(freq, voices, freqSpread, analog, rng)
-
-    private class SuperSquareIgnitor(
-        private val freq: Ignitor,
-        private val voices: Ignitor,
-        private val freqSpread: Ignitor,
-        private val analog: Ignitor,
-        private val rng: Random,
-    ) : Ignitor {
-        private var v: Int = 0
-        private var phases: DoubleArray = DoubleArray(0)
-        private var detunes: DoubleArray = DoubleArray(0)
-        private var voiceGain: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            ctx.scratchBuffers.use { voicesBuf ->
-                voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
-                if (newV != v) {
-                    v = newV
-                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
-                    val old = phases
-                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
-                    detunes = DoubleArray(v)
-                }
-                if (v <= 0) {
-                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
-                }
-
-                ctx.scratchBuffers.use { spreadBuf ->
-                    freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset]
-
-                    val sr = ctx.sampleRateD
-                    val phaseMod = ctx.phaseMod
-                    val end = ctx.offset + ctx.length
-
-                    if (phaseMod == null) {
-                        for (n in 0 until v) {
-                            val det = getUnisonDetune(v, spread, n)
-                            detunes[n] = actualFreq.applySemitoneDetuneToFrequency(det) / sr
-                        }
-
-                        if (d.active) {
-                            // Analog path: per-sample per-voice jitter
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val baseDt = detunes[0]
-                                for (i in ctx.offset until end) {
-                                    val dt = baseDt * d.nextMultiplier()
-                                    var out = if (p < 0.5) 1.0 else -1.0
-                                    if (dt > BLEP_MIN_DT) {
-                                        out += p.polyBlep(dt)
-                                        out -= (p + 0.5).smallNumFastMod(1.0).polyBlep(dt)
-                                    }
-                                    buffer[i] = (out * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[0] = p
-                            }
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val baseDt = detunes[n]
-                                for (i in ctx.offset until end) {
-                                    val dt = baseDt * d.nextMultiplier()
-                                    var out = if (p < 0.5) 1.0 else -1.0
-                                    if (dt > BLEP_MIN_DT) {
-                                        out += p.polyBlep(dt)
-                                        out -= (p + 0.5).smallNumFastMod(1.0).polyBlep(dt)
-                                    }
-                                    buffer[i] = (buffer[i] + out * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[n] = p
-                            }
-                        } else {
-                            // Clean digital path
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val dt = detunes[0]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((if (p < 0.5) 1.0 else -1.0) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        var out = if (p < 0.5) 1.0 else -1.0
-                                        out += p.polyBlep(dt)
-                                        out -= (p + 0.5).smallNumFastMod(1.0).polyBlep(dt)
-                                        buffer[i] = (out * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[0] = p
-                            }
-
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val dt = detunes[n]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (if (p < 0.5) 1.0 else -1.0) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        var out = if (p < 0.5) 1.0 else -1.0
-                                        out += p.polyBlep(dt)
-                                        out -= (p + 0.5).smallNumFastMod(1.0).polyBlep(dt)
-                                        buffer[i] = (buffer[i] + out * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[n] = p
-                            }
-                        }
-                    } else {
-                        // Modulated path: per-sample (jitter on top of modulation)
-                        for (i in ctx.offset until end) {
-                            val mod = phaseMod[i]
-                            var sum = 0.0
-                            for (n in 0 until v) {
-                                var p = phases[n]
-                                val det = getUnisonDetune(v, spread, n)
-                                var dt = actualFreq.applySemitoneDetuneToFrequency(det) / sr * mod
-                                if (d.active) dt *= d.nextMultiplier()
-                                sum += if (dt <= BLEP_MIN_DT) {
-                                    if (p < 0.5) 1.0 else -1.0
-                                } else {
-                                    var out = if (p < 0.5) 1.0 else -1.0
-                                    out += p.polyBlep(dt)
-                                    out -= (p + 0.5).smallNumFastMod(1.0).polyBlep(dt)
-                                    out
-                                }
-                                p += dt; p = p.wrapPhase(1.0)
-                                phases[n] = p
-                            }
-                            buffer[i] = (sum * voiceGain)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = PulseStackIgnitor(
+        freq, voices, freqSpread, analog, rng,
+        polarity = 1.0,
+        sideAtten = SUPERSQUARE_SIDE_ATTEN, gainJitter = SUPERSQUARE_GAIN_JITTER, detunePower = SUPERSQUARE_DETUNE_POWER,
+        duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES,
+    )
 
     /**
-     * Supertri: multiple detuned triangle oscillators summed together (mono).
-     * Piecewise linear, inherently band-limited. Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Supertri: a detuned stack of triangles (mono) on the shared [PulseStackIgnitor] / super-saw
+     * unison engine — the pulse shape with fully-open flanks (1.0/1.0, duty 0.5); its own `SUPERTRI_*`
+     * knobs, seeded to the super-saw values. Piecewise linear, inherently band-limited. Voice count is
+     * read lazily from the [voices] Ignitor param on the first block.
      */
     fun superTri(
         freq: Ignitor = FreqIgnitor,
@@ -1127,130 +737,18 @@ object Ignitors {
         freqSpread: Ignitor = freqSpreadDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
-    ): Ignitor = SuperTriIgnitor(freq, voices, freqSpread, analog, rng)
-
-    private class SuperTriIgnitor(
-        private val freq: Ignitor,
-        private val voices: Ignitor,
-        private val freqSpread: Ignitor,
-        private val analog: Ignitor,
-        private val rng: Random,
-    ) : Ignitor {
-        private var v: Int = 0
-        private var phases: DoubleArray = DoubleArray(0)
-        private var detunes: DoubleArray = DoubleArray(0)
-        private var voiceGain: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            ctx.scratchBuffers.use { voicesBuf ->
-                voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
-                if (newV != v) {
-                    v = newV
-                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
-                    val old = phases
-                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
-                    detunes = DoubleArray(v)
-                }
-                if (v <= 0) {
-                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
-                }
-
-                ctx.scratchBuffers.use { spreadBuf ->
-                    freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset]
-
-                    val sr = ctx.sampleRateD
-                    val phaseMod = ctx.phaseMod
-                    val end = ctx.offset + ctx.length
-
-                    if (phaseMod == null) {
-                        for (n in 0 until v) {
-                            val det = getUnisonDetune(v, spread, n)
-                            detunes[n] = actualFreq.applySemitoneDetuneToFrequency(det) / sr
-                        }
-
-                        if (d.active) {
-                            // Analog path: per-sample per-voice jitter
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val baseDt = detunes[0]
-                                for (i in ctx.offset until end) {
-                                    val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (out * voiceGain)
-                                    p += baseDt * d.nextMultiplier()
-                                    p = p.wrapPhase(1.0)
-                                }
-                                phases[0] = p
-                            }
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val baseDt = detunes[n]
-                                for (i in ctx.offset until end) {
-                                    val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (buffer[i] + out * voiceGain)
-                                    p += baseDt * d.nextMultiplier()
-                                    p = p.wrapPhase(1.0)
-                                }
-                                phases[n] = p
-                            }
-                        } else {
-                            // Clean digital path
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val dt = detunes[0]
-                                for (i in ctx.offset until end) {
-                                    val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (out * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[0] = p
-                            }
-
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val dt = detunes[n]
-                                for (i in ctx.offset until end) {
-                                    val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (buffer[i] + out * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[n] = p
-                            }
-                        }
-                    } else {
-                        // Modulated path: per-sample (jitter on top of modulation)
-                        for (i in ctx.offset until end) {
-                            val mod = phaseMod[i]
-                            var sum = 0.0
-                            for (n in 0 until v) {
-                                var p = phases[n]
-                                val det = getUnisonDetune(v, spread, n)
-                                var dt = actualFreq.applySemitoneDetuneToFrequency(det) / sr * mod
-                                if (d.active) dt *= d.nextMultiplier()
-                                sum += if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                p += dt; p = p.wrapPhase(1.0)
-                                phases[n] = p
-                            }
-                            buffer[i] = (sum * voiceGain)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = PulseStackIgnitor(
+        freq, voices, freqSpread, analog, rng,
+        polarity = 1.0,
+        sideAtten = SUPERTRI_SIDE_ATTEN, gainJitter = SUPERTRI_GAIN_JITTER, detunePower = SUPERTRI_DETUNE_POWER,
+        duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
+    )
 
     /**
-     * Superramp: multiple detuned reverse-sawtooth oscillators with PolyBLEP anti-aliasing, summed together (mono).
-     * Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Superramp: a detuned stack of the analog saw shape, **negated** (the mirror of [superSaw]).
+     * Shares [SawStackIgnitor] with `polarity = −1`, the `RAMP_*` shape and its own
+     * `SUPERRAMP_*` unison knobs (seeded to the super-saw values; change them to diverge). Voice
+     * count is read lazily from the [voices] Ignitor param on the first block.
      */
     fun superRamp(
         freq: Ignitor = FreqIgnitor,
@@ -1258,141 +756,12 @@ object Ignitors {
         freqSpread: Ignitor = freqSpreadDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
-    ): Ignitor = SuperRampIgnitor(freq, voices, freqSpread, analog, rng)
-
-    private class SuperRampIgnitor(
-        private val freq: Ignitor,
-        private val voices: Ignitor,
-        private val freqSpread: Ignitor,
-        private val analog: Ignitor,
-        private val rng: Random,
-    ) : Ignitor {
-        private var v: Int = 0
-        private var phases: DoubleArray = DoubleArray(0)
-        private var detunes: DoubleArray = DoubleArray(0)
-        private var voiceGain: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            ctx.scratchBuffers.use { voicesBuf ->
-                voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
-                if (newV != v) {
-                    v = newV
-                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
-                    val old = phases
-                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
-                    detunes = DoubleArray(v)
-                }
-                if (v <= 0) {
-                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
-                }
-
-                ctx.scratchBuffers.use { spreadBuf ->
-                    freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset]
-
-                    val sr = ctx.sampleRateD
-                    val phaseMod = ctx.phaseMod
-                    val end = ctx.offset + ctx.length
-
-                    if (phaseMod == null) {
-                        for (n in 0 until v) {
-                            val det = getUnisonDetune(v, spread, n)
-                            detunes[n] = actualFreq.applySemitoneDetuneToFrequency(det) / sr
-                        }
-
-                        if (d.active) {
-                            // Analog path: per-sample per-voice jitter
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val baseDt = detunes[0]
-                                for (i in ctx.offset until end) {
-                                    val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] = ((1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) p.polyBlep(dt) else 0.0) * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[0] = p
-                            }
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val baseDt = detunes[n]
-                                for (i in ctx.offset until end) {
-                                    val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] =
-                                        (buffer[i] + (1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) p.polyBlep(dt) else 0.0) * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[n] = p
-                            }
-                        } else {
-                            // Clean digital path
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val dt = detunes[0]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((1.0 - 2.0 * p) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((1.0 - 2.0 * p + p.polyBlep(dt)) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[0] = p
-                            }
-
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val dt = detunes[n]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p + p.polyBlep(dt)) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[n] = p
-                            }
-                        }
-                    } else {
-                        // Modulated path: per-sample (jitter on top of modulation)
-                        for (i in ctx.offset until end) {
-                            val mod = phaseMod[i]
-                            var sum = 0.0
-                            for (n in 0 until v) {
-                                var p = phases[n]
-                                val det = getUnisonDetune(v, spread, n)
-                                var dt = actualFreq.applySemitoneDetuneToFrequency(det) / sr * mod
-                                if (d.active) dt *= d.nextMultiplier()
-                                sum += if (dt <= BLEP_MIN_DT) {
-                                    1.0 - 2.0 * p
-                                } else {
-                                    1.0 - 2.0 * p + p.polyBlep(dt)
-                                }
-                                p += dt; p = p.wrapPhase(1.0)
-                                phases[n] = p
-                            }
-                            buffer[i] = (sum * voiceGain)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = SawStackIgnitor(
+        freq, voices, freqSpread, analog, rng,
+        polarity = -1.0,
+        sideAtten = SUPERRAMP_SIDE_ATTEN, gainJitter = SUPERRAMP_GAIN_JITTER, detunePower = SUPERRAMP_DETUNE_POWER,
+        resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
+    )
 
     /**
      * Karplus-Strong plucked string synthesis via noise-burst-excited delay line with filtered feedback.
@@ -1660,83 +1029,94 @@ object Ignitors {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Resolve the effective frequency for an oscillator.
-     * If [freq] is a default ParamIgnitor with value 0.0, returns [voiceFreqHz] (fast path, no scratch buffer).
-     * Otherwise evaluates the exciter and uses its output if non-zero, falling back to [voiceFreqHz].
+     * Read a control-rate parameter once per block: the scalar directly when the param is block-constant
+     * (FreqIgnitor / ParamIgnitor / ConstantIgnitor and pointwise combinators over them — no scratch
+     * buffer), otherwise one rendered sample. See [Ignitor.blockStartValue].
      */
-    internal fun resolveFreq(freq: Ignitor, voiceFreqHz: Double, ctx: IgniteContext): Double {
-        if (freq is FreqIgnitor) return voiceFreqHz
-        if (freq is ParamIgnitor) return freq.default
-        return ctx.scratchBuffers.use { buf ->
-            freq.generate(buf, voiceFreqHz, ctx)
-            buf[ctx.offset]
-        }
-    }
+    internal fun readParam(param: Ignitor, freqHz: Double, ctx: IgniteContext): Double =
+        param.blockStartValue(freqHz, ctx)
 
-    /**
-     * Initialize AnalogDrift lazily from an Ignitor param on first block.
-     * Reads the analog amount once from the param buffer (control rate).
-     */
-    internal fun initAnalogDrift(analog: Ignitor, freqHz: Double, ctx: IgniteContext): AnalogDrift {
-        if (analog is ParamIgnitor) return AnalogDrift(analog.default, ctx.sampleRate)
-        return ctx.scratchBuffers.use { tmp ->
-            analog.generate(tmp, freqHz, ctx)
-            AnalogDrift(tmp[ctx.offset], ctx.sampleRate)
-        }
-    }
+    /** Resolve the effective oscillator frequency ([readParam] over [freq]; [FreqIgnitor] → the voice note). */
+    internal fun resolveFreq(freq: Ignitor, voiceFreqHz: Double, ctx: IgniteContext): Double =
+        readParam(freq, voiceFreqHz, ctx)
 
-    /**
-     * Initialize [PolyAnalogDrift] lazily from an Ignitor param on first block.
-     * Reads the analog amount once and allocates per-voice state for [voiceCount] voices.
-     */
+    /** Initialize [AnalogDrift] lazily from the [analog] param on the first block (read once, control rate). */
+    internal fun initAnalogDrift(analog: Ignitor, freqHz: Double, ctx: IgniteContext): AnalogDrift =
+        AnalogDrift(readParam(analog, freqHz, ctx), ctx.sampleRate)
+
+    /** Initialize [PolyAnalogDrift] lazily from the [analog] param, allocating per-voice state for [voiceCount]. */
     internal fun initPolyAnalogDrift(
         analog: Ignitor,
         voiceCount: Int,
         freqHz: Double,
         ctx: IgniteContext,
         rng: Random,
-    ): PolyAnalogDrift {
-        val amount = if (analog is ParamIgnitor) {
-            analog.default
-        } else {
-            ctx.scratchBuffers.use { tmp ->
-                analog.generate(tmp, freqHz, ctx)
-                tmp[ctx.offset]
-            }
-        }
-        return PolyAnalogDrift(amount, voiceCount, ctx.sampleRate, rng)
-    }
-
-    /** Read a control-rate parameter once per block. Optimized for FreqIgnitor and constant ParamIgnitor. */
-    internal fun readParam(param: Ignitor, freqHz: Double, ctx: IgniteContext): Double {
-        if (param is FreqIgnitor) return freqHz
-        if (param is ParamIgnitor) return param.default
-        return ctx.scratchBuffers.use { tmp -> param.generate(tmp, freqHz, ctx); tmp[ctx.offset] }
-    }
+    ): PolyAnalogDrift = PolyAnalogDrift(readParam(analog, freqHz, ctx), voiceCount, ctx.sampleRate, rng)
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Internal helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Minimum dt for PolyBLEP — avoids division by zero at freqHz=0 or negative phaseMod. */
-    private const val BLEP_MIN_DT = 1e-5
-
     /** Base step per sample for Perlin/Berlin noise. rate=1.0 walks ~144 noise-units/sec at 48kHz. */
     private const val PERLIN_STEP = 0.003
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // wrapPhase(), polyBlep(), smallNumFastMod(), applySemitoneDetuneToFrequency()
+    // wrapPhase(), smallNumFastMod(), applySemitoneDetuneToFrequency()
     // are in DspUtil.kt — imported via `import io.peekandpoke.klang.audio_be.*`
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Unison / supersaw helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    internal fun getUnisonDetune(unison: Int, detune: Double, voiceIndex: Int): Double {
+    /**
+     * Center-dominant unison gain profile for the super-saw. The least-detuned (center)
+     * voices are loudest; the most-detuned (edge) voices form a quieter halo — the
+     * JP-8000 / Szabo Super Saw character. Summing all voices flat (`1/v`) sounds uniform
+     * and comb-filtered ("plastic"), and with random start phases an unlucky draw can sum
+     * destructively so the note barely rings. A dominant center voice anchors the note
+     * (always rings) while the quiet detuned halo only adds shimmer.
+     *
+     * Triangular falloff with distance-from-center, normalised to sum to 1 (same overall
+     * level as the old flat `1/v`). [sideAtten] tunes the falloff: 0 = flat/equal, 1 = only the
+     * center voice (defaults to [SUPERSAW_SIDE_ATTEN]; the super-ramp passes its own). Tune by ear.
+     */
+    internal fun superSawVoiceGains(v: Int, sideAtten: Double = SUPERSAW_SIDE_ATTEN): DoubleArray {
+        if (v <= 0) return DoubleArray(0)
+        if (v == 1) return doubleArrayOf(1.0)
+        val c = (v - 1) * 0.5            // center index (fractional)
+        val halfSpan = c                 // > 0 for v >= 2
+        val gains = DoubleArray(v)
+        var s = 0.0
+        for (n in 0 until v) {
+            val d = n - c
+            val dn = (if (d < 0.0) -d else d) / halfSpan          // 0 at center .. 1 at edges
+            val g = (1.0 - sideAtten * dn).coerceAtLeast(0.0)
+            gains[n] = g
+            s += g
+        }
+        val norm = if (s > 0.0) 1.0 / s else 0.0
+        for (n in 0 until v) gains[n] *= norm
+        return gains
+    }
+
+    // Oscillator character constants (SAW_* / SUPERSAW_* / RAMP_* / SUPERRAMP_*) live in OscillatorTuning.kt.
+
+    internal fun getUnisonDetune(
+        unison: Int,
+        detune: Double,
+        voiceIndex: Int,
+        detunePower: Double = SUPERSAW_DETUNE_POWER,
+    ): Double {
         if (unison < 2) return 0.0
         val a = -detune * 0.5
         val b = detune * 0.5
-        val n = voiceIndex.toDouble() / (unison - 1).toDouble()
+        var n = voiceIndex.toDouble() / (unison - 1).toDouble()   // 0..1 across the spread
+        if (detunePower != 1.0) {
+            // Signed power around the center (0.5) keeps the spacing symmetric (no detuning).
+            val x = n * 2.0 - 1.0                                 // -1..+1
+            val sx = (if (x < 0.0) -1.0 else 1.0) * abs(x).pow(detunePower)
+            n = (sx + 1.0) * 0.5
+        }
         return n * (b - a) + a
     }
 }

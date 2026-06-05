@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.FilterEnvDef
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -609,6 +610,25 @@ data class SprudelVoiceData(
             }
         }
 
+        // Canonical filter chain order: HIGHPASS → BANDPASS → NOTCH → FORMANT → LOWPASS.
+        // Chain order is audible once the filters are nonlinear (analog>0 enables the
+        // Obxd state-dependent saturation, which does NOT commute): the highpass strips
+        // bass before the lowpass's saturator sees it, and the lowpass sits LAST to tame
+        // harmonics generated upstream — the "lowpass after distortion" rule, matching
+        // the MS-20 / Juno / Diva convention. sprudel's flat fields carry no order of
+        // their own, so we impose the canonical order here; the engine (VoiceFactory)
+        // bakes whatever order it is handed. At analog=0 the filters are linear and
+        // commute, so this ordering is spectrally a no-op.
+        val orderedFilters = filters.sortedBy { def ->
+            when (def) {
+                is FilterDef.HighPass -> 0
+                is FilterDef.BandPass -> 1
+                is FilterDef.Notch -> 2
+                is FilterDef.Formant -> 3
+                is FilterDef.LowPass -> 4
+            }
+        }
+
         return VoiceData(
             note = note,
             freqHz = freqHz,
@@ -621,7 +641,7 @@ data class SprudelVoiceData(
             sound = soundName,
             soundIndex = soundIndex,
             oscParams = oscParams,
-            filters = FilterDefs(filters),
+            filters = FilterDefs(orderedFilters),
             adsr = AdsrDef.Std(
                 attack = attack,
                 decay = decay,
@@ -1046,6 +1066,9 @@ fun SprudelVoiceData.mergeOscParamsFrom(other: SprudelVoiceData): SprudelVoiceDa
     return copy(oscParams = (oscParams.orEmpty()) + otherParams)
 }
 
-/** Convenience accessor that extracts the [SoundValue.Named.name] from [SprudelVoiceData.sound], or null if [sound] is null or a [SoundValue.Osc]. */
+/**
+ * Convenience accessor that extracts the [SoundValue.Named.name] from [SprudelVoiceData.sound],
+ * or null if sound is null or a [SoundValue.Osc].
+ */
 val SprudelVoiceData.soundName: String? get() = (sound as? SoundValue.Named)?.name
 

@@ -32,6 +32,29 @@ interface Ignitor {
      * @param ctx per-voice rendering context (timing, block params, scratch buffers)
      */
     fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext)
+
+    /**
+     * The block-constant scalar value of this signal, or `null` if it varies within the block.
+     *
+     * Block-constant leaves ([ConstantIgnitor], [ParamIgnitor], [FreqIgnitor]) and pure pointwise
+     * combinators (`plus`/`times`/… folding block-constant children) return their value here; everything
+     * else (oscillators, filters, envelopes, LFOs) returns `null` (the default). Lets control-rate readers
+     * take the scalar directly instead of rendering a scratch buffer, and lets the pulse `duty` path pick
+     * the bake-once render over per-sample PWM.
+     */
+    fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? = null
+
+    /**
+     * The signal's value at block start ([IgniteContext.offset]) — for callers that need a single
+     * control-rate value (oscillator freq / analog / duty params, detune amount, unison spread).
+     *
+     * Uses [controlRateValueOrNull] when available; otherwise renders a scratch buffer and reads one
+     * sample, which for stateful nodes advances their phase by one block (the original `readParam`
+     * fallback). Not meant to be overridden.
+     */
+    fun blockStartValue(freqHz: Double, ctx: IgniteContext): Double =
+        controlRateValueOrNull(freqHz, ctx)
+            ?: ctx.scratchBuffers.use { tmp -> generate(tmp, freqHz, ctx); tmp[ctx.offset] }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -55,6 +78,12 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
             }
         }
     }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return x + y
+    }
 }
 
 /**
@@ -76,6 +105,12 @@ private class TimesIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
             }
         }
     }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return safeOut(x * y)
+    }
 }
 
 /** Scale signal amplitude per-sample by an audio-rate [factor]. Delegates to [times]. */
@@ -94,6 +129,11 @@ private class MulConstIgnitor(private val upstream: Ignitor, private val factor:
         for (i in ctx.offset until end) {
             buffer[i] = safeOut(buffer[i] * factor)
         }
+    }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val x = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return safeOut(x * factor)
     }
 }
 
@@ -116,6 +156,12 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
                 buffer[i] = safeOut(buffer[i] / safeDiv(tmp[i]))
             }
         }
+    }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return safeOut(x / safeDiv(y))
     }
 }
 
@@ -142,6 +188,12 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
             }
         }
     }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return x - y
+    }
 }
 
 /** Negate this signal (flip polarity, per-sample). */
@@ -154,6 +206,11 @@ private class NegIgnitor(private val upstream: Ignitor) : Ignitor {
         for (i in ctx.offset until end) {
             buffer[i] = -buffer[i]
         }
+    }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val x = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return -x
     }
 }
 
@@ -168,6 +225,11 @@ private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
             val v = buffer[i]
             buffer[i] = if (v < 0.0) -v else v
         }
+    }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return if (v < 0.0) -v else v
     }
 }
 
@@ -193,6 +255,13 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
             }
         }
     }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val b = base.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val e = exp.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val raw = if (b >= 0.0) b.pow(e) else -((-b).pow(e))
+        return safeOut(raw)
+    }
 }
 
 /** Per-sample minimum of this signal and [other]. Uses a scratch buffer for [other]. */
@@ -211,6 +280,12 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             }
         }
     }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return if (x < y) x else y
+    }
 }
 
 /** Per-sample maximum of this signal and [other]. Uses a scratch buffer for [other]. */
@@ -228,6 +303,12 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
                 buffer[i] = if (x > y) x else y
             }
         }
+    }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return if (x > y) x else y
     }
 }
 
@@ -259,6 +340,17 @@ private class ClampIgnitor(
             }
         }
     }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val l = lo.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val h = hi.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return when {
+            v < l -> l
+            v > h -> h
+            else -> v
+        }
+    }
 }
 
 /** `e^x` per sample. Output clamped to `±SAFE_MAX` (caught for large `x`, e.g. `exp(40) ≈ 2.4e17`). */
@@ -271,6 +363,11 @@ private class ExpIgnitor(private val upstream: Ignitor) : Ignitor {
         for (i in ctx.offset until end) {
             buffer[i] = safeOut(exp(buffer[i]))
         }
+    }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return safeOut(exp(v))
     }
 }
 
@@ -293,6 +390,15 @@ private class LogIgnitor(private val upstream: Ignitor) : Ignitor {
                 v < 0.0 -> -ln((-v))
                 else -> 0.0
             }
+        }
+    }
+
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+        return when {
+            v > 0.0 -> ln(v)
+            v < 0.0 -> -ln((-v))
+            else -> 0.0
         }
     }
 }
@@ -624,12 +730,9 @@ private class DetuneIgnitor(
     private val semitones: Ignitor,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        ctx.scratchBuffers.use { semiBuf ->
-            semitones.generate(semiBuf, freqHz, ctx)
-            val s = semiBuf[ctx.offset]
-            val ratio = 2.0.pow(s / 12.0)
-            upstream.generate(buffer, freqHz * ratio, ctx)
-        }
+        val s = semitones.blockStartValue(freqHz, ctx)
+        val ratio = 2.0.pow(s / 12.0)
+        upstream.generate(buffer, freqHz * ratio, ctx)
     }
 }
 

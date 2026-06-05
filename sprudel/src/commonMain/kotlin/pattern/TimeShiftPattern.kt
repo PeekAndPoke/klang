@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
@@ -19,38 +19,35 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 internal class TimeShiftPattern(
     private val source: SprudelPattern,
     private val offsetProvider: ControlValueProvider,
-    private val factor: Rational = Rational.ONE,
+    private val factor: Double = 1.0,
 ) : SprudelPattern {
 
     override val weight: Double get() = source.weight
-    override val numSteps: Rational? get() = source.numSteps
-    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    override val numSteps: Double? get() = source.numSteps
+    override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: SprudelPattern.QueryContext,
     ): List<SprudelPatternEvent> {
         // 1. Query control events
         val controlEvents = offsetProvider
-            .queryEvents(from - Rational.ONE, to + Rational.ONE, ctx)
+            .queryEvents(from - CycleTime.ONE, to + CycleTime.ONE, ctx)
 
         if (controlEvents.isEmpty()) return emptyList()
 
         val result = createEventList()
 
         for (controlEvent in controlEvents) {
-            // Read the offset as a Rational directly. The value is already stored as a Rational
-            // (late/early build it once via asControlValueProvider), so going through asDouble +
-            // toRational() would be a Rational -> Double -> Rational round-trip that needlessly
-            // re-runs doubleToFractionBigInt (a continued-fraction loop) on every query. It would
-            // also lose precision for rationals that don't round-trip cleanly through Double.
-            val offset = (controlEvent.data.value?.asRational ?: continue) * factor
+            // Read the offset as a Double (in cycles), then snap it onto the tick grid as a CycleTime.
+            val offsetCycles = (controlEvent.data.value?.asDouble ?: continue) * factor
+            val offset = CycleTime.ofCycles(offsetCycles)
 
             // Determine the time window where this control event (offset) applies
             // We intersect the control event's part with the requested query range
-            val outStart = maxOf(from, controlEvent.part.begin)
-            val outEnd = minOf(to, controlEvent.part.end)
+            val outStart = from.coerceAtLeast(controlEvent.part.begin)
+            val outEnd = to.coerceAtMost(controlEvent.part.end)
 
             if (outStart >= outEnd) continue
 

@@ -168,6 +168,7 @@ object KlangScriptOscExtensions {
         "cube", "cb", "cubic" -> AdsrCurve.Cube
         "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
         "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
+        "exponential", "exp", "expo" -> AdsrCurve.Exponential
         else -> null
     }
 
@@ -348,8 +349,10 @@ object KlangScriptOscExtensions {
         is IgnitorDsl.Triangle -> self.copy(analog = amount.toIgnitorDsl())
         is IgnitorDsl.Ramp -> self.copy(analog = amount.toIgnitorDsl())
         is IgnitorDsl.Zawtooth -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Zamp -> self.copy(analog = amount.toIgnitorDsl())
         is IgnitorDsl.Impulse -> self.copy(analog = amount.toIgnitorDsl())
         is IgnitorDsl.Pulze -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.RawPulze -> self.copy(analog = amount.toIgnitorDsl())
         is IgnitorDsl.SuperSaw -> self.copy(analog = amount.toIgnitorDsl())
         is IgnitorDsl.SuperSine -> self.copy(analog = amount.toIgnitorDsl())
         is IgnitorDsl.SuperSquare -> self.copy(analog = amount.toIgnitorDsl())

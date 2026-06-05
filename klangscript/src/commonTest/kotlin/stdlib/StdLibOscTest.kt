@@ -68,8 +68,8 @@ class StdLibOscTest : StringSpec({
         evalIgnitorDsl("Osc.saw()").shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
     }
 
-    "Osc.square() returns Square" {
-        evalIgnitorDsl("Osc.square()").shouldBeInstanceOf<IgnitorDsl.Square>()
+    "Osc.square() returns Pulze (square/pulse/pulze are one pulse oscillator)" {
+        evalIgnitorDsl("Osc.square()").shouldBeInstanceOf<IgnitorDsl.Pulze>()
     }
 
     "Osc.supersaw() returns SuperSaw" {

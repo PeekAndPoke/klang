@@ -137,7 +137,6 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category effects
  * @tags distort, dist, distortion, waveshaper, overdrive
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyDistort(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -155,7 +154,6 @@ fun SprudelPattern.distort(amount: PatternLike? = null, callInfo: CallInfo? = nu
  * "c2 eb2 g2".distort(0.5).note().s("sawtooth")  // moderate distortion on bass notes
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, callInfo)
@@ -184,7 +182,6 @@ fun String.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category effects
  * @tags distort, dist, distortion, waveshaper, overdrive
  */
-@SprudelDsl
 @KlangScript.Function
 fun distort(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, callInfo) }
 
@@ -202,7 +199,6 @@ fun distort(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
  * note("c3*4").firstOf(4, room(0.3).distort(0.8))  // room + distortion every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.distort(amount, callInfo) }
@@ -234,7 +230,6 @@ fun PatternMapperFn.distort(amount: PatternLike? = null, callInfo: CallInfo? = n
  * @category effects
  * @tags dist, distort, distortion, waveshaper, overdrive
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.distort(amount, callInfo)
@@ -252,7 +247,6 @@ fun SprudelPattern.dist(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * "c2 eb2 g2".dist(0.5).note().s("sawtooth")  // moderate distortion on bass notes
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, callInfo)
@@ -281,7 +275,6 @@ fun String.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags dist, distort, distortion, waveshaper, overdrive
  */
-@SprudelDsl
 @KlangScript.Function
 fun dist(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, callInfo) }
 
@@ -299,7 +292,6 @@ fun dist(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * note("c3*4").firstOf(4, room(0.3).dist(0.8))  // room + distortion every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.distort(amount, callInfo) }
@@ -332,41 +324,33 @@ private fun applyDistortOversample(source: SprudelPattern, args: List<SprudelDsl
  * @category effects
  * @tags distos, distort, oversampling, aliasing, quality
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyDistortOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
-@SprudelDsl
 @KlangScript.Function
 fun String.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distos(factor, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun distos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distos(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.distos(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyDistortOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
-@SprudelDsl
 @KlangScript.Function
 fun String.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distortOversampling(factor, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.distortOversampling(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.distortOversampling(factor, callInfo) }
@@ -405,7 +389,6 @@ private fun applyDistortShape(source: SprudelPattern, args: List<SprudelDslArg<A
  * @category effects
  * @tags distortshape, distshape, dshape, distort, shape, waveshaper
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.distortshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyDistortShape(this, listOf(shape).asSprudelDslArgs(callInfo))
@@ -421,7 +404,6 @@ fun SprudelPattern.distortshape(shape: PatternLike, callInfo: CallInfo? = null):
  * "c2 eb2 g2".distortshape("fold").distort(0.5).note().s("sawtooth")
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.distortshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distortshape(shape, callInfo)
@@ -445,7 +427,6 @@ fun String.distortshape(shape: PatternLike, callInfo: CallInfo? = null): Sprudel
  * @category effects
  * @tags distortshape, distshape, dshape, distort, shape, waveshaper
  */
-@SprudelDsl
 @KlangScript.Function
 fun distortshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distortshape(shape, callInfo) }
 
@@ -461,7 +442,6 @@ fun distortshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperF
  * note("c2 eb2 g2").apply(distort(0.5).distortshape("fold"))   // amount then shape
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.distortshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.distortshape(shape, callInfo) }
@@ -489,7 +469,6 @@ fun PatternMapperFn.distortshape(shape: PatternLike, callInfo: CallInfo? = null)
  * @category effects
  * @tags distshape, distortshape, dshape, distort, shape, waveshaper
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.distshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.distortshape(shape, callInfo)
@@ -505,7 +484,6 @@ fun SprudelPattern.distshape(shape: PatternLike, callInfo: CallInfo? = null): Sp
  * "c2 eb2 g2".distshape("fold").distort(0.5).note().s("sawtooth")
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.distshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distortshape(shape, callInfo)
@@ -527,7 +505,6 @@ fun String.distshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPat
  * @category effects
  * @tags distshape, distortshape, dshape, distort, shape, waveshaper
  */
-@SprudelDsl
 @KlangScript.Function
 fun distshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distortshape(shape, callInfo) }
 
@@ -544,7 +521,6 @@ fun distshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c2 eb2 g2").apply(distort(0.5).distshape("fold"))   // amount then shape
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.distshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.distortshape(shape, callInfo) }
@@ -568,7 +544,6 @@ fun PatternMapperFn.distshape(shape: PatternLike, callInfo: CallInfo? = null): P
  * @category effects
  * @tags dshape, distortshape, distshape, distort, shape, waveshaper
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.dshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.distortshape(shape, callInfo)
@@ -584,7 +559,6 @@ fun SprudelPattern.dshape(shape: PatternLike, callInfo: CallInfo? = null): Sprud
  * "c2 eb2 g2".dshape("fold").distort(0.5).note().s("sawtooth")
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.dshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distortshape(shape, callInfo)
@@ -606,7 +580,6 @@ fun String.dshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * @category effects
  * @tags dshape, distortshape, distshape, distort, shape, waveshaper
  */
-@SprudelDsl
 @KlangScript.Function
 fun dshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distortshape(shape, callInfo) }
 
@@ -623,7 +596,6 @@ fun dshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { 
  * note("c2 eb2 g2").apply(distort(0.5).dshape("fold"))   // amount then shape
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.dshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.distortshape(shape, callInfo) }
@@ -663,7 +635,6 @@ private fun applyCrush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category effects
  * @tags crush, bitcrush, lofi, bitdepth, distortion
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyCrush(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -681,7 +652,6 @@ fun SprudelPattern.crush(amount: PatternLike? = null, callInfo: CallInfo? = null
  * "bd sd hh".crush(4).s()            // 4-bit lo-fi crunch on samples
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).crush(amount, callInfo)
@@ -707,7 +677,6 @@ fun String.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @category effects
  * @tags crush, bitcrush, lofi, bitdepth, distortion
  */
-@SprudelDsl
 @KlangScript.Function
 fun crush(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.crush(amount, callInfo) }
 
@@ -726,7 +695,6 @@ fun crush(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * note("c3*4").every(4, distort(0.5).crush(2))   // distort + max crush every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.crush(amount, callInfo) }
@@ -756,41 +724,33 @@ private fun applyCrushOversample(source: SprudelPattern, args: List<SprudelDslAr
  * @category effects
  * @tags crushos, crush, oversampling, aliasing, quality
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyCrushOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
-@SprudelDsl
 @KlangScript.Function
 fun String.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).crushos(factor, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.crushos(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.crushos(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyCrushOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
-@SprudelDsl
 @KlangScript.Function
 fun String.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).crushOversampling(factor, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.crushOversampling(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.crushOversampling(factor, callInfo) }
@@ -829,7 +789,6 @@ private fun applyCoarse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags coarse, samplerate, lofi, aliasing, downsample
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyCoarse(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -847,7 +806,6 @@ fun SprudelPattern.coarse(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * "bd sd".coarse(4).s()              // lo-fi samples
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).coarse(amount, callInfo)
@@ -873,7 +831,6 @@ fun String.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags coarse, samplerate, lofi, aliasing, downsample
  */
-@SprudelDsl
 @KlangScript.Function
 fun coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.coarse(amount, callInfo) }
 
@@ -892,7 +849,6 @@ fun coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * s("bd sd").every(4, coarse(8).distort(0.5))  // heavy lo-fi every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.coarse(amount, callInfo) }
@@ -925,41 +881,33 @@ private fun applyCoarseOversample(source: SprudelPattern, args: List<SprudelDslA
  * @category effects
  * @tags coarseos, coarse, oversampling, aliasing, quality
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyCoarseOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
-@SprudelDsl
 @KlangScript.Function
 fun String.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).coarseos(factor, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.coarseos(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.coarseos(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyCoarseOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
-@SprudelDsl
 @KlangScript.Function
 fun String.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).coarseOversampling(factor, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.coarseOversampling(factor, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.coarseOversampling(factor, callInfo) }
@@ -1023,7 +971,6 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category effects
  * @tags room, reverb, wet, mix, space
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.room(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyRoom(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -1040,7 +987,6 @@ fun SprudelPattern.room(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * "c3 e3 g3".room(0.5).note().clip(0.5)    // 50% reverb on bass notes
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.room(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).room(amount, callInfo)
@@ -1065,7 +1011,6 @@ fun String.room(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags room, reverb, wet, mix, space
  */
-@SprudelDsl
 @KlangScript.Function
 fun room(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.room(amount, callInfo) }
 
@@ -1083,7 +1028,6 @@ fun room(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * note("c3*4").every(4, coarse(4).room(0.8))     // lo-fi with heavy reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.room(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.room(amount, callInfo) }
@@ -1124,7 +1068,6 @@ private fun applyRoomSize(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category effects
  * @tags roomsize, rsize, sz, size, reverb, room, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyRoomSize(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -1142,7 +1085,6 @@ fun SprudelPattern.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = n
  * "c3 e3".roomsize(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
@@ -1169,7 +1111,6 @@ fun String.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category effects
  * @tags roomsize, rsize, sz, size, reverb, room, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
 
@@ -1187,7 +1128,6 @@ fun roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
  * note("c3*4").every(4, room(0.8).roomsize(8))  // big reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomsize(amount, callInfo) }
@@ -1207,7 +1147,6 @@ fun PatternMapperFn.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = 
  * @category effects
  * @tags rsize, roomsize, sz, size, reverb, room, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.roomsize(amount, callInfo)
@@ -1221,7 +1160,6 @@ fun SprudelPattern.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null
  * "c3 e3".rsize(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
@@ -1240,7 +1178,6 @@ fun String.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @category effects
  * @tags rsize, roomsize, sz, size, reverb, room, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
 
@@ -1258,7 +1195,6 @@ fun rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * note("c3*4").every(4, room(0.8).rsize(8))  // big reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomsize(amount, callInfo) }
@@ -1278,7 +1214,6 @@ fun PatternMapperFn.rsize(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * @category effects
  * @tags sz, roomsize, rsize, size, reverb, room, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.roomsize(amount, callInfo)
@@ -1292,7 +1227,6 @@ fun SprudelPattern.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): 
  * "c3 e3".sz(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
@@ -1311,7 +1245,6 @@ fun String.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @category effects
  * @tags sz, roomsize, rsize, size, reverb, room, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
 
@@ -1329,7 +1262,6 @@ fun sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn
  * note("c3*4").every(4, room(0.8).sz(8))  // big reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomsize(amount, callInfo) }
@@ -1348,7 +1280,6 @@ fun PatternMapperFn.sz(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * @category effects
  * @tags size, roomsize, rsize, sz, reverb, room, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.size(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.roomsize(amount, callInfo)
@@ -1362,7 +1293,6 @@ fun SprudelPattern.size(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * "c3 e3".size(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.size(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
@@ -1381,7 +1311,6 @@ fun String.size(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags size, roomsize, rsize, sz, reverb, room, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
 
@@ -1399,7 +1328,6 @@ fun size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * note("c3*4").every(4, room(0.8).size(8))  // big reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomsize(amount, callInfo) }
@@ -1438,7 +1366,6 @@ private fun applyRoomFade(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category effects
  * @tags roomfade, rfade, reverb, fade, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyRoomFade(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
@@ -1454,7 +1381,6 @@ fun SprudelPattern.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nul
  * "c3 e3".roomfade(2.0).room(0.6).note()   // 2-second fade on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomfade(time, callInfo)
@@ -1480,7 +1406,6 @@ fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags roomfade, rfade, reverb, fade, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomfade(time, callInfo) }
 
@@ -1498,7 +1423,6 @@ fun roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * note("c3*4").every(4, room(0.8).roomfade(4.0))  // big reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomfade(time, callInfo) }
@@ -1523,7 +1447,6 @@ fun PatternMapperFn.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nu
  * @category effects
  * @tags rfade, roomfade, reverb, fade, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.roomfade(time, callInfo)
@@ -1539,7 +1462,6 @@ fun SprudelPattern.rfade(time: PatternLike? = null, callInfo: CallInfo? = null):
  * "c3 e3".rfade(2.0).room(0.6).note()   // 2-second fade on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomfade(time, callInfo)
@@ -1562,7 +1484,6 @@ fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @category effects
  * @tags rfade, roomfade, reverb, fade, tail
  */
-@SprudelDsl
 @KlangScript.Function
 fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomfade(time, callInfo) }
 
@@ -1580,7 +1501,6 @@ fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * note("c3*4").every(4, room(0.8).rfade(4.0))  // big reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomfade(time, callInfo) }
@@ -1620,7 +1540,6 @@ private fun applyRoomLp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags roomlp, rlp, reverb, lowpass, filter
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyRoomLp(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
@@ -1637,7 +1556,6 @@ fun SprudelPattern.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null)
  * "c3 e3".roomlp(4000).room(0.6).note()   // dark reverb on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomlp(freq, callInfo)
@@ -1664,7 +1582,6 @@ fun String.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags roomlp, rlp, reverb, lowpass, filter
  */
-@SprudelDsl
 @KlangScript.Function
 fun roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomlp(freq, callInfo) }
 
@@ -1683,7 +1600,6 @@ fun roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * note("c3*4").every(4, room(0.8).roomlp(1000))  // very dark reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomlp(freq, callInfo) }
@@ -1709,7 +1625,6 @@ fun PatternMapperFn.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags rlp, roomlp, reverb, lowpass, filter
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.roomlp(freq, callInfo)
@@ -1726,7 +1641,6 @@ fun SprudelPattern.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): S
  * "c3 e3".rlp(4000).room(0.6).note()   // dark reverb on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomlp(freq, callInfo)
@@ -1752,7 +1666,6 @@ fun String.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @category effects
  * @tags rlp, roomlp, reverb, lowpass, filter
  */
-@SprudelDsl
 @KlangScript.Function
 fun rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomlp(freq, callInfo) }
 
@@ -1771,7 +1684,6 @@ fun rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * note("c3*4").every(4, room(0.8).rlp(1000))  // very dark reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomlp(freq, callInfo) }
@@ -1810,7 +1722,6 @@ private fun applyRoomDim(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category effects
  * @tags roomdim, rdim, reverb, lowpass, darkness
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyRoomDim(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
@@ -1826,7 +1737,6 @@ fun SprudelPattern.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null
  * "c3 e3".roomdim(500).room(0.6).note()   // very dark reverb on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomdim(freq, callInfo)
@@ -1852,7 +1762,6 @@ fun String.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @category effects
  * @tags roomdim, rdim, reverb, lowpass, darkness
  */
-@SprudelDsl
 @KlangScript.Function
 fun roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomdim(freq, callInfo) }
 
@@ -1870,7 +1779,6 @@ fun roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * note("c3*4").every(4, room(0.8).roomdim(200))  // very dim reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomdim(freq, callInfo) }
@@ -1899,7 +1807,6 @@ fun PatternMapperFn.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = nul
  * @category effects
  * @tags rdim, roomdim, reverb, lowpass, darkness
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.roomdim(freq, callInfo)
@@ -1915,7 +1822,6 @@ fun SprudelPattern.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): 
  * "c3 e3".rdim(500).room(0.6).note()   // very dark reverb on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomdim(freq, callInfo)
@@ -1934,7 +1840,6 @@ fun String.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @category effects
  * @tags rdim, roomdim, reverb, lowpass, darkness
  */
-@SprudelDsl
 @KlangScript.Function
 fun rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomdim(freq, callInfo) }
 
@@ -1953,7 +1858,6 @@ fun rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn
  * note("c3*4").every(4, room(0.8).rdim(200))  // very dim reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.roomdim(freq, callInfo) }
@@ -1989,7 +1893,6 @@ private fun applyIResponse(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags iresponse, ir, impulse, convolution, reverb
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyIResponse(this, listOf(name).asSprudelDslArgs(callInfo))
@@ -2003,7 +1906,6 @@ fun SprudelPattern.iresponse(name: PatternLike, callInfo: CallInfo? = null): Spr
  * "c3 e3 g3".iresponse("church").note()   // church reverb IR on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).iresponse(name, callInfo)
@@ -2028,7 +1930,6 @@ fun String.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPatt
  * @category effects
  * @tags iresponse, ir, impulse, convolution, reverb
  */
-@SprudelDsl
 @KlangScript.Function
 fun iresponse(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.iresponse(name, callInfo) }
 
@@ -2046,7 +1947,6 @@ fun iresponse(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = 
  * note("c3*4").every(4, room(0.8).iresponse("hall"))   // hall IR every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.iresponse(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.iresponse(name, callInfo) }
@@ -2069,7 +1969,6 @@ fun PatternMapperFn.iresponse(name: PatternLike, callInfo: CallInfo? = null): Pa
  * @category effects
  * @tags ir, iresponse, impulse, convolution, reverb
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.iresponse(name, callInfo)
 
@@ -2082,7 +1981,6 @@ fun SprudelPattern.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPat
  * "c3 e3 g3".ir("church").note()   // church reverb IR on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).iresponse(name, callInfo)
@@ -2101,7 +1999,6 @@ fun String.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category effects
  * @tags ir, iresponse, impulse, convolution, reverb
  */
-@SprudelDsl
 @KlangScript.Function
 fun ir(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.iresponse(name, callInfo) }
 
@@ -2119,7 +2016,6 @@ fun ir(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> 
  * note("c3*4").every(4, room(0.8).ir("hall"))   // hall IR every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.ir(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = this.chain { p -> p.iresponse(name, callInfo) }
 
@@ -2190,7 +2086,6 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category effects
  * @tags delay, echo, wet, mix, delaytime, delayfeedback
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyDelay(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -2206,7 +2101,6 @@ fun SprudelPattern.delay(amount: PatternLike? = null, callInfo: CallInfo? = null
  * "c3 e3".delay(0.4).note()   // 40% delay mix on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).delay(amount, callInfo)
@@ -2231,7 +2125,6 @@ fun String.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @category effects
  * @tags delay, echo, wet, mix
  */
-@SprudelDsl
 @KlangScript.Function
 fun delay(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delay(amount, callInfo) }
 
@@ -2249,7 +2142,6 @@ fun delay(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * note("c3*4").every(4, delaytime(0.25).delay(0.8))   // delay every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.delay(amount, callInfo) }
@@ -2288,7 +2180,6 @@ private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags delaytime, delay, echo, time, interval
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyDelayTime(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
@@ -2304,7 +2195,6 @@ fun SprudelPattern.delaytime(time: PatternLike? = null, callInfo: CallInfo? = nu
  * "c3 e3".delaytime(0.25).delay(0.5).note()   // quarter-note delay on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).delaytime(time, callInfo)
@@ -2329,7 +2219,6 @@ fun String.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category effects
  * @tags delaytime, delay, echo, time, interval
  */
-@SprudelDsl
 @KlangScript.Function
 fun delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delaytime(time, callInfo) }
 
@@ -2347,7 +2236,6 @@ fun delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
  * note("c3*4").every(4, delay(0.8).delaytime(0.125))   // delay every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.delaytime(time, callInfo) }
@@ -2387,7 +2275,6 @@ private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<
  * @category effects
  * @tags delayfeedback, delayfb, dfb, delay, echo, feedback, repeats
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyDelayFeedback(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -2403,7 +2290,6 @@ fun SprudelPattern.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo
  * "c3 e3".delayfeedback(0.6).delay(0.4).note()   // echoing string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
@@ -2429,7 +2315,6 @@ fun String.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags delayfeedback, delayfb, dfb, delay, echo, feedback, repeats
  */
-@SprudelDsl
 @KlangScript.Function
 fun delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.delayfeedback(amount, callInfo) }
@@ -2448,7 +2333,6 @@ fun delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): Patt
  * note("c3*4").every(4, delay(0.8).delayfeedback(0.9))   // echoing delay every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.delayfeedback(amount, callInfo) }
@@ -2478,7 +2362,6 @@ fun PatternMapperFn.delayfeedback(amount: PatternLike? = null, callInfo: CallInf
  * @category effects
  * @tags delayfb, delayfeedback, dfb, delay, echo, feedback, repeats
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.delayfeedback(amount, callInfo)
@@ -2494,7 +2377,6 @@ fun SprudelPattern.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = nu
  * "c3 e3".delayfb(0.6).delay(0.4).note()   // echoing string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
@@ -2513,7 +2395,6 @@ fun String.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category effects
  * @tags delayfb, delayfeedback, dfb, delay, echo, feedback, repeats
  */
-@SprudelDsl
 @KlangScript.Function
 fun delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delayfeedback(amount, callInfo) }
 
@@ -2532,7 +2413,6 @@ fun delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
  * note("c3*4").every(4, delay(0.8).delayfb(0.9))   // echoing delay every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.delayfeedback(amount, callInfo) }
@@ -2561,7 +2441,6 @@ fun PatternMapperFn.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = n
  * @category effects
  * @tags dfb, delayfeedback, delayfb, delay, echo, feedback, repeats
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.delayfeedback(amount, callInfo)
@@ -2577,7 +2456,6 @@ fun SprudelPattern.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * "c3 e3".dfb(0.6).delay(0.4).note()   // echoing string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
@@ -2596,7 +2474,6 @@ fun String.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @category effects
  * @tags dfb, delayfeedback, delayfb, delay, echo, feedback, repeats
  */
-@SprudelDsl
 @KlangScript.Function
 fun dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delayfeedback(amount, callInfo) }
 
@@ -2615,7 +2492,6 @@ fun dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * note("c3*4").every(4, delay(0.8).dfb(0.9))   // echoing delay every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.delayfeedback(amount, callInfo) }
@@ -2693,7 +2569,6 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags phaser, ph, phase, sweep, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyPhaser(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
@@ -2709,7 +2584,6 @@ fun SprudelPattern.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null)
  * "c3 e3 g3".phaser(0.5).note().s("sawtooth")   // slow phaser on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, callInfo)
@@ -2741,7 +2615,6 @@ fun String.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags phaser, ph, phase, sweep, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, callInfo) }
 
@@ -2759,7 +2632,6 @@ fun phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * note("c3*4").every(4, phaserdepth(1.0).phaser(4.0))   // full-depth fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phaser(rate, callInfo) }
@@ -2794,7 +2666,6 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags ph, phaser, phase, sweep, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.phaser(rate, callInfo)
@@ -2810,7 +2681,6 @@ fun SprudelPattern.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * "c3 e3 g3".ph(0.5).note().s("sawtooth")   // slow phaser on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, callInfo)
@@ -2835,7 +2705,6 @@ fun String.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * @category effects
  * @tags ph, phaser, phase, sweep, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun ph(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, callInfo) }
 
@@ -2853,7 +2722,6 @@ fun ph(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").every(4, phaserdepth(1.0).ph(4.0))   // full-depth fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phaser(rate, callInfo) }
@@ -2892,7 +2760,6 @@ private fun applyPhaserDepth(source: SprudelPattern, args: List<SprudelDslArg<An
  * @category effects
  * @tags phaserdepth, phd, phasdp, phaser, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyPhaserDepth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -2908,7 +2775,6 @@ fun SprudelPattern.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? 
  * "c3*4".phaserdepth(0.8).phaser(0.5).note()   // deep phaser on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
@@ -2934,7 +2800,6 @@ fun String.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * @category effects
  * @tags phaserdepth, phd, phasdp, phaser, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
 
@@ -2952,7 +2817,6 @@ fun phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): Patter
  * note("c3*4").every(4, phaser(4.0).phaserdepth(1.0))   // full-depth fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phaserdepth(amount, callInfo) }
@@ -2981,7 +2845,6 @@ fun PatternMapperFn.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo?
  * @category effects
  * @tags phd, phaserdepth, phasdp, phaser, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.phaserdepth(amount, callInfo)
@@ -2997,7 +2860,6 @@ fun SprudelPattern.phd(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * "c3*4".phd(0.8).phaser(0.5).note()   // deep phaser on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
@@ -3016,7 +2878,6 @@ fun String.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @category effects
  * @tags phd, phaserdepth, phasdp, phaser, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
 
@@ -3034,7 +2895,6 @@ fun phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * note("c3*4").every(4, phaser(4.0).phd(1.0))   // full-depth fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phaserdepth(amount, callInfo) }
@@ -3063,7 +2923,6 @@ fun PatternMapperFn.phd(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * @category effects
  * @tags phasdp, phaserdepth, phd, phaser, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.phaserdepth(amount, callInfo)
@@ -3079,7 +2938,6 @@ fun SprudelPattern.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * "c3*4".phasdp(0.8).phaser(0.5).note()   // deep phaser on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
@@ -3098,7 +2956,6 @@ fun String.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags phasdp, phaserdepth, phd, phaser, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
 
@@ -3116,7 +2973,6 @@ fun phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * note("c3*4").every(4, phaser(4.0).phasdp(1.0))   // full-depth fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phaserdepth(amount, callInfo) }
@@ -3155,7 +3011,6 @@ private fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<A
  * @category effects
  * @tags phasercenter, phc, phaser, frequency, center
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyPhaserCenter(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
@@ -3171,7 +3026,6 @@ fun SprudelPattern.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? =
  * "c3*4".phasercenter(1000).phaser(0.5).note()   // centered phaser on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phasercenter(freq, callInfo)
@@ -3197,7 +3051,6 @@ fun String.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): 
  * @category effects
  * @tags phasercenter, phc, phaser, frequency, center
  */
-@SprudelDsl
 @KlangScript.Function
 fun phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasercenter(freq, callInfo) }
 
@@ -3215,7 +3068,6 @@ fun phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): Pattern
  * note("c3*4").every(4, phaser(2.0).phasercenter(2000))   // centered fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phasercenter(freq, callInfo) }
@@ -3244,7 +3096,6 @@ fun PatternMapperFn.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? 
  * @category effects
  * @tags phc, phasercenter, phaser, frequency, center
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.phasercenter(freq, callInfo)
@@ -3260,7 +3111,6 @@ fun SprudelPattern.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): S
  * "c3*4".phc(1000).phaser(0.5).note()   // centered phaser on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phasercenter(freq, callInfo)
@@ -3279,7 +3129,6 @@ fun String.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @category effects
  * @tags phc, phasercenter, phaser, frequency, center
  */
-@SprudelDsl
 @KlangScript.Function
 fun phc(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasercenter(freq, callInfo) }
 
@@ -3298,7 +3147,6 @@ fun phc(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * note("c3*4").every(4, phaser(2.0).phc(2000))   // centered fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phasercenter(freq, callInfo) }
@@ -3337,7 +3185,6 @@ private fun applyPhaserSweep(source: SprudelPattern, args: List<SprudelDslArg<An
  * @category effects
  * @tags phasersweep, phs, phaser, sweep, width
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyPhaserSweep(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -3353,7 +3200,6 @@ fun SprudelPattern.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? 
  * "c3*4".phasersweep(2000).phaser(0.5).note()   // wide sweep on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phasersweep(amount, callInfo)
@@ -3379,7 +3225,6 @@ fun String.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * @category effects
  * @tags phasersweep, phs, phaser, sweep, width
  */
-@SprudelDsl
 @KlangScript.Function
 fun phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasersweep(amount, callInfo) }
 
@@ -3397,7 +3242,6 @@ fun phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): Patter
  * note("c3*4").every(4, phaser(2.0).phasersweep(4000))   // wide sweep fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phasersweep(amount, callInfo) }
@@ -3426,7 +3270,6 @@ fun PatternMapperFn.phasersweep(amount: PatternLike? = null, callInfo: CallInfo?
  * @category effects
  * @tags phs, phasersweep, phaser, sweep, width
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.phasersweep(amount, callInfo)
@@ -3442,7 +3285,6 @@ fun SprudelPattern.phs(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * "c3*4".phs(2000).phaser(0.5).note()   // wide sweep on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phasersweep(amount, callInfo)
@@ -3461,7 +3303,6 @@ fun String.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @category effects
  * @tags phs, phasersweep, phaser, sweep, width
  */
-@SprudelDsl
 @KlangScript.Function
 fun phs(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasersweep(amount, callInfo) }
 
@@ -3480,7 +3321,6 @@ fun phs(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * note("c3*4").every(4, phaser(2.0).phs(4000))   // wide sweep fast phaser
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phasersweep(amount, callInfo) }
@@ -3519,7 +3359,6 @@ private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<An
  * @category effects
  * @tags tremolosync, tremsync, tremolo, rate, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyTremoloSync(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
@@ -3535,7 +3374,6 @@ fun SprudelPattern.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = 
  * "c3 e3".tremolosync(4).note().s("sine")   // 4 Hz tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolosync(rate, callInfo)
@@ -3561,7 +3399,6 @@ fun String.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): S
  * @category effects
  * @tags tremolosync, tremsync, tremolo, rate, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolosync(rate, callInfo) }
 
@@ -3579,7 +3416,6 @@ fun tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternM
  * note("c3*4").every(4, tremolodepth(1.0).tremolosync(8))   // full-depth fast tremolo
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremolosync(rate, callInfo) }
@@ -3608,7 +3444,6 @@ fun PatternMapperFn.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? =
  * @category effects
  * @tags tremsync, tremolosync, tremolo, rate, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.tremolosync(rate, callInfo)
@@ -3624,7 +3459,6 @@ fun SprudelPattern.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = nul
  * "c3 e3".tremsync(4).note().s("sine")   // 4 Hz tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolosync(rate, callInfo)
@@ -3643,7 +3477,6 @@ fun String.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags tremsync, tremolosync, tremolo, rate, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolosync(rate, callInfo) }
 
@@ -3662,7 +3495,6 @@ fun tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * note("c3*4").every(4, tremolodepth(1.0).tremsync(8))   // full-depth fast tremolo
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremolosync(rate, callInfo) }
@@ -3701,7 +3533,6 @@ private fun applyTremoloDepth(source: SprudelPattern, args: List<SprudelDslArg<A
  * @category effects
  * @tags tremolodepth, tremdepth, tremolo, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyTremoloDepth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -3717,7 +3548,6 @@ fun SprudelPattern.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo?
  * "c3 e3".tremolodepth(0.8).tremolosync(4).note()   // strong tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolodepth(amount, callInfo)
@@ -3743,7 +3573,6 @@ fun String.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * @category effects
  * @tags tremolodepth, tremdepth, tremolo, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolodepth(amount, callInfo) }
 
@@ -3761,7 +3590,6 @@ fun tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): Patte
  * note("c3*4").every(4, tremolosync(8).tremolodepth(1.0))   // full-depth fast tremolo
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremolodepth(amount, callInfo) }
@@ -3790,7 +3618,6 @@ fun PatternMapperFn.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo
  * @category effects
  * @tags tremdepth, tremolodepth, tremolo, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.tremolodepth(amount, callInfo)
@@ -3806,7 +3633,6 @@ fun SprudelPattern.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = 
  * "c3 e3".tremdepth(0.8).tremolosync(4).note()   // strong tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolodepth(amount, callInfo)
@@ -3825,7 +3651,6 @@ fun String.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): S
  * @category effects
  * @tags tremdepth, tremolodepth, tremolo, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolodepth(amount, callInfo) }
 
@@ -3843,7 +3668,6 @@ fun tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternM
  * note("c3*4").every(4, tremolosync(8).tremdepth(1.0))   // full-depth fast tremolo
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremolodepth(amount, callInfo) }
@@ -3882,7 +3706,6 @@ private fun applyTremoloSkew(source: SprudelPattern, args: List<SprudelDslArg<An
  * @category effects
  * @tags tremoloskew, tremskew, tremolo, skew, asymmetry
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyTremoloSkew(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -3898,7 +3721,6 @@ fun SprudelPattern.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? 
  * "c3*4".tremoloskew(0.8).tremolosync(2).note()   // skewed tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloskew(amount, callInfo)
@@ -3924,7 +3746,6 @@ fun String.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * @category effects
  * @tags tremoloskew, tremskew, tremolo, skew, asymmetry
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloskew(amount, callInfo) }
 
@@ -3942,7 +3763,6 @@ fun tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): Patter
  * note("c3*4").every(4, tremolosync(4).tremoloskew(0.2))   // inverted skew fast tremolo
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremoloskew(amount, callInfo) }
@@ -3971,7 +3791,6 @@ fun PatternMapperFn.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo?
  * @category effects
  * @tags tremskew, tremoloskew, tremolo, skew, asymmetry
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.tremoloskew(amount, callInfo)
@@ -3987,7 +3806,6 @@ fun SprudelPattern.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = n
  * "c3*4".tremskew(0.8).tremolosync(2).note()   // skewed tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloskew(amount, callInfo)
@@ -4006,7 +3824,6 @@ fun String.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category effects
  * @tags tremskew, tremoloskew, tremolo, skew, asymmetry
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloskew(amount, callInfo) }
 
@@ -4025,7 +3842,6 @@ fun tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
  * note("c3*4").every(4, tremolosync(4).tremskew(0.2))   // inverted skew fast tremolo
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremoloskew(amount, callInfo) }
@@ -4067,7 +3883,6 @@ private fun applyTremoloPhase(source: SprudelPattern, args: List<SprudelDslArg<A
  * @category effects
  * @tags tremolophase, tremphase, tremolo, phase, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyTremoloPhase(this, listOfNotNull(phase).asSprudelDslArgs(callInfo))
@@ -4083,7 +3898,6 @@ fun SprudelPattern.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? 
  * "c3 e3".tremolophase(1.57).tremolosync(2).note()   // 90° tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolophase(phase, callInfo)
@@ -4109,7 +3923,6 @@ fun String.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null):
  * @category effects
  * @tags tremolophase, tremphase, tremolo, phase, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolophase(phase, callInfo) }
 
@@ -4127,7 +3940,6 @@ fun tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): Patter
  * note("c3*4").every(4, tremolosync(4).tremolophase(3.14))   // fast tremolo at 180°
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremolophase(phase, callInfo) }
@@ -4156,7 +3968,6 @@ fun PatternMapperFn.tremolophase(phase: PatternLike? = null, callInfo: CallInfo?
  * @category effects
  * @tags tremphase, tremolophase, tremolo, phase, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.tremolophase(phase, callInfo)
@@ -4172,7 +3983,6 @@ fun SprudelPattern.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = n
  * "c3 e3".tremphase(1.57).tremolosync(2).note()   // 90° tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolophase(phase, callInfo)
@@ -4191,7 +4001,6 @@ fun String.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category effects
  * @tags tremphase, tremolophase, tremolo, phase, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolophase(phase, callInfo) }
 
@@ -4210,7 +4019,6 @@ fun tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
  * note("c3*4").every(4, tremolosync(4).tremphase(3.14))   // fast tremolo at 180°
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremolophase(phase, callInfo) }
@@ -4247,7 +4055,6 @@ private fun applyTremoloShape(source: SprudelPattern, args: List<SprudelDslArg<A
  * @category effects
  * @tags tremoloshape, tremshape, tremolo, shape, waveform
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyTremoloShape(this, listOf(shape).asSprudelDslArgs(callInfo))
@@ -4261,7 +4068,6 @@ fun SprudelPattern.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null):
  * "c3 e3".tremoloshape("square").tremolosync(4).note()   // choppy tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloshape(shape, callInfo)
@@ -4286,7 +4092,6 @@ fun String.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): Sprudel
  * @category effects
  * @tags tremoloshape, tremshape, tremolo, shape, waveform
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloshape(shape, callInfo) }
 
@@ -4304,7 +4109,6 @@ fun tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperF
  * note("c3*4").every(4, tremolosync(8).tremoloshape("triangle"))   // shaped fast tremolo
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremoloshape(shape, callInfo) }
@@ -4328,7 +4132,6 @@ fun PatternMapperFn.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null)
  * @category effects
  * @tags tremshape, tremoloshape, tremolo, shape, waveform
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.tremoloshape(shape, callInfo)
 
@@ -4341,7 +4144,6 @@ fun SprudelPattern.tremshape(shape: PatternLike, callInfo: CallInfo? = null): Sp
  * "c3 e3".tremshape("square").tremolosync(4).note()   // choppy tremolo on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloshape(shape, callInfo)
@@ -4360,7 +4162,6 @@ fun String.tremshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPat
  * @category effects
  * @tags tremshape, tremoloshape, tremolo, shape, waveform
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloshape(shape, callInfo) }
 
@@ -4379,7 +4180,6 @@ fun tremshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").every(4, tremolosync(8).tremshape("triangle"))   // shaped fast tremolo
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremoloshape(shape, callInfo) }

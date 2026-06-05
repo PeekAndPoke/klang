@@ -5,7 +5,6 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
@@ -42,7 +41,7 @@ class LangRevvSpec : StringSpec({
         // - fast(2) compresses back to 1 cycle
         //   cycle 0-1 contains: d, c, b, a
 
-        val pattern = fastcat("a", "b", "c", "d").slow(2.toRational()).revv().fast(2.toRational())
+        val pattern = fastcat("a", "b", "c", "d").slow(2.toDouble()).revv().fast(2.toDouble())
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 4
@@ -58,9 +57,9 @@ class LangRevvSpec : StringSpec({
         // Result should be: d, c, b, a in cycle 0
 
         val pattern = fastcat("a", "b", "c", "d")
-            .slow(2.toRational())
+            .slow(2.toDouble())
             .revv()
-            .fast(2.toRational())
+            .fast(2.toDouble())
 
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 

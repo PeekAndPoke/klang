@@ -205,7 +205,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() numeric value still resolves as scale step" {
-        // seq(2) (numeric) wraps as Num(Rational(2)) — its asString is "2.0", which
+        // seq(2) (numeric) wraps as Num(2.0) — its asString is "2.0", which
         // does NOT parse as Int. Falls back to value.asInt for the step.
         val voice = SprudelVoiceData.empty.copy(
             scale = "C major",

@@ -3,8 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.sprudel.shouldBe
 
 class LangSequencePSpec : StringSpec({
 
@@ -17,11 +16,11 @@ class LangSequencePSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "a"
-        events[0].part.begin shouldBe Rational.ZERO
-        events[0].part.end shouldBe 0.5.toRational()
+        events[0].part.begin shouldBe 0.0
+        events[0].part.end shouldBe 0.5
 
         events[1].data.note shouldBeEqualIgnoringCase "b"
-        events[1].part.begin shouldBe 0.5.toRational()
-        events[1].part.end shouldBe Rational.ONE
+        events[1].part.begin shouldBe 0.5
+        events[1].part.end shouldBe 1.0
     }
 })

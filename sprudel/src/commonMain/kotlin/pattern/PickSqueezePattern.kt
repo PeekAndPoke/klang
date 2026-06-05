@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
@@ -21,12 +22,12 @@ internal class PickSqueezePattern(
 ) : SprudelPattern {
 
     override val weight: Double get() = selector.weight
-    override val numSteps: Rational? get() = selector.numSteps
-    override fun estimateCycleDuration(): Rational = selector.estimateCycleDuration()
+    override val numSteps: Double? get() = selector.numSteps
+    override fun estimateCycleDuration(): Double = selector.estimateCycleDuration()
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: SprudelPattern.QueryContext,
     ): List<SprudelPatternEvent> {
         // Query the selector pattern to get selection events
@@ -43,8 +44,8 @@ internal class PickSqueezePattern(
             if (selectedPattern == null) continue
 
             // Determine the intersection of the query arc and the selector event
-            val intersectStart = maxOf(from, selectorEvent.part.begin)
-            val intersectEnd = minOf(to, selectorEvent.part.end)
+            val intersectStart = from.coerceAtLeast(selectorEvent.part.begin)
+            val intersectEnd = to.coerceAtMost(selectorEvent.part.end)
 
             if (intersectEnd <= intersectStart) continue
 
@@ -54,17 +55,18 @@ internal class PickSqueezePattern(
             // selectorEvent.part.end -> 1 (assuming 1 cycle for inner pattern)
 
             val duration = selectorEvent.part.duration
-            if (duration == Rational.ZERO) continue
+            if (duration == CycleTime.ZERO) continue
+            val durCycles = duration.toCycles()
 
-            val innerStart = (intersectStart - selectorEvent.part.begin) / duration
-            val innerEnd = (intersectEnd - selectorEvent.part.begin) / duration
+            val innerStart = (intersectStart - selectorEvent.part.begin).divBy(durCycles)
+            val innerEnd = (intersectEnd - selectorEvent.part.begin).divBy(durCycles)
 
             val innerEvents = selectedPattern.queryArcContextual(innerStart, innerEnd, ctx)
 
             // Map inner events back to outer time
             for (innerEvent in innerEvents) {
-                val scaledPart = innerEvent.part.scale(duration).shift(selectorEvent.part.begin)
-                val scaledWhole = innerEvent.whole.scale(duration).shift(selectorEvent.part.begin)
+                val scaledPart = innerEvent.part.scale(durCycles).shift(selectorEvent.part.begin)
+                val scaledWhole = innerEvent.whole.scale(durCycles).shift(selectorEvent.part.begin)
 
                 result.add(innerEvent.copy(part = scaledPart, whole = scaledWhole))
             }

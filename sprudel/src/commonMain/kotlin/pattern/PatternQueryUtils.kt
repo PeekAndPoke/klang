@@ -2,39 +2,27 @@
 
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.TimeSpan
-import kotlin.math.floor
 
 /**
  * Helper utilities for pattern query operations.
  *
- * These functions centralize common allocation hotspots and repetitive logic
- * to prepare for future GC-free implementation with object pooling.
- *
- * Design principles:
- * - No new allocations in helper APIs (where possible)
- * - Encapsulate repeated patterns across Pattern implementations
- * - Make it easy to replace with pooled versions later
+ * These functions centralize common allocation hotspots and repetitive logic.
+ * Time values are [CycleTime] (fixed-point ticks); scale/span factors are dimensionless [Double].
  */
 
 // ============================================================================
 // Event List Creation
 // ============================================================================
 
-/**
- * Creates a mutable event list.
- * Centralized to enable future pooling/reuse strategies.
- */
+/** Creates a mutable event list. Centralized to enable future pooling/reuse strategies. */
 internal inline fun createEventList(): MutableList<SprudelPatternEvent> {
     return mutableListOf()
 }
 
-/**
- * Creates a mutable event list with expected capacity hint.
- * Reduces allocations when result size is predictable.
- */
+/** Creates a mutable event list with expected capacity hint. */
 internal inline fun createEventList(capacityHint: Int): MutableList<SprudelPatternEvent> {
     return ArrayList(capacityHint)
 }
@@ -43,55 +31,29 @@ internal inline fun createEventList(capacityHint: Int): MutableList<SprudelPatte
 // Overlap / Clipping Detection
 // ============================================================================
 
-/**
- * Checks if an event overlaps with a query range.
- *
- * Returns true if [eventBegin, eventEnd) intersects with [queryFrom, queryTo).
- */
+/** Returns true if [eventBegin, eventEnd) intersects with [queryFrom, queryTo). */
 internal inline fun hasOverlap(
-    eventBegin: Rational,
-    eventEnd: Rational,
-    queryFrom: Rational,
-    queryTo: Rational,
+    eventBegin: CycleTime,
+    eventEnd: CycleTime,
+    queryFrom: CycleTime,
+    queryTo: CycleTime,
 ): Boolean {
     return eventEnd > queryFrom && eventBegin < queryTo
 }
 
-/**
- * Checks if an event overlaps with a query range, using epsilon tolerance.
- *
- * Adjusts query boundaries inward by epsilon to avoid floating-point edge cases.
- */
-internal inline fun hasOverlapWithEpsilon(
-    eventBegin: Rational,
-    eventEnd: Rational,
-    queryFrom: Rational,
-    queryTo: Rational,
-    epsilon: Rational,
-): Boolean {
-    val fromPlusEps = queryFrom + epsilon
-    val toMinusEps = queryTo - epsilon
-    return eventEnd > fromPlusEps && eventBegin <= toMinusEps
-}
-
-/**
- * Calculates the overlap range between two time spans.
- *
- * Returns a Pair of (overlapBegin, overlapEnd) if they overlap, null otherwise.
- */
+/** Overlap range between two spans, or null if they don't overlap. */
 internal inline fun calculateOverlapRange(
-    begin1: Rational,
-    end1: Rational,
-    begin2: Rational,
-    end2: Rational,
-): Pair<Rational, Rational>? {
-    // Check if they overlap
+    begin1: CycleTime,
+    end1: CycleTime,
+    begin2: CycleTime,
+    end2: CycleTime,
+): Pair<CycleTime, CycleTime>? {
     if (end1 <= begin2 || end2 <= begin1) {
         return null
     }
 
-    val overlapBegin = maxOf(begin1, begin2)
-    val overlapEnd = minOf(end1, end2)
+    val overlapBegin = begin1.coerceAtLeast(begin2)
+    val overlapEnd = end1.coerceAtMost(end2)
 
     return if (overlapEnd <= overlapBegin) null else Pair(overlapBegin, overlapEnd)
 }
@@ -101,32 +63,25 @@ internal inline fun calculateOverlapRange(
 // ============================================================================
 
 /**
- * Maps event time coordinates by dividing by a scale factor.
- *
- * Used for patterns that compress time (faster playback).
- * Scales both part and whole by the same factor.
+ * Maps event time by dividing by a scale factor (faster playback). Scales part and whole equally.
  * Returns (scaledPart, scaledWhole).
  */
 internal inline fun mapEventTimeByScale(
     event: SprudelPatternEvent,
-    scale: Rational,
-): Pair<TimeSpan, TimeSpan> {
+    scale: Double,
+): Pair<CycleTimeSpan, CycleTimeSpan> {
+    val inv = 1.0 / scale
     return Pair(
-        event.part.scale(Rational.ONE / scale),
-        event.whole.scale(Rational.ONE / scale),
+        event.part.scale(inv),
+        event.whole.scale(inv),
     )
 }
 
-/**
- * Maps event time coordinates by adding an offset.
- *
- * Used for patterns that shift time (early/late).
- * Returns (shiftedPart, shiftedWhole).
- */
+/** Maps event time by adding an offset (early/late). Returns (shiftedPart, shiftedWhole). */
 internal inline fun offsetEventTime(
     event: SprudelPatternEvent,
-    offset: Rational,
-): Pair<TimeSpan, TimeSpan> {
+    offset: CycleTime,
+): Pair<CycleTimeSpan, CycleTimeSpan> {
     return Pair(
         event.part.shift(offset),
         event.whole.shift(offset)
@@ -134,22 +89,18 @@ internal inline fun offsetEventTime(
 }
 
 /**
- * Maps event time using span-based compression within a cycle.
+ * Maps event time using span-based compression within a cycle (compress/focus/fastGap).
  *
- * Used for patterns like compress/focus that squeeze events into a portion of a cycle.
- *
- * @param event The event to map
- * @param cycleBase The cycle start (e.g., cycle number as Rational)
+ * @param cycleBase The cycle start
  * @param compressedStart The start of the compressed region
- * @param span The span of the compressed region (end - start)
- * @return (mappedPart, mappedWhole)
+ * @param span The span of the compressed region as a fraction of a cycle (Double)
  */
 internal inline fun mapEventTimeBySpan(
     event: SprudelPatternEvent,
-    cycleBase: Rational,
-    compressedStart: Rational,
-    span: Rational,
-): Pair<TimeSpan, TimeSpan> {
+    cycleBase: CycleTime,
+    compressedStart: CycleTime,
+    span: Double,
+): Pair<CycleTimeSpan, CycleTimeSpan> {
     val mappedPart = event.part.shift(-cycleBase).scale(span).shift(compressedStart)
     val mappedWhole = event.whole.shift(-cycleBase).scale(span).shift(compressedStart)
 
@@ -157,17 +108,14 @@ internal inline fun mapEventTimeBySpan(
 }
 
 /**
- * Scales a time range by a factor (multiplication).
- *
- * Used to transform query ranges before passing to inner patterns.
- * Returns (scaledFrom, scaledTo).
+ * Scales a query time range by a factor (multiplication). Returns (scaledFrom, scaledTo).
  */
 internal inline fun scaleTimeRange(
-    from: Rational,
-    to: Rational,
-    scale: Rational,
-): Pair<Rational, Rational> {
-    return Pair(from * scale, to * scale)
+    from: CycleTime,
+    to: CycleTime,
+    scale: Double,
+): Pair<CycleTime, CycleTime> {
+    return Pair(from.scaleBy(scale), to.scaleBy(scale))
 }
 
 // ============================================================================
@@ -175,27 +123,18 @@ internal inline fun scaleTimeRange(
 // ============================================================================
 
 /**
- * Calculates the range of cycle indices that overlap with [from, to).
- *
- * Returns an IntRange from floor(from) to floor(to), inclusive.
- * Used for patterns that operate per-cycle.
+ * Calculates the range of cycle indices that overlap with [from, to), inclusive of both ends.
  */
-internal inline fun calculateCycleBounds(from: Rational, to: Rational): IntRange {
-    val cycleStart = floor(from.toDouble()).toInt()
-    val cycleEnd = floor(to.toDouble()).toInt()
-    return cycleStart..cycleEnd
+internal inline fun calculateCycleBounds(from: CycleTime, to: CycleTime): IntRange {
+    return from.cycleIndex()..to.cycleIndex()
 }
 
-/**
- * Checks if a query range [queryFrom, queryTo) intersects with a cycle region [regionStart, regionEnd).
- *
- * Returns true if there's any overlap.
- */
+/** Returns true if [queryFrom, queryTo) intersects the cycle region [regionStart, regionEnd). */
 internal inline fun cycleRegionIntersects(
-    queryFrom: Rational,
-    queryTo: Rational,
-    regionStart: Rational,
-    regionEnd: Rational,
+    queryFrom: CycleTime,
+    queryTo: CycleTime,
+    regionStart: CycleTime,
+    regionEnd: CycleTime,
 ): Boolean {
     return queryTo > regionStart && queryFrom < regionEnd
 }

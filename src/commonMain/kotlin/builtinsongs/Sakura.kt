@@ -18,14 +18,15 @@ let wait = 14
 
 let koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
-      .lowpass(cutoffHz = Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
       .highpass(200)
+      .lowpass(cutoffHz = Osc.constant(2000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
 
 let shaku = Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2000).adsr(0.02, 0.2, 0.03, 0.02))
-      .lowpass(cutoffHz = 3500, analog = Osc.slot.analog).highpass(cutoffHz = 300, analog = Osc.slot.analog)
+      .highpass(cutoffHz = 300, analog = Osc.slot.analog)
+      .lowpass(cutoffHz = 3500, analog = Osc.slot.analog)
       .analog(0.2).vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
@@ -97,11 +98,12 @@ stack(
     // High fifth
     ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.2).pan(0.6)
   ).hpf(160).filterWhen(x => x >= wait * 3)
-).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(3)
+).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(5)
 
 
 
 
 
+            
             """,
 )

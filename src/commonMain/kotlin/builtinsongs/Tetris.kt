@@ -10,8 +10,7 @@ internal val tetrisSong = Song(
     title = "Stein um Stein",
     rpm = 39.5,
     icon = "gamepad",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // ── Patterns: the raw musical content ───────────────────────────────────
@@ -49,7 +48,7 @@ export drumsPattern = `<
 // Lead voice: triangle, mild lpf, pan-spread, tempo-locked delay,
 // octave-superimposed accents.
 export leadShape = (p) => p
-    .sound("tri").clip(0.33).hpf(500).lpf("5000").warmth(0.1)
+    .sound("tri").clip(0.33).hpf(500).lpf("4000").lpq(3).warmth(0.1)
     .adsr("0.02:0.2:0.5:0.1").superimpose(x => x.transpose("<0 12 0 -12>/8"))
     .orbit(0).gain(0.115).pan(0.33).superimpose(pan(0.66))
     .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.2)
@@ -57,18 +56,21 @@ export leadShape = (p) => p
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
     .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.1)
-    .orbit(1).gain(0.6).adsr("0.01:0.2:0.8:0.15").pan(0.3)
-    .superimpose(transpose("<0 12 0 -12>/8").pan(0.7)).phaser(1/13).phaserdepth(0.20).phasercenter(2500).phasersweep(1000)
-    .detune(sine.range(0.05, 0.4).early(1.5).slow(24)).hpf(200).lpf(2500).lpe(1)
+    .orbit(1).gain(0.45).adsr("0.01:0.2:0.8:0.15").pan(0.2)
+    .superimpose(
+      x => x.pan(0.8),
+      x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
+    ).phaser(1/13).phaserdepth(0.20).phasercenter(2500).phasersweep(1000)
+    .detune(sine.range(0.05, 0.4).early(1.5).slow(24)).hpf(300).lpf(2500).lpe(2)
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.
 export subShape = (p) => p
     .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.8).warmth(0.2).distort("0.3:tube:2").postgain(0.55)
-    .adsr("0.01:0.2:0.5:0.09").tremolo("0.1:8::0:0").hpf(70).lpf(600).lpe(1) // . solo()
+    .adsr("0.01:0.2:0.5:0.09").tremolo("0.1:8::0:0").hpf(70).lpf(300).lpe(2) // . solo()
 
 // Drums: tight, panned right, fast.
 export drumsShape = (p) => p
-    .orbit(3).gain(0.8).pan(0.6).adsr("0.007:0.2:0.5:1.0").hpf(90).lpf("4000:1:1")
+    .orbit(3).gain(0.8).pan(0.6).adsr("0.007:0.2:0.5:1.0").hpf(90).lpf("5000:1:1")
     .fast(2)
 
 // ── Assembled parts: shape × pattern, fully voiced and arrangement-free ─

@@ -9,8 +9,6 @@ import kotlin.math.pow
 
 const val TWO_PI = PI * 2.0
 
-const val ONE_OVER_TWELVE: Double = 1.0 / 12.0
-
 // ── DSP Utilities ────────────────────────────────────────────────────────────
 
 /** Threshold below which filter state is flushed to zero to avoid denormal slowdowns. */
@@ -78,6 +76,33 @@ inline fun Double.polyBlep(dt: Double): Double {
         correction += r * r + r + r + 1.0
     }
     return correction
+}
+
+/**
+ * The **one** piecewise-linear waveform shape behind saw / ramp / square / pulse / triangle (and their
+ * raw variants). A `±1` trapezoid in four segments: a **rise** ramp `−1→+1` over `[0, riseEnd]`, a
+ * **high** plateau `+1` to [highEnd], a **fall** ramp `+1→−1` to [fallEnd], then a **low** plateau `−1`.
+ *
+ * Slopes are precomputed by the caller (`riseSlope = 2/riseEnd`, `fallSlope = 2/fallLen`) so this is
+ * **multiply-only**. A segment of zero length is simply skipped (empty plateaus → saw/triangle; empty
+ * ramps → instant/raw edges). No PolyBLEP — a finite-slope edge is inherently band-limited.
+ *
+ * Configs (see `WaveVoiceState`): saw = empty plateaus (`highEnd = riseEnd`, `fallEnd = 1`); square/pulse
+ * = min-flank ramps + plateaus; triangle = `riseEnd = 0.5`, `fallEnd = 1`; raw = ramp length 0.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun waveTrapezoid(
+    p: Double,
+    riseEnd: Double,
+    highEnd: Double,
+    fallEnd: Double,
+    riseSlope: Double,
+    fallSlope: Double,
+): Double = when {
+    p < riseEnd -> -1.0 + p * riseSlope                   // rise −1 → +1
+    p < highEnd -> 1.0                                    // high plateau
+    p < fallEnd -> 1.0 - (p - highEnd) * fallSlope        // fall +1 → −1
+    else -> -1.0                                          // low plateau
 }
 
 /**

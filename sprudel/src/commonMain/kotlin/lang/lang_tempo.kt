@@ -3,13 +3,12 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel._bind
 import io.peekandpoke.klang.sprudel._bindSqueeze
 import io.peekandpoke.klang.sprudel._innerJoin
@@ -28,16 +27,17 @@ import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 import io.peekandpoke.klang.sprudel.pattern.SwingPattern
 import io.peekandpoke.klang.sprudel.pattern.TimeShiftPattern
 import io.peekandpoke.klang.sprudel.withSteps
+
 // Helpers /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 internal fun applyTimeShift(
     pattern: SprudelPattern,
     args: List<SprudelDslArg<Any?>>,
-    factor: Rational = Rational.ONE,
+    factor: Double = 1.0,
 ): SprudelPattern {
     if (args.isEmpty()) return pattern
 
-    val control = args[0].asControlValueProvider(Rational.ZERO.asVoiceValue())
+    val control = args[0].asControlValueProvider(0.0.asVoiceValue())
 
     return TimeShiftPattern(
         source = pattern,
@@ -56,20 +56,20 @@ internal fun applySlow(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val factorArg = args.firstOrNull() ?: return pattern
 
     val result = pattern._innerJoin(factorArg) { src, factorVal ->
-        val factor = factorVal?.asRational ?: return@_innerJoin src
-        if (factor == Rational.ZERO) return@_innerJoin silence
-        val inverseFactor = Rational.ONE / factor
+        val factor = factorVal?.asDouble ?: return@_innerJoin src
+        if (factor == 0.0) return@_innerJoin silence
+        val inverseFactor = 1.0 / factor
 
-        src._withQueryTime { t -> t * inverseFactor }
-            ._withHapTime { t -> t / inverseFactor }
+        src._withQueryTime { t -> t.scaleBy(inverseFactor) }
+            ._withHapTime { t -> t.divBy(inverseFactor) }
             .withSteps(src.numSteps)
     }
 
-    val staticFactor = factorArg.value?.asRationalOrNull()
+    val staticFactor = factorArg.value?.asDoubleOrNull()
 
-    if (staticFactor != null && staticFactor > Rational.ZERO) {
+    if (staticFactor != null && staticFactor > 0.0) {
         return object : SprudelPattern by result {
-            override fun estimateCycleDuration(): Rational =
+            override fun estimateCycleDuration(): Double =
                 pattern.estimateCycleDuration() * staticFactor
         }
     }
@@ -96,13 +96,11 @@ internal fun applySlow(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category tempo
  * @tags slow, tempo, stretch, speed
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.slow(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySlow(this, listOf(factor).asSprudelDslArgs(callInfo))
 
 /** Slows down this string pattern by the given factor. */
-@SprudelDsl
 @KlangScript.Function
 fun String.slow(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).slow(factor, callInfo)
@@ -119,13 +117,11 @@ fun String.slow(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern
  * @category tempo
  * @tags slow, tempo, stretch, speed
  */
-@SprudelDsl
 @KlangScript.Function
 fun slow(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.slow(factor, callInfo) }
 
 /** Chains a slow operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.slow(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.slow(factor, callInfo) }
@@ -136,19 +132,19 @@ internal fun applyFast(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val factorArg = args.firstOrNull() ?: return pattern
 
     val result = pattern._innerJoin(factorArg) { src, factorVal ->
-        val factor = factorVal?.asRational ?: return@_innerJoin src
-        if (factor == Rational.ZERO) return@_innerJoin silence
+        val factor = factorVal?.asDouble ?: return@_innerJoin src
+        if (factor == 0.0) return@_innerJoin silence
 
-        src._withQueryTime { t -> t * factor }
-            ._withHapTime { t -> t / factor }
+        src._withQueryTime { t -> t.scaleBy(factor) }
+            ._withHapTime { t -> t.divBy(factor) }
             .withSteps(src.numSteps)
     }
 
-    val staticFactor = factorArg.value?.asRationalOrNull()
+    val staticFactor = factorArg.value?.asDoubleOrNull()
 
-    if (staticFactor != null && staticFactor > Rational.ZERO) {
+    if (staticFactor != null && staticFactor > 0.0) {
         return object : SprudelPattern by result {
-            override fun estimateCycleDuration(): Rational =
+            override fun estimateCycleDuration(): Double =
                 pattern.estimateCycleDuration() / staticFactor
         }
     }
@@ -175,13 +171,11 @@ internal fun applyFast(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category tempo
  * @tags fast, speed, tempo, accelerate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fast(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyFast(this, listOf(factor).asSprudelDslArgs(callInfo))
 
 /** Speeds up the mini-notation string pattern by `factor`. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fast(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fast(factor, callInfo)
@@ -198,13 +192,11 @@ fun String.fast(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern
  * @category tempo
  * @tags fast, speed, tempo, accelerate
  */
-@SprudelDsl
 @KlangScript.Function
 fun fast(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fast(factor, callInfo) }
 
 /** Chains a fast operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fast(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fast(factor, callInfo) }
@@ -213,7 +205,7 @@ fun PatternMapperFn.fast(factor: PatternLike, callInfo: CallInfo? = null): Patte
 
 private fun applyRev(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nProvider: ControlValueProvider =
-        args.firstOrNull().asControlValueProvider(Rational.ONE.asVoiceValue())
+        args.firstOrNull().asControlValueProvider(1.0.asVoiceValue())
 
     return ReversePattern(inner = pattern, nProvider = nProvider)
 }
@@ -239,13 +231,11 @@ private fun applyRev(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category tempo
  * @tags rev, reverse, order, retrograde
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.rev(n: PatternLike = 1, callInfo: CallInfo? = null): SprudelPattern =
     applyRev(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Reverses the order of events, applying the reversal across every `n`-cycle span. */
-@SprudelDsl
 @KlangScript.Function
 fun String.rev(n: PatternLike = 1, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).rev(n, callInfo)
@@ -262,13 +252,11 @@ fun String.rev(n: PatternLike = 1, callInfo: CallInfo? = null): SprudelPattern =
  * @category tempo
  * @tags rev, reverse, order, retrograde
  */
-@SprudelDsl
 @KlangScript.Function
 fun rev(n: PatternLike = 1, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.rev(n, callInfo) }
 
 /** Chains a rev operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.rev(n: PatternLike = 1, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.rev(n, callInfo) }
@@ -278,10 +266,10 @@ fun PatternMapperFn.rev(n: PatternLike = 1, callInfo: CallInfo? = null): Pattern
 // TODO: deep checks ... does not seem to work to well for complex patterns
 private fun applyRevv(pattern: SprudelPattern): SprudelPattern {
     // Negates a time span: [begin, end] → [-end, -begin]
-    val negateSpan: (TimeSpan) -> TimeSpan = { span ->
-        TimeSpan(
-            begin = Rational.ZERO - span.end,
-            end = Rational.ZERO - span.begin
+    val negateSpan: (CycleTimeSpan) -> CycleTimeSpan = { span ->
+        CycleTimeSpan(
+            begin = -span.end,
+            end = -span.begin
         )
     }
 
@@ -305,13 +293,11 @@ private fun applyRevv(pattern: SprudelPattern): SprudelPattern {
  * @category tempo
  * @tags revv, reverse, retrograde, time, global
  */
-@SprudelDsl
 @KlangScript.Function
 @Suppress("UNUSED_PARAMETER")
 fun SprudelPattern.revv(callInfo: CallInfo? = null): SprudelPattern = applyRevv(this)
 
 /** Reverses the pattern in absolute time across all cycles. */
-@SprudelDsl
 @KlangScript.Function
 fun String.revv(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).revv(callInfo)
@@ -326,13 +312,11 @@ fun String.revv(callInfo: CallInfo? = null): SprudelPattern =
  * @category tempo
  * @tags revv, reverse, retrograde, time, global
  */
-@SprudelDsl
 @KlangScript.Function
 fun revv(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.revv(callInfo) }
 
 /** Chains a revv operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.revv(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.revv(callInfo) }
@@ -367,13 +351,11 @@ private fun applyPalindrome(pattern: SprudelPattern): SprudelPattern {
  * @category tempo
  * @tags palindrome, reverse, mirror, order, retrograde
  */
-@SprudelDsl
 @KlangScript.Function
 @Suppress("UNUSED_PARAMETER")
 fun SprudelPattern.palindrome(callInfo: CallInfo? = null): SprudelPattern = applyPalindrome(this)
 
 /** Plays the pattern forward then backward, creating a two-cycle palindrome. */
-@SprudelDsl
 @KlangScript.Function
 fun String.palindrome(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).palindrome(callInfo)
@@ -388,13 +370,11 @@ fun String.palindrome(callInfo: CallInfo? = null): SprudelPattern =
  * @category tempo
  * @tags palindrome, reverse, mirror, order, retrograde
  */
-@SprudelDsl
 @KlangScript.Function
 fun palindrome(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.palindrome(callInfo) }
 
 /** Chains a palindrome operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.palindrome(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.palindrome(callInfo) }
@@ -402,7 +382,7 @@ fun PatternMapperFn.palindrome(callInfo: CallInfo? = null): PatternMapperFn =
 // -- early() ----------------------------------------------------------------------------------------------------------
 
 private fun applyEarly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    applyTimeShift(pattern = pattern, args = args, factor = Rational.MINUS_ONE)
+    applyTimeShift(pattern = pattern, args = args, factor = -1.0)
 
 /**
  * Nudges the pattern to start earlier by the given number of cycles.
@@ -425,13 +405,11 @@ private fun applyEarly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category tempo
  * @tags early, shift, time, offset, nudge, ahead
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.early(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyEarly(this, listOf(amount).asSprudelDslArgs(callInfo))
 
 /** Nudges the pattern to start earlier by the given number of cycles. */
-@SprudelDsl
 @KlangScript.Function
 fun String.early(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).early(amount, callInfo)
@@ -448,13 +426,11 @@ fun String.early(amount: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * @category tempo
  * @tags early, shift, time, offset, nudge, ahead
  */
-@SprudelDsl
 @KlangScript.Function
 fun early(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.early(amount, callInfo) }
 
 /** Chains an early operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.early(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.early(amount, callInfo) }
@@ -462,7 +438,7 @@ fun PatternMapperFn.early(amount: PatternLike, callInfo: CallInfo? = null): Patt
 // -- late() -----------------------------------------------------------------------------------------------------------
 
 private fun applyLate(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    applyTimeShift(pattern = pattern, args = args, factor = Rational.ONE)
+    applyTimeShift(pattern = pattern, args = args, factor = 1.0)
 
 /**
  * Nudges the pattern to start later by the given number of cycles.
@@ -485,13 +461,11 @@ private fun applyLate(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category tempo
  * @tags late, shift, time, offset, nudge, delay, behind
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.late(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyLate(this, listOf(amount).asSprudelDslArgs(callInfo))
 
 /** Nudges the pattern to start later by the given number of cycles. */
-@SprudelDsl
 @KlangScript.Function
 fun String.late(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).late(amount, callInfo)
@@ -508,13 +482,11 @@ fun String.late(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern
  * @category tempo
  * @tags late, shift, time, offset, nudge, delay, behind
  */
-@SprudelDsl
 @KlangScript.Function
 fun late(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.late(amount, callInfo) }
 
 /** Chains a late operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.late(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.late(amount, callInfo) }
@@ -532,26 +504,27 @@ internal fun applyCompress(pattern: SprudelPattern, args: List<SprudelDslArg<Any
 
     // Bind start...
     return startCtrl._bind { startEv ->
-        val b = startEv.data.value?.asRational ?: return@_bind null
+        val b = startEv.data.value?.asDouble ?: return@_bind null
 
         // ...bind end
         endCtrl._bind { endEv ->
-            val e = endEv.data.value?.asRational ?: return@_bind null
+            val e = endEv.data.value?.asDouble ?: return@_bind null
 
             // JS check: if (b.gt(e) || b.gt(1) || e.gt(1) || b.lt(0) || e.lt(0)) return silence
-            if (b > e || b > Rational.ONE || e > Rational.ONE || b < Rational.ZERO || e < Rational.ZERO) {
+            if (b > e || b > 1.0 || e > 1.0 || b < 0.0 || e < 0.0) {
                 return@_bind null // effectively silence for this event
             }
 
             val duration = e - b
-            if (duration == Rational.ZERO) return@_bind null
+            if (duration == 0.0) return@_bind null
 
-            val factor = Rational.ONE / duration
+            val factor = 1.0 / duration
             val fastGapped = applyFastGap(pattern, listOf(SprudelDslArg.of(factor)))
 
-            fastGapped._withQueryTime { t -> t - b }.mapEvents { ev ->
-                val shiftedPart = ev.part.shift(b)
-                val shiftedWhole = ev.whole.shift(b)
+            val bTime = CycleTime.ofCycles(b)
+            fastGapped._withQueryTime { t -> t - bTime }.mapEvents { ev ->
+                val shiftedPart = ev.part.shift(bTime)
+                val shiftedWhole = ev.whole.shift(bTime)
                 ev.copy(part = shiftedPart, whole = shiftedWhole)
             }
         }
@@ -579,13 +552,11 @@ internal fun applyCompress(pattern: SprudelPattern, args: List<SprudelDslArg<Any
  * @category tempo
  * @tags compress, squeeze, timespan, gap, range
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.compress(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyCompress(this, listOf(start, end).asSprudelDslArgs(callInfo))
 
 /** Compresses the pattern into `[start, end]` within each cycle, leaving silence outside. */
-@SprudelDsl
 @KlangScript.Function
 fun String.compress(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).compress(start, end, callInfo)
@@ -603,13 +574,11 @@ fun String.compress(start: PatternLike, end: PatternLike, callInfo: CallInfo? = 
  * @category tempo
  * @tags compress, squeeze, timespan, gap, range
  */
-@SprudelDsl
 @KlangScript.Function
 fun compress(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.compress(start, end, callInfo) }
 
 /** Chains a compress operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.compress(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.compress(start, end, callInfo) }
@@ -623,19 +592,20 @@ private fun applyFocus(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     val endCtrl = listOf(args[1]).toPattern(voiceValueModifier)
 
     return startCtrl._bind { startEv ->
-        val s = startEv.data.value?.asRational ?: return@_bind null
+        val s = startEv.data.value?.asDouble ?: return@_bind null
 
         endCtrl._bind { endEv ->
-            val e = endEv.data.value?.asRational ?: return@_bind null
+            val e = endEv.data.value?.asDouble ?: return@_bind null
 
             if (s >= e) return@_bind null
 
-            val d = e - s
-            val sFloored = s.floor()
+            val dCycles = (e - s)
+            val sTime = CycleTime.ofCycles(s)
+            val sFlooredTime = sTime.floorToCycle()
 
-            source._withQueryTime { t -> (t - s) / d + sFloored }.mapEvents { ev ->
-                val scaledPart = ev.part.shift(-sFloored).scale(d).shift(s)
-                val scaledWhole = ev.whole.shift(-sFloored).scale(d).shift(s)
+            source._withQueryTime { t -> (t - sTime).divBy(dCycles) + sFlooredTime }.mapEvents { ev ->
+                val scaledPart = ev.part.shift(-sFlooredTime).scale(dCycles).shift(sTime)
+                val scaledWhole = ev.whole.shift(-sFlooredTime).scale(dCycles).shift(sTime)
                 ev.copy(part = scaledPart, whole = scaledWhole)
             }
         }
@@ -663,13 +633,11 @@ private fun applyFocus(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category tempo
  * @tags focus, zoom, timespan, range, stretch
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.focus(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyFocus(this, listOf(start, end).asSprudelDslArgs(callInfo))
 
 /** Zooms in on `[start, end]` of a cycle and stretches that portion to fill each cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun String.focus(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).focus(start, end, callInfo)
@@ -687,13 +655,11 @@ fun String.focus(start: PatternLike, end: PatternLike, callInfo: CallInfo? = nul
  * @category tempo
  * @tags focus, zoom, timespan, range, stretch
  */
-@SprudelDsl
 @KlangScript.Function
 fun focus(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.focus(start, end, callInfo) }
 
 /** Chains a focus operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.focus(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.focus(start, end, callInfo) }
@@ -708,7 +674,7 @@ private fun applyPly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     val factorArg = args[0]
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asRationalOrNull()
+    val staticFactor = factorArg.value?.asDoubleOrNull()
     val newSteps = if (staticFactor != null) pattern.numSteps?.times(staticFactor) else null
 
     // Convert factor to pattern (supports static values and control patterns)
@@ -723,7 +689,7 @@ private fun applyPly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
         // factorPattern.zoom(begin, end) takes the slice of factor corresponding to the event
         // and stretches it to 0..1, which matches the squeezed context.
         val localFactor = if (staticFactor == null) {
-            factorPattern.zoom(event.whole.begin.toDouble(), event.whole.end.toDouble())
+            factorPattern.zoom(event.whole.begin.toCycles(), event.whole.end.toCycles())
         } else {
             factorPattern
         }
@@ -756,13 +722,11 @@ private fun applyPly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category tempo
  * @tags ply, repeat, subdivide, multiply, density
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.ply(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyPly(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Repeats each event `n` times within its original timespan. */
-@SprudelDsl
 @KlangScript.Function
 fun String.ply(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).ply(n, callInfo)
@@ -779,13 +743,11 @@ fun String.ply(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category tempo
  * @tags ply, repeat, subdivide, multiply, density
  */
-@SprudelDsl
 @KlangScript.Function
 fun ply(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.ply(n, callInfo) }
 
 /** Chains a ply operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.ply(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.ply(n, callInfo) }
@@ -814,16 +776,16 @@ private fun applyPlyWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
     val func = funcArg.toPatternMapper() ?: return pattern
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asRationalOrNull()?.toInt()
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toInt()
 
     val newSteps = if (staticFactor != null) {
-        pattern.numSteps?.times(staticFactor.toRational())
+        pattern.numSteps?.times(staticFactor.toDouble())
     } else {
         null
     }
 
     val result = pattern._bindSqueeze { event ->
-        val factor = staticFactor ?: event.data.value?.asRational?.toInt() ?: 1
+        val factor = staticFactor ?: event.data.value?.asDouble?.toInt() ?: 1
 
         if (factor <= 0) {
             return@_bindSqueeze null
@@ -867,13 +829,11 @@ private fun applyPlyWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category tempo
  * @tags plyWith, repeat, transform, cumulative, subdivide
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.plyWith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyPlyWith(this, listOf(factor, transform).asSprudelDslArgs(callInfo))
 
 /** Repeats each event `n` times, applying `transform` cumulatively (0, 1, 2 … times). */
-@SprudelDsl
 @KlangScript.Function
 fun String.plyWith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).plyWith(factor, transform, callInfo)
@@ -892,13 +852,11 @@ fun String.plyWith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? 
  * @category tempo
  * @tags plyWith, repeat, transform, cumulative, subdivide
  */
-@SprudelDsl
 @KlangScript.Function
 fun plyWith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.plyWith(factor, transform, callInfo) }
 
 /** Chains a plyWith operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.plyWith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.plyWith(factor, transform, callInfo) }
@@ -913,25 +871,21 @@ fun PatternMapperFn.plyWith(factor: Int, transform: PatternMapperFn, callInfo: C
  * @category tempo
  * @tags plywith, plyWith, repeat, transform, cumulative
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.plywith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.plyWith(factor, transform, callInfo)
 
 /** Alias for [plyWith] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.plywith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).plywith(factor, transform, callInfo)
 
 /** Returns a [PatternMapperFn] that is an alias for [plyWith]. */
-@SprudelDsl
 @KlangScript.Function
 fun plywith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     plyWith(factor, transform, callInfo)
 
 /** Alias for [PatternMapperFn.plyWith]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.plywith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.plyWith(factor, transform, callInfo)
@@ -950,7 +904,7 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
     val func = funcArg.value as? ((SprudelPattern, Int) -> SprudelPattern) ?: return pattern
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asRationalOrNull()?.toInt()
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toInt()
 
     val newSteps = if (staticFactor != null) {
         pattern.numSteps?.times(staticFactor)
@@ -959,7 +913,7 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
     }
 
     val result = pattern._bindSqueeze { event ->
-        val factor = staticFactor ?: event.data.value?.asRationalOrNull()?.toInt() ?: 1
+        val factor = staticFactor ?: event.data.value?.asDoubleOrNull()?.toInt() ?: 1
 
         if (factor <= 0) {
             return@_bindSqueeze null
@@ -1010,25 +964,21 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
  * @category tempo
  * @tags plyForEach, repeat, transform, index, subdivide
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.plyForEach(factor: Int, transform: (SprudelPattern, Int) -> SprudelPattern, callInfo: CallInfo? = null): SprudelPattern =
     applyPlyForEach(this, listOf(factor, transform).asSprudelDslArgs(callInfo))
 
 /** Repeats each event `n` times, passing the iteration index to `transform`. */
-@SprudelDsl
 @KlangScript.Function
 fun String.plyForEach(factor: Int, transform: (SprudelPattern, Int) -> SprudelPattern, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).plyForEach(factor, transform, callInfo)
 
 /** Returns a [PatternMapperFn] that repeats each event `n` times, passing the index to `transform`. */
-@SprudelDsl
 @KlangScript.Function
 fun plyForEach(factor: Int, transform: (SprudelPattern, Int) -> SprudelPattern, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.plyForEach(factor, transform, callInfo) }
 
 /** Chains a plyForEach operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.plyForEach(
     factor: Int,
@@ -1047,25 +997,21 @@ fun PatternMapperFn.plyForEach(
  * @category tempo
  * @tags plyforeach, plyForEach, repeat, transform, index
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.plyforeach(factor: Int, transform: (SprudelPattern, Int) -> SprudelPattern, callInfo: CallInfo? = null): SprudelPattern =
     this.plyForEach(factor, transform, callInfo)
 
 /** Alias for [plyForEach] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.plyforeach(factor: Int, transform: (SprudelPattern, Int) -> SprudelPattern, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).plyforeach(factor, transform, callInfo)
 
 /** Returns a [PatternMapperFn] that is an alias for [plyForEach]. */
-@SprudelDsl
 @KlangScript.Function
 fun plyforeach(factor: Int, transform: (SprudelPattern, Int) -> SprudelPattern, callInfo: CallInfo? = null): PatternMapperFn =
     plyForEach(factor, transform, callInfo)
 
 /** Alias for [PatternMapperFn.plyForEach]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.plyforeach(
     factor: Int,
@@ -1109,25 +1055,21 @@ private fun applyHurry(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category tempo
  * @tags hurry, fast, speed, pitch, accelerate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hurry(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyHurry(this, listOf(factor).asSprudelDslArgs(callInfo))
 
 /** Speeds up pattern and multiplies the `speed` audio parameter by the same factor. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hurry(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hurry(factor, callInfo)
 
 /** Returns a [PatternMapperFn] that speeds up a pattern and multiplies the `speed` parameter. */
-@SprudelDsl
 @KlangScript.Function
 fun hurry(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hurry(factor, callInfo) }
 
 /** Chains a hurry operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hurry(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hurry(factor, callInfo) }
@@ -1140,7 +1082,7 @@ internal fun applyFastGap(pattern: SprudelPattern, args: List<SprudelDslArg<Any?
     }
 
     val factorProvider: ControlValueProvider =
-        args.firstOrNull().asControlValueProvider(Rational.ONE.asVoiceValue())
+        args.firstOrNull().asControlValueProvider(1.0.asVoiceValue())
 
     return FastGapPattern(source = pattern, factorProvider = factorProvider)
 }
@@ -1167,49 +1109,41 @@ internal fun applyFastGap(pattern: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category tempo
  * @tags fastGap, fast, gap, silence, compress, density
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fastGap(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyFastGap(this, listOf(factor).asSprudelDslArgs(callInfo))
 
 /** Speeds up the pattern but plays it only once per cycle, leaving a gap. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fastGap(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fastGap(factor, callInfo)
 
 /** Returns a [PatternMapperFn] that speeds up a pattern but plays it only once per cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun fastGap(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fastGap(factor, callInfo) }
 
 /** Chains a fastGap operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fastGap(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fastGap(factor, callInfo) }
 
 /** Alias for [fastGap]. */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.densityGap(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.fastGap(factor, callInfo)
 
 /** Alias for [fastGap]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.densityGap(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).densityGap(factor, callInfo)
 
 /** Returns a [PatternMapperFn] that is an alias for [fastGap]. */
-@SprudelDsl
 @KlangScript.Function
 fun densityGap(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     fastGap(factor, callInfo)
 
 /** Alias for [PatternMapperFn.fastGap]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.densityGap(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.fastGap(factor, callInfo)
@@ -1251,25 +1185,21 @@ private fun applyInside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category tempo
  * @tags inside, transform, zoom, slow, fast
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.inside(factor: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyInside(this, listOf(factor, transform).asSprudelDslArgs(callInfo))
 
 /** Applies a transformation inside a zoomed-in view of the cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun String.inside(factor: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).inside(factor, transform, callInfo)
 
 /** Returns a [PatternMapperFn] that applies a transformation inside a zoomed-in view of the cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun inside(factor: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.inside(factor, transform, callInfo) }
 
 /** Chains an inside operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.inside(factor: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.inside(factor, transform, callInfo) }
@@ -1282,7 +1212,7 @@ private fun applyOutside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
     }
 
     // TODO: support control pattern for "factor"
-    val factor = args[0].value?.asRationalOrNull() ?: Rational.ONE
+    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
 
     val func = args[1].toPatternMapper() ?: return pattern
 
@@ -1313,25 +1243,21 @@ private fun applyOutside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category tempo
  * @tags outside, transform, zoom, fast, slow
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.outside(factor: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyOutside(this, listOf(factor, transform).asSprudelDslArgs(callInfo))
 
 /** Applies a transformation outside the current cycle on this string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.outside(factor: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).outside(factor, transform, callInfo)
 
 /** Returns a [PatternMapperFn] that applies a transformation outside the current cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun outside(factor: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.outside(factor, transform, callInfo) }
 
 /** Chains an outside operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.outside(factor: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.outside(factor, transform, callInfo) }
@@ -1340,8 +1266,8 @@ fun PatternMapperFn.outside(factor: PatternLike, transform: PatternMapperFn, cal
 
 private fun applySwingBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return pattern._innerJoin(args) { source, swing, n ->
-        val swingValue = swing?.asRational ?: return@_innerJoin silence
-        val nVal = n?.asRational ?: Rational.ONE
+        val swingValue = swing?.asDouble ?: return@_innerJoin silence
+        val nVal = n?.asDouble ?: 1.0
 
         SwingPattern(source = source, swing = swingValue, n = nVal)
     }
@@ -1372,25 +1298,21 @@ private fun applySwingBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category tempo
  * @tags swingBy, swing, shuffle, rhythm, timing, groove
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.swingBy(swing: PatternLike, n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySwingBy(this, listOf(swing, n).asSprudelDslArgs(callInfo))
 
 /** Creates a swing rhythm with custom amount; see `swingBy` for details. */
-@SprudelDsl
 @KlangScript.Function
 fun String.swingBy(swing: PatternLike, n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).swingBy(swing, n, callInfo)
 
 /** Returns a [PatternMapperFn] that creates a swing or shuffle rhythm. */
-@SprudelDsl
 @KlangScript.Function
 fun swingBy(swing: PatternLike, n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.swingBy(swing, n, callInfo) }
 
 /** Chains a swingBy operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.swingBy(swing: PatternLike, n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.swingBy(swing, n, callInfo) }
@@ -1423,25 +1345,21 @@ private fun applySwing(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category tempo
  * @tags swing, swingBy, shuffle, rhythm, timing, groove
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.swing(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySwing(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Shorthand for `swingBy(1/3, n)` — classic jazz swing feel. */
-@SprudelDsl
 @KlangScript.Function
 fun String.swing(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).swing(n, callInfo)
 
 /** Returns a [PatternMapperFn] that applies classic jazz swing feel. */
-@SprudelDsl
 @KlangScript.Function
 fun swing(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.swing(n, callInfo) }
 
 /** Chains a swing operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.swing(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.swing(n, callInfo) }
@@ -1470,7 +1388,7 @@ private fun applyBrak(pattern: SprudelPattern): SprudelPattern {
     )
 
     return pattern.`when`(condition, { x ->
-        fastcat(x, silence).late(0.25.toRational())
+        fastcat(x, silence).late(0.25)
     })
 }
 
@@ -1492,25 +1410,21 @@ private fun applyBrak(pattern: SprudelPattern): SprudelPattern {
  * @category tempo
  * @tags brak, breakbeat, syncopation, rhythm, offset, amen
  */
-@SprudelDsl
 @KlangScript.Function
 @Suppress("UNUSED_PARAMETER")
 fun SprudelPattern.brak(callInfo: CallInfo? = null): SprudelPattern = applyBrak(this)
 
 /** Makes every other cycle syncopated — a classic breakbeat effect. */
-@SprudelDsl
 @KlangScript.Function
 fun String.brak(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).brak(callInfo)
 
 /** Returns a [PatternMapperFn] that makes every other cycle syncopated. */
-@SprudelDsl
 @KlangScript.Function
 fun brak(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.brak(callInfo) }
 
 /** Chains a brak operation onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.brak(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.brak(callInfo) }

@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
@@ -17,12 +18,12 @@ internal class PickResetPattern(
 ) : SprudelPattern {
 
     override val weight: Double get() = selector.weight
-    override val numSteps: Rational? get() = selector.numSteps
-    override fun estimateCycleDuration(): Rational = selector.estimateCycleDuration()
+    override val numSteps: Double? get() = selector.numSteps
+    override fun estimateCycleDuration(): Double = selector.estimateCycleDuration()
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: SprudelPattern.QueryContext,
     ): List<SprudelPatternEvent> {
         val selectorEvents = selector.queryArcContextual(from, to, ctx)
@@ -43,7 +44,7 @@ internal class PickResetPattern(
             // NOTE: Using whole.begin (onset time) for cycle position calculation.
             // This matches musical semantics. See accessor-replacement notes.
             val eventBegin = selectorEvent.whole.begin
-            val shift = eventBegin.frac()
+            val shift = eventBegin.fracOfCycle()
             val localStart = intersectStart - shift
             val localEnd = intersectEnd - shift
 

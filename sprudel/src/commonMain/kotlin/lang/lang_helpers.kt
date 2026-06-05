@@ -4,7 +4,6 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -68,7 +67,7 @@ data class SprudelDslArg<out T>(
 fun <T> SprudelDslArg<T>?.asControlValueProvider(default: SprudelVoiceValue): ControlValueProvider {
     val arg = this
     val argVal = arg?.value ?: return ControlValueProvider.Static(default)
-    val argRat = argVal.asRationalOrNull()?.asVoiceValue()
+    val argRat = argVal.asDoubleOrNull()?.asVoiceValue()
 
     if (argRat != null) {
         return ControlValueProvider.Static(value = argRat, location = arg.location)
@@ -90,24 +89,15 @@ fun <T> SprudelDslArg<T>?.asControlValueProvider(default: SprudelVoiceValue): Co
 
 /** Default modifier for patterns that populates VoiceData.value */
 val voiceValueModifier = voiceModifier {
-    val result = (it?.asRationalOrNull() ?: it)?.asVoiceValue()
+    val result = (it?.asDoubleOrNull() ?: it)?.asVoiceValue()
 
     copy(value = result)
 }
 
 // --- Value Conversion Helpers ---
 
-internal fun Any.asRationalOrNull(): Rational? = when (this) {
-    is Rational -> this
-    is Number -> Rational(this.toDouble())
-    is String -> this.toDoubleOrNull()?.let { Rational(it) }
-    is SprudelVoiceValue -> this.asRational
-    else -> null
-}
-
 /** Safely convert any value to a double or null */
 internal fun Any.asDoubleOrNull(): Double? = when (this) {
-    is Rational -> this.toDouble()
     is Number -> this.toDouble()
     is String -> this.toDoubleOrNull()
     is SprudelVoiceValue -> this.asDouble
@@ -116,7 +106,6 @@ internal fun Any.asDoubleOrNull(): Double? = when (this) {
 
 /** Safely convert any value to an int or null */
 internal fun Any.asIntOrNull(): Int? = when (this) {
-    is Rational -> this.toInt()
     is Number -> this.toInt()
     is String -> this.toDoubleOrNull()?.toInt()
     is SprudelVoiceValue -> this.asInt
@@ -331,8 +320,6 @@ internal fun List<SprudelDslArg<Any?>>.toListOfPatterns(
 
             // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
             is String -> parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
-
-            is Rational -> atomFactory(arg, locChain)
 
             is Number -> atomFactory(arg, locChain)
 

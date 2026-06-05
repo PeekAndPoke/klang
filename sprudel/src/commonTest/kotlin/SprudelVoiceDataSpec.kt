@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -122,17 +123,49 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 3
 
-        val lpf = voiceData.filters[0] as FilterDef.LowPass
-        lpf.cutoffHz shouldBe 1000.0
-        lpf.q shouldBe 1.5
-
-        val hpf = voiceData.filters[1] as FilterDef.HighPass
+        // Canonical chain order: HighPass → BandPass → LowPass (lowpass LAST).
+        val hpf = voiceData.filters[0] as FilterDef.HighPass
         hpf.cutoffHz shouldBe 500.0
         hpf.q shouldBe 2.0
 
-        val bpf = voiceData.filters[2] as FilterDef.BandPass
+        val bpf = voiceData.filters[1] as FilterDef.BandPass
         bpf.cutoffHz shouldBe 750.0
         bpf.q shouldBe 1.2
+
+        val lpf = voiceData.filters[2] as FilterDef.LowPass
+        lpf.cutoffHz shouldBe 1000.0
+        lpf.q shouldBe 1.5
+    }
+
+    "toVoiceData() orders the filter chain HighPass → BandPass → Notch → Formant → LowPass" {
+        // Flat fields are declared LowPass-first here on purpose; toVoiceData must
+        // re-order them into the canonical chain regardless of field assignment order.
+        val data = SprudelVoiceData.empty.copy(
+            cutoff = 1000.0,   // LowPass  → must end up LAST
+            hcutoff = 500.0,   // HighPass → must end up FIRST
+            bandf = 750.0,
+            notchf = 600.0,
+            vowel = "a",       // Formant
+        )
+
+        val voiceData = data.toVoiceData()
+
+        voiceData.filters.size shouldBe 5
+        voiceData.filters[0].shouldBeInstanceOf<FilterDef.HighPass>()
+        voiceData.filters[1].shouldBeInstanceOf<FilterDef.BandPass>()
+        voiceData.filters[2].shouldBeInstanceOf<FilterDef.Notch>()
+        voiceData.filters[3].shouldBeInstanceOf<FilterDef.Formant>()
+        voiceData.filters[4].shouldBeInstanceOf<FilterDef.LowPass>()
+    }
+
+    "toVoiceData() puts LowPass last even when it is the only pair with HighPass" {
+        val data = SprudelVoiceData.empty.copy(cutoff = 1000.0, hcutoff = 80.0)
+
+        val voiceData = data.toVoiceData()
+
+        voiceData.filters.size shouldBe 2
+        voiceData.filters[0].shouldBeInstanceOf<FilterDef.HighPass>()
+        voiceData.filters[1].shouldBeInstanceOf<FilterDef.LowPass>()
     }
 
     "toVoiceData() handles null resonance gracefully" {

@@ -371,41 +371,9 @@ body {
     min-height: 100vh;
 }
 
-/* CodeMirror live code highlighting (overlay marks) */
-.cm-highlight-overlay .cm-highlight-playing {
-    border-radius: 3px;
-    animation-name: pulse;
-    animation-timing-function: ease-out;
-    animation-fill-mode: forwards;
-    /* duration comes from inline style */
-}
-
-/* CodeMirror live code highlighting (inline decorations — legacy) */
-.cm-highlight-playing {
-    background-color: rgba(232, 184, 75, 0.0);
-    border: 1px solid rgba(232, 184, 75, 0.0);
-    border-radius: 3px;
-    animation-name: pulse;
-    animation-timing-function: ease-out;
-    animation-fill-mode: forwards;
-    padding: 1px;
-    margin: -2px;
-}
-
-@keyframes pulse {
-    0% {
-        background-color: rgba(232, 184, 75, 0.1);
-        border-color: rgba(255, 220, 100, 1.0);
-    }
-    70% {
-        background-color: rgba(232, 184, 75, 0.03);
-        border-color: rgba(255, 220, 100, 0.4);
-    }
-    100% {
-        background-color: rgba(232, 184, 75, 0.0);
-        border-color: rgba(232, 184, 75, 0.0);
-    }
-}
+/* CodeMirror live code highlighting is now rendered on a PixiJS (WebGL) canvas overlay —
+   see CodeMirrorHighlightBuffer. The former DOM `<mark>` overlay rules and `@keyframes pulse`
+   lived here and were removed. */
 
 .fade-out {
     animation: fadeOut 300ms linear forwards;

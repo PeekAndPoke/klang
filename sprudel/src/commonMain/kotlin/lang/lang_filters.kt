@@ -69,7 +69,6 @@ private fun applyLpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * @category effects
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLpf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
@@ -90,7 +89,6 @@ fun SprudelPattern.lpf(freq: PatternLike? = null, callInfo: CallInfo? = null): S
  * @category effects
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpf(freq, callInfo)
@@ -116,7 +114,6 @@ fun String.lpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @category effects
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun lpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lpf(freq, callInfo) }
@@ -135,7 +132,6 @@ fun lpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * note("c3*4").firstOf(4, lpf(300).resonance(15))   // resonant LPF chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lpf(freq, callInfo) }
@@ -161,7 +157,6 @@ fun PatternMapperFn.lpf(freq: PatternLike? = null, callInfo: CallInfo? = null): 
  * @category effects
  * @tags cutoff, lpf, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.cutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpf(freq, callInfo)
@@ -176,7 +171,6 @@ fun SprudelPattern.cutoff(freq: PatternLike? = null, callInfo: CallInfo? = null)
  * "c4 e4".cutoff(500).note()        // alias for String.lpf
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.cutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).cutoff(freq, callInfo)
@@ -199,7 +193,6 @@ fun String.cutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags cutoff, lpf, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun cutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpf(freq, callInfo)
@@ -218,7 +211,6 @@ fun cutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * note("c3*4").firstOf(4, cutoff(300).resonance(10))  // chain cutoff + resonance
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.cutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.lpf(freq, callInfo)
@@ -242,7 +234,6 @@ fun PatternMapperFn.cutoff(freq: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags ctf, lpf, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.ctf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpf(freq, callInfo)
@@ -257,7 +248,6 @@ fun SprudelPattern.ctf(freq: PatternLike? = null, callInfo: CallInfo? = null): S
  * "c4 e4".ctf(500).note()           // short alias
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.ctf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).ctf(freq, callInfo)
@@ -280,7 +270,6 @@ fun String.ctf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @category effects
  * @tags ctf, lpf, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun ctf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpf(freq, callInfo)
@@ -299,7 +288,6 @@ fun ctf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * note("c3*4").firstOf(4, ctf(300).resonance(10))   // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.ctf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.lpf(freq, callInfo)
@@ -323,7 +311,6 @@ fun PatternMapperFn.ctf(freq: PatternLike? = null, callInfo: CallInfo? = null): 
  * @category effects
  * @tags lp, lpf, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpf(freq, callInfo)
@@ -338,7 +325,6 @@ fun SprudelPattern.lp(freq: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * "c4 e4".lp(500).note()            // alias for String.lpf
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.lp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lp(freq, callInfo)
@@ -361,7 +347,6 @@ fun String.lp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * @category effects
  * @tags lp, lpf, low pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun lp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpf(freq, callInfo)
@@ -380,7 +365,6 @@ fun lp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, lp(300).resonance(10))    // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.lpf(freq, callInfo)
@@ -444,7 +428,6 @@ private fun applyHpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * @category effects
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyHpf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
@@ -463,7 +446,6 @@ fun SprudelPattern.hpf(freq: PatternLike? = null, callInfo: CallInfo? = null): S
  * @category effects
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpf(freq, callInfo)
@@ -486,7 +468,6 @@ fun String.hpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @category effects
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun hpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpf(freq, callInfo) }
@@ -505,7 +486,6 @@ fun hpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * note("c3*4").firstOf(4, hpf(200).hresonance(15))  // resonant HPF chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hpf(freq, callInfo) }
@@ -529,7 +509,6 @@ fun PatternMapperFn.hpf(freq: PatternLike? = null, callInfo: CallInfo? = null): 
  * @category effects
  * @tags hp, hpf, high pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hpf(freq, callInfo)
@@ -544,7 +523,6 @@ fun SprudelPattern.hp(freq: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * "c4 e4".hp(300).note()           // alias for String.hpf
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.hp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hp(freq, callInfo)
@@ -567,7 +545,6 @@ fun String.hp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * @category effects
  * @tags hp, hpf, high pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun hp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hpf(freq, callInfo)
@@ -586,7 +563,6 @@ fun hp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, hp(200).hresonance(10))   // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hpf(freq, callInfo)
@@ -610,7 +586,6 @@ fun PatternMapperFn.hp(freq: PatternLike? = null, callInfo: CallInfo? = null): P
  * @category effects
  * @tags hcutoff, hpf, high pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hcutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hpf(freq, callInfo)
@@ -625,7 +600,6 @@ fun SprudelPattern.hcutoff(freq: PatternLike? = null, callInfo: CallInfo? = null
  * "c4 e4".hcutoff(300).note()      // alias for String.hpf
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.hcutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hcutoff(freq, callInfo)
@@ -648,7 +622,6 @@ fun String.hcutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @category effects
  * @tags hcutoff, hpf, high pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun hcutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hpf(freq, callInfo)
@@ -667,7 +640,6 @@ fun hcutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * note("c3*4").firstOf(4, hcutoff(200).hresonance(10))  // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hcutoff(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hpf(freq, callInfo)
@@ -731,7 +703,6 @@ private fun applyBandf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category effects
  * @tags bandf, bpf, band pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bandf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBandf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
@@ -750,7 +721,6 @@ fun SprudelPattern.bandf(freq: PatternLike? = null, callInfo: CallInfo? = null):
  * @category effects
  * @tags bandf, bpf, band pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bandf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bandf(freq, callInfo)
@@ -773,7 +743,6 @@ fun String.bandf(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @category effects
  * @tags bandf, bpf, band pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun bandf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bandf(freq, callInfo) }
@@ -792,7 +761,6 @@ fun bandf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * note("c3*4").firstOf(4, bandf(800).bandq(8))        // narrow BPF chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bandf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bandf(freq, callInfo) }
@@ -816,7 +784,6 @@ fun PatternMapperFn.bandf(freq: PatternLike? = null, callInfo: CallInfo? = null)
  * @category effects
  * @tags bpf, bandf, band pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bandf(freq, callInfo)
@@ -831,7 +798,6 @@ fun SprudelPattern.bpf(freq: PatternLike? = null, callInfo: CallInfo? = null): S
  * "c4 e4".bpf(1000).note()          // alias for String.bandf
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpf(freq, callInfo)
@@ -854,7 +820,6 @@ fun String.bpf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @category effects
  * @tags bpf, bandf, band pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun bpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bandf(freq, callInfo)
@@ -873,7 +838,6 @@ fun bpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * note("c3*4").firstOf(4, bpf(800).bandq(5))         // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.bandf(freq, callInfo)
@@ -897,7 +861,6 @@ fun PatternMapperFn.bpf(freq: PatternLike? = null, callInfo: CallInfo? = null): 
  * @category effects
  * @tags bp, bandf, band pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bandf(freq, callInfo)
@@ -912,7 +875,6 @@ fun SprudelPattern.bp(freq: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * "c4 e4".bp(1000).note()           // alias for String.bandf
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bp(freq, callInfo)
@@ -935,7 +897,6 @@ fun String.bp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * @category effects
  * @tags bp, bandf, band pass filter, filter, frequency
  */
-@SprudelDsl
 @KlangScript.Function
 fun bp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bandf(freq, callInfo)
@@ -954,7 +915,6 @@ fun bp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, bp(800).bandq(5))          // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.bandf(freq, callInfo)
@@ -995,7 +955,6 @@ private fun applyResonance(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags resonance, res, lpq, low pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.resonance(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyResonance(this, listOfNotNull(q).asSprudelDslArgs(callInfo))
@@ -1014,7 +973,6 @@ fun SprudelPattern.resonance(q: PatternLike? = null, callInfo: CallInfo? = null)
  * @category effects
  * @tags resonance, res, lpq, low pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.resonance(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).resonance(q, callInfo)
@@ -1037,7 +995,6 @@ fun String.resonance(q: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags resonance, res, lpq, low pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun resonance(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.resonance(q, callInfo) }
@@ -1056,7 +1013,6 @@ fun resonance(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * note("c3*4").firstOf(4, lpf(300).resonance(20))    // resonant LPF chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.resonance(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.resonance(q, callInfo) }
@@ -1080,7 +1036,6 @@ fun PatternMapperFn.resonance(q: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags res, resonance, lpq, low pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.res(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.resonance(q, callInfo)
@@ -1095,7 +1050,6 @@ fun SprudelPattern.res(q: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * "c4".lpf(500).res(10)             // alias for String.resonance
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.res(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).res(q, callInfo)
@@ -1118,7 +1072,6 @@ fun String.res(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatte
  * @category effects
  * @tags res, resonance, lpq, low pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun res(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     resonance(q, callInfo)
@@ -1137,7 +1090,6 @@ fun res(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, lpf(300).res(20))  // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.res(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.resonance(q, callInfo)
@@ -1161,7 +1113,6 @@ fun PatternMapperFn.res(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
  * @category effects
  * @tags lpq, resonance, res, low pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.resonance(q, callInfo)
@@ -1176,7 +1127,6 @@ fun SprudelPattern.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * "c4".lpf(500).lpq(10)             // alias for String.resonance
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpq(q, callInfo)
@@ -1199,7 +1149,6 @@ fun String.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatte
  * @category effects
  * @tags lpq, resonance, res, low pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun lpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     resonance(q, callInfo)
@@ -1218,7 +1167,6 @@ fun lpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, lpf(300).lpq(20))  // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.resonance(q, callInfo)
@@ -1259,7 +1207,6 @@ private fun applyHresonance(source: SprudelPattern, args: List<SprudelDslArg<Any
  * @category effects
  * @tags hresonance, hres, hpq, high pass filter, Q, resonance
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hresonance(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyHresonance(this, listOfNotNull(q).asSprudelDslArgs(callInfo))
@@ -1278,7 +1225,6 @@ fun SprudelPattern.hresonance(q: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags hresonance, hres, hpq, high pass filter, Q, resonance
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.hresonance(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hresonance(q, callInfo)
@@ -1301,7 +1247,6 @@ fun String.hresonance(q: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @category effects
  * @tags hresonance, hres, hpq, high pass filter, Q, resonance
  */
-@SprudelDsl
 @KlangScript.Function
 fun hresonance(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hresonance(q, callInfo) }
@@ -1320,7 +1265,6 @@ fun hresonance(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * note("c3*4").firstOf(4, hpf(300).hresonance(20))   // resonant HPF chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hresonance(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hresonance(q, callInfo) }
@@ -1344,7 +1288,6 @@ fun PatternMapperFn.hresonance(q: PatternLike? = null, callInfo: CallInfo? = nul
  * @category effects
  * @tags hres, hresonance, hpq, high pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hres(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hresonance(q, callInfo)
@@ -1359,7 +1302,6 @@ fun SprudelPattern.hres(q: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * "c4".hpf(300).hres(10)            // alias for String.hresonance
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.hres(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hres(q, callInfo)
@@ -1382,7 +1324,6 @@ fun String.hres(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatt
  * @category effects
  * @tags hres, hresonance, hpq, high pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun hres(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hresonance(q, callInfo)
@@ -1401,7 +1342,6 @@ fun hres(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, hpf(200).hres(20))  // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hres(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hresonance(q, callInfo)
@@ -1425,7 +1365,6 @@ fun PatternMapperFn.hres(q: PatternLike? = null, callInfo: CallInfo? = null): Pa
  * @category effects
  * @tags hpq, hresonance, hres, high pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hresonance(q, callInfo)
@@ -1440,7 +1379,6 @@ fun SprudelPattern.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * "c4".hpf(300).hpq(10)             // alias for String.hresonance
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpq(q, callInfo)
@@ -1463,7 +1401,6 @@ fun String.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatte
  * @category effects
  * @tags hpq, hresonance, hres, high pass filter, Q
  */
-@SprudelDsl
 @KlangScript.Function
 fun hpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hresonance(q, callInfo)
@@ -1482,7 +1419,6 @@ fun hpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, hpf(200).hpq(20))  // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hresonance(q, callInfo)
@@ -1523,7 +1459,6 @@ private fun applyBandq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category effects
  * @tags bandq, bpq, band pass filter, Q, bandwidth
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bandq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBandq(this, listOfNotNull(q).asSprudelDslArgs(callInfo))
@@ -1538,7 +1473,6 @@ fun SprudelPattern.bandq(q: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * "c4".bandf(800).bandq(5)          // BPF Q on string pattern
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bandq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bandq(q, callInfo)
@@ -1561,7 +1495,6 @@ fun String.bandq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * @category effects
  * @tags bandq, bpq, band pass filter, Q, bandwidth
  */
-@SprudelDsl
 @KlangScript.Function
 fun bandq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bandq(q, callInfo) }
@@ -1580,7 +1513,6 @@ fun bandq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, bandf(1000).bandq(8))      // narrow BPF chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bandq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bandq(q, callInfo) }
@@ -1604,7 +1536,6 @@ fun PatternMapperFn.bandq(q: PatternLike? = null, callInfo: CallInfo? = null): P
  * @category effects
  * @tags bpq, bandq, band pass filter, Q, bandwidth
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bandq(q, callInfo)
@@ -1619,7 +1550,6 @@ fun SprudelPattern.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * "c4".bandf(800).bpq(5)            // alias for String.bandq
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpq(q, callInfo)
@@ -1642,7 +1572,6 @@ fun String.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatte
  * @category effects
  * @tags bpq, bandq, band pass filter, Q, bandwidth
  */
-@SprudelDsl
 @KlangScript.Function
 fun bpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bandq(q, callInfo)
@@ -1661,7 +1590,6 @@ fun bpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * note("c3*4").firstOf(4, bandf(1000).bpq(8))  // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.bandq(q, callInfo)
@@ -1698,7 +1626,6 @@ private fun applyLpattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category effects
  * @tags lpattack, lpa, low pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLpattack(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
@@ -1717,7 +1644,6 @@ fun SprudelPattern.lpattack(seconds: PatternLike? = null, callInfo: CallInfo? = 
  * @category effects
  * @tags lpattack, lpa, low pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpattack(seconds, callInfo)
@@ -1740,7 +1666,6 @@ fun String.lpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
  * @category effects
  * @tags lpattack, lpa, low pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun lpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lpattack(seconds, callInfo) }
@@ -1759,7 +1684,6 @@ fun lpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternM
  * note("c3*4").firstOf(4, lpf(300).lpattack(0.2))  // chain
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lpattack(seconds, callInfo) }
@@ -1779,13 +1703,11 @@ fun PatternMapperFn.lpattack(seconds: PatternLike? = null, callInfo: CallInfo? =
  * @category effects
  * @tags lpa, lpattack, low pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpattack(seconds, callInfo)
 
 /** Alias for [lpattack] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpa(seconds, callInfo)
@@ -1804,13 +1726,11 @@ fun String.lpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags lpa, lpattack, low pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun lpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpattack(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets LPF attack (alias for [lpattack]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.lpattack(seconds, callInfo)
@@ -1845,13 +1765,11 @@ private fun applyLpdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category effects
  * @tags lpdecay, lpd, low pass filter, envelope, decay
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLpdecay(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Parses this string as a pattern, then sets LPF envelope decay time. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpdecay(seconds, callInfo)
@@ -1870,13 +1788,11 @@ fun String.lpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category effects
  * @tags lpdecay, lpd, low pass filter, envelope, decay
  */
-@SprudelDsl
 @KlangScript.Function
 fun lpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lpdecay(seconds, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets LPF decay after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lpdecay(seconds, callInfo) }
@@ -1896,13 +1812,11 @@ fun PatternMapperFn.lpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = 
  * @category effects
  * @tags lpd, lpdecay, low pass filter, envelope, decay
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpdecay(seconds, callInfo)
 
 /** Alias for [lpdecay] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpd(seconds, callInfo)
@@ -1921,13 +1835,11 @@ fun String.lpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category effects
  * @tags lpd, lpdecay, low pass filter, envelope, decay
  */
-@SprudelDsl
 @KlangScript.Function
 fun lpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpdecay(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets LPF decay (alias for [lpdecay]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.lpdecay(seconds, callInfo)
@@ -1961,25 +1873,21 @@ private fun applyLpsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags lpsustain, lps, low pass filter, envelope, sustain
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLpsustain(this, listOfNotNull(level).asSprudelDslArgs(callInfo))
 
 /** Sets the LPF envelope sustain level on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpsustain(level, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the LPF envelope sustain level. */
-@SprudelDsl
 @KlangScript.Function
 fun lpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lpsustain(level, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the LPF envelope sustain level after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lpsustain(level, callInfo) }
@@ -2002,25 +1910,21 @@ fun PatternMapperFn.lpsustain(level: PatternLike? = null, callInfo: CallInfo? = 
  * @category effects
  * @tags lps, lpsustain, low pass filter, envelope, sustain
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lps(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpsustain(level, callInfo)
 
 /** Alias for [lpsustain] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lps(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lps(level, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the LPF envelope sustain level (alias for [lpsustain]). */
-@SprudelDsl
 @KlangScript.Function
 fun lps(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpsustain(level, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets LPF sustain (alias for [lpsustain]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lps(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.lpsustain(level, callInfo)
@@ -2054,25 +1958,21 @@ private fun applyLprelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags lprelease, lpr, low pass filter, envelope, release
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLprelease(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the LPF envelope release time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lprelease(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the LPF envelope release time. */
-@SprudelDsl
 @KlangScript.Function
 fun lprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lprelease(seconds, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the LPF envelope release time after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lprelease(seconds, callInfo) }
@@ -2095,25 +1995,21 @@ fun PatternMapperFn.lprelease(seconds: PatternLike? = null, callInfo: CallInfo? 
  * @category effects
  * @tags lpr, lprelease, low pass filter, envelope, release
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lprelease(seconds, callInfo)
 
 /** Alias for [lprelease] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpr(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the LPF envelope release time (alias for [lprelease]). */
-@SprudelDsl
 @KlangScript.Function
 fun lpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lprelease(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets LPF release (alias for [lprelease]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.lprelease(seconds, callInfo)
@@ -2168,25 +2064,21 @@ private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category effects
  * @tags lpenv, lpe, low pass filter, envelope, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLpenv(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
 
 /** Sets the LPF envelope depth/amount on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpenv(depth, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the LPF envelope depth. */
-@SprudelDsl
 @KlangScript.Function
 fun lpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lpenv(depth, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the LPF envelope depth after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lpenv(depth, callInfo) }
@@ -2209,25 +2101,21 @@ fun PatternMapperFn.lpenv(depth: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags lpe, lpenv, low pass filter, envelope, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpenv(depth, callInfo)
 
 /** Alias for [lpenv] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpe(depth, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the LPF envelope depth (alias for [lpenv]). */
-@SprudelDsl
 @KlangScript.Function
 fun lpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpenv(depth, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets LPF envelope depth (alias for [lpenv]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.lpenv(depth, callInfo)
@@ -2261,25 +2149,21 @@ private fun applyHpattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category effects
  * @tags hpattack, hpa, high pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyHpattack(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the HPF envelope attack time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpattack(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope attack time. */
-@SprudelDsl
 @KlangScript.Function
 fun hpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpattack(seconds, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the HPF envelope attack time after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hpattack(seconds, callInfo) }
@@ -2302,25 +2186,21 @@ fun PatternMapperFn.hpattack(seconds: PatternLike? = null, callInfo: CallInfo? =
  * @category effects
  * @tags hpa, hpattack, high pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hpattack(seconds, callInfo)
 
 /** Alias for [hpattack] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpa(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope attack time (alias for [hpattack]). */
-@SprudelDsl
 @KlangScript.Function
 fun hpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hpattack(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets HPF attack (alias for [hpattack]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hpattack(seconds, callInfo)
@@ -2354,25 +2234,21 @@ private fun applyHpdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category effects
  * @tags hpdecay, hpd, high pass filter, envelope, decay
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyHpdecay(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the HPF envelope decay time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpdecay(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope decay time. */
-@SprudelDsl
 @KlangScript.Function
 fun hpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpdecay(seconds, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the HPF envelope decay time after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hpdecay(seconds, callInfo) }
@@ -2395,25 +2271,21 @@ fun PatternMapperFn.hpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = 
  * @category effects
  * @tags hpd, hpdecay, high pass filter, envelope, decay
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hpdecay(seconds, callInfo)
 
 /** Alias for [hpdecay] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpd(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope decay time (alias for [hpdecay]). */
-@SprudelDsl
 @KlangScript.Function
 fun hpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hpdecay(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets HPF decay (alias for [hpdecay]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hpdecay(seconds, callInfo)
@@ -2448,25 +2320,21 @@ private fun applyHpsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags hpsustain, hps, high pass filter, envelope, sustain
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyHpsustain(this, listOfNotNull(level).asSprudelDslArgs(callInfo))
 
 /** Sets the HPF envelope sustain level on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpsustain(level, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope sustain level. */
-@SprudelDsl
 @KlangScript.Function
 fun hpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpsustain(level, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the HPF envelope sustain level after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hpsustain(level, callInfo) }
@@ -2489,25 +2357,21 @@ fun PatternMapperFn.hpsustain(level: PatternLike? = null, callInfo: CallInfo? = 
  * @category effects
  * @tags hps, hpsustain, high pass filter, envelope, sustain
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hps(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hpsustain(level, callInfo)
 
 /** Alias for [hpsustain] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hps(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hps(level, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope sustain level (alias for [hpsustain]). */
-@SprudelDsl
 @KlangScript.Function
 fun hps(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hpsustain(level, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets HPF sustain (alias for [hpsustain]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hps(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hpsustain(level, callInfo)
@@ -2541,25 +2405,21 @@ private fun applyHprelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags hprelease, hpr, high pass filter, envelope, release
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyHprelease(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the HPF envelope release time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hprelease(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope release time. */
-@SprudelDsl
 @KlangScript.Function
 fun hprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hprelease(seconds, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the HPF envelope release time after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hprelease(seconds, callInfo) }
@@ -2582,25 +2442,21 @@ fun PatternMapperFn.hprelease(seconds: PatternLike? = null, callInfo: CallInfo? 
  * @category effects
  * @tags hpr, hprelease, high pass filter, envelope, release
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hprelease(seconds, callInfo)
 
 /** Alias for [hprelease] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpr(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope release time (alias for [hprelease]). */
-@SprudelDsl
 @KlangScript.Function
 fun hpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hprelease(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets HPF release (alias for [hprelease]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hprelease(seconds, callInfo)
@@ -2655,25 +2511,21 @@ private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category effects
  * @tags hpenv, hpe, high pass filter, envelope, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyHpenv(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
 
 /** Sets the HPF envelope depth/amount on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpenv(depth, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope depth. */
-@SprudelDsl
 @KlangScript.Function
 fun hpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpenv(depth, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the HPF envelope depth after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hpenv(depth, callInfo) }
@@ -2696,25 +2548,21 @@ fun PatternMapperFn.hpenv(depth: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags hpe, hpenv, high pass filter, envelope, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hpenv(depth, callInfo)
 
 /** Alias for [hpenv] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpe(depth, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope depth (alias for [hpenv]). */
-@SprudelDsl
 @KlangScript.Function
 fun hpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hpenv(depth, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets HPF envelope depth (alias for [hpenv]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.hpenv(depth, callInfo)
@@ -2748,25 +2596,21 @@ private fun applyBpattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category effects
  * @tags bpattack, bpa, band pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBpattack(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the BPF envelope attack time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpattack(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope attack time. */
-@SprudelDsl
 @KlangScript.Function
 fun bpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bpattack(seconds, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the BPF envelope attack time after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bpattack(seconds, callInfo) }
@@ -2789,25 +2633,21 @@ fun PatternMapperFn.bpattack(seconds: PatternLike? = null, callInfo: CallInfo? =
  * @category effects
  * @tags bpa, bpattack, band pass filter, envelope, attack
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bpattack(seconds, callInfo)
 
 /** Alias for [bpattack] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpa(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope attack time (alias for [bpattack]). */
-@SprudelDsl
 @KlangScript.Function
 fun bpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bpattack(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets BPF attack (alias for [bpattack]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpa(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.bpattack(seconds, callInfo)
@@ -2841,25 +2681,21 @@ private fun applyBpdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category effects
  * @tags bpdecay, bpd, band pass filter, envelope, decay
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBpdecay(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the BPF envelope decay time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpdecay(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope decay time. */
-@SprudelDsl
 @KlangScript.Function
 fun bpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bpdecay(seconds, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the BPF envelope decay time after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bpdecay(seconds, callInfo) }
@@ -2882,25 +2718,21 @@ fun PatternMapperFn.bpdecay(seconds: PatternLike? = null, callInfo: CallInfo? = 
  * @category effects
  * @tags bpd, bpdecay, band pass filter, envelope, decay
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bpdecay(seconds, callInfo)
 
 /** Alias for [bpdecay] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpd(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope decay time (alias for [bpdecay]). */
-@SprudelDsl
 @KlangScript.Function
 fun bpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bpdecay(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets BPF decay (alias for [bpdecay]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpd(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.bpdecay(seconds, callInfo)
@@ -2935,25 +2767,21 @@ private fun applyBpsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags bpsustain, bps, band pass filter, envelope, sustain
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBpsustain(this, listOfNotNull(level).asSprudelDslArgs(callInfo))
 
 /** Sets the BPF envelope sustain level on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpsustain(level, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope sustain level. */
-@SprudelDsl
 @KlangScript.Function
 fun bpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bpsustain(level, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the BPF envelope sustain level after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bpsustain(level, callInfo) }
@@ -2976,25 +2804,21 @@ fun PatternMapperFn.bpsustain(level: PatternLike? = null, callInfo: CallInfo? = 
  * @category effects
  * @tags bps, bpsustain, band pass filter, envelope, sustain
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bps(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bpsustain(level, callInfo)
 
 /** Alias for [bpsustain] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bps(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bps(level, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope sustain level (alias for [bpsustain]). */
-@SprudelDsl
 @KlangScript.Function
 fun bps(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bpsustain(level, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets BPF sustain (alias for [bpsustain]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bps(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.bpsustain(level, callInfo)
@@ -3028,25 +2852,21 @@ private fun applyBprelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category effects
  * @tags bprelease, bpr, band pass filter, envelope, release
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBprelease(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the BPF envelope release time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bprelease(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope release time. */
-@SprudelDsl
 @KlangScript.Function
 fun bprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bprelease(seconds, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the BPF envelope release time after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bprelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bprelease(seconds, callInfo) }
@@ -3069,25 +2889,21 @@ fun PatternMapperFn.bprelease(seconds: PatternLike? = null, callInfo: CallInfo? 
  * @category effects
  * @tags bpr, bprelease, band pass filter, envelope, release
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bprelease(seconds, callInfo)
 
 /** Alias for [bprelease] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpr(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope release time (alias for [bprelease]). */
-@SprudelDsl
 @KlangScript.Function
 fun bpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bprelease(seconds, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets BPF release (alias for [bprelease]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpr(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.bprelease(seconds, callInfo)
@@ -3142,25 +2958,21 @@ private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category effects
  * @tags bpenv, bpe, band pass filter, envelope, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBpenv(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
 
 /** Sets the BPF envelope depth/amount on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpenv(depth, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope depth. */
-@SprudelDsl
 @KlangScript.Function
 fun bpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bpenv(depth, callInfo) }
 
 /** Creates a chained [PatternMapperFn] that sets the BPF envelope depth after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpenv(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bpenv(depth, callInfo) }
@@ -3183,25 +2995,21 @@ fun PatternMapperFn.bpenv(depth: PatternLike? = null, callInfo: CallInfo? = null
  * @category effects
  * @tags bpe, bpenv, band pass filter, envelope, depth, modulation
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bpenv(depth, callInfo)
 
 /** Alias for [bpenv] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpe(depth, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope depth (alias for [bpenv]). */
-@SprudelDsl
 @KlangScript.Function
 fun bpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bpenv(depth, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets BPF envelope depth (alias for [bpenv]) after the previous mapper. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.bpenv(depth, callInfo)

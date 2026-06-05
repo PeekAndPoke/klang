@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.sprudel.lang
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -100,5 +101,28 @@ class LangArrangeSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.soundName shouldBe "bd"
         events[1].data.soundName shouldBe "hh"
+    }
+
+    "arrange() drops no onsets across a section whose total does not divide the tick grid" {
+        // Regression for "irishLamentTechno" bassline aussetzer: a bass with 8 onsets/cycle
+        // placed in a 16-cycle arrange segment, with a total arrangement length (212) that does
+        // NOT divide CycleTime.T. The old fast(dur).withWeight(dur)+slow(total) formulation
+        // scaled query time through three rounded steps, nudging some per-cycle boundaries a tick
+        // past n*T and silently dropping that cycle's downbeat across the half-open query seam.
+        val bass = note("a1!8") // 8 eighth-note onsets per cycle
+
+        val arranged = arrange(
+            listOf(16, bass),
+            listOf(196, silence), // pad total to 212 (= 4*53, does not divide T)
+        )
+
+        for (n in 0 until 16) {
+            val direct = bass.queryArc(n.toDouble(), n + 1.0).count { it.isOnset }
+            val viaArrange = arranged.queryArc(n.toDouble(), n + 1.0).count { it.isOnset }
+
+            withClue("cycle $n: arrange must preserve every onset the bass emits standalone") {
+                viaArrange shouldBe direct
+            }
+        }
     }
 })

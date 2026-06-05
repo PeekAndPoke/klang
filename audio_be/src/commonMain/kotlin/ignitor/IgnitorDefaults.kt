@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_bridge.plus
  * - freq uses [IgnitorDsl.Freq] (voice note frequency) on all pitched oscillators
  * - "analog" on all pitched oscillators
  * - "voices", "freqSpread" on super oscillators
- * - "duty" on pulze
+ * - "duty" on square/sqr/pulse/pulze (one pulse oscillator; 0.5 = square)
  * - "density" on dust/crackle
  * - "decay", "brightness", "pickPosition", "stiffness" on pluck
  */
@@ -36,24 +36,30 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "sawtooth", dsl = saw)
     register(name = "saw", dsl = saw)
 
-    val square = IgnitorDsl.Square(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "square", dsl = square)
-    register(name = "sqr", dsl = square)
-    register(name = "pulse", dsl = square)
+    // Rounded pulse (square / sqr / pulse) — one band-limited pulse with a "duty" osc-param (0.5 = square).
+    val pulse = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
+    register(name = "square", dsl = pulse)
+    register(name = "sqr", dsl = pulse)
+    register(name = "pulse", dsl = pulse)
+    // Raw pulse (pulze) — naive/aliased counterpart, same "duty" osc-param.
+    val rawPulse = IgnitorDsl.RawPulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
+    register(name = "pulze", dsl = rawPulse)
 
     val triangle = IgnitorDsl.Triangle(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "triangle", dsl = triangle)
     register(name = "tri", dsl = triangle)
 
+    // ramp = rounded reverse-saw; zamp = its raw/aliased counterpart.
     val ramp = IgnitorDsl.Ramp(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "ramp", dsl = ramp)
 
+    val zamp = IgnitorDsl.Zamp(freq = IgnitorDsl.Freq, analog = slots.analog)
+    register(name = "zamp", dsl = zamp)
+
+    // zaw = raw/aliased saw (counterpart of saw/sawtooth).
     val zawtooth = IgnitorDsl.Zawtooth(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "zawtooth", dsl = zawtooth)
     register(name = "zaw", dsl = zawtooth)
-
-    val pulze = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
-    register(name = "pulze", dsl = pulze)
 
     val impulse = IgnitorDsl.Impulse(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "impulse", dsl = impulse)

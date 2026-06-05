@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -26,11 +27,11 @@ internal class ControlPattern(
     // E.g. (bd@2).gain(0.5) should still have a weight of 2.
     override val weight: Double get() = source.weight
 
-    override val numSteps: Rational? get() = source.numSteps
+    override val numSteps: Double? get() = source.numSteps
 
-    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         return source._applyControl(control, from, to, ctx) { src, ctrl ->
             if (ctrl != null) {
                 val mappedControl = mapper(ctrl.data)

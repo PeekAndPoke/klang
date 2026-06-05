@@ -3,7 +3,6 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.seq
 import io.peekandpoke.klang.sprudel.withSteps
@@ -34,7 +33,7 @@ class PropertyOverridePatternSpec : StringSpec({
 
     "PropertyOverridePattern should override steps only" {
         val source = note("a")
-        val newSteps = 4.toRational()
+        val newSteps = 4.toDouble()
 
         val pattern = PropertyOverridePattern(
             source = source,
@@ -48,7 +47,7 @@ class PropertyOverridePatternSpec : StringSpec({
 
     "PropertyOverridePattern should override cycle duration only" {
         val source = note("a")
-        val newDuration = 2.toRational()
+        val newDuration = 2.toDouble()
 
         val pattern = PropertyOverridePattern(
             source = source,
@@ -63,7 +62,7 @@ class PropertyOverridePatternSpec : StringSpec({
     "PropertyOverridePattern should override multiple properties" {
         val source = seq("a", "b")
         val newWeight = 3.0
-        val newSteps = 8.toRational()
+        val newSteps = 8.toDouble()
 
         val pattern = PropertyOverridePattern(
             source = source,
@@ -125,7 +124,7 @@ class PropertyOverridePatternSpec : StringSpec({
 
     "withSteps extension should create PropertyOverridePattern" {
         val source = seq("a", "b", "c")
-        val newSteps = 12.toRational()
+        val newSteps = 12.toDouble()
 
         val pattern = source.withSteps(newSteps)
 
@@ -141,10 +140,10 @@ class PropertyOverridePatternSpec : StringSpec({
 
         val pattern = source
             .withWeight(2.0)
-            .withSteps(4.toRational())
+            .withSteps(4.toDouble())
 
         pattern.weight shouldBe 2.0
-        pattern.numSteps shouldBe 4.toRational()
+        pattern.numSteps shouldBe 4.toDouble()
     }
 
     "PropertyOverridePattern should work with different source patterns" {
@@ -168,7 +167,7 @@ class PropertyOverridePatternSpec : StringSpec({
 
     "PropertyOverridePattern should preserve pattern behavior across multiple queries" {
         val source = seq("a", "b", "c", "d")
-        val pattern = source.withWeight(2.5).withSteps(8.toRational())
+        val pattern = source.withWeight(2.5).withSteps(8.toDouble())
 
         // Query multiple times
         val events1 = pattern.queryArc(0.0, 1.0)
@@ -176,7 +175,7 @@ class PropertyOverridePatternSpec : StringSpec({
 
         // Properties should remain consistent
         pattern.weight shouldBe 2.5
-        pattern.numSteps shouldBe 8.toRational()
+        pattern.numSteps shouldBe 8.toDouble()
 
         events1 shouldHaveSize 4
         events2 shouldHaveSize 4
@@ -211,10 +210,10 @@ class PropertyOverridePatternSpec : StringSpec({
         val source = seq("a", "b")
         val originalWeight = source.weight
 
-        val pattern = source.withSteps(16.toRational())
+        val pattern = source.withSteps(16.toDouble())
 
         pattern.weight shouldBe originalWeight
-        pattern.numSteps shouldBe 16.toRational()
+        pattern.numSteps shouldBe 16.toDouble()
     }
 
     "PropertyOverridePattern should handle zero weight" {

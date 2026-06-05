@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -9,14 +10,14 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
  * Silent pattern with a specific steps value.
  */
 internal class GapPattern(
-    stepsValue: Rational,
+    stepsValue: Double,
 ) : SprudelPattern.FixedWeight {
 
-    override val numSteps: Rational = stepsValue
-    override val weight: Double = stepsValue.toDouble()
+    override val numSteps: Double = stepsValue
+    override val weight: Double = stepsValue
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> =
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> =
         emptyList()
 }

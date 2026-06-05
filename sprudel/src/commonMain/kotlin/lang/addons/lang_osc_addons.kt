@@ -9,7 +9,6 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
-import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.asDoubleOrNull
@@ -48,7 +47,6 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category tonal
  * @tags oscillator, parameter, osc, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyOscparam(this, listOf(key, value).asSprudelDslArgs(callInfo))
@@ -58,7 +56,6 @@ fun SprudelPattern.oscparam(key: String, value: PatternLike, callInfo: CallInfo?
  *
  * @alias oscp
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
@@ -68,7 +65,6 @@ fun String.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null)
  *
  * @alias oscp
  */
-@SprudelDsl
 @KlangScript.Function
 fun oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.oscparam(key, value, callInfo) }
@@ -78,7 +74,6 @@ fun oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): Patte
  *
  * @alias oscp
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.oscparam(key, value, callInfo) }
@@ -88,7 +83,6 @@ fun PatternMapperFn.oscparam(key: String, value: PatternLike, callInfo: CallInfo
  *
  * @alias oscparam
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.oscparam(key, value, callInfo)
@@ -98,7 +92,6 @@ fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = n
  *
  * @alias oscparam
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
@@ -108,7 +101,6 @@ fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): Sp
  *
  * @alias oscparam
  */
-@SprudelDsl
 @KlangScript.Function
 fun oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.oscparam(key, value, callInfo) }
@@ -118,7 +110,6 @@ fun oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMa
  *
  * @alias oscparam
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.oscparam(key, value, callInfo) }
@@ -156,7 +147,6 @@ private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyAnalog(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -173,7 +163,6 @@ fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).analog(amount, callInfo)
@@ -190,7 +179,6 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.analog(amount, callInfo) }
@@ -204,10 +192,66 @@ fun analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  *
  * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.analog(amount, callInfo) }
+
+// -- duty() -----------------------------------------------------------------------------------------------------------
+
+private val dutyMutation = voiceModifier {
+    withOscParam("duty", it?.asDoubleOrNull())
+}
+
+private fun applyDuty(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretStringField(args, dutyMutation)
+}
+
+/**
+ * Sets the pulse width / duty cycle of the pulse oscillator (`square` / `pulse` / `pulze`).
+ *
+ * `duty` is the fraction of each cycle the wave is high: `0.5` is a symmetric square, lower values give
+ * a narrower positive pulse, higher values a wider one. It can be modulated (PWM). Has no effect on
+ * non-pulse oscillators.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").s("pulse").duty("<0.5 0.25 0.1>")   // PWM-style duty sweep
+ * ```
+ *
+ * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+ * @return A new pattern with the duty cycle applied.
+ * @category tonal
+ * @tags duty, pulse, square, pwm, oscillator, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDuty(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and sets the pulse duty cycle.
+ *
+ * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+ */
+@KlangScript.Function
+fun String.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).duty(amount, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that sets the pulse duty cycle.
+ *
+ * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+ */
+@KlangScript.Function
+fun duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.duty(amount, callInfo) }
+
+/**
+ * Chains a duty-set onto this [PatternMapperFn].
+ *
+ * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+ */
+@KlangScript.Function
+fun PatternMapperFn.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.duty(amount, callInfo) }
 
 // -- warmth() ---------------------------------------------------------------------------------------------------------
 
@@ -237,7 +281,6 @@ private fun applyWarmth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category tonal
  * @tags warmth, oscillator, filter, low-pass, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyWarmth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -251,7 +294,6 @@ fun SprudelPattern.warmth(amount: PatternLike? = null, callInfo: CallInfo? = nul
  *
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).warmth(amount, callInfo)
@@ -265,7 +307,6 @@ fun String.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  *
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
-@SprudelDsl
 @KlangScript.Function
 fun warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.warmth(amount, callInfo) }
@@ -279,7 +320,6 @@ fun warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  *
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.warmth(amount, callInfo) }

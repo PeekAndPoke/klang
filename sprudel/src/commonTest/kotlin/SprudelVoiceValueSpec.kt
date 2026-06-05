@@ -4,7 +4,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import kotlinx.serialization.json.Json
 
@@ -405,10 +404,10 @@ class SprudelVoiceValueSpec : StringSpec({
 
     // Serialization tests
     "VoiceValue.Num: serialization and deserialization" {
-        val original = SprudelVoiceValue.Num(42.5.toRational())
+        val original = SprudelVoiceValue.Num(42.5)
         val json = Json.encodeToString(SprudelVoiceValueSerializer, original)
-        // Now serializes as fraction string "85/2" instead of "42.5"
-        json shouldBe "\"85/2\""
+        // Num serializes as a JSON number now (values are Double, not Rational).
+        json shouldBe "42.5"
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
         deserialized shouldBe original
     }
@@ -438,14 +437,13 @@ class SprudelVoiceValueSpec : StringSpec({
     "VoiceValue.Seq: serialization and deserialization" {
         val original = SprudelVoiceValue.Seq(
             listOf(
-                SprudelVoiceValue.Num(1.1.toRational()),
+                SprudelVoiceValue.Num(1.1),
                 SprudelVoiceValue.Text("test"),
                 SprudelVoiceValue.Bool(true)
             )
         )
         val json = Json.encodeToString(SprudelVoiceValueSerializer, original)
-        // Now serializes as fraction string "11/10" instead of "1.1"
-        json shouldBe """["11/10","test",true]"""
+        json shouldBe """[1.1,"test",true]"""
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
         deserialized shouldBe original
     }
@@ -475,40 +473,41 @@ class SprudelVoiceValueSpec : StringSpec({
         deserializedFalse shouldBe SprudelVoiceValue.Text("false")
     }
 
-    "VoiceValue.Num: fraction serialization with positive numbers" {
-        val twoThirds = SprudelVoiceValue.Num((2.0 / 3.0).toRational())
+    "VoiceValue.Num: positive number round-trips" {
+        val twoThirds = SprudelVoiceValue.Num(2.0 / 3.0)
         val json = Json.encodeToString(SprudelVoiceValueSerializer, twoThirds)
-        json shouldBe "\"2/3\""
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        // Use tolerance due to fixed-point arithmetic precision
-        deserialized.asDouble!! shouldBe (2.0 / 3.0 plusOrMinus 1e-6)
+        deserialized.asDouble!! shouldBe (2.0 / 3.0 plusOrMinus 1e-12)
     }
 
-    "VoiceValue.Num: fraction serialization with negative numbers" {
-        val negativeFiveEighths = SprudelVoiceValue.Num((-5.0 / 8.0).toRational())
+    "VoiceValue.Num: negative number serialization" {
+        val negativeFiveEighths = SprudelVoiceValue.Num(-5.0 / 8.0)
         val json = Json.encodeToString(SprudelVoiceValueSerializer, negativeFiveEighths)
-        json shouldBe "\"-5/8\""
+        json shouldBe "-0.625"
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
         deserialized.asDouble shouldBe (-5.0 / 8.0)
     }
 
     "VoiceValue.Num: whole number serialization" {
-        val five = SprudelVoiceValue.Num(5.0.toRational())
+        val five = SprudelVoiceValue.Num(5.0)
         val json = Json.encodeToString(SprudelVoiceValueSerializer, five)
-        json shouldBe "\"5/1\""
+        // Whole-number doubles format differently across platforms (JVM "5.0", JS "5"); assert it is an
+        // unquoted JSON number of the right value, not a brittle platform-specific string.
+        json.toDoubleOrNull() shouldBe 5.0
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
         deserialized.asDouble shouldBe 5.0
     }
 
     "VoiceValue.Num: zero serialization" {
-        val zero = SprudelVoiceValue.Num(0.0.toRational())
+        val zero = SprudelVoiceValue.Num(0.0)
         val json = Json.encodeToString(SprudelVoiceValueSerializer, zero)
-        json shouldBe "\"0/1\""
+        // Same cross-platform formatting (JVM "0.0", JS "0"): assert the numeric value, not the string.
+        json.toDoubleOrNull() shouldBe 0.0
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
         deserialized.asDouble shouldBe 0.0
     }
 
-    "VoiceValue.Num: deserialization from fraction string" {
+    "VoiceValue.Num: deserialization from legacy fraction string" {
         val json = "\"3/4\""
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
         deserialized.asDouble shouldBe 0.75

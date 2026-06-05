@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.common.math.lcm
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
@@ -12,18 +13,18 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
  */
 internal class StackPattern(val patterns: List<SprudelPattern>) : SprudelPattern.FixedWeight {
 
-    override val numSteps: Rational?
+    override val numSteps: Double?
         get() {
             val allSteps = patterns.mapNotNull { it.numSteps?.toInt() }
             if (allSteps.isEmpty()) return null
-            return lcm(allSteps).takeIf { it > 0 }?.let { Rational(it) }
+            return lcm(allSteps).takeIf { it > 0 }?.toDouble()
         }
 
-    override fun estimateCycleDuration(): Rational {
-        return patterns.maxOfOrNull { it.estimateCycleDuration() } ?: Rational.ONE
+    override fun estimateCycleDuration(): Double {
+        return patterns.maxOfOrNull { it.estimateCycleDuration() } ?: 1.0
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         return patterns
             .flatMap { it.queryArcContextual(from, to, ctx) }
             .sortedBy { it.part.begin } // Sort them to keep order nice (optional but good for debugging)

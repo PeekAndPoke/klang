@@ -53,6 +53,11 @@ class Voice(
 
     // Pre-built BlockContext (created by VoiceFactory, mutated per block)
     private val blockCtx: BlockContext,
+
+    // The baked main filter chain (LP/HP/BP/Notch/Formant), in the exact order received.
+    // Exposed for tests that assert filter-bake ordering; not used during rendering
+    // (the pipeline drives audio). Null when the voice has no main filter.
+    internal val mainFilter: AudioFilter? = null,
 ) {
     // Full pipeline: Pitch → Ignite → Filter → Send
     private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
@@ -149,8 +154,8 @@ class Voice(
         val decayFrames: Double,
         val sustainLevel: Double,
         val releaseFrames: Double,
-        val attackCurve: AdsrCurve = AdsrCurve.SCurve,
-        val decayCurve: AdsrCurve = AdsrCurve.Square,
+        val attackCurve: AdsrCurve = AdsrCurve.Square,
+        val decayCurve: AdsrCurve = AdsrCurve.Exponential,
         val releaseCurve: AdsrCurve = AdsrCurve.Square,
         var level: Double = 0.0,
         var releaseStartLevel: Double = 0.0,

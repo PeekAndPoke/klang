@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -19,22 +20,22 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 internal class PropertyOverridePattern(
     private val source: SprudelPattern,
     private val weightOverride: Double? = null,
-    private val stepsOverride: Rational? = null,
-    private val cycleDurationOverride: Rational? = null,
+    private val stepsOverride: Double? = null,
+    private val cycleDurationOverride: Double? = null,
 ) : SprudelPattern {
 
     override val weight: Double
         get() = weightOverride ?: source.weight
 
-    override val numSteps: Rational?
+    override val numSteps: Double?
         get() = stepsOverride ?: source.numSteps
 
-    override fun estimateCycleDuration(): Rational =
+    override fun estimateCycleDuration(): Double =
         cycleDurationOverride ?: source.estimateCycleDuration()
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         return source.queryArcContextual(from, to, ctx)

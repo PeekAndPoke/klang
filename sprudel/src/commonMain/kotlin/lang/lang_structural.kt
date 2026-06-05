@@ -3,8 +3,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.lcm
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
@@ -45,8 +44,11 @@ import io.peekandpoke.klang.sprudel.pattern.StructurePattern
 import io.peekandpoke.klang.sprudel.withSteps
 import io.peekandpoke.klang.sprudel.withWeight
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log2
+import kotlin.math.pow
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Structural patterns
 // ///
@@ -93,13 +95,11 @@ private fun applyHush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category structural
  * @tags silence, mute, control
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hush(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyHush(this, args.toList().asSprudelDslArgs(callInfo))
 
 /** Silences this string pattern. Without arguments, unconditionally returns silence. */
-@SprudelDsl
 @KlangScript.Function
 fun String.hush(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hush(*args, callInfo = callInfo)
@@ -124,13 +124,11 @@ fun String.hush(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * @category structural
  * @tags silence, mute, control
  */
-@SprudelDsl
 @KlangScript.Function
 fun hush(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hush(*args, callInfo = callInfo) }
 
 /** Chains a hush onto this [PatternMapperFn]; silences or conditionally gates the result. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hush(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hush(*args, callInfo = callInfo) }
@@ -153,13 +151,11 @@ fun PatternMapperFn.hush(vararg args: PatternLike, callInfo: CallInfo? = null): 
  * @category structural
  * @tags silence, mute, bypass, control
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bypass(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.hush(*args, callInfo = callInfo)
 
 /** Alias for [hush] on a string pattern. Without arguments, unconditionally returns silence. */
-@SprudelDsl
 @KlangScript.Function
 fun String.bypass(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bypass(*args, callInfo = callInfo)
@@ -178,13 +174,11 @@ fun String.bypass(vararg args: PatternLike, callInfo: CallInfo? = null): Sprudel
  * @category structural
  * @tags silence, mute, bypass, control
  */
-@SprudelDsl
 @KlangScript.Function
 fun bypass(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bypass(*args, callInfo = callInfo) }
 
 /** Chains a bypass (alias for [hush]) onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bypass(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bypass(*args, callInfo = callInfo) }
@@ -207,13 +201,11 @@ fun PatternMapperFn.bypass(vararg args: PatternLike, callInfo: CallInfo? = null)
  * @category structural
  * @tags silence, mute, control
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.mute(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.hush(*args, callInfo = callInfo)
 
 /** Alias for [hush] on a string pattern. Without arguments, unconditionally returns silence. */
-@SprudelDsl
 @KlangScript.Function
 fun String.mute(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).mute(*args, callInfo = callInfo)
@@ -232,13 +224,11 @@ fun String.mute(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * @category structural
  * @tags silence, mute, control
  */
-@SprudelDsl
 @KlangScript.Function
 fun mute(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.mute(*args, callInfo = callInfo) }
 
 /** Chains a mute (alias for [hush]) onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.mute(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.mute(*args, callInfo = callInfo) }
@@ -247,11 +237,11 @@ fun PatternMapperFn.mute(vararg args: PatternLike, callInfo: CallInfo? = null): 
 
 /** Creates a silent pattern occupying the given number of steps. Supports control patterns via _innerJoin. */
 private fun applyGap(args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val stepsArg = args.getOrNull(0) ?: return GapPattern(Rational.ONE)
+    val stepsArg = args.getOrNull(0) ?: return GapPattern(1.0)
 
     // For static values create GapPattern directly so its weight is preserved.
     // SequencePattern reads .weight once at construction for proportional allocation.
-    val staticSteps = stepsArg.value?.asRationalOrNull()
+    val staticSteps = stepsArg.value?.asDoubleOrNull()
     if (staticSteps != null) {
         return GapPattern(staticSteps)
     }
@@ -259,7 +249,7 @@ private fun applyGap(args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // For control patterns evaluate the step count per event via _innerJoin.
     // Proportional weight in sequences is not supported for control patterns (defaults to 1).
     return silence._innerJoin(stepsArg) { _, stepsVal ->
-        val steps = stepsVal?.asRationalOrNull() ?: Rational.ONE
+        val steps = stepsVal?.asDoubleOrNull() ?: 1.0
         GapPattern(steps)
     }
 }
@@ -288,7 +278,6 @@ private fun applyGap(args: List<SprudelDslArg<Any?>>): SprudelPattern {
  * @category structural
  * @tags silence, rest, gap, rhythm
  */
-@SprudelDsl
 @KlangScript.Function
 fun gap(vararg steps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyGap(steps.toList().asSprudelDslArgs(callInfo))
@@ -304,7 +293,7 @@ fun gap(vararg steps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * note("c").gap(2)  // Replaces with 2-step silence
  * ```
  */
-@SprudelDsl
+@Suppress("UnusedReceiverParameter")
 @KlangScript.Function
 fun SprudelPattern.gap(vararg steps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyGap(steps.toList().asSprudelDslArgs(callInfo))
@@ -316,7 +305,6 @@ fun SprudelPattern.gap(vararg steps: PatternLike, callInfo: CallInfo? = null): S
  * seq("bd", "hh".gap(), "sd").s()  // Middle step replaced by silence
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.gap(vararg steps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).gap(*steps, callInfo = callInfo)
@@ -358,7 +346,6 @@ private fun applySeq(patterns: List<SprudelPattern>): SprudelPattern {
  * @category structural
  * @tags sequence, timing, control, order, pattern-creator
  */
-@SprudelDsl
 @KlangScript.Function
 fun seq(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySeq(patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -379,7 +366,6 @@ fun seq(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * "bd sd".seq("hh hh", "cp").s()
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.seq(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySeq(listOf(this) + patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -394,7 +380,6 @@ fun SprudelPattern.seq(vararg patterns: PatternLike, callInfo: CallInfo? = null)
  * "c e".seq("g a").note()  // Two patterns squeezed into one cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.seq(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).seq(*patterns, callInfo = callInfo)
@@ -420,7 +405,6 @@ fun String.seq(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sprude
  * @category structural
  * @tags mini, notation, parse, sequence
  */
-@SprudelDsl
 @KlangScript.Function
 fun mini(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     patterns.toList().asSprudelDslArgs(callInfo).toPattern()
@@ -432,7 +416,6 @@ fun mini(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPatte
  * "c d e f".mini().note()  // Four notes from mini-notation string
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.mini(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation)
@@ -467,7 +450,6 @@ private fun applyStack(patterns: List<SprudelPattern>): SprudelPattern {
  * @category structural
  * @tags stack, layer, chord, polyrhythm, simultaneous
  */
-@SprudelDsl
 @KlangScript.Function
 fun stack(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStack(patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -483,7 +465,6 @@ fun stack(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPatt
  * note("c e").stack("g b".note())  // Two melodic lines layered
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.stack(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStack(listOf(this) + patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -495,7 +476,6 @@ fun SprudelPattern.stack(vararg patterns: PatternLike, callInfo: CallInfo? = nul
  * "c e g".stack("g b d").note()  // Two chord voicings layered
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.stack(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).stack(*patterns, callInfo = callInfo)
@@ -508,16 +488,80 @@ private fun applyArrange(args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (segments.isEmpty()) return silence
 
     val totalDuration = segments.sumOf { it.first }
+    if (totalDuration <= 0.0) return silence
 
-    // 1. fast(dur) speeds up the pattern to play 'dur' times in 1 cycle
-    // 2. withWeight(dur) tells SequencePattern to allocate 'dur' proportional space
-    // 3. SequencePattern compresses it to fit that space
-    // 4. slow(total) stretches the whole 1-cycle sequence to the total duration
-    val processedPatterns = segments.map { (dur, pat) ->
-        pat.fast(dur).withWeight(dur)
+    // arrange() is concatenation, NOT time-scaling: each segment plays its own cycles
+    // 0..dur-1 at natural speed, back to back, looping after `totalDuration` cycles.
+    //
+    // We place each segment at its cumulative cycle offset and query it at LOCAL time
+    // (outer - segStart), shifting events back by segStart. For the common integer-duration
+    // case every offset is an exact whole-cycle multiple of T, so `shift` introduces ZERO
+    // rounding and per-cycle downbeats stay exactly on the grid.
+    //
+    // (The earlier `pat.fast(dur).withWeight(dur)` + `slow(total)` formulation scaled query
+    // time through three rounded steps — `round(round(round(n*T/total)*…)*…)` — which could
+    // nudge a cycle boundary a tick past n*T. The downbeat sitting exactly on n*T was then
+    // dropped across the half-open query seam: rejected by the `< to` overlap test on one
+    // side, and demoted from an onset to a continuation on the other. See LangArrangeSpec.)
+    //
+    // Cumulative starts are derived from a running Double sum and snapped once via ofCycles,
+    // so fractional durations round per-boundary instead of accumulating drift in ticks.
+    val starts = DoubleArray(segments.size)
+    var acc = 0.0
+    for (i in segments.indices) {
+        starts[i] = acc
+        acc += segments[i].first
     }
 
-    return SequencePattern(processedPatterns).slow(totalDuration)
+    return object : SprudelPattern {
+        override val weight: Double = 1.0
+        override val numSteps: Double? = null
+
+        override fun estimateCycleDuration(): Double = totalDuration
+
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
+            val result = mutableListOf<SprudelPatternEvent>()
+
+            // Which repetitions of the whole arrangement does [from, to) touch?
+            val startLoop = floor(from.toCycles() / totalDuration).toInt()
+            val endLoop = ceil(to.toCycles() / totalDuration).toInt()
+
+            var loop = startLoop
+            while (loop < endLoop) {
+                val loopBaseCycles = loop * totalDuration
+
+                for (i in segments.indices) {
+                    val (dur, pat) = segments[i]
+
+                    val segStart = CycleTime.ofCycles(loopBaseCycles + starts[i])
+                    val segEnd = CycleTime.ofCycles(loopBaseCycles + starts[i] + dur)
+
+                    val qStart = from.coerceAtLeast(segStart)
+                    val qEnd = to.coerceAtMost(segEnd)
+
+                    if (qEnd > qStart) {
+                        // Local (segment-relative) query window — exact when segStart is a
+                        // whole-cycle offset (the integer-duration case).
+                        val localStart = qStart - segStart
+                        val localEnd = qEnd - segStart
+
+                        pat.queryArcContextual(localStart, localEnd, ctx).forEach { ev ->
+                            result.add(
+                                ev.copy(
+                                    part = ev.part.shift(segStart),
+                                    whole = ev.whole.shift(segStart),
+                                )
+                            )
+                        }
+                    }
+                }
+
+                loop++
+            }
+
+            return result
+        }
+    }
 }
 
 /**
@@ -547,7 +591,6 @@ private fun applyArrange(args: List<SprudelDslArg<Any?>>): SprudelPattern {
  * @category structural
  * @tags arrange, sequence, timing, duration, loop
  */
-@SprudelDsl
 @KlangScript.Function
 fun arrange(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArrange(segments.toList().asSprudelDslArgs(callInfo))
@@ -559,7 +602,6 @@ fun arrange(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * note("c e g").arrange([2, note("f a c")]).s("piano")  // 1 cycle chord, then 2 cycles
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.arrange(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArrange(listOf(SprudelDslArg.of(this)) + segments.toList().asSprudelDslArgs(callInfo))
@@ -571,7 +613,6 @@ fun SprudelPattern.arrange(vararg segments: PatternLike, callInfo: CallInfo? = n
  * "c e g".arrange([2, "f a c"]).note()  // 1 cycle, then 2 cycles of second chord
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.arrange(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).arrange(*segments, callInfo = callInfo)
@@ -613,7 +654,6 @@ private fun applyStepcat(args: List<SprudelDslArg<Any?>>): SprudelPattern {
  * @category structural
  * @tags stepcat, sequence, timing, proportional, duration
  */
-@SprudelDsl
 @KlangScript.Function
 fun stepcat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStepcat(segments.toList().asSprudelDslArgs(callInfo))
@@ -625,7 +665,6 @@ fun stepcat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * note("c").stepcat([3, note("e g")])  // "c" takes 1/4, "e g" takes 3/4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.stepcat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStepcat(listOf(SprudelDslArg.of(this)) + segments.toList().asSprudelDslArgs(callInfo))
@@ -637,7 +676,6 @@ fun SprudelPattern.stepcat(vararg segments: PatternLike, callInfo: CallInfo? = n
  * "c".stepcat([3, "e g"]).note()  // "c" takes 1/4, "e g" takes 3/4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.stepcat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).stepcat(*segments, callInfo = callInfo)
@@ -655,7 +693,6 @@ fun String.stepcat(vararg segments: PatternLike, callInfo: CallInfo? = null): Sp
  * @category structural
  * @tags stepcat, sequence, timing, proportional, duration
  */
-@SprudelDsl
 @KlangScript.Function
 fun timeCat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     stepcat(*segments, callInfo = callInfo)
@@ -667,7 +704,6 @@ fun timeCat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * note("c").timeCat([3, note("e g")])  // "c" takes 1/4, "e g" takes 3/4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.timeCat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.stepcat(*segments, callInfo = callInfo)
@@ -679,7 +715,6 @@ fun SprudelPattern.timeCat(vararg segments: PatternLike, callInfo: CallInfo? = n
  * "c".timeCat([3, "e g"]).note()  // "c" takes 1/4, "e g" takes 3/4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.timeCat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).timeCat(*segments, callInfo = callInfo)
@@ -697,7 +732,6 @@ fun String.timeCat(vararg segments: PatternLike, callInfo: CallInfo? = null): Sp
  * @category structural
  * @tags stepcat, sequence, timing, proportional, duration
  */
-@SprudelDsl
 @KlangScript.Function
 fun timecat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     stepcat(*segments, callInfo = callInfo)
@@ -709,7 +743,6 @@ fun timecat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * note("c").timecat([3, note("e g")])  // "c" takes 1/4, "e g" takes 3/4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.timecat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.stepcat(*segments, callInfo = callInfo)
@@ -721,7 +754,6 @@ fun SprudelPattern.timecat(vararg segments: PatternLike, callInfo: CallInfo? = n
  * "c".timecat([3, "e g"]).note()  // "c" takes 1/4, "e g" takes 3/4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.timecat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).timecat(*segments, callInfo = callInfo)
@@ -739,7 +771,6 @@ fun String.timecat(vararg segments: PatternLike, callInfo: CallInfo? = null): Sp
  * @category structural
  * @tags stepcat, sequence, timing, proportional, duration
  */
-@SprudelDsl
 @KlangScript.Function
 fun s_cat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     stepcat(*segments, callInfo = callInfo)
@@ -751,7 +782,6 @@ fun s_cat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPatt
  * note("c").s_cat([3, note("e g")])  // "c" takes 1/4, "e g" takes 3/4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.s_cat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.stepcat(*segments, callInfo = callInfo)
@@ -763,7 +793,6 @@ fun SprudelPattern.s_cat(vararg segments: PatternLike, callInfo: CallInfo? = nul
  * "c".s_cat([3, "e g"]).note()  // "c" takes 1/4, "e g" takes 3/4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.s_cat(vararg segments: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).s_cat(*segments, callInfo = callInfo)
@@ -775,9 +804,7 @@ private fun applyStackBy(patterns: List<SprudelPattern>, alignment: Double): Spr
 
     // Get duration for each pattern
     val durations = patterns.map { it.estimateCycleDuration() }
-    val maxDur = durations.maxOrNull() ?: Rational.ONE
-
-    val alignmentRat = alignment.toRational()
+    val maxDur = durations.maxOrNull() ?: 1.0
 
     // Align patterns by padding them with gaps to match maxDur
     val alignedPatterns = patterns.zip(durations).map { (pat, dur) ->
@@ -785,7 +812,7 @@ private fun applyStackBy(patterns: List<SprudelPattern>, alignment: Double): Spr
             pat
         } else {
             val diff = maxDur - dur
-            val leftGap = diff * alignmentRat
+            val leftGap = diff * alignment
             val rightGap = diff - leftGap
 
             val segments = mutableListOf<SprudelPattern>()
@@ -794,19 +821,19 @@ private fun applyStackBy(patterns: List<SprudelPattern>, alignment: Double): Spr
             // EmptyPattern occupies time (via weight) but produces NO events.
             // GapPattern produces "silent events" which pollute the event count.
 
-            if (leftGap > Rational.ZERO) {
-                segments.add(EmptyPattern.withWeight(leftGap.toDouble()))
+            if (leftGap > 0.0) {
+                segments.add(EmptyPattern.withWeight(leftGap))
             }
 
-            segments.add(pat.withWeight(dur.toDouble()))
+            segments.add(pat.withWeight(dur))
 
-            if (rightGap > Rational.ZERO) {
-                segments.add(EmptyPattern.withWeight(rightGap.toDouble()))
+            if (rightGap > 0.0) {
+                segments.add(EmptyPattern.withWeight(rightGap))
             }
 
             // SequencePattern fits total weight into 1 cycle.
             // We slow it down by maxDur to restore original speeds and placement within the larger cycle.
-            SequencePattern(segments).slow(maxDur.toDouble())
+            SequencePattern(segments).slow(maxDur)
         }
     }
 
@@ -834,7 +861,6 @@ private fun applyStackBy(patterns: List<SprudelPattern>, alignment: Double): Spr
  * @category structural
  * @tags stack, layer, alignment, simultaneous
  */
-@SprudelDsl
 @KlangScript.Function
 fun stackBy(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
     // TODO: support control patterns
@@ -858,7 +884,6 @@ fun stackBy(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * @category structural
  * @tags stack, layer, alignment, simultaneous
  */
-@SprudelDsl
 @KlangScript.Function
 fun stackLeft(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStackBy(
@@ -880,7 +905,6 @@ fun stackLeft(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sprudel
  * @category structural
  * @tags stack, layer, alignment, simultaneous
  */
-@SprudelDsl
 @KlangScript.Function
 fun stackRight(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStackBy(
@@ -902,7 +926,6 @@ fun stackRight(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sprude
  * @category structural
  * @tags stack, layer, alignment, simultaneous
  */
-@SprudelDsl
 @KlangScript.Function
 fun stackCentre(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStackBy(
@@ -925,7 +948,6 @@ fun stackCentre(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sprud
  * @category structural
  * @tags polyrhythm, stack, layer, simultaneous, rhythm
  */
-@SprudelDsl
 @KlangScript.Function
 fun polyrhythm(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     stack(*patterns, callInfo = callInfo)
@@ -937,7 +959,6 @@ fun polyrhythm(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sprude
  * s("bd sd").polyrhythm(s("hh hh hh"))  // Layer two patterns
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.polyrhythm(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.stack(*patterns, callInfo = callInfo)
@@ -949,7 +970,6 @@ fun SprudelPattern.polyrhythm(vararg patterns: PatternLike, callInfo: CallInfo? 
  * "bd sd".polyrhythm(s("hh hh hh"))  // Layer two patterns
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.polyrhythm(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).polyrhythm(*patterns, callInfo = callInfo)
@@ -969,7 +989,6 @@ fun String.polyrhythm(vararg patterns: PatternLike, callInfo: CallInfo? = null):
  * @category structural
  * @tags sequence, timing, order
  */
-@SprudelDsl
 @KlangScript.Function
 fun sequenceP(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     seq(*patterns, callInfo = callInfo)
@@ -982,35 +1001,36 @@ fun applyCat(patterns: List<SprudelPattern>): SprudelPattern {
 
     return object : SprudelPattern {
         override val weight: Double = patterns.sumOf { it.weight }
-        override val numSteps: Rational? = null
+        override val numSteps: Double? = null
 
-        override fun estimateCycleDuration(): Rational {
-            return patterns.fold(Rational.ZERO) { acc, p -> acc + p.estimateCycleDuration() }
+        override fun estimateCycleDuration(): Double {
+            return patterns.fold(0.0) { acc, p -> acc + p.estimateCycleDuration() }
         }
 
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             val totalDuration = estimateCycleDuration()
-            if (totalDuration <= Rational.ZERO) return emptyList()
+            if (totalDuration <= 0.0) return emptyList()
 
             val result = mutableListOf<SprudelPatternEvent>()
 
             // Find which "loops" of the total sequence we touch
-            val startLoop = (from / totalDuration).floor()
-            val endLoop = (to / totalDuration).ceil()
+            val totalDurationCycles = totalDuration
+            val startLoop = floor(from.toCycles() / totalDurationCycles).toInt()
+            val endLoop = ceil(to.toCycles() / totalDurationCycles).toInt()
 
             var currentLoop = startLoop
             while (currentLoop < endLoop) {
-                val loopStart = currentLoop * totalDuration
+                val loopStart = CycleTime.ofCycles(currentLoop * totalDurationCycles)
                 var currentOffset = loopStart
 
                 for (p in patterns) {
-                    val dur = p.estimateCycleDuration()
+                    val durTime = CycleTime.ofCycles(p.estimateCycleDuration())
                     val pStart = currentOffset
-                    val pEnd = pStart + dur
+                    val pEnd = pStart + durTime
 
                     // Check intersection
-                    val start = if (from > pStart) from else pStart
-                    val end = if (to < pEnd) to else pEnd
+                    val start = from.coerceAtLeast(pStart)
+                    val end = to.coerceAtMost(pEnd)
 
                     if (end > start) {
                         // Map to pattern local time
@@ -1029,9 +1049,9 @@ fun applyCat(patterns: List<SprudelPattern>): SprudelPattern {
                             )
                         }
                     }
-                    currentOffset += dur
+                    currentOffset += durTime
                 }
-                currentLoop += Rational.ONE
+                currentLoop++
             }
             return result
         }
@@ -1058,7 +1078,6 @@ fun applyCat(patterns: List<SprudelPattern>): SprudelPattern {
  * @category structural
  * @tags cat, sequence, concatenate, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun cat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyCat(patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -1070,7 +1089,6 @@ fun cat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * note("c d").cat(note("e f g"))  // "c d" then "e f g" in sequence
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.cat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyCat(listOf(this) + patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -1082,7 +1100,6 @@ fun SprudelPattern.cat(vararg patterns: PatternLike, callInfo: CallInfo? = null)
  * "c d".cat("e f g").note()  // "c d" then "e f g" in sequence
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.cat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).cat(*patterns, callInfo = callInfo)
@@ -1100,7 +1117,6 @@ fun String.cat(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sprude
  * @category structural
  * @tags sequence, timing, order
  */
-@SprudelDsl
 @KlangScript.Function
 fun fastcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     seq(*patterns, callInfo = callInfo)
@@ -1112,7 +1128,6 @@ fun fastcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * s("bd").fastcat(s("sd"))  // "bd sd" squeezed into one cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fastcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.seq(*patterns, callInfo = callInfo)
@@ -1124,7 +1139,6 @@ fun SprudelPattern.fastcat(vararg patterns: PatternLike, callInfo: CallInfo? = n
  * "bd".fastcat("sd").s()  // "bd sd" squeezed into one cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.fastcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fastcat(*patterns, callInfo = callInfo)
@@ -1145,7 +1159,6 @@ fun String.fastcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sp
  * @category structural
  * @tags sequence, concatenate, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun slowcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     cat(*patterns, callInfo = callInfo)
@@ -1157,7 +1170,6 @@ fun slowcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * s("bd sd").slowcat(s("hh hh hh hh"))  // alternates each cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.slowcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.cat(*patterns, callInfo = callInfo)
@@ -1169,7 +1181,6 @@ fun SprudelPattern.slowcat(vararg patterns: PatternLike, callInfo: CallInfo? = n
  * "bd sd".slowcat("hh hh hh hh").s()  // alternates each cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.slowcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).slowcat(*patterns, callInfo = callInfo)
@@ -1188,23 +1199,24 @@ fun applySlowcatPrime(patterns: List<SprudelPattern>): SprudelPattern {
 
     return object : SprudelPattern {
         override val weight: Double = patterns.sumOf { it.weight }
-        override val numSteps: Rational? = null
+        override val numSteps: Double? = null
 
-        override fun estimateCycleDuration(): Rational = Rational.ONE * patterns.size
+        override fun estimateCycleDuration(): Double = 1.0 * patterns.size
 
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
 
             val result = mutableListOf<SprudelPatternEvent>()
             val n = patterns.size
-            var cycle = from.floor()
+            var cycleIdx = from.cycleIndex()
 
-            while (cycle < to) {
-                val cycleEnd = cycle + Rational.ONE
-                val queryStart = maxOf(from, cycle)
-                val queryEnd = minOf(to, cycleEnd)
+            while (CycleTime.ofCycleIndex(cycleIdx) < to) {
+                val cycle = CycleTime.ofCycleIndex(cycleIdx)
+                val cycleEnd = cycle + CycleTime.ONE
+                val queryStart = from.coerceAtLeast(cycle)
+                val queryEnd = to.coerceAtMost(cycleEnd)
 
                 // Select pattern using modulo (cycles infinitely through patterns)
-                val patternIndex = cycle.toInt().mod(n)
+                val patternIndex = cycleIdx.mod(n)
                 val pattern = patterns[patternIndex]
 
                 // Crucial: We query at absolute time (queryStart), not relative time.
@@ -1213,7 +1225,7 @@ fun applySlowcatPrime(patterns: List<SprudelPattern>): SprudelPattern {
                     result.addAll(pattern.queryArcContextual(queryStart, queryEnd, ctx))
                 }
 
-                cycle = cycleEnd
+                cycleIdx++
             }
 
             return result
@@ -1236,7 +1248,6 @@ fun applySlowcatPrime(patterns: List<SprudelPattern>): SprudelPattern {
  * @category structural
  * @tags sequence, concatenate, timing, absolute
  */
-@SprudelDsl
 @KlangScript.Function
 fun slowcatPrime(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySlowcatPrime(patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -1248,7 +1259,6 @@ fun slowcatPrime(vararg patterns: PatternLike, callInfo: CallInfo? = null): Spru
  * note("c d").slowcatPrime(note("e f g"))  // cycles through at absolute time
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.slowcatPrime(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySlowcatPrime(listOf(this) + patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -1260,7 +1270,6 @@ fun SprudelPattern.slowcatPrime(vararg patterns: PatternLike, callInfo: CallInfo
  * "c d".slowcatPrime("e f g").note()  // cycles through at absolute time
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.slowcatPrime(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).slowcatPrime(*patterns, callInfo = callInfo)
@@ -1288,7 +1297,7 @@ private fun applyPolymeter(patterns: List<SprudelPattern>, baseSteps: Int? = nul
 
     return PropertyOverridePattern(
         source = StackPattern(adjustedPatterns),
-        stepsOverride = targetSteps.toRational()
+        stepsOverride = targetSteps.toDouble()
     )
 }
 
@@ -1312,7 +1321,6 @@ private fun applyPolymeter(patterns: List<SprudelPattern>, baseSteps: Int? = nul
  * @category structural
  * @tags polymeter, rhythm, timing, alignment
  */
-@SprudelDsl
 @KlangScript.Function
 fun polymeter(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyPolymeter(patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -1324,7 +1332,6 @@ fun polymeter(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sprudel
  * note("c d").polymeter(note("c d e"))  // 2 and 3 steps aligned to LCM
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.polymeter(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyPolymeter(listOf(this) + patterns.toList().asSprudelDslArgs(callInfo).toListOfPatterns())
@@ -1336,7 +1343,6 @@ fun SprudelPattern.polymeter(vararg patterns: PatternLike, callInfo: CallInfo? =
  * "c d".polymeter("c d e").note()  // 2 and 3 steps aligned to LCM
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.polymeter(vararg patterns: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).polymeter(*patterns, callInfo = callInfo)
@@ -1357,7 +1363,6 @@ fun String.polymeter(vararg patterns: PatternLike, callInfo: CallInfo? = null): 
  * @category structural
  * @tags polymeter, rhythm, timing, steps
  */
-@SprudelDsl
 @KlangScript.Function
 fun polymeterSteps(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
     val argList = args.toList().asSprudelDslArgs(callInfo)
@@ -1384,9 +1389,8 @@ fun polymeterSteps(vararg args: PatternLike, callInfo: CallInfo? = null): Sprude
  * @category structural
  * @tags pure, value, atomic, repeat
  */
-@SprudelDsl
 @KlangScript.Function
-fun pure(value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+fun pure(value: PatternLike, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     AtomicPattern(SprudelVoiceData.empty.copy(value = value.asVoiceValue()))
 
 // -- struct() ---------------------------------------------------------------------------------------------------------
@@ -1422,13 +1426,11 @@ private fun applyStruct(source: SprudelPattern, structArg: SprudelDslArg<Any?>?)
  * @category structural
  * @tags struct, mask, rhythm, structure, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.struct(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStruct(this, args.toList().asSprudelDslArgs(callInfo).firstOrNull())
 
 /** Restructures this string pattern using the mask's timing; keeps only truthy mask events. */
-@SprudelDsl
 @KlangScript.Function
 fun String.struct(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).struct(*args, callInfo = callInfo)
@@ -1446,13 +1448,11 @@ fun String.struct(vararg args: PatternLike, callInfo: CallInfo? = null): Sprudel
  * @category structural
  * @tags struct, mask, rhythm, structure, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun struct(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.struct(*args, callInfo = callInfo) }
 
 /** Chains a struct onto this [PatternMapperFn]; restructures using the mask's timing. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.struct(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.struct(*args, callInfo = callInfo) }
@@ -1491,13 +1491,11 @@ private fun applyStructAll(source: SprudelPattern, structArg: SprudelDslArg<Any?
  * @category structural
  * @tags structAll, struct, mask, rhythm, structure, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.structAll(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyStructAll(this, args.toList().asSprudelDslArgs(callInfo).firstOrNull())
 
 /** Like [structAll] on a string pattern; keeps all events overlapping the mask. */
-@SprudelDsl
 @KlangScript.Function
 fun String.structAll(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).structAll(*args, callInfo = callInfo)
@@ -1515,13 +1513,11 @@ fun String.structAll(vararg args: PatternLike, callInfo: CallInfo? = null): Spru
  * @category structural
  * @tags structAll, struct, mask, rhythm, structure, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun structAll(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.structAll(*args, callInfo = callInfo) }
 
 /** Chains a structAll onto this [PatternMapperFn]; reshapes keeping all overlapping events. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.structAll(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.structAll(*args, callInfo = callInfo) }
@@ -1559,13 +1555,11 @@ private fun applyMask(source: SprudelPattern, maskArg: SprudelDslArg<Any?>?): Sp
  * @category structural
  * @tags mask, gate, filter, rhythm, boolean
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.mask(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyMask(this, args.toList().asSprudelDslArgs(callInfo).firstOrNull())
 
 /** Filters this string pattern using a boolean mask; truthy events pass, falsy events are silenced. */
-@SprudelDsl
 @KlangScript.Function
 fun String.mask(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).mask(*args, callInfo = callInfo)
@@ -1583,13 +1577,11 @@ fun String.mask(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * @category structural
  * @tags mask, gate, filter, rhythm, boolean
  */
-@SprudelDsl
 @KlangScript.Function
 fun mask(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.mask(*args, callInfo = callInfo) }
 
 /** Chains a mask onto this [PatternMapperFn]; gates the result by the boolean mask. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.mask(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.mask(*args, callInfo = callInfo) }
@@ -1620,13 +1612,11 @@ private fun applyMaskAll(source: SprudelPattern, maskArg: SprudelDslArg<Any?>?):
  * @category structural
  * @tags maskAll, mask, gate, filter, rhythm
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.maskAll(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyMaskAll(this, args.toList().asSprudelDslArgs(callInfo).firstOrNull())
 
 /** Like [maskAll] on a string pattern; gates by mask structure, all values pass. */
-@SprudelDsl
 @KlangScript.Function
 fun String.maskAll(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).maskAll(*args, callInfo = callInfo)
@@ -1644,13 +1634,11 @@ fun String.maskAll(vararg args: PatternLike, callInfo: CallInfo? = null): Sprude
  * @category structural
  * @tags maskAll, mask, gate, filter, rhythm
  */
-@SprudelDsl
 @KlangScript.Function
 fun maskAll(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.maskAll(*args, callInfo = callInfo) }
 
 /** Chains a maskAll onto this [PatternMapperFn]; gates the result keeping all overlapping events. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.maskAll(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.maskAll(*args, callInfo = callInfo) }
@@ -1685,13 +1673,11 @@ private fun applyJux(source: SprudelPattern, transform: PatternMapperFn): Sprude
  * @category structural
  * @tags jux, pan, stereo, spatial, transform
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.jux(transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.jux(transform: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyJux(this, transform)
 
 /** Pans this string pattern hard left and a transformed version hard right. */
-@SprudelDsl
 @KlangScript.Function
 fun String.jux(transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).jux(transform, callInfo)
@@ -1709,13 +1695,11 @@ fun String.jux(transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelP
  * @category structural
  * @tags jux, pan, stereo, spatial, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun jux(transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.jux(transform, callInfo) }
 
 /** Chains a jux onto this [PatternMapperFn]; pans left and transformed-right. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.jux(transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.jux(transform, callInfo) }
@@ -1757,13 +1741,11 @@ private fun applyJuxBy(source: SprudelPattern, amount: Double, transform: Patter
  * @category structural
  * @tags juxBy, jux, pan, stereo, spatial, width
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.juxBy(amount: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.juxBy(amount: Double, transform: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyJuxBy(this, amount, transform)
 
 /** Like [jux] with adjustable stereo width on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.juxBy(amount: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).juxBy(amount, transform, callInfo)
@@ -1782,13 +1764,11 @@ fun String.juxBy(amount: Double, transform: PatternMapperFn, callInfo: CallInfo?
  * @category structural
  * @tags juxBy, jux, pan, stereo, spatial, width
  */
-@SprudelDsl
 @KlangScript.Function
 fun juxBy(amount: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.juxBy(amount, transform, callInfo) }
 
 /** Chains a juxBy onto this [PatternMapperFn]; pans with adjustable stereo width. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.juxBy(amount: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.juxBy(amount, transform, callInfo) }
@@ -1796,8 +1776,7 @@ fun PatternMapperFn.juxBy(amount: Double, transform: PatternMapperFn, callInfo: 
 // -- off() ------------------------------------------------------------------------------------------------------------
 
 private fun applyOff(source: SprudelPattern, time: Double, transform: PatternMapperFn): SprudelPattern {
-    val timeRat = time.toRational()
-    return source.stack(transform(source).late(timeRat))
+    return source.stack(transform(source).late(time))
 }
 
 /**
@@ -1821,13 +1800,11 @@ private fun applyOff(source: SprudelPattern, time: Double, transform: PatternMap
  * @category structural
  * @tags off, delay, echo, layer, stack, time
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.off(time: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.off(time: Double, transform: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyOff(this, time, transform)
 
 /** Layers a time-shifted, transformed copy of this string pattern on top of itself. */
-@SprudelDsl
 @KlangScript.Function
 fun String.off(time: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).off(time, transform, callInfo)
@@ -1846,13 +1823,11 @@ fun String.off(time: Double, transform: PatternMapperFn, callInfo: CallInfo? = n
  * @category structural
  * @tags off, delay, echo, layer, stack, time
  */
-@SprudelDsl
 @KlangScript.Function
 fun off(time: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.off(time, transform, callInfo) }
 
 /** Chains an off onto this [PatternMapperFn]; layers a time-shifted, transformed copy. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.off(time: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.off(time, transform, callInfo) }
@@ -1882,13 +1857,11 @@ private fun applyFilter(source: SprudelPattern, predicate: (SprudelPatternEvent)
  * @category structural
  * @tags filter, gate, conditional, predicate
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.filter(predicate: (SprudelPatternEvent) -> Boolean, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyFilter(this, predicate)
 
 /** Filters events from this string pattern using a predicate function. */
-@SprudelDsl
 @KlangScript.Function
 fun String.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).filter(predicate, callInfo)
@@ -1906,13 +1879,11 @@ fun String.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInf
  * @category structural
  * @tags filter, gate, conditional, predicate
  */
-@SprudelDsl
 @KlangScript.Function
 fun filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.filter(predicate, callInfo) }
 
 /** Chains a filter onto this [PatternMapperFn]; keeps only events satisfying the predicate. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.filter(predicate, callInfo) }
@@ -1938,13 +1909,11 @@ fun PatternMapperFn.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo
  * @category structural
  * @tags filterWhen, filter, time, conditional, predicate
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.filterWhen(predicate: (Double) -> Boolean, callInfo: CallInfo? = null): SprudelPattern =
-    applyFilter(this) { predicate(it.part.begin.toDouble()) }
+fun SprudelPattern.filterWhen(predicate: (Double) -> Boolean, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    applyFilter(this) { predicate(it.part.begin.toCycles()) }
 
 /** Filters events from this string pattern based on their begin time. */
-@SprudelDsl
 @KlangScript.Function
 fun String.filterWhen(predicate: (Double) -> Boolean, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).filterWhen(predicate, callInfo)
@@ -1962,13 +1931,11 @@ fun String.filterWhen(predicate: (Double) -> Boolean, callInfo: CallInfo? = null
  * @category structural
  * @tags filterWhen, filter, time, conditional, predicate
  */
-@SprudelDsl
 @KlangScript.Function
 fun filterWhen(predicate: (Double) -> Boolean, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.filterWhen(predicate, callInfo) }
 
 /** Chains a filterWhen onto this [PatternMapperFn]; filters events by their begin time. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.filterWhen(predicate: (Double) -> Boolean, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.filterWhen(predicate, callInfo) }
@@ -2000,13 +1967,11 @@ private fun applySuperimpose(source: SprudelPattern, transforms: Array<out Patte
  * @category structural
  * @tags superimpose, layer, stack, transform
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.superimpose(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.superimpose(vararg transforms: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applySuperimpose(this, transforms)
 
 /** Layers a transformed copy of this string pattern on top of itself. */
-@SprudelDsl
 @KlangScript.Function
 fun String.superimpose(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).superimpose(*transforms, callInfo = callInfo)
@@ -2024,13 +1989,11 @@ fun String.superimpose(vararg transforms: PatternMapperFn, callInfo: CallInfo? =
  * @category structural
  * @tags superimpose, layer, stack, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun superimpose(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.superimpose(*transforms, callInfo = callInfo) }
 
 /** Chains a superimpose onto this [PatternMapperFn]; layers a transformed copy on top. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.superimpose(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.superimpose(*transforms, callInfo = callInfo) }
@@ -2079,13 +2042,11 @@ private fun applyLayer(source: SprudelPattern, transforms: Array<out PatternMapp
  * @category structural
  * @tags layer, stack, transform, superimpose
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.layer(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.layer(vararg transforms: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyLayer(this, transforms)
 
 /** Applies transformations to this string pattern and stacks the results. */
-@SprudelDsl
 @KlangScript.Function
 fun String.layer(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).layer(*transforms, callInfo = callInfo)
@@ -2104,13 +2065,11 @@ fun String.layer(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null)
  * @category structural
  * @tags layer, stack, transform, superimpose
  */
-@SprudelDsl
 @KlangScript.Function
 fun layer(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.layer(*transforms, callInfo = callInfo) }
 
 /** Chains a layer onto this [PatternMapperFn]; stacks the transformed copies. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.layer(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.layer(*transforms, callInfo = callInfo) }
@@ -2133,13 +2092,11 @@ fun PatternMapperFn.layer(vararg transforms: PatternMapperFn, callInfo: CallInfo
  * @category structural
  * @tags layer, stack, transform, apply
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.apply(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.layer(*transforms, callInfo = callInfo)
 
 /** Alias for [layer] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.apply(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).apply(*transforms, callInfo = callInfo)
@@ -2158,13 +2115,11 @@ fun String.apply(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null)
  * @category structural
  * @tags layer, stack, transform, apply
  */
-@SprudelDsl
 @KlangScript.Function
 fun apply(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.apply(*transforms, callInfo = callInfo) }
 
 /** Chains an apply (alias for [layer]) onto this [PatternMapperFn]; stacks the transformed copies. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.apply(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.apply(*transforms, callInfo = callInfo) }
@@ -2182,11 +2137,11 @@ private fun applyZoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 
     // Bind the start pattern...
     return startCtrl._bind { startEv ->
-        val s = startEv.data.value?.asRational ?: return@_bind null
+        val s = startEv.data.value?.asDouble ?: return@_bind null
 
         // ... then bind the end pattern
         endCtrl._bind { endEv ->
-            val e = endEv.data.value?.asRational ?: return@_bind null
+            val e = endEv.data.value?.asDouble ?: return@_bind null
 
             if (s >= e) return@_bind silence
 
@@ -2194,14 +2149,14 @@ private fun applyZoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
             val steps = source.numSteps?.let { it * d }
 
             // Using relative start to ensure correct periodicity even if s > 1
-            val sRel = s - s.floor()
+            val sRelTime = CycleTime.ofCycles(s - floor(s))
 
             // Match JS implementation: withQuerySpan + withHapSpan + splitQueries
             source
                 // Apply transformation to cycle-local time: t => t * d + sRel
-                ._withQuerySpan { span -> span.withCycle { t -> t * d + sRel } }
+                ._withQuerySpan { span -> span.withCycle { t -> t.scaleBy(d) + sRelTime } }
                 // Apply transformation to cycle-local time: t => (t - sRel) / d
-                ._withHapSpan { span -> span.withCycle { t: Rational -> (t - sRel) / d } }
+                ._withHapSpan { span -> span.withCycle { t -> (t - sRelTime).divBy(d) } }
                 ._splitQueries()
                 .withSteps(steps)
         }
@@ -2229,13 +2184,11 @@ private fun applyZoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category structural
  * @tags zoom, window, time, stretch, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.zoom(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyZoom(this, listOf(start, end).asSprudelDslArgs(callInfo))
 
 /** Plays a portion of this string pattern within a time window, stretched to fill a cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun String.zoom(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).zoom(start, end, callInfo)
@@ -2254,13 +2207,11 @@ fun String.zoom(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null
  * @category structural
  * @tags zoom, window, time, stretch, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun zoom(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.zoom(start, end, callInfo) }
 
 /** Chains a zoom onto this [PatternMapperFn]; plays a window of the result stretched to one cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.zoom(start: PatternLike, end: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.zoom(start, end, callInfo) }
@@ -2273,25 +2224,23 @@ private fun applyWithin(
     endVal: Double,
     transform: PatternMapperFn,
 ): SprudelPattern {
-    val start = startVal.toRational()
-    val end = endVal.toRational()
-
-    if (start >= end || start < Rational.ZERO || end > Rational.ONE) {
+    if (startVal >= endVal || startVal < 0.0 || endVal > 1.0) {
         return source // Return unchanged if invalid window
     }
 
+    val startTime = CycleTime.ofCycles(startVal)
+    val endTime = CycleTime.ofCycles(endVal)
     val isBeginInWindow: (SprudelPatternEvent) -> Boolean = { ev ->
-        val cycle = ev.part.begin.floor()
-        if (start < end) {
-            val s = cycle + start
-            val e = cycle + end
+        val cycle = ev.part.begin.floorToCycle()
+        if (startVal < endVal) {
+            val s = cycle + startTime
+            val e = cycle + endTime
             ev.part.begin >= s && ev.part.begin < e
         } else {
-            val s1 = cycle + start
-            val e1 = cycle + Rational.ONE
-            val s2 = cycle
-            val e2 = cycle + end
-            (ev.part.begin >= s1 && ev.part.begin < e1) || (ev.part.begin >= s2 && ev.part.begin < e2)
+            val s1 = cycle + startTime
+            val e1 = cycle + CycleTime.ONE
+            val e2 = cycle + endTime
+            (ev.part.begin >= s1 && ev.part.begin < e1) || (ev.part.begin >= cycle && ev.part.begin < e2)
         }
     }
 
@@ -2324,13 +2273,12 @@ private fun applyWithin(
  * @category structural
  * @tags within, window, time, conditional, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.within(
     start: Double,
     end: Double,
     transform: PatternMapperFn,
-    callInfo: CallInfo? = null,
+    @Suppress("unused") callInfo: CallInfo? = null,
 ): SprudelPattern = applyWithin(this, start, end, transform)
 
 /**
@@ -2348,7 +2296,6 @@ fun SprudelPattern.within(
  * @category structural
  * @tags within, window, time, conditional, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.within(
     start: Double,
@@ -2373,7 +2320,6 @@ fun String.within(
  * @category structural
  * @tags within, window, time, conditional, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun within(
     start: Double,
@@ -2383,7 +2329,6 @@ fun within(
 ): PatternMapperFn = { p -> p.within(start, end, transform, callInfo) }
 
 /** Chains a within onto this [PatternMapperFn]; applies `transform` to events in the time window of the result. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.within(
     start: Double,
@@ -2424,7 +2369,7 @@ internal fun applyChunk(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     }
 
     if (earlyOffset != 0) {
-        binaryIter = binaryIter.early(earlyOffset.toRational())
+        binaryIter = binaryIter.early(earlyOffset.toDouble())
     }
 
     val pattern = if (!fast) {
@@ -2461,7 +2406,6 @@ internal fun applyChunk(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category structural
  * @tags chunk, cycle, transform, rotate, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.chunk(
     n: Int,
@@ -2472,7 +2416,6 @@ fun SprudelPattern.chunk(
 ): SprudelPattern = applyChunk(this, listOf(n, transform, back, fast).asSprudelDslArgs(callInfo))
 
 /** Like [chunk] applied to a mini-notation string. */
-@SprudelDsl
 @KlangScript.Function
 fun String.chunk(
     n: Int,
@@ -2502,7 +2445,6 @@ fun String.chunk(
  * @category structural
  * @tags slowchunk, chunk, cycle, transform, rotate, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.slowchunk(
     n: Int,
@@ -2513,7 +2455,6 @@ fun SprudelPattern.slowchunk(
 ): SprudelPattern = this.chunk(n, transform, back, fast, callInfo)
 
 /** Alias for [chunk]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.slowchunk(
     n: Int,
@@ -2543,7 +2484,6 @@ fun String.slowchunk(
  * @category structural
  * @tags slowChunk, chunk, cycle, transform, rotate, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.slowChunk(
     n: Int,
@@ -2554,7 +2494,6 @@ fun SprudelPattern.slowChunk(
 ): SprudelPattern = this.chunk(n, transform, back, fast, callInfo)
 
 /** Alias for [chunk]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.slowChunk(
     n: Int,
@@ -2587,7 +2526,6 @@ fun String.slowChunk(
  * @category structural
  * @tags chunk, cycle, transform, reverse, rotate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.chunkBack(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyChunk(this, listOf(n, transform, true, false).asSprudelDslArgs(callInfo))
@@ -2600,7 +2538,6 @@ fun SprudelPattern.chunkBack(n: Int, transform: PatternMapperFn, callInfo: CallI
  * ```
  * @alias chunkback
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.chunkBack(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).chunkBack(n, transform, callInfo)
@@ -2623,7 +2560,6 @@ fun String.chunkBack(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = n
  * @category structural
  * @tags chunk, cycle, transform, reverse, rotate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.chunkback(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.chunkBack(n, transform, callInfo)
@@ -2636,7 +2572,6 @@ fun SprudelPattern.chunkback(n: Int, transform: PatternMapperFn, callInfo: CallI
  * ```
  * @alias chunkBack
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.chunkback(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).chunkback(n, transform, callInfo)
@@ -2664,7 +2599,6 @@ fun String.chunkback(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = n
  * @category structural
  * @tags chunk, cycle, transform, fast, rotate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fastChunk(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyChunk(this, listOf(n, transform, false, true).asSprudelDslArgs(callInfo))
@@ -2677,7 +2611,6 @@ fun SprudelPattern.fastChunk(n: Int, transform: PatternMapperFn, callInfo: CallI
  * ```
  * @alias fastchunk
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.fastChunk(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fastChunk(n, transform, callInfo)
@@ -2700,7 +2633,6 @@ fun String.fastChunk(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = n
  * @category structural
  * @tags chunk, cycle, transform, fast, rotate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fastchunk(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.fastChunk(n, transform, callInfo)
@@ -2713,7 +2645,6 @@ fun SprudelPattern.fastchunk(n: Int, transform: PatternMapperFn, callInfo: CallI
  * ```
  * @alias fastChunk
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.fastchunk(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fastchunk(n, transform, callInfo)
@@ -2741,13 +2672,11 @@ fun String.fastchunk(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = n
  * @category structural
  * @tags chunkInto, chunk, cycle, transform, fast, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.chunkInto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyChunk(this, listOf(n, transform, false, true).asSprudelDslArgs(callInfo))
 
 /** Like [chunkInto] applied to a mini-notation string. */
-@SprudelDsl
 @KlangScript.Function
 fun String.chunkInto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).chunkInto(n, transform, callInfo)
@@ -2770,13 +2699,11 @@ fun String.chunkInto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = n
  * @category structural
  * @tags chunkinto, chunkInto, chunk, cycle, transform, fast, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.chunkinto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.chunkInto(n, transform, callInfo)
 
 /** Alias for [chunkInto]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.chunkinto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).chunkinto(n, transform, callInfo)
@@ -2803,13 +2730,11 @@ fun String.chunkinto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = n
  * @category structural
  * @tags chunk, slice, backward, transform, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.chunkBackInto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyChunk(this, listOf(n, transform, true, true, 1).asSprudelDslArgs(callInfo))
 
 /** Like [chunkBackInto] applied to a mini-notation string. */
-@SprudelDsl
 @KlangScript.Function
 fun String.chunkBackInto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).chunkBackInto(n, transform, callInfo)
@@ -2832,13 +2757,11 @@ fun String.chunkBackInto(n: Int, transform: PatternMapperFn, callInfo: CallInfo?
  * @category structural
  * @tags chunk, slice, backward, transform, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.chunkbackinto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.chunkBackInto(n, transform, callInfo)
 
 /** Alias for [chunkBackInto]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.chunkbackinto(n: Int, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).chunkbackinto(n, transform, callInfo)
@@ -2849,18 +2772,18 @@ private fun applyLinger(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
     val tArg = args.getOrNull(0) ?: return pattern
 
     return pattern._innerJoin(tArg) { src, tVal ->
-        val t = tVal?.asRational ?: return@_innerJoin src
+        val t = tVal?.asDouble ?: return@_innerJoin src
 
         when {
-            t == Rational.ZERO -> silence
-            t < Rational.ZERO -> {
+            t == 0.0 -> silence
+            t < 0.0 -> {
                 // Negative: zoom from (t+1) to 1, then slow by t (which is negative)
-                src.zoom(t + Rational.ONE, Rational.ONE).slow(-t).timeLoop(Rational.ONE)
+                src.zoom(t + 1.0, 1.0).slow(-t).timeLoop(1.0)
             }
 
             else -> {
                 // Positive: zoom from 0 to t, then slow by t
-                src.zoom(Rational.ZERO, t).slow(t).timeLoop(Rational.ONE)
+                src.zoom(0.0, t).slow(t).timeLoop(1.0)
             }
         }
     }
@@ -2889,7 +2812,6 @@ private fun applyLinger(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category structural
  * @tags linger, loop, fraction, repeat, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.linger(t: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyLinger(this, listOf(t).asSprudelDslArgs(callInfo))
@@ -2907,7 +2829,6 @@ fun SprudelPattern.linger(t: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * @category structural
  * @tags linger, loop, fraction, repeat, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.linger(t: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).linger(t, callInfo)
@@ -2925,20 +2846,18 @@ fun String.linger(t: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags linger, loop, fraction, repeat, slice
  */
-@SprudelDsl
 @KlangScript.Function
 fun linger(t: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.linger(t, callInfo) }
 
 /** Chains a linger onto this [PatternMapperFn]; repeats the selected fraction of the result to fill the cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.linger(t: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.linger(t, callInfo) }
 
 // -- echo() / stut() --------------------------------------------------------------------------------------------------
 
-private fun applyEcho(source: SprudelPattern, times: Int, delay: Rational, decay: Rational): SprudelPattern {
+private fun applyEcho(source: SprudelPattern, times: Int, delay: Double, decay: Double): SprudelPattern {
     if (times < 1) return silence
     if (times == 1) return source // Only original, no echoes
 
@@ -2978,10 +2897,9 @@ private fun applyEcho(source: SprudelPattern, times: Int, delay: Rational, decay
  * @category structural
  * @tags echo, stut, delay, decay, reverb, effect
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.echo(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): SprudelPattern =
-    applyEcho(this, times, delay.toRational(), decay.toRational())
+fun SprudelPattern.echo(times: Int, delay: Double, decay: Double, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    applyEcho(this, times, delay, decay)
 
 /**
  * Like [echo] applied to a mini-notation string.
@@ -2999,7 +2917,6 @@ fun SprudelPattern.echo(times: Int, delay: Double, decay: Double, callInfo: Call
  * @category structural
  * @tags echo, stut, delay, decay, reverb, effect
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.echo(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).echo(times, delay, decay, callInfo)
@@ -3020,13 +2937,11 @@ fun String.echo(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = 
  * @category structural
  * @tags echo, stut, delay, decay, reverb, effect
  */
-@SprudelDsl
 @KlangScript.Function
 fun echo(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.echo(times, delay, decay, callInfo) }
 
 /** Chains an echo onto this [PatternMapperFn]; superimposes delayed and decayed copies of the result. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.echo(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.echo(times, delay, decay, callInfo) }
@@ -3051,7 +2966,6 @@ fun PatternMapperFn.echo(times: Int, delay: Double, decay: Double, callInfo: Cal
  * @category structural
  * @tags stut, echo, delay, decay, reverb, effect
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.stut(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): SprudelPattern =
     this.echo(times, delay, decay, callInfo)
@@ -3072,7 +2986,6 @@ fun SprudelPattern.stut(times: Int, delay: Double, decay: Double, callInfo: Call
  * @category structural
  * @tags stut, echo, delay, decay, reverb, effect
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.stut(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).stut(times, delay, decay, callInfo)
@@ -3093,20 +3006,18 @@ fun String.stut(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = 
  * @category structural
  * @tags stut, echo, delay, decay, reverb, effect
  */
-@SprudelDsl
 @KlangScript.Function
 fun stut(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.stut(times, delay, decay, callInfo) }
 
 /** Chains a stut onto this [PatternMapperFn]; alias for [PatternMapperFn.echo]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.stut(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.stut(times, delay, decay, callInfo) }
 
 // -- echoWith() / stutWith() ------------------------------------------------------------------------------------------
 
-private fun applyEchoWith(source: SprudelPattern, times: Int, delay: Rational, transform: PatternMapperFn): SprudelPattern {
+private fun applyEchoWith(source: SprudelPattern, times: Int, delay: Double, transform: PatternMapperFn): SprudelPattern {
     if (times <= 0) return silence
     if (times == 1) return source // Only original, no additional layers
 
@@ -3146,13 +3057,16 @@ private fun applyEchoWith(source: SprudelPattern, times: Int, delay: Rational, t
  * @category structural
  * @tags echoWith, stutWith, delay, transform, layers, effect
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.echoWith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
-    applyEchoWith(this, times, delay.toRational(), transform)
+fun SprudelPattern.echoWith(
+    times: Int,
+    delay: Double,
+    transform: PatternMapperFn,
+    @Suppress("unused") callInfo: CallInfo? = null
+): SprudelPattern =
+    applyEchoWith(this, times, delay, transform)
 
 /** Like [echoWith] applied to a mini-notation string. */
-@SprudelDsl
 @KlangScript.Function
 fun String.echoWith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).echoWith(times, delay, transform, callInfo)
@@ -3176,13 +3090,11 @@ fun String.echoWith(times: Int, delay: Double, transform: PatternMapperFn, callI
  * @category structural
  * @tags stutWith, echoWith, delay, transform, layers, effect
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.stutWith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.echoWith(times, delay, transform, callInfo)
 
 /** Alias for [echoWith]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.stutWith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).stutWith(times, delay, transform, callInfo)
@@ -3206,13 +3118,11 @@ fun String.stutWith(times: Int, delay: Double, transform: PatternMapperFn, callI
  * @category structural
  * @tags stutwith, echoWith, stutWith, delay, transform, layers
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.stutwith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.echoWith(times, delay, transform, callInfo)
 
 /** Alias for [echoWith]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.stutwith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).stutwith(times, delay, transform, callInfo)
@@ -3236,13 +3146,11 @@ fun String.stutwith(times: Int, delay: Double, transform: PatternMapperFn, callI
  * @category structural
  * @tags echowith, echoWith, stutWith, delay, transform, layers
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.echowith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.echoWith(times, delay, transform, callInfo)
 
 /** Alias for [echoWith]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.echowith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).echowith(times, delay, transform, callInfo)
@@ -3254,16 +3162,16 @@ private fun applyBite(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 
     val nPattern = args.take(1).toPattern()
     val indicesPattern = args.drop(1).toPattern()
-    val indicesSteps: Rational = indicesPattern.numSteps ?: Rational.ONE
+    val indicesSteps: Double = indicesPattern.numSteps ?: 1.0
 
     return source._innerJoin(nPattern, indicesPattern) { src, nValue, indexValue ->
-        val steps: Rational =
+        val steps: Double =
             src.numSteps ?: return@_innerJoin silence
-        val n: Rational =
-            nValue?.asRational?.takeIf { it > Rational.ZERO } ?: return@_innerJoin silence
-        val index: Rational =
-            indexValue?.asRational ?: return@_innerJoin silence
-        val indexMod: Rational =
+        val n: Double =
+            nValue?.asDouble?.takeIf { it > 0.0 } ?: return@_innerJoin silence
+        val index: Double =
+            indexValue?.asDouble ?: return@_innerJoin silence
+        val indexMod: Double =
             ((index % steps) + steps) % steps
 
         val start = indexMod / n
@@ -3294,7 +3202,6 @@ private fun applyBite(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category structural
  * @tags bite, slice, rearrange, index, stutter
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bite(n: PatternLike, indices: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyBite(this, listOf(n, indices).asSprudelDslArgs(callInfo))
@@ -3313,7 +3220,6 @@ fun SprudelPattern.bite(n: PatternLike, indices: PatternLike, callInfo: CallInfo
  * @category structural
  * @tags bite, slice, rearrange, index, stutter
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bite(n: PatternLike, indices: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bite(n, indices, callInfo)
@@ -3332,13 +3238,11 @@ fun String.bite(n: PatternLike, indices: PatternLike, callInfo: CallInfo? = null
  * @category structural
  * @tags bite, slice, rearrange, index, stutter
  */
-@SprudelDsl
 @KlangScript.Function
 fun bite(n: PatternLike, indices: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bite(n, indices, callInfo) }
 
 /** Chains a bite onto this [PatternMapperFn]; rearranges slices of the result in `indices` order. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bite(n: PatternLike, indices: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bite(n, indices, callInfo) }
@@ -3391,7 +3295,6 @@ private fun applySegment(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category structural
  * @tags segment, seg, sample, discrete, quantize
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.segment(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySegment(this, listOf(n).asSprudelDslArgs(callInfo))
@@ -3410,7 +3313,6 @@ fun SprudelPattern.segment(n: PatternLike, callInfo: CallInfo? = null): SprudelP
  * @category structural
  * @tags segment, seg, sample, discrete, quantize
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.segment(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).segment(n, callInfo)
@@ -3429,13 +3331,11 @@ fun String.segment(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags segment, seg, sample, discrete, quantize
  */
-@SprudelDsl
 @KlangScript.Function
 fun segment(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.segment(n, callInfo) }
 
 /** Chains a segment onto this [PatternMapperFn]; samples the result at `n` events per cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.segment(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.segment(n, callInfo) }
@@ -3458,7 +3358,6 @@ fun PatternMapperFn.segment(n: PatternLike, callInfo: CallInfo? = null): Pattern
  * @category structural
  * @tags seg, segment, sample, discrete, quantize
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.seg(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.segment(n, callInfo)
@@ -3477,7 +3376,6 @@ fun SprudelPattern.seg(n: PatternLike, callInfo: CallInfo? = null): SprudelPatte
  * @category structural
  * @tags seg, segment, sample, discrete, quantize
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.seg(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).seg(n, callInfo)
@@ -3496,13 +3394,11 @@ fun String.seg(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags seg, segment, sample, discrete, quantize
  */
-@SprudelDsl
 @KlangScript.Function
 fun seg(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.seg(n, callInfo) }
 
 /** Chains a seg onto this [PatternMapperFn]; alias for [PatternMapperFn.segment]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.seg(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.seg(n, callInfo) }
@@ -3541,9 +3437,8 @@ private fun applyRun(n: Int): SprudelPattern {
  * @category structural
  * @tags run, sequence, range, index, discrete
  */
-@SprudelDsl
 @KlangScript.Function
-fun run(n: Int, callInfo: CallInfo? = null): SprudelPattern = applyRun(n)
+fun run(n: Int, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyRun(n)
 
 // -- binaryN() --------------------------------------------------------------------------------------------------------
 
@@ -3582,9 +3477,8 @@ private fun applyBinaryN(n: Int, bits: Int): SprudelPattern {
  * @category structural
  * @tags binaryN, binary, bits, structure, pattern
  */
-@SprudelDsl
 @KlangScript.Function
-fun binaryN(n: Int, bits: Int = 16, callInfo: CallInfo? = null): SprudelPattern = applyBinaryN(n, bits)
+fun binaryN(n: Int, bits: Int = 16, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyBinaryN(n, bits)
 
 // -- binary() ---------------------------------------------------------------------------------------------------------
 
@@ -3604,9 +3498,8 @@ fun binaryN(n: Int, bits: Int = 16, callInfo: CallInfo? = null): SprudelPattern 
  * @category structural
  * @tags binary, binaryN, bits, structure, pattern
  */
-@SprudelDsl
 @KlangScript.Function
-fun binary(n: Int, callInfo: CallInfo? = null): SprudelPattern {
+fun binary(n: Int, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern {
     return if (n == 0) {
         applyBinaryN(0, 1)
     } else {
@@ -3654,9 +3547,8 @@ private fun applyBinaryNL(n: Int, bits: Int): SprudelPattern {
  * @category structural
  * @tags binaryNL, binary, bits, list, structure
  */
-@SprudelDsl
 @KlangScript.Function
-fun binaryNL(n: Int, bits: Int = 16, callInfo: CallInfo? = null): SprudelPattern = applyBinaryNL(n, bits)
+fun binaryNL(n: Int, bits: Int = 16, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyBinaryNL(n, bits)
 
 // -- binaryL() --------------------------------------------------------------------------------------------------------
 
@@ -3678,9 +3570,8 @@ fun binaryNL(n: Int, bits: Int = 16, callInfo: CallInfo? = null): SprudelPattern
  * @category structural
  * @tags binaryL, binaryNL, binary, bits, list, structure
  */
-@SprudelDsl
 @KlangScript.Function
-fun binaryL(n: Int, callInfo: CallInfo? = null): SprudelPattern {
+fun binaryL(n: Int, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern {
     return if (n == 0) {
         applyBinaryNL(0, 1)
     } else {
@@ -3732,19 +3623,16 @@ private val ratioMutation = voiceModifier { inputValue ->
  * @category structural
  * @tags ratio, tuning, fraction, colon, notation
  */
-@SprudelDsl
 @KlangScript.Function
 fun ratio(vararg values: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     values.toList().asSprudelDslArgs(callInfo).toPattern(ratioMutation)
 
 /** Converts colon-ratio notation in the pattern's values to numbers. */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.ratio(callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.ratio(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     this.reinterpretVoice { it.ratioMutation(it.value?.asString) }
 
 /** Converts colon-ratio notation in the mini-notation string to numbers. */
-@SprudelDsl
 @KlangScript.Function
 fun String.ratio(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).ratio(callInfo)
@@ -3752,10 +3640,10 @@ fun String.ratio(callInfo: CallInfo? = null): SprudelPattern =
 // -- pace() / steps() -------------------------------------------------------------------------------------------------
 
 private fun applyPace(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val targetSteps = args.firstOrNull()?.value?.asRationalOrNull() ?: Rational.ONE
-    val currentSteps = source.numSteps ?: Rational.ONE
+    val targetSteps = args.firstOrNull()?.value?.asDoubleOrNull() ?: 1.0
+    val currentSteps = source.numSteps ?: 1.0
 
-    if (targetSteps <= Rational.ZERO || currentSteps <= Rational.ZERO) {
+    if (targetSteps <= 0.0 || currentSteps <= 0.0) {
         return source
     }
 
@@ -3785,13 +3673,11 @@ private fun applyPace(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category structural
  * @tags pace, steps, tempo, speed, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.pace(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyPace(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Adjusts this string pattern to play `n` steps per cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun String.pace(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).pace(n, callInfo)
@@ -3810,13 +3696,11 @@ fun String.pace(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags pace, steps, tempo, speed, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun pace(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.pace(n, callInfo) }
 
 /** Chains a pace onto this [PatternMapperFn]; adjusts to play `n` steps per cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.pace(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.pace(n, callInfo) }
@@ -3835,25 +3719,21 @@ fun PatternMapperFn.pace(n: PatternLike, callInfo: CallInfo? = null): PatternMap
  * @category structural
  * @tags steps, pace, tempo, speed, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.steps(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.pace(n, callInfo)
 
 /** Alias for [pace] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.steps(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).steps(n, callInfo)
 
 /** Returns a [PatternMapperFn] — alias for [pace] — that adjusts to play `n` steps per cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun steps(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.steps(n, callInfo) }
 
 /** Chains a steps (alias for [pace]) onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.steps(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.steps(n, callInfo) }
@@ -3863,7 +3743,7 @@ fun PatternMapperFn.steps(n: PatternLike, callInfo: CallInfo? = null): PatternMa
 private fun applyTake(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val takeArg = args.firstOrNull() ?: return source
 
-    val control: ControlValueProvider = takeArg.asControlValueProvider(Rational.ONE.asVoiceValue())
+    val control: ControlValueProvider = takeArg.asControlValueProvider(1.0.asVoiceValue())
 
     val takePattern = when (control) {
         is ControlValueProvider.Static -> AtomicPattern(SprudelVoiceData.empty.copy(value = control.value))
@@ -3871,19 +3751,19 @@ private fun applyTake(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     }
 
     return takePattern._stepJoin { event ->
-        val n = event.data.value?.asRational ?: return@_stepJoin null
+        val n = event.data.value?.asDouble ?: return@_stepJoin null
         val steps = source.numSteps
 
-        if (steps != null && steps > Rational.ZERO) {
+        if (steps != null && steps > 0.0) {
             val end = n / steps
 
-            if (end <= Rational.ZERO) return@_stepJoin silence
-            if (end >= Rational.ONE) return@_stepJoin source
+            if (end <= 0.0) return@_stepJoin silence
+            if (end >= 1.0) return@_stepJoin source
+
             // Take(n) keeps first n steps.
             // Zoom window [0, end] to [0, 1]
-            source
-                ._withQueryTime { t -> t * end }
-                ._withHapTime { t -> t / end }
+            source._withQueryTime { t -> t.scaleBy(end) }
+                ._withHapTime { t -> t.divBy(end) }
                 .withSteps(n)
         } else {
             silence
@@ -3908,13 +3788,11 @@ private fun applyTake(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category structural
  * @tags take, slice, truncate, steps, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.take(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyTake(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Keeps the first `n` steps of this string pattern, stretched to fill the cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun String.take(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).take(n, callInfo)
@@ -3932,13 +3810,11 @@ fun String.take(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags take, slice, truncate, steps, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun take(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.take(n, callInfo) }
 
 /** Chains a take onto this [PatternMapperFn]; keeps only the first `n` steps. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.take(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.take(n, callInfo) }
@@ -3948,7 +3824,7 @@ fun PatternMapperFn.take(n: PatternLike, callInfo: CallInfo? = null): PatternMap
 private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val dropArg = args.firstOrNull() ?: return source
 
-    val control: ControlValueProvider = dropArg.asControlValueProvider(Rational.ZERO.asVoiceValue())
+    val control: ControlValueProvider = dropArg.asControlValueProvider(0.0.asVoiceValue())
 
     val dropPattern = when (control) {
         is ControlValueProvider.Static -> AtomicPattern(SprudelVoiceData.empty.copy(value = control.value))
@@ -3956,32 +3832,33 @@ private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     }
 
     return dropPattern._stepJoin { event ->
-        val n = event.data.value?.asRational ?: return@_stepJoin null
+        val n = event.data.value?.asDouble ?: return@_stepJoin null
         val steps = source.numSteps
 
-        if (steps != null && steps > Rational.ZERO) {
-            if (n > Rational.ZERO) {
+        if (steps != null && steps > 0.0) {
+            if (n > 0.0) {
                 // drop from start: zoom(n/steps, 1)
                 val start = n / steps
-                if (start >= Rational.ONE) return@_stepJoin silence
+                if (start >= 1.0) return@_stepJoin silence
                 // Zoom window [start, 1] to [0, 1]
                 // Map query t in [0, 1] to [start, 1] -> t' = start + t * (1 - start)
-                val duration = Rational.ONE - start
+                val durationCycles = (1.0 - start)
+                val startTime = CycleTime.ofCycles(start)
 
                 source
-                    ._withQueryTime { t -> start + t * duration }
-                    ._withHapTime { t -> (t - start) / duration }
+                    ._withQueryTime { t -> startTime + t.scaleBy(durationCycles) }
+                    ._withHapTime { t -> (t - startTime).divBy(durationCycles) }
                     .withSteps(steps - n)
             } else {
                 // drop from end: zoom(0, (steps+n)/steps)
                 // n is negative
                 val end = (steps + n) / steps
-                if (end <= Rational.ZERO) return@_stepJoin silence
+                if (end <= 0.0) return@_stepJoin silence
+
                 // Zoom window [0, end] to [0, 1]
                 // Map query t in [0, 1] to [0, end] -> t' = t * end
-                source
-                    ._withQueryTime { t -> t * end }
-                    ._withHapTime { t -> t / end }
+                source._withQueryTime { t -> t.scaleBy(end) }
+                    ._withHapTime { t -> t.divBy(end) }
                     .withSteps(steps + n)
             }
         } else {
@@ -4009,13 +3886,11 @@ private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category structural
  * @tags drop, skip, slice, steps, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.drop(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyDrop(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Skips the first `n` steps of this string pattern, stretched to fill the cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun String.drop(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).drop(n, callInfo)
@@ -4033,13 +3908,11 @@ fun String.drop(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags drop, skip, slice, steps, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun drop(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.drop(n, callInfo) }
 
 /** Chains a drop onto this [PatternMapperFn]; skips the first `n` steps. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.drop(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.drop(n, callInfo) }
@@ -4057,7 +3930,7 @@ private fun applyRepeatCycles(source: SprudelPattern, args: List<SprudelDslArg<A
         }
     }
 
-    val staticReps = repsVal?.asRationalOrNull()
+    val staticReps = repsVal?.asDoubleOrNull()
 
     return if (staticReps != null) {
         RepeatCyclesPattern(source, staticReps)
@@ -4085,13 +3958,11 @@ private fun applyRepeatCycles(source: SprudelPattern, args: List<SprudelDslArg<A
  * @category structural
  * @tags repeatCycles, repeat, cycle, loop, stutter
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.repeatCycles(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyRepeatCycles(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Repeats each cycle of this string pattern `n` times. */
-@SprudelDsl
 @KlangScript.Function
 fun String.repeatCycles(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).repeatCycles(n, callInfo)
@@ -4109,13 +3980,11 @@ fun String.repeatCycles(n: PatternLike, callInfo: CallInfo? = null): SprudelPatt
  * @category structural
  * @tags repeatCycles, repeat, cycle, loop, stutter
  */
-@SprudelDsl
 @KlangScript.Function
 fun repeatCycles(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.repeatCycles(n, callInfo) }
 
 /** Chains a repeatCycles onto this [PatternMapperFn]; repeats each cycle `n` times. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.repeatCycles(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.repeatCycles(n, callInfo) }
@@ -4142,13 +4011,11 @@ fun PatternMapperFn.repeatCycles(n: PatternLike, callInfo: CallInfo? = null): Pa
  * @category structural
  * @tags extend, fast, speed, tempo, accelerate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.extend(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyFast(this, listOf(factor).asSprudelDslArgs(callInfo))
 
 /** Speeds up this string pattern by `factor` — alias for [fast]. */
-@SprudelDsl
 @KlangScript.Function
 fun String.extend(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).extend(factor, callInfo)
@@ -4167,13 +4034,11 @@ fun String.extend(factor: PatternLike, callInfo: CallInfo? = null): SprudelPatte
  * @category structural
  * @tags extend, fast, speed, tempo, accelerate
  */
-@SprudelDsl
 @KlangScript.Function
 fun extend(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.extend(factor, callInfo) }
 
 /** Chains an extend (alias for [fast]) onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.extend(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.extend(factor, callInfo) }
@@ -4187,11 +4052,11 @@ internal fun applyIter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
     if (n <= 0) return silence
 
-    val nRat = n.toRational()
+    val nDbl = n.toDouble()
 
     // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.early(Fraction(i).div(times)))
     val patterns = (0 until n).map { i ->
-        val shift = i.toRational() / nRat
+        val shift = i.toDouble() / nDbl
         // We use early() to shift the view forward (events appear earlier, effectively rotating the pattern left)
         source.early(shift)
     }
@@ -4221,13 +4086,11 @@ internal fun applyIter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category structural
  * @tags iter, iterate, rotate, cycle, shift, forward
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.iter(n: Int, callInfo: CallInfo? = null): SprudelPattern =
     applyIter(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Rotates this string pattern forward by one slice each cycle, dividing into `n` slices. */
-@SprudelDsl
 @KlangScript.Function
 fun String.iter(n: Int, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).iter(n, callInfo)
@@ -4245,13 +4108,11 @@ fun String.iter(n: Int, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags iter, iterate, rotate, cycle, shift, forward
  */
-@SprudelDsl
 @KlangScript.Function
 fun iter(n: Int, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.iter(n, callInfo) }
 
 /** Chains an iter onto this [PatternMapperFn]; rotates forward by one slice per cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.iter(n: Int, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.iter(n, callInfo) }
@@ -4264,11 +4125,11 @@ internal fun applyIterBack(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
     if (n <= 0) return silence
 
-    val nRat = n.toRational()
+    val nDbl = n.toDouble()
 
     // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.late(Fraction(i).div(times)))
     val patterns = (0 until n).map { i ->
-        val shift = i.toRational() / nRat
+        val shift = i.toDouble() / nDbl
         // We use late() to shift the view backward (events appear later, rotating pattern right)
         source.late(shift)
     }
@@ -4296,13 +4157,11 @@ internal fun applyIterBack(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category structural
  * @tags iterBack, iterate, rotate, cycle, shift, backward
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.iterBack(n: Int, callInfo: CallInfo? = null): SprudelPattern =
     applyIterBack(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Rotates this string pattern backward by one slice each cycle, dividing into `n` slices. */
-@SprudelDsl
 @KlangScript.Function
 fun String.iterBack(n: Int, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).iterBack(n, callInfo)
@@ -4320,13 +4179,11 @@ fun String.iterBack(n: Int, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags iterBack, iterate, rotate, cycle, shift, backward
  */
-@SprudelDsl
 @KlangScript.Function
 fun iterBack(n: Int, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.iterBack(n, callInfo) }
 
 /** Chains an iterBack onto this [PatternMapperFn]; rotates backward by one slice per cycle. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.iterBack(n: Int, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.iterBack(n, callInfo) }
@@ -4366,12 +4223,10 @@ private fun applyInvert(pattern: SprudelPattern): SprudelPattern {
  * @category structural
  * @tags invert, inv, boolean, mask, flip, negate
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.invert(callInfo: CallInfo? = null): SprudelPattern = applyInvert(this)
+fun SprudelPattern.invert(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyInvert(this)
 
 /** Inverts boolean values in this string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.invert(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).invert(callInfo)
@@ -4389,13 +4244,11 @@ fun String.invert(callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags invert, inv, boolean, mask, flip, negate
  */
-@SprudelDsl
 @KlangScript.Function
 fun invert(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.invert(callInfo) }
 
 /** Chains an invert onto this [PatternMapperFn]; toggles all boolean values. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.invert(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.invert(callInfo) }
@@ -4417,24 +4270,20 @@ fun PatternMapperFn.invert(callInfo: CallInfo? = null): PatternMapperFn =
  * @category structural
  * @tags invert, inv, boolean, mask, flip, negate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.inv(callInfo: CallInfo? = null): SprudelPattern = this.invert(callInfo)
 
 /** Alias for [invert] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.inv(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).inv(callInfo)
 
 /** Returns a [PatternMapperFn] — alias for [invert] — that toggles all boolean values. */
-@SprudelDsl
 @KlangScript.Function
 fun inv(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.inv(callInfo) }
 
 /** Chains an inv (alias for [invert]) onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.inv(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.inv(callInfo) }
@@ -4482,13 +4331,11 @@ private fun applyApplyN(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category structural
  * @tags applyN, apply, repeat, transform, function, iterate
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.applyN(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyApplyN(this, listOf(n, transform).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` to this string pattern `n` times. */
-@SprudelDsl
 @KlangScript.Function
 fun String.applyN(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).applyN(n, transform, callInfo)
@@ -4507,13 +4354,11 @@ fun String.applyN(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo
  * @category structural
  * @tags applyN, apply, repeat, transform, function, iterate
  */
-@SprudelDsl
 @KlangScript.Function
 fun applyN(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.applyN(n, transform, callInfo) }
 
 /** Chains an applyN onto this [PatternMapperFn]; applies `transform` `n` times. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.applyN(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.applyN(n, transform, callInfo) }
@@ -4536,7 +4381,7 @@ private fun applyPressBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
     val rArg = args.getOrNull(0) ?: return pattern
 
     return pattern._innerJoin(rArg) { src, rVal ->
-        val r = rVal?.asRational ?: return@_innerJoin src
+        val r = rVal?.asDouble ?: return@_innerJoin src
 
         src._fmap { value ->
             // Create atomic pattern with the value
@@ -4568,13 +4413,11 @@ private fun applyPressBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category structural
  * @tags pressBy, press, syncopate, compress, rhythm, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.pressBy(r: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyPressBy(this, listOf(r).asSprudelDslArgs(callInfo))
 
 /** Syncopates this string pattern by compressing events to start at position `r`. */
-@SprudelDsl
 @KlangScript.Function
 fun String.pressBy(r: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).pressBy(r, callInfo)
@@ -4592,13 +4435,11 @@ fun String.pressBy(r: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags pressBy, press, syncopate, compress, rhythm, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun pressBy(r: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.pressBy(r, callInfo) }
 
 /** Chains a pressBy onto this [PatternMapperFn]; compresses events to position `r`. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.pressBy(r: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.pressBy(r, callInfo) }
@@ -4633,12 +4474,10 @@ private fun applyPress(pattern: SprudelPattern): SprudelPattern {
  * @category structural
  * @tags press, pressBy, syncopate, compress, rhythm, timing, off-beat
  */
-@SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.press(callInfo: CallInfo? = null): SprudelPattern = applyPress(this)
+fun SprudelPattern.press(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyPress(this)
 
 /** Syncopates this string pattern by shifting events halfway into their timespan. */
-@SprudelDsl
 @KlangScript.Function
 fun String.press(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).press(callInfo)
@@ -4657,13 +4496,11 @@ fun String.press(callInfo: CallInfo? = null): SprudelPattern =
  * @category structural
  * @tags press, pressBy, syncopate, compress, rhythm, timing, off-beat
  */
-@SprudelDsl
 @KlangScript.Function
 fun press(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.press(callInfo) }
 
 /** Chains a press onto this [PatternMapperFn]; shifts each event halfway into its timespan. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.press(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.press(callInfo) }
@@ -4675,7 +4512,7 @@ private fun applyRibbon(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
     val cyclesArg = args.getOrNull(1) ?: SprudelDslArg.of(1.0)
 
     // pat.early(offset) -> use applyTimeShift with factor -1
-    val shifted = applyTimeShift(pattern, listOf(offsetArg), Rational.MINUS_ONE)
+    val shifted = applyTimeShift(pattern, listOf(offsetArg), -1.0)
 
     // pure(1).slow(cycles)
     // We use SequencePattern to ensure we get discrete events per cycle (or per 'cycles' duration),
@@ -4712,7 +4549,6 @@ private fun applyRibbon(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category structural
  * @tags ribbon, rib, loop, slice, offset, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.ribbon(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     applyRibbon(this, listOf(offset, cycles).asSprudelDslArgs(callInfo))
@@ -4732,7 +4568,6 @@ fun SprudelPattern.ribbon(offset: PatternLike, cycles: PatternLike = 1.0, callIn
  * @category structural
  * @tags ribbon, rib, loop, slice, offset, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.ribbon(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).ribbon(offset, cycles, callInfo)
@@ -4752,13 +4587,11 @@ fun String.ribbon(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: Call
  * @category structural
  * @tags ribbon, rib, loop, slice, offset, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun ribbon(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.ribbon(offset, cycles, callInfo) }
 
 /** Chains a ribbon onto this [PatternMapperFn]; loops a segment of the result starting at `offset`. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.ribbon(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.ribbon(offset, cycles, callInfo) }
@@ -4782,7 +4615,6 @@ fun PatternMapperFn.ribbon(offset: PatternLike, cycles: PatternLike = 1.0, callI
  * @category structural
  * @tags rib, ribbon, loop, slice, offset, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.rib(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     this.ribbon(offset, cycles, callInfo)
@@ -4802,7 +4634,6 @@ fun SprudelPattern.rib(offset: PatternLike, cycles: PatternLike = 1.0, callInfo:
  * @category structural
  * @tags rib, ribbon, loop, slice, offset, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.rib(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).rib(offset, cycles, callInfo)
@@ -4822,13 +4653,11 @@ fun String.rib(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInf
  * @category structural
  * @tags rib, ribbon, loop, slice, offset, cycle
  */
-@SprudelDsl
 @KlangScript.Function
 fun rib(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.rib(offset, cycles, callInfo) }
 
 /** Chains a rib onto this [PatternMapperFn]; alias for [PatternMapperFn.ribbon]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.rib(offset: PatternLike, cycles: PatternLike = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.rib(offset, cycles, callInfo) }

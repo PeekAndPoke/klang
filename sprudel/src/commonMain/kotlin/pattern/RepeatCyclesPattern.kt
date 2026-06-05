@@ -1,10 +1,8 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import kotlin.math.ceil
 import kotlin.math.floor
 
 /**
@@ -18,39 +16,39 @@ import kotlin.math.floor
  */
 class RepeatCyclesPattern(
     private val source: SprudelPattern,
-    private val n: Rational,
+    private val n: Double,
 ) : SprudelPattern.FixedWeight {
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: SprudelPattern.QueryContext,
     ): List<SprudelPatternEvent> {
         val result = mutableListOf<SprudelPatternEvent>()
-        val nDouble = n.toDouble()
+        val nDouble = n
 
         // Iterate through each cycle in the output range
-        var currentCycle = floor(from.toDouble()).toInt()
-        val lastCycle = ceil(to.toDouble()).toInt()
+        var currentCycle = from.cycleIndex()
+        val lastCycle = to.ceilToCycle().cycleIndex()
 
         while (currentCycle < lastCycle) {
-            val cycleStart = currentCycle.toDouble().toRational()
-            val cycleEnd = cycleStart + Rational.ONE
+            val cycleStart = CycleTime.ofCycleIndex(currentCycle)
+            val cycleEnd = cycleStart + CycleTime.ONE
 
             // Calculate which source cycle corresponds to this output cycle
             // Source cycle = floor(current_output_cycle / n)
             val sourceCycleIndex = floor(currentCycle / nDouble).toInt()
-            val sourceCycleStart = sourceCycleIndex.toDouble().toRational()
+            val sourceCycleStart = CycleTime.ofCycleIndex(sourceCycleIndex)
 
             // Overlap of current output cycle with query range
-            val queryStart = maxOf(from, cycleStart)
-            val queryEnd = minOf(to, cycleEnd)
+            val queryStart = from.coerceAtLeast(cycleStart)
+            val queryEnd = to.coerceAtMost(cycleEnd)
 
             if (queryStart < queryEnd) {
                 // Map query times to source times
                 // Time within cycle is T - cycleStart
                 // Source time = sourceCycleStart + (T - cycleStart)
-                val mapToSource = { t: Rational -> sourceCycleStart + (t - cycleStart) }
+                val mapToSource = { t: CycleTime -> sourceCycleStart + (t - cycleStart) }
 
                 val sourceQueryStart = mapToSource(queryStart)
                 val sourceQueryEnd = mapToSource(queryEnd)
@@ -74,11 +72,11 @@ class RepeatCyclesPattern(
         return result
     }
 
-    override fun estimateCycleDuration(): Rational {
+    override fun estimateCycleDuration(): Double {
         return source.estimateCycleDuration() * n
     }
 
-    override val numSteps: Rational? = source.numSteps
+    override val numSteps: Double? = source.numSteps
 
     companion object {
         /**
@@ -90,19 +88,18 @@ class RepeatCyclesPattern(
         ): SprudelPattern {
             return object : SprudelPattern.FixedWeight {
                 override fun queryArcContextual(
-                    from: Rational,
-                    to: Rational,
+                    from: CycleTime,
+                    to: CycleTime,
                     ctx: SprudelPattern.QueryContext,
                 ): List<SprudelPatternEvent> {
-                    val repsEvents = repetitionsPattern.queryArcContextual(from, from + Rational.ONE, ctx)
+                    val repsEvents = repetitionsPattern.queryArcContextual(from, from + CycleTime.ONE, ctx)
                     val repsValue = repsEvents.firstOrNull()?.data?.value?.asDouble ?: 1.0
-                    val repetitions = repsValue.toRational()
 
-                    return RepeatCyclesPattern(source, repetitions).queryArcContextual(from, to, ctx)
+                    return RepeatCyclesPattern(source, repsValue).queryArcContextual(from, to, ctx)
                 }
 
-                override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
-                override val numSteps: Rational? = source.numSteps
+                override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
+                override val numSteps: Double? = source.numSteps
             }
         }
     }

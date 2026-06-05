@@ -3,6 +3,9 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.pulze
+import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.ramp
+import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.square
 
 /**
  * Osc object for KlangScript — builds IgnitorDsl signal graphs.
@@ -57,12 +60,13 @@ object KlangScriptOsc {
         IgnitorDsl.Sawtooth(freq = freq.toIgnitorDsl())
 
     /**
-     * Creates a square wave oscillator (PolyBLEP anti-aliased).
+     * Creates a square wave oscillator — a 50%-duty [pulze]. (`square`/`pulse`/`pulze` are aliases of
+     * the one pulse oscillator; its `duty` is an osc-param.)
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
     fun square(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Square(freq = freq.toIgnitorDsl())
+        IgnitorDsl.Pulze(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a triangle wave oscillator.
@@ -89,6 +93,14 @@ object KlangScriptOsc {
         IgnitorDsl.Zawtooth(freq = freq.toIgnitorDsl())
 
     /**
+     * Creates a raw ramp ("zamp") — naive reverse sawtooth without anti-aliasing (the raw [ramp]).
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     */
+    @KlangScript.Method
+    fun zamp(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
+        IgnitorDsl.Zamp(freq = freq.toIgnitorDsl())
+
+    /**
      * Creates an impulse (click) oscillator.
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
@@ -97,12 +109,13 @@ object KlangScriptOsc {
         IgnitorDsl.Impulse(freq = freq.toIgnitorDsl())
 
     /**
-     * Creates a pulse wave with variable duty cycle.
+     * Creates a raw pulse ("pulze") — naive/aliased pulse with variable duty cycle (the raw
+     * counterpart of [square]/[pulse]).
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
     fun pulze(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Pulze(freq = freq.toIgnitorDsl())
+        IgnitorDsl.RawPulze(freq = freq.toIgnitorDsl())
 
     /** Creates a silent ignitor (zero output). */
     @KlangScript.Method

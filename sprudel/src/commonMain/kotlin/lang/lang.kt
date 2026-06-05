@@ -5,9 +5,6 @@ package io.peekandpoke.klang.sprudel.lang
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
-@DslMarker
-annotation class SprudelDsl
-
 /**
  * Type alias for pattern-like values that can be converted to patterns.
  * Accepts:

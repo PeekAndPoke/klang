@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -31,7 +32,7 @@ internal class RandLPattern(
             val atom = AtomicPattern.pure
             val events = (0 until n).map { index ->
                 atom.reinterpret { evt, ctx ->
-                    val fraction = evt.part.begin - evt.part.begin.floor()
+                    val fraction = evt.part.begin.fracOfCycle().toCycles()
                     val seed = (fraction * n * 10).toInt()
                     val random = ctx.getSeededRandom(seed, index, "randL")
                     val value = random.nextInt(0, 8).asVoiceValue()
@@ -43,13 +44,13 @@ internal class RandLPattern(
         }
     }
 
-    override val numSteps: Rational = Rational.ONE
+    override val numSteps: Double = 1.0
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
@@ -64,7 +65,7 @@ internal class RandLPattern(
 
             val events = (0 until n).map { index ->
                 atom.reinterpret { evt, ctx2 ->
-                    val fraction = evt.part.begin - evt.part.begin.floor()
+                    val fraction = evt.part.begin.fracOfCycle().toCycles()
                     val seed = (fraction * n * 10).toInt()
                     val random = ctx2.getSeededRandom(seed, index, "randL")
                     val value = random.nextInt(0, 8).asVoiceValue()

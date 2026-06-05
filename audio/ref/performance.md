@@ -190,18 +190,21 @@ After (`audio_be/.../ignitor/Ignitors.kt::PinkNoiseIgnitor`):
 - Inner loop reads/writes the fields directly. V8 monomorphic-shape
   optimization keeps each access to a single slot load.
 
-### Worked example 3 — Super-saw / super-sine / ...
+### Worked example 3 — the super-oscillators (supersaw / ramp / square / tri / sine)
 
 Before: each `super-X` factory returned a SAM lambda that allocated a
 **fresh `DoubleArray(v)`** every block to hold per-voice detune ratios — at
 ~344 blocks/sec × multiple super-* voices, real GC pressure.
 
-After (`audio_be/.../ignitor/Ignitors.kt::SuperSawIgnitor` and siblings):
+After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIgnitor`):
 
-- `private var detunes: DoubleArray` field, reallocated **only** when
-  voice-count changes (the same condition that resizes `phases`).
-- Per-block: `for (n in 0 until v) detunes[n] = ...` writes into the
-  persistent buffer.
+- Per-voice state (phase / dt / gain / shape / drift) lives in a persistent
+  `Array<WaveVoiceState>`, reused across blocks and **reallocated only** when the
+  voice count changes.
+- Detune + shape are recomputed only when freq / voice count / spread change
+  (NaN cache keys), not every block. The hot path is a **voice-major** loop that
+  hoists each voice's fields into locals (register residency); the per-voice
+  render is a `final override` so the shape loop stays monomorphic.
 
 ## Adjacent rules (linked, not duplicated here)
 

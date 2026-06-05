@@ -3,7 +3,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -40,13 +39,11 @@ private fun applyBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category sampling
  * @tags begin, start, sample, position, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBegin(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
 
 /** Sets the sample start position (0–1) on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).begin(pos, callInfo)
@@ -64,13 +61,11 @@ fun String.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @category sampling
  * @tags begin, start, sample, position, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun begin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.begin(pos, callInfo) }
 
 /** Chains a begin onto this [PatternMapperFn]; sets the sample start position (0–1). */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.begin(pos, callInfo) }
@@ -102,13 +97,11 @@ private fun applyEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * @category sampling
  * @tags end, stop, sample, position, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.end(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyEnd(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
 
 /** Sets the sample end position (0–1) on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.end(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).end(pos, callInfo)
@@ -126,13 +119,11 @@ fun String.end(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * @category sampling
  * @tags end, stop, sample, position, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun end(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.end(pos, callInfo) }
 
 /** Chains an end onto this [PatternMapperFn]; sets the sample end position (0–1). */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.end(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.end(pos, callInfo) }
@@ -164,13 +155,11 @@ private fun applySpeed(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category sampling
  * @tags speed, playback, pitch, rate, reverse
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySpeed(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
 
 /** Sets the sample playback speed on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).speed(rate, callInfo)
@@ -188,13 +177,11 @@ fun String.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @category sampling
  * @tags speed, playback, pitch, rate, reverse
  */
-@SprudelDsl
 @KlangScript.Function
 fun speed(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.speed(rate, callInfo) }
 
 /** Chains a speed onto this [PatternMapperFn]; sets the sample playback speed. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.speed(rate, callInfo) }
@@ -230,13 +217,11 @@ private fun applyUnit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category sampling
  * @tags unit, time unit, cycles, sample, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.unit(value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyUnit(this, listOf(value).asSprudelDslArgs(callInfo))
 
 /** Sets the time unit for sample playback on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.unit(value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).unit(value, callInfo)
@@ -254,13 +239,11 @@ fun String.unit(value: PatternLike, callInfo: CallInfo? = null): SprudelPattern 
  * @category sampling
  * @tags unit, time unit, cycles, sample, timing
  */
-@SprudelDsl
 @KlangScript.Function
 fun unit(value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.unit(value, callInfo) }
 
 /** Chains a unit onto this [PatternMapperFn]; sets the time unit for sample playback. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.unit(value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.unit(value, callInfo) }
@@ -295,13 +278,11 @@ private fun applyLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category sampling
  * @tags loop, looping, repeat, sample
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.loop(flag: PatternLike = true, callInfo: CallInfo? = null): SprudelPattern =
     applyLoop(this, listOf(flag).asSprudelDslArgs(callInfo))
 
 /** Enables sample looping on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.loop(flag: PatternLike = true, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loop(flag, callInfo)
@@ -319,13 +300,11 @@ fun String.loop(flag: PatternLike = true, callInfo: CallInfo? = null): SprudelPa
  * @category sampling
  * @tags loop, looping, repeat, sample
  */
-@SprudelDsl
 @KlangScript.Function
 fun loop(flag: PatternLike = true, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.loop(flag, callInfo) }
 
 /** Chains a loop onto this [PatternMapperFn]; enables sample looping. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.loop(flag: PatternLike = true, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.loop(flag, callInfo) }
@@ -358,13 +337,11 @@ private fun applyLoopBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category sampling
  * @tags loopBegin, loopb, loop, start, sample, position
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLoopBegin(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
 
 /** Sets the loop start position (0–1) on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopBegin(pos, callInfo)
@@ -383,13 +360,11 @@ fun String.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category sampling
  * @tags loopBegin, loopb, loop, start, sample, position
  */
-@SprudelDsl
 @KlangScript.Function
 fun loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.loopBegin(pos, callInfo) }
 
 /** Chains a loopBegin onto this [PatternMapperFn]; sets the loop start position. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.loopBegin(pos, callInfo) }
@@ -402,25 +377,21 @@ fun PatternMapperFn.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = nu
  * @category sampling
  * @tags loopb, loopBegin, loop, start, sample, position
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.loopBegin(pos, callInfo)
 
 /** Alias for [loopBegin] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopb(pos, callInfo)
 
 /** Alias for [loopBegin] — returns a [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun loopb(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     loopBegin(pos, callInfo)
 
 /** Chains a loopb (alias for [loopBegin]) onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.loopb(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.loopBegin(pos, callInfo)
@@ -453,13 +424,11 @@ private fun applyLoopEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category sampling
  * @tags loopEnd, loope, loop, end, sample, position
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLoopEnd(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
 
 /** Sets the loop end position (0–1) on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopEnd(pos, callInfo)
@@ -478,13 +447,11 @@ fun String.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category sampling
  * @tags loopEnd, loope, loop, end, sample, position
  */
-@SprudelDsl
 @KlangScript.Function
 fun loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.loopEnd(pos, callInfo) }
 
 /** Chains a loopEnd onto this [PatternMapperFn]; sets the loop end position. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.loopEnd(pos, callInfo) }
@@ -497,25 +464,21 @@ fun PatternMapperFn.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null
  * @category sampling
  * @tags loope, loopEnd, loop, end, sample, position
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.loopEnd(pos, callInfo)
 
 /** Alias for [loopEnd] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loope(pos, callInfo)
 
 /** Alias for [loopEnd] — returns a [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun loope(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     loopEnd(pos, callInfo)
 
 /** Chains a loope (alias for [loopEnd]) onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.loope(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.loopEnd(pos, callInfo)
@@ -531,7 +494,7 @@ private fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     if (args.isEmpty()) return source
 
     // Get the loopAt factor
-    val factor = args[0].value?.asRationalOrNull() ?: return source
+    val factor = args[0].value?.asDoubleOrNull() ?: return source
 
     // Apply slow() to stretch the events to the desired duration
     // loopAt(2) stretches events to 2 cycles, loopAt(0.5) compresses to 0.5 cycles
@@ -566,13 +529,11 @@ private fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category sampling
  * @tags loopAt, loop, fit, cycles, tempo, stretch
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyLoopAt(this, listOf(cycles).asSprudelDslArgs(callInfo))
 
 /** Fits the sample to the specified number of cycles on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopAt(cycles, callInfo)
@@ -590,13 +551,11 @@ fun String.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): SprudelPatte
  * @category sampling
  * @tags loopAt, loop, fit, cycles, tempo, stretch
  */
-@SprudelDsl
 @KlangScript.Function
 fun loopAt(cycles: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.loopAt(cycles, callInfo) }
 
 /** Chains a loopAt onto this [PatternMapperFn]; fits the sample to the given number of cycles. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.loopAt(cycles, callInfo) }
@@ -605,11 +564,11 @@ fun PatternMapperFn.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): Pat
 
 private fun applyLoopAtCps(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._innerJoin(args) { pat, factorValue, cpsValue ->
-        val factor = factorValue?.asRational ?: return@_innerJoin silence
-        val cps = cpsValue?.asRational ?: Rational.HALF
+        val factor = factorValue?.asDouble ?: return@_innerJoin silence
+        val cps = cpsValue?.asDouble ?: 0.5
 
         // Calculate speed: (1 / factor) * cps
-        val speed = (Rational.ONE / factor) * cps
+        val speed = (1.0 / factor) * cps
 
         // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
         pat.speed(speed).unit("c").slow(factor)
@@ -637,24 +596,20 @@ private fun applyLoopAtCps(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category sampling
  * @tags loopAtCps, loopatcps, loop, fit, cycles, cps, tempo, stretch
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyLoopAtCps(this, listOf(factor, cps).asSprudelDslArgs(callInfo))
 
 /** Fits the sample to the given number of cycles and cps value on this pattern (numeric overload). */
-@SprudelDsl
 fun SprudelPattern.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
     this.loopAtCps(factor as PatternLike, cps as PatternLike)
 
 /** Fits the sample to the given number of cycles and cps value on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopAtCps(factor, cps, callInfo)
 
 /** Fits the sample to the given number of cycles and cps value on a string pattern (numeric overload). */
-@SprudelDsl
 fun String.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
     this.loopAtCps(factor as PatternLike, cps as PatternLike)
 
@@ -673,13 +628,11 @@ fun String.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
  * @category sampling
  * @tags loopAtCps, loopatcps, loop, fit, cycles, cps, tempo, stretch
  */
-@SprudelDsl
 @KlangScript.Function
 fun loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.loopAtCps(factor, cps, callInfo) }
 
 /** Chains a loopAtCps onto this [PatternMapperFn]; fits the sample to the given cycles and cps. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.loopAtCps(factor, cps, callInfo) }
@@ -693,33 +646,27 @@ fun PatternMapperFn.loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: C
  * @category sampling
  * @tags loopatcps, loopAtCps, loop, fit, cycles, cps, tempo, stretch
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.loopatcps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.loopAtCps(factor, cps, callInfo)
 
 /** Alias for [loopAtCps] on this pattern (numeric overload). */
-@SprudelDsl
 fun SprudelPattern.loopatcps(factor: Number, cps: Number = 0.5): SprudelPattern = this.loopAtCps(factor, cps)
 
 /** Alias for [loopAtCps] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.loopatcps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopatcps(factor, cps, callInfo)
 
 /** Alias for [loopAtCps] on a string pattern (numeric overload). */
-@SprudelDsl
 fun String.loopatcps(factor: Number, cps: Number = 0.5): SprudelPattern = this.loopAtCps(factor, cps)
 
 /** Alias for [loopAtCps] — returns a [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun loopatcps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     loopAtCps(factor, cps, callInfo)
 
 /** Chains a loopatcps (alias for [loopAtCps]) onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.loopatcps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.loopAtCps(factor, cps, callInfo)
@@ -752,13 +699,11 @@ private fun applyCut(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * @category sampling
  * @tags cut, choke, group, hi-hat, sample
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.cut(group: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyCut(this, listOfNotNull(group).asSprudelDslArgs(callInfo))
 
 /** Assigns the sample to a cut group (choke group) on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.cut(group: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).cut(group, callInfo)
@@ -776,13 +721,11 @@ fun String.cut(group: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @category sampling
  * @tags cut, choke, group, hi-hat, sample
  */
-@SprudelDsl
 @KlangScript.Function
 fun cut(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.cut(group, callInfo) }
 
 /** Chains a cut onto this [PatternMapperFn]; assigns the sample to the given cut group. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.cut(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.cut(group, callInfo) }
@@ -824,7 +767,6 @@ private fun applySlice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category sampling
  * @tags slice, segment, chop, sample, begin, end
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySlice(this, listOf(n, index).asSprudelDslArgs(callInfo))
@@ -833,7 +775,6 @@ fun SprudelPattern.slice(n: PatternLike, index: PatternLike, callInfo: CallInfo?
  * Plays a specific slice of the sample on a string pattern.
  * See [SprudelPattern.slice] for full documentation.
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).slice(n, index, callInfo)
@@ -852,13 +793,11 @@ fun String.slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null)
  * @category sampling
  * @tags slice, segment, chop, sample, begin, end
  */
-@SprudelDsl
 @KlangScript.Function
 fun slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.slice(n, index, callInfo) }
 
 /** Chains a slice onto this [PatternMapperFn]; plays the given slice of the sample. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.slice(n, index, callInfo) }
@@ -894,7 +833,6 @@ private fun applySplice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category sampling
  * @tags splice, slice, chop, sample, speed, tempo
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applySplice(this, listOf(n, index).asSprudelDslArgs(callInfo))
@@ -903,7 +841,6 @@ fun SprudelPattern.splice(n: PatternLike, index: PatternLike, callInfo: CallInfo
  * Plays a specific slice of the sample at the original tempo on a string pattern.
  * See [SprudelPattern.splice] for full documentation.
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).splice(n, index, callInfo)
@@ -922,13 +859,11 @@ fun String.splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null
  * @category sampling
  * @tags splice, slice, chop, sample, speed, tempo
  */
-@SprudelDsl
 @KlangScript.Function
 fun splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.splice(n, index, callInfo) }
 
 /** Chains a splice onto this [PatternMapperFn]; plays the given slice at original sample tempo. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.splice(n, index, callInfo) }

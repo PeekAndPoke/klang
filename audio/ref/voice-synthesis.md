@@ -138,17 +138,19 @@ Subclasses only implement `generateSignal(ctx: RenderContext)`.
 
 ## Oscillators
 
-`osci/Oscillators.kt` — waveform factory (builder pattern).
+`ignitor/Ignitors.kt` — oscillator + signal-generator factories (the `Ignitor` DSL). Sound names are
+registered in `ignitor/IgnitorDefaults.kt` / `IgnitorRegistry.kt`. (There is no `osci/Oscillators.kt`.)
 
-| Waveform   | OscFn key    | Notes                                    |
-|------------|--------------|------------------------------------------|
-| `sine`     | `"sine"`     | Pure sinusoid                            |
-| `saw`      | `"saw"`      | Rising sawtooth                          |
-| `square`   | `"square"`   | ±1 square wave with optional pulse-width |
-| `triangle` | `"triangle"` | Symmetric triangle wave                  |
-| `zawtooth` | `"zawtooth"` | Falling sawtooth                         |
-| `supersaw` | `"supersaw"` | Detuned multi-voice saw (uses `density`) |
-| `noise`    | `"noise"`    | White noise                              |
+| Family           | Names                                                       | Notes                                                                                                                                                           |
+|------------------|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Sine             | `sine`                                                      | Pure sinusoid (inherently band-limited)                                                                                                                         |
+| Trapezoid shapes | `saw` `ramp` `square` `pulze` `triangle`                    | ONE `waveTrapezoid` / `WaveVoiceState` engine (`WaveIgnitor`); finite-slope edges, no PolyBLEP, softens with pitch. `pulze` duty is audio-rate (PWM)            |
+| Raw shapes       | `zaw`/`zawtooth` `zamp`                                     | `flankSamples = 0` → instant / aliased edges                                                                                                                    |
+| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `DetunedStackIgnitor` — detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` oscParams |
+| Noise            | `noise` `pink` `dust` …                                     | White / pink / impulse noise                                                                                                                                    |
+
+Per-oscillator character constants live in `ignitor/OscillatorTuning.kt`
+(`SAW_*`, `PULSE_*`, `SUPERSAW_*`, `SUPER{RAMP,SQUARE,TRI,SINE}_*`).
 
 ## Modulation Sub-objects (inside Voice)
 
