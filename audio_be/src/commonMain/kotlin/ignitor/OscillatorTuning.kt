@@ -38,3 +38,16 @@ internal const val SUPERSAW_GAIN_JITTER: Double = 0.1
 
 /** Detune spacing shape: 1.0 = even; >1 concentrates voices toward center; <1 spreads outward. */
 internal const val SUPERSAW_DETUNE_POWER: Double = 1.2
+
+// ── Super-ramp (unison) ──────────────────────────────────────────────────────────────────────────
+// The super-ramp is a negated super-saw; these are its OWN unison knobs, seeded to the super-saw
+// values for now. Change these literals to give the unison ramp its own character.
+
+/** Super-ramp center-dominant gain falloff. Starts equal to the super-saw. */
+internal const val SUPERRAMP_SIDE_ATTEN: Double = SUPERSAW_SIDE_ATTEN
+
+/** Super-ramp per-voice amplitude jitter. Starts equal to the super-saw. */
+internal const val SUPERRAMP_GAIN_JITTER: Double = SUPERSAW_GAIN_JITTER
+
+/** Super-ramp detune spacing shape. Starts equal to the super-saw. */
+internal const val SUPERRAMP_DETUNE_POWER: Double = SUPERSAW_DETUNE_POWER

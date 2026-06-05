@@ -7,6 +7,7 @@ import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.dust
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.sawtooth
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superRamp
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSaw
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSawRaw
 import io.peekandpoke.klang.audio_be.polyBlep
@@ -651,10 +652,8 @@ object Ignitors {
     }
 
     /**
-     * Supersaw: multiple detuned analog-flyback sawtooth oscillators summed together (mono).
-     * Voice count is read lazily from the [voices] Ignitor param on the first block. See
-     * [SuperSawIgnitor] for the analog shape, the gain-weighted-centroid tuning anchor, and the
-     * per-voice character knobs.
+     * Supersaw: a detuned stack of the analog-flyback saw shape (mono). Voice count is read lazily
+     * from the [voices] Ignitor param on the first block. See [DetunedSawStackIgnitor].
      */
     fun superSawRaw(
         freq: Ignitor = FreqIgnitor,
@@ -662,7 +661,12 @@ object Ignitors {
         freqSpread: Ignitor = freqSpreadDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
-    ): Ignitor = SuperSawIgnitor(freq, voices, freqSpread, analog, rng)
+    ): Ignitor = DetunedSawStackIgnitor(
+        freq, voices, freqSpread, analog, rng,
+        polarity = 1.0,
+        resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX,
+        sideAtten = SUPERSAW_SIDE_ATTEN, gainJitter = SUPERSAW_GAIN_JITTER, detunePower = SUPERSAW_DETUNE_POWER,
+    )
 
     /** Super Saw (mono). Alias of [superSawRaw]; the historic pitch-tracking HPF wrapper was removed. */
     fun superSaw(
@@ -674,35 +678,35 @@ object Ignitors {
     ): Ignitor = superSawRaw(freq, voices, freqSpread, analog, rng)
 
     /**
-     * Detuned saw ensemble with analog character (mono).
+     * Detuned stack of the one analog saw shape (mono) — the shared engine behind [superSaw] and
+     * [superRamp]. [polarity] flips the waveform (`+1` = saw, `−1` = ramp); it is **baked into the
+     * voice gains** (negated), so the hot loop is byte-identical for both.
      *
-     * Each voice is a self-contained [SawVoiceState] doing all its per-sample math in `tick()`.
+     * **Shape** ([analogSawShape] via [SawVoiceState]): a finite-slope sawtooth — linear rise then a
+     * finite-time flyback (no PolyBLEP). The flyback spans [resetSamples] × dt samples, so it grows
+     * with pitch → high notes soften toward a triangle, low notes stay bright.
      *
-     * **Shape** ([SawVoiceState.sampleAt]): a finite-slope sawtooth — a linear rise then a finite-time
-     * flyback — instead of an instantaneous reset + PolyBLEP. The flyback spans a *constant* number of
-     * samples ([SAW_RESET_SAMPLES] × dt), so it covers a larger fraction of the cycle at higher
-     * pitch → high notes soften toward a triangle (natural HF rolloff), low notes stay bright. A
-     * finite-slope edge is inherently band-limited, so no PolyBLEP is needed.
+     * **Tuning**: per-voice detune is the even spread (± [freqSpread]/2 semitones, shaped by
+     * [detunePower]) with the **gain-weighted mean removed**, so the pitch centroid sits exactly on
+     * the note regardless of voice-count parity, curve shaping, or gain jitter. Odd default voice
+     * count → a voice also sits on the note.
      *
-     * **Tuning**: per-voice detune is the even spread (± [freqSpread]/2 semitones, optionally shaped
-     * by [SUPERSAW_DETUNE_POWER]) with the **gain-weighted mean removed**, so the perceived pitch
-     * centroid is exactly on the note regardless of voice-count parity, curve shaping, or the gain
-     * jitter below. The default voice count is odd so a voice also sits exactly on the note.
-     *
-     * **Character knobs** (internal, tuned by ear): [SUPERSAW_SIDE_ATTEN] center-dominant gain;
-     * [SUPERSAW_GAIN_JITTER] per-voice random *amplitude* offset (analog non-uniformity with zero
-     * pitch effect — replaces the old detune jitter); per-voice [AnalogDrift] pitch drift via the
-     * [analog] param; random initial phase (lushness).
-     *
-     * Per-voice detune increments and shape fractions are cached, recomputed only when frequency,
-     * voice count, or spread changes.
+     * **Character knobs**: [sideAtten] center-dominant gain; [gainJitter] per-voice amplitude offset
+     * (analog non-uniformity, zero pitch effect); per-voice [AnalogDrift] via [analog]; random phase.
+     * Per-voice detune + shape are cached, recomputed only when frequency / voice count / spread change.
      */
-    private class SuperSawIgnitor(
+    private class DetunedSawStackIgnitor(
         private val freq: Ignitor,
         private val voices: Ignitor,
         private val freqSpread: Ignitor,
         private val analog: Ignitor,
         private val rng: Random,
+        private val polarity: Double,
+        private val resetSamples: Double,
+        private val shapeMax: Double,
+        private val sideAtten: Double,
+        private val gainJitter: Double,
+        private val detunePower: Double,
     ) : Ignitor {
         private var v: Int = 0
         private var voiceStates: Array<SawVoiceState> = emptyArray()
@@ -749,8 +753,8 @@ object Ignitors {
             // Voice-major: hoist each voice's state into locals (register residency) for its whole
             // sample run — voice 0 writes the buffer, the rest accumulate. Voices are independent now
             // (each owns its drift), which is what lets this be voice-major instead of sample-major.
-            // `pm` = phaseMod (vibrato/FM/pitch-env/accelerate), null when unmodulated. The shape is
-            // inlined here (same 2-branch form as SawVoiceState.sampleAt — small, deliberate dup).
+            // `pm` = phaseMod (vibrato/FM/pitch-env/accelerate), null when unmodulated. Polarity is
+            // already baked into `gain`, so saw and ramp share this loop verbatim.
             val pm = ctx.phaseMod
             val off = ctx.offset
             val end = off + ctx.length
@@ -779,38 +783,42 @@ object Ignitors {
             }
         }
 
-        /** Center-dominant base gains × per-voice amplitude jitter, renormalized to sum 1, into the voices. */
+        /**
+         * Center-dominant base gains × per-voice amplitude jitter, renormalized to sum 1, with
+         * [polarity] folded in (negated for the ramp) so the hot loop needs no per-sample sign flip.
+         */
         private fun computeVoiceGains() {
-            val base = superSawVoiceGains(v)
+            val base = superSawVoiceGains(v, sideAtten)
             var s = 0.0
             for (n in 0 until v) {
-                val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * SUPERSAW_GAIN_JITTER
+                val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter
                 val g = (base[n] * jit).coerceAtLeast(0.0)
                 voiceStates[n].gain = g; s += g
             }
             if (s > 0.0) {
-                val inv = 1.0 / s; for (n in 0 until v) voiceStates[n].gain *= inv
+                val inv = polarity / s; for (n in 0 until v) voiceStates[n].gain *= inv
             }
         }
 
         /**
          * Per-voice detune increment + analog flyback shape, with the gain-weighted mean detune
          * removed so the perceived pitch centroid sits exactly on the note (anchors tuning despite
-         * gain jitter, curve shaping, or voice-count parity).
+         * gain jitter, curve shaping, or voice-count parity). Works for either polarity (the sign
+         * cancels in the weighted mean).
          */
         private fun computeDetunes(actualFreq: Double, spread: Double, sr: Double) {
             // Gain-weighted mean detune (two cheap passes — avoids a per-call array allocation).
-            var wsum = 0.0;
+            var wsum = 0.0
             var gsum = 0.0
             for (n in 0 until v) {
                 val g = voiceStates[n].gain
-                wsum += getUnisonDetune(v, spread, n) * g; gsum += g
+                wsum += getUnisonDetune(v, spread, n, detunePower) * g; gsum += g
             }
-            val mean = if (gsum > 0.0) wsum / gsum else 0.0
+            val mean = if (gsum != 0.0) wsum / gsum else 0.0
             for (n in 0 until v) {
                 val vs = voiceStates[n]
-                vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(v, spread, n) - mean) / sr
-                val rf = (SAW_RESET_SAMPLES * vs.dt).coerceAtMost(SAW_SHAPE_MAX)
+                vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(v, spread, n, detunePower) - mean) / sr
+                val rf = (resetSamples * vs.dt).coerceAtMost(shapeMax)
                 vs.setShape(rf)
             }
         }
@@ -1239,8 +1247,10 @@ object Ignitors {
     }
 
     /**
-     * Superramp: multiple detuned reverse-sawtooth oscillators with PolyBLEP anti-aliasing, summed together (mono).
-     * Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Superramp: a detuned stack of the analog saw shape, **negated** (the mirror of [superSaw]).
+     * Shares [DetunedSawStackIgnitor] with `polarity = −1`, the `RAMP_*` shape and its own
+     * `SUPERRAMP_*` unison knobs (seeded to the super-saw values; change them to diverge). Voice
+     * count is read lazily from the [voices] Ignitor param on the first block.
      */
     fun superRamp(
         freq: Ignitor = FreqIgnitor,
@@ -1248,141 +1258,12 @@ object Ignitors {
         freqSpread: Ignitor = freqSpreadDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
-    ): Ignitor = SuperRampIgnitor(freq, voices, freqSpread, analog, rng)
-
-    private class SuperRampIgnitor(
-        private val freq: Ignitor,
-        private val voices: Ignitor,
-        private val freqSpread: Ignitor,
-        private val analog: Ignitor,
-        private val rng: Random,
-    ) : Ignitor {
-        private var v: Int = 0
-        private var phases: DoubleArray = DoubleArray(0)
-        private var detunes: DoubleArray = DoubleArray(0)
-        private var voiceGain: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            ctx.scratchBuffers.use { voicesBuf ->
-                voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
-                if (newV != v) {
-                    v = newV
-                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
-                    val old = phases
-                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
-                    detunes = DoubleArray(v)
-                }
-                if (v <= 0) {
-                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
-                }
-
-                ctx.scratchBuffers.use { spreadBuf ->
-                    freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset]
-
-                    val sr = ctx.sampleRateD
-                    val phaseMod = ctx.phaseMod
-                    val end = ctx.offset + ctx.length
-
-                    if (phaseMod == null) {
-                        for (n in 0 until v) {
-                            val det = getUnisonDetune(v, spread, n)
-                            detunes[n] = actualFreq.applySemitoneDetuneToFrequency(det) / sr
-                        }
-
-                        if (d.active) {
-                            // Analog path: per-sample per-voice jitter
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val baseDt = detunes[0]
-                                for (i in ctx.offset until end) {
-                                    val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] = ((1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) p.polyBlep(dt) else 0.0) * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[0] = p
-                            }
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val baseDt = detunes[n]
-                                for (i in ctx.offset until end) {
-                                    val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] =
-                                        (buffer[i] + (1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) p.polyBlep(dt) else 0.0) * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[n] = p
-                            }
-                        } else {
-                            // Clean digital path
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val dt = detunes[0]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((1.0 - 2.0 * p) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((1.0 - 2.0 * p + p.polyBlep(dt)) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[0] = p
-                            }
-
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val dt = detunes[n]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p + p.polyBlep(dt)) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[n] = p
-                            }
-                        }
-                    } else {
-                        // Modulated path: per-sample (jitter on top of modulation)
-                        for (i in ctx.offset until end) {
-                            val mod = phaseMod[i]
-                            var sum = 0.0
-                            for (n in 0 until v) {
-                                var p = phases[n]
-                                val det = getUnisonDetune(v, spread, n)
-                                var dt = actualFreq.applySemitoneDetuneToFrequency(det) / sr * mod
-                                if (d.active) dt *= d.nextMultiplier()
-                                sum += if (dt <= BLEP_MIN_DT) {
-                                    1.0 - 2.0 * p
-                                } else {
-                                    1.0 - 2.0 * p + p.polyBlep(dt)
-                                }
-                                p += dt; p = p.wrapPhase(1.0)
-                                phases[n] = p
-                            }
-                            buffer[i] = (sum * voiceGain)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = DetunedSawStackIgnitor(
+        freq, voices, freqSpread, analog, rng,
+        polarity = -1.0,
+        resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
+        sideAtten = SUPERRAMP_SIDE_ATTEN, gainJitter = SUPERRAMP_GAIN_JITTER, detunePower = SUPERRAMP_DETUNE_POWER,
+    )
 
     /**
      * Karplus-Strong plucked string synthesis via noise-burst-excited delay line with filtered feedback.
@@ -1732,10 +1613,10 @@ object Ignitors {
      * (always rings) while the quiet detuned halo only adds shimmer.
      *
      * Triangular falloff with distance-from-center, normalised to sum to 1 (same overall
-     * level as the old flat `1/v`). [SUPERSAW_SIDE_ATTEN] tunes the falloff: 0 = flat/equal
-     * (old behaviour), 1 = only the center voice. Tune by ear.
+     * level as the old flat `1/v`). [sideAtten] tunes the falloff: 0 = flat/equal, 1 = only the
+     * center voice (defaults to [SUPERSAW_SIDE_ATTEN]; the super-ramp passes its own). Tune by ear.
      */
-    internal fun superSawVoiceGains(v: Int): DoubleArray {
+    internal fun superSawVoiceGains(v: Int, sideAtten: Double = SUPERSAW_SIDE_ATTEN): DoubleArray {
         if (v <= 0) return DoubleArray(0)
         if (v == 1) return doubleArrayOf(1.0)
         val c = (v - 1) * 0.5            // center index (fractional)
@@ -1745,7 +1626,7 @@ object Ignitors {
         for (n in 0 until v) {
             val d = n - c
             val dn = (if (d < 0.0) -d else d) / halfSpan          // 0 at center .. 1 at edges
-            val g = (1.0 - SUPERSAW_SIDE_ATTEN * dn).coerceAtLeast(0.0)
+            val g = (1.0 - sideAtten * dn).coerceAtLeast(0.0)
             gains[n] = g
             s += g
         }
@@ -1754,17 +1635,22 @@ object Ignitors {
         return gains
     }
 
-    // Oscillator character constants (SAW_* / SUPERSAW_*) live in OscillatorTuning.kt.
+    // Oscillator character constants (SAW_* / SUPERSAW_* / RAMP_* / SUPERRAMP_*) live in OscillatorTuning.kt.
 
-    internal fun getUnisonDetune(unison: Int, detune: Double, voiceIndex: Int): Double {
+    internal fun getUnisonDetune(
+        unison: Int,
+        detune: Double,
+        voiceIndex: Int,
+        detunePower: Double = SUPERSAW_DETUNE_POWER,
+    ): Double {
         if (unison < 2) return 0.0
         val a = -detune * 0.5
         val b = detune * 0.5
         var n = voiceIndex.toDouble() / (unison - 1).toDouble()   // 0..1 across the spread
-        if (SUPERSAW_DETUNE_POWER != 1.0) {
+        if (detunePower != 1.0) {
             // Signed power around the center (0.5) keeps the spacing symmetric (no detuning).
             val x = n * 2.0 - 1.0                                 // -1..+1
-            val sx = (if (x < 0.0) -1.0 else 1.0) * abs(x).pow(SUPERSAW_DETUNE_POWER)
+            val sx = (if (x < 0.0) -1.0 else 1.0) * abs(x).pow(detunePower)
             n = (sx + 1.0) * 0.5
         }
         return n * (b - a) + a
