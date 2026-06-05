@@ -31,19 +31,18 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 
 ### audio_be — DSP backend
 
-| File                                             | Role                                      |
-|--------------------------------------------------|-------------------------------------------|
-| `src/commonMain/kotlin/KlangAudioRenderer.kt`    | Main render loop driver + master limiter  |
-| `src/commonMain/kotlin/voices/Voice.kt`          | Voice sealed interface + all sub-objects  |
-| `src/commonMain/kotlin/voices/AbstractVoice.kt`  | Base DSP logic shared by all voice types  |
-| `src/commonMain/kotlin/voices/SynthVoice.kt`     | Oscillator-based synthesis                |
-| `src/commonMain/kotlin/voices/SampleVoice.kt`    | Sample playback                           |
-| `src/commonMain/kotlin/voices/VoiceScheduler.kt` | Voice lifecycle management                |
-| `src/commonMain/kotlin/cylinders/Cylinders.kt`   | Effect bus manager                        |
-| `src/commonMain/kotlin/cylinders/Cylinder.kt`    | Single effect bus (delay/reverb/phaser/…) |
-| `src/commonMain/kotlin/osci/Oscillators.kt`      | Waveform factory (sine/saw/square/noise…) |
-| `src/jvmMain/kotlin/JvmAudioBackend.kt`          | JVM: javax.sound.sampled output           |
-| `src/jsMain/kotlin/JsAudioBackend.kt`            | JS: Web Audio API AudioContext output     |
+| File                                             | Role                                                                                    |
+|--------------------------------------------------|-----------------------------------------------------------------------------------------|
+| `src/commonMain/kotlin/KlangAudioRenderer.kt`    | Main render loop driver + master limiter                                                |
+| `src/commonMain/kotlin/voices/Voice.kt`          | `Voice` — runs the Pitch → Excite → Filter strip per note                               |
+| `src/commonMain/kotlin/voices/VoiceFactory.kt`   | Builds a `Voice` (ignitor + filter chain) from `VoiceData`                              |
+| `src/commonMain/kotlin/voices/strip/`            | Per-block strip stages: `pitch/`, `ignite/`, `filter/`, `send/`                         |
+| `src/commonMain/kotlin/voices/VoiceScheduler.kt` | Voice lifecycle management                                                              |
+| `src/commonMain/kotlin/cylinders/Cylinders.kt`   | Effect bus manager                                                                      |
+| `src/commonMain/kotlin/cylinders/Cylinder.kt`    | Single effect bus (delay/reverb/phaser/…)                                               |
+| `src/commonMain/kotlin/ignitor/Ignitors.kt`      | Oscillator + signal-gen factories (Ignitor DSL); samples via `ignitor/SampleIgnitor.kt` |
+| `src/jvmMain/kotlin/JvmAudioBackend.kt`          | JVM: javax.sound.sampled output                                                         |
+| `src/jsMain/kotlin/JsAudioBackend.kt`            | JS: Web Audio API AudioContext output                                                   |
 
 ### audio_fe — sample frontend
 

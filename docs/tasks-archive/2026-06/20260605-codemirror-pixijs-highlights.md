@@ -2,11 +2,13 @@
 
 Last updated: 2026-06-05.
 
-Status: **implemented, pending manual verification.** All code landed and `compileKotlinJs`
-passes; the run-the-app functional/perf checks below have not yet been done. Replaces the
-DOM-`<mark>` overlay highlight renderer with a single PixiJS v8 (WebGL) canvas driven by a Pixi
-`Ticker`. Scope is the **CodeMirror script editor only** — the KlangBlocks inline highlights are a
-separate, lighter mechanism and are intentionally left untouched.
+Status: **done, verified.** All code landed, `compileKotlinJs` passes, and the user confirmed in
+the app: highlights appear in sync, fade correctly, scroll-track, no gutter overlap, and the
+alignment is dialed in (box nudged 3px left / 1px up via the `showHighlight` offset constants).
+Performance on the weak machine is "much much better." Replaces the DOM-`<mark>` overlay highlight
+renderer with a single PixiJS v8 (WebGL) canvas driven by a Pixi `Ticker`. Scope was the
+**CodeMirror script editor only** — the KlangBlocks inline highlights are a separate, lighter
+mechanism and were intentionally left untouched.
 
 ---
 
@@ -84,9 +86,15 @@ gating, `maxOverdueMs` drop.
        viewport-cull, set `alpha = pulseAlpha(elapsed/duration)`, expire when `elapsed ≥ duration`;
     3. if no pending ops and no active marks → `ticker.stop()`.
 - **No per-frame `coordsAtPos`.** Geometry is measured **once** at show time (the existing
-  `coordsAtPos` + scroll math, now relative to `view.dom`) and stored as content-absolute
-  `contentX/contentY/w/h`; each frame just subtracts live scroll. Avoids forced reflow on weak
-  machines.
+  `coordsAtPos` + scroll math, relative to the **canvas's own** `getBoundingClientRect()` — the
+  Pixi world origin, so it's immune to any border/padding on the editor root) and stored as
+  content-absolute `contentX/contentY/w/h`; each frame just subtracts live scroll. Avoids forced
+  reflow on weak machines.
+- **Gutter clipping.** The canvas overlays the whole editor (z-index 5, above the sticky
+  line-number gutter), so a `clip-path: inset(0 0 0 <gutterRight>px)` is applied to the canvas to
+  keep highlights from painting over the gutter when scrolled left. `gutterRight` is recomputed at
+  show time (cheap; adapts when the gutter widens, e.g. line 99 → 100) and only re-applied when it
+  changes.
 - **`Graphics` pooling.** Expired marks are returned to a small pool (capped) instead of destroyed,
   to avoid GC churn during dense playback. Each highlight is one `roundRect().fill().stroke()`,
   drawn once; only `x/y/alpha/visible` change per frame (no per-frame redraw).
@@ -124,6 +132,4 @@ and the `@keyframes pulse` (grep-confirmed: only this overlay used them).
 
 ## Possible later refinements
 
-- Gutter clipping: when horizontally scrolled, cull/clip marks sliding under `.cm-gutters`
-  (old overlay didn't clip either; horizontal scroll is rare).
 - Lower the cap on `resolution` (e.g. 1.5) if fill-rate is still tight on the weakest hardware.

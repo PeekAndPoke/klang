@@ -4,8 +4,27 @@
 
 - **JVM**: Full audio output via javax.sound.sampled ✅
 - **JS**: Full audio output via Web Audio API + AudioWorklet ✅
-- Synthesis: oscillators (sine/saw/square/triangle/supersaw/noise) + sample playback
+- Synthesis: oscillators (sine, saw/ramp/square/pulze/triangle + raw zaw/zamp, super* unison,
+  karplus, noise family) + sample playback
 - Effects: delay, reverb, phaser, compressor, ducking, distortion, bit-crush, tremolo
+
+## Oscillator Engine Unified (2026-06-05)
+
+The `audio_be` oscillator code was consolidated (branch `dedicated-cycle-time`) — see
+`docs/agent-tasks-archive/2026-06/20260605-oscillator-engine-unification.md` for the full writeup:
+
+1. **One shape engine** — `analogSawShape` + `pulseTrapezoidShape` → one `waveTrapezoid`
+   (`DspUtil.kt`); `SawVoiceState` + `PulseWaveState` → one `WaveVoiceState`. One `WaveIgnitor` behind
+   saw/ramp/square/pulze/triangle (+ raw zaw/zamp). Finite-slope edges, no PolyBLEP.
+2. **Control-rate value on `interface Ignitor`** — `controlRateValueOrNull(freqHz, ctx)` (non-null iff
+   block-constant) + `blockStartValue(...)`; the `ControlRateIgnitor` marker is gone. Pointwise
+   combinators fold, so control-rate param reads (freq/analog/duty/detune/spread) no longer render a
+   scratch buffer.
+3. **One unison engine** — all five super-oscillators (supersaw/ramp/square/tri/sine) share
+   `DetunedStackIgnitor` (→ `TrapezoidStackIgnitor` → `SawStackIgnitor`/`PulseStackIgnitor`;
+   `SineStackIgnitor`). Each variant has its own `SUPER*_{SIDE_ATTEN,GAIN_JITTER,DETUNE_POWER}` consts
+   in `OscillatorTuning.kt`, seeded to the supersaw values. supersquare/supertri/supersine dropped
+   PolyBLEP/flat-gain → now center-dominant, per-voice drift, on-note tuning (sound changed by design).
 
 ## Architecture Decisions
 

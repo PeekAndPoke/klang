@@ -62,6 +62,9 @@ class CodeMirrorHighlightBuffer(
     private var initializing = false
     private var tickerRunning = false
 
+    /** Last left-clip applied to the canvas (px), so highlights never paint over the sticky gutter. */
+    private var lastClipLeftPx: Double = -1.0
+
     /** Recycled [Graphics] objects, reused across highlights to avoid GC churn during dense playback. */
     private val pool = ArrayDeque<Graphics>()
 
@@ -142,6 +145,7 @@ class CodeMirrorHighlightBuffer(
         pool.clear()
         app = null
         tickerRunning = false
+        lastClipLeftPx = -1.0
         view = null
     }
 
@@ -297,8 +301,8 @@ class CodeMirrorHighlightBuffer(
         // 2) Animate + expire active marks. Cached content rects are offset by live scroll — no
         //    per-frame coordsAtPos (which would force a layout reflow).
         if (activeMarks.isNotEmpty()) {
-            val scrollLeft = view.scrollDOM.scrollLeft.toDouble()
-            val scrollTop = view.scrollDOM.scrollTop.toDouble()
+            val scrollLeft = view.scrollDOM.scrollLeft
+            val scrollTop = view.scrollDOM.scrollTop
             val canvasW = app.screen.width
             val canvasH = app.screen.height
 
@@ -354,17 +358,28 @@ class CodeMirrorHighlightBuffer(
         val fromCoords = view.coordsAtPos(from) ?: return
         val toCoords = view.coordsAtPos(to) ?: return
 
-        // Content-absolute coordinates relative to the (non-scrolling) editor root. Adding the
-        // current scroll back in makes them scroll-independent; the ticker subtracts live scroll.
-        val editorRect = view.dom.getBoundingClientRect()
-        val scrollLeft = view.scrollDOM.scrollLeft.toDouble()
-        val scrollTop = view.scrollDOM.scrollTop.toDouble()
+        // Measure against the canvas's own box (not the editor's): the canvas is the Pixi world
+        // origin, so `viewport - canvasRect` is exactly the canvas-local draw position, immune to
+        // any border/padding on the editor root. Adding the current scroll back in makes the cached
+        // coords scroll-independent; the ticker subtracts live scroll each frame.
+        val canvasRect = app.canvas.getBoundingClientRect()
+        val scrollLeft = view.scrollDOM.scrollLeft
+        val scrollTop = view.scrollDOM.scrollTop
 
-        val contentX = (fromCoords.left - editorRect.left) + scrollLeft
-        val contentY = (fromCoords.top - editorRect.top) + scrollTop + 1.0
+        // Nudge the box to sit snugly around the glyphs (3px left, 2px up).
+        val contentX = (fromCoords.left - canvasRect.left) + scrollLeft - 3.0
+        val contentY = (fromCoords.top - canvasRect.top) + scrollTop - 1.0
         val w = (toCoords.right - fromCoords.left) + 5.0
         val h = (fromCoords.bottom - fromCoords.top) + 2.0
         if (w <= 0 || h <= 0) return
+
+        // Clip the canvas to the content area so highlights scrolled left don't paint over the
+        // sticky line-number gutter (the gutter's right edge is fixed w.r.t. horizontal scroll).
+        val clipLeft = maxOf(0.0, (view.contentDOM.getBoundingClientRect().left - canvasRect.left) + scrollLeft)
+        if (clipLeft != lastClipLeftPx) {
+            lastClipLeftPx = clipLeft
+            app.canvas.style.setProperty("clip-path", "inset(0 0 0 ${clipLeft}px)")
+        }
 
         val g = pool.removeLastOrNull() ?: addon.createGraphics()
         g.clear()

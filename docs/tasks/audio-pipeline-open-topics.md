@@ -1,6 +1,6 @@
 # Audio Pipeline — Open Topics
 
-Last updated: 2026-04-13.
+Last updated: 2026-06-05.
 
 Recent progress:
 
@@ -8,6 +8,11 @@ Recent progress:
   `2026-04/20260409-distortion-oversampling.md`.
 - New "pedal" engine mode landed (commit `3c32351f`). Voice pipeline now has a Motör-branded
   engine DSL with `modern` and `pedal` flavors (see `engines/AudioEngine.kt`).
+- Oscillator engine unified (2026-06) — one `waveTrapezoid`/`WaveVoiceState` shape engine behind
+  saw/ramp/square/pulze/triangle, control-rate reads moved onto the `Ignitor` interface
+  (`controlRateValueOrNull`), and **all** super-oscillators (supersaw/ramp/square/tri/sine) now share
+  one `DetunedStackIgnitor` unison engine. See archived
+  `2026-06/20260605-oscillator-engine-unification.md`.
 
 The topics below are still open.
 
@@ -60,7 +65,9 @@ See archived `20260409-distortion-oversampling.md` for full review findings (A1-
 ## 6. Minor Items
 
 - **PitchEnvelopeRenderer per-sample `pow()`** — could optimize sustain phase (constant value).
-- **Triangle oscillator not band-limited** — aliasing at -12dB/oct, acceptable for most use.
+- **Triangle oscillator** — now renders via the shared finite-slope `waveTrapezoid` (mono `triangle`
+  and `supertri`); corners soften with pitch via the min-flank floor (`PULSE_MIN_FLANK_SAMPLES`).
+  Residual ~-12dB/oct aliasing at very high pitch is accepted (raw-engine philosophy, no PolyBLEP).
 - **Cylinder "last writer wins"** — by design (strudel convention), can cause parameter flickering.
 - **VoiceScheduler cut group TODO** — "Use a fade out / release phase instead of hard cut?"
 - **VoiceScheduler scheduling tests** — only diagnostics tested, promotion logic untested.
