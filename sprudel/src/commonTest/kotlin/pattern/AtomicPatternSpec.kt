@@ -6,13 +6,13 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.note
 
 class AtomicPatternSpec : StringSpec({
 
     "AtomicPattern: Direct Instantiation" {
-        val pattern = AtomicPattern(SprudelVoiceData.empty.copy(note = "c3"))
+        val pattern = AtomicPattern(createSprudelVoiceData { note = "c3" })
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "c3"

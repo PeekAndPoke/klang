@@ -11,6 +11,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel._bind
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
@@ -20,6 +21,7 @@ import io.peekandpoke.klang.sprudel.pattern.PickResetPattern
 import io.peekandpoke.klang.sprudel.pattern.PickRestartPattern
 import io.peekandpoke.klang.sprudel.pattern.PickSqueezePattern
 import kotlin.math.floor
+
 // =====================================================================================================================
 // Helper Functions
 // =====================================================================================================================
@@ -57,7 +59,7 @@ private fun reifyLookup(lookup: Any, baseLocation: SourceLocation? = null): Map<
                 // Parse strings as mini-notation patterns with source location
                 val atomFactory = { text: String, sourceLocations: SourceLocationChain? ->
                     AtomicPattern(
-                        data = SprudelVoiceData.empty.voiceValueModifier(text),
+                        data = createSprudelVoiceData().voiceValueModifier(text),
                         sourceLocations = sourceLocations,
                     )
                 }
@@ -66,7 +68,7 @@ private fun reifyLookup(lookup: Any, baseLocation: SourceLocation? = null): Map<
 
             else -> {
                 // Wrap other values (numbers, etc.) in atomic pattern with default modifier
-                AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(value))
+                AtomicPattern(createSprudelVoiceData().voiceValueModifier(value))
             }
         }
     }

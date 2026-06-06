@@ -8,15 +8,15 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.seq
 
 class SequencePatternSpec : StringSpec({
 
     "SequencePattern: Direct Instantiation" {
-        val p1 = AtomicPattern(SprudelVoiceData.empty.copy(note = "a"))
-        val p2 = AtomicPattern(SprudelVoiceData.empty.copy(note = "b"))
+        val p1 = AtomicPattern(createSprudelVoiceData { note = "a" })
+        val p2 = AtomicPattern(createSprudelVoiceData { note = "b" })
         val pattern = SequencePattern(listOf(p1, p2))
 
         verifyPattern(pattern, 2) { i, note, begin, dur ->
@@ -129,9 +129,9 @@ class SequencePatternSpec : StringSpec({
 
     "SequencePattern: zero-weight patterns fall back to equal distribution" {
         // All patterns with @0 weight — should not crash and should distribute equally
-        val p1 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "a")), weightOverride = 0.0)
-        val p2 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "b")), weightOverride = 0.0)
-        val p3 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "c")), weightOverride = 0.0)
+        val p1 = PropertyOverridePattern(AtomicPattern(createSprudelVoiceData { note = "a" }), weightOverride = 0.0)
+        val p2 = PropertyOverridePattern(AtomicPattern(createSprudelVoiceData { note = "b" }), weightOverride = 0.0)
+        val p3 = PropertyOverridePattern(AtomicPattern(createSprudelVoiceData { note = "c" }), weightOverride = 0.0)
         val pattern = SequencePattern(listOf(p1, p2, p3))
 
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
@@ -149,9 +149,9 @@ class SequencePatternSpec : StringSpec({
 
     "SequencePattern: mixed zero and non-zero weights" {
         // a@0, b@2, c@0 — zero-weighted patterns get zero duration, all time goes to b
-        val p1 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "a")), weightOverride = 0.0)
-        val p2 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "b")), weightOverride = 2.0)
-        val p3 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "c")), weightOverride = 0.0)
+        val p1 = PropertyOverridePattern(AtomicPattern(createSprudelVoiceData { note = "a" }), weightOverride = 0.0)
+        val p2 = PropertyOverridePattern(AtomicPattern(createSprudelVoiceData { note = "b" }), weightOverride = 2.0)
+        val p3 = PropertyOverridePattern(AtomicPattern(createSprudelVoiceData { note = "c" }), weightOverride = 0.0)
         val pattern = SequencePattern(listOf(p1, p2, p3))
 
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }

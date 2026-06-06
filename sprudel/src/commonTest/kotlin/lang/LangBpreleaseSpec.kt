@@ -109,10 +109,11 @@ class LangBpreleaseSpec : StringSpec({
     }
 
     "bprelease() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
-            bandf = 1000.0,
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
+            bandf = 1000.0
             bprelease = 0.4
-        )
+
+        }
         val voiceData = data.toVoiceData()
         val bpf = voiceData.filters[0] as FilterDef.BandPass
 

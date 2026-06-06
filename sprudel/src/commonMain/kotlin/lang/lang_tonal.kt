@@ -165,31 +165,26 @@ fun PatternMapperFn.scale(name: PatternLike? = null, callInfo: CallInfo? = null)
 
 // -- note() -----------------------------------------------------------------------------------------------------------
 
-private val noteMutation = voiceModifier { input ->
-    input?.toString()?.let { raw ->
-        // `name:index[:gain]` form — mirrors soundMutation so `note("a:1")` works the
-        // same way as `s("bd:1")` for picking a variant via Osc.variants(...) /
-        // sample banks. Only split when [1] parses as an integer; otherwise leave
-        // the string intact so non-numeric suffixes like "C4:minor" still resolve
-        // through Tones.noteToFreq unchanged.
-        val parts = raw.split(":")
-        val parsedIndex = parts.getOrNull(1)?.toIntOrNull()
-        if (parsedIndex == null) {
-            copy(
-                note = raw,
-                freqHz = Tones.noteToFreq(raw),
-                value = null,
-            )
-        } else {
-            copy(
-                note = parts[0],
-                freqHz = Tones.noteToFreq(parts[0]),
-                soundIndex = parsedIndex,
-                gain = parts.getOrNull(2)?.toDoubleOrNull() ?: gain,
-                value = null,
-            )
-        }
-    } ?: this
+private val noteMutation = voiceSetter { input ->
+    val raw = input?.toString() ?: return@voiceSetter
+    // `name:index[:gain]` form — mirrors soundMutation so `note("a:1")` works the
+    // same way as `s("bd:1")` for picking a variant via Osc.variants(...) /
+    // sample banks. Only split when [1] parses as an integer; otherwise leave
+    // the string intact so non-numeric suffixes like "C4:minor" still resolve
+    // through Tones.noteToFreq unchanged.
+    val parts = raw.split(":")
+    val parsedIndex = parts.getOrNull(1)?.toIntOrNull()
+    if (parsedIndex == null) {
+        note = raw
+        freqHz = Tones.noteToFreq(raw)
+        value = null
+    } else {
+        note = parts[0]
+        freqHz = Tones.noteToFreq(parts[0])
+        soundIndex = parsedIndex
+        gain = parts.getOrNull(2)?.toDoubleOrNull() ?: gain
+        value = null
+    }
 }
 
 private fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -217,13 +212,12 @@ private fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
             // form. Re-running the mutation on ctrl.note would lose those fields, so merge
             // them in directly (mirrors applySound).
             if (ctrl.note != null || ctrl.freqHz != null) {
-                src.copy(
-                    note = ctrl.note ?: src.note,
-                    freqHz = ctrl.freqHz ?: src.freqHz,
-                    soundIndex = ctrl.soundIndex ?: src.soundIndex,
-                    gain = ctrl.gain ?: src.gain,
-                    value = null,
-                )
+                src.note = ctrl.note ?: src.note
+                src.freqHz = ctrl.freqHz ?: src.freqHz
+                src.soundIndex = ctrl.soundIndex ?: src.soundIndex
+                src.gain = ctrl.gain ?: src.gain
+                src.value = null
+                src
             } else {
                 // Fallback: ctrl wasn't parsed (e.g. raw value pattern) — interpret its
                 // value as the note name and run the parser on it.
@@ -268,11 +262,9 @@ fun String.note(noteName: PatternLike? = null, callInfo: CallInfo? = null): Spru
 
 // -- n() --------------------------------------------------------------------------------------------------------------
 
-private val nMutation = voiceModifier {
-    copy(
-        soundIndex = it?.asIntOrNull() ?: soundIndex,
-        value = null,
-    )
+private val nMutation = voiceSetter {
+    soundIndex = it?.asIntOrNull() ?: soundIndex
+    value = null
 }
 
 private fun applyN(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -333,25 +325,25 @@ fun n(index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
 
 // -- sound() / s() ----------------------------------------------------------------------------------------------------
 
-private val soundMutation = voiceModifier {
-    if (it == null) return@voiceModifier this
+private val soundMutation = voiceSetter {
+    if (it == null) return@voiceSetter
 
     // An inline ignitor DSL value bypasses the "name:index" string parse and is stored as-is.
     if (it is IgnitorDsl) {
-        return@voiceModifier copy(sound = SoundValue.Osc(it), value = null)
+        sound = SoundValue.Osc(it)
+        value = null
+        return@voiceSetter
     }
 
     val split = it.toString().split(":")
 
-    copy(
-        sound = split.getOrNull(0)?.let { name -> SoundValue.Named(name) },
-        // Preserve existing index if the string doesn't specify one.
-        soundIndex = split.getOrNull(1)?.toIntOrNull() ?: soundIndex,
-        // Preserve existing gain if the string doesn't specify one.
-        gain = split.getOrNull(2)?.toDoubleOrNull() ?: gain,
-        // clear the value
-        value = null,
-    )
+    sound = split.getOrNull(0)?.let { name -> SoundValue.Named(name) }
+    // Preserve existing index if the string doesn't specify one.
+    soundIndex = split.getOrNull(1)?.toIntOrNull() ?: soundIndex
+    // Preserve existing gain if the string doesn't specify one.
+    gain = split.getOrNull(2)?.toDoubleOrNull() ?: gain
+    // clear the value
+    value = null
 }
 
 private fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -369,10 +361,9 @@ private fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
         }
     } else {
         source._applyControlFromParams(args, soundMutation) { src, ctrl ->
-            src.copy(
-                sound = ctrl.sound ?: src.sound,
-                soundIndex = ctrl.soundIndex ?: src.soundIndex,
-            )
+            src.sound = ctrl.sound ?: src.sound
+            src.soundIndex = ctrl.soundIndex ?: src.soundIndex
+            src
         }
     }
 }
@@ -1626,8 +1617,8 @@ fun PatternMapperFn.scaleTranspose(steps: PatternLike, callInfo: CallInfo? = nul
 
 // -- chord() ----------------------------------------------------------------------------------------------------------
 
-private val chordMutation = voiceModifier { chordName ->
-    val name = chordName?.toString() ?: return@voiceModifier this
+private val chordMutation = voiceSetter { chordName ->
+    val name = chordName?.toString() ?: return@voiceSetter
 
     // Set the chord property
     // We also set the note to the chord root/tonic to ensure it plays something meaningful if voicing is not used
@@ -1635,10 +1626,10 @@ private val chordMutation = voiceModifier { chordName ->
     val chordObj = Chord.get(name)
     val root = if (!chordObj.empty) chordObj.tonic ?: chordObj.root else null
 
+    chord = name
     if (root != null) {
-        copy(chord = name, note = root, freqHz = Tones.noteToFreq(root))
-    } else {
-        copy(chord = name)
+        note = root
+        freqHz = Tones.noteToFreq(root)
     }
 }
 

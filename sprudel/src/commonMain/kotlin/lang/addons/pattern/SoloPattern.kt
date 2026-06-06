@@ -5,7 +5,7 @@ import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.sampleAt
 
 /**
@@ -62,14 +62,14 @@ class SoloPattern(
             return SprudelPatternEvent(
                 part = span,
                 whole = span, // whole == part → isOnset = true, so the backend picks it up
-                data = SprudelVoiceData.empty.copy(
-                    note = "a",
-                    freqHz = 0.0,
-                    sound = SoundValue.Named("sine"),
-                    gain = 0.000001,
-                    solo = evt?.data?.value?.asDouble?.coerceIn(0.0, 1.0),
-                    patternId = patternId,
-                ),
+                data = createSprudelVoiceData().also {
+                    it.note = "a"
+                    it.freqHz = 0.0
+                    it.sound = SoundValue.Named("sine")
+                    it.gain = 0.000001
+                    it.solo = evt?.data?.value?.asDouble?.coerceIn(0.0, 1.0)
+                    it.patternId = patternId
+                },
             ).prependLocations(evt?.sourceLocations)
         }
 

@@ -6,15 +6,15 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.stack
 
 class StackPatternSpec : StringSpec({
 
     "StackPattern: Direct Instantiation" {
-        val p1 = AtomicPattern(SprudelVoiceData.empty.copy(note = "a"))
-        val p2 = AtomicPattern(SprudelVoiceData.empty.copy(note = "b"))
+        val p1 = AtomicPattern(createSprudelVoiceData { note = "a" })
+        val p2 = AtomicPattern(createSprudelVoiceData { note = "b" })
         val pattern = StackPattern(listOf(p1, p2))
 
         // We sort by begin in verifyPattern, but notes "a" and "b" both start at 0.0.

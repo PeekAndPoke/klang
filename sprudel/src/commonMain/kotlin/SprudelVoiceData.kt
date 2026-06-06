@@ -19,348 +19,267 @@ import kotlinx.serialization.Serializable
  * the original JavaScript Strudel implementation.
  *
  * Gets converted to [VoiceData] when passed to the audio engine.
+ *
+ * **All properties are `var` by design — for performance.** The pattern engine mutates voice data in
+ * place down the modifier chain (via [io.peekandpoke.klang.sprudel.lang.voiceSetter]) instead of
+ * allocating a fresh copy per modifier, which is what previously dominated query cost. The trade-off:
+ * an instance is NOT safe to share — **the caller is responsible for cloning when a value might be
+ * reused or handed to more than one consumer** (use [clone]). The leaf emitters (`AtomicPattern`,
+ * `AtomicInfinitePattern`, `StaticSprudelPattern`) clone on emission so every queried event owns its
+ * data; mutate freely from there. There is intentionally no shared `empty` singleton — construct a
+ * fresh one with `SprudelVoiceData()`. See `docs/tasks/mutable-voicedata-optimization.md`.
  */
 @Serializable
 data class SprudelVoiceData(
     // note, scale, freq
-    val note: String?,
-    val freqHz: Double?,
-    val scale: String?,
+    var note: String?,
+    var freqHz: Double?,
+    var scale: String?,
     /** Chord name (e.g., "Cmaj7", "Dm7", "F/A") for harmonic context */
-    val chord: String?,
+    var chord: String?,
 
     // Gain / Dynamics
-    val gain: Double?,
-    val legato: Double?,
+    var gain: Double?,
+    var legato: Double?,
     /** Volume scaling (0-1), multiplies with gain */
-    val velocity: Double?,
+    var velocity: Double?,
     /** Gain applied after voice processing, before mixing to the cylinder */
-    val postGain: Double?,
+    var postGain: Double?,
 
     // Sound, bank, sound index
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
-    val bank: String?,
+    var bank: String?,
     /**
      * The sound this voice references. Either a [SoundValue.Named] (sample bank entry,
      * pre-registered ignitor, etc., possibly with `name:index` form parsed into [soundIndex])
      * or a [SoundValue.Osc] inlining an [IgnitorDsl] tree — the latter gets denormalized to
      * a synthetic name at the wire boundary by [toVoiceData].
      */
-    val sound: SoundValue?,
+    var sound: SoundValue?,
     /** Sound index */
-    val soundIndex: Int?,
+    var soundIndex: Int?,
 
     // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
-    val oscParams: Map<String, Double>?,
+    var oscParams: Map<String, Double>?,
 
     // ADSR (flattened)
-    val attack: Double?,
-    val decay: Double?,
-    val sustain: Double?,
-    val release: Double?,
-    val attackCurve: AdsrCurve?,
-    val decayCurve: AdsrCurve?,
-    val releaseCurve: AdsrCurve?,
+    var attack: Double?,
+    var decay: Double?,
+    var sustain: Double?,
+    var release: Double?,
+    var attackCurve: AdsrCurve?,
+    var decayCurve: AdsrCurve?,
+    var releaseCurve: AdsrCurve?,
 
     // Pitch / Glisando
-    val accelerate: Double?,
+    var accelerate: Double?,
 
     // Vibrato
-    val vibrato: Double?,
-    val vibratoMod: Double?,
+    var vibrato: Double?,
+    var vibratoMod: Double?,
 
     // Pitch envelope
-    val pAttack: Double?,
-    val pDecay: Double?,
-    val pRelease: Double?,
-    val pEnv: Double?,
-    val pCurve: Double?,
-    val pAnchor: Double?,
+    var pAttack: Double?,
+    var pDecay: Double?,
+    var pRelease: Double?,
+    var pEnv: Double?,
+    var pCurve: Double?,
+    var pAnchor: Double?,
 
     // FM Synthesis
     /** FM harmonicity ratio (carrier to modulator frequency ratio) */
-    val fmh: Double?,
+    var fmh: Double?,
     /** FM envelope attack time */
-    val fmAttack: Double?,
+    var fmAttack: Double?,
     /** FM envelope decay time */
-    val fmDecay: Double?,
+    var fmDecay: Double?,
     /** FM envelope sustain level */
-    val fmSustain: Double?,
+    var fmSustain: Double?,
     /** FM modulation depth/amount */
-    val fmEnv: Double?,
+    var fmEnv: Double?,
 
     // Effects
-    val distort: Double?,
+    var distort: Double?,
     /** Distortion shape: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify */
-    val distortShape: String?,
+    var distortShape: String?,
     /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val distortOversample: Int? = null,
-    val coarse: Double?,
+    var distortOversample: Int?,
+    var coarse: Double?,
     /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val coarseOversample: Int? = null,
-    val crush: Double?,
+    var coarseOversample: Int?,
+    var crush: Double?,
     /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val crushOversample: Int? = null,
+    var crushOversample: Int?,
 
     // Phaser
     /** Phaser modulation speed */
-    val phaserRate: Double?,
+    var phaserRate: Double?,
     /** Phaser depth (0-1) */
-    val phaserDepth: Double?,
+    var phaserDepth: Double?,
     /** Phaser center frequency (Hz) */
-    val phaserCenter: Double?,
+    var phaserCenter: Double?,
     /** Phaser sweep range (Hz) */
-    val phaserSweep: Double?,
+    var phaserSweep: Double?,
 
     // Tremolo
     /** Tremolo modulation speed in cycles */
-    val tremoloSync: Double?,
+    var tremoloSync: Double?,
     /** Tremolo depth */
-    val tremoloDepth: Double?,
+    var tremoloDepth: Double?,
     /** Tremolo waveform shape/skew (0-1) */
-    val tremoloSkew: Double?,
+    var tremoloSkew: Double?,
     /** Tremolo phase offset in cycles */
-    val tremoloPhase: Double?,
+    var tremoloPhase: Double?,
     /** Tremolo waveform type (tri, square, sine, saw, ramp) */
-    val tremoloShape: String?,
+    var tremoloShape: String?,
 
     // Ducking / Sidechain
     /** Target cylinder to listen to for ducking (source of sidechain signal) */
-    val duckCylinder: Int?,
+    var duckCylinder: Int?,
     /** Duck return-to-normal time in seconds (attack/release time) */
-    val duckAttack: Double?,
+    var duckAttack: Double?,
     /** Ducking amount (0.0 = no ducking, 1.0 = full silence) */
-    val duckDepth: Double?,
+    var duckDepth: Double?,
 
     // Filters (flattened) - each filter has its own cutoff and resonance
     /** Low pass filter cutoff frequency */
-    val cutoff: Double?,
+    var cutoff: Double?,
     /** Low pass filter resonance/Q */
-    val resonance: Double?,
+    var resonance: Double?,
     /** High pass filter cutoff frequency */
-    val hcutoff: Double?,
+    var hcutoff: Double?,
     /** High pass filter resonance/Q */
-    val hresonance: Double?,
+    var hresonance: Double?,
     /** Band pass filter cutoff frequency */
-    val bandf: Double?,
+    var bandf: Double?,
     /** Band pass filter resonance/Q */
-    val bandq: Double?,
+    var bandq: Double?,
     /** Notch filter cutoff frequency */
-    val notchf: Double?,
+    var notchf: Double?,
     /** Notch filter resonance/Q */
-    val nresonance: Double?,
+    var nresonance: Double?,
 
     // Lowpass filter envelope
     /** Low pass filter envelope attack time */
-    val lpattack: Double?,
+    var lpattack: Double?,
     /** Low pass filter envelope decay time */
-    val lpdecay: Double?,
+    var lpdecay: Double?,
     /** Low pass filter envelope sustain level */
-    val lpsustain: Double?,
+    var lpsustain: Double?,
     /** Low pass filter envelope release time */
-    val lprelease: Double?,
+    var lprelease: Double?,
     /** Low pass filter envelope depth/amount */
-    val lpenv: Double?,
+    var lpenv: Double?,
 
     // Highpass filter envelope
     /** High pass filter envelope attack time */
-    val hpattack: Double?,
+    var hpattack: Double?,
     /** High pass filter envelope decay time */
-    val hpdecay: Double?,
+    var hpdecay: Double?,
     /** High pass filter envelope sustain level */
-    val hpsustain: Double?,
+    var hpsustain: Double?,
     /** High pass filter envelope release time */
-    val hprelease: Double?,
+    var hprelease: Double?,
     /** High pass filter envelope depth/amount */
-    val hpenv: Double?,
+    var hpenv: Double?,
 
     // Bandpass filter envelope
     /** Band pass filter envelope attack time */
-    val bpattack: Double?,
+    var bpattack: Double?,
     /** Band pass filter envelope decay time */
-    val bpdecay: Double?,
+    var bpdecay: Double?,
     /** Band pass filter envelope sustain level */
-    val bpsustain: Double?,
+    var bpsustain: Double?,
     /** Band pass filter envelope release time */
-    val bprelease: Double?,
+    var bprelease: Double?,
     /** Band pass filter envelope depth/amount */
-    val bpenv: Double?,
+    var bpenv: Double?,
 
     // Notch filter envelope
     /** Notch filter envelope attack time */
-    val nfattack: Double?,
+    var nfattack: Double?,
     /** Notch filter envelope decay time */
-    val nfdecay: Double?,
+    var nfdecay: Double?,
     /** Notch filter envelope sustain level */
-    val nfsustain: Double?,
+    var nfsustain: Double?,
     /** Notch filter envelope release time */
-    val nfrelease: Double?,
+    var nfrelease: Double?,
     /** Notch filter envelope depth/amount */
-    val nfenv: Double?,
+    var nfenv: Double?,
 
     // Routing
     /** The mix channel / bus / orbit / cylinder */
-    val cylinder: Int?,
+    var cylinder: Int?,
 
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
-    val pan: Double?,
+    var pan: Double?,
 
     // Delay
-    val delay: Double?, // Mix amount (0.0 to 1.0)
-    val delayTime: Double?, // Time in seconds
-    val delayFeedback: Double?, // Feedback amount (0.0 to <1.0)
+    var delay: Double?, // Mix amount (0.0 to 1.0)
+    var delayTime: Double?, // Time in seconds
+    var delayFeedback: Double?, // Feedback amount (0.0 to <1.0)
 
     // Reverb
-    val room: Double?,
-    val roomSize: Double?,
+    var room: Double?,
+    var roomSize: Double?,
     /** Reverb fade time */
-    val roomFade: Double?,
+    var roomFade: Double?,
     /** Reverb lowpass start frequency */
-    val roomLp: Double?,
+    var roomLp: Double?,
     /** Reverb lowpass frequency at -60dB */
-    val roomDim: Double?,
+    var roomDim: Double?,
     /** Impulse response sample */
-    val iResponse: String?,
+    var iResponse: String?,
 
     // Sample manipulation
-    val begin: Double?,
-    val end: Double?,
-    val speed: Double?,
-    val unit: String?,
-    val loop: Boolean?,
-    val cut: Int?,
-    val loopBegin: Double?,
-    val loopEnd: Double?,
+    var begin: Double?,
+    var end: Double?,
+    var speed: Double?,
+    var unit: String?,
+    var loop: Boolean?,
+    var cut: Int?,
+    var loopBegin: Double?,
+    var loopEnd: Double?,
 
     // Voice / Singing
     /** Vowel formant filter (a, e, i, o, u) */
-    val vowel: String?,
+    var vowel: String?,
 
     // Dynamics / Compression
     /** Dynamic range compression settings (threshold:ratio:knee:attack:release) */
-    val compressor: String?,
+    var compressor: String?,
 
     // Playback control
     /** Solo value - 0.0 = disabled, 0.0..1.0 = enabled (amount), null = not set */
-    val solo: Double?,
+    var solo: Double?,
 
     /** Unique pattern ID for tracking solo state across pattern changes */
-    val patternId: String? = null,
+    var patternId: String?,
 
     /**
      * Voice pipeline engine name — selects the topology of the Filter stage.
      * Known values: `"modern"` (default), `"pedal"`. Unknown/null → modern.
      */
-    val engine: String? = null,
+    var engine: String?,
 
     // Custom value
-    val value: SprudelVoiceValue? = null,
+    var value: SprudelVoiceValue?,
 ) {
-    companion object {
-        val empty = SprudelVoiceData(
-            note = null,
-            freqHz = null,
-            scale = null,
-            chord = null,
-            gain = null,
-            legato = null,
-            velocity = null,
-            postGain = null,
-            bank = null,
-            sound = null,
-            soundIndex = null,
-            oscParams = null,
-            attack = null,
-            decay = null,
-            sustain = null,
-            release = null,
-            attackCurve = null,
-            decayCurve = null,
-            releaseCurve = null,
-            accelerate = null,
-            vibrato = null,
-            vibratoMod = null,
-            pAttack = null,
-            pDecay = null,
-            pRelease = null,
-            pEnv = null,
-            pCurve = null,
-            pAnchor = null,
-            fmh = null,
-            fmAttack = null,
-            fmDecay = null,
-            fmSustain = null,
-            fmEnv = null,
-            distort = null,
-            distortShape = null,
-            coarse = null,
-            crush = null,
-            phaserRate = null,
-            phaserDepth = null,
-            phaserCenter = null,
-            phaserSweep = null,
-            tremoloSync = null,
-            tremoloDepth = null,
-            tremoloSkew = null,
-            tremoloPhase = null,
-            tremoloShape = null,
-            duckCylinder = null,
-            duckAttack = null,
-            duckDepth = null,
-            cutoff = null,
-            resonance = null,
-            hcutoff = null,
-            hresonance = null,
-            bandf = null,
-            bandq = null,
-            notchf = null,
-            nresonance = null,
-            lpattack = null,
-            lpdecay = null,
-            lpsustain = null,
-            lprelease = null,
-            lpenv = null,
-            hpattack = null,
-            hpdecay = null,
-            hpsustain = null,
-            hprelease = null,
-            hpenv = null,
-            bpattack = null,
-            bpdecay = null,
-            bpsustain = null,
-            bprelease = null,
-            bpenv = null,
-            nfattack = null,
-            nfdecay = null,
-            nfsustain = null,
-            nfrelease = null,
-            nfenv = null,
-            cylinder = null,
-            pan = null,
-            delay = null,
-            delayTime = null,
-            delayFeedback = null,
-            room = null,
-            roomSize = null,
-            roomFade = null,
-            roomLp = null,
-            roomDim = null,
-            iResponse = null,
-            begin = null,
-            end = null,
-            speed = null,
-            unit = null,
-            loop = null,
-            cut = null,
-            loopBegin = null,
-            loopEnd = null,
-            vowel = null,
-            compressor = null,
-            solo = null,
-            patternId = null,
-            value = null,
-        )
-    }
+
+    /**
+     * Fresh shallow copy of this voice data.
+     *
+     * Used by the leaf emitters (`AtomicPattern`, `AtomicInfinitePattern`, `StaticSprudelPattern`)
+     * to hand every event its own single-owner instance, which is the invariant that makes the
+     * in-place mutation of `var` fields safe (see `docs/tasks/mutable-voicedata-optimization.md`).
+     * Flat fields only — `oscParams` is treated as immutable-replace, so sharing its reference is fine.
+     *
+     * Just `copy()`: the generated data-class copy (constructor) is the fast path on Kotlin/JS — V8
+     * optimizes it into a monomorphic constructor call. A benchmarked `Object.assign(Object.create(...))`
+     * alternative ("fastCopy") was ~22x SLOWER (slow dictionary-mode object), so don't reintroduce it.
+     * See `docs/tasks/mutable-voicedata-optimization.md`.
+     */
+    fun clone(): SprudelVoiceData = copy()
 
     fun merge(other: SprudelVoiceData): SprudelVoiceData {
         return SprudelVoiceData(
@@ -470,6 +389,120 @@ data class SprudelVoiceData(
             engine = other.engine ?: engine,
             value = other.value ?: value
         )
+    }
+
+    /**
+     * In-place counterpart of [merge]: folds [other]'s non-null fields into this instance (other wins),
+     * mutating it rather than allocating. `patternId` is preserved (never taken from other), matching
+     * [merge]. Only safe on a single-owner instance (see [clone]). Guarded against drift from [merge] by
+     * `SprudelVoiceDataSpec`.
+     */
+    fun mergeFrom(other: SprudelVoiceData) {
+        note = other.note ?: note
+        freqHz = other.freqHz ?: freqHz
+        scale = other.scale ?: scale
+        chord = other.chord ?: chord
+        gain = other.gain ?: gain
+        legato = other.legato ?: legato
+        velocity = other.velocity ?: velocity
+        postGain = other.postGain ?: postGain
+        bank = other.bank ?: bank
+        sound = other.sound ?: sound
+        soundIndex = other.soundIndex ?: soundIndex
+        oscParams = mergeOscParams(oscParams, other.oscParams)
+        attack = other.attack ?: attack
+        decay = other.decay ?: decay
+        sustain = other.sustain ?: sustain
+        release = other.release ?: release
+        attackCurve = other.attackCurve ?: attackCurve
+        decayCurve = other.decayCurve ?: decayCurve
+        releaseCurve = other.releaseCurve ?: releaseCurve
+        accelerate = other.accelerate ?: accelerate
+        vibrato = other.vibrato ?: vibrato
+        vibratoMod = other.vibratoMod ?: vibratoMod
+        pAttack = other.pAttack ?: pAttack
+        pDecay = other.pDecay ?: pDecay
+        pRelease = other.pRelease ?: pRelease
+        pEnv = other.pEnv ?: pEnv
+        pCurve = other.pCurve ?: pCurve
+        pAnchor = other.pAnchor ?: pAnchor
+        fmh = other.fmh ?: fmh
+        fmAttack = other.fmAttack ?: fmAttack
+        fmDecay = other.fmDecay ?: fmDecay
+        fmSustain = other.fmSustain ?: fmSustain
+        fmEnv = other.fmEnv ?: fmEnv
+        distort = other.distort ?: distort
+        distortShape = other.distortShape ?: distortShape
+        distortOversample = other.distortOversample ?: distortOversample
+        coarse = other.coarse ?: coarse
+        coarseOversample = other.coarseOversample ?: coarseOversample
+        crush = other.crush ?: crush
+        crushOversample = other.crushOversample ?: crushOversample
+        phaserRate = other.phaserRate ?: phaserRate
+        phaserDepth = other.phaserDepth ?: phaserDepth
+        phaserCenter = other.phaserCenter ?: phaserCenter
+        phaserSweep = other.phaserSweep ?: phaserSweep
+        tremoloSync = other.tremoloSync ?: tremoloSync
+        tremoloDepth = other.tremoloDepth ?: tremoloDepth
+        tremoloSkew = other.tremoloSkew ?: tremoloSkew
+        tremoloPhase = other.tremoloPhase ?: tremoloPhase
+        tremoloShape = other.tremoloShape ?: tremoloShape
+        duckCylinder = other.duckCylinder ?: duckCylinder
+        duckAttack = other.duckAttack ?: duckAttack
+        duckDepth = other.duckDepth ?: duckDepth
+        cutoff = other.cutoff ?: cutoff
+        resonance = other.resonance ?: resonance
+        hcutoff = other.hcutoff ?: hcutoff
+        hresonance = other.hresonance ?: hresonance
+        bandf = other.bandf ?: bandf
+        bandq = other.bandq ?: bandq
+        notchf = other.notchf ?: notchf
+        nresonance = other.nresonance ?: nresonance
+        lpattack = other.lpattack ?: lpattack
+        lpdecay = other.lpdecay ?: lpdecay
+        lpsustain = other.lpsustain ?: lpsustain
+        lprelease = other.lprelease ?: lprelease
+        lpenv = other.lpenv ?: lpenv
+        hpattack = other.hpattack ?: hpattack
+        hpdecay = other.hpdecay ?: hpdecay
+        hpsustain = other.hpsustain ?: hpsustain
+        hprelease = other.hprelease ?: hprelease
+        hpenv = other.hpenv ?: hpenv
+        bpattack = other.bpattack ?: bpattack
+        bpdecay = other.bpdecay ?: bpdecay
+        bpsustain = other.bpsustain ?: bpsustain
+        bprelease = other.bprelease ?: bprelease
+        bpenv = other.bpenv ?: bpenv
+        nfattack = other.nfattack ?: nfattack
+        nfdecay = other.nfdecay ?: nfdecay
+        nfsustain = other.nfsustain ?: nfsustain
+        nfrelease = other.nfrelease ?: nfrelease
+        nfenv = other.nfenv ?: nfenv
+        cylinder = other.cylinder ?: cylinder
+        pan = other.pan ?: pan
+        delay = other.delay ?: delay
+        delayTime = other.delayTime ?: delayTime
+        delayFeedback = other.delayFeedback ?: delayFeedback
+        room = other.room ?: room
+        roomSize = other.roomSize ?: roomSize
+        roomFade = other.roomFade ?: roomFade
+        roomLp = other.roomLp ?: roomLp
+        roomDim = other.roomDim ?: roomDim
+        iResponse = other.iResponse ?: iResponse
+        begin = other.begin ?: begin
+        end = other.end ?: end
+        speed = other.speed ?: speed
+        unit = other.unit ?: unit
+        loop = other.loop ?: loop
+        cut = other.cut ?: cut
+        loopBegin = other.loopBegin ?: loopBegin
+        loopEnd = other.loopEnd ?: loopEnd
+        vowel = other.vowel ?: vowel
+        compressor = other.compressor ?: compressor
+        solo = other.solo ?: solo
+        // patternId intentionally preserved (never taken from other) — matches merge()
+        engine = other.engine ?: engine
+        value = other.value ?: value
     }
 
     fun isTruthy(): Boolean {
@@ -1034,6 +1067,135 @@ data class SprudelVoiceData(
     }
 }
 
+/**
+ * Shared all-null template, cloned by [createSprudelVoiceData]. `@PublishedApi internal` so the inline
+ * factory can reference it across the module. Never mutate it directly — it is only ever `clone()`d.
+ * This full-field constructor call (plus `merge()`/`mergeFrom`) is the compile-time guard that no field
+ * is forgotten, since the primary constructor has no defaults.
+ */
+@PublishedApi
+internal val blueprint = SprudelVoiceData(
+    note = null,
+    freqHz = null,
+    scale = null,
+    chord = null,
+    gain = null,
+    legato = null,
+    velocity = null,
+    postGain = null,
+    bank = null,
+    sound = null,
+    soundIndex = null,
+    oscParams = null,
+    attack = null,
+    decay = null,
+    sustain = null,
+    release = null,
+    attackCurve = null,
+    decayCurve = null,
+    releaseCurve = null,
+    accelerate = null,
+    vibrato = null,
+    vibratoMod = null,
+    pAttack = null,
+    pDecay = null,
+    pRelease = null,
+    pEnv = null,
+    pCurve = null,
+    pAnchor = null,
+    fmh = null,
+    fmAttack = null,
+    fmDecay = null,
+    fmSustain = null,
+    fmEnv = null,
+    distort = null,
+    distortShape = null,
+    distortOversample = null,
+    coarse = null,
+    coarseOversample = null,
+    crush = null,
+    crushOversample = null,
+    phaserRate = null,
+    phaserDepth = null,
+    phaserCenter = null,
+    phaserSweep = null,
+    tremoloSync = null,
+    tremoloDepth = null,
+    tremoloSkew = null,
+    tremoloPhase = null,
+    tremoloShape = null,
+    duckCylinder = null,
+    duckAttack = null,
+    duckDepth = null,
+    cutoff = null,
+    resonance = null,
+    hcutoff = null,
+    hresonance = null,
+    bandf = null,
+    bandq = null,
+    notchf = null,
+    nresonance = null,
+    lpattack = null,
+    lpdecay = null,
+    lpsustain = null,
+    lprelease = null,
+    lpenv = null,
+    hpattack = null,
+    hpdecay = null,
+    hpsustain = null,
+    hprelease = null,
+    hpenv = null,
+    bpattack = null,
+    bpdecay = null,
+    bpsustain = null,
+    bprelease = null,
+    bpenv = null,
+    nfattack = null,
+    nfdecay = null,
+    nfsustain = null,
+    nfrelease = null,
+    nfenv = null,
+    cylinder = null,
+    pan = null,
+    delay = null,
+    delayTime = null,
+    delayFeedback = null,
+    room = null,
+    roomSize = null,
+    roomFade = null,
+    roomLp = null,
+    roomDim = null,
+    iResponse = null,
+    begin = null,
+    end = null,
+    speed = null,
+    unit = null,
+    loop = null,
+    cut = null,
+    loopBegin = null,
+    loopEnd = null,
+    vowel = null,
+    compressor = null,
+    solo = null,
+    patternId = null,
+    engine = null,
+    value = null,
+)
+
+/**
+ * Factory for a fresh [SprudelVoiceData], configured via [config].
+ *
+ * Clones the all-null [blueprint] and applies [config] to set the fields you want — avoids threading
+ * 100+ constructor params through every call site. `inline`, so `config` is inlined (no lambda
+ * allocation): `createSprudelVoiceData { gain = 0.5 }` compiles to `blueprint.clone().also { it.gain = 0.5 }`.
+ *
+ * Note: inside [config] the receiver is the new instance, so a bare name on the right-hand side resolves
+ * to the instance's property, not an outer local — write `also { it.field = localValue }` when the local
+ * shares a field's name (e.g. `value`).
+ */
+inline fun createSprudelVoiceData(config: SprudelVoiceData.() -> Unit = {}): SprudelVoiceData =
+    blueprint.clone().apply(config)
+
 /** Merges two oscParams maps: other's values override this's values. */
 private fun mergeOscParams(
     base: Map<String, Double>?,
@@ -1050,6 +1212,28 @@ fun SprudelVoiceData.withOscParam(key: String, value: Double?): SprudelVoiceData
     return copy(oscParams = (oscParams.orEmpty()) + (key to value))
 }
 
+/**
+ * In-place counterpart of [withOscParam]: sets the given oscParam on this instance (null is a no-op).
+ * `oscParams` is treated as immutable-replace, so a fresh map is assigned to the field — no new
+ * [SprudelVoiceData] is allocated. Only safe on a single-owner instance (see [clone]).
+ */
+fun SprudelVoiceData.putOscParam(key: String, value: Double?) {
+    if (value == null) return
+    oscParams = (oscParams.orEmpty()) + (key to value)
+}
+
+/**
+ * In-place counterpart of [withOscParams]: sets the given oscParams on this instance. Null values
+ * are ignored. Only safe on a single-owner instance (see [clone]).
+ */
+fun SprudelVoiceData.putOscParams(vararg params: Pair<String, Double?>) {
+    val nonNull = params.filter { it.second != null }
+    if (nonNull.isEmpty()) return
+    val merged = oscParams.orEmpty().toMutableMap()
+    for ((k, v) in nonNull) merged[k] = v!!
+    oscParams = merged
+}
+
 /** Merges multiple oscParams in a single copy. Null values are ignored. */
 fun SprudelVoiceData.withOscParams(vararg params: Pair<String, Double?>): SprudelVoiceData {
     val nonNull = params.filter { it.second != null }
@@ -1064,6 +1248,16 @@ fun SprudelVoiceData.mergeOscParamsFrom(other: SprudelVoiceData): SprudelVoiceDa
     val otherParams = other.oscParams
     if (otherParams.isNullOrEmpty()) return this
     return copy(oscParams = (oscParams.orEmpty()) + otherParams)
+}
+
+/**
+ * In-place counterpart of [mergeOscParamsFrom]: folds [other]'s oscParams into this instance.
+ * Only safe on a single-owner instance (see [clone]).
+ */
+fun SprudelVoiceData.putOscParamsFrom(other: SprudelVoiceData) {
+    val otherParams = other.oscParams
+    if (otherParams.isNullOrEmpty()) return
+    oscParams = (oscParams.orEmpty()) + otherParams
 }
 
 /**

@@ -7,8 +7,8 @@ import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 
 class RandLPatternSpec : StringSpec({
 
@@ -25,7 +25,7 @@ class RandLPatternSpec : StringSpec({
                     SprudelPatternEvent(
                         part = CycleTimeSpan(from, to),
                         whole = CycleTimeSpan(from, to),
-                        data = SprudelVoiceData.empty.copy(value = 4.asVoiceValue())
+                        data = createSprudelVoiceData { value = 4.asVoiceValue() }
                     )
                 )
             }

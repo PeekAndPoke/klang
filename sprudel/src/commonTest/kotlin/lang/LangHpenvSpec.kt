@@ -104,10 +104,11 @@ class LangHpenvSpec : StringSpec({
     }
 
     "hpenv() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
-            hcutoff = 2000.0,
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
+            hcutoff = 2000.0
             hpenv = 0.7
-        )
+
+        }
         val voiceData = data.toVoiceData()
         val hpf = voiceData.filters[0] as FilterDef.HighPass
 

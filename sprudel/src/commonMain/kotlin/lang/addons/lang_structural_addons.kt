@@ -12,6 +12,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
@@ -102,7 +103,7 @@ private fun applyMorse(textArg: SprudelDslArg<Any?>?): SprudelPattern {
 
         // "x" is the standard note for rhythm/struct
         return AtomicPattern(
-            data = SprudelVoiceData.empty.copy(value = SprudelVoiceValue.Num(1.0)),
+            data = createSprudelVoiceData { value = SprudelVoiceValue.Num(1.0) },
             sourceLocations = chain
         )
     }

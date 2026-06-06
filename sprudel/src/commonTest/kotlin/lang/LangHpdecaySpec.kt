@@ -104,10 +104,11 @@ class LangHpdecaySpec : StringSpec({
     }
 
     "hpdecay() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
-            hcutoff = 2000.0,
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
+            hcutoff = 2000.0
             hpdecay = 0.2
-        )
+
+        }
         val voiceData = data.toVoiceData()
         val hpf = voiceData.filters[0] as FilterDef.HighPass
 

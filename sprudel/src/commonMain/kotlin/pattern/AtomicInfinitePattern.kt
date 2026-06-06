@@ -37,7 +37,8 @@ class AtomicInfinitePattern(val data: SprudelVoiceData) : SprudelPattern {
                 val timeSpan = CycleTimeSpan(begin = cycleStart, end = cycleEnd)
 
                 result.add(
-                    SprudelPatternEvent(part = timeSpan, whole = timeSpan, data = data)
+                    // clone() so each emitted event owns its data (single-owner invariant; backs ply/echo).
+                    SprudelPatternEvent(part = timeSpan, whole = timeSpan, data = data.clone())
                 )
             }
         }

@@ -8,7 +8,7 @@ import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.makeStatic
 
@@ -20,12 +20,12 @@ class StaticSprudelPatternSpec : StringSpec({
             SprudelPatternEvent(
                 part = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(0.5)),
                 whole = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(0.5)),
-                data = SprudelVoiceData.empty.copy(note = "a"),
+                data = createSprudelVoiceData { note = "a" },
             ),
             SprudelPatternEvent(
                 part = CycleTimeSpan(CycleTime.ofCycles(0.5), CycleTime.ofCycles(1.0)),
                 whole = CycleTimeSpan(CycleTime.ofCycles(0.5), CycleTime.ofCycles(1.0)),
-                data = SprudelVoiceData.empty.copy(note = "b"),
+                data = createSprudelVoiceData { note = "b" },
             )
         )
         val pattern = StaticSprudelPattern(events)
@@ -50,7 +50,7 @@ class StaticSprudelPatternSpec : StringSpec({
             SprudelPatternEvent(
                 part = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(1.0)),
                 whole = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(1.0)),
-                data = SprudelVoiceData.empty.copy(note = "kick"),
+                data = createSprudelVoiceData { note = "kick" },
             )
         )
         val pattern = StaticSprudelPattern(events)

@@ -6,8 +6,8 @@ import io.peekandpoke.klang.common.math.bjorklund
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 
 /**
  * Euclidean Morph Pattern: Morphs between Euclidean rhythm and even distribution.
@@ -170,7 +170,7 @@ internal class EuclideanMorphPattern(
                             SprudelPatternEvent(
                                 part = timeSpan,
                                 whole = timeSpan,
-                                data = SprudelVoiceData.empty.copy(value = 1.asVoiceValue())
+                                data = createSprudelVoiceData { value = 1.asVoiceValue() }
                             )
                         )
                     }

@@ -5,8 +5,8 @@ import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 
 /**
  * Pattern that generates random sequences with varying length based on a control pattern.
@@ -65,7 +65,7 @@ internal class RandrunPattern(
                     SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = SprudelVoiceData.empty.copy(value = value)
+                        data = createSprudelVoiceData().also { it.value = value }
                     )
                 )
             }

@@ -10,6 +10,7 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
@@ -78,7 +79,7 @@ fun <T> SprudelDslArg<T>?.asControlValueProvider(default: SprudelVoiceValue): Co
 
         else -> parseMiniNotation(arg) { text, loc ->
             AtomicPattern(
-                data = SprudelVoiceData.empty.voiceValueModifier(text),
+                data = createSprudelVoiceData().voiceValueModifier(text),
                 sourceLocations = loc
             )
         }
@@ -118,6 +119,17 @@ internal fun Any.asIntOrNull(): Int? = when (this) {
 
 /** Creates a voice modifier */
 fun voiceModifier(modify: VoiceModifierFn): VoiceModifierFn = modify
+
+/**
+ * Creates a voice modifier that **mutates the receiver in place** and returns it, instead of
+ * allocating via `copy(...)`.
+ *
+ * Safe because every [SprudelVoiceData] reaching a modifier is a single-owner clone — the leaf
+ * emitters (`AtomicPattern`, `AtomicInfinitePattern`, `StaticSprudelPattern`) clone on emission, so
+ * no instance is ever shared between events. This kills the per-event copy/GC churn that dominated
+ * query cost. See `docs/tasks/mutable-voicedata-optimization.md`.
+ */
+fun voiceSetter(set: SprudelVoiceData.(Any?) -> Unit): VoiceModifierFn = { value -> this.set(value); this }
 
 /** Chains two pattern mappers together, returning a new mapper */
 fun PatternMapperFn.chain(next: PatternMapperFn?): PatternMapperFn {
@@ -192,7 +204,7 @@ fun List<SprudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, SprudelPatt
                 val pat = when (patVal) {
                     is SprudelPattern -> patVal
                     else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+                        AtomicPattern(createSprudelVoiceData().voiceValueModifier(text))
                     }
                 }
 
@@ -263,7 +275,7 @@ fun List<SprudelDslArg<Any?>>.extractWeightedPairs(): Pair<List<SprudelDslArg<An
 fun String.toVoiceValuePattern(baseLocation: SourceLocation? = null): SprudelPattern =
     parseMiniNotation(input = this, baseLocation = baseLocation) { text, loc ->
         AtomicPattern(
-            data = SprudelVoiceData.empty.voiceValueModifier(text),
+            data = createSprudelVoiceData().voiceValueModifier(text),
             sourceLocations = loc,
         )
     }
@@ -304,7 +316,9 @@ internal fun List<SprudelDslArg<Any?>>.toListOfPatterns(
 
     val atomFactory = { text: Any?, sourceLocations: SourceLocationChain? ->
         AtomicPattern(
-            data = SprudelVoiceData.empty.modify(text).copy(patternId = sourceId),
+            // Fresh createSprudelVoiceData() per atom: `modify` may mutate in place (voiceSetter), so it
+            // must never run on a shared instance. See docs/tasks/mutable-voicedata-optimization.md.
+            data = createSprudelVoiceData().modify(text).copy(patternId = sourceId),
             sourceLocations = sourceLocations,
         )
     }

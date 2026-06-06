@@ -11,17 +11,15 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 // -- lpf() / cutoff() / ctf() / lp() ---------------------------------------------------------------------------------
 
-private val lpfMutation = voiceModifier {
-    val str = it?.toString() ?: return@voiceModifier this
+private val lpfMutation = voiceSetter {
+    val str = it?.toString() ?: return@voiceSetter
     if (":" in str) {
         val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
-        copy(
-            cutoff = parts.getOrNull(0) ?: cutoff,
-            resonance = parts.getOrNull(1) ?: resonance,
-            lpenv = parts.getOrNull(2) ?: lpenv,
-        )
+        cutoff = parts.getOrNull(0) ?: cutoff
+        resonance = parts.getOrNull(1) ?: resonance
+        lpenv = parts.getOrNull(2) ?: lpenv
     } else {
-        copy(cutoff = str.toDoubleOrNull())
+        cutoff = str.toDoubleOrNull()
     }
 }
 
@@ -29,11 +27,10 @@ private fun applyLpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, lpfMutation) { src, ctrl ->
-            src.copy(
-                cutoff = ctrl.cutoff ?: src.cutoff,
-                resonance = ctrl.resonance ?: src.resonance,
-                lpenv = ctrl.lpenv ?: src.lpenv,
-            )
+            src.cutoff = ctrl.cutoff ?: src.cutoff
+            src.resonance = ctrl.resonance ?: src.resonance
+            src.lpenv = ctrl.lpenv ?: src.lpenv
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, lpfMutation)
@@ -371,17 +368,15 @@ fun PatternMapperFn.lp(freq: PatternLike? = null, callInfo: CallInfo? = null): P
 
 // -- hpf() / hp() / hcutoff() -----------------------------------------------------------------------------------------
 
-private val hpfMutation = voiceModifier {
-    val str = it?.toString() ?: return@voiceModifier this
+private val hpfMutation = voiceSetter {
+    val str = it?.toString() ?: return@voiceSetter
     if (":" in str) {
         val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
-        copy(
-            hcutoff = parts.getOrNull(0) ?: hcutoff,
-            hresonance = parts.getOrNull(1) ?: hresonance,
-            hpenv = parts.getOrNull(2) ?: hpenv,
-        )
+        hcutoff = parts.getOrNull(0) ?: hcutoff
+        hresonance = parts.getOrNull(1) ?: hresonance
+        hpenv = parts.getOrNull(2) ?: hpenv
     } else {
-        copy(hcutoff = str.toDoubleOrNull())
+        hcutoff = str.toDoubleOrNull()
     }
 }
 
@@ -389,11 +384,10 @@ private fun applyHpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, hpfMutation) { src, ctrl ->
-            src.copy(
-                hcutoff = ctrl.hcutoff ?: src.hcutoff,
-                hresonance = ctrl.hresonance ?: src.hresonance,
-                hpenv = ctrl.hpenv ?: src.hpenv,
-            )
+            src.hcutoff = ctrl.hcutoff ?: src.hcutoff
+            src.hresonance = ctrl.hresonance ?: src.hresonance
+            src.hpenv = ctrl.hpenv ?: src.hpenv
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, hpfMutation)
@@ -646,17 +640,15 @@ fun PatternMapperFn.hcutoff(freq: PatternLike? = null, callInfo: CallInfo? = nul
 
 // -- bandf() / bpf() / bp() -------------------------------------------------------------------------------------------
 
-private val bandfMutation = voiceModifier {
-    val str = it?.toString() ?: return@voiceModifier this
+private val bandfMutation = voiceSetter {
+    val str = it?.toString() ?: return@voiceSetter
     if (":" in str) {
         val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
-        copy(
-            bandf = parts.getOrNull(0) ?: bandf,
-            bandq = parts.getOrNull(1) ?: bandq,
-            bpenv = parts.getOrNull(2) ?: bpenv,
-        )
+        bandf = parts.getOrNull(0) ?: bandf
+        bandq = parts.getOrNull(1) ?: bandq
+        bpenv = parts.getOrNull(2) ?: bpenv
     } else {
-        copy(bandf = str.toDoubleOrNull())
+        bandf = str.toDoubleOrNull()
     }
 }
 
@@ -664,11 +656,10 @@ private fun applyBandf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, bandfMutation) { src, ctrl ->
-            src.copy(
-                bandf = ctrl.bandf ?: src.bandf,
-                bandq = ctrl.bandq ?: src.bandq,
-                bpenv = ctrl.bpenv ?: src.bpenv,
-            )
+            src.bandf = ctrl.bandf ?: src.bandf
+            src.bandq = ctrl.bandq ?: src.bandq
+            src.bpenv = ctrl.bpenv ?: src.bpenv
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, bandfMutation)
@@ -921,7 +912,7 @@ fun PatternMapperFn.bp(freq: PatternLike? = null, callInfo: CallInfo? = null): P
 
 // -- resonance() / res() / lpq() - Low Pass Filter resonance ---------------------------------------------------------
 
-private val resonanceMutation = voiceModifier { copy(resonance = it?.asDoubleOrNull()) }
+private val resonanceMutation = voiceSetter { resonance = it?.asDoubleOrNull() }
 
 private fun applyResonance(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, resonanceMutation)
@@ -1173,7 +1164,7 @@ fun PatternMapperFn.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
 
 // -- hresonance() / hres() / hpq() - High Pass Filter resonance ------------------------------------------------------
 
-private val hresonanceMutation = voiceModifier { copy(hresonance = it?.asDoubleOrNull()) }
+private val hresonanceMutation = voiceSetter { hresonance = it?.asDoubleOrNull() }
 
 private fun applyHresonance(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, hresonanceMutation)
@@ -1425,7 +1416,7 @@ fun PatternMapperFn.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
 
 // -- bandq() / bpq() - Band Pass Filter resonance --------------------------------------------------------------------
 
-private val bandqMutation = voiceModifier { copy(bandq = it?.asDoubleOrNull()) }
+private val bandqMutation = voiceSetter { bandq = it?.asDoubleOrNull() }
 
 private fun applyBandq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, bandqMutation)
@@ -1596,7 +1587,7 @@ fun PatternMapperFn.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
 
 // -- lpattack() / lpa() - Low Pass Filter Envelope Attack ---------------------------------------------------------------
 
-private val lpattackMutation = voiceModifier { copy(lpattack = it?.asDoubleOrNull()) }
+private val lpattackMutation = voiceSetter { lpattack = it?.asDoubleOrNull() }
 
 private fun applyLpattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, lpattackMutation)
@@ -1737,7 +1728,7 @@ fun PatternMapperFn.lpa(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- lpdecay() / lpd() - Low Pass Filter Envelope Decay ----------------------------------------------------------------
 
-private val lpdecayMutation = voiceModifier { copy(lpdecay = it?.asDoubleOrNull()) }
+private val lpdecayMutation = voiceSetter { lpdecay = it?.asDoubleOrNull() }
 
 private fun applyLpdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, lpdecayMutation)
@@ -1846,7 +1837,7 @@ fun PatternMapperFn.lpd(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- lpsustain() / lps() - Low Pass Filter Envelope Sustain ------------------------------------------------------------
 
-private val lpsustainMutation = voiceModifier { copy(lpsustain = it?.asDoubleOrNull()) }
+private val lpsustainMutation = voiceSetter { lpsustain = it?.asDoubleOrNull() }
 
 private fun applyLpsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, lpsustainMutation)
@@ -1931,7 +1922,7 @@ fun PatternMapperFn.lps(level: PatternLike? = null, callInfo: CallInfo? = null):
 
 // -- lprelease() / lpr() - Low Pass Filter Envelope Release ------------------------------------------------------------
 
-private val lpreleaseMutation = voiceModifier { copy(lprelease = it?.asDoubleOrNull()) }
+private val lpreleaseMutation = voiceSetter { lprelease = it?.asDoubleOrNull() }
 
 private fun applyLprelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, lpreleaseMutation)
@@ -2016,7 +2007,7 @@ fun PatternMapperFn.lpr(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- lpenv() / lpe() - Low Pass Filter Envelope Depth ------------------------------------------------------------------
 
-private val lpenvMutation = voiceModifier { copy(lpenv = it?.asDoubleOrNull()) }
+private val lpenvMutation = voiceSetter { lpenv = it?.asDoubleOrNull() }
 
 private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, lpenvMutation)
@@ -2122,7 +2113,7 @@ fun PatternMapperFn.lpe(depth: PatternLike? = null, callInfo: CallInfo? = null):
 
 // -- hpattack() / hpa() - High Pass Filter Envelope Attack -------------------------------------------------------------
 
-private val hpattackMutation = voiceModifier { copy(hpattack = it?.asDoubleOrNull()) }
+private val hpattackMutation = voiceSetter { hpattack = it?.asDoubleOrNull() }
 
 private fun applyHpattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, hpattackMutation)
@@ -2207,7 +2198,7 @@ fun PatternMapperFn.hpa(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- hpdecay() / hpd() - High Pass Filter Envelope Decay ---------------------------------------------------------------
 
-private val hpdecayMutation = voiceModifier { copy(hpdecay = it?.asDoubleOrNull()) }
+private val hpdecayMutation = voiceSetter { hpdecay = it?.asDoubleOrNull() }
 
 private fun applyHpdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, hpdecayMutation)
@@ -2292,7 +2283,7 @@ fun PatternMapperFn.hpd(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- hpsustain() / hps() - High Pass Filter Envelope Sustain -----------------------------------------------------------
 
-private val hpsustainMutation = voiceModifier { copy(hpsustain = it?.asDoubleOrNull()) }
+private val hpsustainMutation = voiceSetter { hpsustain = it?.asDoubleOrNull() }
 
 private fun applyHpsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, hpsustainMutation)
@@ -2378,7 +2369,7 @@ fun PatternMapperFn.hps(level: PatternLike? = null, callInfo: CallInfo? = null):
 
 // -- hprelease() / hpr() - High Pass Filter Envelope Release -----------------------------------------------------------
 
-private val hpreleaseMutation = voiceModifier { copy(hprelease = it?.asDoubleOrNull()) }
+private val hpreleaseMutation = voiceSetter { hprelease = it?.asDoubleOrNull() }
 
 private fun applyHprelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, hpreleaseMutation)
@@ -2463,7 +2454,7 @@ fun PatternMapperFn.hpr(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- hpenv() / hpe() - High Pass Filter Envelope Depth -----------------------------------------------------------------
 
-private val hpenvMutation = voiceModifier { copy(hpenv = it?.asDoubleOrNull()) }
+private val hpenvMutation = voiceSetter { hpenv = it?.asDoubleOrNull() }
 
 private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, hpenvMutation)
@@ -2569,7 +2560,7 @@ fun PatternMapperFn.hpe(depth: PatternLike? = null, callInfo: CallInfo? = null):
 
 // -- bpattack() / bpa() - Band Pass Filter Envelope Attack -------------------------------------------------------------
 
-private val bpattackMutation = voiceModifier { copy(bpattack = it?.asDoubleOrNull()) }
+private val bpattackMutation = voiceSetter { bpattack = it?.asDoubleOrNull() }
 
 private fun applyBpattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, bpattackMutation)
@@ -2654,7 +2645,7 @@ fun PatternMapperFn.bpa(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- bpdecay() / bpd() - Band Pass Filter Envelope Decay ---------------------------------------------------------------
 
-private val bpdecayMutation = voiceModifier { copy(bpdecay = it?.asDoubleOrNull()) }
+private val bpdecayMutation = voiceSetter { bpdecay = it?.asDoubleOrNull() }
 
 private fun applyBpdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, bpdecayMutation)
@@ -2739,7 +2730,7 @@ fun PatternMapperFn.bpd(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- bpsustain() / bps() - Band Pass Filter Envelope Sustain -----------------------------------------------------------
 
-private val bpsustainMutation = voiceModifier { copy(bpsustain = it?.asDoubleOrNull()) }
+private val bpsustainMutation = voiceSetter { bpsustain = it?.asDoubleOrNull() }
 
 private fun applyBpsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, bpsustainMutation)
@@ -2825,7 +2816,7 @@ fun PatternMapperFn.bps(level: PatternLike? = null, callInfo: CallInfo? = null):
 
 // -- bprelease() / bpr() - Band Pass Filter Envelope Release -----------------------------------------------------------
 
-private val bpreleaseMutation = voiceModifier { copy(bprelease = it?.asDoubleOrNull()) }
+private val bpreleaseMutation = voiceSetter { bprelease = it?.asDoubleOrNull() }
 
 private fun applyBprelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, bpreleaseMutation)
@@ -2910,7 +2901,7 @@ fun PatternMapperFn.bpr(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- bpenv() / bpe() - Band Pass Filter Envelope Depth -----------------------------------------------------------------
 
-private val bpenvMutation = voiceModifier { copy(bpenv = it?.asDoubleOrNull()) }
+private val bpenvMutation = voiceSetter { bpenv = it?.asDoubleOrNull() }
 
 private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, bpenvMutation)

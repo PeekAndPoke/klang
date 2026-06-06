@@ -14,15 +14,16 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.asDoubleOrNull
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
-import io.peekandpoke.klang.sprudel.lang.voiceModifier
-import io.peekandpoke.klang.sprudel.withOscParam
+import io.peekandpoke.klang.sprudel.lang.voiceSetter
+import io.peekandpoke.klang.sprudel.putOscParam
+
 // -- oscparam() / oscp() ----------------------------------------------------------------------------------------------
 
 private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.size < 2) return source
     val key = args[0].value?.toString() ?: return source
     val valueArgs = args.drop(1)
-    val mutation = voiceModifier { withOscParam(key, it?.asDoubleOrNull()) }
+    val mutation = voiceSetter { putOscParam(key, it?.asDoubleOrNull()) }
     return source._liftOrReinterpretStringField(valueArgs, mutation)
 }
 
@@ -116,8 +117,8 @@ fun PatternMapperFn.oscp(key: String, value: PatternLike, callInfo: CallInfo? = 
 
 // -- analog() ---------------------------------------------------------------------------------------------------------
 
-private val analogMutation = voiceModifier {
-    withOscParam("analog", it?.asDoubleOrNull())
+private val analogMutation = voiceSetter {
+    putOscParam("analog", it?.asDoubleOrNull())
 }
 
 private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -198,8 +199,8 @@ fun PatternMapperFn.analog(amount: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- duty() -----------------------------------------------------------------------------------------------------------
 
-private val dutyMutation = voiceModifier {
-    withOscParam("duty", it?.asDoubleOrNull())
+private val dutyMutation = voiceSetter {
+    putOscParam("duty", it?.asDoubleOrNull())
 }
 
 private fun applyDuty(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -255,8 +256,8 @@ fun PatternMapperFn.duty(amount: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- warmth() ---------------------------------------------------------------------------------------------------------
 
-private val warmthMutation = voiceModifier {
-    withOscParam("warmth", it?.asDoubleOrNull())
+private val warmthMutation = voiceSetter {
+    putOscParam("warmth", it?.asDoubleOrNull())
 }
 
 private fun applyWarmth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {

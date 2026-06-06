@@ -636,7 +636,8 @@ object JsCompatTestData {
         ).map {
             it.ignore("data.gain")
                 .recovers("data.soundIndex") { graal, native ->
-                    graal.data.soundIndex != null && graal.data.soundIndex.toDouble() == native.data.value?.asDouble
+                    val soundIndex = graal.data.soundIndex
+                    soundIndex != null && soundIndex.toDouble() == native.data.value?.asDouble
                 }
         }.toTypedArray(),
 
