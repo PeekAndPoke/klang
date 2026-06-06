@@ -224,15 +224,20 @@ preserves `patternId`) + `putOscParamsFrom`. Converted the 2 `merge()` sites (`S
 Then: user re-profiles *Der Schmetterling* (expect `copy$default`/`copy` + Minor GC to drop from the
 combiner/merge side; `clone()` leaf cost unchanged — see fastCopy/fast-path below).
 
-**Deferred follow-ups (for the remaining `clone()`/`new` cost — the dominant per-event item):**
+**Native `fastCopy` for `clone()` on JS (DONE, 2026-06-06).** `clone()` now delegates to an
+`internal expect fun fastCopy(src): SprudelVoiceData` — JVM actual = `src.copy()`, JS actual =
+`js("Object.assign(Object.create(Object.getPrototypeOf(src)), src)")` (one native own-property copy,
+prototype preserved → methods / `is` / `equals` intact; shallow, exactly like `copy()`, shares the
+`oscParams` map ref). Files: `sprudel/src/commonMain/kotlin/fastCopy.kt` (expect) +
+`fastCopy_jvm.kt` / `fastCopy_js.kt` (actuals). **The caveat is verified**: the commonTest
+`SprudelVoiceDataSpec` "clone() copies every field" guard (all 105 fields set distinctly →
+`clone() shouldBe populated`) passes on `:sprudel:jsTest`, proving Kotlin/JS stores the `var` fields as
+own enumerable props and `Object.assign` reproduces them. `:sprudel:jvmTest` (golden + full suite) green;
+root app `:compileKotlinJs` green. **Pending: user browser re-profile of *Der Schmetterling*** to confirm
+the `clone`/`copy$default` self-time actually drops (the test only proves correctness, not the win).
 
-- **Native `fastCopy` for `clone()` on JS.** `clone()=copy()` reads 105 Kotlin properties + constructs;
-  a JS-native `Object.assign(Object.create(Object.getPrototypeOf(this)), this)` replaces that with one
-  native copy loop while preserving the prototype (methods/`is`/equals intact). Make `clone()` an
-  `expect/actual`: JVM = `copy()`, JS = the native hack. Guarded by the existing clone-all-fields test +
-  golden. Caveats: verify Kotlin/JS IR stores `var` fields as own enumerable props (it does for plain data
-  classes — no lazy/delegated props here); shallow (same as copy). Likely the biggest single win for the
-  per-event leaf clones.
+**Other deferred follow-ups (for the remaining `clone()`/`new` cost):**
+
 - **Constant-control fast-path to cut clone COUNT.** Skip building+sampling+cloning a control atom for
   constant scalar args (`gain(0.5)`, `lpf(1625)`); apply directly. Bigger/riskier change to the lift/control
   helpers.

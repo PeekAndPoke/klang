@@ -273,6 +273,11 @@ data class SprudelVoiceData(
      * to hand every event its own single-owner instance, which is the invariant that makes the
      * in-place mutation of `var` fields safe (see `docs/tasks/mutable-voicedata-optimization.md`).
      * Flat fields only — `oscParams` is treated as immutable-replace, so sharing its reference is fine.
+     *
+     * Just `copy()`: the generated data-class copy (constructor) is the fast path on Kotlin/JS — V8
+     * optimizes it into a monomorphic constructor call. A benchmarked `Object.assign(Object.create(...))`
+     * alternative ("fastCopy") was ~22x SLOWER (slow dictionary-mode object), so don't reintroduce it.
+     * See `docs/tasks/mutable-voicedata-optimization.md`.
      */
     fun clone(): SprudelVoiceData = copy()
 

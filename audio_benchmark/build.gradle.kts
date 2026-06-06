@@ -37,6 +37,7 @@ kotlin {
                 implementation(project(":common"))
                 implementation(project(":audio_bridge"))
                 implementation(project(":audio_be"))
+                implementation(project(":sprudel"))
             }
         }
 
