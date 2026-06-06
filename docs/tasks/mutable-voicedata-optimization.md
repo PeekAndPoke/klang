@@ -278,3 +278,67 @@ the `clone`/`copy$default` self-time actually drops (the test only proves correc
   `:sprudel:jsTest` for JS-specific behaviour.
 - Browser perf-tab A/B on *Der Schmetterling*: next-cycle query under 16 ms;
   `SprudelVoiceData` alloc / `copy$default` / Minor GC reduced.
+
+---
+
+# Checkpoint & backlog (2026-06-06)
+
+This section supersedes the older "deferred follow-ups / open questions" text above. Live working copy:
+`~/.claude/plans/gleaming-inventing-gosling.md`.
+
+## Done & verified green (golden + full `:sprudel:jvmTest` + app JVM/JS compile)
+
+- Phases 0–2: golden net; `var` fields + `clone()`; 3 leaf emitters clone on emission; all 113
+  `voiceModifier{copy}` setters → in-place `voiceSetter`; shared-`empty` aliasing leak fixed then `empty`
+  **removed** → top-level inline `createSprudelVoiceData{…}` factory (clones a `@PublishedApi internal blueprint`)
+    + **no-default constructor** (compile-forces field completeness in clone/merge/blueprint).
+- Parts 2/3: all 35 `_applyControlFromParams` combiners → in-place; `merge()` → in-place `mergeFrom()` +
+  `putOscParamsFrom()` (2 merge sites + 10 `snd_*` combiners). Guard tests: clone-all-fields + mergeFrom-vs-merge
+  in `SprudelVoiceDataSpec` (`populatedVoiceData`).
+
+## Rejected (do not retry)
+
+- Hand-written explicit `clone()`: no faster than `copy()`. Reverted to `clone() = copy()`.
+- **`fastCopy`** (`Object.assign(Object.create(getPrototypeOf(src)),src)`): **benchmarked ~22× SLOWER on JS**
+  (820 vs 18,390 ns/op). V8 optimizes the constructor-based `copy()`; Object.create/assign → slow dictionary-mode
+  object. Removed; KDoc warns against it. Microbenchmark kept at
+  `audio_benchmark/src/commonMain/kotlin/VoiceDataCopyBenchmark.kt` (`:audio_benchmark:jsNodeProductionRun`/`:jvmRun`).
+  ⇒ `copy()` (~820 ns/op JS) is the floor for a 105-field object. Remaining wins = FEWER copies or SMALLER object.
+
+## Pending decision
+
+- **blueprint + inline config-factory** (`createSprudelVoiceData { … }`) — implemented, behavior-preserving but
+  perf-neutral. Cost a 119-site rewrite; bulk perl pass left cosmetic misplaced `}` in ~25 test files (compiles +
+  passes). KEEP (clean test formatting) vs REVERT (simpler param-factory). Likely moot if Item B lands.
+
+## Backlog
+
+### Item A — Constant-control fast-path (small, low-risk; do first)
+
+Constant args (`gain(0.5)`, `lpf(1625)`, `distort("0.3:tube:4")`) currently build a control pattern and
+`sampleAt`+`clone()` it **per source event** — ~15–25 redundant control-atom clones per event on heavy voices.
+Detect via a polymorphic `SprudelPattern.constantValueOrNull(): SprudelVoiceData? = null` (override only in
+`AtomicPattern` → its `data`; exclude nested-`Pattern`-valued atoms) — **no `is` checks, no string heuristics**.
+In the lift/control helpers (`_liftNumericField`, `_liftOrReinterpretNumericalField`, `_liftStringField`,
+`_applyControlFromParams`, `_liftData`), if `control.constantValueOrNull()` ≠ null → apply directly via
+`reinterpret`/`reinterpretVoice` (one clone+map total, mutate source in place) instead of per-event sampling.
+Subtleties: reuse mapped control (combiner contract: mutate `src`, read `ctrl`); replicate
+`prependLocations(ctrl.sourceLocations)` via event-level `reinterpret` (live-highlighting; `@Transient` so golden
+won't catch it). Golden-guarded. ~1 interface method + 1 `AtomicPattern` override + ~5 helper sites.
+
+### Item B — Group `SprudelVoiceData` fields into sub-objects (big structural lever)
+
+Group the ~105 flat fields into ~12 cohesive sub-objects. With **immutable groups + copy-on-write**, `clone()`
+copies ~12 shared group refs (not 105 fields) and a setter copy-on-writes one small group — cuts both `clone()`
+and per-modifier cost; `toVoiceData()` flattens less.
+
+- **Reuse** `audio_bridge` types: `AdsrDef.Std` (adsr), `FilterDefs`/`FilterDef.*`/`FilterEnvDef` (filters+env).
+- **New group types** (not yet grouped in `VoiceData`): FM, phaser (`phaserRate`↔`phaser` mismatch), tremolo,
+  ducking, delay, reverb, sample, pitch-envelope. Define once, share with `VoiceData`.
+- **Blast radius ~515 sites, ALL inside sprudel** (setters, merge/mergeFrom, `toVoiceData`, `GraalSprudelPattern`,
+  tests); **zero external** (app/audio see only `VoiceData`; `SprudelVoiceData` `@Serializable` but never
+  persisted — songs store code). Golden file changes shape (regenerate).
+- **Design fork:** immutable-groups + copy-on-write (recommended; *supersedes* the var/in-place model from
+  Phases 1–2 — re-evaluate) vs mutable group objects. Consider flat delegating accessors to shrink churn.
+- Large, phased: define types → restructure → migrate setters/merge/toVoiceData/Graal → regen golden → tests →
+  re-profile. Highest-leverage remaining item.
