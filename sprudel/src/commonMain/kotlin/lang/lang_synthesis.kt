@@ -76,7 +76,7 @@ note("c3*4")
 
 // -- fmh() ------------------------------------------------------------------------------------------------------------
 
-private val fmhMutation = voiceModifier { copy(fmh = it?.asDoubleOrNull()) }
+private val fmhMutation = voiceSetter { fmh = it?.asDoubleOrNull() }
 
 private fun applyFmh(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, fmhMutation)
@@ -134,7 +134,7 @@ fun PatternMapperFn.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null):
 
 // -- fmattack() / fmatt() ---------------------------------------------------------------------------------------------
 
-private val fmattackMutation = voiceModifier { copy(fmAttack = it?.asDoubleOrNull()) }
+private val fmattackMutation = voiceSetter { fmAttack = it?.asDoubleOrNull() }
 
 private fun applyFmattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, fmattackMutation)
@@ -229,7 +229,7 @@ fun PatternMapperFn.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- fmdecay() / fmdec() ----------------------------------------------------------------------------------------------
 
-private val fmdecayMutation = voiceModifier { copy(fmDecay = it?.asDoubleOrNull()) }
+private val fmdecayMutation = voiceSetter { fmDecay = it?.asDoubleOrNull() }
 
 private fun applyFmdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, fmdecayMutation)
@@ -324,7 +324,7 @@ fun PatternMapperFn.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- fmsustain() / fmsus() --------------------------------------------------------------------------------------------
 
-private val fmsustainMutation = voiceModifier { copy(fmSustain = it?.asDoubleOrNull()) }
+private val fmsustainMutation = voiceSetter { fmSustain = it?.asDoubleOrNull() }
 
 private fun applyFmsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, fmsustainMutation)
@@ -420,7 +420,7 @@ fun PatternMapperFn.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- fmenv() / fmmod() ------------------------------------------------------------------------------------------------
 
-private val fmenvMutation = voiceModifier { copy(fmEnv = it?.asDoubleOrNull()) }
+private val fmenvMutation = voiceSetter { fmEnv = it?.asDoubleOrNull() }
 
 private fun applyFmenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, fmenvMutation)

@@ -25,7 +25,7 @@ class RandLPatternSpec : StringSpec({
                     SprudelPatternEvent(
                         part = CycleTimeSpan(from, to),
                         whole = CycleTimeSpan(from, to),
-                        data = SprudelVoiceData.empty.copy(value = 4.asVoiceValue())
+                        data = SprudelVoiceData(value = 4.asVoiceValue())
                     )
                 )
             }

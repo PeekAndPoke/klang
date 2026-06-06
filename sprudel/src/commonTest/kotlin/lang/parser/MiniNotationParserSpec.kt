@@ -393,7 +393,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             val pattern = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }
@@ -422,7 +422,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             val pattern = parseMiniNotation("bd hh", baseLocation) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }
@@ -449,7 +449,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             val pattern = parseMiniNotation("[bd hh]", baseLocation) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }
@@ -476,7 +476,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             val pattern = parseMiniNotation("<bd hh>", baseLocation) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }
@@ -504,7 +504,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             val pattern = parseMiniNotation("bd(3,8)", baseLocation) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }
@@ -528,7 +528,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             val pattern = parseMiniNotation("bd@3", baseLocation) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }
@@ -551,7 +551,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             val pattern = parseMiniNotation("bd*2", baseLocation) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }
@@ -577,7 +577,7 @@ class MiniNotationParserSpec : StringSpec() {
             // but we can test that the base location is preserved
             val pattern = parseMiniNotation("bd hh", baseLocation) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }
@@ -593,7 +593,7 @@ class MiniNotationParserSpec : StringSpec() {
         "Null baseLocation creates atoms without source locations" {
             val pattern = parseMiniNotation("bd hh", null) { text, sourceLocations ->
                 io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
-                    data = SprudelVoiceData.empty.copy(note = text),
+                    data = SprudelVoiceData(note = text),
                     sourceLocations = sourceLocations,
                 )
             }

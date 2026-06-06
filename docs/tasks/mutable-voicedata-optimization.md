@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-05.
 
-Status: **Phase 0 (golden safety net) done.** Phases 1–3 not started. Designed and
-audited in the CycleTime-migration session; the CycleTime migration it depended on
-is now **done** — `Rational` timing is fully replaced and
-`CycleTime.T = 2²⁰·3·5·7 = 110 100 480` is locked in.
+Status: **Phases 0–2 done** (golden net + enablement + all setters converted).
+Phase 3 (combiners / `merge()`) not started. The CycleTime migration this depended
+on is also done — `Rational` timing fully replaced, `CycleTime.T = 2²⁰·3·5·7 =
+110 100 480` locked in.
 
 ---
 
@@ -139,28 +139,57 @@ insertion-ordered `LinkedHashMap`, so its serialization is stable.
 (option A of open-Q #1 — the corpus is self-contained and seed-pinned, no baseline
 pin needed). Corpus = **pinned song + targeted patterns** (per user).
 
-### Phase 1 — Enable mutability + close the 3 leaks
+### Phase 1 — Enable mutability + close the 3 leaks (DONE, 2026-06-05)
 
-1. `SprudelVoiceData`: `val → var` on all fields; add `fun clone(): SprudelVoiceData`
-   (an explicit shallow copy — keep `copy()` available during transition).
+1. `SprudelVoiceData`: 105 constructor fields flipped `val → var`; added
+   `fun clone(): SprudelVoiceData = copy()`.
 2. Clone `data` per emission in `AtomicPattern`, `AtomicInfinitePattern`,
-   `StaticSprudelPattern`. **This is the actual correctness fix** and is required
-   before *any* in-place mutation is safe.
-3. Golden test stays green (no modifier converted yet — pure no-op + clone).
+   `StaticSprudelPattern` — the actual correctness fix.
+3. Golden stayed green (pure no-op + clone). Only fallout: 3 sprudel **test** files
+   relied on smart-casting the now-`var` fields (`data.value`/`data.gain`/
+   `data.soundIndex`) — fixed with local captures (`shouldNotBeNull()` return,
+   `val x = …`). The 66 main-app consumers compiled unchanged.
 
-### Phase 2 — Convert the hot path (narrow, per user's preference)
+### Phase 2 — Convert the setters (DONE, 2026-06-05)
 
-- Convert the highest-traffic `voiceModifier { copy(…) }` setters (gain, note,
-  velocity, the per-voice filter/adsr setters) to mutate `this` and return `this`.
-- Re-run golden test after each batch.
-- Measure *Der Schmetterling* in the browser perf tab — confirm
+Converted **all 113** `voiceModifier { copy(…) }` setters to in-place mutation
+(the user asked for the full sweep, not just the hot path). Mechanism:
+
+- New helper `voiceSetter { … }` (`lang_helpers.kt`) — runs a
+  `SprudelVoiceData.(Any?) -> Unit` body that mutates the receiver and returns `this`.
+- In-place oscParam helpers on `SprudelVoiceData`: `putOscParam` /`putOscParams`
+  (counterparts of `withOscParam`/`withOscParams`).
+- Each `copy(field = v)` → `field = v`; `return@voiceModifier this/copy(…)` →
+  `return@voiceSetter`; the `snd_*` `copy(sound=…).withOscParams(…)` →
+  `sound = …; putOscParams(…)`.
+
+**Critical aliasing fix found by the golden** (do NOT revert): `toListOfPatterns`
+built atoms via `SprudelVoiceData.empty.modify(text)` — `empty` is a **shared
+singleton**, so an in-place modifier corrupted it and leaked into every later
+pattern (a guitar's `adsrCurves` Square bled into the drums). First fixed by cloning
+(`empty.clone().modify(text)…`), then **hardened by removing the shared singleton
+entirely** (below).
+
+**`SprudelVoiceData.empty` removed (hardening, 2026-06-06):** the shared mutable
+singleton was the root footgun, so it's gone. All 105 constructor params now default
+to `null`, so a fresh empty is just `SprudelVoiceData()` and the common
+`empty.copy(value = x)` collapses to single-alloc `SprudelVoiceData(value = x)`. All
+~146 `SprudelVoiceData.empty` sites (commonMain + commonTest) rewritten; the line-318
+`.clone()` became redundant and was dropped. The class KDoc now documents the
+**`var`-by-design / caller-must-clone** contract. `voiceValueModifier` stays
+copy-based (still fine — it now runs on a fresh `SprudelVoiceData()`, not a shared one).
+
+**Verified:** golden green; **full `:sprudel:jvmTest` green** (incl. Graal JS-compat +
+all lang specs); main app compiles JVM+JS. *(Note: never run a second Gradle build
+concurrently with `:sprudel:jvmTest` — it clobbers `:sprudel` class outputs and
+throws spurious `NoClassDefFoundError`s.)*
+
+### Phase 3 — Finish the long tail (NOT started)
+
+- The **combiners** (`_applyControlFromParams { src, ctrl -> src.copy(…) }`) and
+  `merge()` still allocate — convert to in-place for the remaining win.
+- Then measure *Der Schmetterling* in the browser perf tab to confirm the
   `SprudelVoiceData` construction / `copy$default` / Minor GC drop.
-
-### Phase 3 — Finish the long tail (optional / later)
-
-- Convert remaining modifier sites + `merge()` to in-place.
-- Once all 114 are converted and the leaf clones cover ownership, remove the
-  transitional `copy()` reliance.
 
 ---
 
@@ -168,15 +197,15 @@ pin needed). Corpus = **pinned song + targeted patterns** (per user).
 
 1. ~~**Golden capture baseline**~~ — RESOLVED: captured & committed on this branch
    (seed-pinned, self-contained corpus; no baseline-commit pin needed).
-2. **Scope commitment** — hot-path-only (leaves codebase in a sound mixed state)
-   vs full 114-site sweep in one pass. User leans hot-path-first. *(Decide at Phase 2.)*
+2. ~~**Scope commitment**~~ — RESOLVED: user chose the **full sweep**; all 113
+   setters converted in one pass.
 3. **`clone()` cost** — cloning per leaf event partly offsets the win; confirm the
-   net is still strongly positive (it should be: 1 clone at the leaf vs ~20 copies
-   down the chain).
+   net is still strongly positive (1 clone at the leaf vs ~20 copies down the chain).
+   *(Pending the Phase-3 browser perf measurement.)*
 4. **`merge()` direction** — `merge()` mutating `this` has a left/right-bias
-   pitfall; decide which operand owns the result.
-5. **`SprudelPatternEvent` wrapper** — leave immutable (only `data` mutates) — most
-   likely yes; revisit only if event-wrapper churn shows up in profiles.
+   pitfall; decide which operand owns the result. *(Phase 3.)*
+5. **`SprudelPatternEvent` wrapper** — left immutable (only `data` mutates); revisit
+   only if event-wrapper churn shows up in profiles.
 
 ## Key files
 

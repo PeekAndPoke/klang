@@ -8,7 +8,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 class RepeatCyclesPatternSpec : StringSpec({
 
     "RepeatCyclesPattern repeats each cycle n times" {
-        val source = AtomicPattern(SprudelVoiceData.empty.copy(note = "c"))
+        val source = AtomicPattern(SprudelVoiceData(note = "c"))
 
         val pattern = RepeatCyclesPattern(source, 2.0)
 

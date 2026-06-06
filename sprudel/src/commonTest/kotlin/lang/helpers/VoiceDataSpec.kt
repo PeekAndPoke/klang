@@ -12,7 +12,7 @@ import io.peekandpoke.klang.sprudel.lang.resolveNote
 class VoiceDataSpec : StringSpec({
 
     "resolveNote() with scale and index should resolve note and frequency" {
-        val voice = SprudelVoiceData.empty.copy(scale = "C major")
+        val voice = SprudelVoiceData(scale = "C major")
 
         val result = voice.resolveNote(newIndex = 0)
 
@@ -26,7 +26,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with scale containing colon should clean it" {
-        val voice = SprudelVoiceData.empty.copy(scale = "C3:major")
+        val voice = SprudelVoiceData(scale = "C3:major")
 
         val result = voice.resolveNote(newIndex = 2)
 
@@ -38,7 +38,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with soundIndex and scale should use soundIndex" {
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             soundIndex = 4
         )
@@ -50,7 +50,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with value and scale should interpret value as index" {
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C4 major",
             value = 2.asVoiceValue()
         )
@@ -62,7 +62,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with newIndex but no scale should set soundIndex" {
-        val voice = SprudelVoiceData.empty
+        val voice = SprudelVoiceData()
 
         val result = voice.resolveNote(newIndex = 5)
 
@@ -72,7 +72,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with note but no scale should preserve note and compute frequency" {
-        val voice = SprudelVoiceData.empty.copy(note = "A4")
+        val voice = SprudelVoiceData(note = "A4")
 
         val result = voice.resolveNote()
 
@@ -81,7 +81,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with value as note string should use it as fallback" {
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             value = "C4".asVoiceValue()
         )
 
@@ -95,7 +95,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() priority: newIndex over soundIndex" {
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C3:major",
             soundIndex = 0
         )
@@ -109,7 +109,7 @@ class VoiceDataSpec : StringSpec({
         // value is the scale-step input; soundIndex carries variant override.
         // With value=4 + soundIndex=2 + scale, value wins for note resolution
         // and soundIndex survives as the variant.
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             soundIndex = 2,
             value = 4.asVoiceValue()
@@ -123,7 +123,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() parses value 'step:variant' into note + soundIndex override" {
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             value = "0:1".asVoiceValue()
         )
@@ -136,7 +136,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() parses value 'step:variant:gain' into all three" {
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             value = "0:1:0.5".asVoiceValue()
         )
@@ -152,7 +152,7 @@ class VoiceDataSpec : StringSpec({
     "resolveNote() leaves soundIndex untouched when value has no :variant" {
         // seq("1").scale(...) — only step parsed, no variant override.
         // Existing soundIndex on the voice should NOT be overwritten with null.
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             value = "1".asVoiceValue(),
             soundIndex = 7
@@ -165,7 +165,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() leaves gain untouched when value has no :gain" {
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             value = "0:1".asVoiceValue(),
             gain = 0.42
@@ -180,7 +180,7 @@ class VoiceDataSpec : StringSpec({
         // The "only update when parsed is non-null" rule cuts the other way too:
         // when the parse DOES yield a variant, it must replace whatever soundIndex
         // was sitting on the voice (e.g. from a prior `.n(...)`).
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             value = "0:1".asVoiceValue(),
             soundIndex = 7
@@ -193,7 +193,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() value :gain OVERWRITES an existing gain" {
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             value = "0:1:0.7".asVoiceValue(),
             gain = 0.42
@@ -207,7 +207,7 @@ class VoiceDataSpec : StringSpec({
     "resolveNote() numeric value still resolves as scale step" {
         // seq(2) (numeric) wraps as Num(2.0) — its asString is "2.0", which
         // does NOT parse as Int. Falls back to value.asInt for the step.
-        val voice = SprudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData(
             scale = "C major",
             value = 2.asVoiceValue()
         )
@@ -220,7 +220,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with empty voice should return empty voice" {
-        val voice = SprudelVoiceData.empty
+        val voice = SprudelVoiceData()
 
         val result = voice.resolveNote()
 

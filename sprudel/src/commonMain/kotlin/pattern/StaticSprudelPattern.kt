@@ -51,7 +51,9 @@ class StaticSprudelPattern(
             .map {
                 val shiftedPart = it.part.shift(offset)
                 val shiftedWhole = it.whole.shift(offset)
-                it.copy(part = shiftedPart, whole = shiftedWhole)
+                // clone() the data too — copy() alone keeps the stored recording's data reference,
+                // which would let a downstream mutation corrupt the recording for the next query.
+                it.copy(part = shiftedPart, whole = shiftedWhole, data = it.data.clone())
             }
     }
 

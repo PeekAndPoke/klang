@@ -12,7 +12,7 @@ import io.peekandpoke.klang.sprudel.lang.note
 class AtomicPatternSpec : StringSpec({
 
     "AtomicPattern: Direct Instantiation" {
-        val pattern = AtomicPattern(SprudelVoiceData.empty.copy(note = "c3"))
+        val pattern = AtomicPattern(SprudelVoiceData(note = "c3"))
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "c3"

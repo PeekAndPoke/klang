@@ -109,7 +109,7 @@ class LangBpenvSpec : StringSpec({
     }
 
     "bpenv() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
+        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData(
             bandf = 1000.0,
             bpenv = 0.5
         )

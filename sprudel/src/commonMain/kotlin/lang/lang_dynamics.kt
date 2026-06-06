@@ -12,10 +12,11 @@ import io.peekandpoke.klang.sprudel._liftNumericField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.withOscParam
+import io.peekandpoke.klang.sprudel.putOscParam
+
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
-private val gainMutation = voiceModifier { copy(gain = it?.asDoubleOrNull()) }
+private val gainMutation = voiceSetter { gain = it?.asDoubleOrNull() }
 
 private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, gainMutation)
@@ -85,7 +86,7 @@ fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
-private val panMutation = voiceModifier { copy(pan = it?.asDoubleOrNull()) }
+private val panMutation = voiceSetter { pan = it?.asDoubleOrNull() }
 
 private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, panMutation)
@@ -157,7 +158,7 @@ fun PatternMapperFn.pan(amount: PatternLike? = null, callInfo: CallInfo? = null)
 
 // -- velocity() / vel() -----------------------------------------------------------------------------------------------
 
-private val velocityMutation = voiceModifier { copy(velocity = it?.asDoubleOrNull()) }
+private val velocityMutation = voiceSetter { velocity = it?.asDoubleOrNull() }
 
 private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, velocityMutation)
@@ -289,7 +290,7 @@ fun PatternMapperFn.vel(amount: PatternLike? = null, callInfo: CallInfo? = null)
 
 // -- postgain() -------------------------------------------------------------------------------------------------------
 
-private val postgainMutation = voiceModifier { copy(postGain = it?.asDoubleOrNull()) }
+private val postgainMutation = voiceSetter { postGain = it?.asDoubleOrNull() }
 
 private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, postgainMutation)
@@ -358,7 +359,7 @@ fun PatternMapperFn.postgain(amount: PatternLike? = null, callInfo: CallInfo? = 
 
 // -- compressor() / comp() --------------------------------------------------------------------------------------------
 
-private val compressorMutation = voiceModifier { copy(compressor = it?.toString()) }
+private val compressorMutation = voiceSetter { compressor = it?.toString() }
 
 private fun applyCompressor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, compressorMutation)
@@ -530,7 +531,7 @@ fun PatternMapperFn.comp(params: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- unison() / uni() -------------------------------------------------------------------------------------------------
 
-private val unisonMutation = voiceModifier { withOscParam("voices", it?.asDoubleOrNull()) }
+private val unisonMutation = voiceSetter { putOscParam("voices", it?.asDoubleOrNull()) }
 
 private fun applyUnison(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, unisonMutation)
@@ -660,7 +661,7 @@ fun PatternMapperFn.uni(voices: PatternLike? = null, callInfo: CallInfo? = null)
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
-private val detuneMutation = voiceModifier { withOscParam("freqSpread", it?.asDoubleOrNull()) }
+private val detuneMutation = voiceSetter { putOscParam("freqSpread", it?.asDoubleOrNull()) }
 
 private fun applyDetune(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, detuneMutation)
@@ -729,7 +730,7 @@ fun PatternMapperFn.detune(amount: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
-private val spreadMutation = voiceModifier { withOscParam("panSpread", it?.asDoubleOrNull()) }
+private val spreadMutation = voiceSetter { putOscParam("panSpread", it?.asDoubleOrNull()) }
 
 private fun applySpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, spreadMutation)
@@ -799,7 +800,7 @@ fun PatternMapperFn.spread(amount: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 
-private val densityMutation = voiceModifier { withOscParam("density", it?.asDoubleOrNull()) }
+private val densityMutation = voiceSetter { putOscParam("density", it?.asDoubleOrNull()) }
 
 private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, densityMutation)
@@ -930,7 +931,7 @@ fun PatternMapperFn.d(amount: PatternLike? = null, callInfo: CallInfo? = null): 
 
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
 
-private val attackMutation = voiceModifier { copy(attack = it?.asDoubleOrNull()) }
+private val attackMutation = voiceSetter { attack = it?.asDoubleOrNull() }
 
 private fun applyAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, attackMutation)
@@ -1000,7 +1001,7 @@ fun PatternMapperFn.attack(time: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
-private val decayMutation = voiceModifier { copy(decay = it?.asDoubleOrNull()) }
+private val decayMutation = voiceSetter { decay = it?.asDoubleOrNull() }
 
 private fun applyDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, decayMutation)
@@ -1069,7 +1070,7 @@ fun PatternMapperFn.decay(time: PatternLike? = null, callInfo: CallInfo? = null)
 
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
-private val sustainMutation = voiceModifier { copy(sustain = it?.asDoubleOrNull()) }
+private val sustainMutation = voiceSetter { sustain = it?.asDoubleOrNull() }
 
 private fun applySustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, sustainMutation)
@@ -1139,7 +1140,7 @@ fun PatternMapperFn.sustain(level: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 
-private val releaseMutation = voiceModifier { copy(release = it?.asDoubleOrNull()) }
+private val releaseMutation = voiceSetter { release = it?.asDoubleOrNull() }
 
 private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, releaseMutation)
@@ -1209,16 +1210,14 @@ fun PatternMapperFn.release(time: PatternLike? = null, callInfo: CallInfo? = nul
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
-private val adsrMutation = voiceModifier {
+private val adsrMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.mapNotNull { d -> d.toDoubleOrNull() } ?: emptyList()
 
-    copy(
-        attack = parts.getOrNull(0) ?: attack,
-        decay = parts.getOrNull(1) ?: decay,
-        sustain = parts.getOrNull(2) ?: sustain,
-        release = parts.getOrNull(3) ?: release,
-    )
+    attack = parts.getOrNull(0) ?: attack
+    decay = parts.getOrNull(1) ?: decay
+    sustain = parts.getOrNull(2) ?: sustain
+    release = parts.getOrNull(3) ?: release
 }
 
 private fun applyAdsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -1299,16 +1298,14 @@ private fun parseAdsrCurveName(name: String?): AdsrCurve? = when (name?.trim()?.
     else -> null
 }
 
-private val adsrCurvesMutation = voiceModifier {
+private val adsrCurvesMutation = voiceSetter {
     val parts = it?.toString()?.split(":") ?: emptyList()
     val a = parts.getOrNull(0)?.let(::parseAdsrCurveName)
     val d = parts.getOrNull(1)?.let(::parseAdsrCurveName)
     val r = parts.getOrNull(2)?.let(::parseAdsrCurveName)
-    copy(
-        attackCurve = a ?: attackCurve,
-        decayCurve = d ?: decayCurve,
-        releaseCurve = r ?: releaseCurve,
-    )
+    attackCurve = a ?: attackCurve
+    decayCurve = d ?: decayCurve
+    releaseCurve = r ?: releaseCurve
 }
 
 private fun applyAdsrCurves(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -1321,13 +1318,13 @@ private fun applyAdsrCurves(source: SprudelPattern, args: List<SprudelDslArg<Any
     }
 }
 
-private val adsrCurveMutation = voiceModifier {
+private val adsrCurveMutation = voiceSetter {
     val curve = parseAdsrCurveName(it?.toString())
-    if (curve == null) this else copy(
-        attackCurve = curve,
-        decayCurve = curve,
-        releaseCurve = curve,
-    )
+    if (curve != null) {
+        attackCurve = curve
+        decayCurve = curve
+        releaseCurve = curve
+    }
 }
 
 private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -1447,8 +1444,8 @@ fun PatternMapperFn.adsr(params: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- orbit() / o() ----------------------------------------------------------------------------------------------------
 
-private val orbitMutation = voiceModifier {
-    copy(cylinder = it?.asIntOrNull())
+private val orbitMutation = voiceSetter {
+    cylinder = it?.asIntOrNull()
 }
 
 private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -1571,8 +1568,8 @@ fun o(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
 
 // -- duckorbit() / duck() ---------------------------------------------------------------------------------------------
 
-private val duckOrbitMutation = voiceModifier {
-    copy(duckCylinder = it?.asIntOrNull())
+private val duckOrbitMutation = voiceSetter {
+    duckCylinder = it?.asIntOrNull()
 }
 
 private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -1704,7 +1701,7 @@ fun PatternMapperFn.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = 
 
 // -- duckattack() / duckatt() -----------------------------------------------------------------------------------------
 
-private val duckAttackMutation = voiceModifier { copy(duckAttack = it?.asDoubleOrNull()) }
+private val duckAttackMutation = voiceSetter { duckAttack = it?.asDoubleOrNull() }
 
 private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, duckAttackMutation)
@@ -1836,7 +1833,7 @@ fun PatternMapperFn.duckatt(time: PatternLike? = null, callInfo: CallInfo? = nul
 
 // -- duckdepth() ------------------------------------------------------------------------------------------------------
 
-private val duckDepthMutation = voiceModifier { copy(duckDepth = it?.asDoubleOrNull()) }
+private val duckDepthMutation = voiceSetter { duckDepth = it?.asDoubleOrNull() }
 
 private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, duckDepthMutation)

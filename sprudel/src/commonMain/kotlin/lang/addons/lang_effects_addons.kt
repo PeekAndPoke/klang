@@ -13,20 +13,18 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
-import io.peekandpoke.klang.sprudel.lang.voiceModifier
+import io.peekandpoke.klang.sprudel.lang.voiceSetter
 // -- reverb() ---------------------------------------------------------------------------------------------------------
 
-private val reverbMutation = voiceModifier {
+private val reverbMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(
-        room = parts.getOrNull(0) ?: room,
-        roomSize = parts.getOrNull(1) ?: roomSize,
-        roomFade = parts.getOrNull(2) ?: roomFade,
-        roomLp = parts.getOrNull(3) ?: roomLp,
-        roomDim = parts.getOrNull(4) ?: roomDim,
-    )
+    room = parts.getOrNull(0) ?: room
+    roomSize = parts.getOrNull(1) ?: roomSize
+    roomFade = parts.getOrNull(2) ?: roomFade
+    roomLp = parts.getOrNull(3) ?: roomLp
+    roomDim = parts.getOrNull(4) ?: roomDim
 }
 
 private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -140,16 +138,14 @@ fun PatternMapperFn.reverb(params: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- lpadsr() ---------------------------------------------------------------------------------------------------------
 
-private val lpadsrMutation = voiceModifier {
+private val lpadsrMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(
-        lpattack = parts.getOrNull(0) ?: lpattack,
-        lpdecay = parts.getOrNull(1) ?: lpdecay,
-        lpsustain = parts.getOrNull(2) ?: lpsustain,
-        lprelease = parts.getOrNull(3) ?: lprelease,
-    )
+    lpattack = parts.getOrNull(0) ?: lpattack
+    lpdecay = parts.getOrNull(1) ?: lpdecay
+    lpsustain = parts.getOrNull(2) ?: lpsustain
+    lprelease = parts.getOrNull(3) ?: lprelease
 }
 
 private fun applyLpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -166,7 +162,7 @@ private fun applyLpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 /**
  * Sets the LPF envelope shape via a colon-separated string `"attack:decay:sustain:release"`.
  *
- * Controls how the low-pass filter cutoff sweeps over time (used with [lpf] and [lpenv]).
+ * Controls how the low-pass filter cutoff sweeps over time (used with [ lpf ] and [ lpenv ]).
  * - **attack**: time in seconds for the filter to open fully
  * - **decay**: time in seconds to fall from peak to sustain level
  * - **sustain**: sustain level (0–1)
@@ -231,16 +227,14 @@ fun PatternMapperFn.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- hpadsr() ---------------------------------------------------------------------------------------------------------
 
-private val hpadsrMutation = voiceModifier {
+private val hpadsrMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(
-        hpattack = parts.getOrNull(0) ?: hpattack,
-        hpdecay = parts.getOrNull(1) ?: hpdecay,
-        hpsustain = parts.getOrNull(2) ?: hpsustain,
-        hprelease = parts.getOrNull(3) ?: hprelease,
-    )
+    hpattack = parts.getOrNull(0) ?: hpattack
+    hpdecay = parts.getOrNull(1) ?: hpdecay
+    hpsustain = parts.getOrNull(2) ?: hpsustain
+    hprelease = parts.getOrNull(3) ?: hprelease
 }
 
 private fun applyHpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -257,7 +251,7 @@ private fun applyHpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 /**
  * Sets the HPF envelope shape via a colon-separated string `"attack:decay:sustain:release"`.
  *
- * Controls how the high-pass filter cutoff sweeps over time (used with [hpf] and [hpenv]).
+ * Controls how the high-pass filter cutoff sweeps over time (used with [ hpf ] and [ hpenv ]).
  * - **attack**: time in seconds for the filter to open fully
  * - **decay**: time in seconds to fall from peak to sustain level
  * - **sustain**: sustain level (0–1)
@@ -322,16 +316,14 @@ fun PatternMapperFn.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- bpadsr() ---------------------------------------------------------------------------------------------------------
 
-private val bpadsrMutation = voiceModifier {
+private val bpadsrMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(
-        bpattack = parts.getOrNull(0) ?: bpattack,
-        bpdecay = parts.getOrNull(1) ?: bpdecay,
-        bpsustain = parts.getOrNull(2) ?: bpsustain,
-        bprelease = parts.getOrNull(3) ?: bprelease,
-    )
+    bpattack = parts.getOrNull(0) ?: bpattack
+    bpdecay = parts.getOrNull(1) ?: bpdecay
+    bpsustain = parts.getOrNull(2) ?: bpsustain
+    bprelease = parts.getOrNull(3) ?: bprelease
 }
 
 private fun applyBpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -348,7 +340,7 @@ private fun applyBpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 /**
  * Sets the BPF envelope shape via a colon-separated string `"attack:decay:sustain:release"`.
  *
- * Controls how the band-pass filter cutoff sweeps over time (used with [bpf] and [bpenv]).
+ * Controls how the band-pass filter cutoff sweeps over time (used with [ bpf ] and [ bpenv ]).
  * - **attack**: time in seconds for the filter to open fully
  * - **decay**: time in seconds to fall from peak to sustain level
  * - **sustain**: sustain level (0–1)
@@ -413,16 +405,14 @@ fun PatternMapperFn.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- tremolo() --------------------------------------------------------------------------------------------------------
 
-private val tremoloMutation = voiceModifier {
+private val tremoloMutation = voiceSetter {
     val parts = it?.toString()?.split(":") ?: emptyList()
 
-    copy(
-        tremoloDepth = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: tremoloDepth,
-        tremoloSync = parts.getOrNull(1)?.trim()?.toDoubleOrNull() ?: tremoloSync,
-        tremoloShape = parts.getOrNull(2)?.trim()?.takeIf { s -> s.isNotEmpty() } ?: tremoloShape,
-        tremoloSkew = parts.getOrNull(3)?.trim()?.toDoubleOrNull() ?: tremoloSkew,
-        tremoloPhase = parts.getOrNull(4)?.trim()?.toDoubleOrNull() ?: tremoloPhase,
-    )
+    tremoloDepth = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: tremoloDepth
+    tremoloSync = parts.getOrNull(1)?.trim()?.toDoubleOrNull() ?: tremoloSync
+    tremoloShape = parts.getOrNull(2)?.trim()?.takeIf { s -> s.isNotEmpty() } ?: tremoloShape
+    tremoloSkew = parts.getOrNull(3)?.trim()?.toDoubleOrNull() ?: tremoloSkew
+    tremoloPhase = parts.getOrNull(4)?.trim()?.toDoubleOrNull() ?: tremoloPhase
 }
 
 private fun applyTremolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -528,16 +518,14 @@ fun PatternMapperFn.tremolo(params: PatternLike? = null, callInfo: CallInfo? = n
 
 // -- nfadsr() ---------------------------------------------------------------------------------------------------------
 
-private val nfadsrMutation = voiceModifier {
+private val nfadsrMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(
-        nfattack = parts.getOrNull(0) ?: nfattack,
-        nfdecay = parts.getOrNull(1) ?: nfdecay,
-        nfsustain = parts.getOrNull(2) ?: nfsustain,
-        nfrelease = parts.getOrNull(3) ?: nfrelease,
-    )
+    nfattack = parts.getOrNull(0) ?: nfattack
+    nfdecay = parts.getOrNull(1) ?: nfdecay
+    nfsustain = parts.getOrNull(2) ?: nfsustain
+    nfrelease = parts.getOrNull(3) ?: nfrelease
 }
 
 private fun applyNfadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -554,7 +542,7 @@ private fun applyNfadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 /**
  * Sets the notch filter envelope shape via a colon-separated string `"attack:decay:sustain:release"`.
  *
- * Controls how the notch filter cutoff sweeps over time (used with [nf] and [nfenv]).
+ * Controls how the notch filter cutoff sweeps over time (used with [ nf ] and [ nfenv ]).
  * - **attack**: time in seconds for the filter to open fully
  * - **decay**: time in seconds to fall from peak to sustain level
  * - **sustain**: sustain level (0–1)

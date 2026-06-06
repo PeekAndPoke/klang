@@ -57,7 +57,7 @@ private fun reifyLookup(lookup: Any, baseLocation: SourceLocation? = null): Map<
                 // Parse strings as mini-notation patterns with source location
                 val atomFactory = { text: String, sourceLocations: SourceLocationChain? ->
                     AtomicPattern(
-                        data = SprudelVoiceData.empty.voiceValueModifier(text),
+                        data = SprudelVoiceData().voiceValueModifier(text),
                         sourceLocations = sourceLocations,
                     )
                 }
@@ -66,7 +66,7 @@ private fun reifyLookup(lookup: Any, baseLocation: SourceLocation? = null): Map<
 
             else -> {
                 // Wrap other values (numbers, etc.) in atomic pattern with default modifier
-                AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(value))
+                AtomicPattern(SprudelVoiceData().voiceValueModifier(value))
             }
         }
     }

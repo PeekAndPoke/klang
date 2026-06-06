@@ -33,7 +33,7 @@ private fun applyEuclidFromArgs(p: SprudelPattern, args: List<SprudelDslArg<Any?
         is SprudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -41,7 +41,7 @@ private fun applyEuclidFromArgs(p: SprudelPattern, args: List<SprudelDslArg<Any?
         is SprudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -152,7 +152,7 @@ private fun applyEuclidRotFromArgs(p: SprudelPattern, args: List<SprudelDslArg<A
         is SprudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -160,7 +160,7 @@ private fun applyEuclidRotFromArgs(p: SprudelPattern, args: List<SprudelDslArg<A
         is SprudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -168,7 +168,7 @@ private fun applyEuclidRotFromArgs(p: SprudelPattern, args: List<SprudelDslArg<A
         is SprudelPattern -> rotationVal
 
         else -> parseMiniNotation(rotationArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -373,7 +373,7 @@ private fun applyBjorkFromArgs(p: SprudelPattern, args: List<SprudelDslArg<Any?>
         is SprudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -381,7 +381,7 @@ private fun applyBjorkFromArgs(p: SprudelPattern, args: List<SprudelDslArg<Any?>
         is SprudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -389,7 +389,7 @@ private fun applyBjorkFromArgs(p: SprudelPattern, args: List<SprudelDslArg<Any?>
         is SprudelPattern -> rotationVal
 
         else -> parseMiniNotation(rotationVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -480,7 +480,7 @@ private fun applyEuclidLegatoFromArgs(p: SprudelPattern, args: List<SprudelDslAr
         is SprudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -488,7 +488,7 @@ private fun applyEuclidLegatoFromArgs(p: SprudelPattern, args: List<SprudelDslAr
         is SprudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -572,7 +572,7 @@ private fun applyEuclidLegatoRotFromArgs(p: SprudelPattern, args: List<SprudelDs
         is SprudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -580,7 +580,7 @@ private fun applyEuclidLegatoRotFromArgs(p: SprudelPattern, args: List<SprudelDs
         is SprudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -588,7 +588,7 @@ private fun applyEuclidLegatoRotFromArgs(p: SprudelPattern, args: List<SprudelDs
         is SprudelPattern -> rotationVal
 
         else -> parseMiniNotation(rotationArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -681,7 +681,7 @@ private fun applyEuclidishFromArgs(source: SprudelPattern, args: List<SprudelDsl
         is SprudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -689,7 +689,7 @@ private fun applyEuclidishFromArgs(source: SprudelPattern, args: List<SprudelDsl
         is SprudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
         }
     }
 
@@ -698,7 +698,7 @@ private fun applyEuclidishFromArgs(source: SprudelPattern, args: List<SprudelDsl
         is SprudelPattern -> grooveVal
         else -> {
             parseMiniNotation(grooveArg ?: SprudelDslArg.of("0")) { text, _ ->
-                AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
+                AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
             }
         }
     }

@@ -19,348 +19,262 @@ import kotlinx.serialization.Serializable
  * the original JavaScript Strudel implementation.
  *
  * Gets converted to [VoiceData] when passed to the audio engine.
+ *
+ * **All properties are `var` by design — for performance.** The pattern engine mutates voice data in
+ * place down the modifier chain (via [io.peekandpoke.klang.sprudel.lang.voiceSetter]) instead of
+ * allocating a fresh copy per modifier, which is what previously dominated query cost. The trade-off:
+ * an instance is NOT safe to share — **the caller is responsible for cloning when a value might be
+ * reused or handed to more than one consumer** (use [clone]). The leaf emitters (`AtomicPattern`,
+ * `AtomicInfinitePattern`, `StaticSprudelPattern`) clone on emission so every queried event owns its
+ * data; mutate freely from there. There is intentionally no shared `empty` singleton — construct a
+ * fresh one with `SprudelVoiceData()`. See `docs/tasks/mutable-voicedata-optimization.md`.
  */
 @Serializable
 data class SprudelVoiceData(
     // note, scale, freq
-    val note: String?,
-    val freqHz: Double?,
-    val scale: String?,
+    var note: String? = null,
+    var freqHz: Double? = null,
+    var scale: String? = null,
     /** Chord name (e.g., "Cmaj7", "Dm7", "F/A") for harmonic context */
-    val chord: String?,
+    var chord: String? = null,
 
     // Gain / Dynamics
-    val gain: Double?,
-    val legato: Double?,
+    var gain: Double? = null,
+    var legato: Double? = null,
     /** Volume scaling (0-1), multiplies with gain */
-    val velocity: Double?,
+    var velocity: Double? = null,
     /** Gain applied after voice processing, before mixing to the cylinder */
-    val postGain: Double?,
+    var postGain: Double? = null,
 
     // Sound, bank, sound index
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
-    val bank: String?,
+    var bank: String? = null,
     /**
      * The sound this voice references. Either a [SoundValue.Named] (sample bank entry,
      * pre-registered ignitor, etc., possibly with `name:index` form parsed into [soundIndex])
      * or a [SoundValue.Osc] inlining an [IgnitorDsl] tree — the latter gets denormalized to
      * a synthetic name at the wire boundary by [toVoiceData].
      */
-    val sound: SoundValue?,
+    var sound: SoundValue? = null,
     /** Sound index */
-    val soundIndex: Int?,
+    var soundIndex: Int? = null,
 
     // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
-    val oscParams: Map<String, Double>?,
+    var oscParams: Map<String, Double>? = null,
 
     // ADSR (flattened)
-    val attack: Double?,
-    val decay: Double?,
-    val sustain: Double?,
-    val release: Double?,
-    val attackCurve: AdsrCurve?,
-    val decayCurve: AdsrCurve?,
-    val releaseCurve: AdsrCurve?,
+    var attack: Double? = null,
+    var decay: Double? = null,
+    var sustain: Double? = null,
+    var release: Double? = null,
+    var attackCurve: AdsrCurve? = null,
+    var decayCurve: AdsrCurve? = null,
+    var releaseCurve: AdsrCurve? = null,
 
     // Pitch / Glisando
-    val accelerate: Double?,
+    var accelerate: Double? = null,
 
     // Vibrato
-    val vibrato: Double?,
-    val vibratoMod: Double?,
+    var vibrato: Double? = null,
+    var vibratoMod: Double? = null,
 
     // Pitch envelope
-    val pAttack: Double?,
-    val pDecay: Double?,
-    val pRelease: Double?,
-    val pEnv: Double?,
-    val pCurve: Double?,
-    val pAnchor: Double?,
+    var pAttack: Double? = null,
+    var pDecay: Double? = null,
+    var pRelease: Double? = null,
+    var pEnv: Double? = null,
+    var pCurve: Double? = null,
+    var pAnchor: Double? = null,
 
     // FM Synthesis
     /** FM harmonicity ratio (carrier to modulator frequency ratio) */
-    val fmh: Double?,
+    var fmh: Double? = null,
     /** FM envelope attack time */
-    val fmAttack: Double?,
+    var fmAttack: Double? = null,
     /** FM envelope decay time */
-    val fmDecay: Double?,
+    var fmDecay: Double? = null,
     /** FM envelope sustain level */
-    val fmSustain: Double?,
+    var fmSustain: Double? = null,
     /** FM modulation depth/amount */
-    val fmEnv: Double?,
+    var fmEnv: Double? = null,
 
     // Effects
-    val distort: Double?,
+    var distort: Double? = null,
     /** Distortion shape: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify */
-    val distortShape: String?,
+    var distortShape: String? = null,
     /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val distortOversample: Int? = null,
-    val coarse: Double?,
+    var distortOversample: Int? = null,
+    var coarse: Double? = null,
     /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val coarseOversample: Int? = null,
-    val crush: Double?,
+    var coarseOversample: Int? = null,
+    var crush: Double? = null,
     /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val crushOversample: Int? = null,
+    var crushOversample: Int? = null,
 
     // Phaser
     /** Phaser modulation speed */
-    val phaserRate: Double?,
+    var phaserRate: Double? = null,
     /** Phaser depth (0-1) */
-    val phaserDepth: Double?,
+    var phaserDepth: Double? = null,
     /** Phaser center frequency (Hz) */
-    val phaserCenter: Double?,
+    var phaserCenter: Double? = null,
     /** Phaser sweep range (Hz) */
-    val phaserSweep: Double?,
+    var phaserSweep: Double? = null,
 
     // Tremolo
     /** Tremolo modulation speed in cycles */
-    val tremoloSync: Double?,
+    var tremoloSync: Double? = null,
     /** Tremolo depth */
-    val tremoloDepth: Double?,
+    var tremoloDepth: Double? = null,
     /** Tremolo waveform shape/skew (0-1) */
-    val tremoloSkew: Double?,
+    var tremoloSkew: Double? = null,
     /** Tremolo phase offset in cycles */
-    val tremoloPhase: Double?,
+    var tremoloPhase: Double? = null,
     /** Tremolo waveform type (tri, square, sine, saw, ramp) */
-    val tremoloShape: String?,
+    var tremoloShape: String? = null,
 
     // Ducking / Sidechain
     /** Target cylinder to listen to for ducking (source of sidechain signal) */
-    val duckCylinder: Int?,
+    var duckCylinder: Int? = null,
     /** Duck return-to-normal time in seconds (attack/release time) */
-    val duckAttack: Double?,
+    var duckAttack: Double? = null,
     /** Ducking amount (0.0 = no ducking, 1.0 = full silence) */
-    val duckDepth: Double?,
+    var duckDepth: Double? = null,
 
     // Filters (flattened) - each filter has its own cutoff and resonance
     /** Low pass filter cutoff frequency */
-    val cutoff: Double?,
+    var cutoff: Double? = null,
     /** Low pass filter resonance/Q */
-    val resonance: Double?,
+    var resonance: Double? = null,
     /** High pass filter cutoff frequency */
-    val hcutoff: Double?,
+    var hcutoff: Double? = null,
     /** High pass filter resonance/Q */
-    val hresonance: Double?,
+    var hresonance: Double? = null,
     /** Band pass filter cutoff frequency */
-    val bandf: Double?,
+    var bandf: Double? = null,
     /** Band pass filter resonance/Q */
-    val bandq: Double?,
+    var bandq: Double? = null,
     /** Notch filter cutoff frequency */
-    val notchf: Double?,
+    var notchf: Double? = null,
     /** Notch filter resonance/Q */
-    val nresonance: Double?,
+    var nresonance: Double? = null,
 
     // Lowpass filter envelope
     /** Low pass filter envelope attack time */
-    val lpattack: Double?,
+    var lpattack: Double? = null,
     /** Low pass filter envelope decay time */
-    val lpdecay: Double?,
+    var lpdecay: Double? = null,
     /** Low pass filter envelope sustain level */
-    val lpsustain: Double?,
+    var lpsustain: Double? = null,
     /** Low pass filter envelope release time */
-    val lprelease: Double?,
+    var lprelease: Double? = null,
     /** Low pass filter envelope depth/amount */
-    val lpenv: Double?,
+    var lpenv: Double? = null,
 
     // Highpass filter envelope
     /** High pass filter envelope attack time */
-    val hpattack: Double?,
+    var hpattack: Double? = null,
     /** High pass filter envelope decay time */
-    val hpdecay: Double?,
+    var hpdecay: Double? = null,
     /** High pass filter envelope sustain level */
-    val hpsustain: Double?,
+    var hpsustain: Double? = null,
     /** High pass filter envelope release time */
-    val hprelease: Double?,
+    var hprelease: Double? = null,
     /** High pass filter envelope depth/amount */
-    val hpenv: Double?,
+    var hpenv: Double? = null,
 
     // Bandpass filter envelope
     /** Band pass filter envelope attack time */
-    val bpattack: Double?,
+    var bpattack: Double? = null,
     /** Band pass filter envelope decay time */
-    val bpdecay: Double?,
+    var bpdecay: Double? = null,
     /** Band pass filter envelope sustain level */
-    val bpsustain: Double?,
+    var bpsustain: Double? = null,
     /** Band pass filter envelope release time */
-    val bprelease: Double?,
+    var bprelease: Double? = null,
     /** Band pass filter envelope depth/amount */
-    val bpenv: Double?,
+    var bpenv: Double? = null,
 
     // Notch filter envelope
     /** Notch filter envelope attack time */
-    val nfattack: Double?,
+    var nfattack: Double? = null,
     /** Notch filter envelope decay time */
-    val nfdecay: Double?,
+    var nfdecay: Double? = null,
     /** Notch filter envelope sustain level */
-    val nfsustain: Double?,
+    var nfsustain: Double? = null,
     /** Notch filter envelope release time */
-    val nfrelease: Double?,
+    var nfrelease: Double? = null,
     /** Notch filter envelope depth/amount */
-    val nfenv: Double?,
+    var nfenv: Double? = null,
 
     // Routing
     /** The mix channel / bus / orbit / cylinder */
-    val cylinder: Int?,
+    var cylinder: Int? = null,
 
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
-    val pan: Double?,
+    var pan: Double? = null,
 
     // Delay
-    val delay: Double?, // Mix amount (0.0 to 1.0)
-    val delayTime: Double?, // Time in seconds
-    val delayFeedback: Double?, // Feedback amount (0.0 to <1.0)
+    var delay: Double? = null, // Mix amount (0.0 to 1.0)
+    var delayTime: Double? = null, // Time in seconds
+    var delayFeedback: Double? = null, // Feedback amount (0.0 to <1.0)
 
     // Reverb
-    val room: Double?,
-    val roomSize: Double?,
+    var room: Double? = null,
+    var roomSize: Double? = null,
     /** Reverb fade time */
-    val roomFade: Double?,
+    var roomFade: Double? = null,
     /** Reverb lowpass start frequency */
-    val roomLp: Double?,
+    var roomLp: Double? = null,
     /** Reverb lowpass frequency at -60dB */
-    val roomDim: Double?,
+    var roomDim: Double? = null,
     /** Impulse response sample */
-    val iResponse: String?,
+    var iResponse: String? = null,
 
     // Sample manipulation
-    val begin: Double?,
-    val end: Double?,
-    val speed: Double?,
-    val unit: String?,
-    val loop: Boolean?,
-    val cut: Int?,
-    val loopBegin: Double?,
-    val loopEnd: Double?,
+    var begin: Double? = null,
+    var end: Double? = null,
+    var speed: Double? = null,
+    var unit: String? = null,
+    var loop: Boolean? = null,
+    var cut: Int? = null,
+    var loopBegin: Double? = null,
+    var loopEnd: Double? = null,
 
     // Voice / Singing
     /** Vowel formant filter (a, e, i, o, u) */
-    val vowel: String?,
+    var vowel: String? = null,
 
     // Dynamics / Compression
     /** Dynamic range compression settings (threshold:ratio:knee:attack:release) */
-    val compressor: String?,
+    var compressor: String? = null,
 
     // Playback control
     /** Solo value - 0.0 = disabled, 0.0..1.0 = enabled (amount), null = not set */
-    val solo: Double?,
+    var solo: Double? = null,
 
     /** Unique pattern ID for tracking solo state across pattern changes */
-    val patternId: String? = null,
+    var patternId: String? = null,
 
     /**
      * Voice pipeline engine name — selects the topology of the Filter stage.
      * Known values: `"modern"` (default), `"pedal"`. Unknown/null → modern.
      */
-    val engine: String? = null,
+    var engine: String? = null,
 
     // Custom value
-    val value: SprudelVoiceValue? = null,
+    var value: SprudelVoiceValue? = null,
 ) {
-    companion object {
-        val empty = SprudelVoiceData(
-            note = null,
-            freqHz = null,
-            scale = null,
-            chord = null,
-            gain = null,
-            legato = null,
-            velocity = null,
-            postGain = null,
-            bank = null,
-            sound = null,
-            soundIndex = null,
-            oscParams = null,
-            attack = null,
-            decay = null,
-            sustain = null,
-            release = null,
-            attackCurve = null,
-            decayCurve = null,
-            releaseCurve = null,
-            accelerate = null,
-            vibrato = null,
-            vibratoMod = null,
-            pAttack = null,
-            pDecay = null,
-            pRelease = null,
-            pEnv = null,
-            pCurve = null,
-            pAnchor = null,
-            fmh = null,
-            fmAttack = null,
-            fmDecay = null,
-            fmSustain = null,
-            fmEnv = null,
-            distort = null,
-            distortShape = null,
-            coarse = null,
-            crush = null,
-            phaserRate = null,
-            phaserDepth = null,
-            phaserCenter = null,
-            phaserSweep = null,
-            tremoloSync = null,
-            tremoloDepth = null,
-            tremoloSkew = null,
-            tremoloPhase = null,
-            tremoloShape = null,
-            duckCylinder = null,
-            duckAttack = null,
-            duckDepth = null,
-            cutoff = null,
-            resonance = null,
-            hcutoff = null,
-            hresonance = null,
-            bandf = null,
-            bandq = null,
-            notchf = null,
-            nresonance = null,
-            lpattack = null,
-            lpdecay = null,
-            lpsustain = null,
-            lprelease = null,
-            lpenv = null,
-            hpattack = null,
-            hpdecay = null,
-            hpsustain = null,
-            hprelease = null,
-            hpenv = null,
-            bpattack = null,
-            bpdecay = null,
-            bpsustain = null,
-            bprelease = null,
-            bpenv = null,
-            nfattack = null,
-            nfdecay = null,
-            nfsustain = null,
-            nfrelease = null,
-            nfenv = null,
-            cylinder = null,
-            pan = null,
-            delay = null,
-            delayTime = null,
-            delayFeedback = null,
-            room = null,
-            roomSize = null,
-            roomFade = null,
-            roomLp = null,
-            roomDim = null,
-            iResponse = null,
-            begin = null,
-            end = null,
-            speed = null,
-            unit = null,
-            loop = null,
-            cut = null,
-            loopBegin = null,
-            loopEnd = null,
-            vowel = null,
-            compressor = null,
-            solo = null,
-            patternId = null,
-            value = null,
-        )
-    }
+
+    /**
+     * Fresh shallow copy of this voice data.
+     *
+     * Used by the leaf emitters (`AtomicPattern`, `AtomicInfinitePattern`, `StaticSprudelPattern`)
+     * to hand every event its own single-owner instance, which is the invariant that makes the
+     * in-place mutation of `var` fields safe (see `docs/tasks/mutable-voicedata-optimization.md`).
+     * Flat fields only — `oscParams` is treated as immutable-replace, so sharing its reference is fine.
+     */
+    fun clone(): SprudelVoiceData = copy()
 
     fun merge(other: SprudelVoiceData): SprudelVoiceData {
         return SprudelVoiceData(
@@ -1048,6 +962,28 @@ private fun mergeOscParams(
 fun SprudelVoiceData.withOscParam(key: String, value: Double?): SprudelVoiceData {
     if (value == null) return this
     return copy(oscParams = (oscParams.orEmpty()) + (key to value))
+}
+
+/**
+ * In-place counterpart of [withOscParam]: sets the given oscParam on this instance (null is a no-op).
+ * `oscParams` is treated as immutable-replace, so a fresh map is assigned to the field — no new
+ * [SprudelVoiceData] is allocated. Only safe on a single-owner instance (see [clone]).
+ */
+fun SprudelVoiceData.putOscParam(key: String, value: Double?) {
+    if (value == null) return
+    oscParams = (oscParams.orEmpty()) + (key to value)
+}
+
+/**
+ * In-place counterpart of [withOscParams]: sets the given oscParams on this instance. Null values
+ * are ignored. Only safe on a single-owner instance (see [clone]).
+ */
+fun SprudelVoiceData.putOscParams(vararg params: Pair<String, Double?>) {
+    val nonNull = params.filter { it.second != null }
+    if (nonNull.isEmpty()) return
+    val merged = oscParams.orEmpty().toMutableMap()
+    for ((k, v) in nonNull) merged[k] = v!!
+    oscParams = merged
 }
 
 /** Merges multiple oscParams in a single copy. Null values are ignored. */

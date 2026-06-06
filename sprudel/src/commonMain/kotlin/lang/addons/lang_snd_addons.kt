@@ -15,16 +15,18 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
-import io.peekandpoke.klang.sprudel.lang.voiceModifier
+import io.peekandpoke.klang.sprudel.lang.voiceSetter
 import io.peekandpoke.klang.sprudel.mergeOscParamsFrom
-import io.peekandpoke.klang.sprudel.withOscParams
+import io.peekandpoke.klang.sprudel.putOscParams
+
 // -- sndPluck() -------------------------------------------------------------------------------------------------------
 
-private val sndPluckMutation = voiceModifier {
+private val sndPluckMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("pluck")).withOscParams(
+    sound = SoundValue.Named("pluck")
+    putOscParams(
         "decay" to parts.getOrNull(0),
         "brightness" to parts.getOrNull(1),
         "pickPosition" to parts.getOrNull(2),
@@ -112,11 +114,12 @@ fun PatternMapperFn.sndPluck(params: PatternLike? = null, callInfo: CallInfo? = 
 
 // -- sndSuperPluck() --------------------------------------------------------------------------------------------------
 
-private val sndSuperPluckMutation = voiceModifier {
+private val sndSuperPluckMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("superpluck")).withOscParams(
+    sound = SoundValue.Named("superpluck")
+    putOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
         "decay" to parts.getOrNull(2),
@@ -551,11 +554,12 @@ fun PatternMapperFn.sndPink(params: PatternLike? = null, callInfo: CallInfo? = n
 
 // -- sndPulze() -------------------------------------------------------------------------------------------------------
 
-private val sndPulzeMutation = voiceModifier {
+private val sndPulzeMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("pulze")).withOscParams(
+    sound = SoundValue.Named("pulze")
+    putOscParams(
         "duty" to parts.getOrNull(0),
     )
 }
@@ -617,11 +621,12 @@ fun PatternMapperFn.sndPulze(params: PatternLike? = null, callInfo: CallInfo? = 
 
 // -- sndDust() --------------------------------------------------------------------------------------------------------
 
-private val sndDustMutation = voiceModifier {
+private val sndDustMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("dust")).withOscParams(
+    sound = SoundValue.Named("dust")
+    putOscParams(
         "density" to parts.getOrNull(0),
     )
 }
@@ -683,11 +688,12 @@ fun PatternMapperFn.sndDust(params: PatternLike? = null, callInfo: CallInfo? = n
 
 // -- sndCrackle() -----------------------------------------------------------------------------------------------------
 
-private val sndCrackleMutation = voiceModifier {
+private val sndCrackleMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("crackle")).withOscParams(
+    sound = SoundValue.Named("crackle")
+    putOscParams(
         "density" to parts.getOrNull(0),
     )
 }
@@ -749,11 +755,12 @@ fun PatternMapperFn.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? 
 
 // -- sndSuperSaw() ----------------------------------------------------------------------------------------------------
 
-private val sndSuperSawMutation = voiceModifier {
+private val sndSuperSawMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("supersaw")).withOscParams(
+    sound = SoundValue.Named("supersaw")
+    putOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -818,11 +825,12 @@ fun PatternMapperFn.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo?
 
 // -- sndSuperSine() ---------------------------------------------------------------------------------------------------
 
-private val sndSuperSineMutation = voiceModifier {
+private val sndSuperSineMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("supersine")).withOscParams(
+    sound = SoundValue.Named("supersine")
+    putOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -887,11 +895,12 @@ fun PatternMapperFn.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo
 
 // -- sndSuperSquare() -------------------------------------------------------------------------------------------------
 
-private val sndSuperSquareMutation = voiceModifier {
+private val sndSuperSquareMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("supersquare")).withOscParams(
+    sound = SoundValue.Named("supersquare")
+    putOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -956,11 +965,12 @@ fun PatternMapperFn.sndSuperSquare(params: PatternLike? = null, callInfo: CallIn
 
 // -- sndSuperTri() ----------------------------------------------------------------------------------------------------
 
-private val sndSuperTriMutation = voiceModifier {
+private val sndSuperTriMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("supertri")).withOscParams(
+    sound = SoundValue.Named("supertri")
+    putOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -1025,11 +1035,12 @@ fun PatternMapperFn.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo?
 
 // -- sndSuperRamp() ---------------------------------------------------------------------------------------------------
 
-private val sndSuperRampMutation = voiceModifier {
+private val sndSuperRampMutation = voiceSetter {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = SoundValue.Named("superramp")).withOscParams(
+    sound = SoundValue.Named("superramp")
+    putOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )

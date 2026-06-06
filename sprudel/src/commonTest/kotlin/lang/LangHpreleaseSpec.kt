@@ -104,7 +104,7 @@ class LangHpreleaseSpec : StringSpec({
     }
 
     "hprelease() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
+        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData(
             hcutoff = 2000.0,
             hprelease = 0.5
         )

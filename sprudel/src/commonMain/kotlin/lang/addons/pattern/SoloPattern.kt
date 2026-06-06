@@ -62,7 +62,7 @@ class SoloPattern(
             return SprudelPatternEvent(
                 part = span,
                 whole = span, // whole == part → isOnset = true, so the backend picks it up
-                data = SprudelVoiceData.empty.copy(
+                data = SprudelVoiceData(
                     note = "a",
                     freqHz = 0.0,
                     sound = SoundValue.Named("sine"),

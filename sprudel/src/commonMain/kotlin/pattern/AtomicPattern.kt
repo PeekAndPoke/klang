@@ -24,12 +24,12 @@ internal class AtomicPattern(
         /**
          * AtomicPattern that produces events with empty SprudelVoiceData.
          */
-        val pure = AtomicPattern(SprudelVoiceData.empty)
+        val pure = AtomicPattern(SprudelVoiceData())
 
         /**
          * Creates an AtomicPattern the produces events with the given value set as VoiceValue.
          */
-        fun value(value: Any?) = AtomicPattern(SprudelVoiceData.empty.copy(value = value?.asVoiceValue()))
+        fun value(value: Any?) = AtomicPattern(SprudelVoiceData(value = value?.asVoiceValue()))
     }
 
     override val numSteps: Double = 1.0
@@ -53,7 +53,9 @@ internal class AtomicPattern(
                     SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = data,
+                        // clone() so each emitted event owns its data — required for safe in-place
+                        // mutation downstream (the stored `data` field must never be handed out shared).
+                        data = data.clone(),
                         sourceLocations = sourceLocations
                     )
                 )

@@ -208,7 +208,7 @@ internal class EuclideanPattern(
                                     SprudelPatternEvent(
                                         part = CycleTimeSpan(s, e),
                                         whole = CycleTimeSpan(absStart, absEnd),
-                                        data = SprudelVoiceData.empty.copy(value = 1.asVoiceValue())
+                                        data = SprudelVoiceData(value = 1.asVoiceValue())
                                     )
                                 )
                             }
@@ -288,7 +288,7 @@ internal class EuclideanPattern(
                     SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = SprudelVoiceData.empty.copy(value = 1.0.asVoiceValue())
+                        data = SprudelVoiceData(value = 1.0.asVoiceValue())
                     )
                 )
             }

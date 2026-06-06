@@ -13,7 +13,7 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 // -- begin() ----------------------------------------------------------------------------------------------------------
 
-private val beginMutation = voiceModifier { copy(begin = it?.asDoubleOrNull()) }
+private val beginMutation = voiceSetter { begin = it?.asDoubleOrNull() }
 
 private fun applyBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, beginMutation)
@@ -72,7 +72,7 @@ fun PatternMapperFn.begin(pos: PatternLike? = null, callInfo: CallInfo? = null):
 
 // -- end() ------------------------------------------------------------------------------------------------------------
 
-private val endMutation = voiceModifier { copy(end = it?.asDoubleOrNull()) }
+private val endMutation = voiceSetter { end = it?.asDoubleOrNull() }
 
 private fun applyEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, endMutation)
@@ -130,7 +130,7 @@ fun PatternMapperFn.end(pos: PatternLike? = null, callInfo: CallInfo? = null): P
 
 // -- speed() ----------------------------------------------------------------------------------------------------------
 
-private val speedMutation = voiceModifier { copy(speed = it?.asDoubleOrNull()) }
+private val speedMutation = voiceSetter { speed = it?.asDoubleOrNull() }
 
 private fun applySpeed(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, speedMutation)
@@ -188,7 +188,7 @@ fun PatternMapperFn.speed(rate: PatternLike? = null, callInfo: CallInfo? = null)
 
 // -- unit() -----------------------------------------------------------------------------------------------------------
 
-private val unitMutation = voiceModifier { copy(unit = it?.asVoiceValue()?.asString) }
+private val unitMutation = voiceSetter { unit = it?.asVoiceValue()?.asString }
 
 private fun applyUnit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.isEmpty()) return source
@@ -250,7 +250,7 @@ fun PatternMapperFn.unit(value: PatternLike, callInfo: CallInfo? = null): Patter
 
 // -- loop() -----------------------------------------------------------------------------------------------------------
 
-private val loopMutation = voiceModifier { copy(loop = it?.asVoiceValue()?.asBoolean) }
+private val loopMutation = voiceSetter { loop = it?.asVoiceValue()?.asBoolean }
 
 private fun applyLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val effectiveArgs = args.ifEmpty { listOf(SprudelDslArg.of(1.0)) }
@@ -311,7 +311,7 @@ fun PatternMapperFn.loop(flag: PatternLike = true, callInfo: CallInfo? = null): 
 
 // -- loopBegin() / loopb() --------------------------------------------------------------------------------------------
 
-private val loopBeginMutation = voiceModifier { copy(loopBegin = it?.asDoubleOrNull()) }
+private val loopBeginMutation = voiceSetter { loopBegin = it?.asDoubleOrNull() }
 
 private fun applyLoopBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, loopBeginMutation)
@@ -398,7 +398,7 @@ fun PatternMapperFn.loopb(pos: PatternLike, callInfo: CallInfo? = null): Pattern
 
 // -- loopEnd() / loope() ----------------------------------------------------------------------------------------------
 
-private val loopEndMutation = voiceModifier { copy(loopEnd = it?.asDoubleOrNull()) }
+private val loopEndMutation = voiceSetter { loopEnd = it?.asDoubleOrNull() }
 
 private fun applyLoopEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, loopEndMutation)
@@ -485,9 +485,9 @@ fun PatternMapperFn.loope(pos: PatternLike, callInfo: CallInfo? = null): Pattern
 
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 
-private val loopAtSpeedMutation = voiceModifier {
+private val loopAtSpeedMutation = voiceSetter {
     val value = it?.asDoubleOrNull()
-    if (value == null) copy(speed = null) else copy(speed = 1.0 / (2.0 * value))
+    speed = if (value == null) null else 1.0 / (2.0 * value)
 }
 
 private fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -673,7 +673,7 @@ fun PatternMapperFn.loopatcps(factor: PatternLike, cps: PatternLike, callInfo: C
 
 // -- cut() ------------------------------------------------------------------------------------------------------------
 
-private val cutMutation = voiceModifier { copy(cut = it?.asIntOrNull()) }
+private val cutMutation = voiceSetter { cut = it?.asIntOrNull() }
 
 private fun applyCut(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, cutMutation)

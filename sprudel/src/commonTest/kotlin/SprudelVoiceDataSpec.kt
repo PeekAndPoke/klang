@@ -13,7 +13,7 @@ import kotlinx.serialization.json.Json
 class SprudelVoiceDataSpec : StringSpec({
 
     "empty companion object has all fields null" {
-        val empty = SprudelVoiceData.empty
+        val empty = SprudelVoiceData()
 
         empty.note shouldBe null
         empty.freqHz shouldBe null
@@ -25,7 +25,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "can create SprudelVoiceData with basic fields" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             note = "c4",
             freqHz = 440.0,
             gain = 0.8
@@ -37,7 +37,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts flat ADSR fields to AdsrDef" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             attack = 0.01,
             decay = 0.1,
             sustain = 0.7,
@@ -54,7 +54,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts LPF flat fields to FilterDef.LowPass" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             cutoff = 1000.0,
             resonance = 1.5
         )
@@ -68,7 +68,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts HPF flat fields to FilterDef.HighPass" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             hcutoff = 500.0,
             hresonance = 2.0
         )
@@ -82,7 +82,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts BPF flat fields to FilterDef.BandPass" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             bandf = 750.0,
             bandq = 1.2
         )
@@ -96,7 +96,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts Notch flat fields to FilterDef.Notch" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             notchf = 600.0,
             nresonance = 0.8
         )
@@ -110,7 +110,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() creates multiple filters with independent resonance" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             cutoff = 1000.0,
             resonance = 1.5,
             hcutoff = 500.0,
@@ -140,7 +140,7 @@ class SprudelVoiceDataSpec : StringSpec({
     "toVoiceData() orders the filter chain HighPass → BandPass → Notch → Formant → LowPass" {
         // Flat fields are declared LowPass-first here on purpose; toVoiceData must
         // re-order them into the canonical chain regardless of field assignment order.
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             cutoff = 1000.0,   // LowPass  → must end up LAST
             hcutoff = 500.0,   // HighPass → must end up FIRST
             bandf = 750.0,
@@ -159,7 +159,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() puts LowPass last even when it is the only pair with HighPass" {
-        val data = SprudelVoiceData.empty.copy(cutoff = 1000.0, hcutoff = 80.0)
+        val data = SprudelVoiceData(cutoff = 1000.0, hcutoff = 80.0)
 
         val voiceData = data.toVoiceData()
 
@@ -169,7 +169,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() handles null resonance gracefully" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             cutoff = 1000.0,
             resonance = null // No resonance specified
         )
@@ -183,7 +183,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() maps all basic fields correctly" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             note = "c4",
             freqHz = 440.0,
             scale = "major",
@@ -248,7 +248,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "SprudelVoiceData is serializable to JSON" {
-        val data = SprudelVoiceData.empty.copy(
+        val data = SprudelVoiceData(
             note = "c4",
             freqHz = 440.0,
             gain = 0.8,
@@ -267,7 +267,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "copy() creates new instance with updated fields" {
-        val original = SprudelVoiceData.empty.copy(
+        val original = SprudelVoiceData(
             note = "c4",
             gain = 0.8
         )

@@ -15,20 +15,18 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.asDoubleOrNull
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
-import io.peekandpoke.klang.sprudel.lang.voiceModifier
+import io.peekandpoke.klang.sprudel.lang.voiceSetter
 // -- notchf() ---------------------------------------------------------------------------------------------------------
 
-private val notchfMutation = voiceModifier {
-    val str = it?.toString() ?: return@voiceModifier this
+private val notchfMutation = voiceSetter {
+    val str = it?.toString() ?: return@voiceSetter
     if (":" in str) {
         val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
-        copy(
-            notchf = parts.getOrNull(0) ?: notchf,
-            nresonance = parts.getOrNull(1) ?: nresonance,
-            nfenv = parts.getOrNull(2) ?: nfenv,
-        )
+        notchf = parts.getOrNull(0) ?: notchf
+        nresonance = parts.getOrNull(1) ?: nresonance
+        nfenv = parts.getOrNull(2) ?: nfenv
     } else {
-        copy(notchf = str.toDoubleOrNull())
+        notchf = str.toDoubleOrNull()
     }
 }
 
@@ -136,7 +134,7 @@ fun PatternMapperFn.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- nresonance() / nres() - Notch Filter resonance ------------------------------------------------------------------
 
-private val nresonanceMutation = voiceModifier { copy(nresonance = it?.asDoubleOrNull()) }
+private val nresonanceMutation = voiceSetter { nresonance = it?.asDoubleOrNull() }
 
 private fun applyNresonance(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nresonanceMutation)
@@ -311,7 +309,7 @@ fun PatternMapperFn.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): 
 
 // -- nfattack() / nfa() - Notch Filter Envelope Attack -----------------------------------------------------------------
 
-private val nfattackMutation = voiceModifier { copy(nfattack = it?.asDoubleOrNull()) }
+private val nfattackMutation = voiceSetter { nfattack = it?.asDoubleOrNull() }
 
 private fun applyNfattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfattackMutation)
@@ -396,7 +394,7 @@ fun PatternMapperFn.nfa(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- nfdecay() / nfd() - Notch Filter Envelope Decay -------------------------------------------------------------------
 
-private val nfdecayMutation = voiceModifier { copy(nfdecay = it?.asDoubleOrNull()) }
+private val nfdecayMutation = voiceSetter { nfdecay = it?.asDoubleOrNull() }
 
 private fun applyNfdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfdecayMutation)
@@ -481,7 +479,7 @@ fun PatternMapperFn.nfd(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- nfsustain() / nfs() - Notch Filter Envelope Sustain ---------------------------------------------------------------
 
-private val nfsustainMutation = voiceModifier { copy(nfsustain = it?.asDoubleOrNull()) }
+private val nfsustainMutation = voiceSetter { nfsustain = it?.asDoubleOrNull() }
 
 private fun applyNfsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfsustainMutation)
@@ -567,7 +565,7 @@ fun PatternMapperFn.nfs(level: PatternLike? = null, callInfo: CallInfo? = null):
 
 // -- nfrelease() / nfr() - Notch Filter Envelope Release ---------------------------------------------------------------
 
-private val nfreleaseMutation = voiceModifier { copy(nfrelease = it?.asDoubleOrNull()) }
+private val nfreleaseMutation = voiceSetter { nfrelease = it?.asDoubleOrNull() }
 
 private fun applyNfrelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfreleaseMutation)
@@ -652,7 +650,7 @@ fun PatternMapperFn.nfr(seconds: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- nfenv() / nfe() - Notch Filter Envelope Depth ---------------------------------------------------------------------
 
-private val nfenvMutation = voiceModifier { copy(nfenv = it?.asDoubleOrNull()) }
+private val nfenvMutation = voiceSetter { nfenv = it?.asDoubleOrNull() }
 
 private fun applyNfenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfenvMutation)

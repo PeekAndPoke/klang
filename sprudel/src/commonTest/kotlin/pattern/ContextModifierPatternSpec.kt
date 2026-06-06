@@ -30,7 +30,7 @@ class ContextModifierPatternSpec : StringSpec({
                     SprudelPatternEvent(
                         part = CycleTimeSpan(from, to),
                         whole = CycleTimeSpan(from, to),
-                        data = SprudelVoiceData.empty.copy(note = testVal)
+                        data = SprudelVoiceData(note = testVal)
                     )
                 )
             }

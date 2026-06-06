@@ -170,7 +170,7 @@ internal class EuclideanMorphPattern(
                             SprudelPatternEvent(
                                 part = timeSpan,
                                 whole = timeSpan,
-                                data = SprudelVoiceData.empty.copy(value = 1.asVoiceValue())
+                                data = SprudelVoiceData(value = 1.asVoiceValue())
                             )
                         )
                     }
