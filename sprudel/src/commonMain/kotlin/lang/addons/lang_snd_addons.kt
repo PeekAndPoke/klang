@@ -16,8 +16,8 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.lang.voiceSetter
-import io.peekandpoke.klang.sprudel.mergeOscParamsFrom
 import io.peekandpoke.klang.sprudel.putOscParams
+import io.peekandpoke.klang.sprudel.putOscParamsFrom
 
 // -- sndPluck() -------------------------------------------------------------------------------------------------------
 
@@ -39,7 +39,9 @@ private fun applySndPluck(source: SprudelPattern, args: List<SprudelDslArg<Any?>
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("pluck")) }
     } else {
         source._applyControlFromParams(args, sndPluckMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -134,7 +136,9 @@ private fun applySndSuperPluck(source: SprudelPattern, args: List<SprudelDslArg<
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("superpluck")) }
     } else {
         source._applyControlFromParams(args, sndSuperPluckMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -569,7 +573,9 @@ private fun applySndPulze(source: SprudelPattern, args: List<SprudelDslArg<Any?>
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("pulze")) }
     } else {
         source._applyControlFromParams(args, sndPulzeMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -636,7 +642,9 @@ private fun applySndDust(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("dust")) }
     } else {
         source._applyControlFromParams(args, sndDustMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -703,7 +711,9 @@ private fun applySndCrackle(source: SprudelPattern, args: List<SprudelDslArg<Any
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("crackle")) }
     } else {
         source._applyControlFromParams(args, sndCrackleMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -771,7 +781,9 @@ private fun applySndSuperSaw(source: SprudelPattern, args: List<SprudelDslArg<An
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("supersaw")) }
     } else {
         source._applyControlFromParams(args, sndSuperSawMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -841,7 +853,9 @@ private fun applySndSuperSine(source: SprudelPattern, args: List<SprudelDslArg<A
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("supersine")) }
     } else {
         source._applyControlFromParams(args, sndSuperSineMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -911,7 +925,9 @@ private fun applySndSuperSquare(source: SprudelPattern, args: List<SprudelDslArg
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("supersquare")) }
     } else {
         source._applyControlFromParams(args, sndSuperSquareMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -981,7 +997,9 @@ private fun applySndSuperTri(source: SprudelPattern, args: List<SprudelDslArg<An
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("supertri")) }
     } else {
         source._applyControlFromParams(args, sndSuperTriMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }
@@ -1051,7 +1069,9 @@ private fun applySndSuperRamp(source: SprudelPattern, args: List<SprudelDslArg<A
         source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("superramp")) }
     } else {
         source._applyControlFromParams(args, sndSuperRampMutation) { src, ctrl ->
-            src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
         }
     }
 }

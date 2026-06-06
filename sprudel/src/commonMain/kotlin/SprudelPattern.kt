@@ -984,10 +984,11 @@ fun SprudelPattern._liftData(
         // For each control event, we map the source pattern
         this@_liftData.mapEvents { sourceEvent ->
 
-            // MERGE: control data overrides source data (where not null)
-            val mergedData = sourceEvent.data.merge(controlEvent.data)
+            // MERGE: control data overrides source data (where not null). sourceEvent.data is a
+            // single-owner leaf clone, so merge in place instead of allocating a new instance.
+            sourceEvent.data.mergeFrom(controlEvent.data)
 
-            sourceEvent.copy(data = mergedData)
+            sourceEvent.copy(data = sourceEvent.data)
         }
     }
 

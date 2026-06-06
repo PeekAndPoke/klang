@@ -16,7 +16,8 @@ private val engineMutation = voiceSetter { name -> engine = name?.toString()?.lo
 
 private fun applyEngine(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, engineMutation) { src, ctrl ->
-        src.copy(engine = ctrl.engine)
+        src.engine = ctrl.engine
+        src
     }
 }
 

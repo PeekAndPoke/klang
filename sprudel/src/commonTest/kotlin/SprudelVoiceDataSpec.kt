@@ -28,40 +28,25 @@ class SprudelVoiceDataSpec : StringSpec({
     "clone() copies every field (guards the hand-written clone against dropped/swapped fields)" {
         // Every field set to a distinct non-default value. clone() must reproduce all of them; a
         // dropped field would clone to null and a swap would mismatch — either fails data-class equals.
-        val populated = createSprudelVoiceData(
-            note = "n", freqHz = 1.0, scale = "s", chord = "c",
-            gain = 2.0, legato = 3.0, velocity = 4.0, postGain = 5.0,
-            bank = "b", sound = SoundValue.Named("snd"), soundIndex = 6, oscParams = mapOf("k" to 7.0),
-            attack = 8.0, decay = 9.0, sustain = 10.0, release = 11.0,
-            attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
-            accelerate = 12.0, vibrato = 13.0, vibratoMod = 14.0,
-            pAttack = 15.0, pDecay = 16.0, pRelease = 17.0, pEnv = 18.0, pCurve = 19.0, pAnchor = 20.0,
-            fmh = 21.0, fmAttack = 22.0, fmDecay = 23.0, fmSustain = 24.0, fmEnv = 25.0,
-            distort = 26.0, distortShape = "ds", distortOversample = 27,
-            coarse = 28.0, coarseOversample = 29, crush = 30.0, crushOversample = 31,
-            phaserRate = 32.0, phaserDepth = 33.0, phaserCenter = 34.0, phaserSweep = 35.0,
-            tremoloSync = 36.0, tremoloDepth = 37.0, tremoloSkew = 38.0, tremoloPhase = 39.0, tremoloShape = "ts",
-            duckCylinder = 40, duckAttack = 41.0, duckDepth = 42.0,
-            cutoff = 43.0, resonance = 44.0, hcutoff = 45.0, hresonance = 46.0,
-            bandf = 47.0, bandq = 48.0, notchf = 49.0, nresonance = 50.0,
-            lpattack = 51.0, lpdecay = 52.0, lpsustain = 53.0, lprelease = 54.0, lpenv = 55.0,
-            hpattack = 56.0, hpdecay = 57.0, hpsustain = 58.0, hprelease = 59.0, hpenv = 60.0,
-            bpattack = 61.0, bpdecay = 62.0, bpsustain = 63.0, bprelease = 64.0, bpenv = 65.0,
-            nfattack = 66.0, nfdecay = 67.0, nfsustain = 68.0, nfrelease = 69.0, nfenv = 70.0,
-            cylinder = 71, pan = 72.0,
-            delay = 73.0, delayTime = 74.0, delayFeedback = 75.0,
-            room = 76.0, roomSize = 77.0, roomFade = 78.0, roomLp = 79.0, roomDim = 80.0,
-            iResponse = "ir",
-            begin = 81.0, end = 82.0, speed = 83.0, unit = "u", loop = true, cut = 84,
-            loopBegin = 85.0, loopEnd = 86.0,
-            vowel = "v", compressor = "comp", solo = 88.0, patternId = "pid", engine = "eng",
-            value = SprudelVoiceValue.Num(87.0),
-        )
+        val populated = populatedVoiceData(0)
 
         val cloned = populated.clone()
 
         cloned shouldBe populated
         (cloned === populated) shouldBe false
+    }
+
+    "mergeFrom() matches merge() (guards the in-place merge against the copy-based merge)" {
+        // Two fully-populated instances with distinct values. With every field of `b` non-null, the
+        // copy-based merge() takes all of b's values (patternId stays a's). mergeFrom() must reproduce
+        // that exactly — a dropped/wrong field would diverge from the merge() oracle.
+        val a = populatedVoiceData(0)
+        val b = populatedVoiceData(1000)
+
+        val viaMerge = a.merge(b)
+        val viaMergeFrom = a.clone().also { it.mergeFrom(b) }
+
+        viaMergeFrom shouldBe viaMerge
     }
 
     "can create SprudelVoiceData with basic fields" {
@@ -328,3 +313,43 @@ class SprudelVoiceDataSpec : StringSpec({
         modified.freqHz shouldBe 440.0
     }
 })
+
+/**
+ * Builds a [SprudelVoiceData] with EVERY field set to a distinct non-null value, offset by [seed] so
+ * two instances can be made fully distinct. Used to guard `clone()` and `mergeFrom()` completeness:
+ * every field is exercised, so a dropped or swapped field fails data-class equality.
+ */
+private fun populatedVoiceData(seed: Int): SprudelVoiceData {
+    val b = seed.toDouble()
+    return createSprudelVoiceData(
+        note = "note$seed", freqHz = b + 1, scale = "scale$seed", chord = "chord$seed",
+        gain = b + 2, legato = b + 3, velocity = b + 4, postGain = b + 5,
+        bank = "bank$seed", sound = SoundValue.Named("snd$seed"), soundIndex = seed + 6,
+        oscParams = mapOf("k$seed" to b + 7),
+        attack = b + 8, decay = b + 9, sustain = b + 10, release = b + 11,
+        attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
+        accelerate = b + 12, vibrato = b + 13, vibratoMod = b + 14,
+        pAttack = b + 15, pDecay = b + 16, pRelease = b + 17, pEnv = b + 18, pCurve = b + 19, pAnchor = b + 20,
+        fmh = b + 21, fmAttack = b + 22, fmDecay = b + 23, fmSustain = b + 24, fmEnv = b + 25,
+        distort = b + 26, distortShape = "ds$seed", distortOversample = seed + 27,
+        coarse = b + 28, coarseOversample = seed + 29, crush = b + 30, crushOversample = seed + 31,
+        phaserRate = b + 32, phaserDepth = b + 33, phaserCenter = b + 34, phaserSweep = b + 35,
+        tremoloSync = b + 36, tremoloDepth = b + 37, tremoloSkew = b + 38, tremoloPhase = b + 39,
+        tremoloShape = "ts$seed",
+        duckCylinder = seed + 40, duckAttack = b + 41, duckDepth = b + 42,
+        cutoff = b + 43, resonance = b + 44, hcutoff = b + 45, hresonance = b + 46,
+        bandf = b + 47, bandq = b + 48, notchf = b + 49, nresonance = b + 50,
+        lpattack = b + 51, lpdecay = b + 52, lpsustain = b + 53, lprelease = b + 54, lpenv = b + 55,
+        hpattack = b + 56, hpdecay = b + 57, hpsustain = b + 58, hprelease = b + 59, hpenv = b + 60,
+        bpattack = b + 61, bpdecay = b + 62, bpsustain = b + 63, bprelease = b + 64, bpenv = b + 65,
+        nfattack = b + 66, nfdecay = b + 67, nfsustain = b + 68, nfrelease = b + 69, nfenv = b + 70,
+        cylinder = seed + 71, pan = b + 72,
+        delay = b + 73, delayTime = b + 74, delayFeedback = b + 75,
+        room = b + 76, roomSize = b + 77, roomFade = b + 78, roomLp = b + 79, roomDim = b + 80,
+        iResponse = "ir$seed",
+        begin = b + 81, end = b + 82, speed = b + 83, unit = "u$seed", loop = true, cut = seed + 84,
+        loopBegin = b + 85, loopEnd = b + 86,
+        vowel = "v$seed", compressor = "comp$seed", solo = b + 88, patternId = "pid$seed", engine = "eng$seed",
+        value = SprudelVoiceValue.Num(b + 87),
+    )
+}

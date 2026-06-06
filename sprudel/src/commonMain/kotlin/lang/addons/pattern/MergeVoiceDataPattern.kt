@@ -36,9 +36,11 @@ internal class MergePattern(
 
             val toAdd = when (val ctrlEvt = control.sampleAt(sampleTime, ctx)) {
                 null -> srcEvt
-                else -> srcEvt.copy(
-                    data = srcEvt.data.merge(ctrlEvt.data),
-                ).prependLocations(ctrlEvt.sourceLocations)
+                else -> {
+                    // srcEvt.data is a single-owner leaf clone — merge in place, no allocation.
+                    srcEvt.data.mergeFrom(ctrlEvt.data)
+                    srcEvt.copy(data = srcEvt.data).prependLocations(ctrlEvt.sourceLocations)
+                }
             }
 
             result.add(toAdd)

@@ -212,13 +212,12 @@ private fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
             // form. Re-running the mutation on ctrl.note would lose those fields, so merge
             // them in directly (mirrors applySound).
             if (ctrl.note != null || ctrl.freqHz != null) {
-                src.copy(
-                    note = ctrl.note ?: src.note,
-                    freqHz = ctrl.freqHz ?: src.freqHz,
-                    soundIndex = ctrl.soundIndex ?: src.soundIndex,
-                    gain = ctrl.gain ?: src.gain,
-                    value = null,
-                )
+                src.note = ctrl.note ?: src.note
+                src.freqHz = ctrl.freqHz ?: src.freqHz
+                src.soundIndex = ctrl.soundIndex ?: src.soundIndex
+                src.gain = ctrl.gain ?: src.gain
+                src.value = null
+                src
             } else {
                 // Fallback: ctrl wasn't parsed (e.g. raw value pattern) — interpret its
                 // value as the note name and run the parser on it.
@@ -362,10 +361,9 @@ private fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
         }
     } else {
         source._applyControlFromParams(args, soundMutation) { src, ctrl ->
-            src.copy(
-                sound = ctrl.sound ?: src.sound,
-                soundIndex = ctrl.soundIndex ?: src.soundIndex,
-            )
+            src.sound = ctrl.sound ?: src.sound
+            src.soundIndex = ctrl.soundIndex ?: src.soundIndex
+            src
         }
     }
 }

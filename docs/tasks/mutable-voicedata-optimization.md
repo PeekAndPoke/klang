@@ -190,10 +190,12 @@ Corrected profile showed the remaining query-path cost is dominated by **`clone(
 (the per-emission leaf clones, `clone() = copy()` routing through `copy$default`) plus the combiner
 `src.copy(...)` calls — not the pattern logic. Plan: `docs` / `~/.claude/plans/gleaming-inventing-gosling.md`.
 
-**Part 1 — faster `clone()` (DONE, 2026-06-06).** Replaced `clone() = copy()` with an explicit
-105-field primary-constructor call (bypasses the `copy$default` bitmask wrapper). Guarded by a new
-`SprudelVoiceDataSpec` test that clones a fully-populated instance and asserts data-class equality
-(catches any dropped/swapped field).
+**Part 1 — faster `clone()` (TRIED, REVERTED).** Hand-wrote `clone()` as an explicit 105-field
+constructor call to bypass `copy$default`. Profiling showed **no improvement** (slightly worse — the
+105-arg constructor call is as costly as `copy$default`). Reverted to `clone() = copy()`. Kept the
+`SprudelVoiceDataSpec` "clone copies every field" guard test (now also guards via `populatedVoiceData`).
+Takeaway: `clone()`/`copy()` is at the floor for a 105-field object; the only way to reduce it is
+**fewer clones** (deferred fast-path) or a **faster native copy** (see fastCopy note below).
 
 **Hardening — no-default constructor + `createSprudelVoiceData()` factory (DONE, 2026-06-06).**
 Per user: removed the `= null` defaults from all 105 constructor params, and added a **top-level**
@@ -205,18 +207,37 @@ added, so a field can never be silently dropped from `clone()`. All ~149 partial
 (simple rename; factory has matching default params) and given the factory import. Verified: golden green,
 full `:sprudel:jvmTest` green, app compiles JVM+JS.
 
-**Part 2 — in-place combiners (NOT started).** Convert the ~34 `_applyControlFromParams { src, ctrl ->
-src.copy(field = ctrl.field ?: src.field) }` to mutate `src` in place + return it. (`n`/`chord` combiners
-already in-place; `_liftNumericField` already in-place; leave event-timing `copy(part/whole)` alone.)
+**Part 2 — in-place combiners (DONE, 2026-06-06).** Converted all 35 `_applyControlFromParams { src, ctrl ->
+src.copy(field = ctrl.field ?: src.field) }` to mutate `src` in place + return it
+(`lang_filters`/`lang_effects`/`lang_dynamics`/`lang_engine`/`lang_tonal` + `effects_addons`/`filters_addons`).
+`n`/`chord` were already in-place; `_liftNumericField` already in-place; event-timing `copy(part/whole)`
+left alone.
 
-**Part 3 — in-place `merge()` (NOT started).** Add `mergeFrom(other)` (in-place) + `putOscParamsFrom`,
-convert the 2 `merge()` sites (`SprudelPattern.kt:988`, `MergeVoiceDataPattern.kt:40`) and the `snd_*`
-`mergeOscParamsFrom` combiners.
+**Part 3 — in-place `merge()` (DONE, 2026-06-06).** Added `mergeFrom(other)` (in-place, mirrors `merge()`,
+preserves `patternId`) + `putOscParamsFrom`. Converted the 2 `merge()` sites (`SprudelPattern.kt` `_liftData`,
+`MergeVoiceDataPattern.kt`) and the 10 `snd_*` combiners (`src.copy(sound=…).mergeOscParamsFrom` →
+`src.sound = …; src.putOscParamsFrom(ctrl); src`). `merge()` kept as the oracle for a new
+`mergeFrom`-vs-`merge` guard test in `SprudelVoiceDataSpec` (mergeFrom isn't covered by the golden corpus).
 
-Then: user re-profiles *Der Schmetterling* (expect `copy$default`/`copy`/`clone` + Minor GC to drop).
+**Verified:** golden green after every file, full `:sprudel:jvmTest` green, app compiles JVM+JS.
 
-**Deferred follow-up:** constant-control fast-path to cut clone COUNT (skip building+sampling+cloning a
-control atom for constant scalar args like `gain(0.5)`). Bigger/riskier; revisit after measuring.
+Then: user re-profiles *Der Schmetterling* (expect `copy$default`/`copy` + Minor GC to drop from the
+combiner/merge side; `clone()` leaf cost unchanged — see fastCopy/fast-path below).
+
+**Deferred follow-ups (for the remaining `clone()`/`new` cost — the dominant per-event item):**
+
+- **Native `fastCopy` for `clone()` on JS.** `clone()=copy()` reads 105 Kotlin properties + constructs;
+  a JS-native `Object.assign(Object.create(Object.getPrototypeOf(this)), this)` replaces that with one
+  native copy loop while preserving the prototype (methods/`is`/equals intact). Make `clone()` an
+  `expect/actual`: JVM = `copy()`, JS = the native hack. Guarded by the existing clone-all-fields test +
+  golden. Caveats: verify Kotlin/JS IR stores `var` fields as own enumerable props (it does for plain data
+  classes — no lazy/delegated props here); shallow (same as copy). Likely the biggest single win for the
+  per-event leaf clones.
+- **Constant-control fast-path to cut clone COUNT.** Skip building+sampling+cloning a control atom for
+  constant scalar args (`gain(0.5)`, `lpf(1625)`); apply directly. Bigger/riskier change to the lift/control
+  helpers.
+- **Not worth it:** a `blueprint.clone().apply{}` config-factory — profiling showed `createSprudelVoiceData`
+  is only ~0.8% / 0.5 ms, and it doesn't touch `clone()`.
 
 ---
 

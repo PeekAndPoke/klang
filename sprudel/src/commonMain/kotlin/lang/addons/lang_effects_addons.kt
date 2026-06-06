@@ -29,13 +29,12 @@ private val reverbMutation = voiceSetter {
 
 private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, reverbMutation) { src, ctrl ->
-        src.copy(
-            room = ctrl.room ?: src.room,
-            roomSize = ctrl.roomSize ?: src.roomSize,
-            roomFade = ctrl.roomFade ?: src.roomFade,
-            roomLp = ctrl.roomLp ?: src.roomLp,
-            roomDim = ctrl.roomDim ?: src.roomDim,
-        )
+        src.room = ctrl.room ?: src.room
+        src.roomSize = ctrl.roomSize ?: src.roomSize
+        src.roomFade = ctrl.roomFade ?: src.roomFade
+        src.roomLp = ctrl.roomLp ?: src.roomLp
+        src.roomDim = ctrl.roomDim ?: src.roomDim
+        src
     }
 }
 
@@ -150,12 +149,11 @@ private val lpadsrMutation = voiceSetter {
 
 private fun applyLpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, lpadsrMutation) { src, ctrl ->
-        src.copy(
-            lpattack = ctrl.lpattack ?: src.lpattack,
-            lpdecay = ctrl.lpdecay ?: src.lpdecay,
-            lpsustain = ctrl.lpsustain ?: src.lpsustain,
-            lprelease = ctrl.lprelease ?: src.lprelease,
-        )
+        src.lpattack = ctrl.lpattack ?: src.lpattack
+        src.lpdecay = ctrl.lpdecay ?: src.lpdecay
+        src.lpsustain = ctrl.lpsustain ?: src.lpsustain
+        src.lprelease = ctrl.lprelease ?: src.lprelease
+        src
     }
 }
 
@@ -239,12 +237,11 @@ private val hpadsrMutation = voiceSetter {
 
 private fun applyHpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, hpadsrMutation) { src, ctrl ->
-        src.copy(
-            hpattack = ctrl.hpattack ?: src.hpattack,
-            hpdecay = ctrl.hpdecay ?: src.hpdecay,
-            hpsustain = ctrl.hpsustain ?: src.hpsustain,
-            hprelease = ctrl.hprelease ?: src.hprelease,
-        )
+        src.hpattack = ctrl.hpattack ?: src.hpattack
+        src.hpdecay = ctrl.hpdecay ?: src.hpdecay
+        src.hpsustain = ctrl.hpsustain ?: src.hpsustain
+        src.hprelease = ctrl.hprelease ?: src.hprelease
+        src
     }
 }
 
@@ -328,12 +325,11 @@ private val bpadsrMutation = voiceSetter {
 
 private fun applyBpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, bpadsrMutation) { src, ctrl ->
-        src.copy(
-            bpattack = ctrl.bpattack ?: src.bpattack,
-            bpdecay = ctrl.bpdecay ?: src.bpdecay,
-            bpsustain = ctrl.bpsustain ?: src.bpsustain,
-            bprelease = ctrl.bprelease ?: src.bprelease,
-        )
+        src.bpattack = ctrl.bpattack ?: src.bpattack
+        src.bpdecay = ctrl.bpdecay ?: src.bpdecay
+        src.bpsustain = ctrl.bpsustain ?: src.bpsustain
+        src.bprelease = ctrl.bprelease ?: src.bprelease
+        src
     }
 }
 
@@ -417,13 +413,12 @@ private val tremoloMutation = voiceSetter {
 
 private fun applyTremolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, tremoloMutation) { src, ctrl ->
-        src.copy(
-            tremoloDepth = ctrl.tremoloDepth ?: src.tremoloDepth,
-            tremoloSync = ctrl.tremoloSync ?: src.tremoloSync,
-            tremoloShape = ctrl.tremoloShape ?: src.tremoloShape,
-            tremoloSkew = ctrl.tremoloSkew ?: src.tremoloSkew,
-            tremoloPhase = ctrl.tremoloPhase ?: src.tremoloPhase,
-        )
+        src.tremoloDepth = ctrl.tremoloDepth ?: src.tremoloDepth
+        src.tremoloSync = ctrl.tremoloSync ?: src.tremoloSync
+        src.tremoloShape = ctrl.tremoloShape ?: src.tremoloShape
+        src.tremoloSkew = ctrl.tremoloSkew ?: src.tremoloSkew
+        src.tremoloPhase = ctrl.tremoloPhase ?: src.tremoloPhase
+        src
     }
 }
 
@@ -530,12 +525,11 @@ private val nfadsrMutation = voiceSetter {
 
 private fun applyNfadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, nfadsrMutation) { src, ctrl ->
-        src.copy(
-            nfattack = ctrl.nfattack ?: src.nfattack,
-            nfdecay = ctrl.nfdecay ?: src.nfdecay,
-            nfsustain = ctrl.nfsustain ?: src.nfsustain,
-            nfrelease = ctrl.nfrelease ?: src.nfrelease,
-        )
+        src.nfattack = ctrl.nfattack ?: src.nfattack
+        src.nfdecay = ctrl.nfdecay ?: src.nfdecay
+        src.nfsustain = ctrl.nfsustain ?: src.nfsustain
+        src.nfrelease = ctrl.nfrelease ?: src.nfrelease
+        src
     }
 }
 

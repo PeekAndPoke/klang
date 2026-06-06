@@ -1222,12 +1222,11 @@ private val adsrMutation = voiceSetter {
 
 private fun applyAdsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, adsrMutation) { src, ctrl ->
-        src.copy(
-            attack = ctrl.attack ?: src.attack,
-            decay = ctrl.decay ?: src.decay,
-            sustain = ctrl.sustain ?: src.sustain,
-            release = ctrl.release ?: src.release,
-        )
+        src.attack = ctrl.attack ?: src.attack
+        src.decay = ctrl.decay ?: src.decay
+        src.sustain = ctrl.sustain ?: src.sustain
+        src.release = ctrl.release ?: src.release
+        src
     }
 }
 
@@ -1310,11 +1309,10 @@ private val adsrCurvesMutation = voiceSetter {
 
 private fun applyAdsrCurves(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, adsrCurvesMutation) { src, ctrl ->
-        src.copy(
-            attackCurve = ctrl.attackCurve ?: src.attackCurve,
-            decayCurve = ctrl.decayCurve ?: src.decayCurve,
-            releaseCurve = ctrl.releaseCurve ?: src.releaseCurve,
-        )
+        src.attackCurve = ctrl.attackCurve ?: src.attackCurve
+        src.decayCurve = ctrl.decayCurve ?: src.decayCurve
+        src.releaseCurve = ctrl.releaseCurve ?: src.releaseCurve
+        src
     }
 }
 
@@ -1329,11 +1327,10 @@ private val adsrCurveMutation = voiceSetter {
 
 private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, adsrCurveMutation) { src, ctrl ->
-        src.copy(
-            attackCurve = ctrl.attackCurve ?: src.attackCurve,
-            decayCurve = ctrl.decayCurve ?: src.decayCurve,
-            releaseCurve = ctrl.releaseCurve ?: src.releaseCurve,
-        )
+        src.attackCurve = ctrl.attackCurve ?: src.attackCurve
+        src.decayCurve = ctrl.decayCurve ?: src.decayCurve
+        src.releaseCurve = ctrl.releaseCurve ?: src.releaseCurve
+        src
     }
 }
 

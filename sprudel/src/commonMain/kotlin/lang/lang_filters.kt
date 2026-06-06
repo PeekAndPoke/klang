@@ -27,11 +27,10 @@ private fun applyLpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, lpfMutation) { src, ctrl ->
-            src.copy(
-                cutoff = ctrl.cutoff ?: src.cutoff,
-                resonance = ctrl.resonance ?: src.resonance,
-                lpenv = ctrl.lpenv ?: src.lpenv,
-            )
+            src.cutoff = ctrl.cutoff ?: src.cutoff
+            src.resonance = ctrl.resonance ?: src.resonance
+            src.lpenv = ctrl.lpenv ?: src.lpenv
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, lpfMutation)
@@ -385,11 +384,10 @@ private fun applyHpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, hpfMutation) { src, ctrl ->
-            src.copy(
-                hcutoff = ctrl.hcutoff ?: src.hcutoff,
-                hresonance = ctrl.hresonance ?: src.hresonance,
-                hpenv = ctrl.hpenv ?: src.hpenv,
-            )
+            src.hcutoff = ctrl.hcutoff ?: src.hcutoff
+            src.hresonance = ctrl.hresonance ?: src.hresonance
+            src.hpenv = ctrl.hpenv ?: src.hpenv
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, hpfMutation)
@@ -658,11 +656,10 @@ private fun applyBandf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, bandfMutation) { src, ctrl ->
-            src.copy(
-                bandf = ctrl.bandf ?: src.bandf,
-                bandq = ctrl.bandq ?: src.bandq,
-                bpenv = ctrl.bpenv ?: src.bpenv,
-            )
+            src.bandf = ctrl.bandf ?: src.bandf
+            src.bandq = ctrl.bandq ?: src.bandq
+            src.bpenv = ctrl.bpenv ?: src.bpenv
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, bandfMutation)

@@ -28,11 +28,10 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, distortMutation) { src, ctrl ->
-            src.copy(
-                distort = ctrl.distort ?: src.distort,
-                distortShape = ctrl.distortShape ?: src.distortShape,
-                distortOversample = ctrl.distortOversample ?: src.distortOversample,
-            )
+            src.distort = ctrl.distort ?: src.distort
+            src.distortShape = ctrl.distortShape ?: src.distortShape
+            src.distortOversample = ctrl.distortOversample ?: src.distortOversample
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, distortMutation)
@@ -359,7 +358,8 @@ private val distortShapeMutation = voiceSetter { shape -> distortShape = shape?.
 
 private fun applyDistortShape(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, distortShapeMutation) { src, ctrl ->
-        src.copy(distortShape = ctrl.distortShape)
+        src.distortShape = ctrl.distortShape
+        src
     }
 }
 
@@ -932,13 +932,12 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     }
 
     return source._applyControlFromParams(args, roomMutation) { src, ctrl ->
-        src.copy(
-            room = ctrl.room ?: src.room,
-            roomSize = ctrl.roomSize ?: src.roomSize,
-            roomFade = ctrl.roomFade ?: src.roomFade,
-            roomLp = ctrl.roomLp ?: src.roomLp,
-            roomDim = ctrl.roomDim ?: src.roomDim,
-        )
+        src.room = ctrl.room ?: src.room
+        src.roomSize = ctrl.roomSize ?: src.roomSize
+        src.roomFade = ctrl.roomFade ?: src.roomFade
+        src.roomLp = ctrl.roomLp ?: src.roomLp
+        src.roomDim = ctrl.roomDim ?: src.roomDim
+        src
     }
 }
 
@@ -1864,7 +1863,8 @@ private val iResponseMutation = voiceSetter { response -> iResponse = response?.
 
 private fun applyIResponse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, iResponseMutation) { src, ctrl ->
-        src.copy(iResponse = ctrl.iResponse)
+        src.iResponse = ctrl.iResponse
+        src
     }
 }
 
@@ -2034,11 +2034,10 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, delayMutation) { src, ctrl ->
-            src.copy(
-                delay = ctrl.delay ?: src.delay,
-                delayTime = ctrl.delayTime ?: src.delayTime,
-                delayFeedback = ctrl.delayFeedback ?: src.delayFeedback,
-            )
+            src.delay = ctrl.delay ?: src.delay
+            src.delayTime = ctrl.delayTime ?: src.delayTime
+            src.delayFeedback = ctrl.delayFeedback ?: src.delayFeedback
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, delayMutation)
@@ -2509,12 +2508,11 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, phaserMutation) { src, ctrl ->
-            src.copy(
-                phaserRate = ctrl.phaserRate ?: src.phaserRate,
-                phaserDepth = ctrl.phaserDepth ?: src.phaserDepth,
-                phaserCenter = ctrl.phaserCenter ?: src.phaserCenter,
-                phaserSweep = ctrl.phaserSweep ?: src.phaserSweep,
-            )
+            src.phaserRate = ctrl.phaserRate ?: src.phaserRate
+            src.phaserDepth = ctrl.phaserDepth ?: src.phaserDepth
+            src.phaserCenter = ctrl.phaserCenter ?: src.phaserCenter
+            src.phaserSweep = ctrl.phaserSweep ?: src.phaserSweep
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, phaserMutation)
@@ -4021,7 +4019,8 @@ private val tremoloShapeMutation = voiceSetter { shape -> tremoloShape = shape?.
 
 private fun applyTremoloShape(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, tremoloShapeMutation) { src, ctrl ->
-        src.copy(tremoloShape = ctrl.tremoloShape)
+        src.tremoloShape = ctrl.tremoloShape
+        src
     }
 }
 

@@ -34,11 +34,10 @@ private fun applyNotchf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, notchfMutation) { src, ctrl ->
-            src.copy(
-                notchf = ctrl.notchf ?: src.notchf,
-                nresonance = ctrl.nresonance ?: src.nresonance,
-                nfenv = ctrl.nfenv ?: src.nfenv,
-            )
+            src.notchf = ctrl.notchf ?: src.notchf
+            src.nresonance = ctrl.nresonance ?: src.nresonance
+            src.nfenv = ctrl.nfenv ?: src.nfenv
+            src
         }
     } else {
         source._liftOrReinterpretNumericalField(args, notchfMutation)

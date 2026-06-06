@@ -386,6 +386,120 @@ data class SprudelVoiceData(
         )
     }
 
+    /**
+     * In-place counterpart of [merge]: folds [other]'s non-null fields into this instance (other wins),
+     * mutating it rather than allocating. `patternId` is preserved (never taken from other), matching
+     * [merge]. Only safe on a single-owner instance (see [clone]). Guarded against drift from [merge] by
+     * `SprudelVoiceDataSpec`.
+     */
+    fun mergeFrom(other: SprudelVoiceData) {
+        note = other.note ?: note
+        freqHz = other.freqHz ?: freqHz
+        scale = other.scale ?: scale
+        chord = other.chord ?: chord
+        gain = other.gain ?: gain
+        legato = other.legato ?: legato
+        velocity = other.velocity ?: velocity
+        postGain = other.postGain ?: postGain
+        bank = other.bank ?: bank
+        sound = other.sound ?: sound
+        soundIndex = other.soundIndex ?: soundIndex
+        oscParams = mergeOscParams(oscParams, other.oscParams)
+        attack = other.attack ?: attack
+        decay = other.decay ?: decay
+        sustain = other.sustain ?: sustain
+        release = other.release ?: release
+        attackCurve = other.attackCurve ?: attackCurve
+        decayCurve = other.decayCurve ?: decayCurve
+        releaseCurve = other.releaseCurve ?: releaseCurve
+        accelerate = other.accelerate ?: accelerate
+        vibrato = other.vibrato ?: vibrato
+        vibratoMod = other.vibratoMod ?: vibratoMod
+        pAttack = other.pAttack ?: pAttack
+        pDecay = other.pDecay ?: pDecay
+        pRelease = other.pRelease ?: pRelease
+        pEnv = other.pEnv ?: pEnv
+        pCurve = other.pCurve ?: pCurve
+        pAnchor = other.pAnchor ?: pAnchor
+        fmh = other.fmh ?: fmh
+        fmAttack = other.fmAttack ?: fmAttack
+        fmDecay = other.fmDecay ?: fmDecay
+        fmSustain = other.fmSustain ?: fmSustain
+        fmEnv = other.fmEnv ?: fmEnv
+        distort = other.distort ?: distort
+        distortShape = other.distortShape ?: distortShape
+        distortOversample = other.distortOversample ?: distortOversample
+        coarse = other.coarse ?: coarse
+        coarseOversample = other.coarseOversample ?: coarseOversample
+        crush = other.crush ?: crush
+        crushOversample = other.crushOversample ?: crushOversample
+        phaserRate = other.phaserRate ?: phaserRate
+        phaserDepth = other.phaserDepth ?: phaserDepth
+        phaserCenter = other.phaserCenter ?: phaserCenter
+        phaserSweep = other.phaserSweep ?: phaserSweep
+        tremoloSync = other.tremoloSync ?: tremoloSync
+        tremoloDepth = other.tremoloDepth ?: tremoloDepth
+        tremoloSkew = other.tremoloSkew ?: tremoloSkew
+        tremoloPhase = other.tremoloPhase ?: tremoloPhase
+        tremoloShape = other.tremoloShape ?: tremoloShape
+        duckCylinder = other.duckCylinder ?: duckCylinder
+        duckAttack = other.duckAttack ?: duckAttack
+        duckDepth = other.duckDepth ?: duckDepth
+        cutoff = other.cutoff ?: cutoff
+        resonance = other.resonance ?: resonance
+        hcutoff = other.hcutoff ?: hcutoff
+        hresonance = other.hresonance ?: hresonance
+        bandf = other.bandf ?: bandf
+        bandq = other.bandq ?: bandq
+        notchf = other.notchf ?: notchf
+        nresonance = other.nresonance ?: nresonance
+        lpattack = other.lpattack ?: lpattack
+        lpdecay = other.lpdecay ?: lpdecay
+        lpsustain = other.lpsustain ?: lpsustain
+        lprelease = other.lprelease ?: lprelease
+        lpenv = other.lpenv ?: lpenv
+        hpattack = other.hpattack ?: hpattack
+        hpdecay = other.hpdecay ?: hpdecay
+        hpsustain = other.hpsustain ?: hpsustain
+        hprelease = other.hprelease ?: hprelease
+        hpenv = other.hpenv ?: hpenv
+        bpattack = other.bpattack ?: bpattack
+        bpdecay = other.bpdecay ?: bpdecay
+        bpsustain = other.bpsustain ?: bpsustain
+        bprelease = other.bprelease ?: bprelease
+        bpenv = other.bpenv ?: bpenv
+        nfattack = other.nfattack ?: nfattack
+        nfdecay = other.nfdecay ?: nfdecay
+        nfsustain = other.nfsustain ?: nfsustain
+        nfrelease = other.nfrelease ?: nfrelease
+        nfenv = other.nfenv ?: nfenv
+        cylinder = other.cylinder ?: cylinder
+        pan = other.pan ?: pan
+        delay = other.delay ?: delay
+        delayTime = other.delayTime ?: delayTime
+        delayFeedback = other.delayFeedback ?: delayFeedback
+        room = other.room ?: room
+        roomSize = other.roomSize ?: roomSize
+        roomFade = other.roomFade ?: roomFade
+        roomLp = other.roomLp ?: roomLp
+        roomDim = other.roomDim ?: roomDim
+        iResponse = other.iResponse ?: iResponse
+        begin = other.begin ?: begin
+        end = other.end ?: end
+        speed = other.speed ?: speed
+        unit = other.unit ?: unit
+        loop = other.loop ?: loop
+        cut = other.cut ?: cut
+        loopBegin = other.loopBegin ?: loopBegin
+        loopEnd = other.loopEnd ?: loopEnd
+        vowel = other.vowel ?: vowel
+        compressor = other.compressor ?: compressor
+        solo = other.solo ?: solo
+        // patternId intentionally preserved (never taken from other) — matches merge()
+        engine = other.engine ?: engine
+        value = other.value ?: value
+    }
+
     fun isTruthy(): Boolean {
         val noteStr = note ?: ""
         // "0" and "false" strings are false, "~" is false (but usually filtered out before)
@@ -1331,6 +1445,16 @@ fun SprudelVoiceData.mergeOscParamsFrom(other: SprudelVoiceData): SprudelVoiceDa
     val otherParams = other.oscParams
     if (otherParams.isNullOrEmpty()) return this
     return copy(oscParams = (oscParams.orEmpty()) + otherParams)
+}
+
+/**
+ * In-place counterpart of [mergeOscParamsFrom]: folds [other]'s oscParams into this instance.
+ * Only safe on a single-owner instance (see [clone]).
+ */
+fun SprudelVoiceData.putOscParamsFrom(other: SprudelVoiceData) {
+    val otherParams = other.oscParams
+    if (otherParams.isNullOrEmpty()) return
+    oscParams = (oscParams.orEmpty()) + otherParams
 }
 
 /**
