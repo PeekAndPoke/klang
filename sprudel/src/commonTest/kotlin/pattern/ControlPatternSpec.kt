@@ -16,8 +16,8 @@ import io.peekandpoke.klang.sprudel.lang.sine
 class ControlPatternSpec : StringSpec({
 
     "ControlPattern: Direct Instantiation" {
-        val source = AtomicPattern(createSprudelVoiceData(note = "c3"))
-        val control = AtomicPattern(createSprudelVoiceData(gain = 0.5))
+        val source = AtomicPattern(createSprudelVoiceData { note = "c3" })
+        val control = AtomicPattern(createSprudelVoiceData { gain = 0.5 })
 
         val pattern = ControlPattern(
             source = source,

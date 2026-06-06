@@ -109,10 +109,11 @@ class LangLpenvSpec : StringSpec({
     }
 
     "lpenv() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData(
-            cutoff = 1000.0,
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
+            cutoff = 1000.0
             lpenv = 0.7
-        )
+
+        }
         val voiceData = data.toVoiceData()
         val lpf = voiceData.filters[0] as FilterDef.LowPass
 

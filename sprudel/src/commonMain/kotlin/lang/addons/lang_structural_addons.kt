@@ -103,7 +103,7 @@ private fun applyMorse(textArg: SprudelDslArg<Any?>?): SprudelPattern {
 
         // "x" is the standard note for rhythm/struct
         return AtomicPattern(
-            data = createSprudelVoiceData(value = SprudelVoiceValue.Num(1.0)),
+            data = createSprudelVoiceData { value = SprudelVoiceValue.Num(1.0) },
             sourceLocations = chain
         )
     }

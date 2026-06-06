@@ -109,10 +109,11 @@ class LangLpsustainSpec : StringSpec({
     }
 
     "lpsustain() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData(
-            cutoff = 1000.0,
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
+            cutoff = 1000.0
             lpsustain = 0.8
-        )
+
+        }
         val voiceData = data.toVoiceData()
         val lpf = voiceData.filters[0] as FilterDef.LowPass
 

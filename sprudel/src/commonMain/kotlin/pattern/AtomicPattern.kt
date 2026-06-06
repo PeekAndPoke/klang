@@ -30,7 +30,7 @@ internal class AtomicPattern(
         /**
          * Creates an AtomicPattern the produces events with the given value set as VoiceValue.
          */
-        fun value(value: Any?) = AtomicPattern(createSprudelVoiceData(value = value?.asVoiceValue()))
+        fun value(value: Any?) = AtomicPattern(createSprudelVoiceData().also { it.value = value?.asVoiceValue() })
     }
 
     override val numSteps: Double = 1.0

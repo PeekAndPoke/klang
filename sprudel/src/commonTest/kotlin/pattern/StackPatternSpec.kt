@@ -13,8 +13,8 @@ import io.peekandpoke.klang.sprudel.lang.stack
 class StackPatternSpec : StringSpec({
 
     "StackPattern: Direct Instantiation" {
-        val p1 = AtomicPattern(createSprudelVoiceData(note = "a"))
-        val p2 = AtomicPattern(createSprudelVoiceData(note = "b"))
+        val p1 = AtomicPattern(createSprudelVoiceData { note = "a" })
+        val p2 = AtomicPattern(createSprudelVoiceData { note = "b" })
         val pattern = StackPattern(listOf(p1, p2))
 
         // We sort by begin in verifyPattern, but notes "a" and "b" both start at 0.0.

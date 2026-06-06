@@ -28,9 +28,9 @@ class ContextRangeMapPatternSpec : StringSpec({
                     SprudelPatternEvent(
                         part = CycleTimeSpan(from, to),
                         whole = CycleTimeSpan(from, to),
-                        data = createSprudelVoiceData(
+                        data = createSprudelVoiceData {
                             value = (min + max).asVoiceValue()
-                        )
+                        }
                     )
                 )
             }

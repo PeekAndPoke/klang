@@ -18,7 +18,7 @@ class SprudelPlaybackLocationTest : StringSpec({
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
-            AtomicPattern(createSprudelVoiceData(note = text), sourceLocations)
+            AtomicPattern(createSprudelVoiceData { note = text }, sourceLocations)
         }
 
         // We can't easily test the full SprudelPlayback without mocking the audio system,
@@ -39,7 +39,7 @@ class SprudelPlaybackLocationTest : StringSpec({
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd hh sd", baseLocation) { text, sourceLocations ->
-            AtomicPattern(createSprudelVoiceData(note = text), sourceLocations)
+            AtomicPattern(createSprudelVoiceData { note = text }, sourceLocations)
         }
 
         val events = pattern.queryArc(0.0, 1.0)
@@ -60,13 +60,13 @@ class SprudelPlaybackLocationTest : StringSpec({
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern1 = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
-            AtomicPattern(createSprudelVoiceData(note = text), sourceLocations)
+            AtomicPattern(createSprudelVoiceData { note = text }, sourceLocations)
         }
 
         val baseLocation2 =
             SourceLocation(source = "test.klang", startLine = 2, startColumn = 5, endLine = 2, endColumn = 7)
         val pattern2 = parseMiniNotation("hh", baseLocation2) { text, sourceLocations ->
-            AtomicPattern(createSprudelVoiceData(note = text), sourceLocations)
+            AtomicPattern(createSprudelVoiceData { note = text }, sourceLocations)
         }
 
         val stacked = io.peekandpoke.klang.sprudel.lang.stack(pattern1, pattern2)
@@ -96,7 +96,7 @@ class SprudelPlaybackLocationTest : StringSpec({
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd(3,8)", baseLocation) { text, sourceLocations ->
-            AtomicPattern(createSprudelVoiceData(note = text), sourceLocations)
+            AtomicPattern(createSprudelVoiceData { note = text }, sourceLocations)
         }
 
         val events = pattern.queryArc(0.0, 1.0)

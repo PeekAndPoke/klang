@@ -20,12 +20,12 @@ class StaticSprudelPatternSpec : StringSpec({
             SprudelPatternEvent(
                 part = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(0.5)),
                 whole = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(0.5)),
-                data = createSprudelVoiceData(note = "a"),
+                data = createSprudelVoiceData { note = "a" },
             ),
             SprudelPatternEvent(
                 part = CycleTimeSpan(CycleTime.ofCycles(0.5), CycleTime.ofCycles(1.0)),
                 whole = CycleTimeSpan(CycleTime.ofCycles(0.5), CycleTime.ofCycles(1.0)),
-                data = createSprudelVoiceData(note = "b"),
+                data = createSprudelVoiceData { note = "b" },
             )
         )
         val pattern = StaticSprudelPattern(events)
@@ -50,7 +50,7 @@ class StaticSprudelPatternSpec : StringSpec({
             SprudelPatternEvent(
                 part = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(1.0)),
                 whole = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(1.0)),
-                data = createSprudelVoiceData(note = "kick"),
+                data = createSprudelVoiceData { note = "kick" },
             )
         )
         val pattern = StaticSprudelPattern(events)

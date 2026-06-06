@@ -52,7 +52,7 @@ class ContinuousPattern private constructor(
             val event = SprudelPatternEvent(
                 part = span,
                 whole = span,
-                data = createSprudelVoiceData(value = value)
+                data = createSprudelVoiceData().also { it.value = value }
             )
 
             result.add(event)

@@ -309,134 +309,134 @@ class GraalSprudelPattern(
             part = part,
             whole = whole ?: part,
             // Voice data
-            data = createSprudelVoiceData(
+            data = createSprudelVoiceData().also {
                 // Frequency and note
-                note = note,
-                scale = scale,
-                chord = chord,
-                freqHz = freq,
+                it.note = note
+                it.scale = scale
+                it.chord = chord
+                it.freqHz = freq
                 // Gain / Dynamics
-                gain = gain,
-                legato = legato,
-                velocity = velocity,
-                postGain = postGain,
+                it.gain = gain
+                it.legato = legato
+                it.velocity = velocity
+                it.postGain = postGain
                 // Sound samples
-                bank = bank,
-                sound = sound?.let(SoundValue::Named),
-                soundIndex = soundIndex,
+                it.bank = bank
+                it.sound = sound?.let(SoundValue::Named)
+                it.soundIndex = soundIndex
                 // Oscillator parameters
-                oscParams = oscParams,
+                it.oscParams = oscParams
                 // ADSR (flat fields)
-                attack = attack,
-                decay = decay,
-                sustain = sustain,
-                release = release,
-                attackCurve = null,
-                decayCurve = null,
-                releaseCurve = null,
+                it.attack = attack
+                it.decay = decay
+                it.sustain = sustain
+                it.release = release
+                it.attackCurve = null
+                it.decayCurve = null
+                it.releaseCurve = null
                 // Pitch / Glisando
-                accelerate = accelerate,
+                it.accelerate = accelerate
                 // Vibrato
-                vibrato = vibrato,
-                vibratoMod = vibratoMod,
+                it.vibrato = vibrato
+                it.vibratoMod = vibratoMod
                 // Pitch envelope
-                pAttack = pAttack,
-                pDecay = pDecay,
-                pRelease = pRelease,
-                pEnv = pEnv,
-                pCurve = pCurve,
-                pAnchor = pAnchor,
+                it.pAttack = pAttack
+                it.pDecay = pDecay
+                it.pRelease = pRelease
+                it.pEnv = pEnv
+                it.pCurve = pCurve
+                it.pAnchor = pAnchor
                 // FM Synthesis
-                fmh = fmh,
-                fmAttack = fmAttack,
-                fmDecay = fmDecay,
-                fmSustain = fmSustain,
-                fmEnv = fmEnv,
+                it.fmh = fmh
+                it.fmAttack = fmAttack
+                it.fmDecay = fmDecay
+                it.fmSustain = fmSustain
+                it.fmEnv = fmEnv
                 // Effects
-                distort = distort,
-                distortShape = null,
-                coarse = coarse,
-                crush = crush,
+                it.distort = distort
+                it.distortShape = null
+                it.coarse = coarse
+                it.crush = crush
                 // Phaser
-                phaserRate = phaserRate,
-                phaserDepth = phaserDepth,
-                phaserCenter = phaserCenter,
-                phaserSweep = phaserSweep,
+                it.phaserRate = phaserRate
+                it.phaserDepth = phaserDepth
+                it.phaserCenter = phaserCenter
+                it.phaserSweep = phaserSweep
                 // Tremolo
-                tremoloSync = tremoloSync,
-                tremoloDepth = tremoloDepth,
-                tremoloSkew = tremoloSkew,
-                tremoloPhase = tremoloPhase,
-                tremoloShape = tremoloShape,
+                it.tremoloSync = tremoloSync
+                it.tremoloDepth = tremoloDepth
+                it.tremoloSkew = tremoloSkew
+                it.tremoloPhase = tremoloPhase
+                it.tremoloShape = tremoloShape
                 // Ducking / Sidechain
-                duckCylinder = duckOrbit,
-                duckAttack = duckAttack,
-                duckDepth = duckDepth,
+                it.duckCylinder = duckOrbit
+                it.duckAttack = duckAttack
+                it.duckDepth = duckDepth
                 // Filters (flat fields) - each filter has its own resonance
-                cutoff = cutoff,
-                resonance = resonance,
-                hcutoff = hcutoff,
-                hresonance = hresonance,
-                bandf = bandf,
-                bandq = bandq,
-                notchf = notchf,
-                nresonance = nresonance,
+                it.cutoff = cutoff
+                it.resonance = resonance
+                it.hcutoff = hcutoff
+                it.hresonance = hresonance
+                it.bandf = bandf
+                it.bandq = bandq
+                it.notchf = notchf
+                it.nresonance = nresonance
                 // Lowpass filter envelope
-                lpattack = lpattack,
-                lpdecay = lpdecay,
-                lpsustain = lpsustain,
-                lprelease = lprelease,
-                lpenv = lpenv,
+                it.lpattack = lpattack
+                it.lpdecay = lpdecay
+                it.lpsustain = lpsustain
+                it.lprelease = lprelease
+                it.lpenv = lpenv
                 // Highpass filter envelope
-                hpattack = hpattack,
-                hpdecay = hpdecay,
-                hpsustain = hpsustain,
-                hprelease = hprelease,
-                hpenv = hpenv,
+                it.hpattack = hpattack
+                it.hpdecay = hpdecay
+                it.hpsustain = hpsustain
+                it.hprelease = hprelease
+                it.hpenv = hpenv
                 // Bandpass filter envelope
-                bpattack = bpattack,
-                bpdecay = bpdecay,
-                bpsustain = bpsustain,
-                bprelease = bprelease,
-                bpenv = bpenv,
+                it.bpattack = bpattack
+                it.bpdecay = bpdecay
+                it.bpsustain = bpsustain
+                it.bprelease = bprelease
+                it.bpenv = bpenv
                 // Notch filter envelope (not in original Strudel JS implementation)
-                nfattack = nfattack,
-                nfdecay = nfdecay,
-                nfsustain = nfsustain,
-                nfrelease = nfrelease,
-                nfenv = nfenv,
+                it.nfattack = nfattack
+                it.nfdecay = nfdecay
+                it.nfsustain = nfsustain
+                it.nfrelease = nfrelease
+                it.nfenv = nfenv
                 // Routing
-                cylinder = orbit,
+                it.cylinder = orbit
                 // Pan
-                pan = pan,
+                it.pan = pan
                 // Delay
-                delay = delay,
-                delayTime = delayTime,
-                delayFeedback = delayFeedback,
+                it.delay = delay
+                it.delayTime = delayTime
+                it.delayFeedback = delayFeedback
                 // Reverb
-                room = room,
-                roomSize = roomSize,
-                roomFade = roomFade,
-                roomLp = roomLp,
-                roomDim = roomDim,
-                iResponse = iResponse,
+                it.room = room
+                it.roomSize = roomSize
+                it.roomFade = roomFade
+                it.roomLp = roomLp
+                it.roomDim = roomDim
+                it.iResponse = iResponse
                 // Sample manipulation
-                begin = sampleBeginPos,
-                end = sampleEndPos,
-                speed = sampleSpeed,
-                unit = sampleUnit,
-                loop = sampleLoop,
-                cut = sampleCut,
-                loopBegin = null,
-                loopEnd = null,
+                it.begin = sampleBeginPos
+                it.end = sampleEndPos
+                it.speed = sampleSpeed
+                it.unit = sampleUnit
+                it.loop = sampleLoop
+                it.cut = sampleCut
+                it.loopBegin = null
+                it.loopEnd = null
                 // Voice / Singing
-                vowel = vowel,
+                it.vowel = vowel
                 // Dynamics / Compression
-                compressor = compressor,
+                it.compressor = compressor
                 // Playback control
-                solo = null,
+                it.solo = null
                 // Value
-                value = when {
+                it.value = when {
                     value?.isString == true -> value.asString().asVoiceValue()
 
                     value?.isNumber == true -> value.asDouble().asVoiceValue()
@@ -449,7 +449,7 @@ class GraalSprudelPattern(
 
                     else -> null
                 }
-            ),
+            },
         )
     }
 }

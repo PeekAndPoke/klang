@@ -14,7 +14,7 @@ import kotlinx.serialization.json.Json
 class SprudelVoiceDataSpec : StringSpec({
 
     "empty companion object has all fields null" {
-        val empty = createSprudelVoiceData()
+        val empty = createSprudelVoiceData { }
 
         empty.note shouldBe null
         empty.freqHz shouldBe null
@@ -50,11 +50,12 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "can create SprudelVoiceData with basic fields" {
-        val data = createSprudelVoiceData(
-            note = "c4",
-            freqHz = 440.0,
+        val data = createSprudelVoiceData {
+            note = "c4"
+            freqHz = 440.0
             gain = 0.8
-        )
+
+        }
 
         data.note shouldBe "c4"
         data.freqHz shouldBe 440.0
@@ -62,12 +63,13 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts flat ADSR fields to AdsrDef" {
-        val data = createSprudelVoiceData(
-            attack = 0.01,
-            decay = 0.1,
-            sustain = 0.7,
+        val data = createSprudelVoiceData {
+            attack = 0.01
+            decay = 0.1
+            sustain = 0.7
             release = 0.3
-        )
+
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -79,10 +81,11 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts LPF flat fields to FilterDef.LowPass" {
-        val data = createSprudelVoiceData(
-            cutoff = 1000.0,
+        val data = createSprudelVoiceData {
+            cutoff = 1000.0
             resonance = 1.5
-        )
+
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -93,10 +96,11 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts HPF flat fields to FilterDef.HighPass" {
-        val data = createSprudelVoiceData(
-            hcutoff = 500.0,
+        val data = createSprudelVoiceData {
+            hcutoff = 500.0
             hresonance = 2.0
-        )
+
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -107,10 +111,11 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts BPF flat fields to FilterDef.BandPass" {
-        val data = createSprudelVoiceData(
-            bandf = 750.0,
+        val data = createSprudelVoiceData {
+            bandf = 750.0
             bandq = 1.2
-        )
+
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -121,10 +126,11 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts Notch flat fields to FilterDef.Notch" {
-        val data = createSprudelVoiceData(
-            notchf = 600.0,
+        val data = createSprudelVoiceData {
+            notchf = 600.0
             nresonance = 0.8
-        )
+
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -135,14 +141,15 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() creates multiple filters with independent resonance" {
-        val data = createSprudelVoiceData(
-            cutoff = 1000.0,
-            resonance = 1.5,
-            hcutoff = 500.0,
-            hresonance = 2.0,
-            bandf = 750.0,
+        val data = createSprudelVoiceData {
+            cutoff = 1000.0
+            resonance = 1.5
+            hcutoff = 500.0
+            hresonance = 2.0
+            bandf = 750.0
             bandq = 1.2
-        )
+
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -165,13 +172,13 @@ class SprudelVoiceDataSpec : StringSpec({
     "toVoiceData() orders the filter chain HighPass → BandPass → Notch → Formant → LowPass" {
         // Flat fields are declared LowPass-first here on purpose; toVoiceData must
         // re-order them into the canonical chain regardless of field assignment order.
-        val data = createSprudelVoiceData(
-            cutoff = 1000.0,   // LowPass  → must end up LAST
-            hcutoff = 500.0,   // HighPass → must end up FIRST
-            bandf = 750.0,
-            notchf = 600.0,
-            vowel = "a",       // Formant
-        )
+        val data = createSprudelVoiceData {
+            cutoff = 1000.0   // LowPass  → must end up LAST
+            hcutoff = 500.0   // HighPass → must end up FIRST
+            bandf = 750.0
+            notchf = 600.0
+            vowel = "a"       // Formant
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -184,7 +191,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() puts LowPass last even when it is the only pair with HighPass" {
-        val data = createSprudelVoiceData(cutoff = 1000.0, hcutoff = 80.0)
+        val data = createSprudelVoiceData { cutoff = 1000.0; hcutoff = 80.0 }
 
         val voiceData = data.toVoiceData()
 
@@ -194,10 +201,11 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() handles null resonance gracefully" {
-        val data = createSprudelVoiceData(
-            cutoff = 1000.0,
+        val data = createSprudelVoiceData {
+            cutoff = 1000.0
             resonance = null // No resonance specified
-        )
+
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -208,35 +216,36 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() maps all basic fields correctly" {
-        val data = createSprudelVoiceData(
-            note = "c4",
-            freqHz = 440.0,
-            scale = "major",
-            gain = 0.8,
-            legato = 0.9,
-            bank = "MPC60",
-            sound = SoundValue.Named("bd"),
-            soundIndex = 2,
-            oscParams = mapOf("density" to 0.5, "panSpread" to 0.3, "freqSpread" to 0.1, "voices" to 3.0),
-            accelerate = 0.05,
-            vibrato = 0.2,
-            vibratoMod = 0.4,
-            distort = 0.3,
-            coarse = 1.0,
-            crush = 4.0,
-            cylinder = 1,
-            pan = 0.5,
-            delay = 0.3,
-            delayTime = 0.25,
-            delayFeedback = 0.5,
-            room = 0.7,
-            roomSize = 5.0,
-            begin = 0.0,
-            end = 1.0,
-            speed = 1.0,
-            loop = true,
+        val data = createSprudelVoiceData {
+            note = "c4"
+            freqHz = 440.0
+            scale = "major"
+            gain = 0.8
+            legato = 0.9
+            bank = "MPC60"
+            sound = SoundValue.Named("bd")
+            soundIndex = 2
+            oscParams = mapOf("density" to 0.5, "panSpread" to 0.3, "freqSpread" to 0.1, "voices" to 3.0)
+            accelerate = 0.05
+            vibrato = 0.2
+            vibratoMod = 0.4
+            distort = 0.3
+            coarse = 1.0
+            crush = 4.0
+            cylinder = 1
+            pan = 0.5
+            delay = 0.3
+            delayTime = 0.25
+            delayFeedback = 0.5
+            room = 0.7
+            roomSize = 5.0
+            begin = 0.0
+            end = 1.0
+            speed = 1.0
+            loop = true
             cut = 1
-        )
+
+        }
 
         val voiceData = data.toVoiceData()
 
@@ -273,13 +282,14 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "SprudelVoiceData is serializable to JSON" {
-        val data = createSprudelVoiceData(
-            note = "c4",
-            freqHz = 440.0,
-            gain = 0.8,
-            cutoff = 1000.0,
+        val data = createSprudelVoiceData {
+            note = "c4"
+            freqHz = 440.0
+            gain = 0.8
+            cutoff = 1000.0
             resonance = 1.5
-        )
+
+        }
 
         val json = Json.encodeToString(SprudelVoiceData.serializer(), data)
 
@@ -292,10 +302,11 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "copy() creates new instance with updated fields" {
-        val original = createSprudelVoiceData(
-            note = "c4",
+        val original = createSprudelVoiceData {
+            note = "c4"
             gain = 0.8
-        )
+
+        }
 
         val modified = original.copy(
             note = "d4",
@@ -321,35 +332,35 @@ class SprudelVoiceDataSpec : StringSpec({
  */
 private fun populatedVoiceData(seed: Int): SprudelVoiceData {
     val b = seed.toDouble()
-    return createSprudelVoiceData(
-        note = "note$seed", freqHz = b + 1, scale = "scale$seed", chord = "chord$seed",
-        gain = b + 2, legato = b + 3, velocity = b + 4, postGain = b + 5,
-        bank = "bank$seed", sound = SoundValue.Named("snd$seed"), soundIndex = seed + 6,
-        oscParams = mapOf("k$seed" to b + 7),
-        attack = b + 8, decay = b + 9, sustain = b + 10, release = b + 11,
-        attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
-        accelerate = b + 12, vibrato = b + 13, vibratoMod = b + 14,
-        pAttack = b + 15, pDecay = b + 16, pRelease = b + 17, pEnv = b + 18, pCurve = b + 19, pAnchor = b + 20,
-        fmh = b + 21, fmAttack = b + 22, fmDecay = b + 23, fmSustain = b + 24, fmEnv = b + 25,
-        distort = b + 26, distortShape = "ds$seed", distortOversample = seed + 27,
-        coarse = b + 28, coarseOversample = seed + 29, crush = b + 30, crushOversample = seed + 31,
-        phaserRate = b + 32, phaserDepth = b + 33, phaserCenter = b + 34, phaserSweep = b + 35,
-        tremoloSync = b + 36, tremoloDepth = b + 37, tremoloSkew = b + 38, tremoloPhase = b + 39,
-        tremoloShape = "ts$seed",
-        duckCylinder = seed + 40, duckAttack = b + 41, duckDepth = b + 42,
-        cutoff = b + 43, resonance = b + 44, hcutoff = b + 45, hresonance = b + 46,
-        bandf = b + 47, bandq = b + 48, notchf = b + 49, nresonance = b + 50,
-        lpattack = b + 51, lpdecay = b + 52, lpsustain = b + 53, lprelease = b + 54, lpenv = b + 55,
-        hpattack = b + 56, hpdecay = b + 57, hpsustain = b + 58, hprelease = b + 59, hpenv = b + 60,
-        bpattack = b + 61, bpdecay = b + 62, bpsustain = b + 63, bprelease = b + 64, bpenv = b + 65,
-        nfattack = b + 66, nfdecay = b + 67, nfsustain = b + 68, nfrelease = b + 69, nfenv = b + 70,
-        cylinder = seed + 71, pan = b + 72,
-        delay = b + 73, delayTime = b + 74, delayFeedback = b + 75,
-        room = b + 76, roomSize = b + 77, roomFade = b + 78, roomLp = b + 79, roomDim = b + 80,
-        iResponse = "ir$seed",
-        begin = b + 81, end = b + 82, speed = b + 83, unit = "u$seed", loop = true, cut = seed + 84,
-        loopBegin = b + 85, loopEnd = b + 86,
-        vowel = "v$seed", compressor = "comp$seed", solo = b + 88, patternId = "pid$seed", engine = "eng$seed",
-        value = SprudelVoiceValue.Num(b + 87),
-    )
+    return createSprudelVoiceData {
+        note = "note$seed"; freqHz = b + 1; scale = "scale$seed"; chord = "chord$seed"
+        gain = b + 2; legato = b + 3; velocity = b + 4; postGain = b + 5
+        bank = "bank$seed"; sound = SoundValue.Named("snd$seed"); soundIndex = seed + 6
+        oscParams = mapOf("k$seed" to b + 7)
+        attack = b + 8; decay = b + 9; sustain = b + 10; release = b + 11
+        attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
+        accelerate = b + 12; vibrato = b + 13; vibratoMod = b + 14
+        pAttack = b + 15; pDecay = b + 16; pRelease = b + 17; pEnv = b + 18; pCurve = b + 19; pAnchor = b + 20
+        fmh = b + 21; fmAttack = b + 22; fmDecay = b + 23; fmSustain = b + 24; fmEnv = b + 25
+        distort = b + 26; distortShape = "ds$seed"; distortOversample = seed + 27
+        coarse = b + 28; coarseOversample = seed + 29; crush = b + 30; crushOversample = seed + 31
+        phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35
+        tremoloSync = b + 36; tremoloDepth = b + 37; tremoloSkew = b + 38; tremoloPhase = b + 39
+        tremoloShape = "ts$seed"
+        duckCylinder = seed + 40; duckAttack = b + 41; duckDepth = b + 42
+        cutoff = b + 43; resonance = b + 44; hcutoff = b + 45; hresonance = b + 46
+        bandf = b + 47; bandq = b + 48; notchf = b + 49; nresonance = b + 50
+        lpattack = b + 51; lpdecay = b + 52; lpsustain = b + 53; lprelease = b + 54; lpenv = b + 55
+        hpattack = b + 56; hpdecay = b + 57; hpsustain = b + 58; hprelease = b + 59; hpenv = b + 60
+        bpattack = b + 61; bpdecay = b + 62; bpsustain = b + 63; bprelease = b + 64; bpenv = b + 65
+        nfattack = b + 66; nfdecay = b + 67; nfsustain = b + 68; nfrelease = b + 69; nfenv = b + 70
+        cylinder = seed + 71; pan = b + 72
+        delay = b + 73; delayTime = b + 74; delayFeedback = b + 75
+        room = b + 76; roomSize = b + 77; roomFade = b + 78; roomLp = b + 79; roomDim = b + 80
+        iResponse = "ir$seed"
+        begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
+        loopBegin = b + 85; loopEnd = b + 86
+        vowel = "v$seed"; compressor = "comp$seed"; solo = b + 88; patternId = "pid$seed"; engine = "eng$seed"
+        value = SprudelVoiceValue.Num(b + 87)
+    }
 }

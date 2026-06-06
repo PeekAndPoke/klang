@@ -65,7 +65,7 @@ internal class RandrunPattern(
                     SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = createSprudelVoiceData(value = value)
+                        data = createSprudelVoiceData().also { it.value = value }
                     )
                 )
             }

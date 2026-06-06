@@ -12,8 +12,8 @@ class ReversePatternSpec : StringSpec({
         // Create a simple sequence: event at 0.0-0.5 and 0.5-1.0
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(createSprudelVoiceData(note = "a")),
-                AtomicPattern(createSprudelVoiceData(note = "b"))
+                AtomicPattern(createSprudelVoiceData { note = "a" }),
+                AtomicPattern(createSprudelVoiceData { note = "b" })
             )
         )
         val reversed = ReversePattern(inner)
@@ -38,8 +38,8 @@ class ReversePatternSpec : StringSpec({
         // Create pattern with events in cycle 0 and cycle 1
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(createSprudelVoiceData(note = "x")),
-                AtomicPattern(createSprudelVoiceData(note = "y"))
+                AtomicPattern(createSprudelVoiceData { note = "x" }),
+                AtomicPattern(createSprudelVoiceData { note = "y" })
             )
         )
         val reversed = ReversePattern(inner)
@@ -62,10 +62,10 @@ class ReversePatternSpec : StringSpec({
     "ReversePattern handles partial cycle queries" {
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(createSprudelVoiceData(note = "a")),
-                AtomicPattern(createSprudelVoiceData(note = "b")),
-                AtomicPattern(createSprudelVoiceData(note = "c")),
-                AtomicPattern(createSprudelVoiceData(note = "d"))
+                AtomicPattern(createSprudelVoiceData { note = "a" }),
+                AtomicPattern(createSprudelVoiceData { note = "b" }),
+                AtomicPattern(createSprudelVoiceData { note = "c" }),
+                AtomicPattern(createSprudelVoiceData { note = "d" })
             )
         )
         val reversed = ReversePattern(inner)
@@ -83,7 +83,7 @@ class ReversePatternSpec : StringSpec({
     }
 
     "ReversePattern preserves event weight" {
-        val inner = AtomicPattern(createSprudelVoiceData(note = "test"))
+        val inner = AtomicPattern(createSprudelVoiceData { note = "test" })
         val reversed = ReversePattern(inner)
 
         reversed.weight shouldBe inner.weight

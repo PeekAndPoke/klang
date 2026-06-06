@@ -1391,7 +1391,7 @@ fun polymeterSteps(vararg args: PatternLike, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Function
 fun pure(value: PatternLike, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
-    AtomicPattern(createSprudelVoiceData(value = value.asVoiceValue()))
+    AtomicPattern(createSprudelVoiceData().also { it.value = value.asVoiceValue() })
 
 // -- struct() ---------------------------------------------------------------------------------------------------------
 
@@ -2358,7 +2358,7 @@ internal fun applyChunk(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 
     // Construct binary patterns manually to avoid dependency on 'pure' DSL property order
     val binaryPatterns = binary.map {
-        AtomicPattern(createSprudelVoiceData(value = it.asVoiceValue()))
+        AtomicPattern(createSprudelVoiceData { value = it.asVoiceValue() })
     }
     val binarySequence = applySeq(binaryPatterns)
 
@@ -3413,7 +3413,7 @@ private fun applyRun(n: Int): SprudelPattern {
     // equivalent to saw.range(0, n).round().segment(n) in JS
     // But we can just create a sequence directly.
     val items = (0 until n).map {
-        AtomicPattern(createSprudelVoiceData(value = it.asVoiceValue()))
+        AtomicPattern(createSprudelVoiceData { value = it.asVoiceValue() })
     }
 
     return SequencePattern(items)
@@ -3455,7 +3455,7 @@ private fun applyBinaryN(n: Int, bits: Int): SprudelPattern {
         // Shift: bits - 1 - i
         val shift = bits - 1 - i
         val bit = (n shr shift) and 1
-        AtomicPattern(createSprudelVoiceData(value = bit.asVoiceValue()))
+        AtomicPattern(createSprudelVoiceData { value = bit.asVoiceValue() })
     }
     return SequencePattern(items)
 }
@@ -3523,7 +3523,7 @@ private fun applyBinaryNL(n: Int, bits: Int): SprudelPattern {
 
     // Returns a single event containing the list of bits as a Seq value
     return AtomicPattern(
-        createSprudelVoiceData(value = SprudelVoiceValue.Seq(bitList))
+        createSprudelVoiceData { value = SprudelVoiceValue.Seq(bitList) }
     )
 }
 
@@ -3746,7 +3746,7 @@ private fun applyTake(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     val control: ControlValueProvider = takeArg.asControlValueProvider(1.0.asVoiceValue())
 
     val takePattern = when (control) {
-        is ControlValueProvider.Static -> AtomicPattern(createSprudelVoiceData(value = control.value))
+        is ControlValueProvider.Static -> AtomicPattern(createSprudelVoiceData { value = control.value })
         is ControlValueProvider.Pattern -> control.pattern
     }
 
@@ -3827,7 +3827,7 @@ private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     val control: ControlValueProvider = dropArg.asControlValueProvider(0.0.asVoiceValue())
 
     val dropPattern = when (control) {
-        is ControlValueProvider.Static -> AtomicPattern(createSprudelVoiceData(value = control.value))
+        is ControlValueProvider.Static -> AtomicPattern(createSprudelVoiceData { value = control.value })
         is ControlValueProvider.Pattern -> control.pattern
     }
 
@@ -4518,7 +4518,7 @@ private fun applyRibbon(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
     // We use SequencePattern to ensure we get discrete events per cycle (or per 'cycles' duration),
     // which forces _bindRestart to re-trigger the pattern repeatedly (looping it).
     // If we just used AtomicPattern, it might produce a single long event, preventing the loop.
-    val one = AtomicPattern(createSprudelVoiceData(value = 1.asVoiceValue()))
+    val one = AtomicPattern(createSprudelVoiceData { value = 1.asVoiceValue() })
     val pureOne = SequencePattern(listOf(one))
 
     val loopStructure = applySlow(pureOne, listOf(cyclesArg))

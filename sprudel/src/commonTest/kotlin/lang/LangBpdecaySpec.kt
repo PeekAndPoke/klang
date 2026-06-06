@@ -109,10 +109,11 @@ class LangBpdecaySpec : StringSpec({
     }
 
     "bpdecay() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData(
-            bandf = 1000.0,
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
+            bandf = 1000.0
             bpdecay = 0.2
-        )
+
+        }
         val voiceData = data.toVoiceData()
         val bpf = voiceData.filters[0] as FilterDef.BandPass
 

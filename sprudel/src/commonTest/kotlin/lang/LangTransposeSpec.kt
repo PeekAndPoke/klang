@@ -65,8 +65,8 @@ class LangTransposeSpec : StringSpec({
 
     "debug: VoiceData.transpose with intervals from 'note'" {
         // Test that VoiceData.transpose works correctly with interval strings
-        val c2 = createSprudelVoiceData(note = "C2")
-        val c3 = createSprudelVoiceData(note = "C3")
+        val c2 = createSprudelVoiceData { note = "C2" }
+        val c3 = createSprudelVoiceData { note = "C3" }
 
         c2.transpose("1P").note shouldBe "C2"
         c3.transpose("1P").note shouldBe "C3"
@@ -83,8 +83,8 @@ class LangTransposeSpec : StringSpec({
 
     "debug: VoiceData.transpose with intervals from 'value'" {
         // Test that VoiceData.transpose works correctly with interval strings
-        val c2 = createSprudelVoiceData(value = "C2".asVoiceValue())
-        val c3 = createSprudelVoiceData(value = "C3".asVoiceValue())
+        val c2 = createSprudelVoiceData { value = "C2".asVoiceValue() }
+        val c3 = createSprudelVoiceData { value = "C3".asVoiceValue() }
 
         c2.transpose("1P").note shouldBe "C2"
         c3.transpose("1P").note shouldBe "C3"

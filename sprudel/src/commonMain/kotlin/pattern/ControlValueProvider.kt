@@ -51,7 +51,7 @@ sealed interface ControlValueProvider {
                 SprudelPatternEvent(
                     part = timeSpan,
                     whole = timeSpan,
-                    data = createSprudelVoiceData(value = value),
+                    data = createSprudelVoiceData().also { it.value = value },
                     sourceLocations = location?.asChain()
                 )
             )
