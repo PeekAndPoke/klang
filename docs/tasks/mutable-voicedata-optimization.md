@@ -184,12 +184,39 @@ all lang specs); main app compiles JVM+JS. *(Note: never run a second Gradle bui
 concurrently with `:sprudel:jvmTest` — it clobbers `:sprudel` class outputs and
 throws spurious `NoClassDefFoundError`s.)*
 
-### Phase 3 — Finish the long tail (NOT started)
+### Phase 3 — Cut the copy/clone hot path (IN PROGRESS)
 
-- The **combiners** (`_applyControlFromParams { src, ctrl -> src.copy(…) }`) and
-  `merge()` still allocate — convert to in-place for the remaining win.
-- Then measure *Der Schmetterling* in the browser perf tab to confirm the
-  `SprudelVoiceData` construction / `copy$default` / Minor GC drop.
+Corrected profile showed the remaining query-path cost is dominated by **`clone()` ≈ 25%**
+(the per-emission leaf clones, `clone() = copy()` routing through `copy$default`) plus the combiner
+`src.copy(...)` calls — not the pattern logic. Plan: `docs` / `~/.claude/plans/gleaming-inventing-gosling.md`.
+
+**Part 1 — faster `clone()` (DONE, 2026-06-06).** Replaced `clone() = copy()` with an explicit
+105-field primary-constructor call (bypasses the `copy$default` bitmask wrapper). Guarded by a new
+`SprudelVoiceDataSpec` test that clones a fully-populated instance and asserts data-class equality
+(catches any dropped/swapped field).
+
+**Hardening — no-default constructor + `createSprudelVoiceData()` factory (DONE, 2026-06-06).**
+Per user: removed the `= null` defaults from all 105 constructor params, and added a **top-level**
+`createSprudelVoiceData(<all params = null>)` factory (top-level, not a companion member, to avoid the
+`getCompanion()` runtime tax on JS). Rationale: with no constructor defaults, the only full-field
+constructor calls — `clone()`, `merge()`, and the factory body — **fail to compile** if a field is ever
+added, so a field can never be silently dropped from `clone()`. All ~149 partial construction sites
+(commonMain + commonTest + jvmMain/graal) were renamed `SprudelVoiceData(…)` → `createSprudelVoiceData(…)`
+(simple rename; factory has matching default params) and given the factory import. Verified: golden green,
+full `:sprudel:jvmTest` green, app compiles JVM+JS.
+
+**Part 2 — in-place combiners (NOT started).** Convert the ~34 `_applyControlFromParams { src, ctrl ->
+src.copy(field = ctrl.field ?: src.field) }` to mutate `src` in place + return it. (`n`/`chord` combiners
+already in-place; `_liftNumericField` already in-place; leave event-timing `copy(part/whole)` alone.)
+
+**Part 3 — in-place `merge()` (NOT started).** Add `mergeFrom(other)` (in-place) + `putOscParamsFrom`,
+convert the 2 `merge()` sites (`SprudelPattern.kt:988`, `MergeVoiceDataPattern.kt:40`) and the `snd_*`
+`mergeOscParamsFrom` combiners.
+
+Then: user re-profiles *Der Schmetterling* (expect `copy$default`/`copy`/`clone` + Minor GC to drop).
+
+**Deferred follow-up:** constant-control fast-path to cut clone COUNT (skip building+sampling+cloning a
+control atom for constant scalar args like `gain(0.5)`). Bigger/riskier; revisit after measuring.
 
 ---
 

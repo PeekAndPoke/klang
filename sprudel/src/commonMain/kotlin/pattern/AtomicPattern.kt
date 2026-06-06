@@ -8,6 +8,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 
 /**
  * Atomic Pattern: Represents a single event that repeats every cycle (0, 1, 2...).
@@ -24,12 +25,12 @@ internal class AtomicPattern(
         /**
          * AtomicPattern that produces events with empty SprudelVoiceData.
          */
-        val pure = AtomicPattern(SprudelVoiceData())
+        val pure = AtomicPattern(createSprudelVoiceData())
 
         /**
          * Creates an AtomicPattern the produces events with the given value set as VoiceValue.
          */
-        fun value(value: Any?) = AtomicPattern(SprudelVoiceData(value = value?.asVoiceValue()))
+        fun value(value: Any?) = AtomicPattern(createSprudelVoiceData(value = value?.asVoiceValue()))
     }
 
     override val numSteps: Double = 1.0

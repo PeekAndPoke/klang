@@ -5,8 +5,8 @@ import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 
 /**
  * A pattern that generates a value based on continuous cycle time.
@@ -52,7 +52,7 @@ class ContinuousPattern private constructor(
             val event = SprudelPatternEvent(
                 part = span,
                 whole = span,
-                data = SprudelVoiceData(value = value)
+                data = createSprudelVoiceData(value = value)
             )
 
             result.add(event)

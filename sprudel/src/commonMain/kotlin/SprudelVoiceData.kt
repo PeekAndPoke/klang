@@ -32,238 +32,238 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SprudelVoiceData(
     // note, scale, freq
-    var note: String? = null,
-    var freqHz: Double? = null,
-    var scale: String? = null,
+    var note: String?,
+    var freqHz: Double?,
+    var scale: String?,
     /** Chord name (e.g., "Cmaj7", "Dm7", "F/A") for harmonic context */
-    var chord: String? = null,
+    var chord: String?,
 
     // Gain / Dynamics
-    var gain: Double? = null,
-    var legato: Double? = null,
+    var gain: Double?,
+    var legato: Double?,
     /** Volume scaling (0-1), multiplies with gain */
-    var velocity: Double? = null,
+    var velocity: Double?,
     /** Gain applied after voice processing, before mixing to the cylinder */
-    var postGain: Double? = null,
+    var postGain: Double?,
 
     // Sound, bank, sound index
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
-    var bank: String? = null,
+    var bank: String?,
     /**
      * The sound this voice references. Either a [SoundValue.Named] (sample bank entry,
      * pre-registered ignitor, etc., possibly with `name:index` form parsed into [soundIndex])
      * or a [SoundValue.Osc] inlining an [IgnitorDsl] tree — the latter gets denormalized to
      * a synthetic name at the wire boundary by [toVoiceData].
      */
-    var sound: SoundValue? = null,
+    var sound: SoundValue?,
     /** Sound index */
-    var soundIndex: Int? = null,
+    var soundIndex: Int?,
 
     // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
-    var oscParams: Map<String, Double>? = null,
+    var oscParams: Map<String, Double>?,
 
     // ADSR (flattened)
-    var attack: Double? = null,
-    var decay: Double? = null,
-    var sustain: Double? = null,
-    var release: Double? = null,
-    var attackCurve: AdsrCurve? = null,
-    var decayCurve: AdsrCurve? = null,
-    var releaseCurve: AdsrCurve? = null,
+    var attack: Double?,
+    var decay: Double?,
+    var sustain: Double?,
+    var release: Double?,
+    var attackCurve: AdsrCurve?,
+    var decayCurve: AdsrCurve?,
+    var releaseCurve: AdsrCurve?,
 
     // Pitch / Glisando
-    var accelerate: Double? = null,
+    var accelerate: Double?,
 
     // Vibrato
-    var vibrato: Double? = null,
-    var vibratoMod: Double? = null,
+    var vibrato: Double?,
+    var vibratoMod: Double?,
 
     // Pitch envelope
-    var pAttack: Double? = null,
-    var pDecay: Double? = null,
-    var pRelease: Double? = null,
-    var pEnv: Double? = null,
-    var pCurve: Double? = null,
-    var pAnchor: Double? = null,
+    var pAttack: Double?,
+    var pDecay: Double?,
+    var pRelease: Double?,
+    var pEnv: Double?,
+    var pCurve: Double?,
+    var pAnchor: Double?,
 
     // FM Synthesis
     /** FM harmonicity ratio (carrier to modulator frequency ratio) */
-    var fmh: Double? = null,
+    var fmh: Double?,
     /** FM envelope attack time */
-    var fmAttack: Double? = null,
+    var fmAttack: Double?,
     /** FM envelope decay time */
-    var fmDecay: Double? = null,
+    var fmDecay: Double?,
     /** FM envelope sustain level */
-    var fmSustain: Double? = null,
+    var fmSustain: Double?,
     /** FM modulation depth/amount */
-    var fmEnv: Double? = null,
+    var fmEnv: Double?,
 
     // Effects
-    var distort: Double? = null,
+    var distort: Double?,
     /** Distortion shape: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify */
-    var distortShape: String? = null,
+    var distortShape: String?,
     /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    var distortOversample: Int? = null,
-    var coarse: Double? = null,
+    var distortOversample: Int?,
+    var coarse: Double?,
     /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    var coarseOversample: Int? = null,
-    var crush: Double? = null,
+    var coarseOversample: Int?,
+    var crush: Double?,
     /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    var crushOversample: Int? = null,
+    var crushOversample: Int?,
 
     // Phaser
     /** Phaser modulation speed */
-    var phaserRate: Double? = null,
+    var phaserRate: Double?,
     /** Phaser depth (0-1) */
-    var phaserDepth: Double? = null,
+    var phaserDepth: Double?,
     /** Phaser center frequency (Hz) */
-    var phaserCenter: Double? = null,
+    var phaserCenter: Double?,
     /** Phaser sweep range (Hz) */
-    var phaserSweep: Double? = null,
+    var phaserSweep: Double?,
 
     // Tremolo
     /** Tremolo modulation speed in cycles */
-    var tremoloSync: Double? = null,
+    var tremoloSync: Double?,
     /** Tremolo depth */
-    var tremoloDepth: Double? = null,
+    var tremoloDepth: Double?,
     /** Tremolo waveform shape/skew (0-1) */
-    var tremoloSkew: Double? = null,
+    var tremoloSkew: Double?,
     /** Tremolo phase offset in cycles */
-    var tremoloPhase: Double? = null,
+    var tremoloPhase: Double?,
     /** Tremolo waveform type (tri, square, sine, saw, ramp) */
-    var tremoloShape: String? = null,
+    var tremoloShape: String?,
 
     // Ducking / Sidechain
     /** Target cylinder to listen to for ducking (source of sidechain signal) */
-    var duckCylinder: Int? = null,
+    var duckCylinder: Int?,
     /** Duck return-to-normal time in seconds (attack/release time) */
-    var duckAttack: Double? = null,
+    var duckAttack: Double?,
     /** Ducking amount (0.0 = no ducking, 1.0 = full silence) */
-    var duckDepth: Double? = null,
+    var duckDepth: Double?,
 
     // Filters (flattened) - each filter has its own cutoff and resonance
     /** Low pass filter cutoff frequency */
-    var cutoff: Double? = null,
+    var cutoff: Double?,
     /** Low pass filter resonance/Q */
-    var resonance: Double? = null,
+    var resonance: Double?,
     /** High pass filter cutoff frequency */
-    var hcutoff: Double? = null,
+    var hcutoff: Double?,
     /** High pass filter resonance/Q */
-    var hresonance: Double? = null,
+    var hresonance: Double?,
     /** Band pass filter cutoff frequency */
-    var bandf: Double? = null,
+    var bandf: Double?,
     /** Band pass filter resonance/Q */
-    var bandq: Double? = null,
+    var bandq: Double?,
     /** Notch filter cutoff frequency */
-    var notchf: Double? = null,
+    var notchf: Double?,
     /** Notch filter resonance/Q */
-    var nresonance: Double? = null,
+    var nresonance: Double?,
 
     // Lowpass filter envelope
     /** Low pass filter envelope attack time */
-    var lpattack: Double? = null,
+    var lpattack: Double?,
     /** Low pass filter envelope decay time */
-    var lpdecay: Double? = null,
+    var lpdecay: Double?,
     /** Low pass filter envelope sustain level */
-    var lpsustain: Double? = null,
+    var lpsustain: Double?,
     /** Low pass filter envelope release time */
-    var lprelease: Double? = null,
+    var lprelease: Double?,
     /** Low pass filter envelope depth/amount */
-    var lpenv: Double? = null,
+    var lpenv: Double?,
 
     // Highpass filter envelope
     /** High pass filter envelope attack time */
-    var hpattack: Double? = null,
+    var hpattack: Double?,
     /** High pass filter envelope decay time */
-    var hpdecay: Double? = null,
+    var hpdecay: Double?,
     /** High pass filter envelope sustain level */
-    var hpsustain: Double? = null,
+    var hpsustain: Double?,
     /** High pass filter envelope release time */
-    var hprelease: Double? = null,
+    var hprelease: Double?,
     /** High pass filter envelope depth/amount */
-    var hpenv: Double? = null,
+    var hpenv: Double?,
 
     // Bandpass filter envelope
     /** Band pass filter envelope attack time */
-    var bpattack: Double? = null,
+    var bpattack: Double?,
     /** Band pass filter envelope decay time */
-    var bpdecay: Double? = null,
+    var bpdecay: Double?,
     /** Band pass filter envelope sustain level */
-    var bpsustain: Double? = null,
+    var bpsustain: Double?,
     /** Band pass filter envelope release time */
-    var bprelease: Double? = null,
+    var bprelease: Double?,
     /** Band pass filter envelope depth/amount */
-    var bpenv: Double? = null,
+    var bpenv: Double?,
 
     // Notch filter envelope
     /** Notch filter envelope attack time */
-    var nfattack: Double? = null,
+    var nfattack: Double?,
     /** Notch filter envelope decay time */
-    var nfdecay: Double? = null,
+    var nfdecay: Double?,
     /** Notch filter envelope sustain level */
-    var nfsustain: Double? = null,
+    var nfsustain: Double?,
     /** Notch filter envelope release time */
-    var nfrelease: Double? = null,
+    var nfrelease: Double?,
     /** Notch filter envelope depth/amount */
-    var nfenv: Double? = null,
+    var nfenv: Double?,
 
     // Routing
     /** The mix channel / bus / orbit / cylinder */
-    var cylinder: Int? = null,
+    var cylinder: Int?,
 
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
-    var pan: Double? = null,
+    var pan: Double?,
 
     // Delay
-    var delay: Double? = null, // Mix amount (0.0 to 1.0)
-    var delayTime: Double? = null, // Time in seconds
-    var delayFeedback: Double? = null, // Feedback amount (0.0 to <1.0)
+    var delay: Double?, // Mix amount (0.0 to 1.0)
+    var delayTime: Double?, // Time in seconds
+    var delayFeedback: Double?, // Feedback amount (0.0 to <1.0)
 
     // Reverb
-    var room: Double? = null,
-    var roomSize: Double? = null,
+    var room: Double?,
+    var roomSize: Double?,
     /** Reverb fade time */
-    var roomFade: Double? = null,
+    var roomFade: Double?,
     /** Reverb lowpass start frequency */
-    var roomLp: Double? = null,
+    var roomLp: Double?,
     /** Reverb lowpass frequency at -60dB */
-    var roomDim: Double? = null,
+    var roomDim: Double?,
     /** Impulse response sample */
-    var iResponse: String? = null,
+    var iResponse: String?,
 
     // Sample manipulation
-    var begin: Double? = null,
-    var end: Double? = null,
-    var speed: Double? = null,
-    var unit: String? = null,
-    var loop: Boolean? = null,
-    var cut: Int? = null,
-    var loopBegin: Double? = null,
-    var loopEnd: Double? = null,
+    var begin: Double?,
+    var end: Double?,
+    var speed: Double?,
+    var unit: String?,
+    var loop: Boolean?,
+    var cut: Int?,
+    var loopBegin: Double?,
+    var loopEnd: Double?,
 
     // Voice / Singing
     /** Vowel formant filter (a, e, i, o, u) */
-    var vowel: String? = null,
+    var vowel: String?,
 
     // Dynamics / Compression
     /** Dynamic range compression settings (threshold:ratio:knee:attack:release) */
-    var compressor: String? = null,
+    var compressor: String?,
 
     // Playback control
     /** Solo value - 0.0 = disabled, 0.0..1.0 = enabled (amount), null = not set */
-    var solo: Double? = null,
+    var solo: Double?,
 
     /** Unique pattern ID for tracking solo state across pattern changes */
-    var patternId: String? = null,
+    var patternId: String?,
 
     /**
      * Voice pipeline engine name — selects the topology of the Filter stage.
      * Known values: `"modern"` (default), `"pedal"`. Unknown/null → modern.
      */
-    var engine: String? = null,
+    var engine: String?,
 
     // Custom value
-    var value: SprudelVoiceValue? = null,
+    var value: SprudelVoiceValue?,
 ) {
 
     /**
@@ -947,6 +947,337 @@ data class SprudelVoiceData(
         }
     }
 }
+
+private val blueprint = SprudelVoiceData(
+    note = null,
+    freqHz = null,
+    scale = null,
+    chord = null,
+    gain = null,
+    legato = null,
+    velocity = null,
+    postGain = null,
+    bank = null,
+    sound = null,
+    soundIndex = null,
+    oscParams = null,
+    attack = null,
+    decay = null,
+    sustain = null,
+    release = null,
+    attackCurve = null,
+    decayCurve = null,
+    releaseCurve = null,
+    accelerate = null,
+    vibrato = null,
+    vibratoMod = null,
+    pAttack = null,
+    pDecay = null,
+    pRelease = null,
+    pEnv = null,
+    pCurve = null,
+    pAnchor = null,
+    fmh = null,
+    fmAttack = null,
+    fmDecay = null,
+    fmSustain = null,
+    fmEnv = null,
+    distort = null,
+    distortShape = null,
+    distortOversample = null,
+    coarse = null,
+    coarseOversample = null,
+    crush = null,
+    crushOversample = null,
+    phaserRate = null,
+    phaserDepth = null,
+    phaserCenter = null,
+    phaserSweep = null,
+    tremoloSync = null,
+    tremoloDepth = null,
+    tremoloSkew = null,
+    tremoloPhase = null,
+    tremoloShape = null,
+    duckCylinder = null,
+    duckAttack = null,
+    duckDepth = null,
+    cutoff = null,
+    resonance = null,
+    hcutoff = null,
+    hresonance = null,
+    bandf = null,
+    bandq = null,
+    notchf = null,
+    nresonance = null,
+    lpattack = null,
+    lpdecay = null,
+    lpsustain = null,
+    lprelease = null,
+    lpenv = null,
+    hpattack = null,
+    hpdecay = null,
+    hpsustain = null,
+    hprelease = null,
+    hpenv = null,
+    bpattack = null,
+    bpdecay = null,
+    bpsustain = null,
+    bprelease = null,
+    bpenv = null,
+    nfattack = null,
+    nfdecay = null,
+    nfsustain = null,
+    nfrelease = null,
+    nfenv = null,
+    cylinder = null,
+    pan = null,
+    delay = null,
+    delayTime = null,
+    delayFeedback = null,
+    room = null,
+    roomSize = null,
+    roomFade = null,
+    roomLp = null,
+    roomDim = null,
+    iResponse = null,
+    begin = null,
+    end = null,
+    speed = null,
+    unit = null,
+    loop = null,
+    cut = null,
+    loopBegin = null,
+    loopEnd = null,
+    vowel = null,
+    compressor = null,
+    solo = null,
+    patternId = null,
+    engine = null,
+    value = null,
+)
+
+/**
+ * Factory for [SprudelVoiceData] — the only way to construct a partial/empty instance.
+ *
+ * The primary constructor has **no default values by design**: that forces `clone()`, `merge()`, and this
+ * factory (the only call sites that pass every field) to fail compilation whenever a new field is added, so
+ * a field can never be silently dropped from `clone()`. Construct fresh instances via this factory and
+ * mutate the `var` fields as needed (see the class KDoc). Top-level (not a companion member) to avoid the
+ * `getCompanion()` runtime tax on Kotlin/JS.
+ */
+fun createSprudelVoiceData(
+    note: String? = null,
+    freqHz: Double? = null,
+    scale: String? = null,
+    chord: String? = null,
+    gain: Double? = null,
+    legato: Double? = null,
+    velocity: Double? = null,
+    postGain: Double? = null,
+    bank: String? = null,
+    sound: SoundValue? = null,
+    soundIndex: Int? = null,
+    oscParams: Map<String, Double>? = null,
+    attack: Double? = null,
+    decay: Double? = null,
+    sustain: Double? = null,
+    release: Double? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
+    accelerate: Double? = null,
+    vibrato: Double? = null,
+    vibratoMod: Double? = null,
+    pAttack: Double? = null,
+    pDecay: Double? = null,
+    pRelease: Double? = null,
+    pEnv: Double? = null,
+    pCurve: Double? = null,
+    pAnchor: Double? = null,
+    fmh: Double? = null,
+    fmAttack: Double? = null,
+    fmDecay: Double? = null,
+    fmSustain: Double? = null,
+    fmEnv: Double? = null,
+    distort: Double? = null,
+    distortShape: String? = null,
+    distortOversample: Int? = null,
+    coarse: Double? = null,
+    coarseOversample: Int? = null,
+    crush: Double? = null,
+    crushOversample: Int? = null,
+    phaserRate: Double? = null,
+    phaserDepth: Double? = null,
+    phaserCenter: Double? = null,
+    phaserSweep: Double? = null,
+    tremoloSync: Double? = null,
+    tremoloDepth: Double? = null,
+    tremoloSkew: Double? = null,
+    tremoloPhase: Double? = null,
+    tremoloShape: String? = null,
+    duckCylinder: Int? = null,
+    duckAttack: Double? = null,
+    duckDepth: Double? = null,
+    cutoff: Double? = null,
+    resonance: Double? = null,
+    hcutoff: Double? = null,
+    hresonance: Double? = null,
+    bandf: Double? = null,
+    bandq: Double? = null,
+    notchf: Double? = null,
+    nresonance: Double? = null,
+    lpattack: Double? = null,
+    lpdecay: Double? = null,
+    lpsustain: Double? = null,
+    lprelease: Double? = null,
+    lpenv: Double? = null,
+    hpattack: Double? = null,
+    hpdecay: Double? = null,
+    hpsustain: Double? = null,
+    hprelease: Double? = null,
+    hpenv: Double? = null,
+    bpattack: Double? = null,
+    bpdecay: Double? = null,
+    bpsustain: Double? = null,
+    bprelease: Double? = null,
+    bpenv: Double? = null,
+    nfattack: Double? = null,
+    nfdecay: Double? = null,
+    nfsustain: Double? = null,
+    nfrelease: Double? = null,
+    nfenv: Double? = null,
+    cylinder: Int? = null,
+    pan: Double? = null,
+    delay: Double? = null,
+    delayTime: Double? = null,
+    delayFeedback: Double? = null,
+    room: Double? = null,
+    roomSize: Double? = null,
+    roomFade: Double? = null,
+    roomLp: Double? = null,
+    roomDim: Double? = null,
+    iResponse: String? = null,
+    begin: Double? = null,
+    end: Double? = null,
+    speed: Double? = null,
+    unit: String? = null,
+    loop: Boolean? = null,
+    cut: Int? = null,
+    loopBegin: Double? = null,
+    loopEnd: Double? = null,
+    vowel: String? = null,
+    compressor: String? = null,
+    solo: Double? = null,
+    patternId: String? = null,
+    engine: String? = null,
+    value: SprudelVoiceValue? = null,
+): SprudelVoiceData = SprudelVoiceData(
+    note = note,
+    freqHz = freqHz,
+    scale = scale,
+    chord = chord,
+    gain = gain,
+    legato = legato,
+    velocity = velocity,
+    postGain = postGain,
+    bank = bank,
+    sound = sound,
+    soundIndex = soundIndex,
+    oscParams = oscParams,
+    attack = attack,
+    decay = decay,
+    sustain = sustain,
+    release = release,
+    attackCurve = attackCurve,
+    decayCurve = decayCurve,
+    releaseCurve = releaseCurve,
+    accelerate = accelerate,
+    vibrato = vibrato,
+    vibratoMod = vibratoMod,
+    pAttack = pAttack,
+    pDecay = pDecay,
+    pRelease = pRelease,
+    pEnv = pEnv,
+    pCurve = pCurve,
+    pAnchor = pAnchor,
+    fmh = fmh,
+    fmAttack = fmAttack,
+    fmDecay = fmDecay,
+    fmSustain = fmSustain,
+    fmEnv = fmEnv,
+    distort = distort,
+    distortShape = distortShape,
+    distortOversample = distortOversample,
+    coarse = coarse,
+    coarseOversample = coarseOversample,
+    crush = crush,
+    crushOversample = crushOversample,
+    phaserRate = phaserRate,
+    phaserDepth = phaserDepth,
+    phaserCenter = phaserCenter,
+    phaserSweep = phaserSweep,
+    tremoloSync = tremoloSync,
+    tremoloDepth = tremoloDepth,
+    tremoloSkew = tremoloSkew,
+    tremoloPhase = tremoloPhase,
+    tremoloShape = tremoloShape,
+    duckCylinder = duckCylinder,
+    duckAttack = duckAttack,
+    duckDepth = duckDepth,
+    cutoff = cutoff,
+    resonance = resonance,
+    hcutoff = hcutoff,
+    hresonance = hresonance,
+    bandf = bandf,
+    bandq = bandq,
+    notchf = notchf,
+    nresonance = nresonance,
+    lpattack = lpattack,
+    lpdecay = lpdecay,
+    lpsustain = lpsustain,
+    lprelease = lprelease,
+    lpenv = lpenv,
+    hpattack = hpattack,
+    hpdecay = hpdecay,
+    hpsustain = hpsustain,
+    hprelease = hprelease,
+    hpenv = hpenv,
+    bpattack = bpattack,
+    bpdecay = bpdecay,
+    bpsustain = bpsustain,
+    bprelease = bprelease,
+    bpenv = bpenv,
+    nfattack = nfattack,
+    nfdecay = nfdecay,
+    nfsustain = nfsustain,
+    nfrelease = nfrelease,
+    nfenv = nfenv,
+    cylinder = cylinder,
+    pan = pan,
+    delay = delay,
+    delayTime = delayTime,
+    delayFeedback = delayFeedback,
+    room = room,
+    roomSize = roomSize,
+    roomFade = roomFade,
+    roomLp = roomLp,
+    roomDim = roomDim,
+    iResponse = iResponse,
+    begin = begin,
+    end = end,
+    speed = speed,
+    unit = unit,
+    loop = loop,
+    cut = cut,
+    loopBegin = loopBegin,
+    loopEnd = loopEnd,
+    vowel = vowel,
+    compressor = compressor,
+    solo = solo,
+    patternId = patternId,
+    engine = engine,
+    value = value,
+)
 
 /** Merges two oscParams maps: other's values override this's values. */
 private fun mergeOscParams(

@@ -6,7 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.gain
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.range
@@ -16,8 +16,8 @@ import io.peekandpoke.klang.sprudel.lang.sine
 class ControlPatternSpec : StringSpec({
 
     "ControlPattern: Direct Instantiation" {
-        val source = AtomicPattern(SprudelVoiceData(note = "c3"))
-        val control = AtomicPattern(SprudelVoiceData(gain = 0.5))
+        val source = AtomicPattern(createSprudelVoiceData(note = "c3"))
+        val control = AtomicPattern(createSprudelVoiceData(gain = 0.5))
 
         val pattern = ControlPattern(
             source = source,

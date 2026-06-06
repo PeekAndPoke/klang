@@ -5,6 +5,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -13,7 +14,7 @@ import kotlinx.serialization.json.Json
 class SprudelVoiceDataSpec : StringSpec({
 
     "empty companion object has all fields null" {
-        val empty = SprudelVoiceData()
+        val empty = createSprudelVoiceData()
 
         empty.note shouldBe null
         empty.freqHz shouldBe null
@@ -24,8 +25,47 @@ class SprudelVoiceDataSpec : StringSpec({
         empty.value shouldBe null
     }
 
+    "clone() copies every field (guards the hand-written clone against dropped/swapped fields)" {
+        // Every field set to a distinct non-default value. clone() must reproduce all of them; a
+        // dropped field would clone to null and a swap would mismatch — either fails data-class equals.
+        val populated = createSprudelVoiceData(
+            note = "n", freqHz = 1.0, scale = "s", chord = "c",
+            gain = 2.0, legato = 3.0, velocity = 4.0, postGain = 5.0,
+            bank = "b", sound = SoundValue.Named("snd"), soundIndex = 6, oscParams = mapOf("k" to 7.0),
+            attack = 8.0, decay = 9.0, sustain = 10.0, release = 11.0,
+            attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
+            accelerate = 12.0, vibrato = 13.0, vibratoMod = 14.0,
+            pAttack = 15.0, pDecay = 16.0, pRelease = 17.0, pEnv = 18.0, pCurve = 19.0, pAnchor = 20.0,
+            fmh = 21.0, fmAttack = 22.0, fmDecay = 23.0, fmSustain = 24.0, fmEnv = 25.0,
+            distort = 26.0, distortShape = "ds", distortOversample = 27,
+            coarse = 28.0, coarseOversample = 29, crush = 30.0, crushOversample = 31,
+            phaserRate = 32.0, phaserDepth = 33.0, phaserCenter = 34.0, phaserSweep = 35.0,
+            tremoloSync = 36.0, tremoloDepth = 37.0, tremoloSkew = 38.0, tremoloPhase = 39.0, tremoloShape = "ts",
+            duckCylinder = 40, duckAttack = 41.0, duckDepth = 42.0,
+            cutoff = 43.0, resonance = 44.0, hcutoff = 45.0, hresonance = 46.0,
+            bandf = 47.0, bandq = 48.0, notchf = 49.0, nresonance = 50.0,
+            lpattack = 51.0, lpdecay = 52.0, lpsustain = 53.0, lprelease = 54.0, lpenv = 55.0,
+            hpattack = 56.0, hpdecay = 57.0, hpsustain = 58.0, hprelease = 59.0, hpenv = 60.0,
+            bpattack = 61.0, bpdecay = 62.0, bpsustain = 63.0, bprelease = 64.0, bpenv = 65.0,
+            nfattack = 66.0, nfdecay = 67.0, nfsustain = 68.0, nfrelease = 69.0, nfenv = 70.0,
+            cylinder = 71, pan = 72.0,
+            delay = 73.0, delayTime = 74.0, delayFeedback = 75.0,
+            room = 76.0, roomSize = 77.0, roomFade = 78.0, roomLp = 79.0, roomDim = 80.0,
+            iResponse = "ir",
+            begin = 81.0, end = 82.0, speed = 83.0, unit = "u", loop = true, cut = 84,
+            loopBegin = 85.0, loopEnd = 86.0,
+            vowel = "v", compressor = "comp", solo = 88.0, patternId = "pid", engine = "eng",
+            value = SprudelVoiceValue.Num(87.0),
+        )
+
+        val cloned = populated.clone()
+
+        cloned shouldBe populated
+        (cloned === populated) shouldBe false
+    }
+
     "can create SprudelVoiceData with basic fields" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             note = "c4",
             freqHz = 440.0,
             gain = 0.8
@@ -37,7 +77,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts flat ADSR fields to AdsrDef" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             attack = 0.01,
             decay = 0.1,
             sustain = 0.7,
@@ -54,7 +94,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts LPF flat fields to FilterDef.LowPass" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             cutoff = 1000.0,
             resonance = 1.5
         )
@@ -68,7 +108,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts HPF flat fields to FilterDef.HighPass" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             hcutoff = 500.0,
             hresonance = 2.0
         )
@@ -82,7 +122,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts BPF flat fields to FilterDef.BandPass" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             bandf = 750.0,
             bandq = 1.2
         )
@@ -96,7 +136,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() converts Notch flat fields to FilterDef.Notch" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             notchf = 600.0,
             nresonance = 0.8
         )
@@ -110,7 +150,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() creates multiple filters with independent resonance" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             cutoff = 1000.0,
             resonance = 1.5,
             hcutoff = 500.0,
@@ -140,7 +180,7 @@ class SprudelVoiceDataSpec : StringSpec({
     "toVoiceData() orders the filter chain HighPass → BandPass → Notch → Formant → LowPass" {
         // Flat fields are declared LowPass-first here on purpose; toVoiceData must
         // re-order them into the canonical chain regardless of field assignment order.
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             cutoff = 1000.0,   // LowPass  → must end up LAST
             hcutoff = 500.0,   // HighPass → must end up FIRST
             bandf = 750.0,
@@ -159,7 +199,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() puts LowPass last even when it is the only pair with HighPass" {
-        val data = SprudelVoiceData(cutoff = 1000.0, hcutoff = 80.0)
+        val data = createSprudelVoiceData(cutoff = 1000.0, hcutoff = 80.0)
 
         val voiceData = data.toVoiceData()
 
@@ -169,7 +209,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() handles null resonance gracefully" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             cutoff = 1000.0,
             resonance = null // No resonance specified
         )
@@ -183,7 +223,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "toVoiceData() maps all basic fields correctly" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             note = "c4",
             freqHz = 440.0,
             scale = "major",
@@ -248,7 +288,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "SprudelVoiceData is serializable to JSON" {
-        val data = SprudelVoiceData(
+        val data = createSprudelVoiceData(
             note = "c4",
             freqHz = 440.0,
             gain = 0.8,
@@ -267,7 +307,7 @@ class SprudelVoiceDataSpec : StringSpec({
     }
 
     "copy() creates new instance with updated fields" {
-        val original = SprudelVoiceData(
+        val original = createSprudelVoiceData(
             note = "c4",
             gain = 0.8
         )

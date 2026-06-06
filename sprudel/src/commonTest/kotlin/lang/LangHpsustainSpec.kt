@@ -104,7 +104,7 @@ class LangHpsustainSpec : StringSpec({
     }
 
     "hpsustain() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData(
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData(
             hcutoff = 2000.0,
             hpsustain = 0.8
         )

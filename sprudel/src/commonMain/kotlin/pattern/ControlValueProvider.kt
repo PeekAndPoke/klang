@@ -5,9 +5,9 @@ import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 
 /**
  * Provides control values either as static constants or from control patterns.
@@ -51,7 +51,7 @@ sealed interface ControlValueProvider {
                 SprudelPatternEvent(
                     part = timeSpan,
                     whole = timeSpan,
-                    data = SprudelVoiceData(value = value),
+                    data = createSprudelVoiceData(value = value),
                     sourceLocations = location?.asChain()
                 )
             )

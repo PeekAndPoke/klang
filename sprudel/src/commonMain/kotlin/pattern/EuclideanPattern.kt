@@ -6,8 +6,8 @@ import io.peekandpoke.klang.common.math.recursiveBjorklund
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.struct
 import kotlin.math.abs
 import kotlin.math.max
@@ -208,7 +208,7 @@ internal class EuclideanPattern(
                                     SprudelPatternEvent(
                                         part = CycleTimeSpan(s, e),
                                         whole = CycleTimeSpan(absStart, absEnd),
-                                        data = SprudelVoiceData(value = 1.asVoiceValue())
+                                        data = createSprudelVoiceData(value = 1.asVoiceValue())
                                     )
                                 )
                             }
@@ -288,7 +288,7 @@ internal class EuclideanPattern(
                     SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = SprudelVoiceData(value = 1.0.asVoiceValue())
+                        data = createSprudelVoiceData(value = 1.0.asVoiceValue())
                     )
                 )
             }

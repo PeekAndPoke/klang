@@ -109,7 +109,7 @@ class LangLpreleaseSpec : StringSpec({
     }
 
     "lprelease() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData(
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData(
             cutoff = 1000.0,
             lprelease = 0.5
         )

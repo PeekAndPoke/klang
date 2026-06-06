@@ -109,7 +109,7 @@ class LangLpdecaySpec : StringSpec({
     }
 
     "lpdecay() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData(
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData(
             cutoff = 1000.0,
             lpdecay = 0.2
         )

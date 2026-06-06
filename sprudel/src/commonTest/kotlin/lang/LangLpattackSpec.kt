@@ -109,7 +109,7 @@ class LangLpattackSpec : StringSpec({
     }
 
     "lpattack() creates FilterEnvDef in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData(
+        val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData(
             cutoff = 1000.0,
             lpattack = 0.05
         )

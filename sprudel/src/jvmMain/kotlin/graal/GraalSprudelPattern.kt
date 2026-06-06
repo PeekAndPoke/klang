@@ -6,8 +6,8 @@ import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeGetMember
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumberOrNull
@@ -309,7 +309,7 @@ class GraalSprudelPattern(
             part = part,
             whole = whole ?: part,
             // Voice data
-            data = SprudelVoiceData(
+            data = createSprudelVoiceData(
                 // Frequency and note
                 note = note,
                 scale = scale,

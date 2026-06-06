@@ -3,12 +3,12 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 
 class RepeatCyclesPatternSpec : StringSpec({
 
     "RepeatCyclesPattern repeats each cycle n times" {
-        val source = AtomicPattern(SprudelVoiceData(note = "c"))
+        val source = AtomicPattern(createSprudelVoiceData(note = "c"))
 
         val pattern = RepeatCyclesPattern(source, 2.0)
 

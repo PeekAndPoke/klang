@@ -10,6 +10,7 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
@@ -78,7 +79,7 @@ fun <T> SprudelDslArg<T>?.asControlValueProvider(default: SprudelVoiceValue): Co
 
         else -> parseMiniNotation(arg) { text, loc ->
             AtomicPattern(
-                data = SprudelVoiceData().voiceValueModifier(text),
+                data = createSprudelVoiceData().voiceValueModifier(text),
                 sourceLocations = loc
             )
         }
@@ -203,7 +204,7 @@ fun List<SprudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, SprudelPatt
                 val pat = when (patVal) {
                     is SprudelPattern -> patVal
                     else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(SprudelVoiceData().voiceValueModifier(text))
+                        AtomicPattern(createSprudelVoiceData().voiceValueModifier(text))
                     }
                 }
 
@@ -274,7 +275,7 @@ fun List<SprudelDslArg<Any?>>.extractWeightedPairs(): Pair<List<SprudelDslArg<An
 fun String.toVoiceValuePattern(baseLocation: SourceLocation? = null): SprudelPattern =
     parseMiniNotation(input = this, baseLocation = baseLocation) { text, loc ->
         AtomicPattern(
-            data = SprudelVoiceData().voiceValueModifier(text),
+            data = createSprudelVoiceData().voiceValueModifier(text),
             sourceLocations = loc,
         )
     }
@@ -315,9 +316,9 @@ internal fun List<SprudelDslArg<Any?>>.toListOfPatterns(
 
     val atomFactory = { text: Any?, sourceLocations: SourceLocationChain? ->
         AtomicPattern(
-            // Fresh SprudelVoiceData() per atom: `modify` may mutate in place (voiceSetter), so it
+            // Fresh createSprudelVoiceData() per atom: `modify` may mutate in place (voiceSetter), so it
             // must never run on a shared instance. See docs/tasks/mutable-voicedata-optimization.md.
-            data = SprudelVoiceData().modify(text).copy(patternId = sourceId),
+            data = createSprudelVoiceData().modify(text).copy(patternId = sourceId),
             sourceLocations = sourceLocations,
         )
     }
