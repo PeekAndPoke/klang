@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
  * Use to schedule the playback of a voice
  */
 @Serializable
+@WireFormat
 data class ScheduledVoice(
     /** The ID of the playback (song) this voice belongs to */
     val playbackId: String,

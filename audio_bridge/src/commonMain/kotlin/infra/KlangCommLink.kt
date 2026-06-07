@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.WireFormat
 import io.peekandpoke.klang.common.infra.KlangMessageReceiver
 import io.peekandpoke.klang.common.infra.KlangMessageSender
 import io.peekandpoke.klang.common.infra.KlangRingBuffer
@@ -18,6 +19,7 @@ class KlangCommLink(capacity: Int = 8192) {
     }
 
     /** Sent from the frontend to the backend */
+    @WireFormat
     sealed interface Cmd {
         val playbackId: String
 
@@ -153,6 +155,7 @@ class KlangCommLink(capacity: Int = 8192) {
 
     /** Sent from the backend to the frontend */
     @Serializable
+    @WireFormat
     sealed interface Feedback {
         val playbackId: String
 

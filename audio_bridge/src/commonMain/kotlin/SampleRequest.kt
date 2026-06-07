@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
  * Used to request a sample from the Sample Index
  */
 @Serializable
+@WireFormat
 data class SampleRequest(
     /** Name of the requested bank ... null means default sounds */
     val bank: String?,

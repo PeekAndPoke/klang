@@ -2,7 +2,6 @@
 
 plugins {
     kotlin("multiplatform")
-    kotlin("plugin.serialization")
 }
 
 val GROUP: String by project

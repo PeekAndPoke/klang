@@ -35,8 +35,9 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                // @Serializable wire types need core + the plugin. JSON is only used by tests (the worklet now
+                // uses the KSP-generated codec) — so serialization_json lives in commonTest, not here.
                 implementation(Deps.KotlinX.serialization_core)
-                implementation(Deps.KotlinX.serialization_json)
 
                 api(project(":common"))
                 api(project(":tones"))
@@ -45,6 +46,7 @@ kotlin {
 
         commonTest {
             dependencies {
+                implementation(Deps.KotlinX.serialization_json)
                 Deps.Test {
                     commonTestDeps()
                 }
@@ -64,6 +66,12 @@ kotlin {
             }
         }
     }
+}
+
+// Worklet wire-codec generation — JS-only (codec uses `dynamic`), so applied to the JS target and generated
+// into jsMain (NOT kspCommonMainMetadata). See docs/tasks/worklet-codec-ksp.md.
+dependencies {
+    add("kspJs", project(":audio-wire-codec-ksp"))
 }
 
 tasks {
