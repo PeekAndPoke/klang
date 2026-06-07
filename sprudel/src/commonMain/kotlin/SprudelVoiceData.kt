@@ -156,441 +156,441 @@ data class SprudelVoiceData(
     private fun sampleOrNew(): SvdSample = sample ?: SvdSample().also { sample = it }
 
     var attack: Double?
-        get() = adsr?.attack;
+        get() = adsr?.attack
         set(v) {
             if (v != null || adsr != null) adsrOrNew().attack = v
         }
     var decay: Double?
-        get() = adsr?.decay;
+        get() = adsr?.decay
         set(v) {
             if (v != null || adsr != null) adsrOrNew().decay = v
         }
     var sustain: Double?
-        get() = adsr?.sustain;
+        get() = adsr?.sustain
         set(v) {
             if (v != null || adsr != null) adsrOrNew().sustain = v
         }
     var release: Double?
-        get() = adsr?.release;
+        get() = adsr?.release
         set(v) {
             if (v != null || adsr != null) adsrOrNew().release = v
         }
     var attackCurve: AdsrCurve?
-        get() = adsr?.attackCurve;
+        get() = adsr?.attackCurve
         set(v) {
             if (v != null || adsr != null) adsrOrNew().attackCurve = v
         }
     var decayCurve: AdsrCurve?
-        get() = adsr?.decayCurve;
+        get() = adsr?.decayCurve
         set(v) {
             if (v != null || adsr != null) adsrOrNew().decayCurve = v
         }
     var releaseCurve: AdsrCurve?
-        get() = adsr?.releaseCurve;
+        get() = adsr?.releaseCurve
         set(v) {
             if (v != null || adsr != null) adsrOrNew().releaseCurve = v
         }
 
     var cutoff: Double?
-        get() = lpf?.cutoff;
+        get() = lpf?.cutoff
         set(v) {
             if (v != null || lpf != null) lpfOrNew().cutoff = v
         }
     var resonance: Double?
-        get() = lpf?.resonance;
+        get() = lpf?.resonance
         set(v) {
             if (v != null || lpf != null) lpfOrNew().resonance = v
         }
     var lpattack: Double?
-        get() = lpf?.attack;
+        get() = lpf?.attack
         set(v) {
             if (v != null || lpf != null) lpfOrNew().attack = v
         }
     var lpdecay: Double?
-        get() = lpf?.decay;
+        get() = lpf?.decay
         set(v) {
             if (v != null || lpf != null) lpfOrNew().decay = v
         }
     var lpsustain: Double?
-        get() = lpf?.sustain;
+        get() = lpf?.sustain
         set(v) {
             if (v != null || lpf != null) lpfOrNew().sustain = v
         }
     var lprelease: Double?
-        get() = lpf?.release;
+        get() = lpf?.release
         set(v) {
             if (v != null || lpf != null) lpfOrNew().release = v
         }
     var lpenv: Double?
-        get() = lpf?.env;
+        get() = lpf?.env
         set(v) {
             if (v != null || lpf != null) lpfOrNew().env = v
         }
 
     var hcutoff: Double?
-        get() = hpf?.cutoff;
+        get() = hpf?.cutoff
         set(v) {
             if (v != null || hpf != null) hpfOrNew().cutoff = v
         }
     var hresonance: Double?
-        get() = hpf?.resonance;
+        get() = hpf?.resonance
         set(v) {
             if (v != null || hpf != null) hpfOrNew().resonance = v
         }
     var hpattack: Double?
-        get() = hpf?.attack;
+        get() = hpf?.attack
         set(v) {
             if (v != null || hpf != null) hpfOrNew().attack = v
         }
     var hpdecay: Double?
-        get() = hpf?.decay;
+        get() = hpf?.decay
         set(v) {
             if (v != null || hpf != null) hpfOrNew().decay = v
         }
     var hpsustain: Double?
-        get() = hpf?.sustain;
+        get() = hpf?.sustain
         set(v) {
             if (v != null || hpf != null) hpfOrNew().sustain = v
         }
     var hprelease: Double?
-        get() = hpf?.release;
+        get() = hpf?.release
         set(v) {
             if (v != null || hpf != null) hpfOrNew().release = v
         }
     var hpenv: Double?
-        get() = hpf?.env;
+        get() = hpf?.env
         set(v) {
             if (v != null || hpf != null) hpfOrNew().env = v
         }
 
     var bandf: Double?
-        get() = bpf?.cutoff;
+        get() = bpf?.cutoff
         set(v) {
             if (v != null || bpf != null) bpfOrNew().cutoff = v
         }
     var bandq: Double?
-        get() = bpf?.resonance;
+        get() = bpf?.resonance
         set(v) {
             if (v != null || bpf != null) bpfOrNew().resonance = v
         }
     var bpattack: Double?
-        get() = bpf?.attack;
+        get() = bpf?.attack
         set(v) {
             if (v != null || bpf != null) bpfOrNew().attack = v
         }
     var bpdecay: Double?
-        get() = bpf?.decay;
+        get() = bpf?.decay
         set(v) {
             if (v != null || bpf != null) bpfOrNew().decay = v
         }
     var bpsustain: Double?
-        get() = bpf?.sustain;
+        get() = bpf?.sustain
         set(v) {
             if (v != null || bpf != null) bpfOrNew().sustain = v
         }
     var bprelease: Double?
-        get() = bpf?.release;
+        get() = bpf?.release
         set(v) {
             if (v != null || bpf != null) bpfOrNew().release = v
         }
     var bpenv: Double?
-        get() = bpf?.env;
+        get() = bpf?.env
         set(v) {
             if (v != null || bpf != null) bpfOrNew().env = v
         }
 
     var notchf: Double?
-        get() = notch?.cutoff;
+        get() = notch?.cutoff
         set(v) {
             if (v != null || notch != null) notchOrNew().cutoff = v
         }
     var nresonance: Double?
-        get() = notch?.resonance;
+        get() = notch?.resonance
         set(v) {
             if (v != null || notch != null) notchOrNew().resonance = v
         }
     var nfattack: Double?
-        get() = notch?.attack;
+        get() = notch?.attack
         set(v) {
             if (v != null || notch != null) notchOrNew().attack = v
         }
     var nfdecay: Double?
-        get() = notch?.decay;
+        get() = notch?.decay
         set(v) {
             if (v != null || notch != null) notchOrNew().decay = v
         }
     var nfsustain: Double?
-        get() = notch?.sustain;
+        get() = notch?.sustain
         set(v) {
             if (v != null || notch != null) notchOrNew().sustain = v
         }
     var nfrelease: Double?
-        get() = notch?.release;
+        get() = notch?.release
         set(v) {
             if (v != null || notch != null) notchOrNew().release = v
         }
     var nfenv: Double?
-        get() = notch?.env;
+        get() = notch?.env
         set(v) {
             if (v != null || notch != null) notchOrNew().env = v
         }
 
     var accelerate: Double?
-        get() = pitchMod?.accelerate;
+        get() = pitchMod?.accelerate
         set(v) {
             if (v != null || pitchMod != null) pitchModOrNew().accelerate = v
         }
     var vibrato: Double?
-        get() = pitchMod?.vibrato;
+        get() = pitchMod?.vibrato
         set(v) {
             if (v != null || pitchMod != null) pitchModOrNew().vibrato = v
         }
     var vibratoMod: Double?
-        get() = pitchMod?.vibratoMod;
+        get() = pitchMod?.vibratoMod
         set(v) {
             if (v != null || pitchMod != null) pitchModOrNew().vibratoMod = v
         }
 
     var pAttack: Double?
-        get() = pitchEnv?.pAttack;
+        get() = pitchEnv?.pAttack
         set(v) {
             if (v != null || pitchEnv != null) pitchEnvOrNew().pAttack = v
         }
     var pDecay: Double?
-        get() = pitchEnv?.pDecay;
+        get() = pitchEnv?.pDecay
         set(v) {
             if (v != null || pitchEnv != null) pitchEnvOrNew().pDecay = v
         }
     var pRelease: Double?
-        get() = pitchEnv?.pRelease;
+        get() = pitchEnv?.pRelease
         set(v) {
             if (v != null || pitchEnv != null) pitchEnvOrNew().pRelease = v
         }
     var pEnv: Double?
-        get() = pitchEnv?.pEnv;
+        get() = pitchEnv?.pEnv
         set(v) {
             if (v != null || pitchEnv != null) pitchEnvOrNew().pEnv = v
         }
     var pCurve: Double?
-        get() = pitchEnv?.pCurve;
+        get() = pitchEnv?.pCurve
         set(v) {
             if (v != null || pitchEnv != null) pitchEnvOrNew().pCurve = v
         }
     var pAnchor: Double?
-        get() = pitchEnv?.pAnchor;
+        get() = pitchEnv?.pAnchor
         set(v) {
             if (v != null || pitchEnv != null) pitchEnvOrNew().pAnchor = v
         }
 
     var fmh: Double?
-        get() = fm?.fmh;
+        get() = fm?.fmh
         set(v) {
             if (v != null || fm != null) fmOrNew().fmh = v
         }
     var fmAttack: Double?
-        get() = fm?.fmAttack;
+        get() = fm?.fmAttack
         set(v) {
             if (v != null || fm != null) fmOrNew().fmAttack = v
         }
     var fmDecay: Double?
-        get() = fm?.fmDecay;
+        get() = fm?.fmDecay
         set(v) {
             if (v != null || fm != null) fmOrNew().fmDecay = v
         }
     var fmSustain: Double?
-        get() = fm?.fmSustain;
+        get() = fm?.fmSustain
         set(v) {
             if (v != null || fm != null) fmOrNew().fmSustain = v
         }
     var fmEnv: Double?
-        get() = fm?.fmEnv;
+        get() = fm?.fmEnv
         set(v) {
             if (v != null || fm != null) fmOrNew().fmEnv = v
         }
 
     var distort: Double?
-        get() = distortion?.distort;
+        get() = distortion?.distort
         set(v) {
             if (v != null || distortion != null) distortionOrNew().distort = v
         }
     var distortShape: String?
-        get() = distortion?.distortShape;
+        get() = distortion?.distortShape
         set(v) {
             if (v != null || distortion != null) distortionOrNew().distortShape = v
         }
     var distortOversample: Int?
-        get() = distortion?.distortOversample;
+        get() = distortion?.distortOversample
         set(v) {
             if (v != null || distortion != null) distortionOrNew().distortOversample = v
         }
     var coarse: Double?
-        get() = distortion?.coarse;
+        get() = distortion?.coarse
         set(v) {
             if (v != null || distortion != null) distortionOrNew().coarse = v
         }
     var coarseOversample: Int?
-        get() = distortion?.coarseOversample;
+        get() = distortion?.coarseOversample
         set(v) {
             if (v != null || distortion != null) distortionOrNew().coarseOversample = v
         }
     var crush: Double?
-        get() = distortion?.crush;
+        get() = distortion?.crush
         set(v) {
             if (v != null || distortion != null) distortionOrNew().crush = v
         }
     var crushOversample: Int?
-        get() = distortion?.crushOversample;
+        get() = distortion?.crushOversample
         set(v) {
             if (v != null || distortion != null) distortionOrNew().crushOversample = v
         }
 
     var phaserRate: Double?
-        get() = phaser?.phaserRate;
+        get() = phaser?.phaserRate
         set(v) {
             if (v != null || phaser != null) phaserOrNew().phaserRate = v
         }
     var phaserDepth: Double?
-        get() = phaser?.phaserDepth;
+        get() = phaser?.phaserDepth
         set(v) {
             if (v != null || phaser != null) phaserOrNew().phaserDepth = v
         }
     var phaserCenter: Double?
-        get() = phaser?.phaserCenter;
+        get() = phaser?.phaserCenter
         set(v) {
             if (v != null || phaser != null) phaserOrNew().phaserCenter = v
         }
     var phaserSweep: Double?
-        get() = phaser?.phaserSweep;
+        get() = phaser?.phaserSweep
         set(v) {
             if (v != null || phaser != null) phaserOrNew().phaserSweep = v
         }
 
     var tremoloSync: Double?
-        get() = tremolo?.tremoloSync;
+        get() = tremolo?.tremoloSync
         set(v) {
             if (v != null || tremolo != null) tremoloOrNew().tremoloSync = v
         }
     var tremoloDepth: Double?
-        get() = tremolo?.tremoloDepth;
+        get() = tremolo?.tremoloDepth
         set(v) {
             if (v != null || tremolo != null) tremoloOrNew().tremoloDepth = v
         }
     var tremoloSkew: Double?
-        get() = tremolo?.tremoloSkew;
+        get() = tremolo?.tremoloSkew
         set(v) {
             if (v != null || tremolo != null) tremoloOrNew().tremoloSkew = v
         }
     var tremoloPhase: Double?
-        get() = tremolo?.tremoloPhase;
+        get() = tremolo?.tremoloPhase
         set(v) {
             if (v != null || tremolo != null) tremoloOrNew().tremoloPhase = v
         }
     var tremoloShape: String?
-        get() = tremolo?.tremoloShape;
+        get() = tremolo?.tremoloShape
         set(v) {
             if (v != null || tremolo != null) tremoloOrNew().tremoloShape = v
         }
 
     var duckCylinder: Int?
-        get() = duck?.duckCylinder;
+        get() = duck?.duckCylinder
         set(v) {
             if (v != null || duck != null) duckOrNew().duckCylinder = v
         }
     var duckAttack: Double?
-        get() = duck?.duckAttack;
+        get() = duck?.duckAttack
         set(v) {
             if (v != null || duck != null) duckOrNew().duckAttack = v
         }
     var duckDepth: Double?
-        get() = duck?.duckDepth;
+        get() = duck?.duckDepth
         set(v) {
             if (v != null || duck != null) duckOrNew().duckDepth = v
         }
 
     var delay: Double?
-        get() = delayFx?.delay;
+        get() = delayFx?.delay
         set(v) {
             if (v != null || delayFx != null) delayFxOrNew().delay = v
         }
     var delayTime: Double?
-        get() = delayFx?.delayTime;
+        get() = delayFx?.delayTime
         set(v) {
             if (v != null || delayFx != null) delayFxOrNew().delayTime = v
         }
     var delayFeedback: Double?
-        get() = delayFx?.delayFeedback;
+        get() = delayFx?.delayFeedback
         set(v) {
             if (v != null || delayFx != null) delayFxOrNew().delayFeedback = v
         }
 
     var room: Double?
-        get() = reverb?.room;
+        get() = reverb?.room
         set(v) {
             if (v != null || reverb != null) reverbOrNew().room = v
         }
     var roomSize: Double?
-        get() = reverb?.roomSize;
+        get() = reverb?.roomSize
         set(v) {
             if (v != null || reverb != null) reverbOrNew().roomSize = v
         }
     var roomFade: Double?
-        get() = reverb?.roomFade;
+        get() = reverb?.roomFade
         set(v) {
             if (v != null || reverb != null) reverbOrNew().roomFade = v
         }
     var roomLp: Double?
-        get() = reverb?.roomLp;
+        get() = reverb?.roomLp
         set(v) {
             if (v != null || reverb != null) reverbOrNew().roomLp = v
         }
     var roomDim: Double?
-        get() = reverb?.roomDim;
+        get() = reverb?.roomDim
         set(v) {
             if (v != null || reverb != null) reverbOrNew().roomDim = v
         }
     var iResponse: String?
-        get() = reverb?.iResponse;
+        get() = reverb?.iResponse
         set(v) {
             if (v != null || reverb != null) reverbOrNew().iResponse = v
         }
 
     var begin: Double?
-        get() = sample?.begin;
+        get() = sample?.begin
         set(v) {
             if (v != null || sample != null) sampleOrNew().begin = v
         }
     var end: Double?
-        get() = sample?.end;
+        get() = sample?.end
         set(v) {
             if (v != null || sample != null) sampleOrNew().end = v
         }
     var speed: Double?
-        get() = sample?.speed;
+        get() = sample?.speed
         set(v) {
             if (v != null || sample != null) sampleOrNew().speed = v
         }
     var unit: String?
-        get() = sample?.unit;
+        get() = sample?.unit
         set(v) {
             if (v != null || sample != null) sampleOrNew().unit = v
         }
     var loop: Boolean?
-        get() = sample?.loop;
+        get() = sample?.loop
         set(v) {
             if (v != null || sample != null) sampleOrNew().loop = v
         }
     var cut: Int?
-        get() = sample?.cut;
+        get() = sample?.cut
         set(v) {
             if (v != null || sample != null) sampleOrNew().cut = v
         }
     var loopBegin: Double?
-        get() = sample?.loopBegin;
+        get() = sample?.loopBegin
         set(v) {
             if (v != null || sample != null) sampleOrNew().loopBegin = v
         }
     var loopEnd: Double?
-        get() = sample?.loopEnd;
+        get() = sample?.loopEnd
         set(v) {
             if (v != null || sample != null) sampleOrNew().loopEnd = v
         }
