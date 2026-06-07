@@ -1,6 +1,12 @@
 # KSP-generated worklet wire codec
 
-Status: **planned** (not started). Created 2026-06-07.
+Status: **Phase 1 done** — KSP wiring proven. Created 2026-06-07.
+
+Phase 1 (done 2026-06-07): `@WireFormat` annotation in `audio_bridge/commonMain`; new `:audio-wire-codec-ksp`
+module (plain JVM, `@AutoService` provider, discovery-only processor); wired via `add("kspJs", ...)` on
+`audio_bridge`. Annotated roots `ScheduledVoice`, `KlangCommLink.Cmd`, `KlangCommLink.Feedback`.
+`:audio_bridge:kspKotlinJs` runs the processor on the JS target and logs all 3 roots; both targets compile.
+The one unproven bit — `kspJs` into the JS target seeing commonMain types — is confirmed.
 
 ## Context
 
@@ -80,9 +86,15 @@ sources, not dependencies. The wire types are defined in `audio_bridge`, so the 
   refinement. `MonoSamplePcm` is not `@Serializable`; the generated codec handles it like any other annotated class.
 - **Nullable / defaults**: omit nulls on encode; on decode, missing → the constructor default (the generator knows
   each param's default, or passes null for nullable-without-default).
-- **Version-skew guard:** "trust the input" assumes frontend + worklet are the **same build** (true — one bundle).
-  Add a single `v` schema-version int to the top-level envelope; the worklet rejects/logs on mismatch so a stale
-  cached worklet fails loudly instead of producing silent garbage.
+- **Version-skew guard (auto-derived — NOT hand-bumped):** "trust the input" assumes frontend + worklet are the
+  **same build**. That holds for one bundle, but the AudioWorklet module is fetched by URL and the browser can cache
+  it independently → a stale worklet can meet a fresh frontend. Guard: the processor, while walking the type graph,
+  folds a **deterministic structural hash** (each type's field names+types+order, sealed subtype lists, enum entries)
+  and emits `const val WIRE_SCHEMA_HASH: Int`. Any wire-type change → graph changes → hash changes, automatically (no
+  human bump to forget). `encodeCmd` stamps `o.v = WIRE_SCHEMA_HASH` **once on the top-level envelope** (one int/msg,
+  not per nested object); `decodeCmd` checks it first and on mismatch rejects + logs loudly (optionally emits a
+  `Feedback` so the frontend can prompt a reload). Same-bundle operation always matches → guard is free; only a
+  stale-cached worklet trips it.
 
 ## Type inventory (everything to cover)
 

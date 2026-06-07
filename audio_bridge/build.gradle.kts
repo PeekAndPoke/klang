@@ -66,6 +66,12 @@ kotlin {
     }
 }
 
+// Worklet wire-codec generation — JS-only (codec uses `dynamic`), so applied to the JS target and generated
+// into jsMain (NOT kspCommonMainMetadata). See docs/tasks/worklet-codec-ksp.md.
+dependencies {
+    add("kspJs", project(":audio-wire-codec-ksp"))
+}
+
 tasks {
     configureJvmTests()
 }

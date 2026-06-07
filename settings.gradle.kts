@@ -28,6 +28,7 @@ include(
     ":audio_bridge",
     ":audio_jsworklet",
     ":audio_benchmark",
+    ":audio-wire-codec-ksp",
 
     // utils
     ":tones",
