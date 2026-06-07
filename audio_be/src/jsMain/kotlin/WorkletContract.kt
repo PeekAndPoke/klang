@@ -1,242 +1,63 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
-import io.peekandpoke.klang.audio_bridge.SampleMetadata
-import io.peekandpoke.klang.audio_bridge.SampleRequest
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_be.WorkletContract.requireSchema
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromDynamic
-import kotlinx.serialization.json.encodeToDynamic
+import io.peekandpoke.klang.audio_bridge.wire.WIRE_SCHEMA_HASH
+import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
+import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Feedback
+import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
+import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
 import org.w3c.dom.MessageEvent
 import org.w3c.dom.MessagePort
 
-@Suppress("OPT_IN_USAGE")
+/**
+ * Frontend ⇄ audio-worklet message codec.
+ *
+ * Commands ([KlangCommLink.Cmd]) and feedback ([KlangCommLink.Feedback]) are encoded/decoded by the
+ * KSP-generated "trust the input" wire codec (`:audio-wire-codec-ksp`, generated into `audio_bridge` jsMain).
+ * That replaced kotlinx `encodeToDynamic`/`decodeFromDynamic` + hand-built marshalling, which dominated the
+ * worklet's audio-thread decode (~64 µs/voice → ~0.4 µs). See `docs/tasks/worklet-codec-ksp.md`.
+ *
+ * Each message carries the generated [WIRE_SCHEMA_HASH] under `v`; [requireSchema] rejects a mismatch so a
+ * stale-cached worklet meeting a fresh frontend (different build) fails loudly instead of decoding garbage.
+ */
 object WorkletContract {
-
-    const val PROP_TYPE = "type"
-
-    const val PROP_AFTER_TIME_SEC = "afterTimeSec"
-    const val PROP_CHUNK_OFFSET = "chunkOffset"
-    const val PROP_CLEAR_SCHEDULED = "clearScheduled"
-    const val PROP_DATA = "data"
-    const val PROP_IS_LAST_CHUNK = "isLastChunk"
-    const val PROP_META = "meta"
-    const val PROP_NOTE = "note"
-    const val PROP_PCM = "pcm"
-    const val PROP_PITCH_HZ = "pitchHz"
-    const val PROP_PLAYBACK_ID = "playbackId"
-    const val PROP_REQ = "req"
-    const val PROP_SAMPLE = "sample"
-    const val PROP_SAMPLE_RATE = "sampleRate"
-    const val PROP_TOTAL_SIZE = "totalSize"
-    const val PROP_VOICE = "voice"
-    const val PROP_VOICES = "voices"
-    const val PROP_NAME = "name"
-    const val PROP_DSL = "dsl"
-
-    private val codec = Json {
-        ignoreUnknownKeys = true
-        explicitNulls = false
-    }
+    /** Envelope key carrying the wire-schema hash. */
+    private const val PROP_VERSION = "v"
 
     fun MessagePort.sendCmd(cmd: KlangCommLink.Cmd) {
-        val obj = cmd.encode()
-
-        postMessage(obj)
+        postMessage(stamp(encode_KlangCommLink_Cmd(cmd)))
     }
 
     fun decodeCmd(msg: MessageEvent): KlangCommLink.Cmd {
-        val decoded = decodeCmd(msg.data)
-
-        return decoded
+        val data = msg.data
+        requireSchema(data)
+        return decode_KlangCommLink_Cmd(data)
     }
 
     fun MessagePort.sendFeed(feedback: KlangCommLink.Feedback) {
-        // println("Sending feedback: $feedback")
-
-        val obj = codec.encodeToDynamic(KlangCommLink.Feedback.serializer(), feedback)
-
-        postMessage(obj)
+        postMessage(stamp(encode_KlangCommLink_Feedback(feedback)))
     }
 
     fun decodeFeed(msg: MessageEvent): KlangCommLink.Feedback {
-        val decoded = codec.decodeFromDynamic(KlangCommLink.Feedback.serializer(), msg.data)
-
-        return decoded
+        val data = msg.data
+        requireSchema(data)
+        return decode_KlangCommLink_Feedback(data)
     }
 
-    private fun KlangCommLink.Cmd.encode(): dynamic {
-        return when (this) {
-            is KlangCommLink.Cmd.Cleanup -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.Cleanup.SERIAL_NAME
-                it[PROP_PLAYBACK_ID] = playbackId
-            }
-
-            is KlangCommLink.Cmd.ClearScheduled -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.ClearScheduled.SERIAL_NAME
-                it[PROP_PLAYBACK_ID] = playbackId
-            }
-
-            is KlangCommLink.Cmd.ReplaceVoices -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.ReplaceVoices.SERIAL_NAME
-                it[PROP_PLAYBACK_ID] = playbackId
-                it[PROP_VOICES] = voices.map { v -> v.encode() }.toTypedArray()
-                it[PROP_AFTER_TIME_SEC] = afterTimeSec
-            }
-
-            is KlangCommLink.Cmd.ScheduleVoice -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.ScheduleVoice.SERIAL_NAME
-                it[PROP_PLAYBACK_ID] = playbackId
-                it[PROP_VOICE] = voice.encode()
-                it[PROP_CLEAR_SCHEDULED] = clearScheduled
-            }
-
-            is KlangCommLink.Cmd.ScheduleVoices -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.ScheduleVoices.SERIAL_NAME
-                it[PROP_PLAYBACK_ID] = playbackId
-                it[PROP_VOICES] = voices.map { v -> v.encode() }.toTypedArray()
-            }
-
-            is KlangCommLink.Cmd.Sample.NotFound -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.Sample.NotFound.SERIAL_NAME
-                it[PROP_REQ] = req.encode()
-            }
-
-            is KlangCommLink.Cmd.Sample.Complete -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.Sample.Complete.SERIAL_NAME
-                it[PROP_REQ] = req.encode()
-                it[PROP_NOTE] = note
-                it[PROP_PITCH_HZ] = pitchHz
-                it[PROP_SAMPLE] = sample.encode()
-            }
-
-            is KlangCommLink.Cmd.Sample.Chunk -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.Sample.Chunk.SERIAL_NAME
-                it[PROP_REQ] = req.encode()
-                it[PROP_NOTE] = note
-                it[PROP_PITCH_HZ] = pitchHz
-                it[PROP_SAMPLE_RATE] = sampleRate
-                it[PROP_META] = meta.encode()
-                it[PROP_TOTAL_SIZE] = totalSize
-                it[PROP_IS_LAST_CHUNK] = isLastChunk
-                it[PROP_CHUNK_OFFSET] = chunkOffset
-                it[PROP_DATA] = data
-            }
-
-            is KlangCommLink.Cmd.RegisterIgnitor -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.RegisterIgnitor.SERIAL_NAME
-                it[PROP_PLAYBACK_ID] = playbackId
-                it[PROP_NAME] = name
-                it[PROP_DSL] = codec.encodeToDynamic(IgnitorDsl.serializer(), dsl)
-            }
-        }
-    }
-
-    private fun decodeCmd(msg: dynamic): KlangCommLink.Cmd {
-        return when (val type = msg[PROP_TYPE]) {
-            KlangCommLink.Cmd.Cleanup.SERIAL_NAME -> KlangCommLink.Cmd.Cleanup(
-                playbackId = msg[PROP_PLAYBACK_ID],
-            )
-
-            KlangCommLink.Cmd.ClearScheduled.SERIAL_NAME -> KlangCommLink.Cmd.ClearScheduled(
-                playbackId = msg[PROP_PLAYBACK_ID],
-            )
-
-            KlangCommLink.Cmd.ReplaceVoices.SERIAL_NAME -> KlangCommLink.Cmd.ReplaceVoices(
-                playbackId = msg[PROP_PLAYBACK_ID],
-                voices = (msg[PROP_VOICES] as Array<*>).map { decodeScheduledVoice(it!!) },
-                afterTimeSec = msg[PROP_AFTER_TIME_SEC] as? Double,
-            )
-
-            KlangCommLink.Cmd.ScheduleVoice.SERIAL_NAME -> KlangCommLink.Cmd.ScheduleVoice(
-                playbackId = msg[PROP_PLAYBACK_ID],
-                voice = decodeScheduledVoice(msg[PROP_VOICE]),
-                clearScheduled = msg[PROP_CLEAR_SCHEDULED] as? Boolean ?: false
-            )
-
-            KlangCommLink.Cmd.ScheduleVoices.SERIAL_NAME -> KlangCommLink.Cmd.ScheduleVoices(
-                playbackId = msg[PROP_PLAYBACK_ID],
-                voices = (msg[PROP_VOICES] as Array<*>).map { decodeScheduledVoice(it!!) },
-            )
-
-            KlangCommLink.Cmd.Sample.NotFound.SERIAL_NAME -> KlangCommLink.Cmd.Sample.NotFound(
-                req = decodeSampleRequest(msg[PROP_REQ])
-            )
-
-            KlangCommLink.Cmd.Sample.Complete.SERIAL_NAME -> KlangCommLink.Cmd.Sample.Complete(
-                req = decodeSampleRequest(msg[PROP_REQ]),
-                note = msg[PROP_NOTE],
-                pitchHz = msg[PROP_PITCH_HZ],
-                sample = decodeMonoSamplePcm(msg[PROP_SAMPLE])
-            )
-
-            KlangCommLink.Cmd.Sample.Chunk.SERIAL_NAME -> KlangCommLink.Cmd.Sample.Chunk(
-                req = decodeSampleRequest(msg[PROP_REQ]),
-                note = msg[PROP_NOTE],
-                pitchHz = msg[PROP_PITCH_HZ],
-                sampleRate = msg[PROP_SAMPLE_RATE],
-                meta = decodeSampleMetadata(msg[PROP_META]),
-                totalSize = msg[PROP_TOTAL_SIZE],
-                isLastChunk = msg[PROP_IS_LAST_CHUNK],
-                chunkOffset = msg[PROP_CHUNK_OFFSET],
-                data = msg[PROP_DATA],
-            )
-
-            KlangCommLink.Cmd.RegisterIgnitor.SERIAL_NAME -> KlangCommLink.Cmd.RegisterIgnitor(
-                playbackId = msg[PROP_PLAYBACK_ID],
-                name = msg[PROP_NAME],
-                dsl = codec.decodeFromDynamic(IgnitorDsl.serializer(), msg[PROP_DSL]),
-            )
-
-            else -> error("Unknown cmd type: $type")
-        }
-    }
-
-    private fun MonoSamplePcm.encode(): dynamic = jsObject {
-        it[PROP_SAMPLE_RATE] = sampleRate
-        it[PROP_PCM] = pcm
-        it[PROP_META] = meta.encode()
-    }
-
-    private fun decodeMonoSamplePcm(obj: dynamic): MonoSamplePcm {
-        return MonoSamplePcm(
-            sampleRate = obj[PROP_SAMPLE_RATE],
-            pcm = obj[PROP_PCM],
-            meta = decodeSampleMetadata(obj[PROP_META])
-        )
-    }
-
-    private fun ScheduledVoice.encode(): dynamic {
-        return codec.encodeToDynamic(ScheduledVoice.serializer(), this)
-    }
-
-    private fun decodeScheduledVoice(obj: dynamic): ScheduledVoice {
-        return codec.decodeFromDynamic(ScheduledVoice.serializer(), obj)
-    }
-
-    private fun SampleRequest.encode(): dynamic {
-        return codec.encodeToDynamic(SampleRequest.serializer(), this)
-    }
-
-    private fun decodeSampleRequest(obj: dynamic): SampleRequest {
-        return codec.decodeFromDynamic(SampleRequest.serializer(), obj)
-    }
-
-    private fun SampleMetadata.encode(): dynamic {
-        return codec.encodeToDynamic(SampleMetadata.Companion.serializer(), this)
-    }
-
-    private fun decodeSampleMetadata(obj: dynamic): SampleMetadata {
-        return codec.decodeFromDynamic(SampleMetadata.Companion.serializer(), obj)
-    }
-
-    fun jsObject(): dynamic = js("({})")
-
-    fun <T> jsObject(block: (T) -> Unit): T {
-        val obj = jsObject() as T
-        block(obj)
+    /** Stamps the wire-schema hash onto the (freshly-built, single-owner) envelope object. */
+    private fun stamp(obj: dynamic): dynamic {
+        obj[PROP_VERSION] = WIRE_SCHEMA_HASH
         return obj
+    }
+
+    private fun requireSchema(data: dynamic) {
+        val v: Int? = data[PROP_VERSION]
+        if (v != WIRE_SCHEMA_HASH) {
+            error(
+                "Worklet wire-schema mismatch: message has v=$v, this build expects $WIRE_SCHEMA_HASH. " +
+                        "Frontend and audio worklet are different builds (stale cached worklet?) — reload."
+            )
+        }
     }
 }

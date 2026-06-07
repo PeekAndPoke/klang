@@ -1,6 +1,56 @@
 # KSP-generated worklet wire codec
 
-Status: **Phase 1 done** — KSP wiring proven. Created 2026-06-07.
+Status: **DONE** ✅ — generated codec live in WorkletContract; ~174× decode; browser playback confirmed; deps trimmed.
+Created 2026-06-07.
+
+Phase 7 + cleanup (done 2026-06-07): browser playback confirmed working with the generated codec. Dependency cleanup
+(the worklet swap freed these): `audio_be` + `audio_jsworklet` had ZERO kotlinx-serialization usage (main+test) →
+dropped the `kotlin("plugin.serialization")` plugin + serialization deps. `audio_bridge`: `serialization_json` moved to
+`commonTest` (commonMain keeps `serialization_core` + plugin for the `@Serializable` wire-type annotations, which the
+golden + round-trip oracle tests still require). kotlinx-serialization itself STAYS — used app-wide (common/sprudel/
+audio_fe for songs/klangscript/klangbuch/persistence) and by the golden test (`json.encodeToString(VoiceData…)`).
+Verified: audio_bridge jvmTest + full app JS compile all green.
+
+Phase 6 (done 2026-06-07): generator emits `const val WIRE_SCHEMA_HASH` (deterministic structural hash of the type
+graph via `typeSignature`/`typeSig`, sorted). `WorkletContract` rewritten (~242→~62 lines): `sendCmd`/`decodeCmd`/
+`sendFeed`/`decodeFeed` now call `encode_KlangCommLink_Cmd`/`decode_…`/`…Feedback` + stamp/check `v = WIRE_SCHEMA_HASH`
+(rejects stale-build skew). All hand marshalling + the kotlinx `Json` codec + `PROP_*` deleted; no external refs broke.
+Full app JS compiles (klang/audio_jsworklet/audio_fe). Microbench now measures the GENERATED codec (replaced the hand
+proof): **decode 67,001→385 ns/op (~174×), encode 4,904→478 ns/op (~10×), round-trips == original = true.**
+Phase 7 REMAINING: real browser playback session (audio plays, no glitches) — only the user can do that; the JS worklet
+path isn't covered by JVM tests. (audio_bridge jsTest codec round-trip + sprudel kotlinx
+WorkletSerializationRoundTripSpec
+both green.)
+
+Phase 5 (done 2026-06-07): added `DoubleArray` pass-through, `data object` sealed subtypes (tag-only encode /
+singleton decode), and intermediate-sealed flattening (`Cmd.Sample` → leaves, single `t` tag space via `leafSubtypes`).
+This unlocked `Cmd` + the recursive 60+-node `IgnitorDsl` (recursion handled by the cycle-detecting walk + mutually
+recursive generated functions) + `MonoSamplePcm`/`SampleMetadata`. **109 types generate**, the full protocol; jsTest
+round-trips `Cmd`(+IgnitorDsl tree, +Sample.Chunk DoubleArray compared by content), `Feedback`, `ScheduledVoice` on JS.
+**FAIL-EARLY (per request):** the processor NO LONGER silently defers — `collectType` records every unsupported shape
+with a field/subtype path and `logger.error`s them (failing the build). To add a wire type, extend the emitter.
+NOTE: schema-version tag is still Phase 6 (not yet emitted). Remaining: Phase 6 (WorkletContract swap + schema-hash),
+Phase 7 (full validation + microbench re-run + browser).
+
+Phases 3+4 (done 2026-06-07): generator core. Transitive walk from `@WireFormat` roots (`collectType`), defers a
+root if its graph hits an unsupported shape. Emits `encode_<flat>`/`decode_<flat>` (flat = nesting chain, e.g.
+`encode_FilterDef_LowPass`, `encode_KlangCommLink_Feedback`). Handles: scalars (pass-through), enums (ordinal Int),
+**sealed (int `t` type-tag** over `getSealedSubclasses()`), nested classes, `List<T>`, `Map<String,Double>`, and
+nullability (encode uses Kotlin `?.let` on the typed value; decode uses `if (acc != null)` — NOT `?.let`, which
+doesn't bind on a `dynamic`). Hand-written JS-interop helpers in `audio_bridge/src/jsMain/.../WireCodecSupport.kt`
+(`wireObj`/`wireEncodeList`/`wireDecodeList`/`wireEncode|DecodeStringDoubleMap`). Generated 20 types (full
+`ScheduledVoice`→`VoiceData`→adsr/filters subgraph + `Feedback` subgraph). `Cmd` deferred — ONLY because of
+`DoubleArray` (sample PCM) + `IgnitorDsl` `data object` subtypes. jsTest `WireCodecRoundTripSpec` round-trips a
+populated `ScheduledVoice` + `Feedback` on the browser runtime. Remaining: Phase 5 (`DoubleArray` + `data object` +
+recursion → unlock `Cmd`/`IgnitorDsl`), Phase 6 (WorkletContract swap + schema-hash), Phase 7 (validation + bench).
+
+Phase 2 (done 2026-06-07): generator emits `encode<T>`/`decode<T>` for non-sealed all-scalar data classes
+(`SampleRequest`) into `audio_bridge/build/generated/ksp/js/jsMain/kotlin/.../wire/WireCodecGenerated.kt`. KSP
+auto-registers that dir on the JS compile path (no manual `srcDir`). New jsTest
+`audio_bridge/src/jsTest/.../WireCodecRoundTripSpec` round-trips it (green on browser). Sealed/nested roots
+(`Cmd`/`Feedback`/`ScheduledVoice`) logged as deferred + skipped → build green. Emitter helpers:
+`isSimpleScalarDataClass`,
+`emitScalarCodec`; `SCALARS` set.
 
 Phase 1 (done 2026-06-07): `@WireFormat` annotation in `audio_bridge/commonMain`; new `:audio-wire-codec-ksp`
 module (plain JVM, `@AutoService` provider, discovery-only processor); wired via `add("kspJs", ...)` on
