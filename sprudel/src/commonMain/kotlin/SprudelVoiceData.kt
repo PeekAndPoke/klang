@@ -1395,4 +1395,3 @@ fun SprudelVoiceData.putOscParamsFrom(other: SprudelVoiceData) {
  * or null if sound is null or a [SoundValue.Osc].
  */
 val SprudelVoiceData.soundName: String? get() = (sound as? SoundValue.Named)?.name
-

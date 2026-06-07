@@ -112,7 +112,6 @@ class LangHpattackSpec : StringSpec({
         val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
             hcutoff = 2000.0
             hpattack = 0.05
-
         }
         val voiceData = data.toVoiceData()
         val hpf = voiceData.filters[0] as FilterDef.HighPass
