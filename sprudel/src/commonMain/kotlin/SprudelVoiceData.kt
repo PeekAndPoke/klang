@@ -62,150 +62,36 @@ data class SprudelVoiceData(
     // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
     var oscParams: Map<String, Double>?,
 
-    // ADSR (flattened)
-    var attack: Double?,
-    var decay: Double?,
-    var sustain: Double?,
-    var release: Double?,
-    var attackCurve: AdsrCurve?,
-    var decayCurve: AdsrCurve?,
-    var releaseCurve: AdsrCurve?,
+    // ADSR amplitude envelope — grouped (see SvdAdsr). Flat fields (attack/decay/…) are accessors below.
+    var adsr: SvdAdsr?,
 
-    // Pitch / Glisando
-    var accelerate: Double?,
+    // Pitch modulation (glide + vibrato) — grouped (see SvdPitchMod). Flat fields are accessors below.
+    var pitchMod: SvdPitchMod?,
 
-    // Vibrato
-    var vibrato: Double?,
-    var vibratoMod: Double?,
+    // Pitch envelope — grouped (see SvdPitchEnv).
+    var pitchEnv: SvdPitchEnv?,
 
-    // Pitch envelope
-    var pAttack: Double?,
-    var pDecay: Double?,
-    var pRelease: Double?,
-    var pEnv: Double?,
-    var pCurve: Double?,
-    var pAnchor: Double?,
+    // FM synthesis — grouped (see SvdFm).
+    var fm: SvdFm?,
 
-    // FM Synthesis
-    /** FM harmonicity ratio (carrier to modulator frequency ratio) */
-    var fmh: Double?,
-    /** FM envelope attack time */
-    var fmAttack: Double?,
-    /** FM envelope decay time */
-    var fmDecay: Double?,
-    /** FM envelope sustain level */
-    var fmSustain: Double?,
-    /** FM modulation depth/amount */
-    var fmEnv: Double?,
+    // Distortion + lo-fi (coarse / crush) — grouped (see SvdDistortion).
+    var distortion: SvdDistortion?,
 
-    // Effects
-    var distort: Double?,
-    /** Distortion shape: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify */
-    var distortShape: String?,
-    /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    var distortOversample: Int?,
-    var coarse: Double?,
-    /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    var coarseOversample: Int?,
-    var crush: Double?,
-    /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    var crushOversample: Int?,
+    // Phaser — grouped (see SvdPhaser).
+    var phaser: SvdPhaser?,
 
-    // Phaser
-    /** Phaser modulation speed */
-    var phaserRate: Double?,
-    /** Phaser depth (0-1) */
-    var phaserDepth: Double?,
-    /** Phaser center frequency (Hz) */
-    var phaserCenter: Double?,
-    /** Phaser sweep range (Hz) */
-    var phaserSweep: Double?,
+    // Tremolo — grouped (see SvdTremolo).
+    var tremolo: SvdTremolo?,
 
-    // Tremolo
-    /** Tremolo modulation speed in cycles */
-    var tremoloSync: Double?,
-    /** Tremolo depth */
-    var tremoloDepth: Double?,
-    /** Tremolo waveform shape/skew (0-1) */
-    var tremoloSkew: Double?,
-    /** Tremolo phase offset in cycles */
-    var tremoloPhase: Double?,
-    /** Tremolo waveform type (tri, square, sine, saw, ramp) */
-    var tremoloShape: String?,
+    // Ducking / sidechain — grouped (see SvdDuck).
+    var duck: SvdDuck?,
 
-    // Ducking / Sidechain
-    /** Target cylinder to listen to for ducking (source of sidechain signal) */
-    var duckCylinder: Int?,
-    /** Duck return-to-normal time in seconds (attack/release time) */
-    var duckAttack: Double?,
-    /** Ducking amount (0.0 = no ducking, 1.0 = full silence) */
-    var duckDepth: Double?,
-
-    // Filters (flattened) - each filter has its own cutoff and resonance
-    /** Low pass filter cutoff frequency */
-    var cutoff: Double?,
-    /** Low pass filter resonance/Q */
-    var resonance: Double?,
-    /** High pass filter cutoff frequency */
-    var hcutoff: Double?,
-    /** High pass filter resonance/Q */
-    var hresonance: Double?,
-    /** Band pass filter cutoff frequency */
-    var bandf: Double?,
-    /** Band pass filter resonance/Q */
-    var bandq: Double?,
-    /** Notch filter cutoff frequency */
-    var notchf: Double?,
-    /** Notch filter resonance/Q */
-    var nresonance: Double?,
-
-    // Lowpass filter envelope
-    /** Low pass filter envelope attack time */
-    var lpattack: Double?,
-    /** Low pass filter envelope decay time */
-    var lpdecay: Double?,
-    /** Low pass filter envelope sustain level */
-    var lpsustain: Double?,
-    /** Low pass filter envelope release time */
-    var lprelease: Double?,
-    /** Low pass filter envelope depth/amount */
-    var lpenv: Double?,
-
-    // Highpass filter envelope
-    /** High pass filter envelope attack time */
-    var hpattack: Double?,
-    /** High pass filter envelope decay time */
-    var hpdecay: Double?,
-    /** High pass filter envelope sustain level */
-    var hpsustain: Double?,
-    /** High pass filter envelope release time */
-    var hprelease: Double?,
-    /** High pass filter envelope depth/amount */
-    var hpenv: Double?,
-
-    // Bandpass filter envelope
-    /** Band pass filter envelope attack time */
-    var bpattack: Double?,
-    /** Band pass filter envelope decay time */
-    var bpdecay: Double?,
-    /** Band pass filter envelope sustain level */
-    var bpsustain: Double?,
-    /** Band pass filter envelope release time */
-    var bprelease: Double?,
-    /** Band pass filter envelope depth/amount */
-    var bpenv: Double?,
-
-    // Notch filter envelope
-    /** Notch filter envelope attack time */
-    var nfattack: Double?,
-    /** Notch filter envelope decay time */
-    var nfdecay: Double?,
-    /** Notch filter envelope sustain level */
-    var nfsustain: Double?,
-    /** Notch filter envelope release time */
-    var nfrelease: Double?,
-    /** Notch filter envelope depth/amount */
-    var nfenv: Double?,
+    // Filters — grouped (see SvdFilter): cutoff + resonance + optional envelope, one group per filter type.
+    // Flat fields (cutoff/hcutoff/bandf/notchf, resonance/…, lp*/hp*/bp*/nf*) are accessors below.
+    var lpf: SvdFilter?,
+    var hpf: SvdFilter?,
+    var bpf: SvdFilter?,
+    var notch: SvdFilter?,
 
     // Routing
     /** The mix channel / bus / orbit / cylinder */
@@ -214,32 +100,14 @@ data class SprudelVoiceData(
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
     var pan: Double?,
 
-    // Delay
-    var delay: Double?, // Mix amount (0.0 to 1.0)
-    var delayTime: Double?, // Time in seconds
-    var delayFeedback: Double?, // Feedback amount (0.0 to <1.0)
+    // Delay — grouped (see SvdDelay). Property is `delayFx` (the flat `delay` mix-amount is an accessor below).
+    var delayFx: SvdDelay?,
 
-    // Reverb
-    var room: Double?,
-    var roomSize: Double?,
-    /** Reverb fade time */
-    var roomFade: Double?,
-    /** Reverb lowpass start frequency */
-    var roomLp: Double?,
-    /** Reverb lowpass frequency at -60dB */
-    var roomDim: Double?,
-    /** Impulse response sample */
-    var iResponse: String?,
+    // Reverb — grouped (see SvdReverb).
+    var reverb: SvdReverb?,
 
-    // Sample manipulation
-    var begin: Double?,
-    var end: Double?,
-    var speed: Double?,
-    var unit: String?,
-    var loop: Boolean?,
-    var cut: Int?,
-    var loopBegin: Double?,
-    var loopEnd: Double?,
+    // Sample manipulation — grouped (see SvdSample).
+    var sample: SvdSample?,
 
     // Voice / Singing
     /** Vowel formant filter (a, e, i, o, u) */
@@ -266,20 +134,492 @@ data class SprudelVoiceData(
     var value: SprudelVoiceValue?,
 ) {
 
+    // --- Flat-field accessors over the grouped storage -------------------------------------------------
+    // Bridge so the rest of the engine/DSL/tests keep using the flat names (data.attack, data.cutoff, …)
+    // while storage is grouped. A non-null write lazily creates the group; a null write only clears an
+    // existing group (never allocates an empty one). Reads are null-safe through the (possibly null) group.
+
+    private fun adsrOrNew(): SvdAdsr = adsr ?: SvdAdsr().also { adsr = it }
+    private fun lpfOrNew(): SvdFilter = lpf ?: SvdFilter().also { lpf = it }
+    private fun hpfOrNew(): SvdFilter = hpf ?: SvdFilter().also { hpf = it }
+    private fun bpfOrNew(): SvdFilter = bpf ?: SvdFilter().also { bpf = it }
+    private fun notchOrNew(): SvdFilter = notch ?: SvdFilter().also { notch = it }
+    private fun pitchModOrNew(): SvdPitchMod = pitchMod ?: SvdPitchMod().also { pitchMod = it }
+    private fun pitchEnvOrNew(): SvdPitchEnv = pitchEnv ?: SvdPitchEnv().also { pitchEnv = it }
+    private fun fmOrNew(): SvdFm = fm ?: SvdFm().also { fm = it }
+    private fun distortionOrNew(): SvdDistortion = distortion ?: SvdDistortion().also { distortion = it }
+    private fun phaserOrNew(): SvdPhaser = phaser ?: SvdPhaser().also { phaser = it }
+    private fun tremoloOrNew(): SvdTremolo = tremolo ?: SvdTremolo().also { tremolo = it }
+    private fun duckOrNew(): SvdDuck = duck ?: SvdDuck().also { duck = it }
+    private fun delayFxOrNew(): SvdDelay = delayFx ?: SvdDelay().also { delayFx = it }
+    private fun reverbOrNew(): SvdReverb = reverb ?: SvdReverb().also { reverb = it }
+    private fun sampleOrNew(): SvdSample = sample ?: SvdSample().also { sample = it }
+
+    var attack: Double?
+        get() = adsr?.attack;
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().attack = v
+        }
+    var decay: Double?
+        get() = adsr?.decay;
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().decay = v
+        }
+    var sustain: Double?
+        get() = adsr?.sustain;
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().sustain = v
+        }
+    var release: Double?
+        get() = adsr?.release;
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().release = v
+        }
+    var attackCurve: AdsrCurve?
+        get() = adsr?.attackCurve;
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().attackCurve = v
+        }
+    var decayCurve: AdsrCurve?
+        get() = adsr?.decayCurve;
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().decayCurve = v
+        }
+    var releaseCurve: AdsrCurve?
+        get() = adsr?.releaseCurve;
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().releaseCurve = v
+        }
+
+    var cutoff: Double?
+        get() = lpf?.cutoff;
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().cutoff = v
+        }
+    var resonance: Double?
+        get() = lpf?.resonance;
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().resonance = v
+        }
+    var lpattack: Double?
+        get() = lpf?.attack;
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().attack = v
+        }
+    var lpdecay: Double?
+        get() = lpf?.decay;
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().decay = v
+        }
+    var lpsustain: Double?
+        get() = lpf?.sustain;
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().sustain = v
+        }
+    var lprelease: Double?
+        get() = lpf?.release;
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().release = v
+        }
+    var lpenv: Double?
+        get() = lpf?.env;
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().env = v
+        }
+
+    var hcutoff: Double?
+        get() = hpf?.cutoff;
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().cutoff = v
+        }
+    var hresonance: Double?
+        get() = hpf?.resonance;
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().resonance = v
+        }
+    var hpattack: Double?
+        get() = hpf?.attack;
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().attack = v
+        }
+    var hpdecay: Double?
+        get() = hpf?.decay;
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().decay = v
+        }
+    var hpsustain: Double?
+        get() = hpf?.sustain;
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().sustain = v
+        }
+    var hprelease: Double?
+        get() = hpf?.release;
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().release = v
+        }
+    var hpenv: Double?
+        get() = hpf?.env;
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().env = v
+        }
+
+    var bandf: Double?
+        get() = bpf?.cutoff;
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().cutoff = v
+        }
+    var bandq: Double?
+        get() = bpf?.resonance;
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().resonance = v
+        }
+    var bpattack: Double?
+        get() = bpf?.attack;
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().attack = v
+        }
+    var bpdecay: Double?
+        get() = bpf?.decay;
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().decay = v
+        }
+    var bpsustain: Double?
+        get() = bpf?.sustain;
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().sustain = v
+        }
+    var bprelease: Double?
+        get() = bpf?.release;
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().release = v
+        }
+    var bpenv: Double?
+        get() = bpf?.env;
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().env = v
+        }
+
+    var notchf: Double?
+        get() = notch?.cutoff;
+        set(v) {
+            if (v != null || notch != null) notchOrNew().cutoff = v
+        }
+    var nresonance: Double?
+        get() = notch?.resonance;
+        set(v) {
+            if (v != null || notch != null) notchOrNew().resonance = v
+        }
+    var nfattack: Double?
+        get() = notch?.attack;
+        set(v) {
+            if (v != null || notch != null) notchOrNew().attack = v
+        }
+    var nfdecay: Double?
+        get() = notch?.decay;
+        set(v) {
+            if (v != null || notch != null) notchOrNew().decay = v
+        }
+    var nfsustain: Double?
+        get() = notch?.sustain;
+        set(v) {
+            if (v != null || notch != null) notchOrNew().sustain = v
+        }
+    var nfrelease: Double?
+        get() = notch?.release;
+        set(v) {
+            if (v != null || notch != null) notchOrNew().release = v
+        }
+    var nfenv: Double?
+        get() = notch?.env;
+        set(v) {
+            if (v != null || notch != null) notchOrNew().env = v
+        }
+
+    var accelerate: Double?
+        get() = pitchMod?.accelerate;
+        set(v) {
+            if (v != null || pitchMod != null) pitchModOrNew().accelerate = v
+        }
+    var vibrato: Double?
+        get() = pitchMod?.vibrato;
+        set(v) {
+            if (v != null || pitchMod != null) pitchModOrNew().vibrato = v
+        }
+    var vibratoMod: Double?
+        get() = pitchMod?.vibratoMod;
+        set(v) {
+            if (v != null || pitchMod != null) pitchModOrNew().vibratoMod = v
+        }
+
+    var pAttack: Double?
+        get() = pitchEnv?.pAttack;
+        set(v) {
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pAttack = v
+        }
+    var pDecay: Double?
+        get() = pitchEnv?.pDecay;
+        set(v) {
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pDecay = v
+        }
+    var pRelease: Double?
+        get() = pitchEnv?.pRelease;
+        set(v) {
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pRelease = v
+        }
+    var pEnv: Double?
+        get() = pitchEnv?.pEnv;
+        set(v) {
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pEnv = v
+        }
+    var pCurve: Double?
+        get() = pitchEnv?.pCurve;
+        set(v) {
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pCurve = v
+        }
+    var pAnchor: Double?
+        get() = pitchEnv?.pAnchor;
+        set(v) {
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pAnchor = v
+        }
+
+    var fmh: Double?
+        get() = fm?.fmh;
+        set(v) {
+            if (v != null || fm != null) fmOrNew().fmh = v
+        }
+    var fmAttack: Double?
+        get() = fm?.fmAttack;
+        set(v) {
+            if (v != null || fm != null) fmOrNew().fmAttack = v
+        }
+    var fmDecay: Double?
+        get() = fm?.fmDecay;
+        set(v) {
+            if (v != null || fm != null) fmOrNew().fmDecay = v
+        }
+    var fmSustain: Double?
+        get() = fm?.fmSustain;
+        set(v) {
+            if (v != null || fm != null) fmOrNew().fmSustain = v
+        }
+    var fmEnv: Double?
+        get() = fm?.fmEnv;
+        set(v) {
+            if (v != null || fm != null) fmOrNew().fmEnv = v
+        }
+
+    var distort: Double?
+        get() = distortion?.distort;
+        set(v) {
+            if (v != null || distortion != null) distortionOrNew().distort = v
+        }
+    var distortShape: String?
+        get() = distortion?.distortShape;
+        set(v) {
+            if (v != null || distortion != null) distortionOrNew().distortShape = v
+        }
+    var distortOversample: Int?
+        get() = distortion?.distortOversample;
+        set(v) {
+            if (v != null || distortion != null) distortionOrNew().distortOversample = v
+        }
+    var coarse: Double?
+        get() = distortion?.coarse;
+        set(v) {
+            if (v != null || distortion != null) distortionOrNew().coarse = v
+        }
+    var coarseOversample: Int?
+        get() = distortion?.coarseOversample;
+        set(v) {
+            if (v != null || distortion != null) distortionOrNew().coarseOversample = v
+        }
+    var crush: Double?
+        get() = distortion?.crush;
+        set(v) {
+            if (v != null || distortion != null) distortionOrNew().crush = v
+        }
+    var crushOversample: Int?
+        get() = distortion?.crushOversample;
+        set(v) {
+            if (v != null || distortion != null) distortionOrNew().crushOversample = v
+        }
+
+    var phaserRate: Double?
+        get() = phaser?.phaserRate;
+        set(v) {
+            if (v != null || phaser != null) phaserOrNew().phaserRate = v
+        }
+    var phaserDepth: Double?
+        get() = phaser?.phaserDepth;
+        set(v) {
+            if (v != null || phaser != null) phaserOrNew().phaserDepth = v
+        }
+    var phaserCenter: Double?
+        get() = phaser?.phaserCenter;
+        set(v) {
+            if (v != null || phaser != null) phaserOrNew().phaserCenter = v
+        }
+    var phaserSweep: Double?
+        get() = phaser?.phaserSweep;
+        set(v) {
+            if (v != null || phaser != null) phaserOrNew().phaserSweep = v
+        }
+
+    var tremoloSync: Double?
+        get() = tremolo?.tremoloSync;
+        set(v) {
+            if (v != null || tremolo != null) tremoloOrNew().tremoloSync = v
+        }
+    var tremoloDepth: Double?
+        get() = tremolo?.tremoloDepth;
+        set(v) {
+            if (v != null || tremolo != null) tremoloOrNew().tremoloDepth = v
+        }
+    var tremoloSkew: Double?
+        get() = tremolo?.tremoloSkew;
+        set(v) {
+            if (v != null || tremolo != null) tremoloOrNew().tremoloSkew = v
+        }
+    var tremoloPhase: Double?
+        get() = tremolo?.tremoloPhase;
+        set(v) {
+            if (v != null || tremolo != null) tremoloOrNew().tremoloPhase = v
+        }
+    var tremoloShape: String?
+        get() = tremolo?.tremoloShape;
+        set(v) {
+            if (v != null || tremolo != null) tremoloOrNew().tremoloShape = v
+        }
+
+    var duckCylinder: Int?
+        get() = duck?.duckCylinder;
+        set(v) {
+            if (v != null || duck != null) duckOrNew().duckCylinder = v
+        }
+    var duckAttack: Double?
+        get() = duck?.duckAttack;
+        set(v) {
+            if (v != null || duck != null) duckOrNew().duckAttack = v
+        }
+    var duckDepth: Double?
+        get() = duck?.duckDepth;
+        set(v) {
+            if (v != null || duck != null) duckOrNew().duckDepth = v
+        }
+
+    var delay: Double?
+        get() = delayFx?.delay;
+        set(v) {
+            if (v != null || delayFx != null) delayFxOrNew().delay = v
+        }
+    var delayTime: Double?
+        get() = delayFx?.delayTime;
+        set(v) {
+            if (v != null || delayFx != null) delayFxOrNew().delayTime = v
+        }
+    var delayFeedback: Double?
+        get() = delayFx?.delayFeedback;
+        set(v) {
+            if (v != null || delayFx != null) delayFxOrNew().delayFeedback = v
+        }
+
+    var room: Double?
+        get() = reverb?.room;
+        set(v) {
+            if (v != null || reverb != null) reverbOrNew().room = v
+        }
+    var roomSize: Double?
+        get() = reverb?.roomSize;
+        set(v) {
+            if (v != null || reverb != null) reverbOrNew().roomSize = v
+        }
+    var roomFade: Double?
+        get() = reverb?.roomFade;
+        set(v) {
+            if (v != null || reverb != null) reverbOrNew().roomFade = v
+        }
+    var roomLp: Double?
+        get() = reverb?.roomLp;
+        set(v) {
+            if (v != null || reverb != null) reverbOrNew().roomLp = v
+        }
+    var roomDim: Double?
+        get() = reverb?.roomDim;
+        set(v) {
+            if (v != null || reverb != null) reverbOrNew().roomDim = v
+        }
+    var iResponse: String?
+        get() = reverb?.iResponse;
+        set(v) {
+            if (v != null || reverb != null) reverbOrNew().iResponse = v
+        }
+
+    var begin: Double?
+        get() = sample?.begin;
+        set(v) {
+            if (v != null || sample != null) sampleOrNew().begin = v
+        }
+    var end: Double?
+        get() = sample?.end;
+        set(v) {
+            if (v != null || sample != null) sampleOrNew().end = v
+        }
+    var speed: Double?
+        get() = sample?.speed;
+        set(v) {
+            if (v != null || sample != null) sampleOrNew().speed = v
+        }
+    var unit: String?
+        get() = sample?.unit;
+        set(v) {
+            if (v != null || sample != null) sampleOrNew().unit = v
+        }
+    var loop: Boolean?
+        get() = sample?.loop;
+        set(v) {
+            if (v != null || sample != null) sampleOrNew().loop = v
+        }
+    var cut: Int?
+        get() = sample?.cut;
+        set(v) {
+            if (v != null || sample != null) sampleOrNew().cut = v
+        }
+    var loopBegin: Double?
+        get() = sample?.loopBegin;
+        set(v) {
+            if (v != null || sample != null) sampleOrNew().loopBegin = v
+        }
+    var loopEnd: Double?
+        get() = sample?.loopEnd;
+        set(v) {
+            if (v != null || sample != null) sampleOrNew().loopEnd = v
+        }
+    // --------------------------------------------------------------------------------------------------
+
     /**
-     * Fresh shallow copy of this voice data.
-     *
-     * Used by the leaf emitters (`AtomicPattern`, `AtomicInfinitePattern`, `StaticSprudelPattern`)
-     * to hand every event its own single-owner instance, which is the invariant that makes the
-     * in-place mutation of `var` fields safe (see `docs/tasks/mutable-voicedata-optimization.md`).
-     * Flat fields only — `oscParams` is treated as immutable-replace, so sharing its reference is fine.
-     *
-     * Just `copy()`: the generated data-class copy (constructor) is the fast path on Kotlin/JS — V8
-     * optimizes it into a monomorphic constructor call. A benchmarked `Object.assign(Object.create(...))`
-     * alternative ("fastCopy") was ~22x SLOWER (slow dictionary-mode object), so don't reintroduce it.
-     * See `docs/tasks/mutable-voicedata-optimization.md`.
+     * Fresh deep-enough copy: the flat core fields are copied shallow (immutable scalars), and each
+     * non-null group is `copy()`-ed so the clone owns its own groups (single-owner invariant — see the
+     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`/`StaticSprudelPattern`). `oscParams` is
+     * treated as immutable-replace, so sharing its reference is fine. As more clusters become groups,
+     * add them to the deep-copy list here.
      */
-    fun clone(): SprudelVoiceData = copy()
+    fun clone(): SprudelVoiceData = copy(
+        adsr = adsr?.copy(),
+        lpf = lpf?.copy(),
+        hpf = hpf?.copy(),
+        bpf = bpf?.copy(),
+        notch = notch?.copy(),
+        pitchMod = pitchMod?.copy(),
+        pitchEnv = pitchEnv?.copy(),
+        fm = fm?.copy(),
+        distortion = distortion?.copy(),
+        phaser = phaser?.copy(),
+        tremolo = tremolo?.copy(),
+        duck = duck?.copy(),
+        delayFx = delayFx?.copy(),
+        reverb = reverb?.copy(),
+        sample = sample?.copy(),
+    )
 
     fun merge(other: SprudelVoiceData): SprudelVoiceData {
         return SprudelVoiceData(
@@ -295,93 +635,23 @@ data class SprudelVoiceData(
             sound = other.sound ?: sound,
             soundIndex = other.soundIndex ?: soundIndex,
             oscParams = mergeOscParams(oscParams, other.oscParams),
-            attack = other.attack ?: attack,
-            decay = other.decay ?: decay,
-            sustain = other.sustain ?: sustain,
-            release = other.release ?: release,
-            attackCurve = other.attackCurve ?: attackCurve,
-            decayCurve = other.decayCurve ?: decayCurve,
-            releaseCurve = other.releaseCurve ?: releaseCurve,
-            accelerate = other.accelerate ?: accelerate,
-            vibrato = other.vibrato ?: vibrato,
-            vibratoMod = other.vibratoMod ?: vibratoMod,
-            pAttack = other.pAttack ?: pAttack,
-            pDecay = other.pDecay ?: pDecay,
-            pRelease = other.pRelease ?: pRelease,
-            pEnv = other.pEnv ?: pEnv,
-            pCurve = other.pCurve ?: pCurve,
-            pAnchor = other.pAnchor ?: pAnchor,
-            fmh = other.fmh ?: fmh,
-            fmAttack = other.fmAttack ?: fmAttack,
-            fmDecay = other.fmDecay ?: fmDecay,
-            fmSustain = other.fmSustain ?: fmSustain,
-            fmEnv = other.fmEnv ?: fmEnv,
-            distort = other.distort ?: distort,
-            distortShape = other.distortShape ?: distortShape,
-            distortOversample = other.distortOversample ?: distortOversample,
-            coarse = other.coarse ?: coarse,
-            coarseOversample = other.coarseOversample ?: coarseOversample,
-            crush = other.crush ?: crush,
-            crushOversample = other.crushOversample ?: crushOversample,
-            phaserRate = other.phaserRate ?: phaserRate,
-            phaserDepth = other.phaserDepth ?: phaserDepth,
-            phaserCenter = other.phaserCenter ?: phaserCenter,
-            phaserSweep = other.phaserSweep ?: phaserSweep,
-            tremoloSync = other.tremoloSync ?: tremoloSync,
-            tremoloDepth = other.tremoloDepth ?: tremoloDepth,
-            tremoloSkew = other.tremoloSkew ?: tremoloSkew,
-            tremoloPhase = other.tremoloPhase ?: tremoloPhase,
-            tremoloShape = other.tremoloShape ?: tremoloShape,
-            duckCylinder = other.duckCylinder ?: duckCylinder,
-            duckAttack = other.duckAttack ?: duckAttack,
-            duckDepth = other.duckDepth ?: duckDepth,
-            cutoff = other.cutoff ?: cutoff,
-            resonance = other.resonance ?: resonance,
-            hcutoff = other.hcutoff ?: hcutoff,
-            hresonance = other.hresonance ?: hresonance,
-            bandf = other.bandf ?: bandf,
-            bandq = other.bandq ?: bandq,
-            notchf = other.notchf ?: notchf,
-            nresonance = other.nresonance ?: nresonance,
-            lpattack = other.lpattack ?: lpattack,
-            lpdecay = other.lpdecay ?: lpdecay,
-            lpsustain = other.lpsustain ?: lpsustain,
-            lprelease = other.lprelease ?: lprelease,
-            lpenv = other.lpenv ?: lpenv,
-            hpattack = other.hpattack ?: hpattack,
-            hpdecay = other.hpdecay ?: hpdecay,
-            hpsustain = other.hpsustain ?: hpsustain,
-            hprelease = other.hprelease ?: hprelease,
-            hpenv = other.hpenv ?: hpenv,
-            bpattack = other.bpattack ?: bpattack,
-            bpdecay = other.bpdecay ?: bpdecay,
-            bpsustain = other.bpsustain ?: bpsustain,
-            bprelease = other.bprelease ?: bprelease,
-            bpenv = other.bpenv ?: bpenv,
-            nfattack = other.nfattack ?: nfattack,
-            nfdecay = other.nfdecay ?: nfdecay,
-            nfsustain = other.nfsustain ?: nfsustain,
-            nfrelease = other.nfrelease ?: nfrelease,
-            nfenv = other.nfenv ?: nfenv,
+            adsr = mergeSvdAdsr(adsr, other.adsr),
+            pitchMod = mergeSvdPitchMod(pitchMod, other.pitchMod),
+            pitchEnv = mergeSvdPitchEnv(pitchEnv, other.pitchEnv),
+            fm = mergeSvdFm(fm, other.fm),
+            distortion = mergeSvdDistortion(distortion, other.distortion),
+            phaser = mergeSvdPhaser(phaser, other.phaser),
+            tremolo = mergeSvdTremolo(tremolo, other.tremolo),
+            duck = mergeSvdDuck(duck, other.duck),
+            lpf = mergeSvdFilter(lpf, other.lpf),
+            hpf = mergeSvdFilter(hpf, other.hpf),
+            bpf = mergeSvdFilter(bpf, other.bpf),
+            notch = mergeSvdFilter(notch, other.notch),
             cylinder = other.cylinder ?: cylinder,
             pan = other.pan ?: pan,
-            delay = other.delay ?: delay,
-            delayTime = other.delayTime ?: delayTime,
-            delayFeedback = other.delayFeedback ?: delayFeedback,
-            room = other.room ?: room,
-            roomSize = other.roomSize ?: roomSize,
-            roomFade = other.roomFade ?: roomFade,
-            roomLp = other.roomLp ?: roomLp,
-            roomDim = other.roomDim ?: roomDim,
-            iResponse = other.iResponse ?: iResponse,
-            begin = other.begin ?: begin,
-            end = other.end ?: end,
-            speed = other.speed ?: speed,
-            unit = other.unit ?: unit,
-            loop = other.loop ?: loop,
-            cut = other.cut ?: cut,
-            loopBegin = other.loopBegin ?: loopBegin,
-            loopEnd = other.loopEnd ?: loopEnd,
+            delayFx = mergeSvdDelay(delayFx, other.delayFx),
+            reverb = mergeSvdReverb(reverb, other.reverb),
+            sample = mergeSvdSample(sample, other.sample),
             vowel = other.vowel ?: vowel,
             compressor = other.compressor ?: compressor,
             solo = other.solo ?: solo,
@@ -410,93 +680,23 @@ data class SprudelVoiceData(
         sound = other.sound ?: sound
         soundIndex = other.soundIndex ?: soundIndex
         oscParams = mergeOscParams(oscParams, other.oscParams)
-        attack = other.attack ?: attack
-        decay = other.decay ?: decay
-        sustain = other.sustain ?: sustain
-        release = other.release ?: release
-        attackCurve = other.attackCurve ?: attackCurve
-        decayCurve = other.decayCurve ?: decayCurve
-        releaseCurve = other.releaseCurve ?: releaseCurve
-        accelerate = other.accelerate ?: accelerate
-        vibrato = other.vibrato ?: vibrato
-        vibratoMod = other.vibratoMod ?: vibratoMod
-        pAttack = other.pAttack ?: pAttack
-        pDecay = other.pDecay ?: pDecay
-        pRelease = other.pRelease ?: pRelease
-        pEnv = other.pEnv ?: pEnv
-        pCurve = other.pCurve ?: pCurve
-        pAnchor = other.pAnchor ?: pAnchor
-        fmh = other.fmh ?: fmh
-        fmAttack = other.fmAttack ?: fmAttack
-        fmDecay = other.fmDecay ?: fmDecay
-        fmSustain = other.fmSustain ?: fmSustain
-        fmEnv = other.fmEnv ?: fmEnv
-        distort = other.distort ?: distort
-        distortShape = other.distortShape ?: distortShape
-        distortOversample = other.distortOversample ?: distortOversample
-        coarse = other.coarse ?: coarse
-        coarseOversample = other.coarseOversample ?: coarseOversample
-        crush = other.crush ?: crush
-        crushOversample = other.crushOversample ?: crushOversample
-        phaserRate = other.phaserRate ?: phaserRate
-        phaserDepth = other.phaserDepth ?: phaserDepth
-        phaserCenter = other.phaserCenter ?: phaserCenter
-        phaserSweep = other.phaserSweep ?: phaserSweep
-        tremoloSync = other.tremoloSync ?: tremoloSync
-        tremoloDepth = other.tremoloDepth ?: tremoloDepth
-        tremoloSkew = other.tremoloSkew ?: tremoloSkew
-        tremoloPhase = other.tremoloPhase ?: tremoloPhase
-        tremoloShape = other.tremoloShape ?: tremoloShape
-        duckCylinder = other.duckCylinder ?: duckCylinder
-        duckAttack = other.duckAttack ?: duckAttack
-        duckDepth = other.duckDepth ?: duckDepth
-        cutoff = other.cutoff ?: cutoff
-        resonance = other.resonance ?: resonance
-        hcutoff = other.hcutoff ?: hcutoff
-        hresonance = other.hresonance ?: hresonance
-        bandf = other.bandf ?: bandf
-        bandq = other.bandq ?: bandq
-        notchf = other.notchf ?: notchf
-        nresonance = other.nresonance ?: nresonance
-        lpattack = other.lpattack ?: lpattack
-        lpdecay = other.lpdecay ?: lpdecay
-        lpsustain = other.lpsustain ?: lpsustain
-        lprelease = other.lprelease ?: lprelease
-        lpenv = other.lpenv ?: lpenv
-        hpattack = other.hpattack ?: hpattack
-        hpdecay = other.hpdecay ?: hpdecay
-        hpsustain = other.hpsustain ?: hpsustain
-        hprelease = other.hprelease ?: hprelease
-        hpenv = other.hpenv ?: hpenv
-        bpattack = other.bpattack ?: bpattack
-        bpdecay = other.bpdecay ?: bpdecay
-        bpsustain = other.bpsustain ?: bpsustain
-        bprelease = other.bprelease ?: bprelease
-        bpenv = other.bpenv ?: bpenv
-        nfattack = other.nfattack ?: nfattack
-        nfdecay = other.nfdecay ?: nfdecay
-        nfsustain = other.nfsustain ?: nfsustain
-        nfrelease = other.nfrelease ?: nfrelease
-        nfenv = other.nfenv ?: nfenv
+        adsr = mergeSvdAdsr(adsr, other.adsr)
+        pitchMod = mergeSvdPitchMod(pitchMod, other.pitchMod)
+        pitchEnv = mergeSvdPitchEnv(pitchEnv, other.pitchEnv)
+        fm = mergeSvdFm(fm, other.fm)
+        distortion = mergeSvdDistortion(distortion, other.distortion)
+        phaser = mergeSvdPhaser(phaser, other.phaser)
+        tremolo = mergeSvdTremolo(tremolo, other.tremolo)
+        duck = mergeSvdDuck(duck, other.duck)
+        lpf = mergeSvdFilter(lpf, other.lpf)
+        hpf = mergeSvdFilter(hpf, other.hpf)
+        bpf = mergeSvdFilter(bpf, other.bpf)
+        notch = mergeSvdFilter(notch, other.notch)
         cylinder = other.cylinder ?: cylinder
         pan = other.pan ?: pan
-        delay = other.delay ?: delay
-        delayTime = other.delayTime ?: delayTime
-        delayFeedback = other.delayFeedback ?: delayFeedback
-        room = other.room ?: room
-        roomSize = other.roomSize ?: roomSize
-        roomFade = other.roomFade ?: roomFade
-        roomLp = other.roomLp ?: roomLp
-        roomDim = other.roomDim ?: roomDim
-        iResponse = other.iResponse ?: iResponse
-        begin = other.begin ?: begin
-        end = other.end ?: end
-        speed = other.speed ?: speed
-        unit = other.unit ?: unit
-        loop = other.loop ?: loop
-        cut = other.cut ?: cut
-        loopBegin = other.loopBegin ?: loopBegin
-        loopEnd = other.loopEnd ?: loopEnd
+        delayFx = mergeSvdDelay(delayFx, other.delayFx)
+        reverb = mergeSvdReverb(reverb, other.reverb)
+        sample = mergeSvdSample(sample, other.sample)
         vowel = other.vowel ?: vowel
         compressor = other.compressor ?: compressor
         solo = other.solo ?: solo
@@ -1087,93 +1287,23 @@ internal val blueprint = SprudelVoiceData(
     sound = null,
     soundIndex = null,
     oscParams = null,
-    attack = null,
-    decay = null,
-    sustain = null,
-    release = null,
-    attackCurve = null,
-    decayCurve = null,
-    releaseCurve = null,
-    accelerate = null,
-    vibrato = null,
-    vibratoMod = null,
-    pAttack = null,
-    pDecay = null,
-    pRelease = null,
-    pEnv = null,
-    pCurve = null,
-    pAnchor = null,
-    fmh = null,
-    fmAttack = null,
-    fmDecay = null,
-    fmSustain = null,
-    fmEnv = null,
-    distort = null,
-    distortShape = null,
-    distortOversample = null,
-    coarse = null,
-    coarseOversample = null,
-    crush = null,
-    crushOversample = null,
-    phaserRate = null,
-    phaserDepth = null,
-    phaserCenter = null,
-    phaserSweep = null,
-    tremoloSync = null,
-    tremoloDepth = null,
-    tremoloSkew = null,
-    tremoloPhase = null,
-    tremoloShape = null,
-    duckCylinder = null,
-    duckAttack = null,
-    duckDepth = null,
-    cutoff = null,
-    resonance = null,
-    hcutoff = null,
-    hresonance = null,
-    bandf = null,
-    bandq = null,
-    notchf = null,
-    nresonance = null,
-    lpattack = null,
-    lpdecay = null,
-    lpsustain = null,
-    lprelease = null,
-    lpenv = null,
-    hpattack = null,
-    hpdecay = null,
-    hpsustain = null,
-    hprelease = null,
-    hpenv = null,
-    bpattack = null,
-    bpdecay = null,
-    bpsustain = null,
-    bprelease = null,
-    bpenv = null,
-    nfattack = null,
-    nfdecay = null,
-    nfsustain = null,
-    nfrelease = null,
-    nfenv = null,
+    adsr = null,
+    pitchMod = null,
+    pitchEnv = null,
+    fm = null,
+    distortion = null,
+    phaser = null,
+    tremolo = null,
+    duck = null,
+    lpf = null,
+    hpf = null,
+    bpf = null,
+    notch = null,
     cylinder = null,
     pan = null,
-    delay = null,
-    delayTime = null,
-    delayFeedback = null,
-    room = null,
-    roomSize = null,
-    roomFade = null,
-    roomLp = null,
-    roomDim = null,
-    iResponse = null,
-    begin = null,
-    end = null,
-    speed = null,
-    unit = null,
-    loop = null,
-    cut = null,
-    loopBegin = null,
-    loopEnd = null,
+    delayFx = null,
+    reverb = null,
+    sample = null,
     vowel = null,
     compressor = null,
     solo = null,

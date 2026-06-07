@@ -29,14 +29,39 @@ private var copyBenchSink: Int = 0
  * ```
  */
 fun runVoiceDataCopyBenchmark() {
-    // A representative leaf voice (a spread of set + null fields, like Der Schmetterling's voices).
-    val sample = createSprudelVoiceData {
+    // LEAF-like data: only the core fields an atom carries at emission; every group is null. This is the
+    // realistic per-event clone hotspot — with grouping the ~35 null adsr/filter fields collapse to 5 null refs.
+    val leaf = createSprudelVoiceData {
+        note = "c3"; freqHz = 130.81; sound = SoundValue.Named("supersaw"); soundIndex = 1
+    }
+    // Typical voice: adsr + low/high-pass filter + distortion groups set (a few non-null → deep-cloned).
+    val voice = createSprudelVoiceData {
         note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95; postGain = 0.8
         sound = SoundValue.Named("supersaw"); soundIndex = 1
         oscParams = mapOf("voices" to 7.0, "freqSpread" to 0.3)
         attack = 0.005; decay = 3.0; sustain = 0.0; release = 0.05
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0; lpattack = 0.005
         hcutoff = 1350.0; distort = 0.3; pan = 0.3
+    }
+    // WORST case: at least one field set in EVERY group, so clone() must deep-copy all 15 nested objects.
+    val full = createSprudelVoiceData {
+        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95; postGain = 0.8
+        sound = SoundValue.Named("supersaw"); soundIndex = 1; oscParams = mapOf("voices" to 7.0)
+        attack = 0.005; decay = 3.0; sustain = 0.0; release = 0.05                 // adsr
+        cutoff = 1625.0; resonance = 1.2; lpenv = 1.0                              // lpf
+        hcutoff = 1350.0; hresonance = 0.8                                         // hpf
+        bandf = 800.0; bandq = 1.0                                                 // bpf
+        notchf = 500.0; nresonance = 0.7                                          // notch
+        accelerate = 0.1; vibrato = 5.0                                            // pitchMod
+        pAttack = 0.01; pEnv = 12.0                                                // pitchEnv
+        fmh = 2.0; fmEnv = 0.5                                                     // fm
+        distort = 0.3; coarse = 2.0; crush = 8.0                                   // distortion
+        phaserRate = 0.5; phaserDepth = 0.6                                        // phaser
+        tremoloSync = 4.0; tremoloDepth = 0.4                                      // tremolo
+        duckDepth = 0.5; duckAttack = 0.05                                         // duck
+        delay = 0.3; delayTime = 0.25; delayFeedback = 0.4                         // delayFx
+        room = 0.5; roomSize = 0.8                                                 // reverb
+        begin = 0.0; end = 1.0; speed = 1.0; loop = true                          // sample
     }
 
     val warmupOps = 100_000
@@ -54,15 +79,22 @@ fun runVoiceDataCopyBenchmark() {
         return nsPerOp[trials / 2]
     }
 
-    val copyNs = medianNsPerOp { sample.copy() }
-    val cloneNs = medianNsPerOp { sample.clone() }
+    val leafClone = medianNsPerOp { leaf.clone() }
+    val leafCopy = medianNsPerOp { leaf.copy() }
+    val voiceClone = medianNsPerOp { voice.clone() }
+    val voiceCopy = medianNsPerOp { voice.copy() }
+    val fullClone = medianNsPerOp { full.clone() }
+    val fullCopy = medianNsPerOp { full.copy() }
 
-    println("=== SprudelVoiceData shallow-copy cost (copy() / clone()) ===")
+    println("=== SprudelVoiceData clone() cost — grouped storage (all optional clusters) ===")
     println("Platform: ${platformInfo()}")
-    println("Warmup $warmupOps ops; $iterations ops x $trials trials (median), best of 2 passes.")
+    println("Warmup $warmupOps ops; $iterations ops x $trials trials (median).")
+    println("clone() = deep (groups copied); copy() = shallow (group refs shared — shown as the floor).")
     println()
-    println("  copy()  : ${copyNs.toFixed(2)} ns/op")
-    println("  clone() : ${cloneNs.toFixed(2)} ns/op   (${(copyNs / cloneNs).toFixed(2)}x vs copy)")
+    println("  leaf  (0 groups)      clone() : ${leafClone.toFixed(2)} ns/op   copy() : ${leafCopy.toFixed(2)} ns/op")
+    println("  voice (4 groups)      clone() : ${voiceClone.toFixed(2)} ns/op   copy() : ${voiceCopy.toFixed(2)} ns/op")
+    println("  full  (all 15 groups) clone() : ${fullClone.toFixed(2)} ns/op   copy() : ${fullCopy.toFixed(2)} ns/op")
+    println("  reference: pre-grouping flat 105-field copy()/clone() ≈ 820 ns/op (JS)")
     println("  sink=$copyBenchSink")
     println()
 }

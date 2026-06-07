@@ -611,7 +611,7 @@ fun PatternMapperFn.clip(amount: PatternLike? = null, callInfo: CallInfo? = null
 
 private fun applyVibrato(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args) { hz ->
-        copy(vibrato = hz)
+        clone().also { it.vibrato = hz }
     }
 }
 
@@ -703,7 +703,7 @@ fun PatternMapperFn.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): Pa
 
 private fun applyVibratoMod(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args) { depth ->
-        copy(vibratoMod = depth)
+        clone().also { it.vibratoMod = depth }
     }
 }
 
@@ -793,7 +793,7 @@ fun PatternMapperFn.vibmod(depth: PatternLike? = null, callInfo: CallInfo? = nul
 // -- pattack() / patt() -----------------------------------------------------------------------------------------------
 
 private fun applyPAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { seconds -> copy(pAttack = seconds) }
+    return source._liftOrReinterpretNumericalField(args) { seconds -> clone().also { it.pAttack = seconds } }
 }
 
 /**
@@ -870,7 +870,7 @@ fun PatternMapperFn.patt(seconds: PatternLike? = null, callInfo: CallInfo? = nul
 // -- pdecay() / pdec() ------------------------------------------------------------------------------------------------
 
 private fun applyPDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { seconds -> copy(pDecay = seconds) }
+    return source._liftOrReinterpretNumericalField(args) { seconds -> clone().also { it.pDecay = seconds } }
 }
 
 /**
@@ -947,7 +947,7 @@ fun PatternMapperFn.pdec(seconds: PatternLike? = null, callInfo: CallInfo? = nul
 // -- prelease() / prel() ----------------------------------------------------------------------------------------------
 
 private fun applyPRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { seconds -> copy(pRelease = seconds) }
+    return source._liftOrReinterpretNumericalField(args) { seconds -> clone().also { it.pRelease = seconds } }
 }
 
 /**
@@ -1023,7 +1023,7 @@ fun PatternMapperFn.prel(seconds: PatternLike? = null, callInfo: CallInfo? = nul
 // -- penv() / pamt() --------------------------------------------------------------------------------------------------
 
 private fun applyPEnv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { semitones -> copy(pEnv = semitones) }
+    return source._liftOrReinterpretNumericalField(args) { semitones -> clone().also { it.pEnv = semitones } }
 }
 
 /**
@@ -1100,7 +1100,7 @@ fun PatternMapperFn.pamt(semitones: PatternLike? = null, callInfo: CallInfo? = n
 // -- pcurve() / pcrv() ------------------------------------------------------------------------------------------------
 
 private fun applyPCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { curve -> copy(pCurve = curve) }
+    return source._liftOrReinterpretNumericalField(args) { curve -> clone().also { it.pCurve = curve } }
 }
 
 /**
@@ -1176,7 +1176,7 @@ fun PatternMapperFn.pcrv(curve: PatternLike? = null, callInfo: CallInfo? = null)
 // -- panchor() / panc() -----------------------------------------------------------------------------------------------
 
 private fun applyPAnchor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { anchor -> copy(pAnchor = anchor) }
+    return source._liftOrReinterpretNumericalField(args) { anchor -> clone().also { it.pAnchor = anchor } }
 }
 
 /**
@@ -1253,7 +1253,7 @@ fun PatternMapperFn.panc(anchor: PatternLike? = null, callInfo: CallInfo? = null
 
 private fun applyAccelerate(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args) { amount ->
-        copy(accelerate = amount)
+        clone().also { it.accelerate = amount }
     }
 }
 

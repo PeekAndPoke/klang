@@ -927,7 +927,7 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     // No args: reinterpret pattern's own values as room mix (backward compat)
     if (args.isEmpty()) {
         return source.reinterpretVoice {
-            it.copy(room = it.value?.asDouble)
+            it.clone().apply { room = value?.asDouble }
         }
     }
 

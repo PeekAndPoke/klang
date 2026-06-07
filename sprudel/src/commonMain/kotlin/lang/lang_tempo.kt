@@ -1030,7 +1030,7 @@ private fun applyHurry(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return spedUp._liftNumericField(listOf(factorArg)) { factor ->
         val f = factor ?: 1.0
         val currentSpeed = speed ?: 1.0
-        copy(speed = currentSpeed * f)
+        clone().also { it.speed = currentSpeed * f }
     }
 }
 
