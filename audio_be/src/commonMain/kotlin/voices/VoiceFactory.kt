@@ -337,6 +337,8 @@ class VoiceFactory(
             is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble, offsetMul)
             // Formant's bands are vowel-specific — per-voice offset would smear vowel character. Skip.
             is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, sampleRateDouble)
+            // Body modes are fixed resonances — per-voice offset would smear the body character. Skip.
+            is FilterDef.Body -> LowPassHighPassFilters.createBody(bands, mix, sampleRateDouble)
         }
     }
 
@@ -365,6 +367,7 @@ class VoiceFactory(
             is FilterDef.BandPass -> this.envelope
             is FilterDef.Notch -> this.envelope
             is FilterDef.Formant -> null
+            is FilterDef.Body -> null
         }
 
         // Per-voice slow cutoff drift. Constructed with the block-rate effective
@@ -387,6 +390,7 @@ class VoiceFactory(
             is FilterDef.BandPass -> this.cutoffHz
             is FilterDef.Notch -> this.cutoffHz
             is FilterDef.Formant -> 0.0
+            is FilterDef.Body -> 0.0
         }
 
         // When there's no envelope but drift is active, build a degenerate envelope

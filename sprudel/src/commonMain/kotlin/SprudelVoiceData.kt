@@ -113,6 +113,12 @@ data class SprudelVoiceData(
     /** Vowel formant filter (a, e, i, o, u) */
     var vowel: String?,
 
+    // Body resonator
+    /** Body resonator material (wood, tube, glass, membrane) — fixed modal resonances mixed over the dry source. */
+    var body: String?,
+    /** Body resonator dry/wet mix (0.0 = dry, 1.0 = wet). Null → default mix. */
+    var bodyMix: Double?,
+
     // Dynamics / Compression
     /** Dynamic range compression settings (threshold:ratio:knee:attack:release) */
     var compressor: String?,
@@ -653,6 +659,8 @@ data class SprudelVoiceData(
             reverb = mergeSvdReverb(reverb, other.reverb),
             sample = mergeSvdSample(sample, other.sample),
             vowel = other.vowel ?: vowel,
+            body = other.body ?: body,
+            bodyMix = other.bodyMix ?: bodyMix,
             compressor = other.compressor ?: compressor,
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
@@ -698,6 +706,8 @@ data class SprudelVoiceData(
         reverb = mergeSvdReverb(reverb, other.reverb)
         sample = mergeSvdSample(sample, other.sample)
         vowel = other.vowel ?: vowel
+        body = other.body ?: body
+        bodyMix = other.bodyMix ?: bodyMix
         compressor = other.compressor ?: compressor
         solo = other.solo ?: solo
         // patternId intentionally preserved (never taken from other) — matches merge()
@@ -841,6 +851,15 @@ data class SprudelVoiceData(
                     add(FilterDef.Formant(bands = bands))
                 }
             }
+
+            // Body resonator — fixed modal resonances blended over the dry source.
+            body?.let { material ->
+                resolveBodyModes(material)?.let { modes ->
+                    // Default body amount when the user didn't set bodyMix — a moderate, audible
+                    // amount (0..1; the blend keeps a broadband floor, so it never thins).
+                    add(FilterDef.Body(bands = modes, mix = bodyMix ?: 0.5))
+                }
+            }
         }
 
         // Canonical filter chain order: HIGHPASS → BANDPASS → NOTCH → FORMANT → LOWPASS.
@@ -858,7 +877,10 @@ data class SprudelVoiceData(
                 is FilterDef.BandPass -> 1
                 is FilterDef.Notch -> 2
                 is FilterDef.Formant -> 3
-                is FilterDef.LowPass -> 4
+                // Body sits before the lowpass so the resonator sees full-spectrum input and
+                // the lowpass tames whatever the body emphasizes (same "lowpass last" logic).
+                is FilterDef.Body -> 4
+                is FilterDef.LowPass -> 5
             }
         }
 
@@ -944,6 +966,70 @@ data class SprudelVoiceData(
             sourceId = patternId,
             engine = engine,
         )
+    }
+
+    /**
+     * Resolves a body-resonator material name to its fixed modal resonances. Returns null for
+     * an unknown material — the body is then skipped (fail soft, never throw on user input).
+     *
+     * Each mode is `freq Hz / db / Q`. After the bank's `1/Q` normalization (in `BodyFilter`),
+     * `db` is the mode's *actual* peak emphasis in dB — a few dB, not 20+. Modes are dense so the
+     * bank covers the spectrum (overlapping skirts keep the inter-mode response up); higher modes
+     * use lower Q so they ring shorter, as real bodies damp high frequencies faster.
+     *
+     * Starting-point tables — expect to tune `db`, the mode sets, and `BODY_FLOOR` by ear.
+     */
+    private fun resolveBodyModes(material: String): List<FilterDef.Body.Mode>? {
+        fun m(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq, db, q)
+
+        return when (material.lowercase()) {
+            // Warm resonant box (guitar/marimba-ish body).
+            "wood" -> listOf(
+                m(100.0, 3.0, 12.0),
+                m(200.0, 2.0, 11.0),
+                m(300.0, 1.0, 10.0),
+                m(430.0, 0.0, 9.0),
+                m(650.0, -1.0, 8.0),
+                m(900.0, -2.0, 7.0),
+                m(1300.0, -4.0, 6.0),
+                m(1900.0, -6.0, 5.0),
+            )
+            // Resonant pipe with a body — the de-plasticized tube.
+            "tube" -> listOf(
+                m(85.0, 4.0, 14.0),
+                m(175.0, 2.0, 12.0),
+                m(270.0, 1.0, 11.0),
+                m(450.0, 0.0, 9.0),
+                m(700.0, -1.0, 8.0),
+                m(1000.0, -3.0, 7.0),
+                m(1400.0, -5.0, 6.0),
+                m(2000.0, -7.0, 5.0),
+            )
+            // Bright, high-Q, long ring.
+            "glass" -> listOf(
+                m(700.0, 2.0, 40.0),
+                m(1050.0, 1.0, 50.0),
+                m(1600.0, 0.0, 55.0),
+                m(2100.0, -1.0, 60.0),
+                m(2800.0, -2.0, 50.0),
+                m(3300.0, -3.0, 45.0),
+                m(4000.0, -5.0, 40.0),
+                m(4700.0, -7.0, 35.0),
+            )
+            // Drum-like, inharmonic, fast decay.
+            "membrane" -> listOf(
+                m(150.0, 2.0, 6.0),
+                m(230.0, 1.0, 5.0),
+                m(310.0, 0.0, 5.0),
+                m(385.0, 0.0, 4.0),
+                m(460.0, -1.0, 4.0),
+                m(550.0, -2.0, 4.0),
+                m(650.0, -3.0, 3.0),
+                m(780.0, -4.0, 3.0),
+            )
+
+            else -> null
+        }
     }
 
     private fun resolveVowelBands(vowelValue: String): List<FilterDef.Formant.Band>? {
@@ -1305,6 +1391,8 @@ internal val blueprint = SprudelVoiceData(
     reverb = null,
     sample = null,
     vowel = null,
+    body = null,
+    bodyMix = null,
     compressor = null,
     solo = null,
     patternId = null,

@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
 import io.peekandpoke.klang.audio_be.adsrExpShape
+import io.peekandpoke.klang.audio_be.envDeclickCoeff
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
@@ -40,9 +41,13 @@ class EnvelopeRenderer(
         val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
         val relRateDen = if (env.releaseFrames > 0) env.releaseFrames else 1.0
 
+        // One-pole de-click coefficient for the VCA gain (rounds segment-join corners).
+        val declick = envDeclickCoeff(ctx.sampleRateD)
+
         // Compute voice-relative position as Int (once per block, not per sample)
         var absPos = (ctx.blockStart + ctx.offset) - startFrame
         var currentEnv = env.level
+        var smoothed = env.smoothedLevel
 
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
@@ -102,11 +107,20 @@ class EnvelopeRenderer(
 
             if (currentEnv < 0.0) currentEnv = 0.0
 
-            ctx.audioBuffer[idx] = (ctx.audioBuffer[idx] * currentEnv)
+            // Seed the smoother to the first rendered gain so always-on voices and
+            // the note onset are not faded in; then round subsequent corners.
+            if (!env.smoothPrimed) {
+                smoothed = currentEnv
+                env.smoothPrimed = true
+            }
+            smoothed += declick * (currentEnv - smoothed)
+
+            ctx.audioBuffer[idx] = (ctx.audioBuffer[idx] * smoothed)
             absPos++
         }
 
         // Update envelope state
         env.level = currentEnv
+        env.smoothedLevel = smoothed
     }
 }

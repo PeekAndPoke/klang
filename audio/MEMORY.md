@@ -8,6 +8,31 @@
   karplus, noise family) + sample playback
 - Effects: delay, reverb, phaser, compressor, ducking, distortion, bit-crush, tremolo
 
+## VCA Gain De-click Smoother (2026-06-08)
+
+`EnvelopeRenderer` (amp VCA) now runs a one-pole low-pass on the final gain to
+de-click ADSR segment joins. Root cause of the "plop": the shape curves are
+value-continuous (C0) but **not slope-continuous (C1)** — at the attack→decay
+peak, gate-off, and instant cutoff the gain changes slope abruptly. That corner
+is a fixed-size event; on a **low note** the slow carrier can't mask it, so it
+reads as a "plop" (2nd-difference corner/floor ratio ~525x at 40Hz vs ~4x at
+880Hz). `exp` curves are worst (steepest joins).
+
+- Constant `ENV_DECLICK_SECONDS = 0.0005` (0.5ms) + `envDeclickCoeff(sampleRate)`
+  in `AdsrCurveMath.kt`. Tunable by ear like `ADSR_EXP_K`. 0.5ms ≈ 25x corner
+  reduction at 40Hz, 0-residual tail, only softens sub-5ms attacks.
+- `Voice.Envelope` gained `smoothedLevel` + `smoothPrimed` state. Primed to the
+  **first rendered gain** (not env.level) so always-on voices and mid-phase block
+  starts don't fade in; only segment-join corners get rounded.
+- Applies to the amp VCA only. `EnvelopeCalc` (filter-mod, control-rate) and
+  `IgnitorEnvelopes` (per-ignitor `.adsr()`) are NOT de-clicked — separate
+  surfaces, less audible. Hard cuts (`releaseFrames == 0`, chokes) ARE de-clicked
+  (single code path, 0.5ms fade instead of 1-sample stop) — chosen deliberately.
+- Guard: `EnvelopeDeclickSpec` (renders through the real renderer, asserts gain
+  per-sample slew < 0.1). `EnvelopeTest` rewritten to assert phase *behaviour*
+  (monotonic direction, settled endpoints, the de-click fade) since mid-ramp
+  values now lag; exact raw-curve shape stays in `EnvelopeShapeTest` (generator).
+
 ## Oscillator Engine Unified (2026-06-05)
 
 The `audio_be` oscillator code was consolidated (branch `dedicated-cycle-time`) — see

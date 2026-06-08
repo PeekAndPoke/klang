@@ -60,7 +60,7 @@ class WorkletSerializationRoundTripSpec : StringSpec({
             hcutoff = 1350.0; hresonance = 0.8; hpattack = 0.02; hpenv = 0.7
             bandf = 800.0; bandq = 1.0; bpenv = 0.5
             notchf = 500.0; nresonance = 0.7; nfenv = 0.4
-            vowel = "a"
+            vowel = "a"; body = "wood"; bodyMix = 0.4
             accelerate = 0.1; vibrato = 5.0; vibratoMod = 0.3
             pAttack = 0.01; pDecay = 0.05; pRelease = 0.1; pEnv = 12.0; pCurve = 1.0; pAnchor = 0.5
             fmh = 2.0; fmAttack = 0.01; fmDecay = 0.1; fmSustain = 0.5; fmEnv = 0.8
@@ -76,8 +76,8 @@ class WorkletSerializationRoundTripSpec : StringSpec({
             compressor = "0.3:4:0.1:0.01:0.1"; solo = 1.0; engine = "pedal"
         }.toVoiceData()
 
-        // Sanity: the conversion produced the full canonical filter chain (HP → BP → Notch → Formant → LP).
-        data.filters.size shouldBe 5
+        // Sanity: the conversion produced the full canonical filter chain (HP → BP → Notch → Formant → Body → LP).
+        data.filters.size shouldBe 6
 
         val original = scheduled(data)
         val decoded = roundTrip(original)
@@ -101,6 +101,7 @@ class WorkletSerializationRoundTripSpec : StringSpec({
             "bpf" to { bandf = 750.0; bandq = 1.2; bpsustain = 0.5; bpenv = 0.5 },
             "notch" to { notchf = 600.0; nresonance = 0.8; nfrelease = 0.2; nfenv = 0.4 },
             "formant" to { vowel = "o" },
+            "body" to { body = "glass"; bodyMix = 0.5 },
         )
         for ((name, cfg) in cases) {
             val data = createSprudelVoiceData { note = "c4"; freqHz = 261.6; sound = SoundValue.Named("saw"); cfg() }.toVoiceData()

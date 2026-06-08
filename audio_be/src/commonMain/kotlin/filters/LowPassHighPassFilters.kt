@@ -149,6 +149,14 @@ internal const val OBXD_STATE_SCALE: Double = 0.0876
 internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
 /**
+ * Broadband transmission floor for the body resonator (see [LowPassHighPassFilters.createBody]).
+ * At full `bodyMix` the dry never drops below this fraction, so the body emphasizes its resonant
+ * modes over a broadband floor instead of collapsing to a few isolated tones — the way a real
+ * passive body behaves. Tunable by ear.
+ */
+internal const val BODY_FLOOR: Double = 0.6
+
+/**
  * Bundled TPT-SVF coefficient set: `a1, a2, a3, k`. Mutable holder, allocated once per
  * filter instance (not per call) so [computeSvfCoeffs] can write all four without
  * returning a tuple. Used by both `BaseSvf` and `Ignitor.svf`.
@@ -232,6 +240,9 @@ object LowPassHighPassFilters {
 
     fun createFormant(bands: List<FilterDef.Formant.Band>, sampleRate: Double): AudioFilter =
         FormantFilter(bands, sampleRate)
+
+    fun createBody(bands: List<FilterDef.Body.Mode>, mix: Double, sampleRate: Double): AudioFilter =
+        ParallelMixFilter(BodyFilter(bands, sampleRate), amount = mix, floor = BODY_FLOOR)
 
     // --- Implementations ---
 

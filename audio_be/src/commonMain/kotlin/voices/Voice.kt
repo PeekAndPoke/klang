@@ -160,6 +160,12 @@ class Voice(
         var level: Double = 0.0,
         var releaseStartLevel: Double = 0.0,
         var releaseStarted: Boolean = false,
+        // One-pole de-click smoother state on the final VCA gain (see envDeclickCoeff).
+        // Rounds the slope-discontinuity ("corner") at segment joins that radiates a
+        // click — most audible on low notes. `smoothPrimed` seeds it to the first
+        // rendered gain so always-on voices and the note onset are not faded in.
+        var smoothedLevel: Double = 0.0,
+        var smoothPrimed: Boolean = false,
     ) {
         companion object {
             fun of(adsr: AdsrDef.Resolved, sampleRate: Int) = Envelope(

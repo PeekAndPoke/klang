@@ -60,4 +60,44 @@ sealed class FilterDef {
             val q: Double,
         )
     }
+
+    /**
+     * Body resonator — a parallel bank of fixed-frequency resonant bandpasses mixed on top
+     * of the dry source, to give a voice a resonating "body" instead of a synthetic/plastic
+     * tone. Same parallel-SVF-bandpass core as [Formant], with two differences that make it
+     * a *body* rather than a vowel:
+     *
+     * 1. **Additive body amount** ([mix]) — the resonances are *added on top of* the full dry
+     *    source (`out = dry + wet·mix`), so no broadband content is lost. [Formant] is wet-only
+     *    and would strip the spectrum. `mix = 0` is the untouched source; values > 1 drive the
+     *    resonances harder.
+     * 2. **Fixed Hz centers that do not track the played note** — different notes get
+     *    emphasized at different points in their harmonic series, breaking the spectral
+     *    "lockstep" that reads as plastic. (Already how SVF centers work; called out here
+     *    because it is the whole point of the effect.)
+     *
+     * Bands are resolved from a named material (`wood`, `tube`, `glass`, `membrane`) at the
+     * sprudel DSL layer; this contract carries only the already-resolved modes + mix.
+     */
+    @Serializable
+    @SerialName("body")
+    data class Body(
+        val bands: List<Mode>,
+        val mix: Double,
+    ) : FilterDef() {
+        /**
+         * One body mode — a single SVF bandpass tuned to a resonance of the body.
+         *
+         * **Gain semantic (constant-skirt SVF convention):** identical to [Formant.Band] —
+         * the actual peak gain at `freq` is `Q · 10^(db/20)`; `db` is *additional* gain on
+         * top of the bandpass's intrinsic Q peak. Material tables conventionally set the
+         * lowest mode to `db = 0` and use negative dB for upper modes.
+         */
+        @Serializable
+        data class Mode(
+            val freq: Double,
+            val db: Double,
+            val q: Double,
+        )
+    }
 }
