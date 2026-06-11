@@ -112,6 +112,8 @@ data class SprudelVoiceData(
     // Voice / Singing
     /** Vowel formant filter (a, e, i, o, u) */
     var vowel: String?,
+    /** Vowel formant dry/wet amount (0.0 = dry source, higher = more vowel colour). Null → default. */
+    var vowelMix: Double?,
 
     // Body resonator
     /** Body resonator material (wood, tube, glass, membrane) — fixed modal resonances mixed over the dry source. */
@@ -659,6 +661,7 @@ data class SprudelVoiceData(
             reverb = mergeSvdReverb(reverb, other.reverb),
             sample = mergeSvdSample(sample, other.sample),
             vowel = other.vowel ?: vowel,
+            vowelMix = other.vowelMix ?: vowelMix,
             body = other.body ?: body,
             bodyMix = other.bodyMix ?: bodyMix,
             compressor = other.compressor ?: compressor,
@@ -706,6 +709,7 @@ data class SprudelVoiceData(
         reverb = mergeSvdReverb(reverb, other.reverb)
         sample = mergeSvdSample(sample, other.sample)
         vowel = other.vowel ?: vowel
+        vowelMix = other.vowelMix ?: vowelMix
         body = other.body ?: body
         bodyMix = other.bodyMix ?: bodyMix
         compressor = other.compressor ?: compressor
@@ -843,12 +847,12 @@ data class SprudelVoiceData(
                 )
             }
 
-            // Vowel formant filter
+            // Vowel formant filter — blended over the dry source (source-filter model), like body.
             vowel?.let { vowelValue ->
                 val formantBands = resolveVowelBands(vowelValue)
 
                 formantBands?.let { bands ->
-                    add(FilterDef.Formant(bands = bands))
+                    add(FilterDef.Formant(bands = bands, mix = vowelMix ?: 0.5))
                 }
             }
 
@@ -1391,6 +1395,7 @@ internal val blueprint = SprudelVoiceData(
     reverb = null,
     sample = null,
     vowel = null,
+    vowelMix = null,
     body = null,
     bodyMix = null,
     compressor = null,

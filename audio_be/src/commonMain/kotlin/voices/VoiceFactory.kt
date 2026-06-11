@@ -336,7 +336,7 @@ class VoiceFactory(
             is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble, offsetMul)
             is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble, offsetMul)
             // Formant's bands are vowel-specific — per-voice offset would smear vowel character. Skip.
-            is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, sampleRateDouble)
+            is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, mix, sampleRateDouble)
             // Body modes are fixed resonances — per-voice offset would smear the body character. Skip.
             is FilterDef.Body -> LowPassHighPassFilters.createBody(bands, mix, sampleRateDouble)
         }

@@ -41,6 +41,14 @@ sealed class FilterDef {
     @SerialName("formant")
     data class Formant(
         val bands: List<Band>,
+        /**
+         * Dry/wet amount for the formant bank, blended the same way as [Body.mix] (additive
+         * "floor + peaks" via the shared mix component). `0` = dry source, higher = more vowel
+         * colour on top. The formant bank is level-tamed before this blend so the broadband dry
+         * stays audible between formants (a vowel is a source *shaped by* formants, not replaced
+         * by them).
+         */
+        val mix: Double,
     ) : FilterDef() {
         /**
          * One formant band — a single SVF bandpass tuned to a vowel formant peak.

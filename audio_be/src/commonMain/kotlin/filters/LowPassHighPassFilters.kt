@@ -157,6 +157,21 @@ internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 internal const val BODY_FLOOR: Double = 0.6
 
 /**
+ * Broadband floor for the vowel/formant filter (see [LowPassHighPassFilters.createFormant]) —
+ * the formant analogue of [BODY_FLOOR]. Keeps the source audible *between* formants (a vowel is
+ * a source shaped by formants, not replaced by them). Tunable by ear.
+ */
+internal const val VOWEL_FLOOR: Double = 0.5
+
+/**
+ * Overall level tame for the formant bank before the dry/wet blend. The vowel tables are tuned
+ * with high Q (80–140), so the raw BPF peaks reach ~+38 dB; this scales them back to ~unity so
+ * `bodyMix`/`vowelMix`-style blending behaves sensibly. Preserves each vowel's relative balance
+ * (single multiplier). Tunable by ear.
+ */
+internal const val VOWEL_TAME: Double = 0.0125
+
+/**
  * Bundled TPT-SVF coefficient set: `a1, a2, a3, k`. Mutable holder, allocated once per
  * filter instance (not per call) so [computeSvfCoeffs] can write all four without
  * returning a tuple. Used by both `BaseSvf` and `Ignitor.svf`.
@@ -238,8 +253,12 @@ object LowPassHighPassFilters {
         cutoffOffsetMul: Double = 1.0,
     ): AudioFilter = SvfNotch(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
 
-    fun createFormant(bands: List<FilterDef.Formant.Band>, sampleRate: Double): AudioFilter =
-        FormantFilter(bands, sampleRate)
+    fun createFormant(bands: List<FilterDef.Formant.Band>, mix: Double, sampleRate: Double): AudioFilter =
+        ParallelMixFilter(
+            inner = FormantFilter(bands, sampleRate, gainScale = VOWEL_TAME),
+            amount = mix,
+            floor = VOWEL_FLOOR,
+        )
 
     fun createBody(bands: List<FilterDef.Body.Mode>, mix: Double, sampleRate: Double): AudioFilter =
         ParallelMixFilter(BodyFilter(bands, sampleRate), amount = mix, floor = BODY_FLOOR)

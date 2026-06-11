@@ -47,7 +47,7 @@ internal inline fun adsrExpShape(x: Double): Double = (exp(ADSR_EXP_K * x) - 1.0
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Time constant (seconds) of the VCA-gain de-click one-pole. */
-internal const val ENV_DECLICK_SECONDS: Double = 0.0005
+internal const val ENV_DECLICK_SECONDS: Double = 0.001
 
 /** Per-sample one-pole coefficient for [ENV_DECLICK_SECONDS] at [sampleRate] Hz. */
 @Suppress("NOTHING_TO_INLINE")
