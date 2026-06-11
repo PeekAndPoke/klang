@@ -107,7 +107,6 @@ class LangHpsustainSpec : StringSpec({
         val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
             hcutoff = 2000.0
             hpsustain = 0.8
-
         }
         val voiceData = data.toVoiceData()
         val hpf = voiceData.filters[0] as FilterDef.HighPass

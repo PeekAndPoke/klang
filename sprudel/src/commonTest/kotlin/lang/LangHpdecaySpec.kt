@@ -107,7 +107,6 @@ class LangHpdecaySpec : StringSpec({
         val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
             hcutoff = 2000.0
             hpdecay = 0.2
-
         }
         val voiceData = data.toVoiceData()
         val hpf = voiceData.filters[0] as FilterDef.HighPass

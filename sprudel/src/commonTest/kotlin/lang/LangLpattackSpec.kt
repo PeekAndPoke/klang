@@ -112,7 +112,6 @@ class LangLpattackSpec : StringSpec({
         val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
             cutoff = 1000.0
             lpattack = 0.05
-
         }
         val voiceData = data.toVoiceData()
         val lpf = voiceData.filters[0] as FilterDef.LowPass

@@ -1132,7 +1132,9 @@ class KlangScriptProcessor(
                 entries.typeExtensions.any { it.memberProperties.isNotEmpty() }
         if (docItems.isEmpty() && entries.objects.isEmpty() && entries.properties.isEmpty() &&
             !anyMemberProperties
-        ) return
+        ) {
+            return
+        }
 
         // Group by script name (handles overloads)
         val grouped = docItems.groupBy { it.scriptName }

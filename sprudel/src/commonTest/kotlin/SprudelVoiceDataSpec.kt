@@ -54,7 +54,6 @@ class SprudelVoiceDataSpec : StringSpec({
             note = "c4"
             freqHz = 440.0
             gain = 0.8
-
         }
 
         data.note shouldBe "c4"
@@ -68,7 +67,6 @@ class SprudelVoiceDataSpec : StringSpec({
             decay = 0.1
             sustain = 0.7
             release = 0.3
-
         }
 
         val voiceData = data.toVoiceData()
@@ -84,7 +82,6 @@ class SprudelVoiceDataSpec : StringSpec({
         val data = createSprudelVoiceData {
             cutoff = 1000.0
             resonance = 1.5
-
         }
 
         val voiceData = data.toVoiceData()
@@ -99,7 +96,6 @@ class SprudelVoiceDataSpec : StringSpec({
         val data = createSprudelVoiceData {
             hcutoff = 500.0
             hresonance = 2.0
-
         }
 
         val voiceData = data.toVoiceData()
@@ -114,7 +110,6 @@ class SprudelVoiceDataSpec : StringSpec({
         val data = createSprudelVoiceData {
             bandf = 750.0
             bandq = 1.2
-
         }
 
         val voiceData = data.toVoiceData()
@@ -129,7 +124,6 @@ class SprudelVoiceDataSpec : StringSpec({
         val data = createSprudelVoiceData {
             notchf = 600.0
             nresonance = 0.8
-
         }
 
         val voiceData = data.toVoiceData()
@@ -148,7 +142,6 @@ class SprudelVoiceDataSpec : StringSpec({
             hresonance = 2.0
             bandf = 750.0
             bandq = 1.2
-
         }
 
         val voiceData = data.toVoiceData()
@@ -204,7 +197,6 @@ class SprudelVoiceDataSpec : StringSpec({
         val data = createSprudelVoiceData {
             cutoff = 1000.0
             resonance = null // No resonance specified
-
         }
 
         val voiceData = data.toVoiceData()
@@ -244,7 +236,6 @@ class SprudelVoiceDataSpec : StringSpec({
             speed = 1.0
             loop = true
             cut = 1
-
         }
 
         val voiceData = data.toVoiceData()
@@ -288,7 +279,6 @@ class SprudelVoiceDataSpec : StringSpec({
             gain = 0.8
             cutoff = 1000.0
             resonance = 1.5
-
         }
 
         val json = Json.encodeToString(SprudelVoiceData.serializer(), data)
@@ -305,7 +295,6 @@ class SprudelVoiceDataSpec : StringSpec({
         val original = createSprudelVoiceData {
             note = "c4"
             gain = 0.8
-
         }
 
         val modified = original.copy(
