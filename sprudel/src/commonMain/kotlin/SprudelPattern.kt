@@ -25,7 +25,6 @@ import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.sprudel.pattern.StackPattern
-import io.peekandpoke.klang.sprudel.pattern.StaticSprudelPattern
 import io.peekandpoke.ultra.datetime.Kronos
 import kotlin.jvm.JvmName
 import kotlin.random.Random
@@ -309,15 +308,6 @@ fun SprudelPattern.sampleAt(time: Double, ctx: QueryContext): SprudelPatternEven
     sampleAt(CycleTime.ofCycles(time), ctx)
 
 /**
- * Creates a static pattern, that can be stored and used for playback with
- * any life sprudel event generator.
- *
- * Acts like recording the arc [from] - [to] for later playback.
- */
-fun SprudelPattern.makeStatic(from: CycleTime, to: CycleTime): StaticSprudelPattern =
-    StaticSprudelPattern(events = queryArc(from = from, to = to))
-
-/**
  * Creates a pattern that transforms the event list using the given function.
  *
  * This is a convenience method for creating MapPattern instances. The resulting pattern
@@ -467,15 +457,6 @@ fun SprudelPattern.withSteps(steps: Double?): SprudelPattern {
 fun SprudelPattern.stack(vararg others: SprudelPattern): SprudelPattern {
     return StackPattern(patterns = listOf(this) + others.toList())
 }
-
-/**
- * Creates a static pattern, that can be stored and used for playback with
- * any life sprudel event generator.
- *
- * Acts like recording the arc [from] - [to] for later playback.
- */
-fun SprudelPattern.makeStatic(from: Double, to: Double): StaticSprudelPattern =
-    makeStatic(CycleTime.ofCycles(from), CycleTime.ofCycles(to))
 
 /**
  * Maps the rango context, useful for mapping between bipolar and unipolar ranges

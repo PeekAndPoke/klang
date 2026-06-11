@@ -2,11 +2,8 @@ package io.peekandpoke.klang.audio_bridge
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import kotlinx.serialization.json.Json
 
 class AdsrDefTest : StringSpec({
-
-    val json = Json { encodeDefaults = false }
 
     "AdsrDef.empty is an AdsrDef.Std with all fields null" {
         val empty = AdsrDef.empty
@@ -76,26 +73,6 @@ class AdsrDefTest : StringSpec({
         val a = AdsrDef.Std(attack = 0.1)
         val merged = a.mergeWith(null) as AdsrDef.Std
         merged shouldBe a
-    }
-
-    "Std round-trips through JSON serialization" {
-        val original = AdsrDef.Std(
-            attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.3,
-            attackCurve = AdsrCurve.Linear,
-            decayCurve = AdsrCurve.Square,
-            releaseCurve = AdsrCurve.Cube,
-        )
-        val encoded: String = json.encodeToString(AdsrDef.serializer(), original)
-        val decoded = json.decodeFromString(AdsrDef.serializer(), encoded) as AdsrDef.Std
-        decoded shouldBe original
-    }
-
-    "Std round-trips through JSON with default null fields omitted" {
-        val original = AdsrDef.Std(attack = 0.01)
-        val encoded = json.encodeToString(AdsrDef.serializer(), original)
-        val decoded = json.decodeFromString(AdsrDef.serializer(), encoded) as AdsrDef.Std
-        decoded shouldBe original
-        decoded.attackCurve shouldBe null
     }
 
     "AdsrCurve enum has Linear, Square, Cube, SCurve, InvSquare, Exponential" {

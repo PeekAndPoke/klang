@@ -125,7 +125,7 @@ fun voiceModifier(modify: VoiceModifierFn): VoiceModifierFn = modify
  * allocating via `copy(...)`.
  *
  * Safe because every [SprudelVoiceData] reaching a modifier is a single-owner clone — the leaf
- * emitters (`AtomicPattern`, `AtomicInfinitePattern`, `StaticSprudelPattern`) clone on emission, so
+ * emitters (`AtomicPattern`, `AtomicInfinitePattern`) clone on emission, so
  * no instance is ever shared between events. This kills the per-event copy/GC churn that dominated
  * query cost. See `docs/tasks/mutable-voicedata-optimization.md`.
  */

@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.audio_bridge
 
-import kotlinx.serialization.Serializable
 
 /**
  * Filter envelope for dynamic filter cutoff modulation.
@@ -18,7 +17,6 @@ import kotlinx.serialization.Serializable
  * | 3.0   | 1.0      | 500 × (1+3×1)  | 2000 Hz (~2 octaves up)       |
  * | 0.5   | 0.2      | 500 × (1+0.5×0.2) | 550 Hz (subtle)           |
  */
-@Serializable
 data class FilterEnvDef(
     /** Attack time in seconds - time to reach peak modulation */
     val attack: Double? = null,

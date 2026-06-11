@@ -5,20 +5,15 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.formatAsTable
 import io.peekandpoke.klang.sprudel.graal.GraalSprudelCompiler
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.encodeToJsonElement
 import org.junit.jupiter.api.fail
+import java.lang.reflect.Modifier
 import kotlin.math.abs
 
 @Suppress("OPT_IN_USAGE")
@@ -40,7 +35,6 @@ class JsCompatTests : StringSpec() {
     }
 
     private val graalCompiler = GraalSprudelCompiler()
-    private val json = Json { prettyPrint = true }
 
     init {
         // Testing that simple pattern code produces the same results
@@ -146,33 +140,7 @@ ${comparison.report}
     ): ComparisonReport {
         val ignore = example.ignoreFields
 
-        val graalJson = json.encodeToJsonElement(graal)
-        val nativeJson = json.encodeToJsonElement(native)
-
-        fun flattenJson(
-            element: JsonElement,
-            path: String = "",
-            result: MutableMap<String, JsonPrimitive> = mutableMapOf(),
-        ) {
-            when (element) {
-                is JsonPrimitive -> result[path] = element
-                is JsonObject -> {
-                    element.forEach { (key, value) ->
-                        val newPath = if (path.isEmpty()) key else "$path.$key"
-                        flattenJson(value, newPath, result)
-                    }
-                }
-
-                is JsonArray -> {
-                    element.forEachIndexed { index, value ->
-                        val newPath = if (path.isEmpty()) "$index" else "$path.$index"
-                        flattenJson(value, newPath, result)
-                    }
-                }
-            }
-        }
-
-        fun isCompatible(path: String, graalElem: JsonPrimitive?, nativeElem: JsonPrimitive?): ComparisonResult {
+        fun isCompatible(path: String, graalElem: String?, nativeElem: String?): ComparisonResult {
             val worst = if (path in ignore) {
                 ComparisonResult.IGNORED
             } else if (example.tryRecover(path, graal, native)) {
@@ -186,8 +154,8 @@ ${comparison.report}
             // One is null and the other one is not?
             if (graalElem == null || nativeElem == null) return worst
 
-            val graalNum = graalElem.doubleOrNull
-            val nativeNum = nativeElem.doubleOrNull
+            val graalNum = graalElem.toDoubleOrNull()
+            val nativeNum = nativeElem.toDoubleOrNull()
 
             if (graalNum != null && nativeNum != null) {
                 val numDiff = abs(graalNum - nativeNum)
@@ -195,23 +163,15 @@ ${comparison.report}
                 if (numDiff < 1e-3) return ComparisonResult.CLOSE
             }
 
-            val graalStr = graalElem.contentOrNull
-            val nativeStr = nativeElem.contentOrNull
-
-            if (path == "data.note" && graalStr != null && nativeStr != null) {
-                if (graalStr.equals(nativeStr, ignoreCase = true)) {
-                    return ComparisonResult.CLOSE
-                }
+            if (path == "data.note" && graalElem.equals(nativeElem, ignoreCase = true)) {
+                return ComparisonResult.CLOSE
             }
 
             return worst
         }
 
-        val graalFlat = mutableMapOf<String, JsonPrimitive>()
-            .apply { flattenJson(graalJson, "", this) }
-
-        val nativeFlat = mutableMapOf<String, JsonPrimitive>()
-            .apply { flattenJson(nativeJson, "", this) }
+        val graalFlat = mutableMapOf<String, String?>().apply { flatten(graal, "", this) }
+        val nativeFlat = mutableMapOf<String, String?>().apply { flatten(native, "", this) }
 
         val allKeys = (graalFlat.keys + nativeFlat.keys)
             .distinct()
@@ -255,6 +215,34 @@ ${comparison.report}
             errors = errors.toList(),
             report = rows.formatAsTable()
         )
+    }
+
+    /**
+     * Flattens an event into `path -> stringified-leaf` (e.g. `data.gain -> "0.7"`, `part.end -> "1.0"`),
+     * mirroring the dotted-path shape the old kotlinx `encodeToJsonElement` flatten produced — so the
+     * `ignoreFields` / `recovers(path)` contract in the test data keeps working. Reflection over the data
+     * classes (no serialization): scalars/enums/`CycleTime` are leaves, `List`/`Map` recurse by index/key,
+     * everything else recurses its (non-static, non-synthetic) declared fields. `sourceLocations` is skipped
+     * (it was `@Transient`), and `SprudelVoiceValue` / `SprudelPattern` are leafed to avoid walking patterns.
+     */
+    private fun flatten(value: Any?, path: String, out: MutableMap<String, String?>) {
+        fun child(seg: String) = if (path.isEmpty()) seg else "$path.$seg"
+        when (value) {
+            null -> out[path] = null
+            is CycleTime -> out[path] = value.toDouble().toString()
+            is SprudelVoiceValue -> out[path] = value.toString()
+            is SprudelPattern -> out[path] = "<pattern>"
+            is Number, is Boolean, is CharSequence, is Char -> out[path] = value.toString()
+            is Enum<*> -> out[path] = value.name
+            is List<*> -> value.forEachIndexed { i, v -> flatten(v, child("$i"), out) }
+            is Map<*, *> -> value.forEach { (k, v) -> flatten(v, child("$k"), out) }
+            else -> value.javaClass.declaredFields
+                .filter { !it.isSynthetic && !Modifier.isStatic(it.modifiers) && it.name != "sourceLocations" && '$' !in it.name }
+                .forEach { f ->
+                    f.isAccessible = true
+                    flatten(f.get(value), child(f.name), out)
+                }
+        }
     }
 
     private fun printEventComparison(graalArc: List<SprudelPatternEvent>, nativeArc: List<SprudelPatternEvent>) {

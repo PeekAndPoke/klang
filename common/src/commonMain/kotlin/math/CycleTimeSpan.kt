@@ -1,15 +1,12 @@
 package io.peekandpoke.klang.common.math
 
-import kotlinx.serialization.Serializable
-
 /**
  * A span of musical time `[begin, end)` measured in [CycleTime] ticks.
  *
- * Renamed from the former `TimeSpan` and moved to `common/math` alongside [CycleTime]/[Rational].
+ * Renamed from the former `TimeSpan` and moved to `common/math` alongside [CycleTime].
  * Arithmetic is delegated to [CycleTime], so `shift`/`duration`/`clipTo` are exact integer-tick ops
  * and only `scale` (tempo) rounds to the grid.
  */
-@Serializable
 data class CycleTimeSpan(
     val begin: CycleTime,
     val end: CycleTime,

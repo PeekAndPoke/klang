@@ -2,14 +2,11 @@ package io.peekandpoke.klang.sprudel
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SoundValue
-import kotlinx.serialization.json.Json
 
 class SprudelVoiceDataSpec : StringSpec({
 
@@ -270,25 +267,6 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.speed shouldBe 1.0
         voiceData.loop shouldBe true
         voiceData.cut shouldBe 1
-    }
-
-    "SprudelVoiceData is serializable to JSON" {
-        val data = createSprudelVoiceData {
-            note = "c4"
-            freqHz = 440.0
-            gain = 0.8
-            cutoff = 1000.0
-            resonance = 1.5
-        }
-
-        val json = Json.encodeToString(SprudelVoiceData.serializer(), data)
-
-        json shouldNotBe null
-        json shouldContain "\"note\":\"c4\""
-        json shouldContain "\"freqHz\":440"
-        json shouldContain "\"gain\":0.8"
-        json shouldContain "\"cutoff\":1000"
-        json shouldContain "\"resonance\":1.5"
     }
 
     "copy() creates new instance with updated fields" {

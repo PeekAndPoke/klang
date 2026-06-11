@@ -1,5 +1,30 @@
 # WireFormat enhancements — `@WireName` discriminators + retire kotlinx for wire types
 
+## Outcome (2026-06-11, branch `engine-dsl-osc-dsl-parameterization`)
+
+**Done — full de-kotlinx, larger than the original plan (user opted in).** Key deviations from the plan
+below, all confirmed by the build:
+
+- **The plan's premise was wrong**: kotlinx `@Serializable` was *not* vestigial. `SprudelVoiceData`
+  (kept, "out of scope") is itself `@Serializable` and holds `sound: SoundValue` (→ `IgnitorDsl`) +
+  `SvdAdsr.attackCurve: AdsrCurve`, so its generated serializer pinned those audio_bridge types — the
+  serialization plugin/deps could not be dropped without de-kotlinx-ing sprudel too. The user directed: rip
+  **all** kotlinx serialization out of sprudel as well (no back-compat needed). `SprudelVoiceValue` lost its
+  custom `SprudelVoiceValueSerializer`; `StaticSprudelPattern` (an early-dev remnant — `toJson`/`fromJson`
+  unused, only `makeStatic` test-exercised) was deleted along with the `makeStatic` helpers.
+- **Real latent bug found + fixed**: the sealed discriminator key `t` collided with `IgnitorDsl.Lerp.t`
+  (the tag overwrote the field → silent wire corruption; the old int discriminator had the same bug, never
+  tested). Fix: reserved wire keys are now **non-identifiers** — `#t` (codec type-tag) and `#v`
+  (`WorkletContract` schema-version) — so no Kotlin data-class field can ever collide. A `WireCodecRoundTripSpec`
+    + `IgnitorDslWireCodecSpec` case for `Lerp` guards it.
+- Tests moved onto the **real** WireCodec (jsTest): `IgnitorDslWireCodecSpec`,
+  `WorkletWireCodecRoundTripSpec` (sprudel). Pure-serialization tests deleted. `MutableVoiceDataGoldenSpec`
+    + `JsCompatTests` rewritten to flatten via reflection (no kotlinx); golden regenerated.
+- Plugin + `serialization_core`/`serialization_json` dropped from **both** `audio_bridge` and `sprudel`
+  build files (sprudel keeps `coroutines_core`).
+
+Phases 1–4 below were all completed (with the above expansions).
+
 ## Context
 
 The audio frontend↔backend protocol moved to a KSP "trust-codec" (`:audio-wire-codec-ksp`, processor

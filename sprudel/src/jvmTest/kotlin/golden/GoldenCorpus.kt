@@ -8,7 +8,7 @@ package io.peekandpoke.klang.sprudel.golden
  * `SprudelVoiceData` safe. Aliasing bugs are silent (one event's data bleeding into another), so the
  * corpus must heavily exercise the constructs where a shared `data` reference can leak:
  *
- *  - **leaf emitters** — `AtomicPattern`, `AtomicInfinitePattern` (the `ply` family), `StaticSprudelPattern`
+ *  - **leaf emitters** — `AtomicPattern`, `AtomicInfinitePattern` (the `ply` family)
  *  - **fan-out** — `stack`, `superimpose`, `jux`
  *  - **time fan-out** — `ply`, `echo`
  *
@@ -21,8 +21,6 @@ object GoldenCorpus {
         val code: String,
         /** How many cycles to capture for this entry. */
         val cycles: Int,
-        /** When true, the queried events are wrapped in a StaticSprudelPattern and re-queried. */
-        val viaStaticRecording: Boolean = false,
     )
 
     /**
@@ -110,15 +108,6 @@ stack(
             "superimpose-ply",
             """note("c3 e3 g3").gain(0.8).superimpose(x => x.transpose(12).gain(0.4)).ply("2 1 3")""",
             cycles = 8,
-        ),
-
-        // Static recording (leaf #3, StaticSprudelPattern). Same source, but re-queried through a
-        // recording so the `it.copy(part=…, whole=…)` shared-data path is exercised.
-        Entry(
-            "static-recording",
-            """note("c3 e3 g3 a3").sound("supersaw").gain(0.7).pan("0.2 0.5 0.8").lpf("800 1200")""",
-            cycles = 8,
-            viaStaticRecording = true,
         ),
     )
 }

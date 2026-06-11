@@ -1,7 +1,5 @@
 package io.peekandpoke.klang.audio_bridge
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 /**
  * Per-stage envelope shape applied to attack / decay / release.
@@ -23,10 +21,8 @@ import kotlinx.serialization.Serializable
  * For decay and release the ramp uses `(1 - p)` so the level falls from
  * its starting value to its endpoint with a curved tail.
  */
-@Serializable
 enum class AdsrCurve { Linear, Square, Cube, SCurve, InvSquare, Exponential }
 
-@Serializable
 sealed interface AdsrDef {
 
     /** Merges this envelope with a fallback. Values in `this` take precedence over `other`. */
@@ -39,8 +35,7 @@ sealed interface AdsrDef {
      * Standard 4-stage ADSR envelope (attack / decay / sustain / release)
      * with per-stage shape curves.
      */
-    @Serializable
-    @SerialName("std")
+    @WireName("std")
     data class Std(
         val attack: Double? = null,
         val decay: Double? = null,

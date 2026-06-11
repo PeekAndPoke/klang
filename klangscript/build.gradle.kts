@@ -5,7 +5,6 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
-    kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
     id("io.kotest")
 }
@@ -47,8 +46,6 @@ kotlin {
                 api(project(":audio_bridge"))
                 implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
-                implementation(Deps.KotlinX.serialization_core)
-                implementation(Deps.KotlinX.serialization_json)
             }
         }
 

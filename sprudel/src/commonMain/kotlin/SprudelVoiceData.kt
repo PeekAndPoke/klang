@@ -9,7 +9,6 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.uniqueId
-import kotlinx.serialization.Serializable
 
 /**
  * Sprudel-specific voice data with flat fields.
@@ -25,11 +24,10 @@ import kotlinx.serialization.Serializable
  * allocating a fresh copy per modifier, which is what previously dominated query cost. The trade-off:
  * an instance is NOT safe to share — **the caller is responsible for cloning when a value might be
  * reused or handed to more than one consumer** (use [clone]). The leaf emitters (`AtomicPattern`,
- * `AtomicInfinitePattern`, `StaticSprudelPattern`) clone on emission so every queried event owns its
+ * `AtomicInfinitePattern`) clone on emission so every queried event owns its
  * data; mutate freely from there. There is intentionally no shared `empty` singleton — construct a
  * fresh one with `SprudelVoiceData()`. See `docs/tasks/mutable-voicedata-optimization.md`.
  */
-@Serializable
 data class SprudelVoiceData(
     // note, scale, freq
     var note: String?,
@@ -607,7 +605,7 @@ data class SprudelVoiceData(
     /**
      * Fresh deep-enough copy: the flat core fields are copied shallow (immutable scalars), and each
      * non-null group is `copy()`-ed so the clone owns its own groups (single-owner invariant — see the
-     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`/`StaticSprudelPattern`). `oscParams` is
+     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`). `oscParams` is
      * treated as immutable-replace, so sharing its reference is fine. As more clusters become groups,
      * add them to the deep-copy list here.
      */
