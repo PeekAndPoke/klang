@@ -313,8 +313,9 @@ class WireCodecProcessor(
 
     /** `SELF` is the placeholder for the (non-null) value inside the wrapper. */
     private fun wrapEncNullable(acc: String, nullable: Boolean, coreWithSelf: String): String =
-        if (!nullable) coreWithSelf.replace("SELF", acc)
-        else {
+        if (!nullable) {
+            coreWithSelf.replace("SELF", acc)
+        } else {
             val v = fresh()
             "$acc?.let { $v -> ${coreWithSelf.replace("SELF", v)} }"
         }

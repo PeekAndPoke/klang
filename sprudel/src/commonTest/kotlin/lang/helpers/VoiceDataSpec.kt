@@ -41,7 +41,6 @@ class VoiceDataSpec : StringSpec({
         val voice = createSprudelVoiceData {
             scale = "C major"
             soundIndex = 4
-
         }
 
         val result = voice.resolveNote()
@@ -54,7 +53,6 @@ class VoiceDataSpec : StringSpec({
         val voice = createSprudelVoiceData {
             scale = "C4 major"
             value = 2.asVoiceValue()
-
         }
 
         val result = voice.resolveNote()
@@ -100,7 +98,6 @@ class VoiceDataSpec : StringSpec({
         val voice = createSprudelVoiceData {
             scale = "C3:major"
             soundIndex = 0
-
         }
 
         val result = voice.resolveNote(newIndex = 4)
@@ -116,7 +113,6 @@ class VoiceDataSpec : StringSpec({
             scale = "C major"
             soundIndex = 2
             value = 4.asVoiceValue()
-
         }
 
         val result = voice.resolveNote()
@@ -130,7 +126,6 @@ class VoiceDataSpec : StringSpec({
         val voice = createSprudelVoiceData {
             scale = "C major"
             value = "0:1".asVoiceValue()
-
         }
 
         val result = voice.resolveNote()
@@ -144,7 +139,6 @@ class VoiceDataSpec : StringSpec({
         val voice = createSprudelVoiceData {
             scale = "C major"
             value = "0:1:0.5".asVoiceValue()
-
         }
 
         val result = voice.resolveNote()
@@ -162,7 +156,6 @@ class VoiceDataSpec : StringSpec({
             scale = "C major"
             value = "1".asVoiceValue()
             soundIndex = 7
-
         }
 
         val result = voice.resolveNote()
@@ -176,7 +169,6 @@ class VoiceDataSpec : StringSpec({
             scale = "C major"
             value = "0:1".asVoiceValue()
             gain = 0.42
-
         }
 
         val result = voice.resolveNote()
@@ -192,7 +184,6 @@ class VoiceDataSpec : StringSpec({
             scale = "C major"
             value = "0:1".asVoiceValue()
             soundIndex = 7
-
         }
 
         val result = voice.resolveNote()
@@ -206,7 +197,6 @@ class VoiceDataSpec : StringSpec({
             scale = "C major"
             value = "0:1:0.7".asVoiceValue()
             gain = 0.42
-
         }
 
         val result = voice.resolveNote()
@@ -220,7 +210,6 @@ class VoiceDataSpec : StringSpec({
         val voice = createSprudelVoiceData {
             scale = "C major"
             value = 2.asVoiceValue()
-
         }
 
         val result = voice.resolveNote()

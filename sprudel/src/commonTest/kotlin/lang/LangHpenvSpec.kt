@@ -107,7 +107,6 @@ class LangHpenvSpec : StringSpec({
         val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
             hcutoff = 2000.0
             hpenv = 0.7
-
         }
         val voiceData = data.toVoiceData()
         val hpf = voiceData.filters[0] as FilterDef.HighPass

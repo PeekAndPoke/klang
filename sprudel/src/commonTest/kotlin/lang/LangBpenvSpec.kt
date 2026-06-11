@@ -112,7 +112,6 @@ class LangBpenvSpec : StringSpec({
         val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
             bandf = 1000.0
             bpenv = 0.5
-
         }
         val voiceData = data.toVoiceData()
         val bpf = voiceData.filters[0] as FilterDef.BandPass

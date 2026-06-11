@@ -112,7 +112,6 @@ class LangLpreleaseSpec : StringSpec({
         val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
             cutoff = 1000.0
             lprelease = 0.5
-
         }
         val voiceData = data.toVoiceData()
         val lpf = voiceData.filters[0] as FilterDef.LowPass

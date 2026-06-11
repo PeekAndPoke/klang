@@ -112,7 +112,6 @@ class LangBpattackSpec : StringSpec({
         val data = io.peekandpoke.klang.sprudel.createSprudelVoiceData {
             bandf = 1000.0
             bpattack = 0.05
-
         }
         val voiceData = data.toVoiceData()
         val bpf = voiceData.filters[0] as FilterDef.BandPass
