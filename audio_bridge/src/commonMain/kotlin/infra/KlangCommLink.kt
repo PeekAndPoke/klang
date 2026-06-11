@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -78,7 +79,7 @@ class KlangCommLink(capacity: Int = 8192) {
         data class RegisterIgnitor(
             override val playbackId: String,
             val name: String,
-            val dsl: io.peekandpoke.klang.audio_bridge.IgnitorDsl,
+            val dsl: IgnitorDsl,
         ) : Cmd {
             companion object {
                 const val SERIAL_NAME = "register-ignitor"

@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.engines
 
+import io.peekandpoke.klang.audio_bridge.EngineDsl
+
 /**
  * Named preset for the voice filter pipeline topology.
  *
@@ -12,7 +14,7 @@ package io.peekandpoke.klang.audio_be.engines
  * `IgnitorDsl` — a declarative, user-extensible way to build custom engines
  * without code changes.
  */
-enum class AudioEngine(val engineName: String) {
+enum class AudioEngine(val engineName: String, val dsl: EngineDsl) {
 
     /**
      * Default engine. Classic subtractive ordering: **osc → waveshaper → VCF → VCA**.
@@ -25,7 +27,7 @@ enum class AudioEngine(val engineName: String) {
      * and don't smear the attack. Waveshapers still precede the filter so
      * their harmonics get cleaned up.
      */
-    Modern("modern"),
+    Modern("modern", EngineDsl.modern),
 
     /**
      * Guitar-pedal feel: envelope drives the waveshapers, so distortion
@@ -40,7 +42,7 @@ enum class AudioEngine(val engineName: String) {
      * modulation FX. Trades "no attack smearing" for "dynamics-responsive
      * distortion" — use when you want the pedal-chain character.
      */
-    Pedal("pedal");
+    Pedal("pedal", EngineDsl.pedal);
 
     companion object {
         /**

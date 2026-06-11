@@ -157,19 +157,21 @@ internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 internal const val BODY_FLOOR: Double = 0.6
 
 /**
- * Broadband floor for the vowel/formant filter (see [LowPassHighPassFilters.createFormant]) —
- * the formant analogue of [BODY_FLOOR]. Keeps the source audible *between* formants (a vowel is
- * a source shaped by formants, not replaced by them). Tunable by ear.
+ * Broadband floor for the vowel/formant filter (see [LowPassHighPassFilters.createFormant]). The
+ * formant analogue of [BODY_FLOOR], but much LOWER: a vowel is a source *strongly shaped by*
+ * formants (deep valleys between them), whereas a body is a subtle coloration over a strong floor.
+ * The floor still keeps some source audible between formants (avoids sparse/robotic). Tunable.
  */
-internal const val VOWEL_FLOOR: Double = 0.5
+internal const val VOWEL_FLOOR: Double = 0.2
 
 /**
  * Overall level tame for the formant bank before the dry/wet blend. The vowel tables are tuned
- * with high Q (80–140), so the raw BPF peaks reach ~+38 dB; this scales them back to ~unity so
- * `bodyMix`/`vowelMix`-style blending behaves sensibly. Preserves each vowel's relative balance
- * (single multiplier). Tunable by ear.
+ * with high Q (80–140), so the raw BPF peaks reach ~+38 dB; this scales them down so blending is
+ * sensible — but the formants must still clearly DOMINATE the [VOWEL_FLOOR] (that is what makes a
+ * vowel), so this is far less aggressive than it first was. Preserves each vowel's relative
+ * balance (single multiplier). Tunable by ear.
  */
-internal const val VOWEL_TAME: Double = 0.0125
+internal const val VOWEL_TAME: Double = 0.05
 
 /**
  * Bundled TPT-SVF coefficient set: `a1, a2, a3, k`. Mutable holder, allocated once per

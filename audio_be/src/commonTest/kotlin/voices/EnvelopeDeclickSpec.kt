@@ -35,11 +35,13 @@ class EnvelopeDeclickSpec : StringSpec({
     "de-click bounds the gain slew at a hard cutoff (releaseFrames=0)" {
         // Without de-click a releaseFrames=0 gate-off drops 1.0 -> 0.0 in ONE sample
         // (slew 1.0 = a click). The smoother caps per-sample slew far below that.
+        // Window (412 frames post-gate) is long enough that the fade converges for any
+        // reasonable declick time constant (~up to 3ms), so this stays tau-agnostic.
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0,
-            endFrame = 200,
+            endFrame = 512,
             gateEndFrame = 100,
-            blockFrames = 200,
+            blockFrames = 512,
             signal = TestIgnitors.constant,
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
@@ -52,14 +54,14 @@ class EnvelopeDeclickSpec : StringSpec({
             ),
         )
 
-        val ctx = VoiceTestHelpers.createContext(blockStart = 0, blockFrames = 200)
+        val ctx = VoiceTestHelpers.createContext(blockStart = 0, blockFrames = 512)
         voice.render(ctx)
 
         // Sustain at full level before the gate, then a de-clicked fade (not a step).
         ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.02)
-        (maxSlew(ctx.voiceBuffer, 200) < 0.1) shouldBe true
-        // And it does fully fade out within the block (the smoother converges).
-        (ctx.voiceBuffer[199] < 0.05) shouldBe true
+        (maxSlew(ctx.voiceBuffer, 512) < 0.1) shouldBe true
+        // And it fully fades out within the (long-enough) window — the smoother converges.
+        (ctx.voiceBuffer[511] < 0.05) shouldBe true
     }
 
     "de-click also bounds the slew across an exp attack→decay→release voice" {
