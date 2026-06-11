@@ -225,9 +225,10 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ): AudioFilter = when (q) {
         null -> OnePoleLPF(cutoffHz, sampleRate, cutoffOffsetMul)
-        else -> SvfLPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul)
+        else -> SvfLPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
     }
 
     fun createHPF(
@@ -236,9 +237,10 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ): AudioFilter = when (q) {
         null -> OnePoleHPF(cutoffHz, sampleRate, cutoffOffsetMul)
-        else -> SvfHPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul)
+        else -> SvfHPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
     }
 
     fun createBPF(
@@ -538,11 +540,12 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
 
-        /** Humanization amount: `analog × FILTER_DRIVE_PER_ANALOG`. Scales the diode-pair tCfb term. */
-        private val driveScale: Double = analog * FILTER_DRIVE_PER_ANALOG
+        /** Humanization amount: `analog × drivePerAnalog`. Scales the diode-pair tCfb term. */
+        private val driveScale: Double = analog * drivePerAnalog
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
@@ -607,11 +610,12 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
 
-        /** Humanization amount: `analog × FILTER_DRIVE_PER_ANALOG`. See [SvfLPF] for math. */
-        private val driveScale: Double = analog * FILTER_DRIVE_PER_ANALOG
+        /** Humanization amount: `analog × drivePerAnalog`. See [SvfLPF] for math. */
+        private val driveScale: Double = analog * drivePerAnalog
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length

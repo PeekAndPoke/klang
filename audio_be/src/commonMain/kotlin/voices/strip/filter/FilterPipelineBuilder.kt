@@ -78,7 +78,13 @@ fun buildFilterPipeline(
                 }
 
             is StageDsl.Vca ->
-                add(EnvelopeRenderer(envelope, startFrame, gateEndFrame))
+                add(
+                    EnvelopeRenderer(
+                        envelope, startFrame, gateEndFrame,
+                        expK = stage.expK,
+                        declickSeconds = stage.declickSeconds,
+                    )
+                )
         }
     }
 }

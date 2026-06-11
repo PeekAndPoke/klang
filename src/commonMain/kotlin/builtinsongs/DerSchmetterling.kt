@@ -35,22 +35,22 @@ stack(                                                                          
       [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [-1 -3] 0 <[4 6] 0>] [<7 [[7 4 6 4]!4]> [-5 -6] -7 [-2 <3 -1>]]>/4`) // . solo()
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("1.00 0.95!3 0.98 0.95!3".fast(4)).analog(feel)
-    .sound("supersaw").unison(9).detune(0.08).gain(0.8).postgain(0.32).distort("1.0:tube:4").distort(1.0).vibrato(4).vibmod(0.02)    
+    .sound("supersaw").unison(9).detune(0.08).gain(0.8).postgain(0.30).distort("1.0:tube:4").distort(1.0).vibrato(4).vibmod(0.02)    
     .clip("<0.93!31 0.80 0.93!31 0.70>".fast(2)).adsr("0.005:1.5:0.1:0.005").adsrCurves("exp:exp:exp").lpadsr("0.005:1.0:0.4:0.005")    
     .hpf("<320!48 440!16 320!48 440!16>").lpf(saw.range(1,0).pow(2.0).mul(650).add(1000).slow(4)).lpe(3.0).lpq(1.25)
-    .coarse(2).coarseos(4).pan(0.3).superimpose(pan(0.7))
-    .engine("pedal").body("wood").bodyMix(0.3)
+    .coarse(2).coarseos(4).pan(0.25).superimpose(pan(0.75))
+    .engine("pedal").body("wood").bodyMix(0.4)
   ,
   // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>") //   . solo()
     .orbit(2).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
     .velocity("1.00 0.9!3 0.95 0.90!3".fast(4)).analog(feel)
-    .sound("supersaw").unison(5).detune(0.07).gain(0.8).postgain(0.25).distort("1:tube:2").distort(1.0)
+    .sound("supersaw").unison(5).detune(0.07).gain(0.8).postgain(0.26).distort("1:tube:2").distort(1.0)
     .clip("<0.93!31 0.80 0.93!31 0.70>".fast(2)).adsr("0.007:1.5:0.0:0.005").adsrCurves("exp:exp:exp").lpadsr("0.007:1.0:0.3:0.005")    
     .hpf(180).hpq(1.0).lpf(1025).lpe(3.0).lpq(1.25)
     .coarse(2).coarseos(4).pan(0.35).superimpose(
       x => x.pan(0.65),
-      x => x.orbit(3).postgain(0.23).hpf(200).lpf(1025) // .lpe(1.0)
+      x => x.orbit(3).postgain(0.25).hpf(200).lpf(1025) // .lpe(1.0)
             .scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))
     ).mute("<0!128 1!16 0!16>").engine("pedal").body("wood").bodyMix(0.3)
   , // Bass
