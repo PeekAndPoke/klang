@@ -50,12 +50,12 @@ stack(                                                                          
     .hpf(170).hpq(1.0).lpf(1025).lpe(3.0).lpq(1.25)
     .coarse(2).coarseos(2).pan(0.35).superimpose(
       x => x.pan(0.65),
-      x => x.orbit(3).postgain(0.25).hpf(200).lpf(1025) // .lpe(1.0)
+      x => x.orbit(3).postgain(0.25).hpf(190).lpf(1025) // .lpe(1.0)
             .scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))
     ).mute("<0!128 1!16 0!16>").engine("pedal").body("wood").bodyMix(0.3)
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!32 [x@3 x]!32 [x!4]!64>").fast(2).velocity("1.00 0.9!3 0.95 0.90!3".fast(4)) // . mute()
-    .scale("<e2:minor!88 e2:minor!8>").sound("saw").gain(0.5).distort("0.2:tube:1").postgain(0.52).clip(0.9)
+    .scale("<e2:minor!88 e2:minor!8>").sound("saw").gain(0.5).distort("0.2:tube:1").postgain(0.53).clip(0.9)
     .adsr("0.010:0.8:0.1:0.03").adsrCurves("exp:exp:exp").lpadsr("0.010:0.5:0.0:0.15").hpf(70).hpq(1.25).lpf(100).lpe(1.0).hpq(1.25) //  .solo()
     .mute("<0!128 1!32>") // .engine("pedal")
   , // Drums
