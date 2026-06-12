@@ -536,6 +536,10 @@ class KlangScriptProcessor(
 
         entries.objects.forEach { obj ->
             obj.cls.qualifiedName?.asString()?.let { imports.add(it) }
+            // Import the return/param types of the object's methods (e.g. a sealed supertype
+            // returned by a factory method, or a vararg element type) — the same collection
+            // that @TypeExtensions and @Function methods already get below.
+            obj.methods.forEach { collectTypeImports(it.fn) }
         }
         entries.typeExtensions.forEach { ext ->
             ext.cls.qualifiedName?.asString()?.let { imports.add(it) }
