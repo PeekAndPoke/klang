@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
+import io.peekandpoke.klang.audio_bridge.EngineDsl
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -65,6 +66,14 @@ class KlangCommLink(capacity: Int = 8192) {
             override val playbackId: String,
             val name: String,
             val dsl: IgnitorDsl,
+        ) : Cmd
+
+        /** Registers a custom EngineDsl in the backend's engine registry. */
+        @WireName("register-engine")
+        data class RegisterEngine(
+            override val playbackId: String,
+            val name: String,
+            val dsl: EngineDsl,
         ) : Cmd
 
         sealed interface Sample : Cmd {

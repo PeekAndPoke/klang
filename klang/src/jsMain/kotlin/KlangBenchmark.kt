@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
@@ -162,12 +163,15 @@ class KlangBenchmark(
             registerDefaults()
         }
 
+        val engineRegistry = EngineRegistry()
+
         val scheduler = VoiceScheduler(
             VoiceScheduler.Options(
                 commLink = commLink.backend,
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
                 ignitorRegistry = ignitorRegistry,
+                engineRegistry = engineRegistry,
                 cylinders = cylinders
             )
         )

@@ -4,7 +4,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.AudioEngine
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
@@ -38,6 +38,7 @@ class VoiceFactory(
     private val sampleRateDouble: Double,
     private val blockFrames: Int,
     private val ignitorRegistry: IgnitorRegistry,
+    private val engineRegistry: EngineRegistry,
     private val cylinders: Cylinders,
     private val voiceBuffer: AudioBuffer,
     private val freqModBuffer: DoubleArray,
@@ -91,7 +92,7 @@ class VoiceFactory(
         val analog = data.oscParams?.get("analog") ?: 0.0
         // The active engine's Filter stage carries the per-voice "filter feel" scales
         // (cutoff offset / drive / drift). Default StageDsl.Filter() == today's constants.
-        val filterStage = AudioEngine.fromName(data.engine).dsl.stages
+        val filterStage = engineRegistry.get(data.engine).stages
             .firstNotNullOfOrNull { it as? StageDsl.Filter } ?: StageDsl.Filter()
         val filters = data.filters.filters.map { it.toFilter(analog, filterStage) }
         val modulators = data.filters.filters.zip(filters).mapNotNull { (def, filter) ->
@@ -490,7 +491,7 @@ class VoiceFactory(
             freqHz = freqHz,
             startFrame = startFrame,
         ) + buildFilterPipeline(
-            engine = AudioEngine.fromName(data.engine),
+            engine = engineRegistry.get(data.engine),
             modulators = modulators,
             startFrame = startFrame,
             gateEndFrame = gateEndFrame,

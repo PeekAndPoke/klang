@@ -1,27 +1,26 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
-import io.peekandpoke.klang.audio_be.engines.AudioEngine
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
+import io.peekandpoke.klang.audio_bridge.EngineDsl
 import io.peekandpoke.klang.audio_bridge.StageDsl
 
 /**
  * Builds the filter pipeline (BlockRenderer chain) from voice parameters.
  *
- * The stage ORDER and PRESENCE come from the selected engine's [io.peekandpoke.klang.audio_bridge.EngineDsl]
- * (`engine.dsl`): the pipeline iterates [StageDsl] slots and maps each to its `BlockRenderer`.
- * The two built-in engines:
+ * The stage ORDER and PRESENCE come from the resolved [EngineDsl]: the pipeline iterates
+ * its [StageDsl] slots and maps each to its `BlockRenderer`. The built-in engines:
  *
- * - [AudioEngine.Modern] (default): classic subtractive `osc → waveshaper → VCF → VCA`.
+ * - `modern` (default): classic subtractive `osc → waveshaper → VCF → VCA`.
  *   ADSR (VCA) runs last so the filter/phaser see steady-state amplitude.
- * - [AudioEngine.Pedal]: VCA runs first so the waveshapers respond to dynamics.
+ * - `pedal`: VCA runs first so the waveshapers respond to dynamics.
  *
  * Only ACTIVE stages are included — a waveshaper/tremolo/phaser slot is skipped when its
  * per-voice amount is off. The engine sets order/presence/feel; the note sets amounts.
  */
 fun buildFilterPipeline(
-    engine: AudioEngine,
+    engine: EngineDsl,
     modulators: List<Voice.FilterModulator>,
     startFrame: Int,
     gateEndFrame: Int,
@@ -34,7 +33,7 @@ fun buildFilterPipeline(
     phaser: Voice.Phaser,
     sampleRate: Int,
 ): List<BlockRenderer> = buildList {
-    for (stage in engine.dsl.stages) {
+    for (stage in engine.stages) {
         when (stage) {
             StageDsl.FilterMod ->
                 if (modulators.isNotEmpty()) {

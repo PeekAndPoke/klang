@@ -81,6 +81,10 @@ class KlangPlayer(
     // concurrent playbacks cannot collide on synthetic names.
     internal val ignitors = IgnitorRegistry(sendControl = ::sendControl)
 
+    // Per-player engine name cache; sends RegisterEngine on first sighting of each unique
+    // EngineDsl tree (mirror of [ignitors]).
+    internal val engines = EngineRegistry(sendControl = ::sendControl)
+
     // Context bundle for playback implementations (reduces constructor parameter lists)
     val playbackContext = KlangPlaybackContext(
         playerOptions = options,
@@ -91,6 +95,7 @@ class KlangPlayer(
         callbackDispatcher = callbackDispatcher,
         backendReady = backendReady,
         ignitors = ignitors,
+        engines = engines,
     )
 
     /**

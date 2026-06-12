@@ -14,18 +14,18 @@ internal val derSchmetterlingSong = Song(
 import * from "stdlib"                                                                                                           //
 import * from "sprudel"                                                                                                         ////
                                                                                                                                //  //
-let feel = 1.5   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                     //    //
+let feel = 2.5   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                     //    //
                                                                                                                              //      //
                                                                                                                             //        //
 stack(                                                                                                         //////////////          //////////////
   // Lead                                                                                                        //                              //
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                  //          DISCO!          //
     .orbit(0).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(11).detune(0.03).analog(feel)             //       FOREVER!       //
-    .hpf(1300).lpf(1600).lpe(berlin.range(1.8, 1.8)).lpq(1.8).lpadsr("0.001:2.0:0.2:0.01")                             //                  //
+    .hpf(1300).lpf(1550).lpe(berlin.range(1.8, 1.8)).lpq(1.8).lpadsr("0.001:2.0:0.2:0.01")                             //                  //
     .gain(1.00).distort("0.350:tube:4").postgain("<0.750!48 0.330!16>") // . solo()                                     //       //      //
     .adsr("0.01:3.0:0.0:0.01").adsrCurves("exp:exp:exp").clip(0.8)  // . mute()                                        //     //    //    //
     .release("<0.20!16 0.35!16>").vibrato(4).vibmod(0.02)                                                             //   //          //  //
-    .phaser(1/8).phaserdepth(0.05).phasersweep(500).phasercenter(2500)                                               // //               // //
+    .phaser(1/8).phaserdepth(0.10).phasersweep(500).phasercenter(1000)                                               // //               // //
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>").coarse(2).coarseos(8)                                                   //                       //
     .superimpose(x => x.transpose(12).detune(0.10).velocity("<0!32 0.15!32>").pan(0.3),
                  x => x.transpose(12).detune(0.15).velocity("<0!32 0.15!32>").pan(0.7))
@@ -38,7 +38,7 @@ stack(                                                                          
     .sound("supersaw").unison(9).detune(0.08).gain(0.8).postgain(0.30).distort("1.0:tube:4").distort(1.0).vibrato(4).vibmod(0.02)    
     .clip("<0.93!31 0.80 0.93!31 0.70>".fast(2)).adsr("0.005:1.5:0.1:0.005").adsrCurves("exp:exp:exp").lpadsr("0.005:1.0:0.4:0.005")    
     .hpf("<320!48 440!16 320!48 440!16>").lpf(saw.range(1,0).pow(2.0).mul(650).add(1000).slow(4)).lpe(3.0).lpq(1.25)
-    .coarse(2).coarseos(4).pan(0.25).superimpose(pan(0.75))
+    .coarse(2).coarseos(2).pan(0.25).superimpose(pan(0.75))
     .engine("pedal").body("wood").bodyMix(0.4)
   ,
   // Guitar 2
@@ -47,8 +47,8 @@ stack(                                                                          
     .velocity("1.00 0.9!3 0.95 0.90!3".fast(4)).analog(feel)
     .sound("supersaw").unison(5).detune(0.07).gain(0.8).postgain(0.26).distort("1:tube:2").distort(1.0)
     .clip("<0.93!31 0.80 0.93!31 0.70>".fast(2)).adsr("0.007:1.5:0.0:0.005").adsrCurves("exp:exp:exp").lpadsr("0.007:1.0:0.3:0.005")    
-    .hpf(180).hpq(1.0).lpf(1025).lpe(3.0).lpq(1.25)
-    .coarse(2).coarseos(4).pan(0.35).superimpose(
+    .hpf(170).hpq(1.0).lpf(1025).lpe(3.0).lpq(1.25)
+    .coarse(2).coarseos(2).pan(0.35).superimpose(
       x => x.pan(0.65),
       x => x.orbit(3).postgain(0.25).hpf(200).lpf(1025) // .lpe(1.0)
             .scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))

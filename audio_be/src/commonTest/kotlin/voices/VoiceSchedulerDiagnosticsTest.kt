@@ -6,6 +6,7 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeAtLeast
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -29,6 +30,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
+            engineRegistry = EngineRegistry(),
             cylinders = Cylinders(maxCylinders = 4, blockFrames = blockFrames, sampleRate = sampleRate),
             performanceTimeMs = timeMs
         )

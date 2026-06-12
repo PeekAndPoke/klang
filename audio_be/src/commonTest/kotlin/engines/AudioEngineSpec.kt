@@ -81,7 +81,7 @@ class AudioEngineSpec : StringSpec({
 
 /** Builds a pipeline with everything OFF (no crush, no distort, no tremolo, no phaser). */
 private fun minimalPipeline(engine: AudioEngine) = buildFilterPipeline(
-    engine = engine,
+    engine = engine.dsl,
     modulators = emptyList(),
     startFrame = 0,
     gateEndFrame = 1000,
@@ -105,7 +105,7 @@ private fun minimalPipeline(engine: AudioEngine) = buildFilterPipeline(
  * waveshaper renderers in the assertions above.
  */
 private fun activePipeline(engine: AudioEngine) = buildFilterPipeline(
-    engine = engine,
+    engine = engine.dsl,
     modulators = emptyList(),
     startFrame = 0,
     gateEndFrame = 1000,

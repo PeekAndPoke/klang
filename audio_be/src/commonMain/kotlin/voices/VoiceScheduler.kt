@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
@@ -21,6 +22,7 @@ class VoiceScheduler(
         val sampleRate: Int,
         val blockFrames: Int,
         val ignitorRegistry: IgnitorRegistry,
+        val engineRegistry: EngineRegistry,
         val cylinders: Cylinders,
         /** Supplier for current backend time in milliseconds (from KlangTime) */
         val performanceTimeMs: () -> Double = { 0.0 },
@@ -155,6 +157,7 @@ class VoiceScheduler(
         sampleRateDouble = options.sampleRateDouble,
         blockFrames = options.blockFrames,
         ignitorRegistry = options.ignitorRegistry,
+        engineRegistry = options.engineRegistry,
         cylinders = options.cylinders,
         voiceBuffer = voiceBuffer,
         freqModBuffer = freqModBuffer,

@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -24,6 +25,7 @@ class KlangAudioRendererSpec : StringSpec({
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
                 ignitorRegistry = IgnitorRegistry(),
+                engineRegistry = EngineRegistry(),
                 cylinders = cylinders,
             )
         )
