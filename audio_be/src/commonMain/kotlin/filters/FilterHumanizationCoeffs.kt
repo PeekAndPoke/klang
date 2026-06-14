@@ -29,7 +29,7 @@ package io.peekandpoke.klang.audio_be.filters
 internal const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.003
 
 /**
- * Humanization-amount scale for the Obxd-style state-dependent damping in
+ * Humanization-amount scale for the analog-style state-dependent damping in
  * `SvfLPF` / `SvfHPF`. `driveScale = analog × FILTER_DRIVE_PER_ANALOG` multiplies
  * the `tCfb` term in `kEff = k + 2·driveScale·tCfb`, where `tCfb` is the
  * diode-pair polynomial ([diodePairResistanceApprox]) evaluated at the BP

@@ -866,7 +866,7 @@ data class SprudelVoiceData(
 
         // Canonical filter chain order: HIGHPASS → BANDPASS → NOTCH → FORMANT → LOWPASS.
         // Chain order is audible once the filters are nonlinear (analog>0 enables the
-        // Obxd state-dependent saturation, which does NOT commute): the highpass strips
+        // analog-style state-dependent saturation, which does NOT commute): the highpass strips
         // bass before the lowpass's saturator sees it, and the lowpass sits LAST to tame
         // harmonics generated upstream — the "lowpass after distortion" rule, matching
         // the MS-20 / Juno / Diva convention. sprudel's flat fields carry no order of

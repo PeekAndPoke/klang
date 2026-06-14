@@ -33,11 +33,13 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
 
                 ui.two.column.stackable.doubling.cards {
                     renderStrudelCard()
-                    renderBrowserCard()
-                    renderFoundationCard()
-                    renderEditorCard()
-                    renderUiCard()
+                    renderTidalCard()
+                    renderFiltersCard()
                     renderMusicAndAudioCard()
+                    renderBrowserCard()
+                    renderEditorCard()
+                    renderFoundationCard()
+                    renderUiCard()
                     renderRuntimeCard()
                     renderTestingCard()
                     renderAiCard()
@@ -65,6 +67,8 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         Sharing the same roots and many of the same ideas, Sprudel takes the pattern language
                         in new directions as part of Klang.
 
+                        And Strudel itself descends from **Tidal Cycles**, the project that started it all — see below.
+
                         A heartfelt thank you to the Strudel community for making all of this openly available.
                     """.trimIndent()
                 )
@@ -77,6 +81,39 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                     noui.item {
                         a(href = "https://codeberg.org/uzu/strudel", target = "_blank") { +"Strudel on Codeberg" }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.renderTidalCard() {
+        noui.card {
+            noui.content {
+                ui.header H2 { +"Tidal Cycles — The Roots" }
+
+                ui.divider()
+
+                MarkdownDisplay(
+                    """
+                        **Before Strudel, there was Tidal Cycles.** Strudel is a JavaScript reimagining of
+                        **[Tidal Cycles](https://tidalcycles.org)** — the Haskell live coding environment created
+                        by **Alex McLean** that pioneered the cyclic, pattern-based language at the heart of all
+                        of this. The way patterns describe music in Strudel, and now in Sprudel, traces directly
+                        back to Tidal.
+
+                        Lineage: **Tidal Cycles → Strudel → Sprudel**.
+                    """.trimIndent()
+                )
+
+                ui.divider()
+
+                ui.list {
+                    noui.item {
+                        a(href = "https://tidalcycles.org", target = "_blank") { +"https://tidalcycles.org" }
+                    }
+                    noui.item {
+                        a(href = "https://github.com/tidalcycles/Tidal", target = "_blank") { +"Tidal on GitHub" }
                     }
                 }
             }
@@ -161,6 +198,31 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
 
                         - **[Tonal.js](https://github.com/tonaljs/tonal)** — music theory library (ported to Kotlin in the :tones module)
                         - **[SoundFont2](https://www.npmjs.com/package/soundfont2)** — SoundFont parsing
+                    """.trimIndent()
+                )
+            }
+        }
+    }
+
+    private fun FlowContent.renderFiltersCard() {
+        noui.card {
+            noui.content {
+                ui.header H2 { +"Filters & DSP" }
+
+                ui.divider()
+
+                MarkdownDisplay(
+                    """
+                        Klang's filters stand on the shoulders of the virtual-analog filter community:
+
+                        - **"The Art of VA Filter Design" by Vadim Zavalishin** — the zero-delay-feedback (TPT)
+                        state-variable filter that powers Klang's lowpass, highpass, bandpass, and notch filters
+                        - **[Cytomic](https://cytomic.com/technical-papers/) (Andrew Simper)** — the canonical
+                        trapezoidal-integrator SVF formulation that Klang's implementation follows
+                        - **[Obxd](https://github.com/2DaT/Obxd) by Vadim Filatov (2DaT)** — inspiration for the
+                        analog-style "diode-pair" resonance saturation that gives the filters their warmth when
+                        driven (`analog > 0`). Klang's SVF topology and the way the nonlinearity is folded in are
+                        its own; the *idea* of steering resonance damping from a diode-pair model comes from here.
                     """.trimIndent()
                 )
             }

@@ -19,6 +19,11 @@ Currently supported live coding frameworks:
 
 - Strudel (pure Kotlin reimplementation)
 
+# Credits
+
+Klang stands on the shoulders of many open-source projects and references.
+See [CREDITS.MD](CREDITS.MD) for the full list.
+
 # Pre-Alpha-Demo
 
 There are still some rough edges ... For the best experience use a chrome-browser on a laptop or pc please.

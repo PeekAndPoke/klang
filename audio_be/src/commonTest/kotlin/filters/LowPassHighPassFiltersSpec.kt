@@ -607,10 +607,10 @@ class LowPassHighPassFiltersSpec : StringSpec({
     }
 
     // -----------------------------------------------------------------------
-    // SvfLPF / SvfHPF — state-dependent damping (Obxd-style)
+    // SvfLPF / SvfHPF — state-dependent damping (analog-style)
     //
-    // When `analog > 0`, the saturated branch uses Vadim Filatov's (2DaT)
-    // polynomial diode-pair approximation to make the resonance damping
+    // When `analog > 0`, the saturated branch uses a polynomial diode-pair
+    // approximation (technique inspired by 2DaT's Obxd) to make the resonance damping
     // coefficient a function of the BP integrator state — as state grows,
     // damping grows, compressing the resonance peak. The signal stays
     // linear; only the damping gain is modulated. See
@@ -663,7 +663,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
 
     "SvfLPF analog>0 - stable at Q=10 with hot drive (regression guard)" {
         // Previous z⁻¹-tanh-feedback topology blew up at Q≥5 + analog>0 because tanh
-        // hard-capped the feedback signal, removing damping. The Obxd state-dependent
+        // hard-capped the feedback signal, removing damping. The analog-style state-dependent
         // damping does the opposite — damping grows with state, so the filter is
         // *more* stable under heavy resonance, not less. Verify no runaway.
         val filter = LowPassHighPassFilters.SvfLPF(800.0, q = 10.0, sampleRate = sampleRate, analog = 5.0)
@@ -710,7 +710,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val settledStart = blockFrames / 2
         val settledLen = blockFrames - settledStart
 
-        // 1) DC test: mean of settled output should be ≈ 0. The Obxd polynomial has a
+        // 1) DC test: mean of settled output should be ≈ 0. The diode-pair polynomial has a
         // small asymmetry near `x ≈ -0.1` (where `tCfb` dips slightly negative before
         // turning positive again), which can leave a tiny steady-state DC bias at
         // very hot drive + high Q. At ≈ −34 dB this is well below audibility and the
@@ -749,7 +749,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
     }
 
     "SvfHPF analog>0 - resonance peak is compressed under hot drive" {
-        // Same as SvfLPF version — verify the Obxd damping mechanism reaches the HP tap.
+        // Same as SvfLPF version — verify the analog-style damping mechanism reaches the HP tap.
         val linear = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
         val saturated = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
 

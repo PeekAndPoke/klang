@@ -742,7 +742,7 @@ sealed interface IgnitorDsl {
         val q: IgnitorDsl = Constant(0.707),
         /**
          * Analog character amount. `0` = clean linear filter (default — bit-identical
-         * to pre-Obxd behaviour). Higher values engage the OB-X-style state-dependent
+         * to pre-saturation behaviour). Higher values engage the OB-X-style state-dependent
          * damping in the SVF resonance feedback, compressing the resonance peak.
          * Typical range 0..10; values around 1–3 give Diva-default warmth.
          */
