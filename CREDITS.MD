@@ -45,12 +45,42 @@ Klang's filters stand on the shoulders of the virtual-analog filter community:
   driven (`analog > 0`). Klang's SVF topology and the way the nonlinearity is folded in are
   its own; the *idea* of steering resonance damping from a diode-pair model comes from here.
 
+## DSP Algorithms & Techniques
+
+Beyond the filters, Klang's voices and effects build on well-known DSP algorithms:
+
+- **Freeverb** by Jezar at Dreampoint — the reverb (Schroeder/Moorer architecture, public domain)
+- **Karplus–Strong** (Kevin Karplus & Alexander Strong) — plucked-string synthesis
+- **PolyBLEP** (Välimäki et al.) — band-limited oscillator anti-aliasing
+- **Super-saw** after Adam Szabo's *"How to Emulate the Super Saw"* (Roland JP-8000)
+- **Chebyshev-polynomial waveshaping** — harmonic distortion
+- **Perlin noise** (Ken Perlin) — organic drift and noise textures
+- **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
+
 ## Music & Audio
 
 Making music possible:
 
 - **[Tonal.js](https://github.com/tonaljs/tonal)** — music theory library (ported to Kotlin in the :tones module)
 - **[SoundFont2](https://www.npmjs.com/package/soundfont2)** — SoundFont parsing
+- **[JLayer](http://www.javazoom.net/javalayer/javalayer.html)** — MP3 decoding on the JVM
+
+## Samples & Soundfonts
+
+Klang ships with a default catalogue of openly available samples and soundfonts.
+Huge thanks to everyone who created, curated, and hosts them:
+
+- **[TidalCycles Dirt-Samples](https://github.com/tidalcycles/Dirt-Samples)** — the classic live-coding sample
+  collection
+- **[uzu-drumkit](https://github.com/tidalcycles/uzu-drumkit)** — the default drum kit
+- **Tidal Drum Machines** — emulation samples of classic drum machines
+- **[Versilian Community Sample Library (VCSL)](https://github.com/sgossner/VCSL)** by Versilian Studios — CC0
+  acoustic-instrument samples
+- **[dough-samples](https://github.com/felixroos/dough-samples)** by Felix Roos — hosting and curation of the bundled
+  sample sets (Dirt-Samples, VCSL, mridangam, piano, drum machines)
+- **[todepond/samples](https://github.com/todepond/samples)** by Lu Wilson — drum-machine sample aliases
+- **[WebAudioFont](https://github.com/surikov/webaudiofont)** by Sergey Surikov — source of the bundled General MIDI
+  soundfont
 
 ## The Modern Browser
 
@@ -65,6 +95,13 @@ The performance and the richness of APIs available today are nothing short of am
   and visualizations
 - **[Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API)** — parallel processing without
   blocking the UI
+
+## Graphics & Rendering
+
+Visuals and editor effects are powered by these libraries (integrated via Kraft addons):
+
+- **[PixiJS](https://pixijs.com)** — WebGL-accelerated rendering of live playback highlights in the editor
+- **[Three.js](https://threejs.org)** — 3D graphics for the animated Motör background and visualizations
 
 ## The Editor
 
@@ -84,6 +121,7 @@ Klang is built on the shoulders of these giants:
 - **[Ktor](https://ktor.io)** — HTTP framework powering the backend
 - **[Gradle](https://gradle.org)** — build automation
 - **[Google KSP](https://github.com/google/ksp)** — Kotlin Symbol Processing for code generation
+- **[Clikt](https://ajalt.github.io/clikt/)** — command-line interface framework for the CLI tools
 
 ## The UI
 
@@ -91,7 +129,18 @@ Looking good thanks to:
 
 - **[Semantic UI](https://semantic-ui.com)** / **[Fomantic UI](https://fomantic-ui.com)** — the UI framework behind the
   interface
-- **[CommonMark](https://github.com/commonmark/commonmark-java)** — markdown rendering
+- **[CommonMark](https://github.com/commonmark/commonmark-java)** / **[Marked](https://marked.js.org)** — markdown
+  rendering (JVM / JS)
+
+## Kraft & Ultra
+
+Klang's frontend and shared building blocks are built on **Kraft** and **Ultra** —
+PeekAndPoke's own open-source Kotlin frameworks:
+
+- **[Kraft](https://github.com/PeekAndPoke)** — the reactive UI framework (VDom, components, forms, routing)
+  the entire interface is built with
+- **[Ultra](https://github.com/PeekAndPoke)** — the foundational Kotlin libraries (html DSL, streams,
+  common utilities, dependency injection, and more)
 
 ## The Runtime
 
