@@ -19,14 +19,17 @@ package io.peekandpoke.klang.audio_be.filters
  * uniform random multiplier in `1 ± FILTER_CUTOFF_OFFSET_PER_ANALOG × analog`
  * applied at construction and at every runtime `setCutoff` call.
  *
- * At `analog=1` ≈ ±5 cents per voice; at `analog=3` ≈ ±15 cents; at `analog=10`
- * ≈ ±50 cents. Tuned by ear — larger values smear the filter's character
+ * At `analog=1` ≈ ±1.7 cents per voice; at `analog=3` ≈ ±5 cents; at `analog=10`
+ * ≈ ±17 cents. Tuned by ear — larger values smear the filter's character
  * noticeably across unison voices, especially with long filter chains where
- * each filter draws independently (e.g. `notch + lpf + hpf`).
+ * each filter draws independently (e.g. `notch + lpf + hpf`). This offset is
+ * *frozen per note*, so on fast melodic lines through a high-Q filter it becomes
+ * a per-note re-pitch of the resonant peak — keep it small.
  *
  * Consumer: `VoiceFactory.perVoiceCutoffOffsetMul`.
+ * Keep in sync with `EngineDsl.Filter.cutoffOffsetPerAnalog` default.
  */
-internal const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.003
+internal const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.001
 
 /**
  * Humanization-amount scale for the analog-style state-dependent damping in
@@ -72,9 +75,10 @@ internal const val FILTER_INV_SMOOTH_SAMPLES: Double = 1.0 / FILTER_SMOOTH_SAMPL
  *
  * Tuned by ear: filter cutoff is less perceptually sensitive than pitch, so
  * drift can be a few times wider before sounding "out of tune". At `analog=1`
- * with this constant = `5.0`, the slow layer wanders ±4 cents over ~10 s and
- * the fast layer adds ±1 cent of micro-wobble — Diva-default territory.
+ * with this constant = `2.5`, the slow layer wanders ±2 cents over ~10 s and
+ * the fast layer adds ±0.5 cent of micro-wobble — Diva-default territory.
  *
  * Consumer: `VoiceFactory.toModulator` (creates the per-filter drift).
+ * Keep in sync with `EngineDsl.Filter.driftRelToOsc` default.
  */
-internal const val FILTER_DRIFT_RELATIVE_TO_OSC: Double = 5.0
+internal const val FILTER_DRIFT_RELATIVE_TO_OSC: Double = 2.5

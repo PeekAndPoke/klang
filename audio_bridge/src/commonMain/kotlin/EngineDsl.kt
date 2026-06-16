@@ -90,9 +90,9 @@ sealed interface StageDsl {
     /** Main filter (LP/HP/BP/Notch chain) + its per-voice humanization feel. */
     @WireName("filter")
     data class Filter(
-        val cutoffOffsetPerAnalog: Double = 0.003, // FILTER_CUTOFF_OFFSET_PER_ANALOG
+        val cutoffOffsetPerAnalog: Double = 0.001, // FILTER_CUTOFF_OFFSET_PER_ANALOG
         val drivePerAnalog: Double = 0.5,          // FILTER_DRIVE_PER_ANALOG
-        val driftRelToOsc: Double = 5.0,           // FILTER_DRIFT_RELATIVE_TO_OSC
+        val driftRelToOsc: Double = 2.5,           // FILTER_DRIFT_RELATIVE_TO_OSC
     ) : StageDsl
 
     /** Amplitude VCA (ADSR) + its envelope character. */
