@@ -11,60 +11,75 @@ internal val strangerThingsSong = Song(
     rpm = 34.0,
     icon = "film",
     code = """
-import * from "stdlib"
-import * from "sprudel"
-
-let wait = 16
-let keep = 32 * 6
-let notch = sine.range(1 * 440, 3 * 440).slow(16) // 440, 880, 1560 ?
-
-stack(
-  // Claps --------------------------------------------------------------------------------------------------------------------
-  sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).orbit(0).gain(0.3).legato(2.0)
-    .bandf(sine.range(1400, 1800).fast(3.14))
-    .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
-  , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
-  n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
-    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(5.0).hpf(1000).analog(5)
-    .sound("pulse").warmth(0.75).crush(5).gain(0.05).clip(0.35).pan(berlin.slow(2)).adsr("0.03:0.08:0.2:0.1") // .solo()
-    .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
-  , // Melody -----------------------------------------------------------------------------------------------------------------
-  n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -1] [-2 -1 2 6 4 2 0 -1]>")
-    .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.35).slow(16)).spread(1.0 ).tremolo("0.1:8").tremolodepth(saw.range(0,0.1).slow(256))
-    .gain(0.8).distort(0.25).warmth(0.7).postgain(0.25).adsr("0.01:0.2:0.8:0.155")
-    .pan(sine.range(0.3, 0.7).slow(16)) // . solo()
-    .superimpose(bandf(notch).bandq(1.0).gain(0.125).transpose(12)).body("glass")
-    .hpf(350).lpf(800).lpenv(perlin.range(3.0, 4.5).lpq(1.5).slow(8)).analog(3)
-    .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
-  , // Bass -----------------------------------------------------------------------------------------------------------------------------
-  note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/4").clip(0.8).struct("x!4").slow(16)
-    .orbit(2).s("supersaw").unison(4).detune(saw.range(0.05, 0.45).slow(64)).warmth(0.01) // . mute()
-    .gain(1.0).adsr("0.01:0.6:0.8:1.80").postgain(0.4) // solo()
-    .superimpose(
-      x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
-        .pan(sine.range(0.2, 0.8).slow(32)).clip(0.9)
-    ).lpf(4 * 440).lpq(2.5).hpf(90).notchf(notch).notchq(0.75).analog(2).body("glass")
-    .superimpose(
-      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.5)).vibrato("8".add(perlin)).vibmod(0.25)
-        .crush("1.85".add(berlin2.mul(0.5).slow(4))).crushos(2).lpf(4.5 * 440).hpf(300).postgain(0.4)
-        .pan(0.2).superimpose(pan(0.8))                 
-    ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
-    .analog(3).filterWhen(x => x < (wait * 4 + keep)) 
-  , // Perc 2 ------------------------------------------------------------------------------------------------------------------
-  sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
-    .orbit(4).gain(0.6).pan(0.4).adsr("0.04:0.2:0.8:2.0").fast(2).degrade(0.1).lpf(4800).late(0.0005)
-    .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
-  , // Perc 1 -----------------------------------------------------------------------------------------------------------------------
-  sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-    .orbit(5).gain(0.9).pan(0.5).adsr("0.03:0.2:0.5:1").degrade(0.01).hpf(120).lpf(5500)
-    .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
-  , // Shore ---------------------------------------------------------------------------------------------------------
-  note("c").fast(7).sound("brown")
-    .orbit(0).gain(0.10).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
-    .bandf(perlin.range(440, 440 * 4).segment(16).slow(48)).bandq(sine.range(0.25, 5.0).slow(48).early(12))
+import * from "stdlib"                                                                                                           //
+import * from "sprudel"                                                                                                         ////
+                                                                                                                               //  //
+let feel = 3.0    // 0.0 .. cold | 10.0 .. warm                                                                               //    //
+                                                                                                                             //      //
+                                                                                                                            //        //
+stack(                                                                                                         //////////////          //////////////
+  // Lead                                                                                                        //                              //
+  n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                  //          DISCO!          //
+    .orbit(0).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(9).detune(0.10).analog(feel)              //       FOREVER!       //
+    .hpf(1600).lpf(1750).lpe(berlin.range(1.6, 1.7).fast(4)).lpq(2.2).lpadsr("0.010:1.5:0.5:0.05")                     //                  //
+    .gain(0.50).distort("0.550:tube:4").postgain("<0.600!48 0.300!16>") // . solo()                                     //       //      //
+    .adsr("0.010:2.0:0.0:0.01").adsrCurves("exp:exp:exp").clip(0.9) //  . mute()                                       //     //    //    //
+    .release("<0.075!16 0.20!16>").vibrato(5).vibmod(0.01)                                                            //   //          //  //
+    .phaser(1/8).phaserdepth(0.15).phasersweep(500).phasercenter(2000)                                               // //               // //
+    .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                         //                       //
+    .superimpose(x => x.transpose(0).detune(0.12).velocity("<0!32 0.25!32>").pan(0.1).superimpose(pan(0.9)))
+    .mute("<1!32 0!192>").engine("pedal"),
+  // Guitar 1
+  n(`<[7 4 2 <-1 3 1 3> [0 -1 -3 -1] [0 -3] -2 <[-1 5@3] [5 6@3] [[4 5] 8@3] [[3 4] 3@3]>]!4
+      [[4@2 [2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
+      [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 2]!4]> [-5 -6] [-7,-14] [-2 <-4 -1>]]>/4`)
+    .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
+    .velocity("1.00 0.93!7 0.96 0.93!7".fast(2)).analog(feel) // . solo()
+    .sound("supersaw").unison(17).detune(0.10).gain(0.8).postgain(0.25).distort("1:diode:4").distort(0.8)    
+    .clip("<0.88!31 0.80 0.88!31 0.91 0.88!30 0.80 0.73>".fast(2)).adsr("0.006:4.0:0.1:0.02").adsrCurves("exp:exp:exp").lpadsr("0.006:1.0:0.4:0.007")    
+    .hpf("<450!48 780!16>").lpf(saw.range(1,0).pow(2.0).mul(500).add(1475).slow(4)).lpe(2.3).lpq(0.825)
+    .coarse(2).pan(0.3).superimpose(pan(0.7))
+    .engine("pedal").body("wood").bodyMix(0.3)
   ,
-).delay("0.2::0.5").delaytime(pure(1/8).div(cps)).room("0.05:10.0").compressor("-15:2:6:0.01:0.2")
+  // Guitar 2
+  n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
+    .orbit(2).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
+    .velocity("1.00 0.94!7 0.97 0.94!7".fast(2)).analog(feel)
+    .sound("supersaw").unison(11).detune(0.10).gain(0.8).postgain(0.25).distort("1:diode:4").distort(0.8)
+    .clip("<0.88!31 0.80 0.88!31 0.91 0.89!30 0.80 0.73>".fast(2)).adsr("0.004:5.0:0.0:0.012").adsrCurves("exp:exp:exp").lpadsr("0.004:1.0:0.4:0.005")    
+    .hpf(120).lpf(1450).lpe(2.3).lpq(0.8)
+    .coarse(2).pan(0.35).superimpose(
+      x => x.pan(0.65),
+      x => x.orbit(3).postgain(0.23).hpf(120).lpf(1450) // .lpe(1.0)
+            .scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))
+    ).mute("<0!128 1!16 0!16>").engine("pedal").body("wood").bodyMix(0.3)
+  , // Bass
+  n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!48>").fast(2).velocity("1.00 0.93!3 0.95 0.93!3".fast(2)) // . mute()
+    .orbit(4).coarse(2).scale("<e2:minor!88 e2:minor!8>").sound("saw").gain(0.5).distort("0.3:tube:1").postgain(0.57).clip(0.7)
+    .adsr("0.003:0.3:0.2:0.015").adsrCurves("exp:exp:exp").lpadsr("0.007:0.5:0.0:0.15").hpf(60).hpq(1.5).lpf(100).lpe(1.0).lpq(1.25) //  .solo()
+    .mute("<0!128 1!32>") // .engine("pedal")
+  , // Drums
+  sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!24 [bd bd bd bd]!24>").mute("<0!128 1!32>")  // . solo()
+    .orbit(5).gain(0.85).hpf(70).lpf(6000).adsr("0.003:0.3:0.5:0.5"),
+  sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!24 [~    sd    ~    sd]!24>").mute("<0!128 1!32>") // . solo()
+    .late(0.002).orbit(6).gain(0.75).hpf(220).lpf(5500).adsr("0.005:0.3:0.7:0.5").superimpose(x => x.bandf(200).bandq(4).gain(0.4)),
+  sound("<[hh hh hh hh]!16 [hh hh oh hh]!16 [cr hh cr hh]!24 [~ hh ~ hh]!24>").fast(2).mute("<0!128 1!32>")  //  . solo()
+    .late(0.001).orbit(7).gain(0.70).hpf(2000).lpf(5800).adsr("0.005:0.3:0.8:0.5") // . mute()
+  // Master
+).room("0.2:3").roomlp(2000).roomdim(500)
+  .compressor("-10:2:10:0.02:0.25").seed(timeOfDay.mul(60*60*24))
+
+
+// Inspired by: Editors - Papillon
+// https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW
+
+
+
+
+// Written by: peekandpoke
+
+// Epilepsy Warning: Do not click the oscilloscope!
+
 
 
 
