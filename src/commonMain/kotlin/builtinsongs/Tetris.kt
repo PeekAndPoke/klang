@@ -10,8 +10,7 @@ internal val tetrisSong = Song(
     title = "Stein um Stein",
     rpm = 39.5,
     icon = "gamepad",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // ── Patterns: the raw musical content ───────────────────────────────────
@@ -49,30 +48,30 @@ export drumsPattern = `<
 // Lead voice: triangle, mild lpf, pan-spread, tempo-locked delay,
 // octave-superimposed accents.
 export leadShape = (p) => p
-    .sound("tri").clip(0.33).hpf(600).lpf(1500).lpe(2).lpq(3)
+    .sound("tri").clip(0.33).hpf(500).lpf("4000").lpq(3).warmth(0.05)
     .adsr("0.02:0.2:0.5:0.1").superimpose(x => x.transpose("<0 12 0 -12>/8"))
-    .orbit(0).gain(0.135).pan(0.3).superimpose(pan(0.66)).body("glass")
+    .orbit(0).gain(0.115).pan(0.33).superimpose(pan(0.66))
     .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.2)
 
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
-    .sound("supersaw").spread(0.5).unison(sine.range(6, 10).slow(80))
-    .orbit(1).gain(0.32).adsr("0.01:1.5:0.2:0.10").pan(0.2)
+    .sound("supersaw").spread(0.5).unison(sine.range(6, 12).slow(80)).warmth(0.1)
+    .orbit(1).gain(0.37).adsr("0.007:0.2:0.8:0.10").pan(0.2)
     .superimpose(
       x => x.pan(0.8),
       x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
-    ).phaser(1/13).phaserdepth(0.10).phasercenter(2000).phasersweep(1000)
-    .detune(sine.range(0.05, 0.4).early(1.5).slow(24)).hpf(240).lpf(1900).lpe(2.0).lpq(2.0)
+    ).phaser(1/13).phaserdepth(0.20).phasercenter(2500).phasersweep(1000)
+    .detune(sine.range(0.05, 0.4).early(1.5).slow(24)).hpf(260).lpf(2500).lpe(2).lpq(1.5)
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.
-export subShape = (p) => p.body("wood").bodyMix(0.2)
-    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.8).distort("0.3:tube:2").postgain(0.63)
-    .adsr("0.01:0.6:0.2:0.09").hpf(80).hpq(1.2).lpf(200).lpe(2) // . solo()
+export subShape = (p) => p
+    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.8).distort("0.3:tube:2").postgain(0.56)
+    .adsr("0.01:0.2:0.5:0.09").tremolo("0.1:8::0:0").hpf(70).lpf(300).lpe(2) // . solo()
 
 // Drums: tight, panned right, fast.
-export drumsShape = (p) => p.fast(2)
-    .orbit(3).gain(0.8).pan(0.6).adsr("0.003:0.2:0.5:1.0").hpf(100).lpf("7000::0.5")
-   
+export drumsShape = (p) => p
+    .orbit(3).gain(0.8).pan(0.6).adsr("0.007:0.2:0.5:1.0").hpf(90).lpf("5000:1:1")
+    .fast(2)
 
 // ── Assembled parts: shape × pattern, fully voiced and arrangement-free ─
 //
@@ -96,7 +95,7 @@ export song = stack(
     bass.filterWhen(x => x > 31.4 && x % 64 > 15.4),
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
-).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25").analog(1.5).swingBy(saw.pow(6).mul(0.33).slow(64), 4)
+).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25").analog(1.5).swingBy(saw.pow(4).mul(0.1).slow(64), 4)
 
 
 
