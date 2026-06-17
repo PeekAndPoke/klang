@@ -43,18 +43,18 @@ object BuiltInSongs {
     val drunkenSailor: Song = drunkenSailorSong
 
     val songs: List<Song> = listOf(
-        derSchmetterling,
-        tetris,
-        soundOfTheSea,
-        sakura,
-        aTruthWorthLyingFor,
-        dialogueWithTheStars,
-        strangerThings,
-        irishLamentTechno,
-        tetrisRemix,
-        irishLament,
         finalFantasy7Prelude,
+        derSchmetterling,
+        soundOfTheSea,
+        strangerThings,
+        sakura,
+        tetris,
+        tetrisRemix,
+        aTruthWorthLyingFor,
+        irishLamentTechno,
+        irishLament,
         smallTownBoy,
         drunkenSailor,
+        dialogueWithTheStars,
     )
 }

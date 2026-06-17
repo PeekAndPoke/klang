@@ -21,7 +21,7 @@ stack(                                                                          
   // Lead                                                                                                        //                              //
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                  //          DISCO!          //
     .orbit(0).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(9).detune(0.10).analog(feel)              //       FOREVER!       //
-    .hpf(1600).lpf(1700).lpe(berlin.range(1.6, 1.7).fast(4)).lpq(2.2).lpadsr("0.010:1.5:0.5:0.05")                     //                  //
+    .hpf(1600).lpf(1750).lpe(berlin.range(1.6, 1.7).fast(4)).lpq(2.2).lpadsr("0.010:1.5:0.5:0.05")                     //                  //
     .gain(0.50).distort("0.590:tube:4").postgain("<0.600!48 0.300!16>") // . solo()                                     //       //      //
     .adsr("0.010:2.0:0.0:0.01").adsrCurves("exp:exp:exp").clip(0.9) //  . mute()                                       //     //    //    //
     .release("<0.075!16 0.20!16>").vibrato(5).vibmod(0.01)                                                            //   //          //  //
@@ -35,9 +35,9 @@ stack(                                                                          
       [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 2]!4]> [-5 -6] [-7,-14] [-2 <-4 -1>]]>/4`)
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("1.00 0.93!7 0.96 0.93!7".fast(2)).analog(feel) // . solo()
-    .sound("supersaw").unison(17).detune(0.10).gain(0.8).postgain(0.25).distort("1:diode:4").distort(0.8)    
-    .clip("<0.89!31 0.80 0.89!31 0.91 0.89!30 0.80 0.73>".fast(2)).adsr("0.006:4.0:0.1:0.02").adsrCurves("exp:exp:exp").lpadsr("0.006:2.0:0.3:0.007")    
-    .hpf("<450!48 750!16>").lpf(saw.range(1,0).pow(2.0).mul(600).add(1475).slow(4)).lpe(2.3).lpq(0.8)
+    .sound("supersaw").unison(17).detune(0.10).gain(0.8).postgain(0.27).distort("1:diode:4").distort(0.8)    
+    .clip("<0.88!31 0.80 0.88!31 0.91 0.88!30 0.80 0.73>".fast(2)).adsr("0.006:4.0:0.1:0.02").adsrCurves("exp:exp:exp").lpadsr("0.006:2.0:0.3:0.007")    
+    .hpf("<450!48 780!16>").lpf(saw.range(1,0).pow(2.0).mul(500).add(1475).slow(4)).lpe(2.3).lpq(0.8)
     .coarse(2).pan(0.25).superimpose(pan(0.75))
     .engine("pedal").body("wood").bodyMix(0.3)
   ,
@@ -45,17 +45,17 @@ stack(                                                                          
   n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
     .orbit(2).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
     .velocity("1.00 0.94!7 0.97 0.94!7".fast(2)).analog(feel)
-    .sound("supersaw").unison(11).detune(0.10).gain(0.8).postgain(0.26).distort("1:diode:2").distort(0.8)
+    .sound("supersaw").unison(11).detune(0.10).gain(0.8).postgain(0.25).distort("1:diode:4").distort(0.8)
     .clip("<0.88!31 0.80 0.88!31 0.91 0.89!30 0.80 0.73>".fast(2)).adsr("0.004:5.0:0.0:0.012").adsrCurves("exp:exp:exp").lpadsr("0.004:2.0:0.3:0.005")    
     .hpf(120).lpf(1450).lpe(2.3).lpq(0.8)
     .coarse(2).pan(0.35).superimpose(
       x => x.pan(0.65),
-      x => x.orbit(3).postgain(0.25).hpf(120).lpf(1450) // .lpe(1.0)
+      x => x.orbit(3).postgain(0.24).hpf(120).lpf(1450) // .lpe(1.0)
             .scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))
     ).mute("<0!128 1!16 0!16>").engine("pedal").body("wood").bodyMix(0.3)
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!48>").fast(2).velocity("1.00 0.93!3 0.95 0.93!3".fast(2)) // . mute()
-    .orbit(4).coarse(2).scale("<e2:minor!88 e2:minor!8>").sound("saw").gain(0.5).distort("0.3:tube:1").postgain(0.57).clip(0.7)
+    .orbit(4).coarse(2).scale("<e2:minor!88 e2:minor!8>").sound("saw").gain(0.5).distort("0.3:tube:1").postgain(0.58).clip(0.7)
     .adsr("0.003:0.3:0.2:0.015").adsrCurves("exp:exp:exp").lpadsr("0.007:0.5:0.0:0.15").hpf(60).hpq(1.5).lpf(100).lpe(1.0).lpq(1.25) //  .solo()
     .mute("<0!128 1!32>") // .engine("pedal")
   , // Drums
@@ -88,6 +88,5 @@ stack(                                                                          
 
 
 
-    
     """,
 )

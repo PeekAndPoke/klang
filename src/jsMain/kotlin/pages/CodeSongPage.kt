@@ -131,7 +131,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
 
-    private var highlightPerEvent by value(10) { newValue ->
+    private var highlightPerEvent by value(15) { newValue ->
         codeEditorRef { it.setMaxHighlightsPerEvent(newValue) }
         blocksHighlightBuffer.cancelAll()
         ctrl.reemitVoiceSignals()
