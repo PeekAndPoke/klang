@@ -138,14 +138,20 @@ class Compressor(
             SILENCE_DB
         }
 
-        // Envelope follower: one-pole IIR `y += k * (x - y)`, attack vs release coefficient
-        // selected by direction of change.
-        val coeff = if (inputDb > envelopeDb) attackCoeff else releaseCoeff
-        envelopeDb += coeff * (inputDb - envelopeDb)
+        // Envelope follower: one-pole IIR `y += k * (x - y)`. Instead of hard-switching the
+        // coefficient on direction (a slope kink + chatter at every attack<->release crossing),
+        // blend attack->release smoothly across a +/- ENV_COEFF_BLEND_DB window around error=0.
+        // C1, branchless: error >= +W keeps full attackCoeff (peaks still caught at full speed →
+        // limiter-safe), error <= -W is full releaseCoeff; |error| < W blends with no kink.
+        val error = inputDb - envelopeDb
+        val blend = smoothstep01((error + ENV_COEFF_BLEND_DB) / (2.0 * ENV_COEFF_BLEND_DB))
+        val coeff = releaseCoeff + (attackCoeff - releaseCoeff) * blend
+        envelopeDb += coeff * error
 
-        // Gain curve → linear multiplier. Skip `exp` when reduction is negligible.
+        // Gain curve → linear multiplier. Skip `exp` only below an inaudible reduction floor
+        // (GAIN_SKIP_THRESHOLD_DB); the old -0.01 dB cutoff snapped the gain 1.0<->0.99885.
         val gainReductionDb = calculateGainReduction(envelopeDb)
-        return if (gainReductionDb < -0.01) {
+        return if (gainReductionDb < GAIN_SKIP_THRESHOLD_DB) {
             exp(gainReductionDb * LN10_OVER_20)
         } else {
             1.0
@@ -156,6 +162,13 @@ class Compressor(
     @Suppress("NOTHING_TO_INLINE")
     private inline fun computeMakeupLinear(): Double {
         return if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * LN10_OVER_20) else 1.0
+    }
+
+    /** Clamped cubic smoothstep: 0 below 0, 1 above 1, C1 at both ends. Polynomial (no `exp`). */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun smoothstep01(x: Double): Double {
+        val c = x.coerceIn(0.0, 1.0)
+        return c * c * (3.0 - 2.0 * c)
     }
 
     /**
@@ -210,6 +223,17 @@ class Compressor(
         // Envelope follower silence floor.
         private const val SILENCE_DB: Double = -100.0
         private const val SILENCE_LIN: Double = 1e-10
+
+        // Attack<->release coefficient blend half-width in dB. The follower coefficient
+        // smoothstep-blends from releaseCoeff to attackCoeff across [-W, +W] around error=0,
+        // removing the hard direction-switch kink. Larger = smoother but softer near-threshold
+        // attack; tune by ear.
+        private const val ENV_COEFF_BLEND_DB: Double = 2.0
+
+        // Gain-curve exp-skip cutoff in dB. Below this reduction we return 1.0 to skip the
+        // per-sample `exp`; small enough that exp(cutoff) ≈ 1 within ~-100 dB so the residual
+        // step is inaudible (the old -0.01 dB cutoff snapped the gain by ~0.12%).
+        private const val GAIN_SKIP_THRESHOLD_DB: Double = -1e-4
 
         /** Returns [value] when finite; otherwise [fallback]. Used to keep param setters safe against NaN/Inf. */
         private fun guardOr(value: Double, fallback: Double): Double =

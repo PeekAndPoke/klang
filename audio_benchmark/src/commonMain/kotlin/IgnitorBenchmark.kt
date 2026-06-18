@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_benchmark
 
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
@@ -122,6 +123,7 @@ class IgnitorBenchmark(
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
                 ignitorRegistry = ignitorRegistry,
+                engineRegistry = EngineRegistry(),
                 cylinders = cylinders,
             )
         )
