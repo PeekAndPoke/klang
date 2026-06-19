@@ -1,5 +1,10 @@
 # Compressor gain smoothing ("ADSR-style" treatment)
 
+> **Status: SHIPPED 2026-06-18.** Implemented in `effects/Compressor.kt` (smoothstep attack↔release blend +
+> `GAIN_SKIP_THRESHOLD_DB` cutoff), guard `effects/CompressorSmoothnessSpec.kt`, full `:audio_be:jvmTest`
+> green, deployed and confirmed by ear ("the compressor plops are gone"). Tunable consts `ENV_COEFF_BLEND_DB`
+> (2.0) / `GAIN_SKIP_THRESHOLD_DB` (−1e-4). Archived from `docs/tasks/`.
+
 ## Trigger
 
 Same family of artifact we just chased on the VCA envelope (the low-note "plop" = a slope corner in the

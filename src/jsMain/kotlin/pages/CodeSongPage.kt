@@ -102,7 +102,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     val builtIn = BuiltInSongs.songs.firstOrNull { it.id == songId }
 
-    val v = 2
+    val v = 3
 
     val rpmStream = StreamSource(builtIn?.rpm ?: 30.0)
         .persistInLocalStorage("song-$v-$songId-rpm", Double.serializer())

@@ -66,9 +66,9 @@ sealed interface AdsrDef {
                 decay = decay ?: d.decay ?: 0.1,
                 sustain = sustain ?: d.sustain ?: 1.0,
                 release = release ?: d.release ?: 0.1,
-                attackCurve = attackCurve ?: d.attackCurve ?: AdsrCurve.Square,
+                attackCurve = attackCurve ?: d.attackCurve ?: AdsrCurve.Exponential,
                 decayCurve = decayCurve ?: d.decayCurve ?: AdsrCurve.Exponential,
-                releaseCurve = releaseCurve ?: d.releaseCurve ?: AdsrCurve.Square,
+                releaseCurve = releaseCurve ?: d.releaseCurve ?: AdsrCurve.Exponential,
             )
         }
 
@@ -81,9 +81,9 @@ sealed interface AdsrDef {
                 decay = 0.1,
                 sustain = 1.0,
                 release = 0.05,
-                attackCurve = AdsrCurve.Square,
+                attackCurve = AdsrCurve.Exponential,
                 decayCurve = AdsrCurve.Exponential,
-                releaseCurve = AdsrCurve.Square,
+                releaseCurve = AdsrCurve.Exponential,
             )
         }
     }

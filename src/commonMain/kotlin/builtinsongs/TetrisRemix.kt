@@ -32,16 +32,16 @@ import { leadPattern, bassPattern, sub as tetrisSub } from "peekandpoke/tetris"
 export lead = note(leadPattern).slow(2)
     .sound("supersquare").adsr("0.025:0.12:0.5:0.2").gain(0.5).detune(0.3)
     .hpf(500).lpf(1600).lpe(1).lpq(2.0)
-    .room("0.8:5:0.1").pan(0.5).superimpose(x => x.sound("brown").gain(0.25))
-    .vibrato("7".add(berlin2.mul(0.2))).vibmod(0.12)
-    .orbit(1).postgain(0.3)  // .solo()
+    .room("0.8:5:0.1").pan(0.5).superimpose(x => x.sound("brown").gain(0.35))
+    .vibrato("3.9".add(berlin2.mul(0.2))).vibmod(0.02)
+    .orbit(1).postgain(0.25)  // .solo()
     .filterWhen(x => x >= 16)
 
 // ── Bass: the original bass line, slowed and sub-heavy ──────────────────
 export bass = note(bassPattern).slow(2).struct("[x!16]").transpose(12)
     .sound("supersaw").unison(32).detune(0.15).warmth(0.01).clip(0.95)
     .gain(0.5).adsr("0.01:0.2:0.3:0.1").pan(0.1).superimpose(pan(0.9).transpose(-12))
-    .hpf(200).lpf("850:1:3").distort("0.8:soft:2").postgain(0.115).engine("pedal")
+    .hpf(300).lpf("850:1:2").lpq(1.3).distort("0.8:soft:2").postgain(0.115).engine("pedal")
     .orbit(2)  // .solo()
 
 // ── Drum kit: dub one-drop ──────────────────────────────────────────────
@@ -52,23 +52,24 @@ export snare = sound("[~ ~ sd sd ~ ~ sd ~]!2").orbit(5).gain(0.475).hpf(200).ads
 
 // ── Skank: off-beat reggae chord stab ──────────────────────────────────
 // The Bring-It-Together; off-beat = 16th-note 2 of every 4-step cycle.
-export skank = chord("<Am Em F Am <Am Em Dm G#> Em Am <G E F G>>").voicing()
+export skank = chord("<Am Em F Am <Em Em Dm G#> Em Am <G E F G>>").voicing()
     .struct("[~ x]!4").legato(1.0)
     .sound("supertri").unison(6).detune(0.05)
-    .gain(1.0).adsr("0.03:0.25:0.0:0.1").postgain(1.5)
-    .hpf(800).lpf(4000).lpe(1).warmth(0.1).pan(0.5)
+    .gain(0.9).adsr("0.03:0.15:0.0:0.1").postgain(1.5)
+    .hpf(800).lpf(6000).lpe(1.2).warmth(0.1).pan(0.5)
     .orbit(6).room(0.5).rsize(5)  // . solo()
     .filterWhen(x => x >= 8)
 
-export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").hpf(60).lpf(400).postgain(0.3).clip(0.8)
+export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").hpf(70).lpf(400).postgain(0.32).clip(0.8)
 
 // ── Song: dub plate with broad reverb tail and gentle bus compression ──
-export song = stack(kick, snare, hat, skank, lead, bass, sub).compressor("-10:2:10:0.02:0.25").analog(3.5)
+export song = stack(kick, snare, hat, skank, lead, bass, sub).compressor("-10:2:10:0.02:0.25").analog(1.5)
 
 // Composed by: peekandpoke + Claude (echo of Korobeiniki, by way of King Tubby)
 
 
 
 
+            
             """,
 )

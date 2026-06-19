@@ -18,15 +18,15 @@ class AdsrDefTest : StringSpec({
         empty.releaseCurve shouldBe null
     }
 
-    "AdsrDef.defaultSynth uses Square attack, Exponential decay, Square release" {
+    "AdsrDef.defaultSynth uses Exponential curves for all three phases" {
         val def = AdsrDef.defaultSynth as AdsrDef.Std
         def.attack shouldBe 0.01
         def.decay shouldBe 0.1
         def.sustain shouldBe 1.0
         def.release shouldBe 0.05
-        def.attackCurve shouldBe AdsrCurve.Square
+        def.attackCurve shouldBe AdsrCurve.Exponential
         def.decayCurve shouldBe AdsrCurve.Exponential
-        def.releaseCurve shouldBe AdsrCurve.Square
+        def.releaseCurve shouldBe AdsrCurve.Exponential
     }
 
     "Std.resolve() fills in defaults when fields are null" {
@@ -35,9 +35,9 @@ class AdsrDefTest : StringSpec({
         resolved.decay shouldBe 0.1
         resolved.sustain shouldBe 1.0
         resolved.release shouldBe 0.05
-        resolved.attackCurve shouldBe AdsrCurve.Square
+        resolved.attackCurve shouldBe AdsrCurve.Exponential
         resolved.decayCurve shouldBe AdsrCurve.Exponential
-        resolved.releaseCurve shouldBe AdsrCurve.Square
+        resolved.releaseCurve shouldBe AdsrCurve.Exponential
     }
 
     "Std.resolve() preserves explicit field values over defaults" {
