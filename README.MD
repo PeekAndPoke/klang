@@ -17,7 +17,7 @@ Currently supported platforms:
 
 Currently supported live coding frameworks:
 
-- Strudel (pure Kotlin reimplementation)
+- Sprudel (a Kotlin pattern language, sibling of strudel.cc — now on its own direction)
 
 # Credits
 
@@ -41,7 +41,7 @@ https://klang.finzo.de
           │            ┌──────────┘  │  └──────────┐            │
           v            v             v             v            v
    ┌────────────┐ ┌─────────┐ ┌───────────┐ ┌──────────┐ ┌────────────────┐
-   │  strudel   │ │klangui  │ │klangblocks│ │klangsc-ui│ │ klang-notebook │
+   │  sprudel   │ │klangui  │ │klangblocks│ │klangsc-ui│ │ klang-notebook │
    │            │ │         │ │           │ │          │ │                │
    │ Pattern    │ │ Shared  │ │ Visual    │ │ Editor   │ │  Interactive   │
    │ language   │ │ UI      │ │ block     │ │ CodeMirr │ │  notebook      │
@@ -56,21 +56,20 @@ https://klang.finzo.de
    │              Scripting language: parser, interpreter                │
    └─────────────────────────────────────────────────────────────────────┘
 
-   ┌──────────┐         ┌──────────────┐
-   │ klangjs  │         │ strudel-ksp  │
-   │          │         │              │
-   │ External │         │ KSP doc      │
-   │ JS decls │         │ processor    │
-   │(CodeMirr)│         │ for strudel  │
-   └──────────┘         └──────────────┘
-       ^                       ^
-       │                       │
-   klangscript-ui          strudel
-   (transitive)            (compile-time)
+
+   ── Build-time / tooling ──────────────────────────────────────────────────────────────────────
+
+   ┌──────────┐ ┌─────────────────────────┐ ┌──────────────────┐ ┌──────────────────────┐ ┌─────────────────┐
+   │ klangjs  │ │ klangscript-annotations │ │ klangscript-ksp  │ │ audio-wire-codec-ksp │ │ audio_benchmark │
+   │          │ │                         │ │                  │ │                      │ │                 │
+   │ External │ │ @KlangScript binding    │ │ KSP: stdlib reg. │ │ KSP: worklet wire    │ │ Engine perf     │
+   │ JS decls │ │ annotations             │ │ + completions    │ │ codec generation     │ │ harness (RTF)   │
+   │(CodeMirr)│ └─────────────────────────┘ └──────────────────┘ └──────────────────────┘ └─────────────────┘
+   └──────────┘
 
 
                     ┌──────────────────────┐
-                    │    audio_bridge      │  Shared audio data types
+                    │    audio_bridge      │  Shared audio data types + wire contracts
                     └──┬───────────────┬───┘
                        │               │
               ┌────────┘               └────────┐
@@ -98,28 +97,31 @@ https://klang.finzo.de
    └──────────┘          └──────────┘
        ^                      ^
        │                      │
-   (used by most modules)  (audio_fe, klangui, strudel)
+   (used by most modules)  (audio_fe, klangui, sprudel)
 ```
 
 ## Modules
 
-| Module            | Platform  | Description                                                                    |
-|-------------------|-----------|--------------------------------------------------------------------------------|
-| `klang`           | JS/JVM    | Main application — web UI, pages, routing, audio player integration            |
-| `klangscript`     | Common    | Scripting language — hand-rolled parser, tree-walking interpreter, type system |
-| `klangscript-ui`  | JS        | CodeMirror editor with code completion, hover docs, tool badges                |
-| `klangjs`         | JS        | External JS declarations (CodeMirror bindings) — no project dependencies       |
-| `klangui`         | JS        | Shared UI components — theme, hover popups, tool registry, SVG helpers         |
-| `klangblocks`     | Common/JS | Visual block editor — AST-to-blocks, code generation, round-trip editing       |
-| `strudel`         | Common/JS | Pattern language — Kotlin port of strudel.cc for live coding music             |
-| `strudel-ksp`     | JVM       | KSP annotation processor — extracts DSL documentation from KDoc                |
-| `audio_bridge`    | Common    | Shared audio data types — voice data, playback signals, audio config           |
-| `audio_be`        | Common    | Audio backend — oscillators, filters, effects, voice rendering                 |
-| `audio_fe`        | Common/JS | Audio frontend — playback scheduling, sample loading, engine facade            |
-| `audio_jsworklet` | JS        | WebAudio worklet — runs audio rendering in a dedicated thread                  |
-| `common`          | Common    | Shared utilities — caching, math helpers, platform abstractions                |
-| `tones`           | Common    | Music theory — note names, scales, frequencies, MIDI conversion                |
-| `klang-notebook`  | Common/JS | Interactive notebook support — cell execution, reactive evaluation             |
+| Module                    | Platform  | Description                                                                            |
+|---------------------------|-----------|----------------------------------------------------------------------------------------|
+| `klang`                   | JS/JVM    | Main application — web UI, pages, routing, audio player integration                    |
+| `sprudel`                 | Common/JS | Pattern language — Kotlin sibling of strudel.cc for live coding music (own direction)  |
+| `klangscript`             | Common    | Scripting language — hand-rolled parser, tree-walking interpreter, type system         |
+| `klangscript-annotations` | Common    | KlangScript binding annotations (`@Object`, `@Method`, `@TypeExtensions`, `@Function`) |
+| `klangscript-ksp`         | JVM       | KSP processor — generates stdlib registration + completion data from the annotations   |
+| `klangscript-ui`          | JS        | CodeMirror editor with code completion, hover docs, tool badges                        |
+| `klangblocks`             | Common/JS | Visual block editor — AST-to-blocks, code generation, round-trip editing               |
+| `klangui`                 | JS        | Shared UI components — theme, hover popups, tool registry, SVG helpers                 |
+| `klangjs`                 | JS        | External JS declarations (CodeMirror bindings) — no project dependencies               |
+| `klang-notebook`          | Common/JS | Interactive notebook support — cell execution, reactive evaluation                     |
+| `audio_bridge`            | Common    | Shared audio data types + wire contracts (`@WireFormat` voice/engine/command types)    |
+| `audio_be`                | Common    | Audio backend — oscillators, filters, effects, voice rendering                         |
+| `audio_fe`                | Common/JS | Audio frontend — playback scheduling, sample loading, engine facade                    |
+| `audio_jsworklet`         | JS        | WebAudio worklet — runs audio rendering in a dedicated thread                          |
+| `audio_benchmark`         | Common    | Audio engine benchmarks — real-time-factor / voice-count performance harness           |
+| `audio-wire-codec-ksp`    | JVM       | KSP processor — generates the worklet wire codec from `@WireFormat` types              |
+| `common`                  | Common    | Shared utilities — caching, math helpers, platform abstractions                        |
+| `tones`                   | Common    | Music theory — note names, scales, frequencies, MIDI conversion                        |
 
 # Dev Diary
 
