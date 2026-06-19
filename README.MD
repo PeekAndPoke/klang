@@ -120,3 +120,8 @@ https://klang.finzo.de
 | `common`          | Common    | Shared utilities — caching, math helpers, platform abstractions                |
 | `tones`           | Common    | Music theory — note names, scales, frequencies, MIDI conversion                |
 | `klang-notebook`  | Common/JS | Interactive notebook support — cell execution, reactive evaluation             |
+
+# Dev Diary
+
+A running, informal log of what happened day to day — the wins, the fights, and the dead ends.
+See [dev-diary.md](dev-diary.md).
