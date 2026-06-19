@@ -22,8 +22,11 @@ import org.w3c.dom.MessagePort
  * stale-cached worklet meeting a fresh frontend (different build) fails loudly instead of decoding garbage.
  */
 object WorkletContract {
-    /** Envelope key carrying the wire-schema hash. */
-    private const val PROP_VERSION = "v"
+    /**
+     * Envelope key carrying the wire-schema hash. A NON-identifier (`#v`) so it can never collide with a
+     * data-class field name on the stamped root object — same invariant as the codec's `#t` type-tag.
+     */
+    private const val PROP_VERSION = "#v"
 
     fun MessagePort.sendCmd(cmd: KlangCommLink.Cmd) {
         postMessage(stamp(encode_KlangCommLink_Cmd(cmd)))

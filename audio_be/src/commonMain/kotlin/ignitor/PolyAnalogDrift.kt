@@ -22,9 +22,10 @@ import kotlin.random.Random
  * shared with the mono [AnalogDrift].
  *
  * Each voice has its own RNG state and its own smoother state, so voices
- * decorrelate from sample 0 and never re-sync. State is seeded at
- * construction from the steady-state Gaussian distribution so drift is
- * immediate after note-on (no ramp-up).
+ * decorrelate from sample 0 and never re-sync. The fast layer is seeded from
+ * its steady-state Gaussian (immediate micro-shimmer); the slow layer is seeded
+ * at CENTRE so each voice attacks in tune and only drifts if held — see
+ * [AnalogDrift] for the rationale.
  *
  * Usage in the audio hot path:
  *
@@ -98,10 +99,12 @@ class PolyAnalogDrift(
         scaleFast = coeffs.scaleFast
         scaleSlow = coeffs.scaleSlow
 
-        // Seed each voice from the steady-state Gaussian. Slow layer would
-        // otherwise need ~30 seconds to reach steady state.
+        // Fast layer: seed each voice from its steady-state Gaussian (settles in ~50 ms,
+        // so the micro-shimmer is immediate). Slow layer: seed at CENTRE (0.0) so each
+        // voice attacks in tune and only drifts if held — steady-state seeding turned
+        // short notes into per-note random detune.
         yFast = DoubleArray(voiceCount) { analogDriftGaussian(rng) * coeffs.sigmaYFast }
-        ySlow = DoubleArray(voiceCount) { analogDriftGaussian(rng) * coeffs.sigmaYSlow }
+        ySlow = DoubleArray(voiceCount) { 0.0 }
 
         rngState = IntArray(voiceCount) {
             var s = rng.nextInt()

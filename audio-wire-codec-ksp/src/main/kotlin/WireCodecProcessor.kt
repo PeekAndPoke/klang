@@ -20,8 +20,8 @@ import com.google.devtools.ksp.validate
  *
  * Supported shapes: plain scalars (String/Double/Int/Boolean/Float), `DoubleArray` (pass-through), enums
  * (as ordinal Int), nested classes with a primary constructor, sealed classes — including intermediate sealed
- * levels, flattened to leaves — (int `t` type-tag), `data object` sealed subtypes, `List<T>`, `Map<String,Double>`,
- * and nullability of any of those.
+ * levels, flattened to leaves — (string `t` type-tag from `@WireName`), `data object` sealed subtypes,
+ * `List<T>`, `Map<String,Double>`, and nullability of any of those.
  *
  * Anything else (e.g. other typed arrays, `Map` with non-String/Double, a type with no primary constructor) is an
  * ERROR: the processor reports it via `logger.error` (failing the build) with the exact field/subtype path. It never
@@ -42,7 +42,15 @@ class WireCodecProcessor(
 
     companion object {
         private const val ANN_WIRE_FORMAT = "io.peekandpoke.klang.audio_bridge.WireFormat"
+        private const val ANN_WIRE_NAME = "io.peekandpoke.klang.audio_bridge.WireName"
         private const val GEN_PKG = "io.peekandpoke.klang.audio_bridge.wire"
+
+        /**
+         * Reserved sealed-discriminator property key, emitted as a Kotlin string literal (`o["#t"]`). The `#`
+         * makes it a NON-identifier, so it can never collide with a data-class field name (e.g. `IgnitorDsl.Lerp.t`)
+         * the way a bare `t` key would — a collision would let the type-tag silently overwrite a real field.
+         */
+        private const val WIRE_TAG = "\"#t\""
 
         private const val LIST = "kotlin.collections.List"
         private const val MAP = "kotlin.collections.Map"
@@ -150,6 +158,16 @@ class WireCodecProcessor(
                 errors += "sealed type '$qn' has no subclasses at $ctx"
                 return false
             }
+            // The discriminator `t` is a string wire name; two leaves resolving to the same name would
+            // silently mis-route on decode, so a collision within a hierarchy MUST fail the build.
+            leafSubtypes(decl)
+                .groupBy { wireName(it) }
+                .filterValues { it.size > 1 }
+                .forEach { (name, dups) ->
+                    errors += "duplicate @WireName '$name' in sealed '${codecId(decl)}': " +
+                            dups.joinToString { it.simpleName.asString() } +
+                            " — give each leaf a unique @WireName"
+                }
             var ok = true
             for (s in subs) {
                 val sub = s.simpleName.asString()
@@ -210,10 +228,21 @@ class WireCodecProcessor(
     private fun encName(decl: KSClassDeclaration) = "encode_${codecId(decl)}"
     private fun decName(decl: KSClassDeclaration) = "decode_${codecId(decl)}"
 
+    /**
+     * Stable wire discriminator name for a sealed leaf — the `@WireName` value, or the simple class name as a
+     * (rename-fragile) fallback. This is the string tag stamped onto `t`, so reordering subtypes can no longer
+     * silently re-route a tag the way the old positional ordinal did.
+     */
+    private fun wireName(decl: KSClassDeclaration): String =
+        decl.annotations.firstOrNull { it.shortName.asString() == "WireName" }
+            ?.arguments?.firstOrNull()?.value as? String
+            ?: decl.simpleName.asString()
+
     /** Canonical per-type structure string, folded into [WIRE_SCHEMA_HASH]. */
     private fun typeSignature(decl: KSClassDeclaration): String =
         if (Modifier.SEALED in decl.modifiers) {
-            "${codecId(decl)}|" + leafSubtypes(decl).joinToString(",") { codecId(it) }
+            // Fold the wire NAMES (not codecIds) so renaming a `@WireName` tag bumps WIRE_SCHEMA_HASH.
+            "${codecId(decl)}|" + leafSubtypes(decl).joinToString(",") { wireName(it) }
         } else {
             "${codecId(decl)}(" + decl.primaryConstructor!!.parameters
                 .joinToString(",") { "${it.name?.asString()}:${typeSig(it.type.resolve())}" } + ")"
@@ -262,27 +291,32 @@ class WireCodecProcessor(
         val qn = fqn(decl)
         val subs = leafSubtypes(decl)
 
+        // Discriminator key is a NON-identifier (`#t`) on purpose: a data-class field can never be named `#t`,
+        // so the sealed type-tag can't clobber a real field. (`IgnitorDsl.Lerp.t` would collide with a plain
+        // `t` key — the tag would overwrite the weight and silently corrupt the wire.) See WIRE_TAG.
         sb.appendLine("fun ${encName(decl)}(v: $qn): dynamic = when (v) {")
-        subs.forEachIndexed { i, s ->
+        subs.forEach { s ->
+            val tag = wireName(s)
             // `data object` subtypes have no fields → just the tag; otherwise delegate to the subtype encoder.
             if (s.classKind == ClassKind.OBJECT) {
-                sb.appendLine("    is ${fqn(s)} -> { val o = wireObj(); o.t = $i; o }")
+                sb.appendLine("    is ${fqn(s)} -> { val o = wireObj(); o[$WIRE_TAG] = \"$tag\"; o }")
             } else {
-                sb.appendLine("    is ${fqn(s)} -> { val o = ${encName(s)}(v); o.t = $i; o }")
+                sb.appendLine("    is ${fqn(s)} -> { val o = ${encName(s)}(v); o[$WIRE_TAG] = \"$tag\"; o }")
             }
         }
         sb.appendLine("}")
         sb.appendLine()
 
-        sb.appendLine("fun ${decName(decl)}(o: dynamic): $qn = when (o.t.unsafeCast<Int>()) {")
-        subs.forEachIndexed { i, s ->
+        sb.appendLine("fun ${decName(decl)}(o: dynamic): $qn = when (o[$WIRE_TAG].unsafeCast<String>()) {")
+        subs.forEach { s ->
+            val tag = wireName(s)
             if (s.classKind == ClassKind.OBJECT) {
-                sb.appendLine("    $i -> ${fqn(s)}")
+                sb.appendLine("    \"$tag\" -> ${fqn(s)}")
             } else {
-                sb.appendLine("    $i -> ${decName(s)}(o)")
+                sb.appendLine("    \"$tag\" -> ${decName(s)}(o)")
             }
         }
-        sb.appendLine("    else -> throw IllegalStateException(\"wire-codec: unknown ${codecId(decl)} tag \" + o.t)")
+        sb.appendLine("    else -> throw IllegalStateException(\"wire-codec: unknown ${codecId(decl)} tag \" + o[$WIRE_TAG])")
         sb.appendLine("}")
         sb.appendLine()
     }

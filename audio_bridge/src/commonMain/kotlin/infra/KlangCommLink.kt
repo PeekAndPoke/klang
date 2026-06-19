@@ -1,15 +1,16 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
+import io.peekandpoke.klang.audio_bridge.EngineDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.WireFormat
+import io.peekandpoke.klang.audio_bridge.WireName
 import io.peekandpoke.klang.common.infra.KlangMessageReceiver
 import io.peekandpoke.klang.common.infra.KlangMessageSender
 import io.peekandpoke.klang.common.infra.KlangRingBuffer
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 class KlangCommLink(capacity: Int = 8192) {
 
@@ -23,89 +24,73 @@ class KlangCommLink(capacity: Int = 8192) {
     sealed interface Cmd {
         val playbackId: String
 
+        @WireName("cleanup")
         data class Cleanup(
             override val playbackId: String,
-        ) : Cmd {
-            companion object {
-                const val SERIAL_NAME = "cleanup"
-            }
-        }
+        ) : Cmd
 
+        @WireName("clear-scheduled")
         data class ClearScheduled(
             override val playbackId: String,
-        ) : Cmd {
-            companion object {
-                const val SERIAL_NAME = "clear-scheduled"
-            }
-        }
+        ) : Cmd
 
+        @WireName("replace-voices")
         data class ReplaceVoices(
             override val playbackId: String,
             val voices: List<ScheduledVoice>,
             val afterTimeSec: Double? = null,
-        ) : Cmd {
-            companion object {
-                const val SERIAL_NAME = "replace-voices"
-            }
-        }
+        ) : Cmd
 
+        @WireName("schedule-voice")
         data class ScheduleVoice(
             override val playbackId: String,
             val voice: ScheduledVoice,
             /** If true, clears all scheduled voices for this playback before scheduling this one */
             val clearScheduled: Boolean = false,
-        ) : Cmd {
-            companion object {
-                const val SERIAL_NAME = "schedule-voice"
-            }
-        }
+        ) : Cmd
 
         /**
          * Batch variant of [ScheduleVoice]. All voices in the list share a single nowSec snapshot
          * on the backend, so per-batch jitter (postMessage interleaving with audio blocks) cannot
          * push later voices into the past relative to earlier ones.
          */
+        @WireName("schedule-voices")
         data class ScheduleVoices(
             override val playbackId: String,
             val voices: List<ScheduledVoice>,
-        ) : Cmd {
-            companion object {
-                const val SERIAL_NAME = "schedule-voices"
-            }
-        }
+        ) : Cmd
 
         /** Registers a custom IgnitorDsl in the backend's exciter registry. */
+        @WireName("register-ignitor")
         data class RegisterIgnitor(
             override val playbackId: String,
             val name: String,
-            val dsl: io.peekandpoke.klang.audio_bridge.IgnitorDsl,
-        ) : Cmd {
-            companion object {
-                const val SERIAL_NAME = "register-ignitor"
-            }
-        }
+            val dsl: IgnitorDsl,
+        ) : Cmd
+
+        /** Registers a custom EngineDsl in the backend's engine registry. */
+        @WireName("register-engine")
+        data class RegisterEngine(
+            override val playbackId: String,
+            val name: String,
+            val dsl: EngineDsl,
+        ) : Cmd
 
         sealed interface Sample : Cmd {
+            @WireName("sample-not-found")
             data class NotFound(
                 override val req: SampleRequest,
             ) : Sample {
-                companion object {
-                    const val SERIAL_NAME = "sample-not-found"
-                }
-
                 override val playbackId: String = SYSTEM_PLAYBACK_ID
             }
 
+            @WireName("sample-complete")
             data class Complete(
                 override val req: SampleRequest,
                 val note: String?,
                 val pitchHz: Double,
                 val sample: MonoSamplePcm,
             ) : Sample {
-                companion object {
-                    const val SERIAL_NAME = "sample-complete"
-                }
-
                 override val playbackId: String = SYSTEM_PLAYBACK_ID
 
                 fun toChunks(chunkSizeBytes: Int = 16 * 1024): List<Chunk> {
@@ -131,6 +116,7 @@ class KlangCommLink(capacity: Int = 8192) {
             }
 
             @Suppress("ArrayInDataClass")
+            @WireName("sample-chunk")
             data class Chunk(
                 override val req: SampleRequest,
                 val note: String?,
@@ -142,10 +128,6 @@ class KlangCommLink(capacity: Int = 8192) {
                 val chunkOffset: Int,
                 val data: DoubleArray,
             ) : Sample {
-                companion object {
-                    const val SERIAL_NAME = "sample-chunk"
-                }
-
                 override val playbackId: String = SYSTEM_PLAYBACK_ID
             }
 
@@ -154,7 +136,6 @@ class KlangCommLink(capacity: Int = 8192) {
     }
 
     /** Sent from the backend to the frontend */
-    @Serializable
     @WireFormat
     sealed interface Feedback {
         val playbackId: String
@@ -165,28 +146,24 @@ class KlangCommLink(capacity: Int = 8192) {
          * playback so the first voice never hits an un-JITed audio render path or lazy
          * cylinder allocation inside a block.
          */
-        @Serializable
-        @SerialName("backend-ready")
+        @WireName("backend-ready")
         data class BackendReady(
             override val playbackId: String = SYSTEM_PLAYBACK_ID,
         ) : Feedback
 
-        @Serializable
-        @SerialName("request-sample")
+        @WireName("request-sample")
         data class RequestSample(
             override val playbackId: String,
             val req: SampleRequest,
         ) : Feedback
 
-        @Serializable
-        @SerialName("sample-received")
+        @WireName("sample-received")
         data class SampleReceived(
             override val playbackId: String,
             val req: SampleRequest,
         ) : Feedback
 
-        @Serializable
-        @SerialName("diagnostics")
+        @WireName("diagnostics")
         data class Diagnostics(
             override val playbackId: String,
             /** Backend sample rate in Hz (e.g. 44100, 48000) */
@@ -219,7 +196,6 @@ class KlangCommLink(capacity: Int = 8192) {
             /** Total output latency in ms (baseLatencyMs + outputDeviceLatencyMs). */
             val outputLatencyMs: Double = 0.0,
         ) : Feedback {
-            @Serializable
             data class CylinderState(
                 /** Cylinder ID (0-15 typically) */
                 val id: Int,

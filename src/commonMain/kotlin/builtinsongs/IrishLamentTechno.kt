@@ -41,20 +41,21 @@ import * from "sprudel"
 let kick = s("bd!4").gain(1.0).hpf(60).adsr("0.06:0.20:0.2:0.02").orbit(1)
 let hat  = s("hh!8").gain(0.35).hpf(6000).adsr("0.001:0.04:0.0:0.04").orbit(2)
 let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
-    .sound("supersaw").legato(0.7).hpf(160).lpf(sine.range(450, 700).slow(48)).resonance(0.5).lpenv(2.5).lpadsr("0.005:0.08:0.7:0.05")
-    .adsr("0.01:0.08:0.5:0.05").distort("0.5:gentle:2").postgain(0.22).warmth(0.25)
+    .sound("supersaw").legato(0.7).hpf(160).lpf(sine.range(450, 700).slow(48)).lpq(1.5).lpenv(1.5).lpadsr("0.005:0.08:0.7:0.05")
+    .adsr("0.01:0.08:0.5:0.05").distort("0.5:gentle:2").postgain(0.22).warmth(0.05)
     .gain(1.0).orbit(0) // . solo()
 let core = stack(kick, hat, bass)
 
 // ── Build layers ────────────────────────────────────────────────────
-let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02").hpf(80).lpf(180).gain(0.35).orbit(6)
+let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02").hpf(80).lpf(180).gain(0.4).orbit(6)
 let clap = s("~ cp ~ cp").gain(0.21).hpf(600).orbit(4).room(0.2).rsize(3)
 let oh   = s("[~ ~ ~ oh]!4").gain(0.19).hpf(4000).orbit(2)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.3).hpf(800).orbit(2)
 
 // ── Lead phrases (5 shapes of the recorder melody) ──────────────────
-let leadStyle = mel =>mel.sound("supertri").unison(3).detune(0.07).euclid(3, 8).warmth(0.2)
-       .hpf(400).lpf(sine.range(2500, 2650).slow(0.5)).lpenv(0.25).resonance(1.5).adsr("0.03:0.3:0.5:0.08").clip(0.7).distort("0.1:gentle:2").postgain(0.3)
+let leadStyle = mel =>mel.sound("supertri").unison(3).detune(0.07).euclid(3, 8).warmth(0.02)
+       .hpf(400).lpf(sine.range(2600, 2700).slow(0.5)).lpe(0.25).lpq(2.5).adsr("0.03:0.3:0.5:0.08")
+       .clip(0.7).distort("0.1:gentle:2").postgain(0.3)
        .delay(0.18).delaytime(pure(3/16).div(cps)).delayfeedback(0.32)
        .gain(0.85).orbit(3).room(0.2).rsize(3)
 let leadA = leadStyle(note(`<[a4 c5 b4 a4] [d5 c5 a4 g4] [bb4 a4 g4  f4]  [g4 e4 c4 a4] [g4 bb4 d5 bb4] [f4 a4 c5 a4] [a4 c5 e5 c5] [d4 f4 a4 d5]>`))
@@ -65,10 +66,10 @@ let leadE = leadStyle(note(`<[a5 e5 d6 c6] [a5 f5 d5 c5] [f5  d5 g5  bb4] [e5 g5
 
 // ── Pad ─────────────────────────────────────────────────────────────
 let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing(rank = sine.range(0, 1.9).fast(7).add(perlin.range(0, 0.3)))
-    .sound("superpulse").unison(3).detune(0.20).lpf("1500:1:1.5").adsr("1.5:0.5:0.3:1.0").legato(1.4)
+    .sound("superpulse").unison(3).detune(0.20).lpf("1500:1:2.5").adsr("1.5:0.5:0.3:1.0").legato(1.4)
     .pan(0.3).superimpose(pan(0.5).transpose(-12), pan(0.5).transpose(12).velocity(0.9)).lpenv(1.2)
     .phaser(1/6).phaserdepth(saw.range(0.3, 0.6).slow(16)).phasersweep(900).phasercenter(1400)
-    .gain(0.05).orbit(5).room(0.4).rsize(6) //  .solo()
+    .gain(0.06).orbit(5).room(0.4).rsize(6) //  .solo()
 
 // ── THE WIND (riser used inside a 16-cycle section so saw ramps once)
 let riser = note("c").fast(2).sound("pink").superimpose(x => x.sound("brown"))
@@ -111,8 +112,8 @@ let hit = stack(
 let melody3a = note(`<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5  f5 e5] [d5 a4 d5  f5] [c5 g4 bb4 a4] [d5 c5 a4 g4] [d4@2  d4 ~]>`)
 let melody1  = note(`<[d4 f4 e4 d4] [c4 a4 g4 f4] [d4 g4 f4 e4] [c4 bb4 a4 g4] [d5 c5 bb4 a4] [g4 e4 d4 e4]  [a4 g4 f4 e4] [f4 c4 a4 ~]>`)
 
-let mel3 = melody3a.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.3).orbit(0).pan(0.3).coarse(3).coarseos(4)
-let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.35).orbit(0).pan(0.7).coarse(3).coarseos(4)
+let mel3 = melody3a.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.8).orbit(0).pan(0.3).coarse(3).coarseos(4)
+let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.85).orbit(0).pan(0.7).coarse(3).coarseos(4)
 
 // One big 64-cycle section. saw.slow(64) ramps 0 → 1 across it.
 // Rhythm/bass build via clean gain ramps (no degrade — that was unpleasant).
@@ -134,9 +135,9 @@ let quietBuild = stack(
         .adsr("0.002:0.08:0.5:0.05").distort("0.4:soft:2").postgain(0.4)
         .gain(saw.range(0.0, 0.45).slow(64)).orbit(0),
     // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.2, 0.7).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.05),
+    mel3.velocity(saw.range(0.3, 0.8).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.05),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(-0.2, 0.75).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.10),
+    mel1.velocity(saw.range(-0.1, 0.8).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.10),
     // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
     // enter at section-local cycle 32 (= second half of the build)
     chord("<Am Dm Bb C Gm F Am Dm>").voicing().struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
@@ -173,13 +174,13 @@ let darkBuild = stack(
     s("[~ ~ ~ oh]!4").gain(0.35).hpf(5000).orbit(2),
     // Sub bass — sidechain pump (drops at each kick, recovers between)
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x!4]!32 [x!8]!32>")
-        .sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.05")
+        .sound("sine").distort("0.2:soft").legato(1.0).adsr("0.005:0.05:0.5:0.05")
         .hpf(70).lpf(220).gain(saw.fast(4).range(0.7, 0.3))
         .orbit(6),
     // Saw bass — pumping, LPF closes, warmth + distortion grow
     note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>")
         .sound("saw").legato(0.7)
-        .hpf(160).lpf(saw.range(280, 900).slow(64)).adsr("0.002:0.08:0.5:0.05")
+        .hpf(160).lpf(saw.range(500, 900).slow(64)).adsr("0.002:0.08:0.5:0.05")
         .distort("0.7:hard:4").postgain(0.5)
         .warmth(saw.range(0.6, 0.2).slow(64))
         .gain(saw.fast(4).range(0.7, 0.3))
@@ -191,7 +192,7 @@ let darkBuild = stack(
         .warmth(saw.range(0.5, 0.2).slow(64)).gain(0.25).distort(saw.range(0.3, 0.5).slow(64))
         .pan(0.3).superimpose(pan(0.7)).superimpose(transpose("<-12 0 12 0>/8").gain(0.2), transpose("<0 12 24 12>/8").gain(saw.range(0.1, 0.2).slow(64)))
         .phaser(1/11).phaserdepth(0.25).phasercenter(3500).phasersweep(500)
-        .hpf(200).lpf(saw.range(2000, 4000).slow(64)).adsr("0.005:0.2:0.5:0.12")
+        .hpf(200).lpf(saw.range(2500, 4000).slow(64)).adsr("0.005:0.2:0.5:0.12")
         .orbit(7),
     // Syncopated pad stabs — keep the 90s rhythm but darken with section
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.3)))
@@ -210,9 +211,9 @@ let darkBuild = stack(
         .orbit(10).room(0.7).rsize(10),
 
       // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.4, 0.80).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
+    mel3.velocity(saw.range(0.6, 1.00).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(0.4, 0.85).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
+    mel1.velocity(saw.range(0.6, 1.05).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
 
 )
 
@@ -239,11 +240,13 @@ arrange(
   [4, hit],           // 80-83: unison hit lands on beat 1 right as wind ends
   [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
   [64, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
-).compressor("-15:2:6:0.01:0.2")
- .room(0.15).rsize(6).analog(3.0)
+).compressor("-10:2:6:0.01:0.1")
+ .room(0.15).rsize(6).analog(2.0)
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing
 // Composed by: Claude, Motör, peekandpoke
+
+
 
 
 

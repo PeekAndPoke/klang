@@ -2,7 +2,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.FILTER_DRIVE_PER_ANALOG
-import io.peekandpoke.klang.audio_be.filters.OBXD_STATE_SCALE
+import io.peekandpoke.klang.audio_be.filters.SAT_STATE_SCALE
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.bilinearK
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
@@ -117,7 +117,7 @@ private class SvfIgnitor(
 
             // Per-sample coefficient deltas (Bresenham accumulator). When env is off they're
             // zero and the inner loop just adds zero each sample — no measurable cost.
-            // `g` is only needed by the saturated path (Obxd state-dependent damping); the
+            // `g` is only needed by the saturated path (analog-style state-dependent damping); the
             // linear branches just `g += 0.0` per sample.
             var a1: Double
             var a2: Double
@@ -167,14 +167,14 @@ private class SvfIgnitor(
             val end = ctx.offset + length
             // Mode is fixed for the lifetime of this Ignitor — branch once per block,
             // not per sample. LOWPASS/HIGHPASS additionally branch on `saturate` (analog>0)
-            // to switch between the linear closed-form math and the Obxd state-dependent
+            // to switch between the linear closed-form math and the analog-style state-dependent
             // damping path (per-sample diode-pair polynomial + explicit-feedback solve).
             when (mode) {
                 SvfMode.LOWPASS -> {
                     if (saturate) {
                         for (i in ctx.offset until end) {
                             val v0 = input[i]
-                            val tCfb = diodePairResistanceApprox(ic1eq * OBXD_STATE_SCALE) - 1.0
+                            val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
                             val kEff = k + 2.0 * driveScale * tCfb
                             val kPlusG = kEff + g
                             val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
@@ -203,7 +203,7 @@ private class SvfIgnitor(
                     if (saturate) {
                         for (i in ctx.offset until end) {
                             val v0 = input[i]
-                            val tCfb = diodePairResistanceApprox(ic1eq * OBXD_STATE_SCALE) - 1.0
+                            val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
                             val kEff = k + 2.0 * driveScale * tCfb
                             val kPlusG = kEff + g
                             val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
@@ -301,7 +301,7 @@ fun Ignitor.lowpass(
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 200–8000.
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
- * @param analog Analog character amount. Default: 0 (clean linear). >0 engages Obxd state-dependent damping.
+ * @param analog Analog character amount. Default: 0 (clean linear). >0 engages OB-X-style state-dependent damping.
  */
 fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
     svf(SvfMode.LOWPASS, cutoffHz, q, env, analog)
@@ -326,7 +326,7 @@ fun Ignitor.highpass(
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 80–2000.
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
- * @param analog Analog character amount. Default: 0 (clean linear). >0 engages Obxd state-dependent damping.
+ * @param analog Analog character amount. Default: 0 (clean linear). >0 engages OB-X-style state-dependent damping.
  */
 fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
     svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog)

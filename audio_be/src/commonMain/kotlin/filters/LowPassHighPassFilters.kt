@@ -114,8 +114,8 @@ internal inline fun onePoleLpfCoeff(cutoffHz: Double, sampleRate: Double): Doubl
 }
 
 /**
- * Polynomial approximation of a diode-pair's I-V resistance characteristic, ported
- * verbatim from 2DaT's Obxd `Source/Engine/Filter.h::diodePairResistanceApprox`.
+ * Polynomial approximation of a diode-pair's I-V resistance characteristic — a curve
+ * fit (Horner form) used as a cheap stand-in for the transcendental diode equation.
  *
  * Output is ≥ ~1.0 for all real `x` and grows monotonically with `|x|`. Used by the
  * nonlinear (saturated) SVF branches to make the resonance damping coefficient a
@@ -127,7 +127,10 @@ internal inline fun onePoleLpfCoeff(cutoffHz: Double, sampleRate: Double): Doubl
  *
  * Per-sample cost: 4 muls + 4 adds (Horner form).
  *
- * Reference: github.com/2DaT/Obxd `Source/Engine/Filter.h`.
+ * The idea of steering resonance damping from a diode-pair model is inspired by the
+ * analog-filter saturation in 2DaT's Obxd (github.com/2DaT/Obxd, by Vadim Filatov);
+ * the SVF topology here and the way the term is folded into the coefficients
+ * (see [LowPassHighPassFilters.SvfLPF]) are our own.
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun diodePairResistanceApprox(x: Double): Double {
@@ -135,11 +138,12 @@ internal inline fun diodePairResistanceApprox(x: Double): Double {
 }
 
 /**
- * Scales the BP integrator state (`ic1eq`) before evaluating
- * [diodePairResistanceApprox]. Direct port from Obxd Filter.h — tuned by Filatov
- * for the original OB-X character.
+ * Scales the BP integrator state (`ic1eq`) before evaluating [diodePairResistanceApprox] —
+ * how hard the resonance "leans into" the diode curve. Larger ⇒ more state-dependent
+ * damping. The value follows the analog-saturation lineage of 2DaT's Obxd; see
+ * [diodePairResistanceApprox].
  */
-internal const val OBXD_STATE_SCALE: Double = 0.0876
+internal const val SAT_STATE_SCALE: Double = 0.0876
 
 /**
  * Default raw IIR pole for [LowPassHighPassFilters.DcBlocker]. `≈ 35 Hz @ 44.1k, 38 Hz @ 48k`.
@@ -157,6 +161,23 @@ internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 internal const val BODY_FLOOR: Double = 0.6
 
 /**
+ * Broadband floor for the vowel/formant filter (see [LowPassHighPassFilters.createFormant]). The
+ * formant analogue of [BODY_FLOOR], but much LOWER: a vowel is a source *strongly shaped by*
+ * formants (deep valleys between them), whereas a body is a subtle coloration over a strong floor.
+ * The floor still keeps some source audible between formants (avoids sparse/robotic). Tunable.
+ */
+internal const val VOWEL_FLOOR: Double = 0.2
+
+/**
+ * Overall level tame for the formant bank before the dry/wet blend. The vowel tables are tuned
+ * with high Q (80–140), so the raw BPF peaks reach ~+38 dB; this scales them down so blending is
+ * sensible — but the formants must still clearly DOMINATE the [VOWEL_FLOOR] (that is what makes a
+ * vowel), so this is far less aggressive than it first was. Preserves each vowel's relative
+ * balance (single multiplier). Tunable by ear.
+ */
+internal const val VOWEL_TAME: Double = 0.05
+
+/**
  * Bundled TPT-SVF coefficient set: `a1, a2, a3, k`. Mutable holder, allocated once per
  * filter instance (not per call) so [computeSvfCoeffs] can write all four without
  * returning a tuple. Used by both `BaseSvf` and `Ignitor.svf`.
@@ -170,7 +191,7 @@ internal class SvfCoeffs {
     /**
      * Bilinear-prewarped angle `g = tan(π·fc/fs)`. Same value used internally
      * by `computeSvfCoeffs` to derive a1/a2/a3 — exposed here for the
-     * Obxd-style nonlinear (saturated) SVF branches in
+     * analog-style nonlinear (saturated) SVF branches in
      * [LowPassHighPassFilters.SvfLPF]/[LowPassHighPassFilters.SvfHPF], which
      * use `kEff + g` for the per-sample closed-form solve.
      */
@@ -208,9 +229,10 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ): AudioFilter = when (q) {
         null -> OnePoleLPF(cutoffHz, sampleRate, cutoffOffsetMul)
-        else -> SvfLPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul)
+        else -> SvfLPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
     }
 
     fun createHPF(
@@ -219,9 +241,10 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ): AudioFilter = when (q) {
         null -> OnePoleHPF(cutoffHz, sampleRate, cutoffOffsetMul)
-        else -> SvfHPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul)
+        else -> SvfHPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
     }
 
     fun createBPF(
@@ -238,8 +261,12 @@ object LowPassHighPassFilters {
         cutoffOffsetMul: Double = 1.0,
     ): AudioFilter = SvfNotch(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
 
-    fun createFormant(bands: List<FilterDef.Formant.Band>, sampleRate: Double): AudioFilter =
-        FormantFilter(bands, sampleRate)
+    fun createFormant(bands: List<FilterDef.Formant.Band>, mix: Double, sampleRate: Double): AudioFilter =
+        ParallelMixFilter(
+            inner = FormantFilter(bands, sampleRate, gainScale = VOWEL_TAME),
+            amount = mix,
+            floor = VOWEL_FLOOR,
+        )
 
     fun createBody(bands: List<FilterDef.Body.Mode>, mix: Double, sampleRate: Double): AudioFilter =
         ParallelMixFilter(BodyFilter(bands, sampleRate), amount = mix, floor = BODY_FLOOR)
@@ -404,7 +431,7 @@ object LowPassHighPassFilters {
      * Construction snaps directly to the target (no ramp on note-on) via [setCutoffSnap].
      *
      * **Nonlinear character**: SvfLPF/SvfHPF have an active `analog`-gated
-     * saturated branch that uses Obxd-style state-dependent damping
+     * saturated branch that uses analog-style state-dependent damping
      * (polynomial diode-pair approximation of the resonance feedback gain;
      * see [diodePairResistanceApprox] and the kdoc on [SvfLPF]).
      */
@@ -480,15 +507,15 @@ object LowPassHighPassFilters {
     }
 
     /**
-     * Lowpass tap of the TPT SVF with optional Obxd-style state-dependent damping.
+     * Lowpass tap of the TPT SVF with optional analog-style state-dependent damping.
      *
-     * When `analog > 0`, the saturated branch ports Vadim Filatov's (2DaT) OB-X
-     * filter approach: a polynomial approximation of a diode-pair's I-V curve
-     * ([diodePairResistanceApprox]) is evaluated at the current BP integrator
-     * state `ic1eq * OBXD_STATE_SCALE` and used to *increase* the resonance
-     * damping coefficient `k → kEff = k + 2·drv·tCfb` for the current sample.
-     * The filter solves the closed-form TPT SVF equation with `kEff` in place
-     * of `k` — one divide per sample, no iteration, no oversampling.
+     * When `analog > 0`, the saturated branch adapts the diode-pair feedback idea
+     * (popularized by 2DaT's Obxd) to our SVF: a polynomial approximation of a
+     * diode-pair's I-V curve ([diodePairResistanceApprox]) is evaluated at the
+     * current BP integrator state `ic1eq * SAT_STATE_SCALE` and used to *increase*
+     * the resonance damping coefficient `k → kEff = k + 2·drv·tCfb` for the current
+     * sample. The filter solves the closed-form TPT SVF equation with `kEff` in
+     * place of `k` — one divide per sample, no iteration, no oversampling.
      *
      * **Why this works** (where prior tanh attempts failed): the signal stays
      * linear; only the *damping gain* is modulated. As `|state|` grows, damping
@@ -496,18 +523,19 @@ object LowPassHighPassFilters {
      * The inverse of a hard-capping `tanh` placed directly in the feedback signal
      * (which would *reduce* damping and run away — the Phase 7 trap).
      *
-     * **Convention conversion** (why the factor of 2): Obxd parameterises the
-     * resonance with `R` where `2R = our k` (damping vs. quality-factor-inverse
-     * conventions). Their per-sample feedback term `2·(R + tCfb)` maps to our
-     * `k + 2·tCfb` — hence the `kEff = k + 2·driveScale·tCfb` formula in the
-     * saturated branch.
+     * **Convention conversion** (why the factor of 2): the OB-X-style filter
+     * parameterises resonance with `R` where `2R` corresponds to our `k` (damping
+     * vs. quality-factor-inverse conventions). A feedback term of the form
+     * `2·(R + tCfb)` therefore maps onto our `k + 2·tCfb` — hence the
+     * `kEff = k + 2·driveScale·tCfb` formula we use in the saturated branch.
      *
      * Linear branch (`analog == 0`) is bit-identical to the pre-saturation
      * code path. Per-voice cutoff offset and coefficient smoothing on `setCutoff`
      * are still active via the [BaseSvf] machinery.
      *
      * References:
-     * - github.com/2DaT/Obxd `Source/Engine/Filter.h` — porting source
+     * - "The Art of VA Filter Design" (Vadim Zavalishin) — the TPT/ZDF SVF this builds on
+     * - 2DaT's Obxd, github.com/2DaT/Obxd — inspiration for the diode-pair saturation idea
      * - `audio/MEMORY.md` "Filter Saturation Dead-End" — history of the failed
      *   attempts that led to this approach
      */
@@ -517,21 +545,22 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
 
-        /** Humanization amount: `analog × FILTER_DRIVE_PER_ANALOG`. Scales the diode-pair tCfb term. */
-        private val driveScale: Double = analog * FILTER_DRIVE_PER_ANALOG
+        /** Humanization amount: `analog × drivePerAnalog`. Scales the diode-pair tCfb term. */
+        private val driveScale: Double = analog * drivePerAnalog
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             var trans = transitionSamples
             if (saturate) {
-                // ── Obxd-style state-dependent damping (nonlinear ZDF SVF) ──────────
+                // ── Analog-style state-dependent damping (nonlinear ZDF SVF) ────────
                 // Per-sample `kEff = k + 2·driveScale·tCfb` where `tCfb` grows monotonically
                 // with `|ic1eq|`. As resonance heats up, damping rises and compresses the
                 // peak. Closed-form single-step solve (no iteration). Convention factor of
-                // 2 because Obxd's R = our k/2.
+                // 2 because the OB-X-style `R` corresponds to our k/2.
                 val drv = driveScale
                 for (i in offset until end) {
                     if (trans > 0) {
@@ -540,7 +569,7 @@ object LowPassHighPassFilters {
                         trans--
                     }
                     val v0 = buffer[i]
-                    val tCfb = diodePairResistanceApprox(ic1eq * OBXD_STATE_SCALE) - 1.0
+                    val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
                     val kEff = k + 2.0 * drv * tCfb
                     // Explicit closed-form HP intermediate with kEff. One divide per sample.
                     val kPlusG = kEff + g
@@ -549,7 +578,7 @@ object LowPassHighPassFilters {
                     val vLp = g * vBp + ic2eq
                     ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
                     ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
-                    // Obxd outputs a morph `mc = (1−mm)·vLp + mm·vHp` (LP↔HP blend).
+                    // OB-X-style filters output a morph `mc = (1−mm)·vLp + mm·vHp` (LP↔HP blend).
                     // With `mm = 0` (pure LP) this collapses to `vLp`.
                     buffer[i] = vLp
                 }
@@ -575,7 +604,7 @@ object LowPassHighPassFilters {
     }
 
     /**
-     * Highpass tap of the TPT SVF. Same Obxd-style state-dependent damping as
+     * Highpass tap of the TPT SVF. Same analog-style state-dependent damping as
      * [SvfLPF] in the saturated branch; output is the HP tap of the explicit-
      * feedback form (`vHp` from the closed-form solve), preserving LP+kBP+HP=v0
      * complementarity at every sample (with `k → kEff`).
@@ -586,17 +615,18 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
 
-        /** Humanization amount: `analog × FILTER_DRIVE_PER_ANALOG`. See [SvfLPF] for math. */
-        private val driveScale: Double = analog * FILTER_DRIVE_PER_ANALOG
+        /** Humanization amount: `analog × drivePerAnalog`. See [SvfLPF] for math. */
+        private val driveScale: Double = analog * drivePerAnalog
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             var trans = transitionSamples
             if (saturate) {
-                // Same Obxd state-dependent damping as [SvfLPF]; output the HP tap directly
+                // Same analog-style state-dependent damping as [SvfLPF]; output the HP tap directly
                 // from the explicit-feedback form (no need for `v0 − k·v1 − v2` algebra since
                 // `vHp` is computed in the closed-form solve already).
                 val drv = driveScale
@@ -607,7 +637,7 @@ object LowPassHighPassFilters {
                         trans--
                     }
                     val v0 = buffer[i]
-                    val tCfb = diodePairResistanceApprox(ic1eq * OBXD_STATE_SCALE) - 1.0
+                    val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
                     val kEff = k + 2.0 * drv * tCfb
                     val kPlusG = kEff + g
                     val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)

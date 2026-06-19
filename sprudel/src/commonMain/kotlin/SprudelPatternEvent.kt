@@ -6,13 +6,10 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 /**
  * Voice Data used to create a Voice.
  */
-@Serializable
 data class SprudelPatternEvent(
     /** Visible portion after clipping */
     val part: CycleTimeSpan,
@@ -26,7 +23,6 @@ data class SprudelPatternEvent(
      * Tracks the transformation path from call site -> string literal -> atom.
      * Not included in serialization as it's only used for live-coding features.
      */
-    @Transient
     override val sourceLocations: SourceLocationChain? = null,
 ) : KlangPatternEvent {
 

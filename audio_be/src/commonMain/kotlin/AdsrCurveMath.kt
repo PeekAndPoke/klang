@@ -15,14 +15,21 @@ import kotlin.math.exp
  */
 internal const val ADSR_EXP_K: Double = 3.0
 
-/** Normalisation so the exponential shape is exactly 0 at x=0 and 1 at x=1. */
+/** Normalisation factor for [adsrExpShape] at curvature [k] — makes `g(0)=0`, `g(1)=1`. */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun adsrExpNorm(k: Double): Double = 1.0 / (exp(k) - 1.0)
+
+/** Normalisation for the global-default curvature [ADSR_EXP_K]. */
 @PublishedApi
-internal val ADSR_EXP_NORM: Double = 1.0 / (exp(ADSR_EXP_K) - 1.0)
+internal val ADSR_EXP_NORM: Double = adsrExpNorm(ADSR_EXP_K)
 
 /**
  * True-exponential ADSR shape `g(x) = (e^(K·x) − 1)/(e^K − 1)` on `x ∈ [0,1]`,
  * with `g(0)=0`, `g(1)=1`. Convex (like `Square` but longer-tailed). For decay /
  * release the caller passes `omp = 1−p`, giving the natural "fast drop, long tail".
+ *
+ * This no-arg form uses the global-default [ADSR_EXP_K] (the filter/FM and ignitor
+ * envelopes). The amp VCA passes a per-engine curvature via [adsrExpShape] below.
  *
  * NOTE: one `exp()` per call. In the per-sample renderers that's a transcendental
  * in the hot loop (the rest of the curve family is multiply-only). Acceptable while
@@ -31,6 +38,10 @@ internal val ADSR_EXP_NORM: Double = 1.0 / (exp(ADSR_EXP_K) - 1.0)
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun adsrExpShape(x: Double): Double = (exp(ADSR_EXP_K * x) - 1.0) * ADSR_EXP_NORM
+
+/** Parameterized exp shape at curvature [k] with precomputed [norm] = [adsrExpNorm]\(k\). */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (exp(k * x) - 1.0) * norm
 
 // ─────────────────────────────────────────────────────────────────────────────
 // De-click smoother on the final amplitude-envelope gain.
@@ -47,9 +58,9 @@ internal inline fun adsrExpShape(x: Double): Double = (exp(ADSR_EXP_K * x) - 1.0
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Time constant (seconds) of the VCA-gain de-click one-pole. */
-internal const val ENV_DECLICK_SECONDS: Double = 0.0005
+internal const val ENV_DECLICK_SECONDS: Double = 0.001
 
-/** Per-sample one-pole coefficient for [ENV_DECLICK_SECONDS] at [sampleRate] Hz. */
+/** Per-sample one-pole coefficient for a [declickSeconds] time constant at [sampleRate] Hz. */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun envDeclickCoeff(sampleRate: Double): Double =
-    1.0 - exp(-1.0 / (ENV_DECLICK_SECONDS * sampleRate))
+internal inline fun envDeclickCoeff(declickSeconds: Double, sampleRate: Double): Double =
+    1.0 - exp(-1.0 / (declickSeconds * sampleRate))

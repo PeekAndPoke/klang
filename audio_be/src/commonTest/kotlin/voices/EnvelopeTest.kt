@@ -78,16 +78,16 @@ class EnvelopeTest : StringSpec({
             )
         )
 
-        // Render at start of decay phase (frame 100-200)
-        val ctx = createContext(blockStart = 100, blockFrames = 100)
+        // Render decay + a long sustain tail so the gain settles regardless of the declick
+        // time constant (tau-agnostic: direction + settled plateau, not an after-N-frames
+        // magnitude — exact shape lives in EnvelopeShapeTest).
+        val ctx = createContext(blockStart = 100, blockFrames = 600)
         voice.render(ctx)
 
-        // Decay falls monotonically from ~1.0 toward sustain (0.5); de-click lags
-        // the falling ramp, so the end sits slightly above sustain.
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.03)
-        (ctx.voiceBuffer[50] < ctx.voiceBuffer[0]) shouldBe true
+        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.03)          // decay start ~1.0
+        (ctx.voiceBuffer[50] < ctx.voiceBuffer[0]) shouldBe true    // falling
         (ctx.voiceBuffer[99] < ctx.voiceBuffer[50]) shouldBe true
-        (ctx.voiceBuffer[99] < 0.65) shouldBe true
+        ctx.voiceBuffer[550] shouldBe (0.5 plusOrMinus 0.02)        // settled at sustain
     }
 
     "sustain phase holds at sustain level" {
@@ -119,7 +119,7 @@ class EnvelopeTest : StringSpec({
     "release phase decays from sustain to zero" {
         val voice = createSynthVoice(
             startFrame = 0,
-            endFrame = 300,
+            endFrame = 800,
             gateEndFrame = 100, // Gate ends at 100, release starts
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
@@ -135,16 +135,15 @@ class EnvelopeTest : StringSpec({
         // Render sustain phase first to establish envelope state
         voice.render(createContext(blockStart = 0, blockFrames = 100))
 
-        // Render at release phase (frame 100-200)
-        val ctx = createContext(blockStart = 100, blockFrames = 100)
+        // Release + a long tail so the gain settles regardless of declick tau (tau-agnostic:
+        // direction + settled silence, not an after-N-frames magnitude).
+        val ctx = createContext(blockStart = 100, blockFrames = 600)
         voice.render(ctx)
 
-        // Release falls monotonically from ~1.0 toward 0; de-click lags the ramp,
-        // so frame 99 is well on its way down but not yet fully at 0.
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.03)
-        (ctx.voiceBuffer[50] < ctx.voiceBuffer[0]) shouldBe true
+        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.03)          // release start ~1.0
+        (ctx.voiceBuffer[50] < ctx.voiceBuffer[0]) shouldBe true    // falling
         (ctx.voiceBuffer[99] < ctx.voiceBuffer[50]) shouldBe true
-        (ctx.voiceBuffer[99] < 0.3) shouldBe true
+        ctx.voiceBuffer[550] shouldBe (0.0 plusOrMinus 0.02)        // settled at silence
     }
 
     "zero attack time produces immediate full amplitude" {
@@ -196,7 +195,7 @@ class EnvelopeTest : StringSpec({
     "zero release time produces very fast decay" {
         val voice = createSynthVoice(
             startFrame = 0,
-            endFrame = 200,
+            endFrame = 700,
             gateEndFrame = 100,
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
@@ -212,23 +211,23 @@ class EnvelopeTest : StringSpec({
         // Render sustain phase first to establish envelope state
         voice.render(createContext(blockStart = 0, blockFrames = 100))
 
-        // Render at release phase
-        val ctx = createContext(blockStart = 100, blockFrames = 100)
+        // Render the cutoff + a long tail so the fade settles regardless of declick tau.
+        val ctx = createContext(blockStart = 100, blockFrames = 600)
         voice.render(ctx)
 
-        // releaseFrames=0 is de-clicked: instead of a 1-sample cutoff (a click) the
-        // gain fades over ~ENV_DECLICK_SECONDS, then is fully gone within the block.
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.02)   // still at sustain at relPos 0
-        (ctx.voiceBuffer[1] < 0.97) shouldBe true            // fading, not a hard cut
-        (ctx.voiceBuffer[1] > 0.0) shouldBe true             // ...but not gone in one sample
-        ctx.voiceBuffer[99] shouldBe (0.0 plusOrMinus 0.03)  // fully faded within the block
+        // releaseFrames=0 is de-clicked: instead of a 1-sample cutoff (a click) the gain
+        // fades over ~ENV_DECLICK_SECONDS, then settles at silence.
+        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.02)        // still at sustain at relPos 0
+        (ctx.voiceBuffer[1] < ctx.voiceBuffer[0]) shouldBe true   // fading (declining), not a hard cut
+        (ctx.voiceBuffer[1] > 0.5) shouldBe true                  // ...nowhere near gone in one sample
+        ctx.voiceBuffer[550] shouldBe (0.0 plusOrMinus 0.02)      // settled at silence
     }
 
     "full ADSR cycle works correctly" {
         val voice = createSynthVoice(
             startFrame = 0,
-            endFrame = 500,
-            gateEndFrame = 300,
+            endFrame = 1000,
+            gateEndFrame = 800,
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
                 decayFrames = 100.0,
@@ -240,17 +239,17 @@ class EnvelopeTest : StringSpec({
             )
         )
 
-        // Render the whole voice as one contiguous block. The engine always renders
-        // contiguous blocks, and the de-click smoother is stateful (it tracks across
-        // adjacent samples), so non-adjacent 1-frame renders are not a real path.
-        val ctx = createContext(blockStart = 0, blockFrames = 500)
+        // One contiguous block (attack 0-100, decay 100-200, sustain 200-800, release
+        // 800-900). The long sustain lets the gain settle, so the plateau check is
+        // tau-agnostic; the rest is direction (exact shape is in EnvelopeShapeTest).
+        val ctx = createContext(blockStart = 0, blockFrames = 1000)
         voice.render(ctx)
 
         (ctx.voiceBuffer[80] > ctx.voiceBuffer[20]) shouldBe true    // attack rising
-        (ctx.voiceBuffer[90] > ctx.voiceBuffer[270]) shouldBe true   // peak/decay above sustain
-        ctx.voiceBuffer[270] shouldBe (0.5 plusOrMinus 0.03)         // sustain settled
-        (ctx.voiceBuffer[380] < ctx.voiceBuffer[270]) shouldBe true  // release below sustain
-        (ctx.voiceBuffer[399] < ctx.voiceBuffer[380]) shouldBe true  // ...and still falling
+        (ctx.voiceBuffer[90] > ctx.voiceBuffer[700]) shouldBe true   // peak/decay above sustain
+        ctx.voiceBuffer[700] shouldBe (0.5 plusOrMinus 0.02)         // sustain settled
+        (ctx.voiceBuffer[850] < ctx.voiceBuffer[700]) shouldBe true  // release below sustain
+        (ctx.voiceBuffer[899] < ctx.voiceBuffer[850]) shouldBe true  // ...and still falling
     }
 
     "envelope state is preserved across multiple renders" {
@@ -356,8 +355,8 @@ class EnvelopeTest : StringSpec({
     "envelope respects gate end frame for release timing" {
         val voice = createSynthVoice(
             startFrame = 0,
-            endFrame = 500,
-            gateEndFrame = 200, // Gate ends at 200
+            endFrame = 900,
+            gateEndFrame = 700, // Gate ends at 700
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
                 decayFrames = 0.0,
@@ -369,15 +368,16 @@ class EnvelopeTest : StringSpec({
             )
         )
 
-        // One contiguous block (attack 0-100, sustain 100-200, release 200-300).
-        val ctx = createContext(blockStart = 0, blockFrames = 300)
+        // One contiguous block (attack 0-100, sustain 100-700, release 700-800). The long
+        // sustain lets the gain settle, so the "holds until the gate" check is tau-agnostic.
+        val ctx = createContext(blockStart = 0, blockFrames = 800)
         voice.render(ctx)
 
-        // Sustain holds at 1.0 right up to the gate end at frame 200.
-        ctx.voiceBuffer[199] shouldBe (1.0 plusOrMinus 0.02)        // just before gate end
-        ctx.voiceBuffer[200] shouldBe (1.0 plusOrMinus 0.02)        // release just starting
+        // Sustain holds at 1.0 right up to the gate end at frame 700.
+        ctx.voiceBuffer[650] shouldBe (1.0 plusOrMinus 0.02)        // settled sustain, before gate
+        ctx.voiceBuffer[699] shouldBe (1.0 plusOrMinus 0.02)        // just before gate end
         // Release begins only after the gate, then falls.
-        (ctx.voiceBuffer[250] < ctx.voiceBuffer[200]) shouldBe true // releasing
-        (ctx.voiceBuffer[250] > 0.3) shouldBe true                  // ...about midway down
+        (ctx.voiceBuffer[750] < ctx.voiceBuffer[700]) shouldBe true // releasing
+        (ctx.voiceBuffer[750] > 0.3) shouldBe true                  // ...about midway down
     }
 })

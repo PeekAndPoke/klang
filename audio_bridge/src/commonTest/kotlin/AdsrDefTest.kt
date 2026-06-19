@@ -2,11 +2,8 @@ package io.peekandpoke.klang.audio_bridge
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import kotlinx.serialization.json.Json
 
 class AdsrDefTest : StringSpec({
-
-    val json = Json { encodeDefaults = false }
 
     "AdsrDef.empty is an AdsrDef.Std with all fields null" {
         val empty = AdsrDef.empty
@@ -21,15 +18,15 @@ class AdsrDefTest : StringSpec({
         empty.releaseCurve shouldBe null
     }
 
-    "AdsrDef.defaultSynth uses Square attack, Exponential decay, Square release" {
+    "AdsrDef.defaultSynth uses Exponential curves for all three phases" {
         val def = AdsrDef.defaultSynth as AdsrDef.Std
         def.attack shouldBe 0.01
         def.decay shouldBe 0.1
         def.sustain shouldBe 1.0
         def.release shouldBe 0.05
-        def.attackCurve shouldBe AdsrCurve.Square
+        def.attackCurve shouldBe AdsrCurve.Exponential
         def.decayCurve shouldBe AdsrCurve.Exponential
-        def.releaseCurve shouldBe AdsrCurve.Square
+        def.releaseCurve shouldBe AdsrCurve.Exponential
     }
 
     "Std.resolve() fills in defaults when fields are null" {
@@ -38,9 +35,9 @@ class AdsrDefTest : StringSpec({
         resolved.decay shouldBe 0.1
         resolved.sustain shouldBe 1.0
         resolved.release shouldBe 0.05
-        resolved.attackCurve shouldBe AdsrCurve.Square
+        resolved.attackCurve shouldBe AdsrCurve.Exponential
         resolved.decayCurve shouldBe AdsrCurve.Exponential
-        resolved.releaseCurve shouldBe AdsrCurve.Square
+        resolved.releaseCurve shouldBe AdsrCurve.Exponential
     }
 
     "Std.resolve() preserves explicit field values over defaults" {
@@ -76,26 +73,6 @@ class AdsrDefTest : StringSpec({
         val a = AdsrDef.Std(attack = 0.1)
         val merged = a.mergeWith(null) as AdsrDef.Std
         merged shouldBe a
-    }
-
-    "Std round-trips through JSON serialization" {
-        val original = AdsrDef.Std(
-            attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.3,
-            attackCurve = AdsrCurve.Linear,
-            decayCurve = AdsrCurve.Square,
-            releaseCurve = AdsrCurve.Cube,
-        )
-        val encoded: String = json.encodeToString(AdsrDef.serializer(), original)
-        val decoded = json.decodeFromString(AdsrDef.serializer(), encoded) as AdsrDef.Std
-        decoded shouldBe original
-    }
-
-    "Std round-trips through JSON with default null fields omitted" {
-        val original = AdsrDef.Std(attack = 0.01)
-        val encoded = json.encodeToString(AdsrDef.serializer(), original)
-        val decoded = json.decodeFromString(AdsrDef.serializer(), encoded) as AdsrDef.Std
-        decoded shouldBe original
-        decoded.attackCurve shouldBe null
     }
 
     "AdsrCurve enum has Linear, Square, Cube, SCurve, InvSquare, Exponential" {

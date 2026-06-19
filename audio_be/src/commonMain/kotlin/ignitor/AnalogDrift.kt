@@ -19,8 +19,12 @@ import kotlin.random.Random
  * Ornstein–Uhlenbeck for the slow one), which is closer to the physical
  * statistics of analog component noise than Perlin's lattice-based field.
  *
- * State is seeded at construction from the steady-state Gaussian distribution
- * of each smoother, so drift is immediate — no ramp-up after note-on.
+ * The fast layer is seeded from its steady-state Gaussian (it settles in ~50 ms,
+ * so the micro-shimmer is immediate). The slow layer is seeded at CENTRE so every
+ * note attacks in tune; its lazy drift only develops if the note is held long
+ * enough. Seeding the slow layer at steady-state (the old behaviour) turned short
+ * notes into per-note random detune — each note stuck at its seeded offset for its
+ * whole (short) life, which read as wandering intonation on melodic lines.
  *
  * Per-sample cost: 3 xorshift ops + 4 muls + 4 adds. No allocations, no `Random.nextX()`
  * dispatch, no perm-table lookups.
@@ -33,7 +37,7 @@ import kotlin.random.Random
  * phase += inc * drift.nextMultiplier()
  * ```
  */
-class AnalogDrift(analog: Double, sampleRate: Int) {
+class AnalogDrift(analog: Double, sampleRate: Int, rng: Random = Random) {
     /** Whether analog drift is active. Check this to skip the drift path entirely. */
     val active: Boolean = analog > 0.0
 
@@ -55,11 +59,13 @@ class AnalogDrift(analog: Double, sampleRate: Int) {
         scaleFast = coeffs.scaleFast
         scaleSlow = coeffs.scaleSlow
 
-        // Seed from steady-state Gaussian so drift is immediate (no ramp-up).
-        yFast = analogDriftGaussian(Random) * coeffs.sigmaYFast
-        ySlow = analogDriftGaussian(Random) * coeffs.sigmaYSlow
+        // Fast layer: seed from its steady-state Gaussian — it settles within ~50 ms,
+        // so the immediate micro-shimmer is harmless. Slow layer: seed at CENTRE (0.0)
+        // so the note attacks in tune and only drifts if held (see class KDoc).
+        yFast = analogDriftGaussian(rng) * coeffs.sigmaYFast
+        ySlow = 0.0
 
-        var s = Random.nextInt()
+        var s = rng.nextInt()
         if (s == 0) s = 1 // xorshift32 doesn't tolerate a zero seed
         rngState = s
     }

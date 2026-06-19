@@ -1,46 +1,46 @@
 package io.peekandpoke.klang.audio_bridge
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
-@Serializable
 sealed class FilterDef {
-    @Serializable
-    @SerialName("low-pass")
+    @WireName("low-pass")
     data class LowPass(
         val cutoffHz: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
-    @Serializable
-    @SerialName("high-pass")
+    @WireName("high-pass")
     data class HighPass(
         val cutoffHz: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
-    @Serializable
-    @SerialName("band-pass")
+    @WireName("band-pass")
     data class BandPass(
         val cutoffHz: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
-    @Serializable
-    @SerialName("notch")
+    @WireName("notch")
     data class Notch(
         val cutoffHz: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
-    @Serializable
-    @SerialName("formant")
+    @WireName("formant")
     data class Formant(
         val bands: List<Band>,
+        /**
+         * Dry/wet amount for the formant bank, blended the same way as [Body.mix] (additive
+         * "floor + peaks" via the shared mix component). `0` = dry source, higher = more vowel
+         * colour on top. The formant bank is level-tamed before this blend so the broadband dry
+         * stays audible between formants (a vowel is a source *shaped by* formants, not replaced
+         * by them).
+         */
+        val mix: Double,
     ) : FilterDef() {
         /**
          * One formant band — a single SVF bandpass tuned to a vowel formant peak.
@@ -53,7 +53,6 @@ sealed class FilterDef {
          *
          * **Q range**: SVF accepts `q ∈ [0.1, 200.0]`. Vowel tables typically use 60–130.
          */
-        @Serializable
         data class Band(
             val freq: Double,
             val db: Double,
@@ -79,8 +78,7 @@ sealed class FilterDef {
      * Bands are resolved from a named material (`wood`, `tube`, `glass`, `membrane`) at the
      * sprudel DSL layer; this contract carries only the already-resolved modes + mix.
      */
-    @Serializable
-    @SerialName("body")
+    @WireName("body")
     data class Body(
         val bands: List<Mode>,
         val mix: Double,
@@ -93,7 +91,6 @@ sealed class FilterDef {
          * top of the bandpass's intrinsic Q peak. Material tables conventionally set the
          * lowest mode to `db = 0` and use negative dB for upper modes.
          */
-        @Serializable
         data class Mode(
             val freq: Double,
             val db: Double,

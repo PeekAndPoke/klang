@@ -3,7 +3,6 @@ package io.peekandpoke.klang.common.math
 import io.peekandpoke.klang.common.math.CycleTime.Companion.T
 import io.peekandpoke.klang.common.math.CycleTime.Companion.ofCycles
 import io.peekandpoke.klang.common.math.CycleTime.Companion.ofSubdivision
-import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 import kotlin.math.floor
 
@@ -22,9 +21,9 @@ private fun roundTicks(x: Double): Double = floor(x + 0.5)
 /**
  * Fixed-point musical time, measured in integer **ticks** of a cycle.
  *
- * One cycle = [T] ticks. This replaces [Rational] on the timing hot path: with a single shared
+ * One cycle = [T] ticks. This replaces the former `Rational` on the timing hot path: with a single shared
  * resolution, `plus`/`minus`/`compareTo` become plain integer arithmetic — **no gcd, no division** —
- * which is where the BigInt-backed [Rational] spent almost all of its time on Kotlin/JS.
+ * which is where the BigInt-backed `Rational` spent almost all of its time on Kotlin/JS.
  *
  * Stored as a [Double] holding an exact integer. This is safe because:
  * - IEEE-754 represents every integer up to 2^53 exactly, and our tick counts stay around 10^10
@@ -38,14 +37,13 @@ private fun roundTicks(x: Double): Double = floor(x + 0.5)
  * a primitive `double` on JVM, so the abstraction is zero-cost on the hot path.
  *
  * ### Exactness envelope
- * `T = 2^13 · 3 · 5 · 7 = 860160` represents exactly: all dyadic subdivisions down to 1/8192, and
+ * `T = 2^20 · 3 · 5 · 7 = 110100480` represents exactly: all dyadic subdivisions down to 1/1048576, and
  * triplets/quintuplets/septuplets and their products (1/3, 1/5, 1/7, 1/6, 1/12 … 1/96, 1/15, 1/105 …).
  * Subdivisions with denominators carrying 3^2 (1/9, 1/18 …), 5^2 (1/25), 7^2, or any prime ≥ 11
- * (1/11, 1/13 …), as well as dyadic finer than 1/8192, are **rounded to the nearest tick**
+ * (1/11, 1/13 …), as well as dyadic finer than 1/1048576, are **rounded to the nearest tick**
  * (sub-microsecond at typical tempo). These are rare in practice.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-@Serializable
 @JvmInline
 value class CycleTime(val ticks: Double) : Comparable<CycleTime> {
 

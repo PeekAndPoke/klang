@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalSerializationApi::class)
-
 package io.peekandpoke.klang.audio_benchmark
 
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -8,10 +6,6 @@ import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.ultra.common.toFixed
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromDynamic
-import kotlinx.serialization.json.encodeToDynamic
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
@@ -21,16 +15,13 @@ private var serBenchSink: Int = 0
 private fun structuredCloneJs(obj: dynamic): dynamic = js("structuredClone(obj)")
 
 /**
- * Per-voice `ScheduledVoice` serialization cost (JS only): the **KSP-generated** wire codec
- * (`encode_ScheduledVoice`/`decode_ScheduledVoice`, what `WorkletContract` now uses) vs the old kotlinx
- * JSON-dynamic path it replaced. The worklet-side decode is the cost that matters (audio thread).
+ * Per-voice `ScheduledVoice` serialization cost (JS only) for the **KSP-generated** wire codec
+ * (`encode_ScheduledVoice`/`decode_ScheduledVoice`, what `WorkletContract` uses) plus the `structuredClone`
+ * that `postMessage` performs. The worklet-side decode is the cost that matters (audio thread). The kotlinx
+ * JSON-dynamic baseline this replaced is gone (the wire types are no longer `@Serializable`); the ~174×
+ * win it demonstrated is recorded in `docs/tasks-archive/2026-06/20260607-worklet-codec-ksp.md`.
  */
 fun runWorkletSerializationBenchmark() {
-    val codec = Json {
-        ignoreUnknownKeys = true
-        explicitNulls = false
-    }
-
     val voiceData = createSprudelVoiceData {
         note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8
         sound = SoundValue.Named("supersaw"); soundIndex = 1
@@ -56,21 +47,14 @@ fun runWorkletSerializationBenchmark() {
         return ns[trials / 2]
     }
 
-    val kxEncoded = codec.encodeToDynamic(ScheduledVoice.serializer(), sv)
     val genEncoded = encode_ScheduledVoice(sv)
     val genOk = decode_ScheduledVoice(genEncoded) == sv
 
-    val kxEncodeNs = medianNsPerOp {
-        val e = codec.encodeToDynamic(ScheduledVoice.serializer(), sv); serBenchSink = serBenchSink xor (if (e == null) 0 else 1)
-    }
-    val cloneNs = medianNsPerOp {
-        val c = structuredCloneJs(kxEncoded); serBenchSink = serBenchSink xor (if (c == null) 0 else 1)
-    }
-    val kxDecodeNs = medianNsPerOp {
-        val d = codec.decodeFromDynamic(ScheduledVoice.serializer(), kxEncoded); serBenchSink = serBenchSink xor (d.data.soundIndex ?: 0)
-    }
     val genEncodeNs = medianNsPerOp {
         val e = encode_ScheduledVoice(sv); serBenchSink = serBenchSink xor (if (e == null) 0 else 1)
+    }
+    val cloneNs = medianNsPerOp {
+        val c = structuredCloneJs(genEncoded); serBenchSink = serBenchSink xor (if (c == null) 0 else 1)
     }
     val genDecodeNs = medianNsPerOp {
         val d = decode_ScheduledVoice(genEncoded); serBenchSink = serBenchSink xor (d.data.soundIndex ?: 0)
@@ -80,13 +64,9 @@ fun runWorkletSerializationBenchmark() {
     println("Platform: ${platformInfo()}")
     println("$iterations ops x $trials trials (median). generated codec round-trips == original: $genOk")
     println()
-    println("kotlinx JSON-dynamic (old):")
-    println("  encodeToDynamic   (frontend send) : ${kxEncodeNs.toFixed(0)} ns/op")
-    println("  structuredClone   (postMessage)   : ${cloneNs.toFixed(0)} ns/op")
-    println("  decodeFromDynamic (worklet recv)  : ${kxDecodeNs.toFixed(0)} ns/op")
-    println()
-    println("KSP-generated wire codec (now used by WorkletContract):")
+    println("KSP-generated wire codec (used by WorkletContract):")
     println("  encode (frontend send) : ${genEncodeNs.toFixed(0)} ns/op")
+    println("  structuredClone (postMessage)   : ${cloneNs.toFixed(0)} ns/op")
     println("  decode (worklet recv)  : ${genDecodeNs.toFixed(0)} ns/op")
     println("  sink=$serBenchSink")
     println()

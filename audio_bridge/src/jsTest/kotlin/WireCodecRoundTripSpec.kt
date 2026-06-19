@@ -3,10 +3,12 @@ package io.peekandpoke.klang.audio_bridge
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.wire.decode_EngineDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Feedback
 import io.peekandpoke.klang.audio_bridge.wire.decode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.wire.encode_EngineDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
 import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
@@ -20,6 +22,20 @@ import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
  * dispatch, nested types, `List`, and `Map` (the `ScheduledVoice`/`VoiceData` + `Feedback` subgraphs).
  */
 class WireCodecRoundTripSpec : StringSpec({
+
+    "EngineDsl round-trips (sealed StageDsl: data-object markers + Filter/Vca config)" {
+        listOf(
+            EngineDsl.modern,
+            EngineDsl.pedal,
+            EngineDsl(
+                listOf(
+                    StageDsl.FilterMod,
+                    StageDsl.Filter(cutoffOffsetPerAnalog = 0.01, drivePerAnalog = 0.7, driftRelToOsc = 4.0),
+                    StageDsl.Vca(expK = 2.5, declickSeconds = 0.002),
+                )
+            ),
+        ).forEach { decode_EngineDsl(encode_EngineDsl(it)) shouldBe it }
+    }
 
     "SampleRequest round-trips (scalars + nulls)" {
         listOf(
@@ -43,7 +59,7 @@ class WireCodecRoundTripSpec : StringSpec({
                         cutoffHz = 1000.0, q = 1.5,
                         envelope = FilterEnvDef(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2, depth = 0.9),
                     ),
-                    FilterDef.Formant(bands = listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 5.0))),
+                    FilterDef.Formant(bands = listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 5.0)), mix = 0.5),
                 )
             ),
         )

@@ -87,6 +87,18 @@ class LangVowelSpec : StringSpec({
 
         // Verify vowel 'a' formant bands
         formant.bands.size shouldBe 5
+        // Default dry/wet amount (blended over the dry source, not wet-only).
+        formant.mix shouldBe 0.5
+    }
+
+    "vowelMix() overrides the formant dry/wet amount" {
+        val p = note("c3").vowel("a").vowelMix(0.3)
+
+        val events = p.queryArc(0.0, 1.0)
+        val voiceData = events[0].data.toVoiceData()
+
+        val formant = voiceData.filters.filters[0] as io.peekandpoke.klang.audio_bridge.FilterDef.Formant
+        formant.mix shouldBe 0.3
     }
 
     "vowel() works with all vowels (a, e, i, o, u)" {

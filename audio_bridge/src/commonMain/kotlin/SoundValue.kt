@@ -1,7 +1,5 @@
 package io.peekandpoke.klang.audio_bridge
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 /**
  * Authoring-layer representation of a sound reference.
@@ -13,17 +11,15 @@ import kotlinx.serialization.Serializable
  * name — the playback context allocates one via `registerIgnitor` — so the
  * wire-level [VoiceData] still carries `sound: String?` and the BE protocol
  * stays unchanged.
+ *
+ * NOT a wire type (no `@WireFormat`, no `@WireName`): it never crosses the worklet boundary — it is
+ * denormalized to `sound: String?` first. Authoring-layer only.
  */
-@Serializable
 sealed interface SoundValue {
 
     /** Sound referenced by a stable name (sample bank entry, pre-registered ignitor, etc.). */
-    @Serializable
-    @SerialName("named")
     data class Named(val name: String) : SoundValue
 
     /** Sound defined inline as an ignitor signal graph. */
-    @Serializable
-    @SerialName("osc")
     data class Osc(val osc: IgnitorDsl) : SoundValue
 }

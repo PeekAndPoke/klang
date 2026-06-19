@@ -5,7 +5,6 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
-    kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
     id("io.kotest")
 }
@@ -41,8 +40,6 @@ kotlin {
             dependencies {
                 implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
-                implementation(Deps.KotlinX.serialization_core)
-                implementation(Deps.KotlinX.serialization_json)
 
                 implementation(Deps.Ktor.Client.core)
                 implementation(Deps.Ktor.Client.cio)

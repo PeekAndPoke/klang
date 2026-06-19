@@ -1,18 +1,5 @@
 package io.peekandpoke.klang.sprudel
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonDecoder
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.doubleOrNull
 import kotlin.math.log2
 import kotlin.math.pow
 
@@ -23,7 +10,6 @@ import kotlin.math.pow
  * [io.peekandpoke.klang.common.math.CycleTime]); these are *values* (gain, pan, note numbers, filter
  * cutoffs, control amounts), for which Double precision is ample.
  */
-@Serializable(with = SprudelVoiceValueSerializer::class)
 sealed interface SprudelVoiceValue {
     val asBoolean: Boolean
     val asString: String
@@ -251,82 +237,3 @@ sealed interface SprudelVoiceValue {
     }
 }
 
-object SprudelVoiceValueSerializer : KSerializer<SprudelVoiceValue> {
-    override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("SprudelVoiceValue", PrimitiveKind.STRING)
-
-    override fun serialize(encoder: Encoder, value: SprudelVoiceValue) {
-        when (value) {
-            is SprudelVoiceValue.Num -> encoder.encodeDouble(value.value)
-            is SprudelVoiceValue.Text -> encoder.encodeString(value.value)
-            is SprudelVoiceValue.Bool -> encoder.encodeBoolean(value.value)
-            is SprudelVoiceValue.Seq -> encoder.encodeSerializableValue(
-                ListSerializer(SprudelVoiceValueSerializer),
-                value.value
-            )
-
-            is SprudelVoiceValue.Pattern -> encoder.encodeString("<pattern>")
-        }
-    }
-
-    override fun deserialize(decoder: Decoder): SprudelVoiceValue {
-        // Optimization for JSON: inspect the element type
-        if (decoder is JsonDecoder) {
-            val element = decoder.decodeJsonElement()
-            return if (element is JsonPrimitive) {
-                when {
-                    element.isString -> {
-                        val content = element.content
-                        // Legacy fraction form "a/b" (older persisted patterns) → parse to Double.
-                        parseFraction(content)?.let { return SprudelVoiceValue.Num(it) }
-                        // Otherwise it's just text
-                        SprudelVoiceValue.Text(content)
-                    }
-
-                    element.content == "true" || element.content == "false" ->
-                        SprudelVoiceValue.Bool(element.content.toBoolean())
-
-                    else -> {
-                        val d = element.doubleOrNull
-                        if (d != null) SprudelVoiceValue.Num(d) else SprudelVoiceValue.Text(element.content)
-                    }
-                }
-            } else if (element is JsonArray) {
-                val items = element.map {
-                    Json.decodeFromJsonElement(SprudelVoiceValueSerializer, it)
-                }
-                SprudelVoiceValue.Seq(items)
-            } else {
-                SprudelVoiceValue.Text(element.toString())
-            }
-        }
-
-        // Fallback for generic decoders (Properties / CBOR)
-        try {
-            val str = decoder.decodeString()
-            parseFraction(str)?.let { return SprudelVoiceValue.Num(it) }
-            val d = str.toDoubleOrNull()
-            return if (d != null) SprudelVoiceValue.Num(d) else SprudelVoiceValue.Text(str)
-        } catch (e: Exception) {
-            try {
-                return SprudelVoiceValue.Num(decoder.decodeDouble())
-            } catch (_: Exception) {
-                try {
-                    return SprudelVoiceValue.Bool(decoder.decodeBoolean())
-                } catch (_: Exception) {
-                    throw e
-                }
-            }
-        }
-    }
-
-    /** Parses a legacy `"a/b"` fraction string to a Double, or null if not a fraction. */
-    private fun parseFraction(content: String): Double? {
-        if ("/" !in content) return null
-        val parts = content.split("/")
-        if (parts.size != 2) return null
-        val num = parts[0].trim().toDoubleOrNull() ?: return null
-        val den = parts[1].trim().toDoubleOrNull() ?: return null
-        return if (den == 0.0) Double.NaN else num / den
-    }
-}

@@ -3,7 +3,6 @@
 plugins {
     idea
     kotlin("multiplatform")
-    kotlin("plugin.serialization")
 }
 
 val GROUP: String by project
@@ -31,8 +30,6 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(Deps.KotlinX.coroutines_core)
-                implementation(Deps.KotlinX.serialization_core)
-                implementation(Deps.KotlinX.serialization_json)
 
                 implementation(project(":common"))
                 implementation(project(":audio_bridge"))

@@ -4,11 +4,9 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.AudioEngine
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
-import io.peekandpoke.klang.audio_be.filters.FILTER_CUTOFF_OFFSET_PER_ANALOG
-import io.peekandpoke.klang.audio_be.filters.FILTER_DRIFT_RELATIVE_TO_OSC
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
@@ -24,6 +22,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.maxReleaseSec
 import kotlin.random.Random
@@ -39,6 +38,7 @@ class VoiceFactory(
     private val sampleRateDouble: Double,
     private val blockFrames: Int,
     private val ignitorRegistry: IgnitorRegistry,
+    private val engineRegistry: EngineRegistry,
     private val cylinders: Cylinders,
     private val voiceBuffer: AudioBuffer,
     private val freqModBuffer: DoubleArray,
@@ -90,9 +90,13 @@ class VoiceFactory(
         // upstream by the language layer (see SprudelVoiceData.toVoiceData), which
         // keeps the engine a faithful consumer and leaves explicit routing open.
         val analog = data.oscParams?.get("analog") ?: 0.0
-        val filters = data.filters.filters.map { it.toFilter(analog) }
+        // The active engine's Filter stage carries the per-voice "filter feel" scales
+        // (cutoff offset / drive / drift). Default StageDsl.Filter() == today's constants.
+        val filterStage = engineRegistry.get(data.engine).stages
+            .firstNotNullOfOrNull { it as? StageDsl.Filter } ?: StageDsl.Filter()
+        val filters = data.filters.filters.map { it.toFilter(analog, filterStage) }
         val modulators = data.filters.filters.zip(filters).mapNotNull { (def, filter) ->
-            def.toModulator(filter, sampleRate, analog)
+            def.toModulator(filter, sampleRate, analog, filterStage)
         }
         val bakedFilters = filters.combine()
 
@@ -324,19 +328,26 @@ class VoiceFactory(
     // Private helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    private fun FilterDef.toFilter(analog: Double): AudioFilter {
+    private fun FilterDef.toFilter(analog: Double, stage: StageDsl.Filter): AudioFilter {
         // Per-voice constant cutoff offset — set once per filter at note-on so that
         // two voices through "the same" configured filter no longer process identically.
         // Real analog filters have component tolerances; we simulate that with a small
-        // random multiplier per filter instance.
-        val offsetMul = perVoiceCutoffOffsetMul(analog)
+        // random multiplier per filter instance. The engine's Filter stage scales it.
+        val offsetMul = perVoiceCutoffOffsetMul(analog, stage.cutoffOffsetPerAnalog)
         return when (this) {
-            is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog, offsetMul)
-            is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(cutoffHz, q, sampleRateDouble, analog, offsetMul)
+            is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog, offsetMul, stage.drivePerAnalog)
+            is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(
+                cutoffHz,
+                q,
+                sampleRateDouble,
+                analog,
+                offsetMul,
+                stage.drivePerAnalog
+            )
             is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble, offsetMul)
             is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble, offsetMul)
             // Formant's bands are vowel-specific — per-voice offset would smear vowel character. Skip.
-            is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, sampleRateDouble)
+            is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, mix, sampleRateDouble)
             // Body modes are fixed resonances — per-voice offset would smear the body character. Skip.
             is FilterDef.Body -> LowPassHighPassFilters.createBody(bands, mix, sampleRateDouble)
         }
@@ -348,15 +359,16 @@ class VoiceFactory(
      * CUTOFF_OFFSET_PER_ANALOG`. So at `analog=1` ≈ ±0.3% (≈ ±5 cents); at `analog=3`
      * (Schmetterling) ≈ ±0.9% (≈ ±15 cents); at `analog=10` ≈ ±3% (≈ ±50 cents).
      */
-    private fun perVoiceCutoffOffsetMul(analog: Double): Double {
+    private fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Double): Double {
         if (analog <= 0.0) return 1.0
-        return 1.0 + (Random.nextDouble() - 0.5) * 2.0 * FILTER_CUTOFF_OFFSET_PER_ANALOG * analog
+        return 1.0 + (Random.nextDouble() - 0.5) * 2.0 * cutoffOffsetPerAnalog * analog
     }
 
     private fun FilterDef.toModulator(
         filter: AudioFilter,
         sampleRate: Int,
         analog: Double,
+        stage: StageDsl.Filter,
     ): Voice.FilterModulator? {
         // Non-tunable filters (Formant) can't be modulated at all.
         if (filter !is AudioFilter.Tunable) return null
@@ -376,7 +388,7 @@ class VoiceFactory(
         // time constants. `analog * FILTER_DRIFT_RELATIVE_TO_OSC` makes the
         // filter drift proportionally bigger than oscillator pitch drift.
         val drift = if (analog > 0.0) {
-            AnalogDrift(analog * FILTER_DRIFT_RELATIVE_TO_OSC, driftUpdateRate)
+            AnalogDrift(analog * stage.driftRelToOsc, driftUpdateRate)
         } else {
             null
         }
@@ -479,7 +491,7 @@ class VoiceFactory(
             freqHz = freqHz,
             startFrame = startFrame,
         ) + buildFilterPipeline(
-            engine = AudioEngine.fromName(data.engine),
+            engine = engineRegistry.get(data.engine),
             modulators = modulators,
             startFrame = startFrame,
             gateEndFrame = gateEndFrame,

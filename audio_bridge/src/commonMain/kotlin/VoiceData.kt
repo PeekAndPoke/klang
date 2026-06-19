@@ -1,11 +1,9 @@
 package io.peekandpoke.klang.audio_bridge
 
-import kotlinx.serialization.Serializable
 
 /**
  * Defines a voice
  */
-@Serializable
 data class VoiceData(
     // note, scale, freq
     // TODO: note can also be numbers -> Midi and detune, f.e. 50.3

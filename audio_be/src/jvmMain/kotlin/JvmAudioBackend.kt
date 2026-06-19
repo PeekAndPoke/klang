@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
@@ -31,12 +32,15 @@ class JvmAudioBackend(
         registerDefaults()
     }
 
+    val engineRegistry = EngineRegistry()
+
     val voices = VoiceScheduler(
         VoiceScheduler.Options(
             commLink = commLink,
             sampleRate = sampleRate,
             blockFrames = blockSize,
             ignitorRegistry = ignitorRegistry,
+            engineRegistry = engineRegistry,
             cylinders = cylinders,
             performanceTimeMs = { klangTime.internalMsNow() },
         )
@@ -127,6 +131,10 @@ class JvmAudioBackend(
 
                         is KlangCommLink.Cmd.RegisterIgnitor -> {
                             ignitorRegistry.register(cmd.name, cmd.dsl)
+                        }
+
+                        is KlangCommLink.Cmd.RegisterEngine -> {
+                            engineRegistry.register(cmd.name, cmd.dsl)
                         }
                     }
                 }

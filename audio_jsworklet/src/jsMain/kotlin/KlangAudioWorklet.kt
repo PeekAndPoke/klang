@@ -3,6 +3,7 @@ import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
@@ -37,12 +38,15 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             registerDefaults()
         }
 
+        val engineRegistry = EngineRegistry()
+
         val voices = VoiceScheduler(
             VoiceScheduler.Options(
                 commLink = commLink.backend,
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
                 ignitorRegistry = ignitorRegistry,
+                engineRegistry = engineRegistry,
                 cylinders = cylinders,
                 // Used for performance measurement only
                 performanceTimeMs = { Date.now() },
@@ -134,6 +138,10 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
                         is KlangCommLink.Cmd.RegisterIgnitor -> {
                             ctx.ignitorRegistry.register(cmd.name, cmd.dsl)
+                        }
+
+                        is KlangCommLink.Cmd.RegisterEngine -> {
+                            ctx.engineRegistry.register(cmd.name, cmd.dsl)
                         }
                     }
                 }

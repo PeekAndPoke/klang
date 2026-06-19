@@ -3,7 +3,6 @@
 plugins {
     idea
     kotlin("multiplatform")
-    kotlin("plugin.serialization")
     `maven-publish`
 }
 
@@ -32,8 +31,6 @@ kotlin {
 
                 // All transitive dependencies that notebooks need
                 api(Deps.KotlinX.coroutines_core)
-                api(Deps.KotlinX.serialization_core)
-                api(Deps.KotlinX.serialization_json)
 
                 // GraalVM for script execution
                 api(Deps.JavaLibs.GraalVM.polyglot)

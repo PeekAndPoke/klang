@@ -1,5 +1,8 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
+import io.peekandpoke.klang.audio_be.ADSR_EXP_K
+import io.peekandpoke.klang.audio_be.ENV_DECLICK_SECONDS
+import io.peekandpoke.klang.audio_be.adsrExpNorm
 import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -22,10 +25,17 @@ class EnvelopeRenderer(
     private val envelope: Voice.Envelope,
     private val startFrame: Int,
     private val gateEndFrame: Int,
+    // Per-engine VCA character (the EngineDsl Vca stage). Defaults == the globals,
+    // so the built-in engines render byte-for-byte as before.
+    private val expK: Double = ADSR_EXP_K,
+    private val declickSeconds: Double = ENV_DECLICK_SECONDS,
 ) : BlockRenderer {
 
     // Voice-relative gate end position (Int, avoids Long in per-sample loop)
     private val gateEndPos: Int = gateEndFrame - startFrame
+
+    // Exp-curve normalisation for this engine's curvature (precomputed once per voice).
+    private val expNorm: Double = adsrExpNorm(expK)
 
     override fun render(ctx: BlockContext) {
         val env = envelope
@@ -41,8 +51,11 @@ class EnvelopeRenderer(
         val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
         val relRateDen = if (env.releaseFrames > 0) env.releaseFrames else 1.0
 
+        // Per-engine exp curvature, hoisted into locals for the per-sample loop.
+        val k = expK
+        val norm = expNorm
         // One-pole de-click coefficient for the VCA gain (rounds segment-join corners).
-        val declick = envDeclickCoeff(ctx.sampleRateD)
+        val declick = envDeclickCoeff(declickSeconds, ctx.sampleRateD)
 
         // Compute voice-relative position as Int (once per block, not per sample)
         var absPos = (ctx.blockStart + ctx.offset) - startFrame
@@ -67,7 +80,7 @@ class EnvelopeRenderer(
                     AdsrCurve.Cube -> omp * omp * omp
                     AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
                     AdsrCurve.InvSquare -> omp * (2.0 - omp)
-                    AdsrCurve.Exponential -> adsrExpShape(omp)
+                    AdsrCurve.Exponential -> adsrExpShape(omp, k, norm)
                 }
                 currentEnv = env.releaseStartLevel * shape
             } else {
@@ -82,7 +95,7 @@ class EnvelopeRenderer(
                             AdsrCurve.Cube -> p * p * p
                             AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
                             AdsrCurve.InvSquare -> p * (2.0 - p)
-                            AdsrCurve.Exponential -> adsrExpShape(p)
+                            AdsrCurve.Exponential -> adsrExpShape(p, k, norm)
                         }
                     }
                     // Decay: level = sustain + (1 - sustain) * shape(1 - p)
@@ -96,7 +109,7 @@ class EnvelopeRenderer(
                             AdsrCurve.Cube -> omp * omp * omp
                             AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
                             AdsrCurve.InvSquare -> omp * (2.0 - omp)
-                            AdsrCurve.Exponential -> adsrExpShape(omp)
+                            AdsrCurve.Exponential -> adsrExpShape(omp, k, norm)
                         }
                         sustain + (1.0 - sustain) * shape
                     }

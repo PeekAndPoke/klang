@@ -9,7 +9,6 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.uniqueId
-import kotlinx.serialization.Serializable
 
 /**
  * Sprudel-specific voice data with flat fields.
@@ -25,11 +24,10 @@ import kotlinx.serialization.Serializable
  * allocating a fresh copy per modifier, which is what previously dominated query cost. The trade-off:
  * an instance is NOT safe to share — **the caller is responsible for cloning when a value might be
  * reused or handed to more than one consumer** (use [clone]). The leaf emitters (`AtomicPattern`,
- * `AtomicInfinitePattern`, `StaticSprudelPattern`) clone on emission so every queried event owns its
+ * `AtomicInfinitePattern`) clone on emission so every queried event owns its
  * data; mutate freely from there. There is intentionally no shared `empty` singleton — construct a
  * fresh one with `SprudelVoiceData()`. See `docs/tasks/mutable-voicedata-optimization.md`.
  */
-@Serializable
 data class SprudelVoiceData(
     // note, scale, freq
     var note: String?,
@@ -112,6 +110,8 @@ data class SprudelVoiceData(
     // Voice / Singing
     /** Vowel formant filter (a, e, i, o, u) */
     var vowel: String?,
+    /** Vowel formant dry/wet amount (0.0 = dry source, higher = more vowel colour). Null → default. */
+    var vowelMix: Double?,
 
     // Body resonator
     /** Body resonator material (wood, tube, glass, membrane) — fixed modal resonances mixed over the dry source. */
@@ -605,7 +605,7 @@ data class SprudelVoiceData(
     /**
      * Fresh deep-enough copy: the flat core fields are copied shallow (immutable scalars), and each
      * non-null group is `copy()`-ed so the clone owns its own groups (single-owner invariant — see the
-     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`/`StaticSprudelPattern`). `oscParams` is
+     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`). `oscParams` is
      * treated as immutable-replace, so sharing its reference is fine. As more clusters become groups,
      * add them to the deep-copy list here.
      */
@@ -659,6 +659,7 @@ data class SprudelVoiceData(
             reverb = mergeSvdReverb(reverb, other.reverb),
             sample = mergeSvdSample(sample, other.sample),
             vowel = other.vowel ?: vowel,
+            vowelMix = other.vowelMix ?: vowelMix,
             body = other.body ?: body,
             bodyMix = other.bodyMix ?: bodyMix,
             compressor = other.compressor ?: compressor,
@@ -706,6 +707,7 @@ data class SprudelVoiceData(
         reverb = mergeSvdReverb(reverb, other.reverb)
         sample = mergeSvdSample(sample, other.sample)
         vowel = other.vowel ?: vowel
+        vowelMix = other.vowelMix ?: vowelMix
         body = other.body ?: body
         bodyMix = other.bodyMix ?: bodyMix
         compressor = other.compressor ?: compressor
@@ -843,12 +845,12 @@ data class SprudelVoiceData(
                 )
             }
 
-            // Vowel formant filter
+            // Vowel formant filter — blended over the dry source (source-filter model), like body.
             vowel?.let { vowelValue ->
                 val formantBands = resolveVowelBands(vowelValue)
 
                 formantBands?.let { bands ->
-                    add(FilterDef.Formant(bands = bands))
+                    add(FilterDef.Formant(bands = bands, mix = vowelMix ?: 0.5))
                 }
             }
 
@@ -864,7 +866,7 @@ data class SprudelVoiceData(
 
         // Canonical filter chain order: HIGHPASS → BANDPASS → NOTCH → FORMANT → LOWPASS.
         // Chain order is audible once the filters are nonlinear (analog>0 enables the
-        // Obxd state-dependent saturation, which does NOT commute): the highpass strips
+        // analog-style state-dependent saturation, which does NOT commute): the highpass strips
         // bass before the lowpass's saturator sees it, and the lowpass sits LAST to tame
         // harmonics generated upstream — the "lowpass after distortion" rule, matching
         // the MS-20 / Juno / Diva convention. sprudel's flat fields carry no order of
@@ -1391,6 +1393,7 @@ internal val blueprint = SprudelVoiceData(
     reverb = null,
     sample = null,
     vowel = null,
+    vowelMix = null,
     body = null,
     bodyMix = null,
     compressor = null,

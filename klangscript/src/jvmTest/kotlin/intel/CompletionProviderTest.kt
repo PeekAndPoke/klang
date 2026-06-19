@@ -115,7 +115,7 @@ class CompletionProviderTest : StringSpec({
     "top-level: empty prefix returns all top-level symbols" {
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.topLevelCompletions("").map { it.name }
-        names shouldContainExactlyInAnyOrder listOf("Osc", "OscSlot", "Math", "Object", "PI", "E")
+        names shouldContainExactlyInAnyOrder listOf("Osc", "OscSlot", "Math", "Object", "PI", "E", "Engine", "Stage")
     }
 
     "top-level: filtered prefix" {

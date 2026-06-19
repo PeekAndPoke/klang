@@ -4,10 +4,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.pattern.StaticSprudelPattern
-import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.fail
 import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Differential golden test guarding the mutable-`SprudelVoiceData` refactor (see
@@ -28,14 +27,6 @@ import java.io.File
  * ```
  */
 class MutableVoiceDataGoldenSpec : StringSpec() {
-
-    // explicitNulls=false drops the many null fields (~5MB -> far smaller) while keeping full fidelity
-    // on every set value: a corruption that sets a null field shows up, one that nulls a field shows up.
-    private val json = Json {
-        prettyPrint = false
-        encodeDefaults = true
-        explicitNulls = false
-    }
 
     // jvmTest runs with the module dir (sprudel/) as the working directory.
     private val goldenFile = File("src/jvmTest/resources/golden/voicedata_golden.txt")
@@ -63,20 +54,10 @@ class MutableVoiceDataGoldenSpec : StringSpec() {
         }
     }
 
-    /** Compile, optionally route through a static recording, and capture per-cycle event output. */
+    /** Compile and capture per-cycle event output. */
     private fun capture(entry: GoldenCorpus.Entry): String {
-        val compiled = SprudelPattern.compile(entry.code)
+        val pattern = SprudelPattern.compile(entry.code)
             ?: fail("Failed to compile corpus entry '${entry.name}'")
-
-        val pattern = if (entry.viaStaticRecording) {
-            // Freeze the source into a recording, then re-query it — exercises StaticSprudelPattern,
-            // the third single-ownership leaf (its `it.copy(part=…)` keeps the stored `data` ref).
-            val recorded = (0 until entry.cycles)
-                .flatMap { c -> compiled.queryArc(c.toDouble(), c + 1.0) }
-            StaticSprudelPattern(events = recorded)
-        } else {
-            compiled
-        }
 
         val sb = StringBuilder()
         sb.append("### ").append(entry.name).append('\n')
@@ -92,10 +73,39 @@ class MutableVoiceDataGoldenSpec : StringSpec() {
 
     private fun formatEvent(e: SprudelPatternEvent): String {
         val vd: VoiceData = e.data.toVoiceData()
-        val vdJson = json.encodeToString(VoiceData.serializer(), vd)
         // Tick counts are exact integers (index * T) — stable across runs and platforms.
         return "${e.whole.begin.ticks}|${e.whole.end.ticks}|" +
-                "${e.part.begin.ticks}|${e.part.end.ticks}|${e.isOnset}|$vdJson"
+                "${e.part.begin.ticks}|${e.part.end.ticks}|${e.isOnset}|${vd.golden()}"
+    }
+
+    /**
+     * Compact, deterministic structural dump of a [VoiceData] — replaces the old kotlinx `encodeToString`
+     * (the wire types are no longer `@Serializable`; the worklet uses the KSP codec). Only non-null leaves
+     * are emitted (matching the old `explicitNulls=false`), keys are sorted, so a corruption that sets a
+     * null field adds a key and one that nulls a set field drops a key — both show as a byte diff. Pure
+     * reflection over the data classes, no serialization.
+     */
+    private fun VoiceData.golden(): String {
+        val out = sortedMapOf<String, String>()
+        flattenNonNull(this, "", out)
+        return out.entries.joinToString(",") { "${it.key}=${it.value}" }
+    }
+
+    private fun flattenNonNull(value: Any?, path: String, out: MutableMap<String, String>) {
+        fun child(seg: String) = if (path.isEmpty()) seg else "$path.$seg"
+        when (value) {
+            null -> {} // omit
+            is Number, is Boolean, is CharSequence, is Char -> out[path] = value.toString()
+            is Enum<*> -> out[path] = value.name
+            is List<*> -> value.forEachIndexed { i, v -> flattenNonNull(v, child("$i"), out) }
+            is Map<*, *> -> value.forEach { (k, v) -> flattenNonNull(v, child("$k"), out) }
+            else -> value.javaClass.declaredFields
+                .filter { !it.isSynthetic && !Modifier.isStatic(it.modifiers) && '$' !in it.name }
+                .forEach { f ->
+                    f.isAccessible = true
+                    flattenNonNull(f.get(value), child(f.name), out)
+                }
+        }
     }
 
     private fun buildMismatchMessage(expected: String, actual: String): String {

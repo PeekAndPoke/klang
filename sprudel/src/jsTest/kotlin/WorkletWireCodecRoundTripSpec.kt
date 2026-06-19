@@ -9,36 +9,22 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import kotlinx.serialization.json.Json
+import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
 
 /**
- * Round-trip guard for the **JS-Worklet wire contract**.
+ * Round-trip guard for the **JS-Worklet wire contract** (JS-only — the KSP codec uses `dynamic`).
  *
  * What actually crosses to the audio worklet is a [ScheduledVoice] whose `data` is a [VoiceData] — produced
- * by [SprudelVoiceData.toVoiceData]. `SprudelVoiceData` itself (now grouped into `Svd*` sub-objects) never
+ * by [SprudelVoiceData.toVoiceData]. `SprudelVoiceData` itself (grouped into `Svd*` sub-objects) never
  * crosses the boundary, so its storage shape can't affect the worklet. These tests pin that: a fully-
- * populated voice survives encode→decode unchanged through the **same `Json` config the worklet uses**
- * (`WorkletContract`: `ignoreUnknownKeys = true, explicitNulls = false`).
- *
- * The worklet runs `encodeToDynamic`/`decodeFromDynamic` (JS-only); this uses `encodeToString`/`decode...`,
- * which share the exact same serializer descriptors, and runs on both JVM and JS test targets.
- *
- * Note: `VoiceData` round-trips under `explicitNulls = false` because its fields have defaults (omitted null
- * → default null). `SprudelVoiceData` deliberately has NO defaults (compile-guard), so it is intentionally
- * not decode-round-tripped here — it is never decoded in production.
+ * populated voice survives `encode_ScheduledVoice` → `decode_ScheduledVoice` unchanged through the **actual
+ * runtime codec** (replacing the old kotlinx-JSON proxy — the worklet never used kotlinx). Data classes give
+ * structural `==`.
  */
-class WorkletSerializationRoundTripSpec : StringSpec({
+class WorkletWireCodecRoundTripSpec : StringSpec({
 
-    // Exactly the worklet's codec config (see WorkletContract.codec).
-    val codec = Json {
-        ignoreUnknownKeys = true
-        explicitNulls = false
-    }
-
-    fun roundTrip(sv: ScheduledVoice): ScheduledVoice {
-        val json = codec.encodeToString(ScheduledVoice.serializer(), sv)
-        return codec.decodeFromString(ScheduledVoice.serializer(), json)
-    }
+    fun roundTrip(sv: ScheduledVoice): ScheduledVoice = decode_ScheduledVoice(encode_ScheduledVoice(sv))
 
     fun scheduled(data: VoiceData) = ScheduledVoice(
         playbackId = "pb-1",
@@ -60,7 +46,7 @@ class WorkletSerializationRoundTripSpec : StringSpec({
             hcutoff = 1350.0; hresonance = 0.8; hpattack = 0.02; hpenv = 0.7
             bandf = 800.0; bandq = 1.0; bpenv = 0.5
             notchf = 500.0; nresonance = 0.7; nfenv = 0.4
-            vowel = "a"; body = "wood"; bodyMix = 0.4
+            vowel = "a"; vowelMix = 0.45; body = "wood"; bodyMix = 0.4
             accelerate = 0.1; vibrato = 5.0; vibratoMod = 0.3
             pAttack = 0.01; pDecay = 0.05; pRelease = 0.1; pEnv = 12.0; pCurve = 1.0; pAnchor = 0.5
             fmh = 2.0; fmAttack = 0.01; fmDecay = 0.1; fmSustain = 0.5; fmEnv = 0.8
@@ -103,7 +89,7 @@ class WorkletSerializationRoundTripSpec : StringSpec({
             "formant" to { vowel = "o" },
             "body" to { body = "glass"; bodyMix = 0.5 },
         )
-        for ((name, cfg) in cases) {
+        for ((_, cfg) in cases) {
             val data = createSprudelVoiceData { note = "c4"; freqHz = 261.6; sound = SoundValue.Named("saw"); cfg() }.toVoiceData()
             val decoded = roundTrip(scheduled(data))
             decoded shouldBe scheduled(data)

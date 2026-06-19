@@ -2,6 +2,251 @@
 
 ## Diary
 
+### (2026-06-19) Housekeeping
+
+- moved agent task notes into docs/tasks + docs/tasks-archive
+- renamed History.md -> this dev diary, linked from the README
+
+### (2026-06-17) Engine tuning
+
+- lots of small tweaks, all by ear
+- compressor improvements ... killed an un-steady gain jump
+
+### (2026-06-11) Engine DSL
+
+- configurable engines straight from KlangScript (Engine / Stage objects)
+- data-driven voice pipeline
+- wire-format update ... finally dropped kotlinx.serialization
+- credits page, more songs
+
+### (2026-06-09) Body resonator
+
+- parallel band-pass "body" filter ... floor + peaks
+- vowel() reworked the same way
+- models a passive body, never adds energy
+
+### (2026-06-07) Worklet transport
+
+- custom KSP serializer for the JS audio worklet
+- decode 67µs -> ~400ns ... no more kotlinx on the wire
+
+### (2026-06-06) Mutable VoiceData
+
+- sprudel query perf: SprudelVoiceData now mutable, single-owner
+- kills the per-event copy overhead
+- leaf clone ~17x faster
+
+### (2026-06-03) SuperSaw + oscillator tuning
+
+- supersaw rewrite ... analog flyback shape, no PolyBLEP
+- oscillator sounds tuning & performance
+- still chasing the "plastic pipe"
+
+### (2026-05-29) CycleTime
+
+- replaced Rational with fixed-point CycleTime
+- sprudel query + JS Rational hot path optimizations
+- runtime tuning
+
+### (2026-05-27) Fighting the plastic pipe
+
+- warmth hunt
+- white noise for analogue drift
+- lpf / hpf saturation + randomization
+- filter envelope drift
+- analog param in the Osc DSL
+
+### (2026-05-22) Ignitor variants
+
+- Osc.variants(osc1, osc2) ... combine ignitors
+- Osc.pluck with all params
+- klangscript pluck behaviour params
+
+### (2026-05-19) KlangScript code-gen + engine cleanup
+
+- annotation taxonomy redesign, better code-gen
+- oscillator registration without binding the env to the player
+- better analyzer + code completion
+- more distort variants
+- audio engine cleanup & performance
+
+### (2026-05-05) Klangbuch
+
+- klangbuch foundations (exportable song parts)
+
+### (2026-05-01) Audio engine deep review
+
+- long correctness + performance review pass
+- jvm backend fix ... runs smoothly again
+
+### (2026-04-29) Double arrays everywhere
+
+- ported to Double arrays ... avoid float->double conversion cost on the jvm
+
+### (2026-04-27) Ignitor DSL + click hunt
+
+- more ignitor dsl work
+- hunting clicks in the voices
+
+### (2026-04-16) Named parameters
+
+- KlangScript named params (many small steps)
+- sprudel dsl named params
+- ignitor dsl refactor ... memoization, freqMod at construction time
+
+### (2026-04-13) Pedal engine mode
+
+- "pedal" engine mode
+- comm link: send voices in batches
+- fixing playback startup hickups
+
+### (2026-04-09) ADSR bugs + tutorials
+
+- adsr bug fixes
+- distort oversampling in ignitors
+- seed() with control
+- songs & tutorials
+
+### (2026-04-06) Recording + tutorials
+
+- music writing + music recording skills
+- offline renderer -> wav files
+- lexikon, audio pipeline order change, param docs
+
+### (2026-04-01) Motör branding
+
+- branding rename -> Motör
+- FreqIgnitor
+- KlangScript intellisense step 1
+- sound library improvements
+
+### (2026-03-31) Code quality pass
+
+- code review, bug fixes, cleanup
+- audio dsp benchmark
+
+### (2026-03-28) Exciter DSL
+
+- composable ExciterDsl
+- integration with KlangScript
+- klangscript intellisense ... first steps
+- super oscis voice bug-fix
+
+### (2026-03-24) KlangScript KSP
+
+- ksp for easy registration of native functions
+- audio pipeline code review
+
+### (2026-03-21) sprudel rename
+
+- strudel -> sprudel ... taking our own direction now
+- credits page, spectrometer improvements
+
+### (2026-03-20) Signal generators
+
+- audio engine signal gen, 32bit floats
+- porting the legacy oscillators
+- a few rounds
+- tutorial factory
+
+### (2026-03-16) Rational performance
+
+- rational impl performance
+- removing Long everywhere (JS pain)
+- klangscript AstIndex ... find nodes from code positions
+- optics, base pattern class extraction
+
+### (2026-03-15) KlangScript editor + docs
+
+- extracted editor + common ui into klangscript-ui
+- docs and repl
+- improved error reporting
+- new language feature
+
+### (2026-03-13) Strudel UI tools
+
+- per-effect ui tools: reverb, delay, filters, compressor, waveform
+- audio be/fe time sync
+- code completion
+
+### (2026-03-11) Restructuring
+
+- project restructuring + cleanup
+- audio worklet production build
+- webui dark theme
+
+### (2026-03-06) Mini notation editor
+
+- mini notation editor tool
+- mini notation parser refactoring
+
+### (2026-03-01) KlangScript + klangblocks
+
+- klangscript language features
+- klangblocks: drag & drop, css extraction, string editing, realtime highlighting
+- project cleanup -> claude skills
+
+### (2026-02-27) Klangblocks MVP
+
+- visual block editor mvp
+- editor commons, docs integration
+
+### (2026-02-19) Strudel DSL documentation
+
+- big documentation pass ... KDoc -> KSP doc extraction
+- several refinement rounds across all the lang_*.kt files
+- pattern mapper chaining audit
+- continuous addons: bpm, timeOfDay
+
+### (2026-02-15) Sample library
+
+- sample library page + explorer
+- shared sample preloader, KlangPlaybackContext
+- one-shot / continuous playback
+- klang parser rewrite
+- extracted js worklet (safari attempt)
+
+### (2026-02-11) Web UI + solo
+
+- smooth immediate ui updates, real pages
+- moved solo into the audio backend
+- klangscript modulo / boolean logic
+
+### (2026-02-10) Spectrometer
+
+- browser spectrometer + gauge
+- mini notation: allow // comments mid-line
+- voices ring out on playback cleanup
+
+### (2026-02-08) FE/BE sync
+
+- fixing fe-be startup sync
+- signals bus, playback latency feedback
+- solo() / mute() as hush alias (now with control patterns)
+- audio backend diagnostics
+
+### (2026-02-06) Oscilloscope
+
+- browser oscilloscope
+- web dashboard
+- notes from numbers
+
+### (2026-02-04) Fighting rational numbers (again)
+
+- ... fighting ... with rational numbers
+- using Rational where it actually helps
+- chunk functions (chunkBack, chunkInto)
+- press() / pressBy()
+- delay line + reverb improvements
+
+### (2026-02-02) FM synthesis + filter unification
+
+- fm synthesis
+- audio be filter unification ... clearer pipeline
+- limiter + ShortArray for performance
+- part/whole refactoring wrapped up
+- revv(), applyN(), brak(), invert(), pickF()
+
 ### (2026-01-31) Strudel - Part/Whole Refactoring & Verification
 
 **Implementation Phase (Morning):**

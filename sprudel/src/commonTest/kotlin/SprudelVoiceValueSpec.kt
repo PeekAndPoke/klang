@@ -2,10 +2,8 @@ package io.peekandpoke.klang.sprudel
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeIn
-import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import kotlinx.serialization.json.Json
 
 @Suppress("RegExpRedundantEscape")
 class SprudelVoiceValueSpec : StringSpec({
@@ -402,121 +400,4 @@ class SprudelVoiceValueSpec : StringSpec({
         (emptySeq or 5.asVoiceValue())?.asInt shouldBe 5
     }
 
-    // Serialization tests
-    "VoiceValue.Num: serialization and deserialization" {
-        val original = SprudelVoiceValue.Num(42.5)
-        val json = Json.encodeToString(SprudelVoiceValueSerializer, original)
-        // Num serializes as a JSON number now (values are Double, not Rational).
-        json shouldBe "42.5"
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized shouldBe original
-    }
-
-    "VoiceValue.Text: serialization and deserialization" {
-        val original = SprudelVoiceValue.Text("hello")
-        val json = Json.encodeToString(SprudelVoiceValueSerializer, original)
-        json shouldBe "\"hello\""
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized shouldBe original
-    }
-
-    "VoiceValue.Bool: serialization and deserialization" {
-        val originalTrue = SprudelVoiceValue.Bool(true)
-        val jsonTrue = Json.encodeToString(SprudelVoiceValueSerializer, originalTrue)
-        jsonTrue shouldBe "true"
-        val deserializedTrue = Json.decodeFromString(SprudelVoiceValueSerializer, jsonTrue)
-        deserializedTrue shouldBe originalTrue
-
-        val originalFalse = SprudelVoiceValue.Bool(false)
-        val jsonFalse = Json.encodeToString(SprudelVoiceValueSerializer, originalFalse)
-        jsonFalse shouldBe "false"
-        val deserializedFalse = Json.decodeFromString(SprudelVoiceValueSerializer, jsonFalse)
-        deserializedFalse shouldBe originalFalse
-    }
-
-    "VoiceValue.Seq: serialization and deserialization" {
-        val original = SprudelVoiceValue.Seq(
-            listOf(
-                SprudelVoiceValue.Num(1.1),
-                SprudelVoiceValue.Text("test"),
-                SprudelVoiceValue.Bool(true)
-            )
-        )
-        val json = Json.encodeToString(SprudelVoiceValueSerializer, original)
-        json shouldBe """[1.1,"test",true]"""
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized shouldBe original
-    }
-
-    "VoiceValue.Seq: empty list serialization" {
-        val original = SprudelVoiceValue.Seq(emptyList())
-        val json = Json.encodeToString(SprudelVoiceValueSerializer, original)
-        json shouldBe "[]"
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized shouldBe original
-    }
-
-    "VoiceValue: deserialization of numeric string" {
-        val json = "\"123\""
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized shouldBe SprudelVoiceValue.Text("123")
-        deserialized.asDouble shouldBe 123.0
-    }
-
-    "VoiceValue: deserialization of boolean strings" {
-        val jsonTrue = "\"true\""
-        val deserializedTrue = Json.decodeFromString(SprudelVoiceValueSerializer, jsonTrue)
-        deserializedTrue shouldBe SprudelVoiceValue.Text("true")
-
-        val jsonFalse = "\"false\""
-        val deserializedFalse = Json.decodeFromString(SprudelVoiceValueSerializer, jsonFalse)
-        deserializedFalse shouldBe SprudelVoiceValue.Text("false")
-    }
-
-    "VoiceValue.Num: positive number round-trips" {
-        val twoThirds = SprudelVoiceValue.Num(2.0 / 3.0)
-        val json = Json.encodeToString(SprudelVoiceValueSerializer, twoThirds)
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized.asDouble!! shouldBe (2.0 / 3.0 plusOrMinus 1e-12)
-    }
-
-    "VoiceValue.Num: negative number serialization" {
-        val negativeFiveEighths = SprudelVoiceValue.Num(-5.0 / 8.0)
-        val json = Json.encodeToString(SprudelVoiceValueSerializer, negativeFiveEighths)
-        json shouldBe "-0.625"
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized.asDouble shouldBe (-5.0 / 8.0)
-    }
-
-    "VoiceValue.Num: whole number serialization" {
-        val five = SprudelVoiceValue.Num(5.0)
-        val json = Json.encodeToString(SprudelVoiceValueSerializer, five)
-        // Whole-number doubles format differently across platforms (JVM "5.0", JS "5"); assert it is an
-        // unquoted JSON number of the right value, not a brittle platform-specific string.
-        json.toDoubleOrNull() shouldBe 5.0
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized.asDouble shouldBe 5.0
-    }
-
-    "VoiceValue.Num: zero serialization" {
-        val zero = SprudelVoiceValue.Num(0.0)
-        val json = Json.encodeToString(SprudelVoiceValueSerializer, zero)
-        // Same cross-platform formatting (JVM "0.0", JS "0"): assert the numeric value, not the string.
-        json.toDoubleOrNull() shouldBe 0.0
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized.asDouble shouldBe 0.0
-    }
-
-    "VoiceValue.Num: deserialization from legacy fraction string" {
-        val json = "\"3/4\""
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        deserialized.asDouble shouldBe 0.75
-    }
-
-    "VoiceValue.Num: deserialization from negative fraction string" {
-        val json = "\"-7/10\""
-        val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
-        // Use tolerance due to fixed-point arithmetic precision
-        deserialized.asDouble!! shouldBe (-0.7 plusOrMinus 1e-6)
-    }
 })

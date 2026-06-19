@@ -19,6 +19,11 @@ Currently supported live coding frameworks:
 
 - Strudel (pure Kotlin reimplementation)
 
+# Credits
+
+Klang stands on the shoulders of many open-source projects and references.
+See [CREDITS.MD](CREDITS.MD) for the full list.
+
 # Pre-Alpha-Demo
 
 There are still some rough edges ... For the best experience use a chrome-browser on a laptop or pc please.
@@ -115,3 +120,8 @@ https://klang.finzo.de
 | `common`          | Common    | Shared utilities — caching, math helpers, platform abstractions                |
 | `tones`           | Common    | Music theory — note names, scales, frequencies, MIDI conversion                |
 | `klang-notebook`  | Common/JS | Interactive notebook support — cell execution, reactive evaluation             |
+
+# Dev Diary
+
+A running, informal log of what happened day to day — the wins, the fights, and the dead ends.
+See [dev-diary.md](dev-diary.md).

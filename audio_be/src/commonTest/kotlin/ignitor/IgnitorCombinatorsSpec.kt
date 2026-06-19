@@ -231,7 +231,7 @@ class ExciterCombinatorsSpec : StringSpec({
     }
 
     "lowpass(cutoff, analog>0) - resonance peak compressed under hot drive" {
-        // Obxd state-dependent damping makes `kEff` grow with state; under hot drive at the
+        // Analog-style state-dependent damping makes `kEff` grow with state; under hot drive at the
         // resonance frequency the saturated path must produce a meaningfully smaller peak
         // than the linear path.
         val cutoff = 800.0

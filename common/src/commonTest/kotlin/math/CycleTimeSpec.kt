@@ -9,11 +9,11 @@ import io.kotest.matchers.shouldBe
  */
 class CycleTimeSpec : StringSpec({
 
-    val T = CycleTime.T // 860160.0
+    val T = CycleTime.T // 110100480.0
 
-    "T is 2^13 * 3 * 5 * 7" {
-        T shouldBe 8192.0 * 3 * 5 * 7
-        T shouldBe 860160.0
+    "T is 2^20 * 3 * 5 * 7" {
+        T shouldBe 1048576.0 * 3 * 5 * 7
+        T shouldBe 110100480.0
     }
 
     // --- Exact arithmetic (no rounding) ---
@@ -27,15 +27,15 @@ class CycleTimeSpec : StringSpec({
     // --- Tuplet snapping: round-half-up keeps thirds exact (plain floor would be one tick low) ---
 
     "ofSubdivision tiles exactly for divisors of T (triplets, quintuplets, septuplets)" {
-        CycleTime.ofSubdivision(1, 3).ticks shouldBe 286720.0       // T/3 exact
+        CycleTime.ofSubdivision(1, 3).ticks shouldBe 36700160.0     // T/3 exact
         CycleTime.ofSubdivision(3, 3) shouldBe CycleTime.ONE         // 3 thirds == 1 cycle
         CycleTime.ofSubdivision(5, 5) shouldBe CycleTime.ONE
         CycleTime.ofSubdivision(7, 7) shouldBe CycleTime.ONE
     }
 
-    "ofCycles(1/3) rounds to the nearest tick (286720), not truncated (286719)" {
-        // 1.0/3.0 is just below a true third; plain floor would give 286719.
-        CycleTime.ofCycles(1.0 / 3.0).ticks shouldBe 286720.0
+    "ofCycles(1/3) rounds to the nearest tick (36700160), not truncated (36700159)" {
+        // 1.0/3.0 is just below a true third; plain floor would give 36700159.
+        CycleTime.ofCycles(1.0 / 3.0).ticks shouldBe 36700160.0
     }
 
     "ofCycles never produces -0.0" {

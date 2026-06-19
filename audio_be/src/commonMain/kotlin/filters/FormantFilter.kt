@@ -34,6 +34,12 @@ import kotlin.math.pow
 class FormantFilter(
     bands: List<FilterDef.Formant.Band>,
     sampleRate: Double,
+    // Overall output scale applied to every band. Default 1.0 (unchanged) for any standalone
+    // use. The vowel path passes a small value to tame the Q-scaled peaks (the BPF peak is
+    // `Q·10^(db/20)`, and vowel tables use Q=80–140 → ~+38 dB) down to ~unity, so the bank can
+    // be blended with the dry source by `ParallelMixFilter`. A single scale preserves each
+    // vowel's tuned relative balance exactly — only the overall level changes.
+    gainScale: Double = 1.0,
 ) : AudioFilter {
 
     private data class BandFilter(val filter: LowPassHighPassFilters.SvfBPF, val gain: Double)
@@ -41,7 +47,7 @@ class FormantFilter(
     private val filters = bands.map { band ->
         // dB → linear, with NaN/Inf guard (matches Round-1+ pattern in `bilinearK`).
         val safeDb = if (band.db.isFinite()) band.db else 0.0
-        val gain = 10.0.pow(safeDb / 20.0)
+        val gain = 10.0.pow(safeDb / 20.0) * gainScale
         BandFilter(
             filter = LowPassHighPassFilters.SvfBPF(band.freq, band.q, sampleRate),
             gain = gain

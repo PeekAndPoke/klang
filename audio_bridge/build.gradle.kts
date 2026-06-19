@@ -5,7 +5,6 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
-    kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
     id("io.kotest")
 }
@@ -35,10 +34,8 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                // @Serializable wire types need core + the plugin. JSON is only used by tests (the worklet now
-                // uses the KSP-generated codec) — so serialization_json lives in commonTest, not here.
-                implementation(Deps.KotlinX.serialization_core)
-
+                // Wire types are serialized by the KSP-generated codec (`:audio-wire-codec-ksp`), not kotlinx —
+                // so no serialization plugin/deps here. See docs/tasks/wireformat-enhancements.md.
                 api(project(":common"))
                 api(project(":tones"))
             }
@@ -46,7 +43,6 @@ kotlin {
 
         commonTest {
             dependencies {
-                implementation(Deps.KotlinX.serialization_json)
                 Deps.Test {
                     commonTestDeps()
                 }

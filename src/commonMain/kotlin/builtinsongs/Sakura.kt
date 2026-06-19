@@ -26,7 +26,7 @@ let shaku = Osc.sine().mul(0.6)
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2000).adsr(0.02, 0.2, 0.03, 0.02))
       .highpass(cutoffHz = 300, analog = Osc.slot.analog)
-      .lowpass(cutoffHz = 3500, analog = Osc.slot.analog)
+      .lowpass(cutoffHz = 3500, q = 1.0, analog = Osc.slot.analog)
       .analog(0.2).vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
@@ -46,11 +46,11 @@ let brush = Osc.perlin(30).mul(0.5)
       .adsr(0.01, 0.08, 0.0, 0.02)
 
 let sub = Osc.sine().lowpass(200)
-      .adsr(0.005, 0.3, 0.0, 0.05)
+      .adsr(0.005, 0.4, 0.0, 0.05)
 
-let pad = Osc.supersine().analog(0.3)
-      .lowpass(cutoffHz = Osc.sine(0.08).plus(1).times(300).plus(800), analog = Osc.slot.analog)
-      .adsr(0.8, 0.5, 0.9, 2.0)
+let pad = Osc.supertri(freq = Osc.freq(), voices = 5).analog(5.0)
+      .lowpass(cutoffHz = Osc.sine(0.3).plus(2).times(400).plus(Osc.freq()), q = 2, analog = Osc.slot.analog)
+      .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve("scurve")
 
 
 stack(
@@ -61,7 +61,7 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
   `).sound(koto).legato(0.8).slow(14).gain(0.7)
-    .superimpose(fast(2).gain(0.075).pan(0.3))
+    .superimpose(fast(2).gain(0.095).pan(0.3)).body("wood")
 
   // Shakuhachi
   ,note(`
@@ -72,7 +72,7 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).sound(shaku).slow(14).gain(0.225).adsr("0.05:0.1:1:0.2").pan(perlin.range(0.3, 0.7).slow(24))
+  `).sound(shaku).slow(14).gain(0.25).pan(perlin.range(0.3, 0.7).slow(24)).body("glass")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
@@ -86,19 +86,19 @@ stack(
 
   ,stack(
     // Root
-    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.2).pan(0.4)
+    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.25).pan(0.4)
     // Third (minor/major character)
-    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.2).pan(0.3)
+    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.25).pan(0.7)
     // Fifth
-    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.2).pan(0.2)
+    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.25).pan(0.2)
     // Octave
-    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.2).pan(0.8)
+    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.13).pan(0.8)
     // High third
-    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.2).pan(0.7)
+    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.13).pan(0.3)
     // High fifth
-    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.2).pan(0.6)
-  ).hpf(160).filterWhen(x => x >= wait * 3)
-).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(5)
+    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.13).pan(0.6)
+  ).hpf(160).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
+).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(8)
 
 
 

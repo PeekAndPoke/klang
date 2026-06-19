@@ -1,7 +1,5 @@
 package io.peekandpoke.klang.audio_bridge
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 /**
  * Process-local counter used to stamp each noise-source DSL instance with a unique
@@ -26,7 +24,7 @@ internal fun nextNoiseUid(): Int = noiseUidCounter++
  * or arithmetic combinator. Subtrees are composed declaratively and serialized across the
  * audio bridge boundary for rendering in the audio worklet.
  */
-@Serializable
+@WireFormat
 sealed interface IgnitorDsl {
 
     /** Recursively collects all [Param] leaf nodes in this DSL subtree into [out]. */
@@ -46,8 +44,7 @@ sealed interface IgnitorDsl {
      * @param default constant value when no modulator is wired in
      * @param description human-readable description for UI tooltips and auto-generated docs
      */
-    @Serializable
-    @SerialName("param")
+    @WireName("param")
     data class Param(
         val name: String,
         val default: Double,
@@ -64,8 +61,7 @@ sealed interface IgnitorDsl {
      * Use when the user explicitly sets a value (e.g. `Osc.sine(5)` = 5 Hz).
      * Unlike [Param], this is not discoverable and not overridable at play time.
      */
-    @Serializable
-    @SerialName("const")
+    @WireName("const")
     data class Constant(
         val value: Double,
     ) : IgnitorDsl {
@@ -76,8 +72,7 @@ sealed interface IgnitorDsl {
      * The voice's note frequency (e.g. 440 Hz for A4).
      * Use anywhere a frequency value is needed to track the played note.
      */
-    @Serializable
-    @SerialName("freq")
+    @WireName("freq")
     data object Freq : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
@@ -97,16 +92,16 @@ sealed interface IgnitorDsl {
      * ```
      */
     object Slots {
-        val analog: IgnitorDsl = Param("analog", 0.0)
-        val voices: IgnitorDsl = Param("voices", 8.0)
-        val freqSpread: IgnitorDsl = Param("freqSpread", 0.2)
-        val duty: IgnitorDsl = Param("duty", 0.5)
-        val density: IgnitorDsl = Param("density", 0.2)
-        val decay: IgnitorDsl = Param("decay", 0.996)
-        val brightness: IgnitorDsl = Param("brightness", 0.5)
-        val pickPosition: IgnitorDsl = Param("pickPosition", 0.5)
-        val stiffness: IgnitorDsl = Param("stiffness", 0.0)
-        val rate: IgnitorDsl = Param("rate", 1.0)
+        val analog: IgnitorDsl = Param(name = "analog", default = 0.0)
+        val voices: IgnitorDsl = Param(name = "voices", default = 8.0)
+        val freqSpread: IgnitorDsl = Param(name = "freqSpread", default = 0.2)
+        val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
+        val density: IgnitorDsl = Param(name = "density", default = 0.2)
+        val decay: IgnitorDsl = Param(name = "decay", default = 0.996)
+        val brightness: IgnitorDsl = Param(name = "brightness", default = 0.5)
+        val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.5)
+        val stiffness: IgnitorDsl = Param(name = "stiffness", default = 0.0)
+        val rate: IgnitorDsl = Param(name = "rate", default = 1.0)
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -117,8 +112,7 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /** Sine wave oscillator. */
-    @Serializable
-    @SerialName("sine")
+    @WireName("sine")
     data class Sine(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
@@ -129,8 +123,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Sawtooth wave oscillator (rising ramp). */
-    @Serializable
-    @SerialName("sawtooth")
+    @WireName("sawtooth")
     data class Sawtooth(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
@@ -145,8 +138,7 @@ sealed interface IgnitorDsl {
      * registered to [Pulze] (one pulse oscillator with a `duty` osc-param); this type is retained as a
      * plain 50%-duty pulse used internally (presets, generic test fixtures).
      */
-    @Serializable
-    @SerialName("square")
+    @WireName("square")
     data class Square(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
@@ -157,8 +149,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Triangle wave oscillator. */
-    @Serializable
-    @SerialName("triangle")
+    @WireName("triangle")
     data class Triangle(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
@@ -177,15 +168,13 @@ sealed interface IgnitorDsl {
      * re-using it (`let s = Osc.whitenoise(); s + s`) keeps a single instance and sums the
      * same stream twice.
      */
-    @Serializable
-    @SerialName("white-noise")
+    @WireName("white-noise")
     data class WhiteNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
     /** Zawtooth wave oscillator. Naive sawtooth without PolyBLEP anti-aliasing (brighter/harsher). */
-    @Serializable
-    @SerialName("zawtooth")
+    @WireName("zawtooth")
     data class Zawtooth(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
@@ -196,8 +185,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Zamp wave oscillator ("zamp"). Naive reverse sawtooth without anti-aliasing — the raw [Ramp]. */
-    @Serializable
-    @SerialName("zamp")
+    @WireName("zamp")
     data class Zamp(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
@@ -208,8 +196,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Impulse oscillator. Emits a single-sample spike per cycle. */
-    @Serializable
-    @SerialName("impulse")
+    @WireName("impulse")
     data class Impulse(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
@@ -220,8 +207,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Pulse wave oscillator with variable duty cycle. */
-    @Serializable
-    @SerialName("pulze")
+    @WireName("pulze")
     data class Pulze(
         val freq: IgnitorDsl = Freq,
         val duty: IgnitorDsl = Constant(0.5),
@@ -236,8 +222,7 @@ sealed interface IgnitorDsl {
      * Raw pulse oscillator — naive (no anti-aliasing), the raw counterpart of the rounded pulse
      * (sound names `square`/`pulse`, which use [Pulze]). This type backs the `pulze` sound name.
      */
-    @Serializable
-    @SerialName("raw-pulze")
+    @WireName("raw-pulze")
     data class RawPulze(
         val freq: IgnitorDsl = Freq,
         val duty: IgnitorDsl = Constant(0.5),
@@ -252,8 +237,7 @@ sealed interface IgnitorDsl {
      * Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope.
      * See [WhiteNoise] for the [uid] instance-discriminator story.
      */
-    @Serializable
-    @SerialName("brown-noise")
+    @WireName("brown-noise")
     data class BrownNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
@@ -262,15 +246,13 @@ sealed interface IgnitorDsl {
      * Pink noise generator. Equal energy per octave with -3 dB/oct slope.
      * See [WhiteNoise] for the [uid] instance-discriminator story.
      */
-    @Serializable
-    @SerialName("pink-noise")
+    @WireName("pink-noise")
     data class PinkNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
     /** Perlin noise generator. Smooth, continuous random signal useful for organic modulation. */
-    @Serializable
-    @SerialName("perlin-noise")
+    @WireName("perlin-noise")
     data class PerlinNoise(
         val rate: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {
@@ -280,8 +262,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Berlin noise generator. Bipolar variant of Perlin noise (output ranges -1..+1). */
-    @Serializable
-    @SerialName("berlin-noise")
+    @WireName("berlin-noise")
     data class BerlinNoise(
         val rate: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {
@@ -291,8 +272,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Dust noise generator. Emits sparse random impulses at a controllable density. */
-    @Serializable
-    @SerialName("dust")
+    @WireName("dust")
     data class Dust(
         val density: IgnitorDsl = Constant(0.2),
     ) : IgnitorDsl {
@@ -302,8 +282,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Crackle noise generator. Similar to [Dust] but with bipolar impulses for a crackle texture. */
-    @Serializable
-    @SerialName("crackle")
+    @WireName("crackle")
     data class Crackle(
         val density: IgnitorDsl = Constant(0.2),
     ) : IgnitorDsl {
@@ -313,8 +292,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Ramp oscillator. Reverse sawtooth (ramp up, opposite slope of [Sawtooth]). */
-    @Serializable
-    @SerialName("ramp")
+    @WireName("ramp")
     data class Ramp(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
@@ -325,8 +303,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Unison supersaw oscillator. Stacks multiple detuned sawtooth voices for a thick sound. */
-    @Serializable
-    @SerialName("supersaw")
+    @WireName("supersaw")
     data class SuperSaw(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
@@ -339,8 +316,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Unison supersine oscillator. Stacks multiple detuned sine voices. */
-    @Serializable
-    @SerialName("supersine")
+    @WireName("supersine")
     data class SuperSine(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
@@ -353,8 +329,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Unison supersquare oscillator. Stacks multiple detuned square voices. */
-    @Serializable
-    @SerialName("supersquare")
+    @WireName("supersquare")
     data class SuperSquare(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
@@ -367,8 +342,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Unison supertriangle oscillator. Stacks multiple detuned triangle voices. */
-    @Serializable
-    @SerialName("supertri")
+    @WireName("supertri")
     data class SuperTri(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
@@ -381,8 +355,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Unison superramp oscillator. Stacks multiple detuned ramp voices. */
-    @Serializable
-    @SerialName("superramp")
+    @WireName("superramp")
     data class SuperRamp(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
@@ -395,8 +368,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Silent exciter. Outputs a zero-filled buffer. */
-    @Serializable
-    @SerialName("silence")
+    @WireName("silence")
     data object Silence : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
@@ -406,8 +378,7 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /** Karplus-Strong plucked string physical model. */
-    @Serializable
-    @SerialName("pluck")
+    @WireName("pluck")
     data class Pluck(
         val freq: IgnitorDsl = Freq,
         val decay: IgnitorDsl = Constant(0.996),
@@ -423,8 +394,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Unison superpluck. Stacks multiple detuned Karplus-Strong voices for a chorus-like string sound. */
-    @Serializable
-    @SerialName("superpluck")
+    @WireName("superpluck")
     data class SuperPluck(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
@@ -461,8 +431,7 @@ sealed interface IgnitorDsl {
      * Nested variants all dispatch on the same `soundIndex` — this is intentional,
      * so a single switching axis can drive correlated changes deep in the tree.
      */
-    @Serializable
-    @SerialName("variants")
+    @WireName("variants")
     data class Variants(val children: List<IgnitorDsl>) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             children.forEach { it.collectParams(out) }
@@ -474,8 +443,7 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /** Additive combinator. Sums two ignitor signals sample-by-sample. */
-    @Serializable
-    @SerialName("plus")
+    @WireName("plus")
     data class Plus(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             left.collectParams(out); right.collectParams(out)
@@ -483,8 +451,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Multiplicative combinator. Multiplies two ignitor signals sample-by-sample (ring modulation). */
-    @Serializable
-    @SerialName("times")
+    @WireName("times")
     data class Times(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             left.collectParams(out); right.collectParams(out)
@@ -492,8 +459,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Divides the left signal by the right signal (per-sample division). */
-    @Serializable
-    @SerialName("div")
+    @WireName("div")
     data class Div(
         val left: IgnitorDsl,
         val right: IgnitorDsl = Constant(1.0),
@@ -504,8 +470,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Subtractive combinator. Subtracts the right signal from the left sample-by-sample. */
-    @Serializable
-    @SerialName("minus")
+    @WireName("minus")
     data class Minus(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             left.collectParams(out); right.collectParams(out)
@@ -513,8 +478,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Negates the inner signal (flips polarity). */
-    @Serializable
-    @SerialName("neg")
+    @WireName("neg")
     data class Neg(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -522,8 +486,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Absolute value of the inner signal (full-wave rectification). */
-    @Serializable
-    @SerialName("abs")
+    @WireName("abs")
     data class Abs(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -537,8 +500,7 @@ sealed interface IgnitorDsl {
      * `-(|base|^exp)`. Preserves sign and avoids `NaN` for any real
      * exponent — keeps the engine numerically stable at audio rate.
      */
-    @Serializable
-    @SerialName("pow")
+    @WireName("pow")
     data class Pow(val base: IgnitorDsl, val exp: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             base.collectParams(out); exp.collectParams(out)
@@ -546,8 +508,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Per-sample minimum of two signals. */
-    @Serializable
-    @SerialName("min")
+    @WireName("min")
     data class Min(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             left.collectParams(out); right.collectParams(out)
@@ -555,8 +516,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Per-sample maximum of two signals. */
-    @Serializable
-    @SerialName("max")
+    @WireName("max")
     data class Max(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             left.collectParams(out); right.collectParams(out)
@@ -564,8 +524,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Bounds the inner signal to `[lo, hi]` per sample. */
-    @Serializable
-    @SerialName("clamp")
+    @WireName("clamp")
     data class Clamp(
         val inner: IgnitorDsl,
         val lo: IgnitorDsl = Constant(-1.0),
@@ -577,8 +536,7 @@ sealed interface IgnitorDsl {
     }
 
     /** `e^x` per sample. */
-    @Serializable
-    @SerialName("exp")
+    @WireName("exp")
     data class Exp(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -591,8 +549,7 @@ sealed interface IgnitorDsl {
      * Signed-magnitude: for negative inputs computes `-ln(|x|)`.
      * `log(0)` is treated as `0` to avoid `-Inf` poisoning the audio path.
      */
-    @Serializable
-    @SerialName("log")
+    @WireName("log")
     data class Log(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -604,8 +561,7 @@ sealed interface IgnitorDsl {
      *
      * Signed-magnitude: for negative inputs computes `-√|x|` to keep the engine `NaN`-free.
      */
-    @Serializable
-    @SerialName("sqrt")
+    @WireName("sqrt")
     data class Sqrt(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -613,8 +569,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Sign of the inner signal (`-1`, `0`, or `+1`). */
-    @Serializable
-    @SerialName("sign")
+    @WireName("sign")
     data class Sign(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -622,8 +577,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Hyperbolic tangent per sample (smooth saturation curve). */
-    @Serializable
-    @SerialName("tanh")
+    @WireName("tanh")
     data class Tanh(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -635,8 +589,7 @@ sealed interface IgnitorDsl {
      *
      * Crossfades between [left] and [right] under per-sample weight [t] (typically `[0, 1]`).
      */
-    @Serializable
-    @SerialName("lerp")
+    @WireName("lerp")
     data class Lerp(
         val left: IgnitorDsl,
         val right: IgnitorDsl,
@@ -652,8 +605,7 @@ sealed interface IgnitorDsl {
      *
      * Standard LFO scaler. Output = `lo + (inner + 1)·0.5·(hi − lo)`.
      */
-    @Serializable
-    @SerialName("range")
+    @WireName("range")
     data class Range(
         val inner: IgnitorDsl,
         val lo: IgnitorDsl,
@@ -665,8 +617,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Maps the inner signal from `[0, 1]` to `[-1, 1]` per sample. */
-    @Serializable
-    @SerialName("bipolar")
+    @WireName("bipolar")
     data class Bipolar(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -674,8 +625,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Maps the inner signal from `[-1, 1]` to `[0, 1]` per sample. */
-    @Serializable
-    @SerialName("unipolar")
+    @WireName("unipolar")
     data class Unipolar(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -683,8 +633,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Per-sample floor: largest integer `≤ x`. */
-    @Serializable
-    @SerialName("floor")
+    @WireName("floor")
     data class Floor(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -692,8 +641,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Per-sample ceiling: smallest integer `≥ x`. */
-    @Serializable
-    @SerialName("ceil")
+    @WireName("ceil")
     data class Ceil(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -701,8 +649,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Per-sample round to nearest integer (banker's rounding ties to even). */
-    @Serializable
-    @SerialName("round")
+    @WireName("round")
     data class Round(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -710,8 +657,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Per-sample fractional part: `x − floor(x)`. */
-    @Serializable
-    @SerialName("frac")
+    @WireName("frac")
     data class Frac(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -724,8 +670,7 @@ sealed interface IgnitorDsl {
      * Zero divisors are substituted with a tiny epsilon (1e-30) so the engine
      * never produces `NaN`. The master limiter handles the resulting spike.
      */
-    @Serializable
-    @SerialName("mod")
+    @WireName("mod")
     data class Mod(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             left.collectParams(out); right.collectParams(out)
@@ -738,8 +683,7 @@ sealed interface IgnitorDsl {
      * Zero inputs are substituted with a tiny epsilon (1e-30) so the engine
      * never produces `NaN`. The master limiter handles the resulting spike.
      */
-    @Serializable
-    @SerialName("recip")
+    @WireName("recip")
     data class Recip(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -747,8 +691,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Per-sample square: `x · x`. */
-    @Serializable
-    @SerialName("sq")
+    @WireName("sq")
     data class Sq(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -761,8 +704,7 @@ sealed interface IgnitorDsl {
      * Both branches are evaluated at audio rate (no short-circuit), so the gate is
      * deterministic and stateful sources advance regardless of which branch is selected.
      */
-    @Serializable
-    @SerialName("select")
+    @WireName("select")
     data class Select(
         val cond: IgnitorDsl,
         val whenTrue: IgnitorDsl,
@@ -778,8 +720,7 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /** Shifts the pitch of the inner exciter by a number of semitones. */
-    @Serializable
-    @SerialName("detune")
+    @WireName("detune")
     data class Detune(
         val inner: IgnitorDsl,
         val semitones: IgnitorDsl = Constant(0.0),
@@ -794,15 +735,14 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /** Biquad lowpass filter. Attenuates frequencies above the cutoff. */
-    @Serializable
-    @SerialName("lowpass")
+    @WireName("lowpass")
     data class Lowpass(
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(2000.0),
         val q: IgnitorDsl = Constant(0.707),
         /**
          * Analog character amount. `0` = clean linear filter (default — bit-identical
-         * to pre-Obxd behaviour). Higher values engage the OB-X-style state-dependent
+         * to pre-saturation behaviour). Higher values engage the OB-X-style state-dependent
          * damping in the SVF resonance feedback, compressing the resonance peak.
          * Typical range 0..10; values around 1–3 give Diva-default warmth.
          */
@@ -814,8 +754,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Biquad highpass filter. Attenuates frequencies below the cutoff. */
-    @Serializable
-    @SerialName("highpass")
+    @WireName("highpass")
     data class Highpass(
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(200.0),
@@ -829,8 +768,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Simple one-pole lowpass filter. Lightweight with -6 dB/oct rolloff and no resonance. */
-    @Serializable
-    @SerialName("one-pole-lowpass")
+    @WireName("one-pole-lowpass")
     data class OnePoleLowpass(
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(2000.0),
@@ -841,8 +779,7 @@ sealed interface IgnitorDsl {
     }
 
     /** SVF bandpass filter. Passes frequencies near the cutoff, attenuates others. */
-    @Serializable
-    @SerialName("bandpass")
+    @WireName("bandpass")
     data class Bandpass(
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(1000.0),
@@ -860,8 +797,7 @@ sealed interface IgnitorDsl {
     }
 
     /** SVF notch (band-reject) filter. Removes frequencies near the cutoff, passes others. */
-    @Serializable
-    @SerialName("notch")
+    @WireName("notch")
     data class Notch(
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(1000.0),
@@ -879,8 +815,7 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /** ADSR amplitude envelope. Shapes the inner signal's volume over the note lifecycle. */
-    @Serializable
-    @SerialName("adsr")
+    @WireName("adsr")
     data class Adsr(
         val inner: IgnitorDsl,
         val attackSec: IgnitorDsl = Constant(0.01),
@@ -905,8 +840,7 @@ sealed interface IgnitorDsl {
      * Frequency modulation synthesis. The modulator's output shifts the carrier's frequency
      * at audio rate, with an optional ADSR envelope controlling modulation depth over time.
      */
-    @Serializable
-    @SerialName("fm")
+    @WireName("fm")
     data class Fm(
         val carrier: IgnitorDsl,
         val modulator: IgnitorDsl,
@@ -933,8 +867,7 @@ sealed interface IgnitorDsl {
      * Pre-amplification stage. Boosts signal level before clipping.
      * Types: "linear" (current gain curve).
      */
-    @Serializable
-    @SerialName("drive")
+    @WireName("drive")
     data class Drive(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(0.5),
@@ -957,8 +890,7 @@ sealed interface IgnitorDsl {
      *  - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly),
      *    "stompbox" (diode pedal), "rectify" (full-wave).
      */
-    @Serializable
-    @SerialName("clip")
+    @WireName("clip")
     data class Clip(
         val inner: IgnitorDsl,
         val shape: String = "soft",
@@ -974,8 +906,7 @@ sealed interface IgnitorDsl {
      * New code should use [Drive] + [Clip] instead. The builder extension [IgnitorDsl.distort]
      * creates a Clip(Drive(...)) chain.
      */
-    @Serializable
-    @SerialName("distort")
+    @WireName("distort")
     data class Distort(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(0.5),
@@ -988,8 +919,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Bit-crush effect. Reduces amplitude resolution to create quantization noise. */
-    @Serializable
-    @SerialName("crush")
+    @WireName("crush")
     data class Crush(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(8.0),
@@ -1000,8 +930,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Sample-rate reduction effect. Holds samples to create aliasing artifacts. */
-    @Serializable
-    @SerialName("coarse")
+    @WireName("coarse")
     data class Coarse(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(4.0),
@@ -1017,8 +946,7 @@ sealed interface IgnitorDsl {
      * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
      *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
      */
-    @Serializable
-    @SerialName("phaser")
+    @WireName("phaser")
     data class Phaser(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(0.5),
@@ -1033,8 +961,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Tremolo effect. Modulates amplitude with an LFO for a pulsing volume change. */
-    @Serializable
-    @SerialName("tremolo")
+    @WireName("tremolo")
     data class Tremolo(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(5.0),
@@ -1061,8 +988,7 @@ sealed interface IgnitorDsl {
      * @param tone One-pole lowpass cutoff in Hz applied in the feedback path.
      *   Lower = darker, more ghostly tails. Typical: 2000–6000. Default: 4000.
      */
-    @Serializable
-    @SerialName("shimmer")
+    @WireName("shimmer")
     data class Shimmer(
         val inner: IgnitorDsl,
         val blend: IgnitorDsl = Constant(0.5),
@@ -1086,8 +1012,7 @@ sealed interface IgnitorDsl {
      * @param depth modulation depth in semitones (default 0.25 ≈ quarter-semitone wobble).
      *   Matches the sprudel `vibratoMod()` unit: both specify depth in semitones.
      */
-    @Serializable
-    @SerialName("vibrato")
+    @WireName("vibrato")
     data class Vibrato(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(5.0),
@@ -1099,8 +1024,7 @@ sealed interface IgnitorDsl {
     }
 
     /** Pitch acceleration. Continuously shifts pitch over the voice's duration using an exponential curve. */
-    @Serializable
-    @SerialName("accelerate")
+    @WireName("accelerate")
     data class Accelerate(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(0.0),
@@ -1114,8 +1038,7 @@ sealed interface IgnitorDsl {
      * Pitch envelope. Applies an attack-decay-release envelope to pitch, useful for
      * kick drum sweeps, laser effects, and other transient pitch gestures.
      */
-    @Serializable
-    @SerialName("pitch-envelope")
+    @WireName("pitch-envelope")
     data class PitchEnvelope(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(0.0),
@@ -1140,8 +1063,7 @@ sealed interface IgnitorDsl {
      * This is the general primitive underlying `.vibrato()`, `.accelerate()`, `.fm()`, and
      * `.pitchEnvelope()`. Use it for custom pitch modulation from any Ignitor source.
      */
-    @Serializable
-    @SerialName("pitch-mod")
+    @WireName("pitch-mod")
     data class PitchMod(
         val inner: IgnitorDsl,
         val mod: IgnitorDsl,

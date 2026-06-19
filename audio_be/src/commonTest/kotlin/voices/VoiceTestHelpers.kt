@@ -121,7 +121,7 @@ object VoiceTestHelpers {
             freqHz = freqHz,
             startFrame = startFrame,
         ) + buildFilterPipeline(
-            engine = AudioEngine.Modern,
+            engine = AudioEngine.Modern.dsl,
             modulators = filterModulators,
             startFrame = startFrame,
             gateEndFrame = gateEndFrame,

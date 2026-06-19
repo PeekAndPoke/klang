@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.sprudel
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import kotlinx.serialization.Serializable
 
 /**
  * Mutable sub-objects (`Svd*`) of [SprudelVoiceData], holding cohesive clusters of voice fields.
@@ -21,7 +20,6 @@ import kotlinx.serialization.Serializable
  */
 
 /** ADSR amplitude envelope. */
-@Serializable
 data class SvdAdsr(
     var attack: Double? = null,
     var decay: Double? = null,
@@ -38,7 +36,6 @@ data class SvdAdsr(
  * (cutoff/hcutoff/bandf/notchf, resonance/hresonance/bandq/nresonance, and the `lp`/`hp`/`bp`/`nf`
  * envelope prefixes) — they all map onto these generic fields via the accessors on [SprudelVoiceData].
  */
-@Serializable
 data class SvdFilter(
     var cutoff: Double? = null,
     var resonance: Double? = null,
@@ -50,7 +47,6 @@ data class SvdFilter(
 )
 
 /** Pitch modulation: glide ([accelerate]) + vibrato. */
-@Serializable
 data class SvdPitchMod(
     var accelerate: Double? = null,
     var vibrato: Double? = null,
@@ -58,7 +54,6 @@ data class SvdPitchMod(
 )
 
 /** Pitch envelope. */
-@Serializable
 data class SvdPitchEnv(
     var pAttack: Double? = null,
     var pDecay: Double? = null,
@@ -69,7 +64,6 @@ data class SvdPitchEnv(
 )
 
 /** FM synthesis. */
-@Serializable
 data class SvdFm(
     var fmh: Double? = null,
     var fmAttack: Double? = null,
@@ -79,7 +73,6 @@ data class SvdFm(
 )
 
 /** Distortion + lo-fi (sample-rate / bit-depth reduction). */
-@Serializable
 data class SvdDistortion(
     var distort: Double? = null,
     var distortShape: String? = null,
@@ -91,7 +84,6 @@ data class SvdDistortion(
 )
 
 /** Phaser. */
-@Serializable
 data class SvdPhaser(
     var phaserRate: Double? = null,
     var phaserDepth: Double? = null,
@@ -100,7 +92,6 @@ data class SvdPhaser(
 )
 
 /** Tremolo. */
-@Serializable
 data class SvdTremolo(
     var tremoloSync: Double? = null,
     var tremoloDepth: Double? = null,
@@ -110,7 +101,6 @@ data class SvdTremolo(
 )
 
 /** Ducking / sidechain. */
-@Serializable
 data class SvdDuck(
     var duckCylinder: Int? = null,
     var duckAttack: Double? = null,
@@ -118,7 +108,6 @@ data class SvdDuck(
 )
 
 /** Delay. */
-@Serializable
 data class SvdDelay(
     var delay: Double? = null,
     var delayTime: Double? = null,
@@ -126,7 +115,6 @@ data class SvdDelay(
 )
 
 /** Reverb. */
-@Serializable
 data class SvdReverb(
     var room: Double? = null,
     var roomSize: Double? = null,
@@ -137,7 +125,6 @@ data class SvdReverb(
 )
 
 /** Sample playback manipulation. */
-@Serializable
 data class SvdSample(
     var begin: Double? = null,
     var end: Double? = null,
