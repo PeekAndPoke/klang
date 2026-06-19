@@ -44,13 +44,13 @@ stack(
     .superimpose(
       x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.15, 0.8).slow(32)).clip(0.9)
-    ).lpf(4 * 440).lpq(2.5).hpf(80).notchf(notch).notchq(0.75).body("glass")
+    ).lpf(4 * 440).lpq(2.5).hpf(80).notchf(notch).notchq(0.75).body("glass").vowel("a e".slow(8)).vowelMix(0.1)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.5)).vibrato("0.5".add(perlin.div(10))).vibmod(0.04)
         .crush("1.85".add(berlin2.mul(0.5).slow(4))).crushos(2).lpf(4.5 * 440).hpf(300).postgain(0.4)
         .pan(0.2).superimpose(pan(0.8))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
-    .analog(15).filterWhen(x => x < (wait * 4 + keep)).vowel("a e".slow(8)).vowelMix(0.1)
+    .analog(15).filterWhen(x => x < (wait * 4 + keep))
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
     .orbit(4).gain(0.6).pan(0.4).adsr("0.04:0.2:0.8:2.0").fast(2).degrade(0.1).lpf(4800).late(0.0005)

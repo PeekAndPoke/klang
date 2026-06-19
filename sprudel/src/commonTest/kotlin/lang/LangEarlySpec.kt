@@ -109,15 +109,18 @@ class LangEarlySpec : StringSpec({
                     // But only 2 have onset (will be played)
                     events.size shouldBe 3
                     val onsetEvents = events.filter { it.isOnset }
-                    onsetEvents.size shouldBe 3
+                    onsetEvents.size shouldBe 2
 
-                    // Event 0: Clipped "c" from previous cycle (NO onset - part.begin != whole.begin)
+                    // Event 0: Clipped "c" from previous cycle (NO onset - part.begin != whole.begin).
+                    // late/early clip part to the query window, so this fragment's part starts at the
+                    // window edge (cycle) while its whole began earlier (cycle-0.25): its onset already
+                    // fired in the previous cycle's query, so it must NOT re-trigger here.
                     events[0].data.note shouldBeEqualIgnoringCase "c"
-                    events[0].part.begin.toDouble() shouldBe ((cycleDbl - 0.25) plusOrMinus EPSILON)
+                    events[0].part.begin.toDouble() shouldBe (cycleDbl plusOrMinus EPSILON)
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl - 0.25) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
-                    events[0].isOnset shouldBe true
+                    events[0].isOnset shouldBe false
 
                     // Event 1: "d" with onset
                     events[1].data.note shouldBeEqualIgnoringCase "d"
@@ -127,10 +130,10 @@ class LangEarlySpec : StringSpec({
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[1].isOnset shouldBe true
 
-                    // Event 2: "c" with onset
+                    // Event 2: "c" with onset (part clipped to query end; whole extends past it)
                     events[2].data.note shouldBeEqualIgnoringCase "c"
                     events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.25) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                     events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.25) plusOrMinus EPSILON)
                     events[2].isOnset shouldBe true
@@ -191,15 +194,17 @@ class LangEarlySpec : StringSpec({
                     events.size shouldBe 3
 
                     val onsetEvents = events.filter { it.isOnset }
-                    onsetEvents.size shouldBe 3
+                    onsetEvents.size shouldBe 2
 
-                    // Event 0: Clipped "c" from previous cycle (NO onset)
+                    // Event 0: Clipped "c" from previous cycle (NO onset). part is clipped to the query
+                    // window (begins at cycle) while whole began earlier (cycle-0.25) — its onset fired
+                    // in the previous cycle's query, so it must NOT re-trigger here.
                     events[0].data.value?.asString shouldBeEqualIgnoringCase "c"
-                    events[0].part.begin.toDouble() shouldBe ((cycleDbl - 0.25) plusOrMinus EPSILON)
+                    events[0].part.begin.toDouble() shouldBe (cycleDbl plusOrMinus EPSILON)
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl - 0.25) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
-                    events[0].isOnset shouldBe true
+                    events[0].isOnset shouldBe false
 
                     // Event 1: "d" with onset
                     events[1].data.value?.asString shouldBeEqualIgnoringCase "d"
@@ -209,10 +214,10 @@ class LangEarlySpec : StringSpec({
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[1].isOnset shouldBe true
 
-                    // Event 2: "c" with onset
+                    // Event 2: "c" with onset (part clipped to query end; whole extends past it)
                     events[2].data.value?.asString shouldBeEqualIgnoringCase "c"
                     events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.25) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                     events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.25) plusOrMinus EPSILON)
                     events[2].isOnset shouldBe true

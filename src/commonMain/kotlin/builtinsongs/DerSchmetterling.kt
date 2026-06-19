@@ -11,61 +11,64 @@ internal val derSchmetterlingSong = Song(
     rpm = 34.5,
     icon = "bug",
     code = """
-import * from "stdlib"                                                                                                             //
-import * from "sprudel"                                                                                                           ////
-                                                                                                                                 //  //
-let feel = 5.0    // 0.0 .. ice | 100.0 .. fire                                                                                 //    //
-                                                                                                                               //      //
-                                                                                                                              //        //
-stack(                                                                                                           //////////////          //////////////
-  // Lead                                                                                                          //                              //
-  n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                    //          DISCO!          //
-    .orbit(0).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(9).detune(0.08).analog(feel)                //       FOREVER!       //
-    .hpf(1600).lpf(1700).lpe(berlin.range(1.6, 1.7).fast(4)).lpq(2.5).lpadsr("0.010:1.5:0.3:0.01")                       //                  //
-    .gain(0.50).distort("0.550:tube:4").postgain("<0.550!48 0.260!16>") // . solo()                                       //       //      //
-    .adsr("0.010:2.5:0.0:0.01").adsrCurves("exp:exp:exp").clip(0.9)  // . mute()                                         //     //    //    //
-    .release("<0.04!16 0.08!16>").vibrato(5).vibmod(0.02)                                                               //   //          //  //
-    .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                            // //               // //
-    .superimpose(x => x.transpose(12).detune(0.12).mute("<1!16 0!16>").velocity(0.20).pan(0.1).superimpose(pan(0.9))) //                       //
-    .mute("<1!32 0!192>").engine("pedal"),
+import * from "stdlib"                                                                                                                   //
+import * from "sprudel"                                                                                                                 ////
+                                                                                                                                       //  //
+let feel = 3.0    // 0.0 .. ice | 100.0 .. fire                                                                                       //    //
+                                                                                                                                     //      //
+                                                                                                                                    //        //
+stack(                                                                                                                 //////////////          //////////////
+  // Lead                                                                                                                //                              //
+  n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                          //          DISCO!          //
+    .orbit(0).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(9).detune(0.08).analog(feel)                      //       FOREVER!       //
+    .hpf(1600).lpf(1600).lpe(berlin.range(1.7, 1.75).fast(4)).lpq(1.5).lpadsr("0.010:1.3:0.05:0.01")                            //                  //
+    .gain(0.50).distort("0.600:tube:4").postgain("<0.340!48 0.180!16>") // . solo()                                             //       //      //
+    .adsr("0.010:2.5:0.0:0.01").adsrCurves("exp:exp:exp").clip(0.9)  // . mute()                                               //     //    //    //
+    .release("<0.04!16 0.11!16>").vibrato(5).vibmod(0.02)                                                                     //   //          //  //
+    .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                  // //               // //
+    .superimpose(x => x.transpose(12).detune(0.12).mute("<1!16 0!16>").velocity(0.20).pan(0.1).superimpose(pan(0.9)))       //                       //
+    .mute("<1!32 0!192>").engine("pedal").room("0.3:5:0.1"),
   // Guitar 1
   n(`<[7 4 2 <-1 3 1 3> [0 -1 -3 -1] [0 -3] -2 <[-1 5@3] [5 6@3] [[4 5] 8@3] [[3 4] 3@3]>]!4
       [[4@2 [2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
       [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 2]!4]> [-5 -6] [-7,-14] [-2 <-4 -1>]]>/4`)
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
-    .velocity("1.00 0.95!7 0.98 0.95!7".fast(2)).analog(feel) // . solo()
-    .sound("supersaw").unison(9).detune(0.08).gain(0.8).postgain(0.21).distort("1:diode:2").distort(0.8)    
-    .clip("<0.88!31 0.80 0.88!31 0.85 0.88!30 0.82 0.73>".fast(2)).adsr("0.004:4.0:0.0:0.012").adsrCurves("exp:exp:exp").lpadsr("0.004:1.4:0.0:1.02")    
-    .hpf("<500!48 800!16>").lpf(2300).lpe(0.975).lpq(1.35).warmth(0.08)
-    .coarse(2).pan(0.3).superimpose(pan(0.7))
+    .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel) // . solo()
+    .sound("supersaw").unison(9).detune(0.08).gain(0.8).postgain(0.10).distort("1:diode:4").distort(0.9)    
+    .clip("<0.88!31 0.80 0.88!31 0.85 0.88!30 0.81 0.71>".fast(2)).adsr("0.004:4.0:0.0:0.012").adsrCurves("exp:exp:exp").lpadsr("0.010:1.0:0.0:0.02")    
+    .hpf("<450!16 450!16 450!16 880!16>").lpf("3000".add(saw.range(1, 0).pow(1.5).mul(600)).slow(4)).lpe(0.5).lpq(1.0)
+    .coarse(2).coarseos(8).pan(0.2).superimpose(pan(0.8))
     .engine("pedal").body("wood").bodyMix(0.2)
   ,
   // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
     .orbit(1).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
-    .velocity("1.00 0.94!7 0.97 0.94!7".fast(2)).analog(feel)
-    .sound("supersaw").unison(9).detune(0.09).gain(0.8).postgain(0.20).distort("1:diode:2").distort(0.8)
-    .clip("<0.88!31 0.80 0.88!31 0.85 0.88!30 0.82 0.73>".fast(2)).adsr("0.004:4.5:0.0:0.012").adsrCurves("exp:exp:exp").lpadsr("0.004:1.3:0.0:1.02")    
-    .hpf(140).hpq(1.0).lpf(2300).lpe(0.975).lpq(1.2).warmth(0.05)
-    .coarse(2).pan(0.35).superimpose(
-      x => x.pan(0.65),
-      x => x.orbit(1).postgain(0.19).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))
+    .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
+    .sound("supersaw").unison(7).detune(0.09).gain(0.8).postgain(0.12).distort("1:diode:4").distort(0.9)
+    .clip("<0.88!31 0.80 0.88!31 0.85 0.88!30 0.81 0.71>".fast(2)).adsr("0.005:4.2:0.0:0.012").adsrCurves("exp:exp:exp").lpadsr("0.010:1.0:0.0:0.02")    
+    .hpf(160).lpf(2600).lpe(0.5).lpq(0.8)
+    .coarse(2).coarseos(4).pan(0.45).superimpose(
+      x => x.pan(0.55),
+      x => x.postgain(0.11).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.28).superimpose(pan(0.72))
     ).mute("<0!128 1!16 0!16>").engine("pedal").body("wood").bodyMix(0.2)
   , // Bass
-  n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!48>").fast(2).velocity("1.00 0.95!3 0.97 0.94!3".fast(1)) // . mute()
-    .orbit(4).coarse(2).scale("<e2:minor!88 e2:minor!8>").sound("saw").gain(0.5).distort("0.4:tube:1").postgain(0.46).clip(0.8)
-    .adsr("0.003:3.0:0.0:0.015").adsrCurves("exp:exp:exp").lpadsr("0.003:0.3:0.0:0.01").hpf(70).hpq(1).lpf(600).lpe(0.1) // .solo()
-    .mute("<0!128 1!32>") // .engine("pedal")
+  n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!48>").fast(2).velocity("0.98 0.96!3 0.97 0.95!3".fast(1)) // . mute()
+    .orbit(4).scale("<e2:minor!88 e2:minor!8>").sound("saw").gain(0.1).distort("0.1:diode:1").postgain(0.24).clip(0.75)
+    .adsr("0.004:1.5:0.0:0.005").adsrCurves("exp:exp:exp").lpadsr("0.005:0.3:0.0:0.01").hpf(120).lpf(240).lpe(0.5) // .solo()
+    .superimpose(x => x.sound("sine").transpose(-12).hpf(60).lpf(140).lpe(1).gain(0.5).pan(0.5))
+    .mute("<0!128 1!32>").duck(5).duckdepth(0.5).duckattack(0.1) // .engine("pedal")
   , // Drums
-  sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!24 [bd bd bd bd]!24>").mute("<0!128 1!32>") //  . solo()
-    .orbit(5).gain(0.75).hpf(100).lpf(5000).adsr("0.005:0.2:0.5:0.5"),
-  sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!24 [~    sd    ~    sd]!24>").mute("<0!128 1!32>")  // . solo()
-    .late(0.003).orbit(6).gain(0.50).hpf(210).lpf(5000).adsr("0.005:0.3:0.7:0.5").superimpose(x => x.bandf(200).bandq(4).gain(0.40)),
+  sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!24 [bd bd bd bd]!24>").mute("<0!128 1!32>")  // . solo()
+    .pan(0.4).orbit(5).gain(0.30).hpf(40).lpf(4500).adsr("0.005:0.2:0.7:0.2"),
+  sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!24 [~ sd ~ sd]!24>").mute("<0!128 1!32>")  // . solo()
+    .pan(0.5).late(0.002).orbit(6).gain(0.42).hpf(250).lpf(6200).adsr("0.007:0.1:0.7:0.2")
+    .superimpose(x => x.bandf(200).bandq(4).vel(0.75)),
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!16 [cr hh cr hh]!24 [~ hh ~ hh]!24>").fast(2).mute("<0!128 1!32>")  //  . solo()
-    .late(0.002).orbit(7).gain(0.70).hpf(1200).lpf(5350).adsr("0.005:0.3:0.7:0.5") // . mute()
+    .late(0.003).orbit(7).gain(0.25).hpf(600).lpf(9200).adsr("0.005:0.3:0.7:0.4").analog(feel), // . mute()
+  sound("brown").gain(0.05),
   // Master
-).room("0.2:5:0.1")
- .compressor("-10:2:10:0.02:0.25").seed(timeOfDay.mul(60*60*24))
+).room("0.16:8:0.12").rlp(8000)
+ //.compressor("-7:2.5:6:0.03:0.1").seed(timeOfDay.mul(60*60*24))
 
 
 // Inspired by: Editors - Papillon

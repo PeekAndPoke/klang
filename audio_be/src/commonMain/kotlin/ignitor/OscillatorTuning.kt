@@ -33,8 +33,13 @@ internal const val RAMP_SHAPE_MAX: Double = SAW_SHAPE_MAX
 /** Center-dominant gain falloff: 0 = all voices equal (flat), 1 = only the center voice. */
 internal const val SUPERSAW_SIDE_ATTEN: Double = 0.1
 
-/** Per-voice random *amplitude* offset (±fraction): analog non-uniformity with zero pitch effect. */
-internal const val SUPERSAW_GAIN_JITTER: Double = 0.1
+/**
+ * Per-voice random *amplitude* offset (±fraction): analog non-uniformity with zero pitch effect.
+ * `0.0` = off (uniform gains → consistent loudness); `0.1` was the original. Currently `0.05` = half, a
+ * compromise between analog non-uniformity and note-to-note loudness consistency. Inherited by the
+ * super-ramp/square/tri/sine unison families below.
+ */
+internal const val SUPERSAW_GAIN_JITTER: Double = 0.05
 
 /** Detune spacing shape: 1.0 = even; >1 concentrates voices toward center; <1 spreads outward. */
 internal const val SUPERSAW_DETUNE_POWER: Double = 1.2

@@ -62,9 +62,14 @@ internal class TimeShiftPattern(
                     val shiftPart = ev.part.shift(offset)
                     val shiftWhole = ev.whole.shift(offset)
 
-                    // Clip the shifted event to the time window where this offset is valid
-                    // (i.e. the control event's duration)
-                    val clippedPart = shiftPart.clipTo(controlEvent.part) ?: return@mapNotNull null
+                    // Clip the shifted part to THIS query's output window [outStart, outEnd)
+                    // (= [from, to) ∩ controlEvent.part). Source events carry their full step-span
+                    // part (the codebase convention), so a step straddling a query boundary would
+                    // otherwise be returned as a full onset by both adjacent windows — duplicating
+                    // the hit when the engine queries cycle-by-cycle. Clipping here makes part.begin
+                    // exceed whole.begin for any slice whose onset is outside this window, so each
+                    // onset is emitted by exactly one window (and `whole` is left intact for timing).
+                    val clippedPart = shiftPart.clipTo(outStart, outEnd) ?: return@mapNotNull null
 
                     ev.copy(part = clippedPart, whole = shiftWhole)
                 }
