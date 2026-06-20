@@ -34,12 +34,12 @@ internal const val RAMP_SHAPE_MAX: Double = SAW_SHAPE_MAX
 internal const val SUPERSAW_SIDE_ATTEN: Double = 0.1
 
 /**
- * Per-voice random *amplitude* offset (±fraction): analog non-uniformity with zero pitch effect.
- * `0.0` = off (uniform gains → consistent loudness); `0.1` was the original. Currently `0.05` = half, a
- * compromise between analog non-uniformity and note-to-note loudness consistency. Inherited by the
- * super-ramp/square/tri/sine unison families below.
+ * Per-voice random *amplitude* offset (±fraction) on the SIDE voices: analog non-uniformity with zero
+ * pitch effect. The on-pitch CENTER voice is **exempt** (see `DetunedStackIgnitor.computeVoiceGains`) so it
+ * always rings — which lets this be pushed high for character without bringing back "won't ring".
+ * `0.0` = off; `0.1` was the original. Inherited by the super-ramp/square/tri/sine unison families below.
  */
-internal const val SUPERSAW_GAIN_JITTER: Double = 0.05
+internal const val SUPERSAW_GAIN_JITTER: Double = 0.15
 
 /** Detune spacing shape: 1.0 = even; >1 concentrates voices toward center; <1 spreads outward. */
 internal const val SUPERSAW_DETUNE_POWER: Double = 1.2

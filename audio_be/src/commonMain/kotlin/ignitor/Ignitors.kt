@@ -568,12 +568,18 @@ object Ignitors {
         /**
          * Center-dominant base gains × per-voice amplitude jitter, renormalized to sum 1, with
          * [polarity] folded in (negated for the ramp) so the hot loop needs no per-sample sign flip.
+         *
+         * The CENTER voice (detune ≈ 0 → carries the perceived pitch / the "ring") is **exempt from the
+         * jitter**: a low jitter draw on it would weaken the on-pitch fundamental and make that note
+         * "won't ring." Sides keep full jitter (analog non-uniformity); phases are untouched (random),
+         * so this stabilises only the ring, not the timbre.
          */
         private fun computeVoiceGains() {
             val base = superSawVoiceGains(v, sideAtten)
+            val center = (v - 1) / 2
             var s = 0.0
             for (n in 0 until v) {
-                val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter
+                val jit = if (n == center) 1.0 else 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter
                 val g = (base[n] * jit).coerceAtLeast(0.0)
                 voiceStates[n].gain = g; s += g
             }

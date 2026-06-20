@@ -2,9 +2,13 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
+import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
  * Guards for the saw config of the unified shape ([WaveVoiceState.setSawShape]) and the super-saw
@@ -65,5 +69,55 @@ class AnalogSawSpec : StringSpec({
             for (n in 0 until u) sum += Ignitors.getUnisonDetune(u, 0.2, n)
             sum shouldBe (0.0 plusOrMinus 1e-9)
         }
+    }
+
+    // ── SuperSaw onset: the on-pitch CENTER voice is exempt from the gain jitter (computeVoiceGains), so the
+    // fundamental is always present → no "won't ring", even at a high SUPERSAW_GAIN_JITTER. Side voices +
+    // phases stay random, so onsets still vary (character intact). Ring *consistency* itself is by-ear; these
+    // guard against dead onsets and against accidentally over-uniformising.
+    val onsetSampleRate = 44100
+
+    fun renderOnset(sig: Ignitor, freqHz: Double, blockFrames: Int): AudioBuffer {
+        val buffer = AudioBuffer(blockFrames)
+        val ctx = IgniteContext(
+            sampleRate = onsetSampleRate,
+            voiceDurationFrames = onsetSampleRate,
+            gateEndFrame = onsetSampleRate,
+            releaseFrames = blockFrames,
+            voiceEndFrame = onsetSampleRate + blockFrames,
+            scratchBuffers = ScratchBuffers(blockFrames),
+        ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
+        sig.generate(buffer, freqHz, ctx)
+        return buffer
+    }
+
+    fun AudioBuffer.rms(): Double {
+        var s = 0.0
+        for (i in 0 until size) s += this[i] * this[i]
+        return sqrt(s / size)
+    }
+
+    // 17-voice super-saw (odd → exact center), analog off to isolate the gain/phase mechanism. Uses the
+    // production SUPERSAW_GAIN_JITTER, so this also covers the high-jitter case.
+    fun superSaw17(seed: Int) = Ignitors.superSaw(
+        voices = ParamIgnitor("voices", 17.0),
+        analog = ParamIgnitor("analog", 0.0),
+        rng = Random(seed),
+    )
+
+    "superSaw - center voice exempt from jitter: onsets never go dead across notes" {
+        // Different seeds = different notes. The exempt on-pitch center guarantees a live onset every time
+        // (no "won't ring" lottery), even though side gains + phases are random.
+        (1..16).forEach { renderOnset(superSaw17(it), 220.0, 882).rms() shouldBeGreaterThan 0.02 }
+    }
+
+    "superSaw - onsets still vary across notes (side jitter + phases keep the character)" {
+        val a = renderOnset(superSaw17(1), 220.0, 882)
+        val b = renderOnset(superSaw17(2), 220.0, 882)
+        var differs = false
+        for (i in 0 until a.size) if (abs(a[i] - b[i]) > 1e-6) {
+            differs = true; break
+        }
+        differs shouldBe true
     }
 })
