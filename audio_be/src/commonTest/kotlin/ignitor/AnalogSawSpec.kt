@@ -71,10 +71,10 @@ class AnalogSawSpec : StringSpec({
         }
     }
 
-    // ── SuperSaw onset: the on-pitch CENTER voice is exempt from the gain jitter (computeVoiceGains), so the
-    // fundamental is always present → no "won't ring", even at a high SUPERSAW_GAIN_JITTER. Side voices +
-    // phases stay random, so onsets still vary (character intact). Ring *consistency* itself is by-ear; these
-    // guard against dead onsets and against accidentally over-uniformising.
+    // ── SuperSaw onset: the on-pitch CENTER voice gets only a scaled-down share of the gain jitter
+    // (SUPERSAW_CENTER_JITTER_SCALE in computeVoiceGains), so its fundamental stays strong → no "won't ring",
+    // even at a high SUPERSAW_GAIN_JITTER. Side voices + phases stay random, so onsets still vary (character
+    // intact). Ring *consistency* itself is by-ear; these guard against dead onsets and over-uniformising.
     val onsetSampleRate = 44100
 
     fun renderOnset(sig: Ignitor, freqHz: Double, blockFrames: Int): AudioBuffer {

@@ -29,24 +29,28 @@ The "won't ring" is the **gain jitter**, not the phases. `computeVoiceGains` jit
 including the **center voice** (index `(v-1)/2`, detune ≈ 0 — the one carrying the perceived pitch / the
 "ring"). A low jitter draw on the center → weak on-pitch fundamental → that note won't ring.
 
-## The fix (shipped)
+## The fix (shipped) — parameterized center jitter
 
-**Exempt the center voice from the gain jitter** — `Ignitors.computeVoiceGains`:
+The center voice gets a **scaled-down** share of the gain jitter (not full, not zero) — `computeVoiceGains`:
 
 ```kotlin
 val center = (v - 1) / 2
-val jit = if (n == center) 1.0 else 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter
+val scale = if (n == center) SUPERSAW_CENTER_JITTER_SCALE else 1.0
+val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter * scale
 ```
 
-The center keeps its deterministic base gain (always rings); side voices keep full jitter **and all phases stay
-random** → analog character fully intact. Crucially this is the **gain** axis, not the **phase** axis, which is
-why it's safe where the phase-anchor wasn't (no "soaring"; timbre untouched). This lets `SUPERSAW_GAIN_JITTER`
-be pushed high for grit without bringing won't-ring back — the user settled on **0.15**.
+Side voices always get full jitter **and all phases stay random** → analog character intact. This is the
+**gain** axis, not the **phase** axis, which is why it's safe where the phase-anchor wasn't (no "soaring";
+timbre untouched). Lets `SUPERSAW_GAIN_JITTER` be pushed high for grit (user set **0.15**) without won't-ring.
 
-**Caveat:** the center's *final* gain is `base[center]/s`, and `s` still includes the jittered sides, so the
-center still wobbles **±~4 %** per note (sum-normalisation) vs **±15 %** when jittered directly — ~4× tighter,
-enough to fix the ring, not mathematically perfect. Fuller fix if ever needed = *fixed-share* normalisation
-(center gets a fixed fraction, the rest distributed among the jittered sides).
+**Why parameterized:** fully exempting the center (`scale = 0`) fixed the ring but the user found it
+"boring"/flat — the loud center carrying no per-note variation removed liveliness. So
+`SUPERSAW_CENTER_JITTER_SCALE` (0..1) is a by-ear dial: `0.0` = stable/boring, `1.0` = original won't-ring
+lottery. Default **0.4** (center sees ±0.06 effective jitter vs ±0.15 sides). Applies to all super-* families.
+
+**Caveat:** sum-normalisation already softens the center's swing somewhat (its final gain is `base[center]/s`),
+so the scale is the primary knob. If ring-stability ever needs decoupling from the scale entirely, the fuller
+fix is *fixed-share* normalisation (center gets a fixed fraction, the rest distributed among the jittered sides).
 
 ## Earlier PHASE fixes — BOTH DEAD-ENDS (reverted by ear 2026-06-18). Do NOT re-attempt.
 

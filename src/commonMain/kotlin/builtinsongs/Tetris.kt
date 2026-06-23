@@ -49,29 +49,31 @@ export drumsPattern = `<
 // Lead voice: triangle, mild lpf, pan-spread, tempo-locked delay,
 // octave-superimposed accents.
 export leadShape = (p) => p
-    .sound("tri").clip(0.33).hpf(500).lpf("4000").lpq(3).warmth(0.05)
-    .adsr("0.02:0.2:0.5:0.1").superimpose(x => x.transpose("<0 12 0 -12>/8"))
-    .orbit(0).gain(0.1).pan(0.33).superimpose(pan(0.66))
+    .sound("tri").clip(0.33).hpf(800).lpf("3600").lpe(0.3).lpq(1).warmth(0.1)
+    .orbit(0).gain(0.1).adsr("0.01:0.2:0.5:0.1").lpadsr("0.01:1.0:0.0:0.1")
+    .superimpose(x => x.transpose("<0 12 0 -12>/8").hpf("<800 1200 800 500>/8"),
+                x => x.sound("white").gain(0.01)) // TODO: separate noise with steady rhythm
+    .pan(0.3).superimpose(pan(0.7)).body("wood").bodyMix(0.2)
     .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.2).analog(2.5)
 
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
-    .sound("supersaw").spread(0.5).unison(sine.range(6, 12).slow(80)).warmth(0.1)
-    .orbit(1).gain(0.28).adsr("0.007:0.2:0.8:0.10").pan(0.2)
+    .sound("supersaw").spread(0.5).unison(sine.range(6, 12).slow(80)).warmth(0.05)
+    .orbit(1).gain(0.23).adsr("0.007:0.5:0.7:0.10").lpadsr("0.007:2.0:0.0:0.10").pan(0.2)
     .superimpose(
       x => x.pan(0.8),
       x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
     ).phaser(1/13).phaserdepth(0.20).phasercenter(2000).phasersweep(1000)
-    .detune(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(300).lpf(2500).lpe(1.5).lpq(1.6)
+    .detune(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(260).lpf(2700).lpe(1.5).lpq(1.6)
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.
 export subShape = (p) => p
     .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7).distort("0.3:tube:2").postgain(0.65).analog(2.5)
-    .adsr("0.01:0.2:0.4:0.09").tremolo("0.1:8::0:0").hpf(70).lpf(300).lpe(2) // . solo()
+    .adsr("0.01:0.2:0.4:0.09").tremolo("0.1:8::0:0").hpf(70).lpf(200).lpe(2) // . solo()
 
 // Drums: tight, panned right, fast.
 export drumsShape = (p) => p
-    .orbit(3).gain(0.8).pan(0.6).adsr("0.007:0.2:0.5:1.0").hpf(90).lpf(6200)
+    .orbit(3).gain(0.5).pan(0.6).adsr("0.007:0.2:0.5:1.0").hpf(90).lpf(6200)
     .fast(2)
 
 // ── Assembled parts: shape × pattern, fully voiced and arrangement-free ─
@@ -96,7 +98,13 @@ export song = stack(
     bass.filterWhen(x => x > 31.4 && x % 64 > 15.4),
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
-).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25").swingBy(sine.pow(1.5).mul(0.05).slow(64), 4)
+).room("0.2:5:0.2:5000").compressor("-10:2:10:0.02:0.125").swingBy(sine.pow(1.5).mul(0.05).slow(64), 4)
+
+
+
+
+
+
 
 
 

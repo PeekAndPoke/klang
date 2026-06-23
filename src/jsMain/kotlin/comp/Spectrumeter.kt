@@ -139,7 +139,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // Clear canvas with fade trail effect
         ctx.save()
         ctx.globalCompositeOperation = "destination-out"
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
+        ctx.fillStyle = "rgba(0, 0, 0, 0.66)"
         ctx.fillRect(0.0, 0.0, width, height)
         ctx.restore()
 
