@@ -7,7 +7,7 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.recursiveBjorklund
+import io.peekandpoke.klang.common.math.bjorklund
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -15,8 +15,6 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.struct
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 
 /**
  * Euclidean Pattern: Applies a Euclidean rhythm to an inner pattern.
@@ -134,15 +132,11 @@ internal class EuclideanPattern(
         ): SprudelPattern {
             if (pulses <= 0 || steps <= 0) return EmptyPattern
 
-            // 1. Rotate the bitmap directly
-            // We use bjorklundSprudel to handle negative pulses consistency
-            val bitmap = bjorklundSprudel(pulses, steps)
-            // Normalize rotation to handle large numbers and correct direction
-            // Strudel JS rotates by shifting right for positive numbers.
-            // rotateJs(n) performs left rotate for positive n, right for negative n.
-            // So we negate the modulo result.
+            // Build the euclidean bitmap, then rotate it. Negate so a positive rotation shifts the
+            // onsets towards later steps; the modulo keeps large rotation values within one cycle.
+            val bitmap = bjorklund(pulses, steps)
             val effectiveRotation = rotation % steps
-            val rotatedBitmap = rotateJs(bitmap, -effectiveRotation)
+            val rotatedBitmap = rotate(bitmap, -effectiveRotation)
 
             val onsets = rotatedBitmap.mapIndexedNotNull { i, v -> if (v == 1) i else null }
 
@@ -226,54 +220,15 @@ internal class EuclideanPattern(
             return inner.struct(geometry)
         }
 
-        // Replicates JS Array.prototype.slice behavior exactly
-        private fun <T> List<T>.jsSlice(start: Int, end: Int? = null): List<T> {
-            val len = this.size
-            if (len == 0) return emptyList()
-
-            // JS slice logic:
-            // If index is negative, it's len + index.
-            // If it's still negative (index < -len), it clamps to 0.
-            val s = if (start < 0) max(len + start, 0) else min(start, len)
-
-            val e = if (end == null) {
-                len
-            } else {
-                if (end < 0) max(len + end, 0) else min(end, len)
-            }
-
-            if (s >= e) return emptyList()
-            return this.subList(s, e)
-        }
-
-        // Replicates Strudel's rotate function: array.slice(n).concat(array.slice(0, n))
-        private fun rotateJs(list: List<Int>, n: Int): List<Int> {
-            return list.jsSlice(n) + list.jsSlice(0, n)
-        }
-
-        private fun bjorklundSprudel(pulses: Int, steps: Int): List<Int> {
-            val k = abs(pulses)
-            if (steps <= 0) return emptyList()
-
-            // Calculate base pattern
-            val basePattern = if (k >= steps) {
-                List(steps) { 1 }
-            } else {
-                val offs = steps - k
-
-                val ones = List(k) { listOf(1) }
-                val zeros = List(offs) { listOf(0) }
-
-                val result = recursiveBjorklund(k, offs, ones, zeros)
-                result.first.flatten() + result.second.flatten()
-            }
-
-            // Handle negative pulses by inverting the pattern (1 -> 0, 0 -> 1)
-            return if (pulses < 0) {
-                basePattern.map { 1 - it }
-            } else {
-                basePattern
-            }
+        /**
+         * Rotates [list] by [by] positions: a positive offset moves the head to the back, a
+         * negative offset moves the tail to the front. The offset is clamped to the list length,
+         * so an offset whose magnitude reaches the length leaves the list unchanged.
+         */
+        private fun rotate(list: List<Int>, by: Int): List<Int> {
+            if (list.isEmpty()) return list
+            val split = (if (by >= 0) by else list.size + by).coerceIn(0, list.size)
+            return list.subList(split, list.size) + list.subList(0, split)
         }
     }
 
@@ -357,7 +312,7 @@ internal class EuclideanPattern(
         if (steps <= 0 || steps < abs(pulses)) return emptyList()
 
         val events = createEventList()
-        val rhythm = rotateJs(bjorklundSprudel(pulses, steps), -rotation)
+        val rhythm = rotate(bjorklund(pulses, steps), -rotation)
 
         val startCycle = from.cycleIndex()
         val endCycle = to.ceilToCycle().cycleIndex()

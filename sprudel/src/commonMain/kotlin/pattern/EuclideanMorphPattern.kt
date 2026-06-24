@@ -70,44 +70,30 @@ internal class EuclideanMorphPattern(
             )
         }
 
+        /**
+         * Builds the morphed onset arcs for `by` in 0..1, where 0 keeps the Euclidean rhythm and
+         * 1 spreads the same number of onsets perfectly evenly across the cycle.
+         *
+         * Each onset is placed at the linear interpolation between its Euclidean cycle position and
+         * its evenly-spaced position, and gets a fixed gate length of one step.
+         */
         internal fun calculateMorphedArcs(pulses: Int, steps: Int, by: Double): List<Pair<Double, Double>> {
-            // from: bjorklund(pulses, steps)
-            val fromList = bjorklund(pulses, steps)
-            // to: Array(pulses).fill(1)
-            // We only need the "on" positions.
-
-            // Helper to get positions of 1s in a list
-            fun getPositions(list: List<Int>): List<Double> {
-                val positions = mutableListOf<Double>()
-                val len = list.size
-                for ((index, value) in list.withIndex()) {
-                    if (value == 1) {
-                        positions.add(index.toDouble() / len)
-                    }
-                }
-                return positions
+            // Euclidean onsets: the cycle fraction of every set bit (its index over the step count).
+            val euclideanRhythm = bjorklund(pulses, steps)
+            val stepCount = euclideanRhythm.size
+            val euclideanOnsets = euclideanRhythm.mapIndexedNotNull { index, bit ->
+                if (bit == 1) index.toDouble() / stepCount else null
             }
 
-            val fromPositions = getPositions(fromList)
-            // To list has length 'pulses' and all are 1s.
-            // So positions are 0/pulses, 1/pulses, ...
-            val toPositions = List(pulses) { i -> i.toDouble() / pulses }
+            // Even onsets: the same count of pulses distributed uniformly over the cycle.
+            val evenOnsets = List(pulses) { it.toDouble() / pulses }
 
-            // fromList.size is 'steps'
-            val dur = 1.0 / steps
+            // Fixed gate length of a single step.
+            val gate = 1.0 / steps
 
-            // zipWith logic from JS
-            // const b = by.mul(posb - posa).add(posa);
-            // const e = b.add(dur);
-
-            // We assume fromPositions and toPositions have same length (pulses)
-            // bjorklund returns 'pulses' ones. toPositions has 'pulses' entries.
-            // So zip is safe.
-
-            return fromPositions.zip(toPositions).map { (posA, posB) ->
-                val b = by * (posB - posA) + posA
-                val e = b + dur
-                b to e
+            return euclideanOnsets.zip(evenOnsets).map { (euclideanPos, evenPos) ->
+                val start = euclideanPos + by * (evenPos - euclideanPos)
+                start to (start + gate)
             }
         }
     }

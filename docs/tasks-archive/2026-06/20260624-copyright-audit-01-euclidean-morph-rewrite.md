@@ -2,6 +2,11 @@
 
 **Bucket B (high confidence) · 🔴 must-fix before non-AGPL relicensing · code change**
 
+> **Status: ✅ DONE (2026-06-24).** `calculateMorphedArcs` rewritten with Klang-native naming
+> (`euclideanRhythm`/`euclideanOnsets`/`evenOnsets`/`gate`/`start`) and `mapIndexedNotNull`; all
+> JS-quoting comments removed; interpolation math preserved exactly. Verified: `EuclideanMorphPatternSpec`
+> and `LangEuclidishSpec` pass. (The `bjorklund(pulses, steps)` call it relies on is task 02.)
+
 ## Context
 
 This is the single clearest piece of copied Strudel *expression* in the pattern engine. The morph helper is a

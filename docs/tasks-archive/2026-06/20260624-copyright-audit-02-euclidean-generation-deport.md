@@ -2,6 +2,15 @@
 
 **Bucket B (high confidence) · 🔴 must-fix before non-AGPL relicensing · code change**
 
+> **Status: ✅ DONE (2026-06-24).** `bjorklund` rewritten as an independent iterative grouping loop
+> (own naming: `primary`/`tail`/`fold`/`folded`/`leftover`); `recursiveBjorklund` deleted. In
+> `EuclideanPattern.kt` the `jsSlice`/`rotateJs`/`bjorklundSprudel` helpers were replaced by one
+> idiomatic `rotate(list, by)` (split-index + subList, preserving the original clamping), call sites
+> use the canonical `bjorklund`, all Strudel/JS-citing comments removed, unused imports dropped.
+> Verified: `EuclideanPatternSpec`, `LangEuclidRotSpec`, `EuclideanMorphPatternSpec`, `LangEuclidishSpec`
+> pass. Code-review (independent agent) ran an exhaustive 625-case old-vs-new comparison — identical
+> output — and confirmed `rotate` reproduces the old clamping exactly. Verdict: APPROVE.
+
 ## Context
 
 The euclidean **rhythm generation** (Bjorklund) and the bitmap **rotation** helpers track Strudel's JS

@@ -6,61 +6,39 @@
 package io.peekandpoke.klang.common.math
 
 import kotlin.math.abs
-import kotlin.math.min
 
 /**
- * Calculates the Euclidean rhythm using the Bjorklund algorithm.
+ * Builds the Euclidean rhythm E(pulses, steps): distributes `pulses` onsets as evenly as
+ * possible across `steps` slots, returning a list of 1s (onset) and 0s (rest).
+ *
+ * The result is the canonical, left-justified Euclidean string (an onset falls on the first slot
+ * whenever there is at least one pulse). Negative `pulses` invert the pattern (1↔0).
  */
 fun bjorklund(pulses: Int, steps: Int): List<Int> {
-    val k = abs(pulses)
-    val n = steps
-    if (n <= 0) return emptyList()
+    if (steps <= 0) return emptyList()
 
-    // Calculate base pattern
-    val basePattern = if (k >= n) {
-        List(n) { 1 }
-    } else {
-        val ons = k
-        val offs = n - k
+    val onsets = abs(pulses).coerceAtMost(steps)
+    val rests = steps - onsets
 
-        val ones = List(ons) { listOf(1) }
-        val zeros = List(offs) { listOf(0) }
+    // Bjorklund grouping: start with one bucket per onset (a "1") and one per rest (a "0"), then
+    // repeatedly fold the fewer trailing buckets onto the leading buckets until a single tail group
+    // remains. Reading the buckets back out in order yields the even distribution.
+    var primary = MutableList(onsets) { mutableListOf(1) }
+    var tail = MutableList(rests) { mutableListOf(0) }
 
-        val result = recursiveBjorklund(ons, offs, ones, zeros)
-        result.first.flatten() + result.second.flatten()
+    while (minOf(primary.size, tail.size) > 1) {
+        val fold = minOf(primary.size, tail.size)
+        val folded = ArrayList<MutableList<Int>>(fold)
+        for (i in 0 until fold) {
+            primary[i].addAll(tail[i])
+            folded.add(primary[i])
+        }
+        val leftover = if (primary.size > tail.size) primary else tail
+        val remainder = ArrayList(leftover.subList(fold, leftover.size))
+        primary = folded
+        tail = remainder
     }
 
-    // Handle negative pulses by inverting the pattern (1 -> 0, 0 -> 1)
-    return if (pulses < 0) {
-        basePattern.map { 1 - it }
-    } else {
-        basePattern
-    }
-}
-
-fun recursiveBjorklund(
-    ons: Int,
-    offs: Int,
-    xs: List<List<Int>>,
-    ys: List<List<Int>>,
-): Pair<List<List<Int>>, List<List<Int>>> {
-    // JS logic: Math.min(ons, offs) <= 1 ? [n, x] ...
-    // Note: The JS source uses Math.min(ons, offs) <= 1.
-    if (min(ons, offs) <= 1) return xs to ys
-
-    if (ons > offs) {
-        val offsCount = offs
-        val xsPrefix = xs.take(offsCount)
-        val xsSuffix = xs.drop(offsCount)
-        val newXs = xsPrefix.zip(ys) { a, b -> a + b }
-        val newYs = xsSuffix
-        return recursiveBjorklund(offs, ons - offs, newXs, newYs)
-    } else {
-        val onsCount = ons
-        val ysPrefix = ys.take(onsCount)
-        val ysSuffix = ys.drop(onsCount)
-        val newXs = xs.zip(ysPrefix) { a, b -> a + b }
-        val newYs = ysSuffix
-        return recursiveBjorklund(ons, offs - ons, newXs, newYs)
-    }
+    val pattern = (primary + tail).flatten()
+    return if (pulses < 0) pattern.map { 1 - it } else pattern
 }

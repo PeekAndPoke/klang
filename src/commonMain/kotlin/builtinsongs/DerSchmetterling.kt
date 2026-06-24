@@ -69,7 +69,7 @@ stack(                                                                          
     .pan(0.475).late(0.002).orbit(6).gain(0.23).hpf(180).lpf(7800).adsr("0.005:0.15:0.2:0.2")
     .superimpose(x => x.bandf(200).bandq(4).vel(0.80).lpf(5000)),
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-    .pan(0.525).late(0.0005).orbit(7).gain(0.29).hpf(800).lpf(6200).adsr("0.005:0.08:0.8:0.2"), // . mute()
+    .pan(0.525).late(0.0005).orbit(7).gain(0.31).hpf(800).lpf(6500).adsr("0.005:0.08:0.8:0.2"), // . mute()
   sound("pink!8").gain(0.02).pan(sine.range(0.35, 0.65).slow(3)).adsr("0.008:1.0:0.0:0.02")  // .solo(),
   // Master
 ).room("0.10:8:0.12").rlp(12500).seed(timeOfDay.mul(60*60*24))
@@ -95,6 +95,6 @@ stack(                                                                          
 
 
 
-
+    
     """,
 )
