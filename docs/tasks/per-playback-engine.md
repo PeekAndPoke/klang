@@ -116,19 +116,23 @@ voice = Ignitor + EngineDsl(→Pipeline) → Cylinder (in its PlaybackEngine)
 
 ## Design
 
-### A. `PlaybackEngine` (per playbackId)
+### A. `PlaybackEngine` (per playbackId) — composition
 
-Absorbs `PlaybackCtx` + the per-playback half of `VoiceScheduler`. Owns:
+`PlaybackEngine` is a thin aggregate: **`{ VoiceScheduler(one pid) + Cylinders(lazy) + bus + master }`**.
+`VoiceScheduler` keeps its identity and tests — it becomes **single-playback-scoped**, which *removes*
+machinery rather than adding it:
 
-- `scheduled: KlangMinHeap<ScheduledVoice>`, `active: ArrayList<ActiveVoice>`, solo state
-  (`soloMuteRamp`, `SoloSourceTracker`) — moved verbatim from `VoiceScheduler`.
-- `epoch`, `ignitorRegistry` (fork) — existing `PlaybackCtx` fields.
-- `cylinders: Cylinders` (constructed lazily; **not** `preallocateAll`'d), `bus: StereoBuffer(blockFrames)`.
-- `master: MasterDsl` (from `Cmd.SetMaster`; default unity).
-- Methods: `schedule/replace/clear`, `promote`, `renderInto(bus, cursorFrame)` =
-  `cylinders.clearAll()` → render its active voices into its cylinders → `cylinders.processAndMix(bus)`
-  → (v1) apply `master` gain to `bus`.
-  Global deps (sample store, scratch, clock, voiceFactory, registry parent) are injected by the dispatcher.
+- `playbackContexts: Map<String, PlaybackCtx>` → gone; `epoch` + forked `ignitorRegistry` become plain fields.
+- `ActiveVoice.playbackId` → gone (every active voice here is this playback).
+- `cleanup()/clearScheduled()/replaceVoices()` → drop the `playbackId` param; the **dispatcher** routes each
+  `Cmd` to the right engine's scheduler.
+
+The engine owns `cylinders: Cylinders` (lazy; **not** `preallocateAll`'d), `bus: StereoBuffer(blockFrames)`,
+and `master: MasterDsl` (default unity). Global deps (sample store, scratch, clock, `VoiceFactory`,
+ignitor-registry parent) are **injected** by the dispatcher — the scheduler does not own scratch (decision #5).
+`renderInto(bus, cursorFrame)` = `cylinders.clearAll()` → `scheduler.process(cursorFrame)` (renders its voices
+into its cylinders) → `cylinders.processAndMix(bus)` → (v1) apply `master` gain to `bus`. Diagnostics
+*emission* moves out of `process()` up to the dispatcher (D).
 
 ### B. `PlaybackEngineDispatcher` (host)
 
@@ -144,10 +148,11 @@ Absorbs `PlaybackCtx` + the per-playback half of `VoiceScheduler`. Owns:
 
 ### C. Voice → cylinder routing seam
 
-The shared `RenderContext` carries a `cylinders` pointer; `SendRenderer.kt:27` reads
-`ctx.renderContext.cylinders`. Each engine renders with the `cylinders` pointer set to **its own**
-`Cylinders` (set once per engine's `renderInto`, not per voice — engines render sequentially). Make
-`renderContext.cylinders` a swappable `var`. Single routing change; no per-voice cylinder field.
+`SendRenderer.kt:27` reads `ctx.renderContext.cylinders` (the only `getOrInit` caller). With composition (A),
+each engine's `VoiceScheduler` builds **its own** `RenderContext` once, fixed to that engine's `Cylinders` and
+holding the **shared** scratch arrays by reference. Because engines render **sequentially**, sharing the
+scratch arrays is safe and **no per-voice pointer swap is needed** — each scheduler simply renders into its own
+cylinders. That is the whole routing change.
 
 ### D. Diagnostics reshape
 
@@ -209,10 +214,13 @@ hitch tracked in Open Q1.
 
 ## File-by-file change list
 
-- `audio_be/.../voices/PlaybackCtx.kt` → fold into new `PlaybackEngine` (per-playback state + cylinders +
-  bus + master + render).
-- `audio_be/.../voices/VoiceScheduler.kt` → split: per-playback logic → `PlaybackEngine`; global bits
-  (sample store, scratch, clock, factory) → dispatcher. May dissolve / be renamed.
+- `audio_be/.../voices/PlaybackCtx.kt` → fields fold into the (now single-pid) `VoiceScheduler` as plain
+  fields; file likely removed.
+- `audio_be/.../voices/VoiceScheduler.kt` → becomes **single-playback** (shed `playbackContexts`,
+  `ActiveVoice.playbackId`, `playbackId` params); receives globals injected; stops *emitting* diagnostics
+  (exposes stats instead). Kept as a unit (and its tests).
+- **new** `audio_be/.../voices/PlaybackEngine.kt` — aggregate `{ VoiceScheduler + Cylinders + bus + master }`
+    + `renderInto(bus, cursorFrame)`.
 - **new** `audio_be/.../PlaybackEngineDispatcher.kt` — host: engine map, global resources, `handle(cmd)`,
   `renderBlock(out)`, diagnostics.
 - `audio_be/.../cylinders/Cylinders.kt` — Tier-2 eviction; drop global-`preallocateAll` assumption.
@@ -220,7 +228,8 @@ hitch tracked in Open Q1.
 - `audio_be/.../KlangAudioRenderer.kt` — narrow to final master/output stage (limiter+DC+clip); the sum is
   the dispatcher's job.
 - `audio_be/.../WarmupRunner.kt` — single warmup engine; drop 255-cylinder pre-alloc.
-- `audio_be/.../Voice.kt` (RenderContext) — `cylinders` becomes a swappable `var`.
+- `audio_be/.../Voice.kt` (RenderContext) — one `RenderContext` per engine (own cylinders + shared scratch
+  refs); no swappable pointer needed.
 - `audio_bridge/.../infra/KlangCommLink.kt` — `Diagnostics` reshape + `PlaybackEngineStats`; new
   `Cmd.SetMaster`.
 - **new** `audio_bridge/.../MasterDsl.kt` — `@WireFormat` master config (minimal).
@@ -229,36 +238,79 @@ hitch tracked in Open Q1.
 - `audio_be/src/jvmMain/.../JvmAudioBackend.kt`, `audio_jsworklet/.../KlangAudioWorklet.kt` — thin pumps;
   remove the duplicated `when(cmd)`.
 
-## Implementation order (de-risked, behaviour-neutral first)
+## Deliverables (independently shippable + verifiable)
 
-1. **Centralize dispatch** — extract the duplicated `when(cmd)` into `PlaybackEngineDispatcher.handle`,
-   still backed by the single `VoiceScheduler`/`Cylinders`. Platform backends become pumps. No behaviour change.
-2. **Hoist globals** — move sample store / scratch / clock / factory to the dispatcher; thread them in.
-3. **Introduce `PlaybackEngine`** owning per-playback state + its own `Cylinders` (lazy); dispatcher
-   lazy-creates; render-loop swaps the cylinders pointer (C) + per-engine bus sum (B). One engine ⇒ identical output.
-4. **Explicit cleanup + drain** (E). Tests: stop → engine gone after tails; pause (no Cleanup) → engine kept.
-5. **Cylinder eviction** (F) with generous timeout. Tests: rhythmic orbit not evicted; finished orbit freed.
-6. **Diagnostics reshape** (D) + convenience getters. Update `VoiceSchedulerDiagnosticsTest`.
-7. **Thin master path** (H): `MasterDsl` + `Cmd.SetMaster` + `Song.master` + frontend send + per-engine gain.
-8. **Warmup adaptation** (G); drop `preallocateAll`. Measure browser memory.
+Each deliverable lands on its own branch, keeps the suite green, and has **both a unit gate and a human
+gate**. Ordered so every step is behaviour-neutral or purely additive — nothing degrades single-playback
+audio until D6 (and then only when a non-unity `Song.master` is set).
 
-## Test plan
+### D1 — Centralize Cmd dispatch · *behaviour-neutral refactor*
 
-- `cylinders/CylindersCleanupTest.kt` — eviction removes from map after timeout; rhythmic re-trigger resets
-  the evict timer (no thrash); reconstruct on next `getOrInit`.
-- `voices/VoiceSchedulerDiagnosticsTest.kt` — per-engine `engines` list; aggregates equal old single values.
-- New isolation spec — two playbacks on the same orbit id keep independent reverb/delay/phaser/comp state.
-- New lifecycle spec — `Cmd.Cleanup` drains then disposes; no Cleanup ⇒ engine retained; master survives.
-- New master spec — `Cmd.SetMaster` gain affects only that engine's bus.
-- Run one spec: `--tests` + UNQUOTED FQCN (no quotes/wildcards).
+- **Scope:** new `PlaybackEngineDispatcher` shell owns the *existing* single `VoiceScheduler` + `Cylinders`
+  and exposes `handle(cmd)` + `renderBlock(out)`; both platform backends delegate to it. Removes the
+  duplicated `when(cmd)` (`JvmAudioBackend.kt:114-148` ≈ `KlangAudioWorklet.kt:121-148`).
+- **Unit:** dispatcher test — each `Cmd` subtype routes to the expected scheduler method (spy/fake scheduler).
+- **Human:** JVM app + browser — play / stop / update / register-ignitor behave exactly as before.
+- **Done when:** no `when(cmd)` in either backend; dispatcher is the single dispatch site; suite green.
 
-## Verification (end-to-end)
+### D2 — Per-engine `PlaybackEngine` + dispatcher map · *the core; single-playback identical*
 
-- Single song sounds **identical** to before (dispatch centralization + limiter relocation are
-  behaviour-neutral) — in-browser listen.
-- Two overlapping songs on the same orbit stay clean (no FX bleed) — the bug this fixes.
-- After stopping a song (`Cmd.Cleanup`), `Diagnostics.activeCylinderCount` → 0 and memory drops (eviction).
-- A song's `Song.master` gain is audible without any UI (proves the Song → `Cmd.SetMaster` → engine path).
+- **Scope:** dispatcher hoists globals (sample store, scratch singletons, clock, `VoiceFactory`) and
+  **lazy-creates** one `PlaybackEngine = { VoiceScheduler(one pid) + Cylinders(lazy) + bus }` per pid; sums
+  per-engine buses → `KlangAudioRenderer` (limiter+DC+clip). `VoiceScheduler` sheds its playbackId machinery
+  (A). Warmup → one warmup engine; **drop global `preallocateAll`**; resolve the first-note hitch (small
+  keep-warm orbit pool, or accept lazy + measure).
+- **Unit:** adapted single-pid `VoiceScheduler` tests green; **isolation spec** — two engines (two pids) on
+  the same orbit id keep independent reverb/delay/phaser/comp state.
+- **Human:** a single song is bit-for-bit identical (one engine == old path); two overlapping songs on the
+  same orbit stay clean; first note of a multi-orbit song is glitch-free; browser memory sane (**answers Open Q1**).
+- **Done when:** isolation spec passes; single-song listen identical; no `preallocateAll`.
+
+### D3 — Explicit cleanup + drain lifecycle · *behaviour change: disposal*
+
+- **Scope:** engine created lazily on first `Cmd` for an unknown pid; `Cmd.Cleanup` → drain (stop scheduling,
+  ring out, dispose once `active` empty **and** all cylinders inactive); `cleanupHard` immediate; **no
+  auto-GC**; pause just withholds scheduling.
+- **Unit:** lifecycle spec — `Cleanup` drains then disposes after tails; no-`Cleanup` retains the engine;
+  re-`Schedule` reuses it.
+- **Human:** stop a song with a long reverb → the tail completes, then the engine disappears (diagnostics);
+  pause → resume → no audible re-init, master retained.
+- **Done when:** lifecycle spec passes; stopping no longer clips tails.
+
+### D4 — Cylinder eviction (tier 2) · *memory*
+
+- **Scope:** `Cylinder` tracks idle-since-deactivation; `Cylinders.processAndMix` step 4 evicts from
+  `id2cylinder` after `EVICT_AFTER_SECONDS` (generous, tunable); `getOrInit` reconstructs on next touch.
+- **Unit:** `CylindersCleanupTest` — evict after the timeout; rhythmic re-trigger resets the timer (no
+  thrash); rebuild on next `getOrInit`.
+- **Human:** an orbit used only in an intro frees after the timeout (memory drops); a steady 4-on-floor orbit
+  never evicts (no glitch); after stop, `activeCylinderCount` → 0 and RSS falls.
+- **Done when:** eviction spec passes; measured memory drops for idle orbits; no thrash artifact by ear.
+
+### D5 — Diagnostics reshape · *observable; UI-neutral*
+
+- **Scope:** `PlaybackEngineStats(playbackId, activeVoiceCount, cylinders)` + `engines: List<…>` on
+  `Diagnostics`; computed convenience getters; built + emitted by the dispatcher.
+- **Unit:** `VoiceSchedulerDiagnosticsTest` — per-engine list correct; `activeVoiceCount`/`activeCylinderCount`
+  aggregates equal the old single-engine values for one playback.
+- **Human:** `PlayerMiniStats` gauges read correctly with one engine and with two simultaneous playbacks.
+- **Done when:** diagnostics spec passes; gauges visually unchanged for one playback.
+
+### D6 — Thin master path · *new feature; default no-op*
+
+- **Scope:** `MasterDsl(gain=1.0)` (`@WireFormat`) in `audio_bridge`; `Cmd.SetMaster(playbackId, MasterDsl)`;
+  `Song.master` (default unity); frontend sends `Cmd.SetMaster` on play before the first voices;
+  `PlaybackEngine` applies `master.gain` to its bus.
+- **Unit:** master spec — `SetMaster` gain scales only that engine's bus; unity == unchanged output.
+- **Human:** set `Song.master` gain on a built-in song → audibly quieter/louder, **no UI**; a second song at
+  a different gain is independent.
+- **Done when:** master spec passes; gain is audible end-to-end via `Song`.
+
+## Cross-cutting checks (every deliverable)
+
+- Full suite green; run one spec via `--tests` + UNQUOTED FQCN (no quotes/wildcards).
+- After each structural step: in-browser smoke — play a built-in song, stop, update, replay.
+- Single-playback audio stays identical through D5; only D6 (non-unity `Song.master`) changes the sound.
 
 ## Open questions
 1. **Real browser cost of `preallocateAll` / the 10 s delay ring.** Reconcile the on-paper ~1.9 GB with what
