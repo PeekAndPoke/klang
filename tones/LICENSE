@@ -8,6 +8,8 @@ LICENSE file).
 MIT License
 
 Copyright (c) 2015 danigb (tonal.js — https://github.com/tonaljs/tonal)
+Copyright (c) Felix Roos (chord-voicings, ISC — https://www.npmjs.com/package/chord-voicings;
+              source of the voicing dictionaries in voicing/VoicingDictionary.kt)
 Copyright (c) 2025-2026 The Klang Audio Motör Authors (Kotlin port — see AUTHORS.MD)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

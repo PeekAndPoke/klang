@@ -2,6 +2,14 @@
 
 **Bucket A (no infringement) · 🟢 nice-to-have · docs/credits only**
 
+> **Status: ✅ DONE (2026-06-24).** (1) `chord-voicings` by Felix Roos credited in `tones/LICENSE`,
+> the `VoicingDictionary.kt` header (replaced the inaccurate tonal.js line — the voicing tables come
+> from chord-voicings, not tonal), and `CREDITS.MD`. Review caught it's **ISC**, not MIT (ISC≈MIT,
+> both permissive) — corrected in all three spots. (2) Padé "27/9" `fast_tanh` (musicdsp/KVR public
+> domain) credited in `CREDITS.MD`. PolyBLEP/Freeverb/Zavalishin/Cytomic were **already** credited —
+> no change needed. Docs-only; review verdict APPROVE. Separate-cleanup note (NOT done here):
+> `DspUtil.polyBlep` is confirmed dead code (no call sites) — candidate for deletion later.
+
 ## Context
 
 A few places use third-party *public/permissive* material that is fine to use but under-credited. Adding the

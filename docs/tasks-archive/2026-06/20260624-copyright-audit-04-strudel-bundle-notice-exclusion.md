@@ -17,7 +17,16 @@
     > `lazy` so no GraalVM `Context` is built off-Graal). Verified it skips cleanly on Corretto
     > (BUILD SUCCESSFUL, oracle never constructed).
 > - Provenance/AGPL note added at `sprudel/jsbridge/README.md`.
-    > Code-review (independent agent): APPROVE; its `:klang` dead-dep finding was applied.
+> - **Enforced build guard added (2026-06-24, follow-up):** Gradle task
+    > `verifyNoVendoredStrudelInProduction` (wired into `check`) FAILS the build if a `strudel-bundle*`
+    > file appears in any main source set (`commonMain`/`jsMain`/`jvmMain`) or inside the assembled
+    > `*-jvm-*.jar`. Negative-tested (planting a dummy bundle fails the build with the offender listed;
+    > clean tree passes). This upgrades the guarantee from structural-confinement to an enforced CI
+    > assertion — so the "build enforces test-only" wording above is now literally accurate.
+> - Code-review (independent agent): APPROVE; its `:klang` dead-dep finding was applied. A later IP-counsel
+    > review rated this task RESIDUAL-LOW and recommended exactly the enforced guard above (now done).
+    > NOTE: the "## Context"/"## Plan" sections below predate the work and still cite the old `jvmMain`
+    > paths — they are the original proposal; the Status block is authoritative.
 
 ## Context
 

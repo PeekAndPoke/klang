@@ -54,6 +54,8 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 - **PolyBLEP** (Välimäki et al.) — band-limited oscillator anti-aliasing
 - **Super-saw** after Adam Szabo's *"How to Emulate the Super Saw"* (Roland JP-8000)
 - **Chebyshev-polynomial waveshaping** — harmonic distortion
+- **Padé `tanh` approximation** `x(27+x²)/(27+9x²)` — the public-domain "27/9" fast-tanh from the
+  musicdsp.org / KVR community, used in Klang's soft-clipping (`ClippingFunctions.fastTanh`)
 - **Perlin noise** (Ken Perlin) — organic drift and noise textures
 - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
 
@@ -64,6 +66,8 @@ Making music possible:
 - **[Tonal.js](https://github.com/tonaljs/tonal)** by danigb — music theory library, MIT-licensed.
   Ported to Kotlin in the `:tones` module, which is itself kept under the **MIT License** to match
   upstream — see [tones/LICENSE](tones/LICENSE). (The rest of Klang is AGPL v3.)
+- **[chord-voicings](https://www.npmjs.com/package/chord-voicings)** by Felix Roos — ISC-licensed; source
+  of the jazz / triad voicing dictionaries in the `:tones` module (`voicing/VoicingDictionary.kt`)
 - **[SoundFont2](https://www.npmjs.com/package/soundfont2)** — SoundFont parsing
 - **[JLayer](http://www.javazoom.net/javalayer/javalayer.html)** — MP3 decoding on the JVM
 

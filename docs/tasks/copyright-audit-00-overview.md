@@ -41,7 +41,7 @@ comments, and the vendored Strudel JS bundle used as a JVM test oracle.
 | 03 | [Reimplement the `degrade` family](../tasks-archive/2026-06/20260624-copyright-audit-03-degrade-reimplement.md)                              | B/C (med)    | ✅ done    | code             |
 | 04 | [`strudel-bundle.mjs` — notice + release exclusion](../tasks-archive/2026-06/20260624-copyright-audit-04-strudel-bundle-notice-exclusion.md) | B (verbatim) | ✅ done    | compliance/build |
 | 05 | [Provenance comment & doc-string sweep](../tasks-archive/2026-06/20260624-copyright-audit-05-comment-docstring-sweep.md)                     | C (low)      | ✅ done    | hygiene          |
-| 06 | [Attribution touch-ups (chord-voicings, fast_tanh, PolyBLEP)](copyright-audit-06-attribution-touchups.md)                                    | A            | 🟢 nice   | docs             |
+| 06 | [Attribution touch-ups (chord-voicings, fast_tanh, PolyBLEP)](../tasks-archive/2026-06/20260624-copyright-audit-06-attribution-touchups.md)  | A            | ✅ done    | docs             |
 | 07 | [Control-vocabulary legal review](copyright-audit-07-control-vocabulary-legal-review.md)                                                     | C            | 🟡 lawyer | decision         |
 | 08 | [Tidal (GPL) comparison follow-up](copyright-audit-08-tidal-comparison-followup.md)                                                          | —            | 🟢 later  | audit            |
 

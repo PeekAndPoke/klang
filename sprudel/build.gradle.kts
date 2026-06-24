@@ -1,6 +1,7 @@
 @file:Suppress("PropertyName")
 
 import Deps.Test.configureJvmTests
+import java.util.zip.ZipFile
 
 plugins {
     idea
@@ -99,6 +100,60 @@ tasks {
     // Build the bundle on the fly before the JVM TEST resources are processed (test-only oracle).
     named("jvmTestProcessResources") {
         dependsOn(buildStrudelBundle)
+    }
+
+    // Copyright guard: the vendored verbatim Strudel bundle (AGPL) is a TEST-ONLY oracle. This
+    // assertion FAILS the build if it ever escapes the jvmTest source set into a production (main)
+    // source set or the assembled JVM jar — so it can never reach a distributable / proprietary
+    // artifact. Wired into `check` so CI enforces it. See jsbridge/README.md and
+    // docs/tasks-archive/.../copyright-audit-04-*.
+    val verifyNoVendoredStrudelInProduction = register("verifyNoVendoredStrudelInProduction") {
+        group = "verification"
+        description = "Fails if the vendored Strudel bundle leaks out of jvmTest into a production artifact"
+
+        dependsOn("jvmJar")
+
+        doLast {
+            val offenders = mutableListOf<String>()
+
+            // 1. The bundle must live ONLY under src/jvmTest — never in a main source set.
+            for (rel in listOf("src/commonMain", "src/jsMain", "src/jvmMain")) {
+                val dir = project.file(rel)
+                if (!dir.exists()) continue
+                for (f in dir.walkTopDown()) {
+                    if (f.isFile && f.name.startsWith("strudel-bundle")) {
+                        offenders += f.relativeTo(project.projectDir).path
+                    }
+                }
+            }
+
+            // 2. The assembled production JVM jar(s) must not contain the bundle.
+            val libsDir = project.layout.buildDirectory.dir("libs").get().asFile
+            val jars = libsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".jar") && it.name.contains("-jvm") }.orEmpty()
+            for (jar in jars) {
+                ZipFile(jar).use { zip ->
+                    val entries = zip.entries()
+                    while (entries.hasMoreElements()) {
+                        val entryName = entries.nextElement().name
+                        if (entryName.contains("strudel-bundle")) {
+                            offenders += jar.name + "!" + entryName
+                        }
+                    }
+                }
+            }
+
+            if (offenders.isNotEmpty()) {
+                throw GradleException(
+                    "Vendored Strudel (AGPL) bundle leaked into a production artifact — it must stay test-only " +
+                            "(src/jvmTest/resources, git-ignored; see jsbridge/README.md). Offenders:\n  " +
+                            offenders.joinToString("\n  ")
+                )
+            }
+        }
+    }
+
+    named("check") {
+        dependsOn(verifyNoVendoredStrudelInProduction)
     }
 }
 

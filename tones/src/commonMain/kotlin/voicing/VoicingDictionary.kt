@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
- * Portions derived from tonal.js — Copyright (c) 2015 danigb.
+ * Voicing dictionaries derived from the chord-voicings package by Felix Roos — Copyright (c) Felix Roos (ISC).
  * SPDX-License-Identifier: MIT
  * Full license: tones/LICENSE
  */
