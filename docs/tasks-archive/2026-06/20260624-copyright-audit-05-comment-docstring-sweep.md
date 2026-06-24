@@ -2,6 +2,20 @@
 
 **Bucket C (low) · 🟡 should-fix · hygiene, no structural code change**
 
+> **Status: ✅ DONE (2026-06-24).** Comment/KDoc-only sweep across `sprudel/src/commonMain` (~30 sites).
+> Reworded/removed: "Equivalent to X in JS Strudel" join-combinator KDocs → "in Tidal / cyclic-pattern
+> languages"; all `// JavaScript: <formula>` / `Matches JS:` / `Equivalent to JS:` transcription comments
+> (incl. JS arrow-function/`listRange` one-liners in `lang_tempo`); `(matches JS behavior)` /
+> `JS Strudel semantics` in `StructurePattern`/`PickReset`/`PickRestart`; the verbatim `berlin` doc-string;
+> `JavaScript Sprudel's register()`; stale `If JS implementation differs…` notes. Kept (legitimate): interop
+> note (`strudel-compat`), credits/terminology (`orbit in Strudel/Tidal`, `NOT in the original strudel impl`,
+> `chunk in TidalCycles`), Kotlin/JS compile-target perf notes, and the project's own DSL `@example` snippets
+> (which use KlangScript `x => …` arrow syntax — not copied JS). Verified comment-only: `compileKotlinJvm`
+> + specs pass. Code-review (independent agent): approved the sweep's accuracy/completeness; its lone
+    > "BLOCKER" was the unrelated `DerSchmetterling.kt` by-ear tuning (a different module, not part of this task)
+    > — left untouched for the author to commit separately. Its recommended completeness items + 2 wording NITs
+    > were applied.
+
 ## Context
 
 Across the engine, the author documented Strudel's JS formula in comments and then implemented it. Where the

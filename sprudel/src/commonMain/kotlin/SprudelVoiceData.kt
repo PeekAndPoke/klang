@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
  *
  * This is the intermediate representation used within the Sprudel pattern system.
  * It uses flat fields (no complex objects like AdsrDef or FilterDefs) to match
- * the original JavaScript Strudel implementation.
+ * the flat value model of cyclic-pattern languages.
  *
  * Gets converted to [VoiceData] when passed to the audio engine.
  *

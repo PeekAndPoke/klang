@@ -64,13 +64,13 @@ stack(                                                                          
     .coarse(2).pan(0.50).mute("<0!128 1!32>") // .engine("pedal")
   , // Drums
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").mute("<0!128 1!32>")  // . solo()
-    .pan(0.5).orbit(5).gain(0.24).hpf(35).lpf(7500).adsr("0.004:0.15:0.5:0.2"),
+    .pan(0.5).orbit(5).gain(0.23).hpf(35).lpf(7500).adsr("0.004:0.15:0.5:0.2"),
   sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>").mute("<0!128 1!32>")  // . solo()
-    .pan(0.475).late(0.002).orbit(6).gain(0.23).hpf(180).lpf(8200).adsr("0.005:0.15:0.2:0.2")
+    .pan(0.475).late(0.002).orbit(6).gain(0.225).hpf(180).lpf(8200).adsr("0.005:0.15:0.2:0.2")
     .superimpose(x => x.bandf(200).bandq(4).vel(0.80).lpf(5000)),
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-    .pan(0.525).late(0.0005).orbit(7).gain(0.32).hpf(800).lpf(7500).adsr("0.005:0.15:0.8:0.2"), // . mute()
-  sound("pink!8").gain(0.02).pan(sine.range(0.35, 0.65).slow(3)).adsr("0.008:1.0:0.0:0.02")  // .solo(),
+    .pan(0.525).late(0.0005).orbit(7).gain(0.31).hpf(800).lpf(7500).adsr("0.005:0.15:0.8:0.2"), // . mute()
+  sound("pink!8").gain(0.07).hpf(8000).pan(sine.range(0.35, 0.65).slow(3)).adsr("0.008:0.3:0.0:0.01") //  .solo(),
   // Master
 ).room("0.10:8:0.12").rlp(12500).seed(timeOfDay.mul(60*60*24))
  .compressor("-6:2:5:0.02:0.05")

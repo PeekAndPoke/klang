@@ -982,7 +982,7 @@ private fun createBerlin2(): SprudelPattern {
  * Continuous Berlin noise — sawtooth-textured unscaled values in `0..1`.
  *
  * Like [perlin] but built from sawtooth waves, giving a harsher, more angular quality.
- * Conceived by James Coyne and Jade Rowland as a joke but turned out to be surprisingly useful.
+ * The sawtooth construction makes it a characterful, surprisingly musical modulation source.
  * Use [range] to map to a target parameter range.
  *
  *

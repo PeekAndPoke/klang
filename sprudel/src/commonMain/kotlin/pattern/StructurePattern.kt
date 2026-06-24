@@ -111,11 +111,11 @@ internal class StructurePattern(
 
                 if (clippedPart != null) {
                     // Create the final event with mask's whole
-                    // JS Strudel semantics: struct "rebirths" events within mask boundaries
+                    // struct "rebirths" events within mask boundaries:
                     // so whole is set to mask boundaries, not preserved from source
                     val finalEvent = sourceEvent.copy(
                         part = clippedPart,
-                        whole = maskEvent.whole  // Set to mask's whole (JS behavior)
+                        whole = maskEvent.whole  // the structuring pattern provides the whole
                     ).prependLocations(maskEvent.sourceLocations)
 
                     result.add(finalEvent)

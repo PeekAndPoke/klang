@@ -14,7 +14,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 /**
  * An infinite pattern that repeats the given [data] every cycle (0..1, 1..2, ...).
  *
- * Equivalent to `pure(x)` in JS Strudel when used inside time transformations like `ply`.
+ * Equivalent to `pure(x)` in Tidal / cyclic-pattern languages when used inside time transformations like `ply`.
  * Unlike [AtomicPattern] which usually represents a single event at 0..1, this pattern
  * conceptually exists across all time.
  */

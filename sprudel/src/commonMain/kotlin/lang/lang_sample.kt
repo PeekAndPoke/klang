@@ -506,7 +506,7 @@ private fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val slowed = source.unit("c").slow(factor)
 
     // Then set the speed parameter and unit to compensate for sample playback
-    // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
+    // Compensate sample playback so it plays at its natural rate across factor cycles.
     // With default cps=0.5: speed = 1/(2*factor)
     val speedControl = args.toPattern(loopAtSpeedMutation)
 
@@ -575,7 +575,7 @@ private fun applyLoopAtCps(source: SprudelPattern, args: List<SprudelDslArg<Any?
         // Calculate speed: (1 / factor) * cps
         val speed = (1.0 / factor) * cps
 
-        // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
+        // Compensate sample playback so it plays at its natural rate across factor cycles.
         pat.speed(speed).unit("c").slow(factor)
     }
 }
