@@ -5,11 +5,6 @@
 
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.EngineRegistry
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
-import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineScope
@@ -30,38 +25,17 @@ class JvmAudioBackend(
     // KlangTime for timing measurements
     private val klangTime = KlangTime.create()
 
-    // 1. Setup DSP Graph
-    val cylinders = Cylinders(blockFrames = blockSize, sampleRate = sampleRate)
-
-    val ignitorRegistry = IgnitorRegistry().apply {
-        registerDefaults()
-    }
-
-    val engineRegistry = EngineRegistry()
-
-    val voices = VoiceScheduler(
-        VoiceScheduler.Options(
-            commLink = commLink,
-            sampleRate = sampleRate,
-            blockFrames = blockSize,
-            ignitorRegistry = ignitorRegistry,
-            engineRegistry = engineRegistry,
-            cylinders = cylinders,
-            performanceTimeMs = { klangTime.internalMsNow() },
-        )
-    )
-
-    // 2. Create Renderer
-    val renderer = KlangAudioRenderer(
+    // 1. DSP graph + Cmd dispatch — shared with the JS worklet backend (see PlaybackEngineDispatcher).
+    private val dispatcher = PlaybackEngineDispatcher.create(
         sampleRate = sampleRate,
         blockFrames = blockSize,
-        voices = voices,
-        cylinders = cylinders
+        commLink = commLink,
+        performanceTimeMs = { klangTime.internalMsNow() },
     )
 
     override suspend fun run(scope: CoroutineScope) {
         // Set backend start time from KlangTime relative clock
-        voices.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
+        dispatcher.voices.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
 
         // Kick off JIT / cache warmup. JVM JIT is warmer than Kotlin/JS but running the same
         // path keeps behavior consistent across targets (and costs ~85 ms of silence at start).
@@ -69,8 +43,8 @@ class JvmAudioBackend(
         // reset at the end of the handshake so nothing leaks into real playback.
         val warmup = WarmupRunner(
             sampleRate = sampleRate,
-            voices = voices,
-            renderer = renderer,
+            voices = dispatcher.voices,
+            renderer = dispatcher.renderer,
             feedback = commLink,
         )
         warmup.start()
@@ -110,44 +84,13 @@ class JvmAudioBackend(
                 // Get events
                 while (true) {
                     val cmd = commLink.control.receive() ?: break
-
-                    when (cmd) {
-                        is KlangCommLink.Cmd.ScheduleVoice -> {
-                            voices.scheduleVoice(voice = cmd.voice, clearScheduled = cmd.clearScheduled)
-                        }
-
-                        is KlangCommLink.Cmd.ScheduleVoices -> {
-                            voices.scheduleVoices(cmd.voices)
-                        }
-
-                        is KlangCommLink.Cmd.ReplaceVoices -> {
-                            voices.replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
-                        }
-
-                        is KlangCommLink.Cmd.Cleanup -> {
-                            voices.cleanup(cmd.playbackId)
-                        }
-
-                        is KlangCommLink.Cmd.ClearScheduled -> {
-                            voices.clearScheduled(cmd.playbackId)
-                        }
-
-                        is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
-
-                        is KlangCommLink.Cmd.RegisterIgnitor -> {
-                            ignitorRegistry.register(cmd.name, cmd.dsl)
-                        }
-
-                        is KlangCommLink.Cmd.RegisterEngine -> {
-                            engineRegistry.register(cmd.name, cmd.dsl)
-                        }
-                    }
+                    dispatcher.handle(cmd)
                 }
 
                 // rendering ///////////////////////////////////////////////////////////////////////////////////////
                 // Always render — warmup voices live on the real scheduler so this exercises
                 // the actual render path for JIT / cache priming.
-                renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)
+                dispatcher.renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)
 
                 if (warmup.isWarming) {
                     outShorts.fill(0)

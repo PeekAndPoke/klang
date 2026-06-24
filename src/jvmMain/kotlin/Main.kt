@@ -16,6 +16,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Playground entry point for testing real-time JVM audio playback.
@@ -50,10 +51,12 @@ suspend fun main() {
 
     println("Starting playback...")
     val playback = player.play(pattern)
-    playback.start(KlangCyclicPlayback.Options(rpm = 33.0))
+    playback.start(KlangCyclicPlayback.Options(rpm = 34.0))
 
-    delay(600_000)
+    delay(600.seconds)
+
     playback.stop()
     player.shutdown()
+
     println("Done")
 }

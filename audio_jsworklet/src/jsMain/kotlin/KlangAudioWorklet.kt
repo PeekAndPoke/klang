@@ -3,15 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.EngineRegistry
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
-import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.AudioWorkletProcessor
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -36,41 +31,27 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         val commLink = KlangCommLink()
         val klangTime = KlangTime.create()  // Creates AudioWorklet-specific time source
 
-        // Core DSP components
-        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
-
-        val ignitorRegistry = IgnitorRegistry().apply {
-            registerDefaults()
-        }
-
-        val engineRegistry = EngineRegistry()
-
-        val voices = VoiceScheduler(
-            VoiceScheduler.Options(
-                commLink = commLink.backend,
-                sampleRate = sampleRate,
-                blockFrames = blockFrames,
-                ignitorRegistry = ignitorRegistry,
-                engineRegistry = engineRegistry,
-                cylinders = cylinders,
-                // Used for performance measurement only
-                performanceTimeMs = { Date.now() },
-            )
-        )
-
-        val renderer = KlangAudioRenderer(
+        // DSP graph + Cmd dispatch — shared with the JVM backend (see PlaybackEngineDispatcher).
+        private val dispatcher = PlaybackEngineDispatcher.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voices = voices,
-            cylinders = cylinders
+            commLink = commLink.backend,
+            // Used for performance measurement only
+            performanceTimeMs = { Date.now() },
         )
+
+        val voices get() = dispatcher.voices
+        val renderer get() = dispatcher.renderer
 
         val warmup = WarmupRunner(
             sampleRate = sampleRate,
-            voices = voices,
-            renderer = renderer,
+            voices = dispatcher.voices,
+            renderer = dispatcher.renderer,
             feedback = commLink.backend,
         )
+
+        /** Route an inbound command to the shared dispatcher. */
+        fun handle(cmd: KlangCommLink.Cmd) = dispatcher.handle(cmd)
 
         // Buffers
         val renderBuffer = ShortArray(blockFrames * 2) // 16-bit Stereo PCM (2 shorts per frame)
@@ -116,40 +97,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             // Listening (Receiving from Main Thread)
             port.onmessage = { message ->
                 // console.log("[WORKLET] Received cmd from main thread:", message)
-
-                WorkletContract.decodeCmd(message).also { cmd ->
-                    when (cmd) {
-                        is KlangCommLink.Cmd.ScheduleVoice -> {
-                            ctx.voices.scheduleVoice(voice = cmd.voice, clearScheduled = cmd.clearScheduled)
-                        }
-
-                        is KlangCommLink.Cmd.ScheduleVoices -> {
-                            ctx.voices.scheduleVoices(cmd.voices)
-                        }
-
-                        is KlangCommLink.Cmd.ReplaceVoices -> {
-                            ctx.voices.replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
-                        }
-
-                        is KlangCommLink.Cmd.Cleanup -> {
-                            ctx.voices.cleanup(cmd.playbackId)
-                        }
-
-                        is KlangCommLink.Cmd.ClearScheduled -> {
-                            ctx.voices.clearScheduled(cmd.playbackId)
-                        }
-
-                        is KlangCommLink.Cmd.Sample -> ctx.voices.addSample(msg = cmd)
-
-                        is KlangCommLink.Cmd.RegisterIgnitor -> {
-                            ctx.ignitorRegistry.register(cmd.name, cmd.dsl)
-                        }
-
-                        is KlangCommLink.Cmd.RegisterEngine -> {
-                            ctx.engineRegistry.register(cmd.name, cmd.dsl)
-                        }
-                    }
-                }
+                WorkletContract.decodeCmd(message).also { cmd -> ctx.handle(cmd) }
             }
 
             // CRITICAL: Start the MessagePort on worklet side (required for Safari)
