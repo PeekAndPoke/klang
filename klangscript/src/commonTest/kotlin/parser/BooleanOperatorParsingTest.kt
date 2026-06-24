@@ -1,9 +1,21 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.script.parser
 
 import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.ast.BinaryOperation
+import io.peekandpoke.klang.script.ast.BinaryOperator
+import io.peekandpoke.klang.script.ast.BooleanLiteral
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.ast.Identifier
+import io.peekandpoke.klang.script.ast.NumberLiteral
+import io.peekandpoke.klang.script.ast.UnaryOperation
+import io.peekandpoke.klang.script.ast.UnaryOperator
 import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 
 /**

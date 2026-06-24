@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
@@ -9,7 +14,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 /**
  * An infinite pattern that repeats the given [data] every cycle (0..1, 1..2, ...).
  *
- * Equivalent to `pure(x)` in JS Strudel when used inside time transformations like `ply`.
+ * Equivalent to `pure(x)` in Tidal / cyclic-pattern languages when used inside time transformations like `ply`.
  * Unlike [AtomicPattern] which usually represents a single event at 0..1, this pattern
  * conceptually exists across all time.
  */

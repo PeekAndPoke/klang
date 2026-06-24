@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.compat
 
 import io.kotest.assertions.assertSoftly
@@ -34,19 +39,39 @@ class JsCompatTests : StringSpec() {
         RECOVERED,
     }
 
-    private val graalCompiler = GraalSprudelCompiler()
+    // Lazy: the GraalVM context (and the vendored Strudel bundle) is only built when an enabled
+    // test actually runs the oracle — so on a non-GraalVM runtime nothing here is constructed.
+    private val graalCompiler by lazy { GraalSprudelCompiler() }
+
+    /**
+     * The JS-compat oracle runs real Strudel through GraalVM's polyglot JS engine. On a non-GraalVM
+     * runtime that engine only runs in a slow interpreted fallback, so these differential tests are
+     * skipped unless we are actually on a GraalVM runtime.
+     */
+    private val onGraalVm: Boolean = run {
+        val vmName = System.getProperty("java.vm.name").orEmpty()
+        val vendorVersion = System.getProperty("java.vendor.version").orEmpty()
+
+        "GraalVM" in vmName || "GraalVM" in vendorVersion || !System.getProperty("org.graalvm.home").isNullOrBlank()
+    }
 
     init {
+        if (!onGraalVm) {
+            val runtime = System.getProperty("java.vendor.version") ?: System.getProperty("java.vm.name") ?: "this JVM"
+
+            println("JsCompatTests: '$runtime' is not a GraalVM runtime — skipping the JS-compatibility oracle tests.")
+        }
+
         // Testing that simple pattern code produces the same results
         JsCompatTestData.patterns.forEachIndexed { index, example ->
-            "Pattern ${index + 1}: ${example.name}".config(enabled = !example.skip) {
+            "Pattern ${index + 1}: ${example.name}".config(enabled = onGraalVm && !example.skip) {
                 runComparison(example)
             }
         }
 
         // Testing that songs code produces the same results
         JsCompatTestSongs.songs.forEachIndexed { index, example ->
-            "Song ${index + 1}: ${example.name}".config(enabled = !example.skip) {
+            "Song ${index + 1}: ${example.name}".config(enabled = onGraalVm && !example.skip) {
                 runComparison(example)
             }
         }
@@ -189,7 +214,7 @@ ${comparison.report}
 
             if (result == ComparisonResult.DIFFERENT) {
                 errors.add(
-                    "'$key': JS (Graal) '${gVal?.toString() ?: "null"}' VS Native '${nVal?.toString() ?: "null"}'"
+                    "'$key': JS (Graal) '${gVal ?: "null"}' VS Native '${nVal ?: "null"}'"
                 )
             }
 
@@ -202,12 +227,7 @@ ${comparison.report}
             }
 
             rows.add(
-                listOf(
-                    resultStr,
-                    key,
-                    gVal?.toString() ?: "null",
-                    nVal?.toString() ?: "null"
-                )
+                listOf(resultStr, key, gVal ?: "null", nVal ?: "null")
             )
         }
 

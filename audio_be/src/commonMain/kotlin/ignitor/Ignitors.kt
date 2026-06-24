@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -568,12 +573,20 @@ object Ignitors {
         /**
          * Center-dominant base gains × per-voice amplitude jitter, renormalized to sum 1, with
          * [polarity] folded in (negated for the ramp) so the hot loop needs no per-sample sign flip.
+         *
+         * The CENTER voice (detune ≈ 0 → carries the perceived pitch / the "ring") gets a **scaled-down**
+         * share of the jitter ([SUPERSAW_CENTER_JITTER_SCALE]): a big jitter draw on it would weaken the
+         * on-pitch fundamental and make that note "won't ring", but fully exempting it (scale 0) flattens
+         * the liveliness. `0.0` = stable center, `1.0` = jittered like the sides. Sides always get full
+         * jitter; phases are untouched (random), so this trades only ring-stability vs liveliness, not timbre.
          */
         private fun computeVoiceGains() {
             val base = superSawVoiceGains(v, sideAtten)
+            val center = (v - 1) / 2
             var s = 0.0
             for (n in 0 until v) {
-                val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter
+                val scale = if (n == center) SUPERSAW_CENTER_JITTER_SCALE else 1.0
+                val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter * scale
                 val g = (base[n] * jit).coerceAtLeast(0.0)
                 voiceStates[n].gain = g; s += g
             }

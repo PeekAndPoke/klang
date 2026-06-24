@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 @file:KlangScript.Library("sprudel")
 
@@ -2200,8 +2205,6 @@ fun PatternMapperFn.pickmodReset(lookup: Map<String, PatternLike>): PatternMappe
  * Apply functions from a list based on a pattern of indices.
  * Indices are clamped to the list size.
  *
- * JavaScript: `pat.apply(pick(lookup, funcs))`
- *
  * Example: `s("bd [rim hh]").pickF("<0 1 2>", [rev, jux(rev), fast(2)])`
  */
 private fun applyPickF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -2295,8 +2298,6 @@ fun PatternMapperFn.pickF(vararg args: PatternLike, callInfo: CallInfo? = null):
 /**
  * Apply functions from a list based on a pattern of indices.
  * Indices wrap around (modulo) if greater than list size.
- *
- * JavaScript: `pat.apply(pickmod(lookup, funcs))`
  */
 private fun applyPickmodF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val lookupArg = args.getOrNull(0) ?: return pattern
@@ -2307,7 +2308,6 @@ private fun applyPickmodF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?
     val mappers = funcsList.mapNotNull { patternMapper(it) }
     if (mappers.isEmpty()) return pattern
 
-    // JavaScript: pat.apply(pickmod(lookup, funcs))
     // Similar to pickF but with modulo wrapping
 
     return lookupArg.toPattern()._bind { indexEvent ->

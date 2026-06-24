@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.ui
 
 import io.peekandpoke.klang.blocks.model.DropDestination
@@ -6,9 +11,47 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.html.*
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onMouseEnter
+import io.peekandpoke.ultra.html.onMouseLeave
+import io.peekandpoke.ultra.html.onMouseOver
+import io.peekandpoke.ultra.html.onMouseUp
 import io.peekandpoke.ultra.semanticui.icon
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.JustifyContent
+import kotlinx.css.Overflow
+import kotlinx.css.PointerEvents
+import kotlinx.css.Position
+import kotlinx.css.alignItems
+import kotlinx.css.alignSelf
+import kotlinx.css.backgroundColor
+import kotlinx.css.border
+import kotlinx.css.borderRadius
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.flexShrink
+import kotlinx.css.height
+import kotlinx.css.justifyContent
+import kotlinx.css.left
+import kotlinx.css.marginLeft
+import kotlinx.css.marginRight
+import kotlinx.css.opacity
+import kotlinx.css.overflow
+import kotlinx.css.paddingLeft
+import kotlinx.css.pct
+import kotlinx.css.pointerEvents
+import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.css.top
+import kotlinx.css.width
+import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div

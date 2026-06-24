@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.script
 
 import io.kotest.assertions.throwables.shouldThrow
@@ -6,7 +11,13 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.builder.registerFunction
-import io.peekandpoke.klang.script.runtime.*
+import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
+import io.peekandpoke.klang.script.runtime.KlangScriptImportError
+import io.peekandpoke.klang.script.runtime.KlangScriptReferenceError
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
+import io.peekandpoke.klang.script.runtime.NullValue
+import io.peekandpoke.klang.script.runtime.NumberValue
+import io.peekandpoke.klang.script.runtime.StringValue
 
 /**
  * Tests for end-to-end source location tracking in error messages

@@ -22,6 +22,9 @@
 
 <!-- PLACEHOLDER::CONFIG -->
 
+<!-- Build metadata (project + git), baked in by webpack from version.json -->
+<script>window.__APP_VERSION__ = <%= JSON.stringify(appVersion) %>;</script>
+
 <div id="spa"></div>
 
 <!--<script>-->

@@ -1,4 +1,4 @@
 jsbridge/node_modules
 
-src/jvmMain/resources/strudel-bundle.mjs
-src/jvmMain/resources/strudel-bundle.mjs.map
+src/jvmTest/resources/strudel-bundle.mjs
+src/jvmTest/resources/strudel-bundle.mjs.map

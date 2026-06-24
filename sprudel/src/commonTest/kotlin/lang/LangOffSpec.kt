@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
@@ -65,27 +70,36 @@ class LangOffSpec : StringSpec({
                 }
 
                 events shouldHaveSize 3
+                // Order by whole.begin — distinct (cycle-0.5, cycle, cycle+0.5) and deterministic.
+                // (Two events share part.begin == cycle once the delayed copy is clipped, so sorting
+                // by part.begin would be ambiguous.)
+                val sorted = events.sortedBy { it.whole.begin }
 
-                // Event 0: Original event from cycle 0
-                events[0].data.note shouldBe "c"
-                events[0].part.begin.toDouble() shouldBe (cycleDbl - 0.5)
-                events[0].part.end.toDouble() shouldBe (cycleDbl + 0.5)
-                events[0].whole.begin.toDouble() shouldBe (cycleDbl - 0.5)
-                events[0].whole.end.toDouble() shouldBe (cycleDbl + 0.5)
+                // [0] Delayed copy whose onset is in the PREVIOUS cycle. Its part is clipped to the
+                // query window, so part.begin (cycle) != whole.begin (cycle-0.5): NOT an onset here —
+                // it already triggered in the previous cycle's query (no double-trigger).
+                sorted[0].data.note shouldBe "c"
+                sorted[0].whole.begin.toDouble() shouldBe (cycleDbl - 0.5)
+                sorted[0].whole.end.toDouble() shouldBe (cycleDbl + 0.5)
+                sorted[0].part.begin.toDouble() shouldBe (cycleDbl + 0.0)
+                sorted[0].part.end.toDouble() shouldBe (cycleDbl + 0.5)
+                sorted[0].isOnset shouldBe false
 
-                // Event 1: Delayed copy from cycle -1, clipped to query range
-                events[0].data.note shouldBe "c"
-                events[1].part.begin.toDouble() shouldBe (cycleDbl + 0.0)
-                events[1].part.end.toDouble() shouldBe (cycleDbl + 1.0)
-                events[1].whole.begin.toDouble() shouldBe (cycleDbl + 0.0)
-                events[1].whole.end.toDouble() shouldBe (cycleDbl + 1.0)
+                // [1] The original (unshifted) event: full cycle, onset.
+                sorted[1].data.note shouldBe "c"
+                sorted[1].whole.begin.toDouble() shouldBe (cycleDbl + 0.0)
+                sorted[1].whole.end.toDouble() shouldBe (cycleDbl + 1.0)
+                sorted[1].part.begin.toDouble() shouldBe (cycleDbl + 0.0)
+                sorted[1].part.end.toDouble() shouldBe (cycleDbl + 1.0)
+                sorted[1].isOnset shouldBe true
 
-                // Event 2: Delayed copy from cycle 0
-                events[0].data.note shouldBe "c"
-                events[2].part.begin.toDouble() shouldBe (cycleDbl + 0.5)
-                events[2].part.end.toDouble() shouldBe (cycleDbl + 1.5)
-                events[2].whole.begin.toDouble() shouldBe (cycleDbl + 0.5)
-                events[2].whole.end.toDouble() shouldBe (cycleDbl + 1.5)
+                // [2] Delayed copy whose onset is in THIS cycle: onset; part clipped to the query end.
+                sorted[2].data.note shouldBe "c"
+                sorted[2].whole.begin.toDouble() shouldBe (cycleDbl + 0.5)
+                sorted[2].whole.end.toDouble() shouldBe (cycleDbl + 1.5)
+                sorted[2].part.begin.toDouble() shouldBe (cycleDbl + 0.5)
+                sorted[2].part.end.toDouble() shouldBe (cycleDbl + 1.0)
+                sorted[2].isOnset shouldBe true
             }
         }
     }

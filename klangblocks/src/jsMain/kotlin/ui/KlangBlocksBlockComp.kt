@@ -1,6 +1,31 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.ui
 
-import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.blocks.model.DropDestination
+import io.peekandpoke.klang.blocks.model.KBArgValue
+import io.peekandpoke.klang.blocks.model.KBArrowFunctionArg
+import io.peekandpoke.klang.blocks.model.KBBinaryArg
+import io.peekandpoke.klang.blocks.model.KBBoolArg
+import io.peekandpoke.klang.blocks.model.KBCallBlock
+import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.KBEmptyArg
+import io.peekandpoke.klang.blocks.model.KBIdentifierArg
+import io.peekandpoke.klang.blocks.model.KBIndexAccessArg
+import io.peekandpoke.klang.blocks.model.KBNestedChainArg
+import io.peekandpoke.klang.blocks.model.KBNumberArg
+import io.peekandpoke.klang.blocks.model.KBPocketLayout
+import io.peekandpoke.klang.blocks.model.KBSlot
+import io.peekandpoke.klang.blocks.model.KBStringArg
+import io.peekandpoke.klang.blocks.model.KBTernaryArg
+import io.peekandpoke.klang.blocks.model.KBTypeMapping
+import io.peekandpoke.klang.blocks.model.KBUnaryArg
+import io.peekandpoke.klang.blocks.model.KBUnaryPosition
+import io.peekandpoke.klang.blocks.model.isStringish
+import io.peekandpoke.klang.blocks.model.toRenderItems
 import io.peekandpoke.klang.common.math.formatAsIntOrDouble
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -9,10 +34,41 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.html.*
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.debugId
+import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onMouseDown
+import io.peekandpoke.ultra.html.onMouseEnter
+import io.peekandpoke.ultra.html.onMouseLeave
+import io.peekandpoke.ultra.html.onMouseOut
+import io.peekandpoke.ultra.html.onMouseOver
+import io.peekandpoke.ultra.html.onMouseUp
 import io.peekandpoke.ultra.semanticui.icon
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.FlexDirection
+import kotlinx.css.Padding
+import kotlinx.css.WhiteSpace
+import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
+import kotlinx.css.borderRadius
+import kotlinx.css.cursor
+import kotlinx.css.flexDirection
+import kotlinx.css.fontSize
+import kotlinx.css.gap
+import kotlinx.css.opacity
+import kotlinx.css.padding
+import kotlinx.css.px
+import kotlinx.css.top
+import kotlinx.css.whiteSpace
+import kotlinx.html.DIV
+import kotlinx.html.HtmlInlineTag
+import kotlinx.html.SPAN
+import kotlinx.html.Tag
+import kotlinx.html.div
+import kotlinx.html.span
 import org.w3c.dom.Element
 
 @Suppress("FunctionName")

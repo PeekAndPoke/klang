@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 @file:Suppress("unused")
 
 package io.peekandpoke.klang.builtinsongs
@@ -11,6 +16,7 @@ internal val soundOfTheSeaSong = Song(
     rpm = 30.0,
     icon = "umbrella beach",
     code = """
+
 
 
 
@@ -43,8 +49,8 @@ internal val soundOfTheSeaSong = Song(
              , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                n(randrun(16)).fast(4).sound("glockenspiel").scale("f2:pentatonic").pan(0.3).body("glass")
                  .gain(0.25).distort(0.05).postgain(windSpiel).adsr("0.05:0.2:0.5:5.0").hpf(400).lpf("3000:2:3.0").degradeBy(0.995)
-                     .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.8) // . solo()
-                           ).room(0.25).rsize(10.0).seed(sinOfDay.add(1).mul(24 * 60 * 60 * 100)).analog(2)
+                     .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.85) // . solo()
+                           ).room(0.25).rsize(10.0).rlp(10000).seed(sinOfDay.add(1).mul(24 * 60 * 60 * 100)).analog(2)
 
 
 

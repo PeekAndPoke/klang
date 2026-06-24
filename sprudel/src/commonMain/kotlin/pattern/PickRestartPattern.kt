@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
@@ -58,7 +63,7 @@ internal class PickRestartPattern(
                 val clippedWhole = shiftedWhole.clipTo(selectorEvent.whole)
 
                 if (clippedPart != null && clippedWhole != null) {
-                    // Intersect whole with selector event's whole (matches JS behavior)
+                    // Intersect whole with selector event's whole
                     result.add(innerEvent.copy(part = clippedPart, whole = clippedWhole))
                 }
             }

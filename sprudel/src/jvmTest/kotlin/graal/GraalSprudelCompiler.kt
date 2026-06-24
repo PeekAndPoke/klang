@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.graal
 
 import io.peekandpoke.klang.sprudel.SprudelCompiler
@@ -17,7 +22,7 @@ class GraalSprudelCompiler(
 
     companion object {
         val defaultBundle = GraalSprudelCompiler::class.java.classLoader.getResource("strudel-bundle.mjs")
-            ?: error("Could not find strudel-entry.mjs in resources")
+            ?: error("Could not find strudel-bundle.mjs in test resources — run the buildStrudelBundle task")
     }
 
     private val lock = ReentrantLock()

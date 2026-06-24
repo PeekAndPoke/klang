@@ -1,9 +1,18 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.dnd
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.blocks.model.DropAction
+import io.peekandpoke.klang.blocks.model.DropDestination
+import io.peekandpoke.klang.blocks.model.KBEmptyArg
+import io.peekandpoke.klang.blocks.model.KBNestedChainArg
+import io.peekandpoke.klang.blocks.model.KBNumberArg
 
 class LetConstDropActionTest : StringSpec({
 

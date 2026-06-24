@@ -1,9 +1,18 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
-import io.peekandpoke.klang.script.runtime.*
+import io.peekandpoke.klang.script.runtime.ArrayValue
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
+import io.peekandpoke.klang.script.runtime.ObjectValue
+import io.peekandpoke.klang.script.runtime.RuntimeValue
+import io.peekandpoke.klang.script.runtime.StringValue
 
 /**
  * Object utility for KlangScript -- provides static methods on the Object type.

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
@@ -23,6 +28,7 @@ import io.peekandpoke.klang.sprudel.lang.room
 import io.peekandpoke.klang.sprudel.lang.rsize
 import io.peekandpoke.klang.sprudel.lang.sound
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.version
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetect
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetectAddon
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
@@ -57,6 +63,7 @@ import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
 import kotlinx.css.TextTransform
+import kotlinx.css.WhiteSpace
 import kotlinx.css.alignItems
 import kotlinx.css.backgroundColor
 import kotlinx.css.borderRadius
@@ -66,6 +73,7 @@ import kotlinx.css.display
 import kotlinx.css.em
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
+import kotlinx.css.fontFamily
 import kotlinx.css.fontSize
 import kotlinx.css.fontWeight
 import kotlinx.css.height
@@ -93,11 +101,13 @@ import kotlinx.css.textAlign
 import kotlinx.css.textTransform
 import kotlinx.css.top
 import kotlinx.css.vh
+import kotlinx.css.whiteSpace
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.title
 import kotlin.math.ceil
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -179,6 +189,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // Build metadata, published as a stream; redraws this page once it loads.
+    private val versionInfo by subscribingTo(version)
 
     private sealed interface State {
         fun update()
@@ -323,7 +336,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             playback?.signals?.invoke { signal ->
                 if (signal is PlaybackStopped) {
                     launch {
-                        kotlinx.coroutines.delay(1000.milliseconds)
+                        kotlinx.coroutines.delay(500.milliseconds)
                         console.log("Playback stopped, navigating to new song page")
                         router.navToUri(Nav.editSongCode(BuiltInSongs.songs.first().id))
                     }
@@ -374,6 +387,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             key = "start-page"
             css {
+                // Anchor the absolutely-positioned version stamp to this container
+                position = Position.relative
                 height = 100.vh
                 width = 100.pct
                 display = Display.flex
@@ -386,6 +401,35 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             renderContent()
+
+            renderVersionStamp()
+        }
+    }
+
+    // Subtle build-version stamp in the bottom-left corner. Renders nothing until loaded.
+    private fun DIV.renderVersionStamp() {
+        val info = versionInfo
+        if (!info.isAvailable) return
+
+        div {
+            key = "version-stamp"
+            css {
+                position = Position.absolute
+                bottom = 8.px
+                left = 12.px
+                zIndex = 5
+                pointerEvents = PointerEvents.none
+                whiteSpace = WhiteSpace.nowrap
+                fontFamily = "monospace"
+                fontSize = 11.px
+                color = Color.white
+                opacity = 0.35
+            }
+            // e.g. "v0.1.0 · 5c7d2119"; full detail (branch, date) on hover via title
+            title = "${info.project} ${info.version} · ${info.gitBranch} · ${info.gitRev}" +
+                    (info.date?.let { " · $it" } ?: "")
+
+            +"v${info.version} · ${info.gitRev}"
         }
     }
 

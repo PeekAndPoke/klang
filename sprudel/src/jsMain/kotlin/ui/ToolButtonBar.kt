@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
@@ -10,7 +15,14 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Display
+import kotlinx.css.JustifyContent
+import kotlinx.css.alignItems
+import kotlinx.css.display
+import kotlinx.css.gap
+import kotlinx.css.justifyContent
+import kotlinx.css.px
 import kotlinx.html.Tag
 import kotlinx.html.div
 

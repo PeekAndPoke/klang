@@ -1,9 +1,18 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.playOnce
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.adsr
+import io.peekandpoke.klang.sprudel.lang.bank
+import io.peekandpoke.klang.sprudel.lang.n
+import io.peekandpoke.klang.sprudel.lang.s
+import io.peekandpoke.klang.sprudel.lang.slow
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -16,8 +25,28 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.Overflow
+import kotlinx.css.backgroundColor
+import kotlinx.css.display
+import kotlinx.css.flexDirection
+import kotlinx.css.flexGrow
+import kotlinx.css.flexShrink
+import kotlinx.css.height
+import kotlinx.css.minHeight
+import kotlinx.css.overflow
+import kotlinx.css.overflowY
+import kotlinx.css.paddingBottom
+import kotlinx.css.px
+import kotlinx.css.vh
+import kotlinx.html.DIV
+import kotlinx.html.InputType
+import kotlinx.html.Tag
+import kotlinx.html.b
+import kotlinx.html.div
+import kotlinx.html.input
 import org.w3c.dom.HTMLInputElement
 
 @Suppress("FunctionName")

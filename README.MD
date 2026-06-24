@@ -19,10 +19,20 @@ Currently supported live coding frameworks:
 
 - Sprudel (a Kotlin pattern language, sibling of strudel.cc — now on its own direction)
 
+# License
+
+Klang Audio Motör is free software, licensed under the **GNU Affero General Public License v3**.
+See [LICENSE](LICENSE) for the full terms.
+
 # Credits
 
 Klang stands on the shoulders of many open-source projects and references.
 See [CREDITS.MD](CREDITS.MD) for the full list.
+
+# Authors
+
+Copyright (C) 2025-2026 The Klang Audio Motör Authors.
+See [AUTHORS.MD](AUTHORS.MD) for the list of copyright holders.
 
 # Pre-Alpha-Demo
 

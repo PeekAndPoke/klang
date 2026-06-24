@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 @file:KlangScript.Library("sprudel")
 
@@ -327,7 +332,7 @@ private fun applyPalindrome(pattern: SprudelPattern): SprudelPattern {
     // Palindrome needs to play the pattern forward, then backward.
     // Critically, it must use ABSOLUTE time (Prime behavior) so that the 'rev' version
     // reverses the content of the *second* cycle, not the first cycle played again.
-    // Matches JS: pat.lastOf(2, rev) -> equivalent to slowcatPrime(pat, rev(pat))
+    // e.g. lastOf(2, rev): alternate the plain and transformed pattern per cycle (via slowcatPrime).
     return applySlowcatPrime(listOf(pattern, applyRev(pattern, listOf(SprudelDslArg(1, null)))))
 }
 
@@ -510,7 +515,7 @@ internal fun applyCompress(pattern: SprudelPattern, args: List<SprudelDslArg<Any
         endCtrl._bind { endEv ->
             val e = endEv.data.value?.asDouble ?: return@_bind null
 
-            // JS check: if (b.gt(e) || b.gt(1) || e.gt(1) || b.lt(0) || e.lt(0)) return silence
+            // Guard: drop spans that are inverted or fall outside 0..1.
             if (b > e || b > 1.0 || e > 1.0 || b < 0.0 || e < 0.0) {
                 return@_bind null // effectively silence for this event
             }
@@ -756,7 +761,7 @@ fun PatternMapperFn.ply(n: PatternLike, callInfo: CallInfo? = null): PatternMapp
 
 /**
  * Helper function to apply a function n times to a value.
- * Equivalent to JS applyN(n, func, p).
+ * Applies the transform n times in succession (the applyN concept).
  */
 private fun applyFunctionNTimes(n: Int, func: PatternMapperFn, pattern: SprudelPattern): SprudelPattern {
     var result = pattern
@@ -792,7 +797,6 @@ private fun applyPlyWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
         }
 
         // Create factor number of patterns, applying func 0, 1, 2, ... (factor-1) times
-        // Equivalent to: cat(...listRange(0, factor - 1).map((i) => applyN(i, func, x)))
         val patterns = (0 until factor).map { i ->
             val atomPattern = AtomicInfinitePattern(event.data)
             applyFunctionNTimes(i, func, atomPattern)
@@ -920,7 +924,6 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
         }
 
         // Start with the original value, then add transformed versions for i = 1 to factor-1
-        // Equivalent to: cat(pure(x), ...listRange(1, factor - 1).map((i) => func(pure(x), i)))
         val atomPattern = AtomicInfinitePattern(event.data)
 
         val patterns = buildList {
@@ -1369,8 +1372,6 @@ fun PatternMapperFn.swing(n: PatternLike, callInfo: CallInfo? = null): PatternMa
 /**
  * Makes every other cycle syncopated (breakbeat-style).
  *
- * JavaScript: `pat.when(slowcat(false, true), (x) => fastcat(x, silence)._late(0.25))`
- *
  * Effect:
  * - Cycle 0: plays normally
  * - Cycle 1: plays first half then silence, delayed by 0.25 cycles (syncopation)
@@ -1379,7 +1380,7 @@ fun PatternMapperFn.swing(n: PatternLike, callInfo: CallInfo? = null): PatternMa
  * - etc.
  */
 private fun applyBrak(pattern: SprudelPattern): SprudelPattern {
-    // when(slowcat(false, true), x => fastcat(x, silence).late(0.25))
+    // Every other cycle: squeeze the events into the first half and delay them by a quarter cycle.
     val condition = applyCat(
         listOf(
             pure(false),

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
@@ -15,7 +20,7 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
  *
  * This is the intermediate representation used within the Sprudel pattern system.
  * It uses flat fields (no complex objects like AdsrDef or FilterDefs) to match
- * the original JavaScript Strudel implementation.
+ * the flat value model of cyclic-pattern languages.
  *
  * Gets converted to [VoiceData] when passed to the audio engine.
  *

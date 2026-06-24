@@ -1,11 +1,40 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.ui
 
 import io.peekandpoke.klang.blocks.model.DropDestination
 import io.peekandpoke.klang.blocks.model.KBChainStmt
 import io.peekandpoke.klang.blocks.model.KBIdentifierItem
 import io.peekandpoke.klang.blocks.model.KBStringLiteralItem
-import io.peekandpoke.ultra.html.*
-import kotlinx.css.*
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onBlur
+import io.peekandpoke.ultra.html.onInput
+import io.peekandpoke.ultra.html.onKeyDown
+import io.peekandpoke.ultra.html.onMouseDown
+import io.peekandpoke.ultra.html.onMouseUp
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.Outline
+import kotlinx.css.Padding
+import kotlinx.css.backgroundColor
+import kotlinx.css.border
+import kotlinx.css.borderRadius
+import kotlinx.css.color
+import kotlinx.css.display
+import kotlinx.css.flexDirection
+import kotlinx.css.fontFamily
+import kotlinx.css.fontSize
+import kotlinx.css.gap
+import kotlinx.css.minWidth
+import kotlinx.css.outline
+import kotlinx.css.padding
+import kotlinx.css.px
 import kotlinx.html.DIV
 import kotlinx.html.div
 import kotlinx.html.input

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.analyzer.createAnalyzerBuffer
@@ -139,7 +144,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // Clear canvas with fade trail effect
         ctx.save()
         ctx.globalCompositeOperation = "destination-out"
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
+        ctx.fillStyle = "rgba(0, 0, 0, 0.66)"
         ctx.fillRect(0.0, 0.0, width, height)
         ctx.restore()
 

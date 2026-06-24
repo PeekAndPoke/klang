@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 @file:Suppress("FunctionName")
 
 package io.peekandpoke.klang.sprudel
@@ -346,7 +351,7 @@ fun SprudelPattern.mapEvents(
 
 /**
  * Filters events based on their value.
- * JavaScript: filterValues(test) - keeps only events where test(value) returns true
+ * Keeps only events whose value passes [test].
  *
  * @param test Predicate function that tests event values
  * @return Pattern with only events that pass the test
@@ -373,7 +378,7 @@ fun SprudelPattern.filterValues(test: (SprudelVoiceValue?) -> Boolean): SprudelP
  * Keeps values from the left pattern, but only where the right pattern has events.
  * Structure is taken from the left pattern.
  *
- * JavaScript: pat_func.appLeft(pat_val)
+ * Algorithm:
  * - Queries left pattern for events
  * - For each left event, queries right pattern at that time
  * - Keeps left event's value and whole, but intersects the part with right events
@@ -587,7 +592,7 @@ fun <T> SprudelPattern._innerJoin(
 
 /**
  * Inner join that passes argument patterns' values and the source pattern to a transform function.
- * This matches JavaScript Sprudel's register() behavior with innerJoin.
+ * Registered transforms use innerJoin semantics.
  *
  * The structure is driven by the argument patterns - for each combination of values
  * from the argument patterns, the transform function is called with those values
@@ -650,7 +655,7 @@ fun SprudelPattern._bind(
 
 /**
  * Maps a function over the values in this pattern, producing a pattern-of-patterns.
- * Equivalent to `fmap` in JS Strudel.
+ * Equivalent to `fmap` in Tidal / cyclic-pattern languages.
  *
  * The function receives a value and returns a [SprudelPattern].
  * The result is a pattern where each event's value is itself a pattern.
@@ -671,7 +676,7 @@ fun SprudelPattern._fmap(
 
 /**
  * Flattens a pattern-of-patterns by squeezing each inner pattern into its outer event's timespan.
- * Equivalent to `squeezeJoin()` in JS Strudel.
+ * Equivalent to `squeezeJoin()` in Tidal / cyclic-pattern languages.
  *
  * Expects a pattern where event values are SprudelVoiceValue.Pattern.
  */
@@ -716,7 +721,7 @@ fun SprudelPattern._squeezeJoin(): SprudelPattern = object : SprudelPattern {
 
 /**
  * Flattens a pattern-of-patterns by querying each inner pattern directly without time transformation.
- * Equivalent to `innerJoin()` in JS Strudel.
+ * Equivalent to `innerJoin()` in Tidal / cyclic-pattern languages.
  *
  * Unlike _squeezeJoin which squeezes the inner pattern's [0,1] cycle into the outer event's timespan,
  * _innerJoin queries the inner pattern for the outer event's timespan directly without transformation.
@@ -778,7 +783,7 @@ private fun SprudelPattern._focusSpan(span: CycleTimeSpan): SprudelPattern {
  * Binds an inner pattern to each event of the outer pattern, "squeezing" the inner pattern
  * (which usually operates in 0..1 time) to fit exactly within the outer event's duration.
  *
- * Equivalent to `pat.fmap(transform).squeezeJoin()` in JS Strudel.
+ * Equivalent to `pat.fmap(transform).squeezeJoin()` in Tidal / cyclic-pattern languages.
  */
 fun SprudelPattern._bindSqueeze(
     transform: (SprudelPatternEvent) -> SprudelPattern?,
@@ -802,7 +807,7 @@ fun SprudelPattern._bindSqueeze(
 
 /**
  * Binds an inner pattern, squeezing it into the outer event's duration (step).
- * Alias for _bindSqueeze. Matches JS stepJoin().
+ * Alias for _bindSqueeze (the stepJoin combinator).
  */
 fun SprudelPattern._stepJoin(
     transform: (SprudelPatternEvent) -> SprudelPattern?,
@@ -810,7 +815,7 @@ fun SprudelPattern._stepJoin(
 
 /**
  * Binds an inner pattern, adjusting its speed based on the ratio of outer steps to inner steps.
- * Equivalent to `pat.fmap(transform).polyJoin()` in JS Strudel.
+ * Equivalent to `pat.fmap(transform).polyJoin()` in Tidal / cyclic-pattern languages.
  */
 fun SprudelPattern._bindPoly(
     transform: (SprudelPatternEvent) -> SprudelPattern?,
@@ -841,7 +846,7 @@ fun SprudelPattern._bindPoly(
 
 /**
  * Binds an inner pattern, resetting it to the start of the cycle for each outer event.
- * Equivalent to `pat.fmap(transform).resetJoin()` in JS Strudel.
+ * Equivalent to `pat.fmap(transform).resetJoin()` in Tidal / cyclic-pattern languages.
  */
 fun SprudelPattern._bindReset(
     transform: (SprudelPatternEvent) -> SprudelPattern?,
@@ -851,7 +856,7 @@ fun SprudelPattern._bindReset(
     // Align inner pattern cycle start to outer event start
     // NOTE: Using whole.begin (onset time) for cycle position, not part.begin (visible start).
     // This matches musical semantics where the event's cycle position is determined by its onset.
-    // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
+    // See accessor-replacement notes if this needs adjustment.
     val eventBegin = outerEvent.whole.begin
     val shift = eventBegin.fracOfCycle()
 
@@ -864,7 +869,7 @@ fun SprudelPattern._bindReset(
 
 /**
  * Binds an inner pattern, restarting it from 0 for each outer event.
- * Equivalent to `pat.fmap(transform).restartJoin()` in JS Strudel.
+ * Equivalent to `pat.fmap(transform).restartJoin()` in Tidal / cyclic-pattern languages.
  */
 fun SprudelPattern._bindRestart(
     transform: (SprudelPatternEvent) -> SprudelPattern?,
@@ -874,7 +879,7 @@ fun SprudelPattern._bindRestart(
     // Align inner pattern start (0) to outer event start
     // NOTE: Using whole.begin (onset time) for alignment, not part.begin (visible start).
     // This matches musical semantics where the event conceptually starts at its onset.
-    // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
+    // See accessor-replacement notes if this needs adjustment.
     val eventBegin = outerEvent.whole.begin
 
     innerPattern._withQueryTime { t -> t - eventBegin }.mapEvents { e ->
@@ -891,7 +896,7 @@ fun SprudelPattern._bindRestart(
  * the pattern itself (like fast(), slow(), zoom(), range(), etc.) rather than just modifying
  * voice data fields.
  *
- * Equivalent to `register(name, func)` in JS Strudel where arity is 1.
+ * Registers a 1-arity pattern transform (the `register(name, func)` concept in cyclic-pattern languages).
  *
  * **Metadata Preservation:**
  * Preserves metadata (weight, numSteps) from the SOURCE pattern, not the control pattern.
@@ -1165,7 +1170,7 @@ fun SprudelPattern._applyControl(
         // Sample the control pattern at the event's begin time
         // NOTE: Using whole.begin (onset time) for sampling, not part.begin (visible start).
         // This ensures control patterns are sampled at the musical onset, not at visible clip boundaries.
-        // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
+        // See accessor-replacement notes if this needs adjustment.
         val sampleTime = event.whole.begin
         val controlEvent = control.sampleAt(sampleTime, ctx)
 

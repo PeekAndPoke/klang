@@ -240,3 +240,41 @@ are acceptable as inline numeric literals **when documented with a source commen
 // Freeverb standard comb tunings (designed for 44100 Hz)
 private val combTuning = intArrayOf(1116, 1188, 1277, 1356, ...)
 ```
+
+---
+
+## File Header Rules
+
+### 17. Every Source File Starts With the Copyright Header
+
+Every `.kt` source file must begin with the project license header as its very first lines,
+**above** any `@file:` annotation or `package` declaration:
+
+```kotlin
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+```
+
+- **New files:** IntelliJ inserts this automatically via the "Klang AGPL" copyright profile in
+  `.idea/copyright/`. When creating files outside the IDE, add the header manually.
+- **Year:** the end year tracks the current year — IntelliJ's "Update copyright" before-commit
+  action keeps it current. Don't hand-edit the year per file.
+- **Brand:** always "Motör" with the ö — never "Motor".
+- **Exempt:** `.kts` build scripts, and any third-party / vendored file that carries its own
+  copyright notice (never overwrite someone else's notice with ours).
+- **`tones/` module is MIT, not AGPL.** It is a Kotlin port of tonal.js (MIT) and is licensed MIT
+  to match upstream. Files there use a different header that also credits danigb — never apply the
+  AGPL header inside `tones/`:
+
+  ```kotlin
+  /*
+   * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+   * Portions derived from tonal.js — Copyright (c) 2015 danigb.
+   * SPDX-License-Identifier: MIT
+   * Full license: tones/LICENSE
+   */
+  ```
+
+  IntelliJ applies this automatically via the "Klang tones MIT" copyright profile scoped to `tones/`.

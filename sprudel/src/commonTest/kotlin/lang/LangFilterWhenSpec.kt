@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // sprudel/src/commonTest/kotlin/lang/LangFilterWhenSpec.kt
 package io.peekandpoke.klang.sprudel.lang
 

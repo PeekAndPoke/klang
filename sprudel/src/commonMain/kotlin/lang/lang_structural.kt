@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 @file:KlangScript.Library("sprudel")
 
@@ -1146,7 +1151,7 @@ fun String.fastcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sp
 /**
  * Alias for [cat]. Concatenates patterns, each taking one full cycle.
  *
- * Note: unlike the JS implementation, this behaves like `cat` / `slowcatPrime`, maintaining
+ * Note: this behaves like `cat` / `slowcatPrime`, maintaining
  * absolute time (cycles of inner patterns may be "skipped" while they are not playing).
  *
  * @param patterns Patterns to concatenate. Each plays for one cycle.
@@ -1190,8 +1195,6 @@ fun String.slowcat(vararg patterns: PatternLike, callInfo: CallInfo? = null): Sp
 /**
  * Cycles through a list of patterns infinitely, playing one pattern per cycle.
  * Preserves absolute time (does not reset pattern time to 0 for each cycle).
- *
- * This corresponds to 'slowcatPrime' in JS.
  */
 fun applySlowcatPrime(patterns: List<SprudelPattern>): SprudelPattern {
     if (patterns.isEmpty()) return silence
@@ -2151,7 +2154,7 @@ private fun applyZoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
             // Using relative start to ensure correct periodicity even if s > 1
             val sRelTime = CycleTime.ofCycles(s - floor(s))
 
-            // Match JS implementation: withQuerySpan + withHapSpan + splitQueries
+            // Reanchor query/hap spans via withQuerySpan + withHapSpan + splitQueries.
             source
                 // Apply transformation to cycle-local time: t => t * d + sRel
                 ._withQuerySpan { span -> span.withCycle { t -> t.scaleBy(d) + sRelTime } }
@@ -3409,9 +3412,7 @@ private fun applyRun(n: Int): SprudelPattern {
     // TODO: support control pattern
 
     if (n <= 0) return silence
-    // "0 1 2 ... n-1"
-    // equivalent to saw.range(0, n).round().segment(n) in JS
-    // But we can just create a sequence directly.
+    // "0 1 2 ... n-1" — build the integer ramp directly as a sequence.
     val items = (0 until n).map {
         AtomicPattern(createSprudelVoiceData { value = it.asVoiceValue() })
     }
@@ -3446,11 +3447,8 @@ private fun applyBinaryN(n: Int, bits: Int): SprudelPattern {
     if (bits <= 0) return silence
 
     val items = (0 until bits).map { i ->
-        // JS: const bitPos = run(nBits).mul(-1).add(nBits.sub(1));
-        // This effectively iterates bits from MSB to LSB?
-        // "1 1 0 1" for 5 (101) with 4 bits -> 0101?
-        // JS example: binaryN(55532, 16) -> "1 1 0 1 1 0 0 0 1 1 1 0 1 1 0 0"
-        // This order is MSB first (big-endian).
+        // Lay the bits out most-significant first (big-endian), e.g.
+        // binaryN(55532, 16) -> "1 1 0 1 1 0 0 0 1 1 1 0 1 1 0 0".
 
         // Shift: bits - 1 - i
         val shift = bits - 1 - i
@@ -4054,14 +4052,14 @@ internal fun applyIter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
     val nDbl = n.toDouble()
 
-    // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.early(Fraction(i).div(times)))
+    // Build `times` copies of the pattern, each shiftedearlier by i/times.
     val patterns = (0 until n).map { i ->
         val shift = i.toDouble() / nDbl
         // We use early() to shift the view forward (events appear earlier, effectively rotating the pattern left)
         source.early(shift)
     }
 
-    // JS uses slowcat (standard) here, but since iter slices are time-shifted manually above,
+    // The standard approach uses slowcat here, but since iter slices are time-shifted manually above,
     // we can use slowcatPrime logic to sequence them without double-shifting.
     return applySlowcatPrime(patterns)
 }
@@ -4127,7 +4125,7 @@ internal fun applyIterBack(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
     val nDbl = n.toDouble()
 
-    // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.late(Fraction(i).div(times)))
+    // Build `times` copies of the pattern, each shiftedlater by i/times.
     val patterns = (0 until n).map { i ->
         val shift = i.toDouble() / nDbl
         // We use late() to shift the view backward (events appear later, rotating pattern right)
@@ -4193,8 +4191,6 @@ fun PatternMapperFn.iterBack(n: Int, callInfo: CallInfo? = null): PatternMapperF
 /**
  * Inverts boolean values in a pattern: true <-> false, 1 <-> 0.
  * Useful for inverting structural patterns and masks.
- *
- * JavaScript: `pat.fmap((x) => !x)`
  */
 private fun applyInvert(pattern: SprudelPattern): SprudelPattern {
     return pattern.mapEvents { event ->
@@ -4295,8 +4291,6 @@ fun PatternMapperFn.inv(callInfo: CallInfo? = null): PatternMapperFn =
  * Supports control patterns for n.
  *
  * Example: `pattern.applyN(3, x => x.fast(2))` applies fast(2) three times
- *
- * JavaScript: `applyN(n, func, pat)`
  */
 private fun applyApplyN(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val transform = args.getOrNull(1).toPatternMapper() ?: return pattern
@@ -4372,8 +4366,7 @@ fun PatternMapperFn.applyN(n: PatternLike, transform: PatternMapperFn, callInfo:
  * - r = 0.5: Events start halfway through (syncopated)
  * - r = 1: Events compressed to end
  *
- * JavaScript: `pat.fmap((x) => pure(x).compress(r, 1)).squeezeJoin()`
- * Kotlin: Uses `_bindSqueeze()` with `compress()` (which handles control patterns internally)
+ * Each event is squeezed into a compressed sub-span (control patterns for `r` are supported).
  *
  * Example: s("bd mt sd ht").pressBy("<0 0.5 0.25>")
  */

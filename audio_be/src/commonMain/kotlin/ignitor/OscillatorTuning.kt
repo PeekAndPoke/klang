@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.audio_be.ignitor
 
 /**
@@ -33,8 +38,21 @@ internal const val RAMP_SHAPE_MAX: Double = SAW_SHAPE_MAX
 /** Center-dominant gain falloff: 0 = all voices equal (flat), 1 = only the center voice. */
 internal const val SUPERSAW_SIDE_ATTEN: Double = 0.1
 
-/** Per-voice random *amplitude* offset (±fraction): analog non-uniformity with zero pitch effect. */
-internal const val SUPERSAW_GAIN_JITTER: Double = 0.1
+/**
+ * Per-voice random *amplitude* offset (±fraction): analog non-uniformity with zero pitch effect.
+ * `0.0` = off; `0.1` was the original. The on-pitch CENTER voice gets a scaled-down share (see
+ * [SUPERSAW_CENTER_JITTER_SCALE]) so a high value here adds side-voice grit without "won't ring".
+ * Inherited by the super-ramp/square/tri/sine unison families below.
+ */
+internal const val SUPERSAW_GAIN_JITTER: Double = 0.15
+
+/**
+ * How much of [SUPERSAW_GAIN_JITTER] the on-pitch CENTER voice receives (`0.0`..`1.0`).
+ * `0.0` = center perfectly stable → always rings, but flatter/"boring"; `1.0` = center jittered like the
+ * sides → max liveliness but the "won't ring" lottery returns. Dial by ear (the loud center voice carries
+ * the perceived pitch, so a little goes a long way). Applies to all super-* unison families.
+ */
+internal const val SUPERSAW_CENTER_JITTER_SCALE: Double = 0.4
 
 /** Detune spacing shape: 1.0 = even; >1 concentrates voices toward center; <1 spreads outward. */
 internal const val SUPERSAW_DETUNE_POWER: Double = 1.2

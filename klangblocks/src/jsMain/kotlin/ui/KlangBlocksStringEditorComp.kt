@@ -1,13 +1,40 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.ui
 
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.html.*
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onBlur
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onInput
+import io.peekandpoke.ultra.html.onKeyDown
+import io.peekandpoke.ultra.html.onMouseDown
+import io.peekandpoke.ultra.html.onMouseOut
 import kotlinx.browser.document
-import kotlinx.css.*
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Padding
+import kotlinx.css.Resize
+import kotlinx.css.backgroundColor
+import kotlinx.css.border
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.fontFamily
+import kotlinx.css.fontSize
+import kotlinx.css.lineHeight
+import kotlinx.css.padding
 import kotlinx.css.properties.LineHeight
+import kotlinx.css.px
+import kotlinx.css.resize
 import kotlinx.html.Tag
 import kotlinx.html.span
 import kotlinx.html.tabIndex

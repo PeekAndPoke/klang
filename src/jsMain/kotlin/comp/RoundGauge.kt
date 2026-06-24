@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.ui.feel.ValueToColorMixer
@@ -12,7 +17,30 @@ import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.semanticIcon
 import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.browser.window
-import kotlinx.css.*
+import kotlinx.css.BoxSizing
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.LinearDimension
+import kotlinx.css.Margin
+import kotlinx.css.PointerEvents
+import kotlinx.css.Position
+import kotlinx.css.TextAlign
+import kotlinx.css.borderWidth
+import kotlinx.css.bottom
+import kotlinx.css.boxSizing
+import kotlinx.css.color
+import kotlinx.css.display
+import kotlinx.css.fontSize
+import kotlinx.css.height
+import kotlinx.css.left
+import kotlinx.css.margin
+import kotlinx.css.pct
+import kotlinx.css.pointerEvents
+import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.css.textAlign
+import kotlinx.css.top
+import kotlinx.css.width
 import kotlinx.html.Tag
 import kotlinx.html.canvas
 import kotlinx.html.div

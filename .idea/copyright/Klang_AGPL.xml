@@ -1,0 +1,9 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="notice" value="Copyright (C) 2025-$today.year The Klang Audio Motör Authors (see AUTHORS.MD)&#10;SPDX-License-Identifier: AGPL-3.0-or-later" />
+    <option name="keyword" value="Copyright" />
+    <option name="allowReplaceRegexp" value="" />
+    <option name="myName" value="Klang AGPL" />
+    <option name="myLocal" value="true" />
+  </copyright>
+</component>

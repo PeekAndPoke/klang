@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.ui
 
 import io.peekandpoke.klang.blocks.model.KBCallBlock
@@ -7,7 +12,15 @@ import io.peekandpoke.klang.blocks.model.KBNewlineHint
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.alignItems
+import kotlinx.css.display
+import kotlinx.css.flexDirection
+import kotlinx.css.gap
+import kotlinx.css.paddingLeft
+import kotlinx.css.px
 import kotlinx.html.DIV
 import kotlinx.html.div
 
