@@ -336,7 +336,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             playback?.signals?.invoke { signal ->
                 if (signal is PlaybackStopped) {
                     launch {
-                        kotlinx.coroutines.delay(1000.milliseconds)
+                        kotlinx.coroutines.delay(500.milliseconds)
                         console.log("Playback stopped, navigating to new song page")
                         router.navToUri(Nav.editSongCode(BuiltInSongs.songs.first().id))
                     }

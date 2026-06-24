@@ -142,7 +142,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
                         }
                     }
 
-                    onClick { router.navToUri(Nav.tour()) }
+                    onClick { router.navToUri(Nav.start()) }
 
                     icon.music { css { marginRight = 10.px } }
 
