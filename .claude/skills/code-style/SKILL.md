@@ -264,3 +264,17 @@ Every `.kt` source file must begin with the project license header as its very f
 - **Brand:** always "Motör" with the ö — never "Motor".
 - **Exempt:** `.kts` build scripts, and any third-party / vendored file that carries its own
   copyright notice (never overwrite someone else's notice with ours).
+- **`tones/` module is MIT, not AGPL.** It is a Kotlin port of tonal.js (MIT) and is licensed MIT
+  to match upstream. Files there use a different header that also credits danigb — never apply the
+  AGPL header inside `tones/`:
+
+  ```kotlin
+  /*
+   * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+   * Portions derived from tonal.js — Copyright (c) 2015 danigb.
+   * SPDX-License-Identifier: MIT
+   * Full license: tones/LICENSE
+   */
+  ```
+
+  IntelliJ applies this automatically via the "Klang tones MIT" copyright profile scoped to `tones/`.

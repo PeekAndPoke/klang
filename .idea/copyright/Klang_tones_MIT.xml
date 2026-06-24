@@ -1,0 +1,9 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="notice" value="Copyright (C) 2025-$today.year The Klang Audio Motör Authors (see AUTHORS.MD)&#10;Portions derived from tonal.js — Copyright (c) 2015 danigb.&#10;SPDX-License-Identifier: MIT&#10;Full license: tones/LICENSE" />
+    <option name="keyword" value="Copyright" />
+    <option name="allowReplaceRegexp" value="" />
+    <option name="myName" value="Klang tones MIT" />
+    <option name="myLocal" value="true" />
+  </copyright>
+</component>

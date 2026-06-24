@@ -61,7 +61,9 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 
 Making music possible:
 
-- **[Tonal.js](https://github.com/tonaljs/tonal)** — music theory library (ported to Kotlin in the :tones module)
+- **[Tonal.js](https://github.com/tonaljs/tonal)** by danigb — music theory library, MIT-licensed.
+  Ported to Kotlin in the `:tones` module, which is itself kept under the **MIT License** to match
+  upstream — see [tones/LICENSE](tones/LICENSE). (The rest of Klang is AGPL v3.)
 - **[SoundFont2](https://www.npmjs.com/package/soundfont2)** — SoundFont parsing
 - **[JLayer](http://www.javazoom.net/javalayer/javalayer.html)** — MP3 decoding on the JVM
 

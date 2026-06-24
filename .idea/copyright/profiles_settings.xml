@@ -1,3 +1,7 @@
 <component name="CopyrightManager">
-  <settings default="Klang AGPL" />
+  <settings default="Klang AGPL">
+    <module2copyright>
+      <element module="tones" copyright="Klang tones MIT" />
+    </module2copyright>
+  </settings>
 </component>
