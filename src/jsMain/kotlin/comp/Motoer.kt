@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Nav
@@ -12,10 +17,39 @@ import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.FontWeight
+import kotlinx.css.PointerEvents
+import kotlinx.css.Position
+import kotlinx.css.TextAlign
+import kotlinx.css.WhiteSpace
+import kotlinx.css.bottom
+import kotlinx.css.color
+import kotlinx.css.display
+import kotlinx.css.flexDirection
+import kotlinx.css.fontFamily
+import kotlinx.css.fontWeight
+import kotlinx.css.height
+import kotlinx.css.left
+import kotlinx.css.lineHeight
+import kotlinx.css.marginBottom
+import kotlinx.css.marginLeft
+import kotlinx.css.marginRight
+import kotlinx.css.opacity
+import kotlinx.css.pct
+import kotlinx.css.pointerEvents
+import kotlinx.css.position
 import kotlinx.css.properties.LineHeight
 import kotlinx.css.properties.scaleX
 import kotlinx.css.properties.transform
+import kotlinx.css.px
+import kotlinx.css.right
+import kotlinx.css.textAlign
+import kotlinx.css.whiteSpace
+import kotlinx.css.width
+import kotlinx.css.zIndex
 import kotlinx.html.Tag
 import kotlinx.html.div
 

@@ -1,10 +1,20 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.script.docs
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.script.types.*
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangCodeSample
+import io.peekandpoke.klang.script.types.KlangMutability
+import io.peekandpoke.klang.script.types.KlangParam
+import io.peekandpoke.klang.script.types.KlangProperty
+import io.peekandpoke.klang.script.types.KlangType
 
 /**
  * Unit tests for the structured DSL documentation model:

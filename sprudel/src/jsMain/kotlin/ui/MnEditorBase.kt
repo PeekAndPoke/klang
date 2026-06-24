@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
@@ -22,7 +27,13 @@ import io.peekandpoke.ultra.streams.ops.filterIsInstance
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.css.*
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.display
+import kotlinx.css.flexDirection
+import kotlinx.css.flexGrow
+import kotlinx.css.minWidth
+import kotlinx.css.vw
 import kotlinx.html.FlowContent
 import kotlinx.html.div
 import org.w3c.dom.events.Event

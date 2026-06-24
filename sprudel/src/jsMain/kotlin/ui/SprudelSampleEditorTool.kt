@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.ui.HoverPopupCtrl
@@ -16,8 +21,28 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onInput
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FlexWrap
+import kotlinx.css.Padding
+import kotlinx.css.border
+import kotlinx.css.borderRadius
+import kotlinx.css.display
+import kotlinx.css.flexWrap
+import kotlinx.css.gap
+import kotlinx.css.marginBottom
+import kotlinx.css.minWidth
+import kotlinx.css.padding
+import kotlinx.css.pct
+import kotlinx.css.px
+import kotlinx.css.width
+import kotlinx.html.FlowContent
+import kotlinx.html.InputType
+import kotlinx.html.Tag
+import kotlinx.html.div
+import kotlinx.html.input
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 

@@ -1,8 +1,89 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.ui
 
 import io.peekandpoke.kraft.addons.styling.StyleSheet
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Appearance
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.Flex
+import kotlinx.css.FlexBasis
+import kotlinx.css.FlexDirection
+import kotlinx.css.FontWeight
+import kotlinx.css.JustifyContent
+import kotlinx.css.LinearDimension
+import kotlinx.css.Margin
+import kotlinx.css.Outline
+import kotlinx.css.Overflow
+import kotlinx.css.Padding
+import kotlinx.css.PointerEvents
+import kotlinx.css.Position
+import kotlinx.css.TextAlign
+import kotlinx.css.TextOverflow
+import kotlinx.css.TextTransform
+import kotlinx.css.UserSelect
+import kotlinx.css.VerticalAlign
+import kotlinx.css.WhiteSpace
+import kotlinx.css.alignItems
+import kotlinx.css.alignSelf
+import kotlinx.css.appearance
+import kotlinx.css.backgroundColor
+import kotlinx.css.border
+import kotlinx.css.borderBottomLeftRadius
+import kotlinx.css.borderRadius
+import kotlinx.css.borderTop
+import kotlinx.css.borderTopLeftRadius
+import kotlinx.css.borderTopRightRadius
+import kotlinx.css.bottom
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.flex
+import kotlinx.css.flexDirection
+import kotlinx.css.flexGrow
+import kotlinx.css.flexShrink
+import kotlinx.css.fontFamily
+import kotlinx.css.fontSize
+import kotlinx.css.fontWeight
+import kotlinx.css.gap
+import kotlinx.css.height
+import kotlinx.css.justifyContent
+import kotlinx.css.left
+import kotlinx.css.letterSpacing
+import kotlinx.css.lineHeight
+import kotlinx.css.margin
+import kotlinx.css.marginBottom
+import kotlinx.css.marginLeft
+import kotlinx.css.marginTop
+import kotlinx.css.minHeight
+import kotlinx.css.minWidth
+import kotlinx.css.opacity
+import kotlinx.css.outline
+import kotlinx.css.overflow
+import kotlinx.css.overflowX
+import kotlinx.css.overflowY
+import kotlinx.css.padding
+import kotlinx.css.pct
+import kotlinx.css.pointerEvents
+import kotlinx.css.position
 import kotlinx.css.properties.LineHeight
+import kotlinx.css.px
+import kotlinx.css.right
+import kotlinx.css.textAlign
+import kotlinx.css.textOverflow
+import kotlinx.css.textTransform
+import kotlinx.css.top
+import kotlinx.css.userSelect
+import kotlinx.css.verticalAlign
+import kotlinx.css.whiteSpace
+import kotlinx.css.width
 
 data class KlangBlocksTheme(
 

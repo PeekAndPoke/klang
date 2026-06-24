@@ -1,6 +1,22 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.ui
 
-import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.blocks.model.AstToKBlocks
+import io.peekandpoke.klang.blocks.model.CodeGenResult
+import io.peekandpoke.klang.blocks.model.DropAction
+import io.peekandpoke.klang.blocks.model.DropDestination
+import io.peekandpoke.klang.blocks.model.KBCallBlock
+import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.KBConstStmt
+import io.peekandpoke.klang.blocks.model.KBLetStmt
+import io.peekandpoke.klang.blocks.model.KBProgram
+import io.peekandpoke.klang.blocks.model.KBProgramEditingCtx
+import io.peekandpoke.klang.blocks.model.KBStmt
+import io.peekandpoke.klang.blocks.model.toCodeGen
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -16,7 +32,11 @@ import io.peekandpoke.ultra.html.onMouseMove
 import io.peekandpoke.ultra.html.onMouseUp
 import io.peekandpoke.ultra.streams.Stream
 import kotlinx.browser.document
-import kotlinx.css.*
+import kotlinx.css.Color
+import kotlinx.css.backgroundColor
+import kotlinx.css.left
+import kotlinx.css.px
+import kotlinx.css.top
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div

@@ -1,6 +1,15 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.ui
 
-import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.blocks.model.DropDestination
+import io.peekandpoke.klang.blocks.model.DropTargetType
+import io.peekandpoke.klang.blocks.model.KBCallBlock
+import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.KBStmt
 
 data class DndCtrl(
     val state: DndState?,

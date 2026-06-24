@@ -1,6 +1,20 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.blocks.dnd
 
-import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.blocks.model.AstToKBlocks
+import io.peekandpoke.klang.blocks.model.KBArgValue
+import io.peekandpoke.klang.blocks.model.KBCallBlock
+import io.peekandpoke.klang.blocks.model.KBChainItem
+import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.KBConstStmt
+import io.peekandpoke.klang.blocks.model.KBLetStmt
+import io.peekandpoke.klang.blocks.model.KBNestedChainArg
+import io.peekandpoke.klang.blocks.model.KBProgramEditingCtx
+import io.peekandpoke.klang.blocks.model.toCode
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 
 internal fun ctx(source: String): KBProgramEditingCtx {

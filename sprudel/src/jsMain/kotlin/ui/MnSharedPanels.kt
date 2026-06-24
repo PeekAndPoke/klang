@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.sprudel.lang.parser.MnNode
@@ -7,8 +12,37 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onInput
 import io.peekandpoke.ultra.html.onKeyUp
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FlexWrap
+import kotlinx.css.FontWeight
+import kotlinx.css.Padding
+import kotlinx.css.PointerEvents
+import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
+import kotlinx.css.borderRadius
+import kotlinx.css.color
+import kotlinx.css.display
+import kotlinx.css.flexWrap
+import kotlinx.css.fontFamily
+import kotlinx.css.fontSize
+import kotlinx.css.fontWeight
+import kotlinx.css.gap
+import kotlinx.css.marginTop
+import kotlinx.css.opacity
+import kotlinx.css.padding
+import kotlinx.css.pointerEvents
+import kotlinx.css.px
+import kotlinx.css.width
+import kotlinx.html.CommonAttributeGroupFacade
+import kotlinx.html.FlowContent
+import kotlinx.html.InputType
+import kotlinx.html.div
+import kotlinx.html.input
+import kotlinx.html.mark
+import kotlinx.html.span
+import kotlinx.html.textArea
 
 // ── Pattern text input ────────────────────────────────────────────────────────
 

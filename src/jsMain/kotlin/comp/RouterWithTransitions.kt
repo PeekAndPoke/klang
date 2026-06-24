@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.kraft.components.Component
@@ -15,7 +20,16 @@ import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.ticker
 import kotlinx.browser.window
-import kotlinx.css.*
+import kotlinx.css.PointerEvents
+import kotlinx.css.Position
+import kotlinx.css.bottom
+import kotlinx.css.left
+import kotlinx.css.pointerEvents
+import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.css.right
+import kotlinx.css.top
+import kotlinx.css.zIndex
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlin.time.Duration.Companion.milliseconds

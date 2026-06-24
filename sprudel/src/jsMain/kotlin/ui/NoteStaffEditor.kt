@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout
@@ -8,13 +13,23 @@ import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
-import io.peekandpoke.klang.ui.*
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.svgEllipse
+import io.peekandpoke.klang.ui.svgG
+import io.peekandpoke.klang.ui.svgLine
+import io.peekandpoke.klang.ui.svgRect
+import io.peekandpoke.klang.ui.svgRoot
+import io.peekandpoke.klang.ui.svgText
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.html.*
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onContextMenu
+import io.peekandpoke.ultra.html.onDblClick
+import io.peekandpoke.ultra.html.onMouseDown
+import io.peekandpoke.ultra.html.onMouseLeave
+import io.peekandpoke.ultra.html.onMouseMove
 import io.peekandpoke.ultra.streams.Stream
 import kotlinx.browser.window
 import kotlinx.css.Overflow

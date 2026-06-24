@@ -1,8 +1,18 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBuffer
 import org.khronos.webgl.get
-import kotlin.math.*
+import kotlin.math.exp
+import kotlin.math.ln
+import kotlin.math.log10
+import kotlin.math.log2
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * Converts raw linear-spaced FFT data into perceptually balanced spectrum buckets.

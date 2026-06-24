@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 @file:Suppress("DuplicatedCode")
 
 package io.peekandpoke.klang.tones.scale
@@ -9,7 +14,6 @@ import io.peekandpoke.klang.tones.pcset.PcSet
 import io.peekandpoke.klang.tones.scale.Scale.Companion.NoScale
 import io.peekandpoke.klang.tones.scale.Scale.Companion.degrees
 import io.peekandpoke.klang.tones.scale.Scale.Companion.getNoteNameOf
-import io.peekandpoke.klang.tones.scale.Scale.Companion.notes
 import io.peekandpoke.klang.tones.scale.Scale.Companion.rangeOfScale
 import io.peekandpoke.klang.tones.utils.TonesArray
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
@@ -8,7 +13,12 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.ultra.streams.StreamSource
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 /**
  * Centralized sample preloader that caches samples across all playbacks.

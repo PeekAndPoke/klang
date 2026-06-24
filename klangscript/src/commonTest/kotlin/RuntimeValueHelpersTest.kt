@@ -1,9 +1,45 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.script
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.script.ast.NumberLiteral
-import io.peekandpoke.klang.script.runtime.*
+import io.peekandpoke.klang.script.runtime.ArrayValue
+import io.peekandpoke.klang.script.runtime.BooleanValue
+import io.peekandpoke.klang.script.runtime.BoundNativeMethod
+import io.peekandpoke.klang.script.runtime.Environment
+import io.peekandpoke.klang.script.runtime.FunctionValue
+import io.peekandpoke.klang.script.runtime.NativeFunctionValue
+import io.peekandpoke.klang.script.runtime.NativeObjectValue
+import io.peekandpoke.klang.script.runtime.NullValue
+import io.peekandpoke.klang.script.runtime.NumberValue
+import io.peekandpoke.klang.script.runtime.ObjectValue
+import io.peekandpoke.klang.script.runtime.StringValue
+import io.peekandpoke.klang.script.runtime.isArray
+import io.peekandpoke.klang.script.runtime.isBoolean
+import io.peekandpoke.klang.script.runtime.isFunction
+import io.peekandpoke.klang.script.runtime.isNull
+import io.peekandpoke.klang.script.runtime.isNumber
+import io.peekandpoke.klang.script.runtime.isObject
+import io.peekandpoke.klang.script.runtime.isString
+import io.peekandpoke.klang.script.runtime.toBooleanOr
+import io.peekandpoke.klang.script.runtime.toBooleanOrNull
+import io.peekandpoke.klang.script.runtime.toDoubleOr
+import io.peekandpoke.klang.script.runtime.toDoubleOrNull
+import io.peekandpoke.klang.script.runtime.toFloatOr
+import io.peekandpoke.klang.script.runtime.toFloatOrNull
+import io.peekandpoke.klang.script.runtime.toIntOr
+import io.peekandpoke.klang.script.runtime.toIntOrNull
+import io.peekandpoke.klang.script.runtime.toLongOr
+import io.peekandpoke.klang.script.runtime.toLongOrNull
+import io.peekandpoke.klang.script.runtime.toObjectOr
+import io.peekandpoke.klang.script.runtime.toObjectOrNull
+import io.peekandpoke.klang.script.runtime.toStringOr
+import io.peekandpoke.klang.script.runtime.toStringOrNull
 
 /**
  * Tests for RuntimeValue helper extension functions

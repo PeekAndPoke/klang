@@ -1,8 +1,20 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.ui
 
-import io.peekandpoke.klang.ui.*
+import io.peekandpoke.klang.ui.HoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.svgLine
+import io.peekandpoke.klang.ui.svgPath
+import io.peekandpoke.klang.ui.svgRect
+import io.peekandpoke.klang.ui.svgRoot
+import io.peekandpoke.klang.ui.svgText
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp

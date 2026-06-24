@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.ui.HoverPopupCtrl
@@ -19,7 +24,31 @@ import io.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.browser.document
-import kotlinx.css.*
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.LinearDimension
+import kotlinx.css.PointerEvents
+import kotlinx.css.Position
+import kotlinx.css.UserSelect
+import kotlinx.css.backgroundColor
+import kotlinx.css.borderRadius
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.fontSize
+import kotlinx.css.height
+import kotlinx.css.left
+import kotlinx.css.marginBottom
+import kotlinx.css.minWidth
+import kotlinx.css.paddingTop
+import kotlinx.css.pct
+import kotlinx.css.pointerEvents
+import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.css.right
+import kotlinx.css.top
+import kotlinx.css.userSelect
+import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
