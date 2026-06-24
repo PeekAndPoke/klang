@@ -2,6 +2,27 @@
 
 **Bucket C · 🟡 lawyer decision · NOT a code task (until counsel advises)**
 
+> **UPDATE (2026-06-24) — task 08 (Tidal comparison) materially narrows this.** A verified comparison
+> against Tidal Cycles `Params.hs` (GPL, Copyright 2021 — *predates Strudel*) shows the bulk of the
+> vocabulary, **including the short aliases**, originates in Tidal, not Strudel. Confirmed in Tidal:
+> the base names (cutoff/resonance/hcutoff/hresonance/bandf/bandq/gain/pan/velocity/note/n/sound/bank/
+> begin/end/speed/coarse/crush/cut/distort/accelerate/legato/sustain/attack/decay/release/room/size/
+> delay/delaytime/delayfeedback/orbit/vowel/shape) **and** the aliases `lpf`/`hpf`/`bpf`/`ctf`/`lpq`/`hpq`/
+> `sz`/`s`/`delayfb`/`delayt`/`sus`/`clip`, **and** the `:`-compound concept itself (`grp`+`wordsBy(==':')`,
+> with `sound → s:n`). → **Strong prior-art defense: most of the "looks copied from Strudel" vocabulary is
+> actually shared Tidal/SuperDirt community terminology.**
+>
+> **What still traces to Strudel specifically (the narrowed question for counsel):**
+> - bare short forms NOT in Tidal: `lp`/`hp`/`bp`, `res`, `vel`, `comp`, `d`, `uni`, `rsize`, `dist`;
+> - the **multi-field (>2) `:`-orderings** that match Strudel's `controls.mjs` and have no Tidal `grp`
+    > equivalent: `lpf → cutoff:resonance:lpenv`, `hpf → …:hpenv`, `bpf → …:bpenv`, `adsr`,
+    > `compressor → threshold:ratio:knee:attack:release`, `reverb → room:size:fade:lp:dim`,
+    > `tremolo → depth:rate:shape:skew:phase`, `delay → delay:delaytime:delayfeedback`;
+> - the pitch/filter-envelope families (`penv`/`lpenv`/`*adsr`) — Strudel-era.
+    > (Motör-engine extras like `distortshape`/`*os`/`body`/`vowelMix`/`unison` are Klang-original — no issue.)
+    > So the genuine Strudel-only residue is **the specific multi-field colon orderings + a few short forms**, not
+    > the vocabulary as a whole. See `docs/tasks-archive/2026-06/20260624-copyright-audit-08-*` for the full evidence.
+
 ## Context
 
 This is the one genuine judgment call. The DSL's **control-parameter alias clusters** and the **compound

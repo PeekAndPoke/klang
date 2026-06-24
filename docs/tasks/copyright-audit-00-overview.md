@@ -43,7 +43,7 @@ comments, and the vendored Strudel JS bundle used as a JVM test oracle.
 | 05 | [Provenance comment & doc-string sweep](../tasks-archive/2026-06/20260624-copyright-audit-05-comment-docstring-sweep.md)                     | C (low)      | ✅ done    | hygiene          |
 | 06 | [Attribution touch-ups (chord-voicings, fast_tanh, PolyBLEP)](../tasks-archive/2026-06/20260624-copyright-audit-06-attribution-touchups.md)  | A            | ✅ done    | docs             |
 | 07 | [Control-vocabulary legal review](copyright-audit-07-control-vocabulary-legal-review.md)                                                     | C            | 🟡 lawyer | decision         |
-| 08 | [Tidal (GPL) comparison follow-up](copyright-audit-08-tidal-comparison-followup.md)                                                          | —            | 🟢 later  | audit            |
+| 08 | [Tidal (GPL) comparison follow-up](../tasks-archive/2026-06/20260624-copyright-audit-08-tidal-comparison-followup.md)                        | A (clean)    | ✅ done    | audit            |
 
 ## What is CONFIRMED CLEAN (no task needed)
 
@@ -65,7 +65,8 @@ comments, and the vendored Strudel JS bundle used as a JVM test oracle.
 Before any code is shipped under a non-AGPL license:
 
 - ✅ tasks **01, 02, 03** completed (copied expression rewritten),
-- ✅ task **04** enforced (the Strudel bundle excluded from the proprietary artifact),
-- ✅ task **07** — IP-lawyer sign-off on the control vocabulary.
+- ✅ task **04** completed + **enforced** (build guard fails if the Strudel bundle reaches a production artifact),
+- ⏳ task **07** — **IP-lawyer sign-off on the control vocabulary — STILL PENDING (the one remaining blocker).**
 
-Tasks 05, 06, 08 strengthen the record but are not strictly blocking.
+Tasks 05, 06 (done) and 08 (done — also delivered Tidal prior-art that **narrows** 07) strengthen the record
+but are not strictly blocking. As of 2026-06-24: everything except the task-07 lawyer sign-off is complete.
