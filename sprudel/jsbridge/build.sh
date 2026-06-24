@@ -17,4 +17,4 @@ echo "Creating esm module"
   --legal-comments=none \
   --keep-names \
   --tree-shaking=false \
-  --outfile=./../src/jvmMain/resources/strudel-bundle.mjs
+  --outfile=./../src/jvmTest/resources/strudel-bundle.mjs

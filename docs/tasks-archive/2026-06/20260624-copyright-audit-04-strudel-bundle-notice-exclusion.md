@@ -2,6 +2,23 @@
 
 **Bucket B (verbatim copy) · 🟡 should-fix · compliance + build · NOT a code rewrite**
 
+> **Status: ✅ DONE (2026-06-24).** Chosen approach: make the **build** enforce test-only (stronger
+> than a label). Actual changes (supersede the old paths described below):
+> - Moved the whole `graal/` oracle (`GraalJsHelpers`/`GraalSprudelCompiler`/`GraalSprudelPattern`)
+    > `jvmMain` → **`jvmTest`**, and the generated `strudel-bundle.mjs` (+ `.map`) → `jvmTest/resources`.
+> - Moved the GraalVM `polyglot`/`js` deps from `jvmMain` → `jvmTest` in `sprudel/build.gradle.kts`;
+    > also removed the now-dead GraalVM deps from the root `:klang` app build. Production jars (both
+    > `:sprudel` and `:klang`) no longer carry GraalVM or the bundle. Verified: `:sprudel:compileKotlinJvm`
+    > and `:klang:compileKotlinJvm` build with **zero** GraalVM on the production classpath.
+> - Bundle is **git-ignored + built on the fly**: `jsbridge/build.sh` outfile → `jvmTest/resources`,
+    > `buildStrudelBundle` wired to `jvmTestProcessResources` (`.gitignore` updated). Verified the bundle
+    > regenerates into the new location.
+> - `JsCompatTests` now **skips when not on GraalVM** (`onGraalVm` vendor check; `graalCompiler` made
+    > `lazy` so no GraalVM `Context` is built off-Graal). Verified it skips cleanly on Corretto
+    > (BUILD SUCCESSFUL, oracle never constructed).
+> - Provenance/AGPL note added at `sprudel/jsbridge/README.md`.
+    > Code-review (independent agent): APPROVE; its `:klang` dead-dep finding was applied.
+
 ## Context
 
 The repo vendors a **complete, verbatim, minified copy of Strudel** as a JVM-side test/reference oracle. This

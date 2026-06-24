@@ -111,10 +111,6 @@ kotlin {
 
         jvmMain {
             dependencies {
-                // GraalVM (for playground / GraalSprudelCompiler)
-                implementation(Deps.JavaLibs.GraalVM.polyglot)
-                implementation(Deps.JavaLibs.GraalVM.js)
-
                 implementation(Deps.JavaLibs.logback_classic)
 
                 // CLI framework (needed by Cli.kt entry point)

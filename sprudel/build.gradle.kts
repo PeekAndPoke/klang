@@ -54,16 +54,15 @@ kotlin {
             }
         }
 
-        jvmMain {
-            dependencies {
-                // GraalVM
-                implementation(Deps.JavaLibs.GraalVM.polyglot)
-                implementation(Deps.JavaLibs.GraalVM.js)
-            }
-        }
-
         jvmTest {
             dependencies {
+                // GraalVM — only the JS-compatibility differential-test oracle uses it
+                // (sprudel/src/jvmTest/kotlin/graal). It is deliberately NOT a jvmMain
+                // dependency, so the production jar never carries GraalVM or the vendored
+                // Strudel bundle. See docs/tasks-archive/.../copyright-audit-04-*.
+                implementation(Deps.JavaLibs.GraalVM.polyglot)
+                implementation(Deps.JavaLibs.GraalVM.js)
+
                 Deps.Test {
                     jvmTestDeps()
                 }
@@ -77,7 +76,7 @@ tasks {
 
     val buildStrudelBundle = register<Exec>("buildStrudelBundle") {
         group = "build"
-        description = "Builds the Strudel ESM Graal-JS bridge using the shell script"
+        description = "Builds the vendored Strudel ESM bundle used ONLY by the JS-compat test oracle"
 
         workingDir = file("jsbridge")
 
@@ -91,13 +90,14 @@ tasks {
 
         commandLine("./build.sh")
 
-        // Optimization: Only run if the JS source files changed
+        // Optimization: Only run if the JS source files changed. The bundle is a generated,
+        // git-ignored, test-only artifact — it is built on the fly into the test resources.
         inputs.dir("jsbridge")
-        outputs.file("src/jvmMain/resources/strudel-entry.mjs")
+        outputs.file("src/jvmTest/resources/strudel-bundle.mjs")
     }
 
-    // Ensure the bundle is built before resources are processed for the JVM
-    named("jvmProcessResources") {
+    // Build the bundle on the fly before the JVM TEST resources are processed (test-only oracle).
+    named("jvmTestProcessResources") {
         dependsOn(buildStrudelBundle)
     }
 }

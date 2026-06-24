@@ -34,16 +34,16 @@ comments, and the vendored Strudel JS bundle used as a JVM test oracle.
 
 ## Tasks (recommended execution order)
 
-| #  | Task                                                                                                                                     | Bucket       | Priority  | Type             |
-|----|------------------------------------------------------------------------------------------------------------------------------------------|--------------|-----------|------------------|
-| 01 | [Rewrite `EuclideanMorphPattern.calculateMorphedArcs`](../tasks-archive/2026-06/20260624-copyright-audit-01-euclidean-morph-rewrite.md)  | B (high)     | ✅ done    | code             |
-| 02 | [De-port Euclidean generation (Bjorklund + rotate)](../tasks-archive/2026-06/20260624-copyright-audit-02-euclidean-generation-deport.md) | B (high)     | ✅ done    | code             |
-| 03 | [Reimplement the `degrade` family](../tasks-archive/2026-06/20260624-copyright-audit-03-degrade-reimplement.md)                          | B/C (med)    | ✅ done    | code             |
-| 04 | [`strudel-bundle.mjs` — notice + release exclusion](copyright-audit-04-strudel-bundle-notice-exclusion.md)                               | B (verbatim) | 🟡 should | compliance/build |
-| 05 | [Provenance comment & doc-string sweep](copyright-audit-05-comment-docstring-sweep.md)                                                   | C (low)      | 🟡 should | hygiene          |
-| 06 | [Attribution touch-ups (chord-voicings, fast_tanh, PolyBLEP)](copyright-audit-06-attribution-touchups.md)                                | A            | 🟢 nice   | docs             |
-| 07 | [Control-vocabulary legal review](copyright-audit-07-control-vocabulary-legal-review.md)                                                 | C            | 🟡 lawyer | decision         |
-| 08 | [Tidal (GPL) comparison follow-up](copyright-audit-08-tidal-comparison-followup.md)                                                      | —            | 🟢 later  | audit            |
+| #  | Task                                                                                                                                         | Bucket       | Priority  | Type             |
+|----|----------------------------------------------------------------------------------------------------------------------------------------------|--------------|-----------|------------------|
+| 01 | [Rewrite `EuclideanMorphPattern.calculateMorphedArcs`](../tasks-archive/2026-06/20260624-copyright-audit-01-euclidean-morph-rewrite.md)      | B (high)     | ✅ done    | code             |
+| 02 | [De-port Euclidean generation (Bjorklund + rotate)](../tasks-archive/2026-06/20260624-copyright-audit-02-euclidean-generation-deport.md)     | B (high)     | ✅ done    | code             |
+| 03 | [Reimplement the `degrade` family](../tasks-archive/2026-06/20260624-copyright-audit-03-degrade-reimplement.md)                              | B/C (med)    | ✅ done    | code             |
+| 04 | [`strudel-bundle.mjs` — notice + release exclusion](../tasks-archive/2026-06/20260624-copyright-audit-04-strudel-bundle-notice-exclusion.md) | B (verbatim) | ✅ done    | compliance/build |
+| 05 | [Provenance comment & doc-string sweep](copyright-audit-05-comment-docstring-sweep.md)                                                       | C (low)      | 🟡 should | hygiene          |
+| 06 | [Attribution touch-ups (chord-voicings, fast_tanh, PolyBLEP)](copyright-audit-06-attribution-touchups.md)                                    | A            | 🟢 nice   | docs             |
+| 07 | [Control-vocabulary legal review](copyright-audit-07-control-vocabulary-legal-review.md)                                                     | C            | 🟡 lawyer | decision         |
+| 08 | [Tidal (GPL) comparison follow-up](copyright-audit-08-tidal-comparison-followup.md)                                                          | —            | 🟢 later  | audit            |
 
 ## What is CONFIRMED CLEAN (no task needed)
 

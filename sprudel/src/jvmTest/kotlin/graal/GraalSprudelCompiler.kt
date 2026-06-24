@@ -22,7 +22,7 @@ class GraalSprudelCompiler(
 
     companion object {
         val defaultBundle = GraalSprudelCompiler::class.java.classLoader.getResource("strudel-bundle.mjs")
-            ?: error("Could not find strudel-entry.mjs in resources")
+            ?: error("Could not find strudel-bundle.mjs in test resources — run the buildStrudelBundle task")
     }
 
     private val lock = ReentrantLock()
