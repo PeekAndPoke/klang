@@ -15,13 +15,12 @@ import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel._lift
-import io.peekandpoke.klang.sprudel.appLeft
-import io.peekandpoke.klang.sprudel.filterValues
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.ChoicePattern
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.sprudel.pattern.ControlPattern
+import io.peekandpoke.klang.sprudel.pattern.DegradePattern
 import io.peekandpoke.klang.sprudel.pattern.RandLPattern
 import io.peekandpoke.klang.sprudel.pattern.RandrunPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
@@ -444,9 +443,7 @@ fun PatternMapperFn.degrade(prob: PatternLike = 0.5, callInfo: CallInfo? = null)
 // -- degradeByWith() --------------------------------------------------------------------------------------------------
 
 private fun applyDegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    // JavaScript: pat.fmap((a) => (_) => a).appLeft(withPat.filterValues((v) => v > x))
-    // Keeps events where withPat > x
-    // Examples:
+    // Keeps each event where the randomness source exceeds the threshold x:
     //   degradeByWith(rand, 0.2) -> keep where rand > 0.2 (~80% kept)
     //   degradeByWith(rand, 0.5) -> keep where rand > 0.5 (~50% kept)
     //   degradeByWith(rand, 0.8) -> keep where rand > 0.8 (~20% kept)
@@ -454,7 +451,7 @@ private fun applyDegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg
     val xPat = (args.getOrNull(1) ?: SprudelDslArg.of(0.5)).toPattern()
 
     return pattern._lift(xPat) { x, src ->
-        src.appLeft(withPat.filterValues { v -> (v?.asDouble ?: 0.0) > x })
+        DegradePattern(source = src, randomness = withPat, threshold = x, keepStrictlyAbove = true)
     }
 }
 
@@ -577,9 +574,7 @@ fun PatternMapperFn.undegradeBy(prob: PatternLike, callInfo: CallInfo? = null): 
 // -- undegradeByWith() ------------------------------------------------------------------------------------------------
 
 private fun applyUndegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    // Inverse of degradeByWith: keep where withPat >= (1 - x)
-    // Keeps events where withPat >= (1 - x), which is equivalent to keeping where withPat > (1 - x) for continuous values
-    // Examples:
+    // Inverse of degradeByWith: keep each event where the randomness source reaches (1 - x):
     //   undegradeByWith(rand, 0.1) -> keep where rand >= 0.9 (~10% kept)
     //   undegradeByWith(rand, 0.5) -> keep where rand >= 0.5 (~50% kept)
     //   undegradeByWith(rand, 1.0) -> keep where rand >= 0.0 (~100% kept)
@@ -587,7 +582,7 @@ private fun applyUndegradeByWith(pattern: SprudelPattern, args: List<SprudelDslA
     val xPat = (args.getOrNull(1) ?: SprudelDslArg.of(0.5)).toPattern()
 
     return pattern._lift(xPat) { x, src ->
-        src.appLeft(withPat.filterValues { v -> (v?.asDouble ?: 0.0) >= (1 - x) })
+        DegradePattern(source = src, randomness = withPat, threshold = 1 - x, keepStrictlyAbove = false)
     }
 }
 

@@ -2,6 +2,16 @@
 
 **Bucket B/C (medium confidence) · 🔴 should-fix before non-AGPL relicensing · code change**
 
+> **Status: ✅ DONE (2026-06-24).** Implemented a dedicated `pattern/DegradePattern.kt` (per the
+> engine's class-per-combinator convention, like `StructurePattern`). `applyDegradeByWith` /
+> `applyUndegradeByWith` now build `DegradePattern(src, withPat, threshold, keepStrictlyAbove)` via
+> the existing `_lift` instead of `src.appLeft(withPat.filterValues { v -> v > x })`; the
+> `appLeft`/`filterValues` imports and the verbatim JS comment were removed. Behavior preserved
+> exactly (the class inlines the appLeft sample-over-whole + clip + threshold, folding in
+> `filterValues`). `sometimesBy`/`someCyclesBy` were already independent (`when`+`lt`), so no change
+> needed there. Verified: LangDegradeBy/DegradeByWith/UndegradeBy/UndegradeByWith/SometimesBy/SomeCyclesBy
+> specs pass. Code-review (independent agent, traced event-by-event vs `appLeft`): APPROVE.
+
 ## Context
 
 `degradeByWith` reproduces Strudel's specific applicative construction (`fmap(const).appLeft(filterValues(v >

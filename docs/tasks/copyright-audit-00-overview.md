@@ -38,7 +38,7 @@ comments, and the vendored Strudel JS bundle used as a JVM test oracle.
 |----|------------------------------------------------------------------------------------------------------------------------------------------|--------------|-----------|------------------|
 | 01 | [Rewrite `EuclideanMorphPattern.calculateMorphedArcs`](../tasks-archive/2026-06/20260624-copyright-audit-01-euclidean-morph-rewrite.md)  | B (high)     | ✅ done    | code             |
 | 02 | [De-port Euclidean generation (Bjorklund + rotate)](../tasks-archive/2026-06/20260624-copyright-audit-02-euclidean-generation-deport.md) | B (high)     | ✅ done    | code             |
-| 03 | [Reimplement the `degrade` family](copyright-audit-03-degrade-reimplement.md)                                                            | B/C (med)    | 🔴 must   | code             |
+| 03 | [Reimplement the `degrade` family](../tasks-archive/2026-06/20260624-copyright-audit-03-degrade-reimplement.md)                          | B/C (med)    | ✅ done    | code             |
 | 04 | [`strudel-bundle.mjs` — notice + release exclusion](copyright-audit-04-strudel-bundle-notice-exclusion.md)                               | B (verbatim) | 🟡 should | compliance/build |
 | 05 | [Provenance comment & doc-string sweep](copyright-audit-05-comment-docstring-sweep.md)                                                   | C (low)      | 🟡 should | hygiene          |
 | 06 | [Attribution touch-ups (chord-voicings, fast_tanh, PolyBLEP)](copyright-audit-06-attribution-touchups.md)                                | A            | 🟢 nice   | docs             |
