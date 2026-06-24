@@ -31,7 +31,7 @@ bug and is **behaviour-identical** for today's single-playback case.
 ## Decisions (locked)
 
 1. **`PlaybackEngine`** = per-`playbackId` instance owning **all per-playback state** (scheduled heap,
-   active voices, solo/mute, epoch, forked ignitor registry, its own `Cylinders`, `bus`, `master`).
+   active voices, solo/mute, epoch, forked ignitor registry, its own `Cylinders` + `master`).
    Effectively *what `VoiceScheduler` becomes* once global state is hoisted out. (Name over
    `PlaybackProcessor` — avoids the worklet `AudioWorkletProcessor`/`process()` clash.)
 2. **`PlaybackEngineDispatcher`** (host, commonMain) sits in front: owns the `Map<String, PlaybackEngine>`
@@ -62,6 +62,12 @@ bug and is **behaviour-identical** for today's single-playback case.
    `Cmd.SetMaster(playbackId, MasterDsl)` before the first voices → engine applies it (v1 = output gain on
    its bus). Rich chain + live UI deferred.
 10. **Diagnostics carries per-engine stats**; UI-facing aggregates survive as computed convenience.
+11. **Single-playback fast path + one shared mixdown scratch.** The final mixdown is `Σ engine
+    contributions`, but engines do **not** own a `bus`. With **one** active engine it renders **straight into
+    the final `mix`** — no extra buffer, no sum, cost-identical to today. With **≥2** (crossfade/layering)
+    each engine renders into **one shared mixdown scratch** (reused across engines, safe because they render
+    sequentially and we accumulate immediately) which is added into `mix`. Per-engine metering/master reads
+    the contribution right after `renderInto`, before it is summed/overwritten.
 
 ## Architecture (target)
 
@@ -70,9 +76,9 @@ PlaybackEngineDispatcher (host, singleton, commonMain)
   global:  SampleStore(cache) · backend clock · VoiceFactory · scratch singletons
            IgnitorRegistry(parent) · EngineRegistry · KlangAudioRenderer(limiter+DC+clip)
   handles: KlangCommLink.Cmd  (lazy-create engine on unknown pid; route; Cmd.Cleanup→drain→dispose)
-  renders: for each engine → engine.renderInto(engine.bus, cursorFrame)
-           Σ engine.bus → KlangAudioRenderer(safety limiter → DC → clip) → out
-  ├─ PlaybackEngine[A]   scheduled·active·solo·epoch·ignitorReg(fork)·Cylinders(lazy)·bus·master
+  renders: 1 engine → renderInto(mix) directly  |  N engines → each renderInto(scratch); mix += scratch
+           mix → KlangAudioRenderer(safety limiter → DC → clip) → out
+  ├─ PlaybackEngine[A]   scheduled·active·solo·epoch·ignitorReg(fork)·Cylinders(lazy)·master
   ├─ PlaybackEngine[B]   …
   └─ …
 platform backend (Jvm / JsWorklet) = thin: pump ring buffer → dispatcher.handle(cmd); dispatcher.renderBlock(out)
@@ -81,19 +87,19 @@ voice = Ignitor + EngineDsl(→Pipeline) → Cylinder (in its PlaybackEngine)
 
 ## Resource scope (global vs per-engine)
 
-| Resource                                       | Scope                           | Why                                                |
-|------------------------------------------------|---------------------------------|----------------------------------------------------|
-| Sample cache (PCM)                             | **global** (dispatcher)         | large, shared across playbacks                     |
-| `ScratchBuffers` / `voiceBuffer` / `freqMod`   | **global singletons**           | per-block transient; engines render sequentially   |
-| backend clock / start time / cursor frame      | **global**                      | one audio timeline                                 |
-| `VoiceFactory`                                 | **global**                      | stateless factory                                  |
-| `IgnitorRegistry`                              | global **parent** + engine fork | defaults shared; per-playback custom osc (exists)  |
-| `EngineRegistry`                               | **global** (fork later)         | per-engine fork deferred to EngineDsl branch       |
-| limiter + DC blockers                          | **global** (final stage)        | safety brick on the summed output                  |
-| scheduled heap · active voices · solo/mute     | **per engine**                  | per-playback timeline & mute                       |
-| epoch                                          | **per engine**                  | per-playback time origin (exists in `PlaybackCtx`) |
-| `Cylinders` (orbits + FX) · `bus` · `master`   | **per engine** (lazy cylinders) | isolation (the bug fix) + per-deck output          |
-| `Oversampler`, filters, envelopes, delay lines | **per voice**                   | inter-block state — not shareable                  |
+| Resource                                                   | Scope                           | Why                                                |
+|------------------------------------------------------------|---------------------------------|----------------------------------------------------|
+| Sample cache (PCM)                                         | **global** (dispatcher)         | large, shared across playbacks                     |
+| `ScratchBuffers`/`voiceBuffer`/`freqMod` + mixdown scratch | **global singletons**           | per-block transient; engines render sequentially   |
+| backend clock / start time / cursor frame                  | **global**                      | one audio timeline                                 |
+| `VoiceFactory`                                             | **global**                      | stateless factory                                  |
+| `IgnitorRegistry`                                          | global **parent** + engine fork | defaults shared; per-playback custom osc (exists)  |
+| `EngineRegistry`                                           | **global** (fork later)         | per-engine fork deferred to EngineDsl branch       |
+| limiter + DC blockers                                      | **global** (final stage)        | safety brick on the summed output                  |
+| scheduled heap · active voices · solo/mute                 | **per engine**                  | per-playback timeline & mute                       |
+| epoch                                                      | **per engine**                  | per-playback time origin (exists in `PlaybackCtx`) |
+| `Cylinders` (orbits + FX) · `master`                       | **per engine** (lazy cylinders) | isolation (the bug fix); mixdown buffer is shared  |
+| `Oversampler`, filters, envelopes, delay lines             | **per voice**                   | inter-block state — not shareable                  |
 
 ## Current state (grounded)
 
@@ -118,21 +124,22 @@ voice = Ignitor + EngineDsl(→Pipeline) → Cylinder (in its PlaybackEngine)
 
 ### A. `PlaybackEngine` (per playbackId) — composition
 
-`PlaybackEngine` is a thin aggregate: **`{ VoiceScheduler(one pid) + Cylinders(lazy) + bus + master }`**.
-`VoiceScheduler` keeps its identity and tests — it becomes **single-playback-scoped**, which *removes*
-machinery rather than adding it:
+`PlaybackEngine` is a thin aggregate: **`{ VoiceScheduler(one pid) + Cylinders(lazy) + master }`** (no `bus`
+— the mixdown buffer is the dispatcher's, see #11). `VoiceScheduler` keeps its identity and tests — it becomes
+**single-playback-scoped**, which *removes* machinery rather than adding it:
 
 - `playbackContexts: Map<String, PlaybackCtx>` → gone; `epoch` + forked `ignitorRegistry` become plain fields.
 - `ActiveVoice.playbackId` → gone (every active voice here is this playback).
 - `cleanup()/clearScheduled()/replaceVoices()` → drop the `playbackId` param; the **dispatcher** routes each
   `Cmd` to the right engine's scheduler.
 
-The engine owns `cylinders: Cylinders` (lazy; **not** `preallocateAll`'d), `bus: StereoBuffer(blockFrames)`,
-and `master: MasterDsl` (default unity). Global deps (sample store, scratch, clock, `VoiceFactory`,
-ignitor-registry parent) are **injected** by the dispatcher — the scheduler does not own scratch (decision #5).
-`renderInto(bus, cursorFrame)` = `cylinders.clearAll()` → `scheduler.process(cursorFrame)` (renders its voices
-into its cylinders) → `cylinders.processAndMix(bus)` → (v1) apply `master` gain to `bus`. Diagnostics
-*emission* moves out of `process()` up to the dispatcher (D).
+The engine owns `cylinders: Cylinders` (lazy; **not** `preallocateAll`'d) and `master: MasterDsl` (default
+unity) — but **no `bus`**. Global deps (sample store, scratch, clock, `VoiceFactory`, ignitor-registry parent)
+are **injected** by the dispatcher — the scheduler does not own scratch (decision #5).
+`renderInto(target, cursorFrame)` writes the engine's stereo output into the **caller's** buffer (the final
+`mix` for one engine, or the shared mixdown scratch for ≥2 — see #11): `cylinders.clearAll()` →
+`scheduler.process(cursorFrame)` (renders its voices into its cylinders) → `cylinders.processAndMix(target)` →
+(v1) apply `master` gain to `target`. Diagnostics *emission* moves out of `process()` up to the dispatcher (D).
 
 ### B. `PlaybackEngineDispatcher` (host)
 
@@ -143,8 +150,9 @@ into its cylinders) → `cylinders.processAndMix(bus)` → (v1) apply `master` g
     - `Cmd.SetMaster` → `engine.master = cmd.dsl`.
     - `Cmd.Cleanup` → mark draining (see E).
     - sample uploads / registrations → global stores.
-- `renderBlock(out)` — for each engine `renderInto(engine.bus, cursorFrame)`; sum buses into `mix`;
-  `renderer.finalize(mix, out)` (limiter → DC → clip). Diagnostics emitted here (see D).
+- `renderBlock(out)` — `mix.clear()`, then the #11 fast path: **1** active engine → `renderInto(mix)`
+  directly; **≥2** → for each, `mixdownScratch.clear(); renderInto(mixdownScratch); mix += mixdownScratch`.
+  Then `renderer.finalize(mix, out)` (limiter → DC → clip). Diagnostics emitted here (see D).
 
 ### C. Voice → cylinder routing seam
 
@@ -219,8 +227,8 @@ hitch tracked in Open Q1.
 - `audio_be/.../voices/VoiceScheduler.kt` → becomes **single-playback** (shed `playbackContexts`,
   `ActiveVoice.playbackId`, `playbackId` params); receives globals injected; stops *emitting* diagnostics
   (exposes stats instead). Kept as a unit (and its tests).
-- **new** `audio_be/.../voices/PlaybackEngine.kt` — aggregate `{ VoiceScheduler + Cylinders + bus + master }`
-    + `renderInto(bus, cursorFrame)`.
+- **new** `audio_be/.../voices/PlaybackEngine.kt` — aggregate `{ VoiceScheduler + Cylinders + master }`
+    + `renderInto(target, cursorFrame)` (writes into the caller's buffer — no per-engine bus).
 - **new** `audio_be/.../PlaybackEngineDispatcher.kt` — host: engine map, global resources, `handle(cmd)`,
   `renderBlock(out)`, diagnostics.
 - `audio_be/.../cylinders/Cylinders.kt` — Tier-2 eviction; drop global-`preallocateAll` assumption.
@@ -252,14 +260,17 @@ audio until D6 (and then only when a non-unity `Song.master` is set).
 - **Unit:** dispatcher test — each `Cmd` subtype routes to the expected scheduler method (spy/fake scheduler).
 - **Human:** JVM app + browser — play / stop / update / register-ignitor behave exactly as before.
 - **Done when:** no `when(cmd)` in either backend; dispatcher is the single dispatch site; suite green.
+- **Status:** ✅ landed + committed. Review fixes applied: test drives `create()`, dead `cylinders` dropped,
+  `handle` is an exhaustive expression, `KlangOfflineRenderer` reuses `create()`.
 
 ### D2 — Per-engine `PlaybackEngine` + dispatcher map · *the core; single-playback identical*
 
 - **Scope:** dispatcher hoists globals (sample store, scratch singletons, clock, `VoiceFactory`) and
-  **lazy-creates** one `PlaybackEngine = { VoiceScheduler(one pid) + Cylinders(lazy) + bus }` per pid; sums
-  per-engine buses → `KlangAudioRenderer` (limiter+DC+clip). `VoiceScheduler` sheds its playbackId machinery
-  (A). Warmup → one warmup engine; **drop global `preallocateAll`**; resolve the first-note hitch (small
-  keep-warm orbit pool, or accept lazy + measure).
+  **lazy-creates** one `PlaybackEngine = { VoiceScheduler(one pid) + Cylinders(lazy) }` per pid (`master`
+  added in D6); mixes down via the **#11 fast path** (1 engine → `renderInto(mix)`; ≥2 → one shared mixdown
+  scratch) → `KlangAudioRenderer` (limiter+DC+clip). `VoiceScheduler` sheds its playbackId machinery (A).
+  Warmup → one warmup engine; **drop global `preallocateAll`**; resolve the first-note hitch (small keep-warm
+  orbit pool, or accept lazy + measure).
 - **Unit:** adapted single-pid `VoiceScheduler` tests green; **isolation spec** — two engines (two pids) on
   the same orbit id keep independent reverb/delay/phaser/comp state.
 - **Human:** a single song is bit-for-bit identical (one engine == old path); two overlapping songs on the

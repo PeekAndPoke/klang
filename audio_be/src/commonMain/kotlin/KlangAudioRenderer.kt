@@ -6,14 +6,15 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 
 /**
- * Standard renderer that drives the DSP graph (VoiceScheduler -> Cylinders -> Stereo Output).
+ * Standard renderer that drives the DSP graph (VoiceScheduler -> Cylinders -> [MasterStage] -> Output).
  *
  * This class is stateless regarding the playback cursor. It simply renders "what is requested".
+ *
+ * The final post-chain (limiter + DC block + clip/interleave) lives in [MasterStage] so the
+ * per-playback mixdown can reuse it once on the summed mix — see `docs/tasks/per-playback-engine.md`.
  */
 class KlangAudioRenderer(
     sampleRate: Int,
@@ -23,27 +24,7 @@ class KlangAudioRenderer(
 ) {
     private val mix = StereoBuffer(blockFrames)
 
-    private val limiter = Compressor(
-        sampleRate = sampleRate,
-        thresholdDb = -1.0,    // Ceiling at -1dB
-        ratio = 20.0,          // Brickwall ratio
-        // 2 dB soft knee — 2026-04-30 fix for britzeling on heavily-distorted content.
-        // With kneeDb=0 the gain curve had a C¹ kink at the threshold corner; every
-        // envelope crossing of -1 dBFS injected high-order harmonics at audio rate.
-        // The 2 dB knee makes the corner smooth without changing the brickwall character
-        // (asymptotic slopes are unchanged: 0 below threshold, ~-0.95 above).
-        kneeDb = 2.0,
-        attackSeconds = 0.001, // 1ms allows transients to retain punch before clamping
-        releaseSeconds = 0.1,
-    )
-
-    // Master-out DC blockers. ~7 Hz cutoff (coefficient = 0.999 at 44.1k / ~7.6 Hz at 48k).
-    // Run AFTER the limiter so input is already ±1-bounded — no rail-edge transient,
-    // no need for downstream softCap. Removes any DC bias from the cylinder mix that
-    // would otherwise eat headroom asymmetrically through the clip-and-interleave step.
-    // Added 2026-04-29; see filters/LowPassHighPassFilters.kt header for DcBlocker history.
-    private val dcBlockerL = LowPassHighPassFilters.DcBlocker(coefficient = 0.999)
-    private val dcBlockerR = LowPassHighPassFilters.DcBlocker(coefficient = 0.999)
+    private val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /**
      * Clears stateful post-chain elements (limiter envelope + DC blocker IIR state).
@@ -51,9 +32,7 @@ class KlangAudioRenderer(
      * into the first real playback block.
      */
     fun resetPostChain() {
-        limiter.reset()
-        dcBlockerL.reset()
-        dcBlockerR.reset()
+        master.reset()
     }
 
     /**
@@ -69,62 +48,17 @@ class KlangAudioRenderer(
         cursorFrame: Int,
         out: ShortArray,
     ) {
-        // 1. Reset Mix Buffers
+        // 1. Reset mix buffers
         mix.clear()
         cylinders.clearAll()
 
-        // 2. Process Voices
+        // 2. Process voices
         voices.process(cursorFrame)
 
-        // 3. Mix Voices into Cylinders -> Main Mix
+        // 3. Mix voices through the cylinders into the main mix
         cylinders.processAndMix(mix)
 
-        // 4. Apply dynamic limiter
-        // This handles the bulk of the loudness management musically
-        limiter.process(mix.left, mix.right, blockFrames)
-
-        // 5. Master-out DC blockers (per channel, in-place).
-        // Strips DC bias accumulated through the cylinder mix so the clip-and-interleave
-        // below has full ±1 headroom symmetrically. Input is post-limiter (already ±1),
-        // so no rail-edge transient and no softCap needed.
-        dcBlockerL.process(mix.left, 0, blockFrames)
-        dcBlockerR.process(mix.right, 0, blockFrames)
-
-        // 6. Post-Process (Transparent Clip + Interleave)
-        val left = mix.left
-        val right = mix.right
-
-        // Cache max value to avoid repeated field access/casting
-        val maxShort = Short.MAX_VALUE
-
-        for (i in 0 until blockFrames) {
-            val lSample = left[i]
-            val rSample = right[i]
-
-            // OPTIMIZATION: Branching Logic
-            // Most samples are within safe bounds [-1.0, 1.0].
-            // We skip all math for them to preserve CPU and Transparency (Unity Gain).
-
-            val lOut = if (lSample >= -1.0 && lSample <= 1.0) {
-                (lSample * maxShort).toInt()
-            } else if (lSample > 1.0) {
-                Short.MAX_VALUE.toInt()
-            } else {
-                Short.MIN_VALUE.toInt()
-            }
-
-            val rOut = if (rSample >= -1.0 && rSample <= 1.0) {
-                (rSample * maxShort).toInt()
-            } else if (rSample > 1.0) {
-                Short.MAX_VALUE.toInt()
-            } else {
-                Short.MIN_VALUE.toInt()
-            }
-
-            // Interleave
-            val idx = i * 2
-            out[idx] = lOut.toShort()
-            out[idx + 1] = rOut.toShort()
-        }
+        // 4. Master/output stage: limiter -> DC block -> transparent clip + interleave.
+        master.process(mix, out)
     }
 }

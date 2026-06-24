@@ -27,7 +27,7 @@ stack(                                                                          
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                          //          DISCO!          //
     .orbit(0).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(5).detune(0.08).analog(feel)                      //       FOREVER!       //
     .hpf(1550).lpf(1550).lpe(berlin.range(2, 2.03).fast(4)).lpq(2.2).lpadsr("0.007:1.1:0.0:0.01")                              //                  //
-    .gain(0.50).distort("0.570:tube:4").postgain("<0.210!48 0.110!16>") // . solo()                                             //       //      //
+    .gain(0.50).distort("0.570:tube:4").postgain("<0.230!48 0.115!16>") // . solo()                                             //       //      //
     .adsr("0.007:4.0:0.0:0.01").clip(0.89)  // . mute()                                                                        //     //    //    //
     .release("<0.04!16 0.11!16>").vibrato(8).vibmod(0.01)                                                                     //   //          //  //
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                  // //               // //
