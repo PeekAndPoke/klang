@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.version
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -52,6 +53,7 @@ import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.title
 
 @Suppress("FunctionName")
 fun Tag.Motoer() = comp {
@@ -61,6 +63,9 @@ fun Tag.Motoer() = comp {
 class Motoer(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // Build metadata, published as a stream; redraws once it loads so the title tooltip is current.
+    private val versionInfo by subscribingTo(version)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -125,6 +130,16 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
                     css {
                         whiteSpace = WhiteSpace.nowrap
                         put("text-shadow", "0 0 5px #000")
+                    }
+
+                    // Reveal the build version as a native tooltip on hover
+                    versionInfo.takeIf { it.isAvailable }?.let { info ->
+                        title = buildString {
+                            append(info.project).append(" v").append(info.version)
+                            append("\nbranch: ").append(info.gitBranch)
+                            append("\nrev: ").append(info.gitDesc)
+                            info.date?.let { append("\nbuilt: ").append(it) }
+                        }
                     }
 
                     onClick { router.navToUri(Nav.tour()) }

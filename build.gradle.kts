@@ -1,5 +1,7 @@
 import Deps.Test.configureJvmTests
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 buildscript {
     repositories {
@@ -132,6 +134,54 @@ tasks {
     // Use JUnit Platform so kotest tests in src/jvmTest/ are discovered.
     configureJvmTests()
 
+    // Generates src/jsMain/resources/version.json (project + git metadata).
+    // Consumed by the frontend (webpack injects it into index.html; see
+    // webpack.config.d/02-html-config.js + VersionController). Shells out to git
+    // directly (no extra build dependency); every field degrades to "n/a" on failure.
+    val versionFile by registering {
+        description = "Writes version.json (project + git metadata) into the JS resources"
+        group = "build"
+        // Git state is cheap to read and changes between builds — never cache.
+        outputs.upToDateWhen { false }
+
+        doLast {
+            fun git(vararg args: String): String? = runCatching {
+                val proc = ProcessBuilder(listOf("git", *args))
+                    .directory(rootDir)
+                    .start()
+                val out = proc.inputStream.bufferedReader().use { it.readText() }.trim()
+                proc.waitFor()
+                out.takeIf { proc.exitValue() == 0 && it.isNotEmpty() }
+            }.getOrNull()
+
+            val na = "n/a"
+            val now = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+            // `describe --always` falls back to the short hash when there are no tags
+            val fields = linkedMapOf(
+                "project" to project.name,
+                "version" to project.version.toString(),
+                "gitBranch" to (git("rev-parse", "--abbrev-ref", "HEAD") ?: na),
+                "gitRev" to (git("rev-parse", "--short=8", "HEAD") ?: na),
+                "gitDesc" to (git("describe", "--tags", "--always") ?: na),
+                "date" to now,
+            )
+
+            fun esc(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"")
+            val json = fields.entries.joinToString(
+                separator = ",\n",
+                prefix = "{\n",
+                postfix = "\n}\n",
+            ) { (k, v) -> """  "$k": "${esc(v)}"""" }
+
+            file("src/jsMain/resources/version.json").apply {
+                parentFile.mkdirs()
+                writeText(json)
+            }
+        }
+    }
+
     val copyWorkletDev by registering(Copy::class) {
         dependsOn(":audio_jsworklet:jsBrowserDevelopmentWebpack")
         from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/developmentExecutable"))
@@ -151,6 +201,8 @@ tasks {
         // NOTICE: For now always dev, as the production build does not work yet
 //        dependsOn(copyWorkletDev)
         dependsOn(copyWorkletProd)
+        // Refresh version.json before resources are processed / webpack runs
+        dependsOn(versionFile)
 
         // Ensure we don't accidentally cache an old version of the worklet
         outputs.upToDateWhen { false }
