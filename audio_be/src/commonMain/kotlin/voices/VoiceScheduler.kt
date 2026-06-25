@@ -6,11 +6,11 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -31,38 +31,14 @@ class VoiceScheduler(
         val cylinders: Cylinders,
         /** Supplier for current backend time in milliseconds (from KlangTime) */
         val performanceTimeMs: () -> Double = { 0.0 },
+        /**
+         * Shared PCM sample cache. Defaults to a private store; the dispatcher injects ONE shared
+         * store across all per-playback schedulers (sample uploads are SYSTEM-wide).
+         */
+        val sampleStore: SampleStore = SampleStore(commLink),
     ) {
         val sampleRateDouble = sampleRate.toDouble()
     }
-
-    sealed interface SampleEntry {
-        data class Requested(
-            override val req: SampleRequest,
-        ) : SampleEntry
-
-        data class NotFound(
-            override val req: SampleRequest,
-        ) : SampleEntry
-
-        data class Complete(
-            override val req: SampleRequest,
-            val note: String?,
-            val pitchHz: Double,
-            val sample: MonoSamplePcm,
-        ) : SampleEntry
-
-        data class Partial(
-            override val req: SampleRequest,
-            val note: String?,
-            val pitchHz: Double,
-            val sample: MonoSamplePcm,
-        ) : SampleEntry
-
-        val req: SampleRequest
-    }
-
-    // The samples uploaded to the backend
-    private val samples = mutableMapOf<SampleRequest, SampleEntry>()
 
     // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
@@ -180,65 +156,10 @@ class VoiceScheduler(
         playbackContexts.clear()
     }
 
-    fun addSample(msg: KlangCommLink.Cmd.Sample) {
-        val req = msg.req
+    fun addSample(msg: KlangCommLink.Cmd.Sample) = options.sampleStore.addSample(msg)
 
-        when (msg) {
-            is KlangCommLink.Cmd.Sample.NotFound -> {
-                samples[req] = SampleEntry.NotFound(req)
-            }
-
-            is KlangCommLink.Cmd.Sample.Complete -> {
-                samples[req] = SampleEntry.Complete(
-                    req = req,
-                    note = msg.note,
-                    pitchHz = msg.pitchHz,
-                    sample = msg.sample,
-                )
-                options.commLink.feedback.send(
-                    KlangCommLink.Feedback.SampleReceived(
-                        playbackId = msg.playbackId,
-                        req = req,
-                    )
-                )
-            }
-
-            is KlangCommLink.Cmd.Sample.Chunk -> {
-                val existing = samples[req]
-                if (existing is SampleEntry.Complete) return
-                val entry = (existing as? SampleEntry.Partial) ?: SampleEntry.Partial(
-                    req = req,
-                    note = msg.note,
-                    pitchHz = msg.pitchHz,
-                    sample = MonoSamplePcm(sampleRate = msg.sampleRate, pcm = DoubleArray(msg.totalSize)),
-                )
-
-                msg.data.copyInto(destination = entry.sample.pcm, destinationOffset = msg.chunkOffset)
-
-                samples[req] = if (!msg.isLastChunk) {
-                    entry
-                } else {
-                    val completed = SampleEntry.Complete(
-                        req = req,
-                        note = entry.note,
-                        pitchHz = entry.pitchHz,
-                        sample = entry.sample,
-                    )
-                    options.commLink.feedback.send(
-                        KlangCommLink.Feedback.SampleReceived(
-                            playbackId = msg.playbackId,
-                            req = req,
-                        )
-                    )
-                    completed
-                }
-            }
-        }
-    }
-
-    fun getCompleteSample(req: SampleRequest): SampleEntry.Complete? {
-        return samples[req] as? SampleEntry.Complete
-    }
+    fun getCompleteSample(req: SampleRequest): SampleStore.SampleEntry.Complete? =
+        options.sampleStore.getComplete(req)
 
     fun setBackendStartTime(startTimeSec: Double) {
         backendStartTimeSec = startTimeSec
@@ -415,19 +336,8 @@ class VoiceScheduler(
     }
 
     private fun prefetchSampleSound(voice: ScheduledVoice) {
-        val pid = voice.playbackId
-
         if (!options.ignitorRegistry.contains(voice.data.sound)) {
-            val req = voice.data.asSampleRequest()
-            if (!samples.containsKey(req)) {
-                samples[req] = SampleEntry.Requested(req)
-                options.commLink.feedback.send(
-                    KlangCommLink.Feedback.RequestSample(
-                        playbackId = pid,
-                        req = req,
-                    )
-                )
-            }
+            options.sampleStore.requestIfMissing(voice.data.asSampleRequest(), voice.playbackId)
         }
     }
 

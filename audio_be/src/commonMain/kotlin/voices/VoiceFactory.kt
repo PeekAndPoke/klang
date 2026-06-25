@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.EngineRegistry
@@ -72,7 +73,7 @@ class VoiceFactory(
         nowFrame: Int,
         backendStartTimeSec: Double,
         playbackCtx: PlaybackCtx,
-        getSample: (SampleRequest) -> VoiceScheduler.SampleEntry.Complete?,
+        getSample: (SampleRequest) -> SampleStore.SampleEntry.Complete?,
     ): Voice? {
         val data = scheduled.data
 

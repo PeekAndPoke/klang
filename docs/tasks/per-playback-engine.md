@@ -41,15 +41,19 @@ bug and is **behaviour-identical** for today's single-playback case.
 3. **Accept the "engine" naming collision for now.** `EngineDsl` is really a per-voice *pipeline*; the
    rename `EngineDsl` → `PipelineDsl` is **deferred** (do not churn the in-flight
    `engine-dsl-osc-dsl-parameterization` branch). Memory note `engine_dsl_misnamed` recorded.
-4. **Global resources stay global** (in the dispatcher): sample cache, backend clock, `VoiceFactory`,
-   shared per-block scratch (`ScratchBuffers` + `voiceBuffer` + `freqModBuffer`), the `IgnitorRegistry`
-   *parent* (per-engine fork stays), the `EngineRegistry` (per-engine fork deferred to the EngineDsl
-   branch), and the final master/output stage (`KlangAudioRenderer`: limiter + DC + clip).
-5. **Shared workspace vs stateful** — the line is *inter-block state*. Per-block transient buffers are
-   backend **singletons** reused across engines (engines render **sequentially** within a block).
-   Anything stateful across blocks stays per-voice/per-engine: filters, envelopes, delay lines, and
-   **`Oversampler`** (anti-alias filter history, per voice — `CrushRenderer.kt:48`/`CoarseRenderer.kt:30`;
-   NOT shareable).
+4. **Shared resources** (in the dispatcher): the **`SampleStore`** sample cache — the one real
+   extraction, because `Cmd.Sample` uploads are SYSTEM-wide and PCM is MBs — plus the backend clock
+   (one timeline), the `IgnitorRegistry` *parent* (per-engine fork stays), the `EngineRegistry`
+   (per-engine fork deferred to the EngineDsl branch), and the final stage **`MasterStage`** (limiter +
+   DC + clip) run **once** on the summed mix. `VoiceFactory` and per-block scratch are **per-engine** (#5).
+5. **Each engine owns its full render state** — its own `RenderContext` + scratch
+   (`voiceBuffer`/`freqModBuffer`/`ScratchBuffers`) + `VoiceFactory`. **No shared `RenderContext`, no
+   per-voice pointer-swap.** Sharing scratch across engines was rejected: it forces sequential rendering
+   and breaks future multi-threading (one deck per core). Cost is negligible (~30–50 KB/engine vs the
+   **7.68 MB** per-cylinder `DelayLine` ring — and cylinders are per-engine regardless). The only shared
+   transient is the dispatcher's **mixdown scratch** (#11), touched only in the ≥2 path. Per-voice
+   stateful objects (`Oversampler` anti-alias history `CrushRenderer.kt:48`/`CoarseRenderer.kt:30`,
+   filters, envelopes, delay lines) stay per-voice as before.
 6. **Cylinders allocate LAZILY per engine** (`getOrInit`); **never `preallocateAll` per engine.** Only one
    warmup engine JITs the render path.
 7. **Two-tier cylinder lifecycle.** `tryDeactivate` already flips `isActive=false` (stops CPU); add a
