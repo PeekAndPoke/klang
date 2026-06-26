@@ -40,7 +40,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             performanceTimeMs = { Date.now() },
         )
 
-        val voices get() = dispatcher.voices
+        fun setBackendStartTime(startTimeSec: Double) = dispatcher.setBackendStartTime(startTimeSec)
 
         val warmup = WarmupRunner(
             sampleRate = sampleRate,
@@ -90,7 +90,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             ctx.klangTime.updateCurrentFrame(ctx.cursorFrame)
 
             // Set backend start time
-            ctx.voices.setBackendStartTime(ctx.klangTime.internalMsNow() / 1000.0)
+            ctx.setBackendStartTime(ctx.klangTime.internalMsNow() / 1000.0)
 
             // Kick off JIT / cache warmup — real playback is gated on BackendReady feedback.
             ctx.warmup.start()

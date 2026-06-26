@@ -56,15 +56,9 @@ class WarmupRunner(
         if (started) return
         started = true
 
-        // Force-allocate every cylinder up front. Songs that first-touch a new orbit
-        // would otherwise pay the Cylinder construction cost (delay/reverb/phaser/compressor
-        // buffer allocations) inside the audio block — enough to blow the deadline and
-        // swallow the first kick. Papillon hit this at ~5 new orbits on its first note.
-        dispatcher.preallocateCylinders()
-
-        // Pre-register the all-zeros warmup sample on the real scheduler. Reserved name — no
-        // real song references it, so the entry is harmless left in the samples map.
-        dispatcher.voices.addSample(
+        // Pre-register the all-zeros warmup sample (SYSTEM-wide sample cache). Reserved name —
+        // no real song references it, so the entry is harmless left in the cache.
+        dispatcher.handle(
             KlangCommLink.Cmd.Sample.Complete(
                 req = SampleRequest(bank = null, sound = WARMUP_SAMPLE_NAME, index = null, note = null),
                 note = null,
@@ -77,31 +71,35 @@ class WarmupRunner(
             )
         )
 
-        // Synth voice + sample voice go through the same render path a real voice will take.
-        dispatcher.voices.scheduleVoices(
-            listOf(
-                // Exercises Voice.render → IgnitorSine → filter → cylinder mix → limiter.
-                ScheduledVoice(
-                    playbackId = WARMUP_PLAYBACK_ID,
-                    data = VoiceData.empty.copy(
-                        sound = "sine",
-                        freqHz = 440.0,
-                        adsr = AdsrDef.Std(attack = 0.005, decay = 0.05, sustain = 0.0, release = 0.05),
+        // Synth + sample voice exercise the full render path on a dedicated warmup engine (created
+        // lazily). Cylinders are allocated lazily as the voices touch orbits — no global pre-alloc.
+        dispatcher.handle(
+            KlangCommLink.Cmd.ScheduleVoices(
+                playbackId = WARMUP_PLAYBACK_ID,
+                voices = listOf(
+                    // Exercises Voice.render → IgnitorSine → filter → cylinder mix → limiter.
+                    ScheduledVoice(
+                        playbackId = WARMUP_PLAYBACK_ID,
+                        data = VoiceData.empty.copy(
+                            sound = "sine",
+                            freqHz = 440.0,
+                            adsr = AdsrDef.Std(attack = 0.005, decay = 0.05, sustain = 0.0, release = 0.05),
+                        ),
+                        startTime = 0.0,
+                        gateEndTime = 0.1,
+                        playbackStartTime = 0.0,
                     ),
-                    startTime = 0.0,
-                    gateEndTime = 0.1,
-                    playbackStartTime = 0.0,
-                ),
-                // Exercises SampleIgnitor lookup + playback of the synthetic all-zeros sample.
-                ScheduledVoice(
-                    playbackId = WARMUP_PLAYBACK_ID,
-                    data = VoiceData.empty.copy(
-                        sound = WARMUP_SAMPLE_NAME,
-                        adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
+                    // Exercises SampleIgnitor lookup + playback of the synthetic all-zeros sample.
+                    ScheduledVoice(
+                        playbackId = WARMUP_PLAYBACK_ID,
+                        data = VoiceData.empty.copy(
+                            sound = WARMUP_SAMPLE_NAME,
+                            adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
+                        ),
+                        startTime = 0.0,
+                        gateEndTime = 0.1,
+                        playbackStartTime = 0.0,
                     ),
-                    startTime = 0.0,
-                    gateEndTime = 0.1,
-                    playbackStartTime = 0.0,
                 ),
             )
         )
@@ -119,8 +117,8 @@ class WarmupRunner(
 
         if (blocksRun >= warmupBlocks) {
             finished = true
-            // Hard-remove all warmup voices from the real scheduler (scheduled + active + pending).
-            dispatcher.voices.cleanupHard(WARMUP_PLAYBACK_ID)
+            // Dispose the warmup engine entirely (scheduled + active + cylinders).
+            dispatcher.cleanupHard(WARMUP_PLAYBACK_ID)
             // Wipe limiter state so the first real kick sees unity gain.
             dispatcher.resetPostChain()
             feedback.feedback.send(KlangCommLink.Feedback.BackendReady())

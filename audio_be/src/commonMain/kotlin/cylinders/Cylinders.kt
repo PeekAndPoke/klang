@@ -30,6 +30,14 @@ class Cylinders(
     /** Get all currently allocated cylinder IDs. */
     val cylindersIds: Set<Int> get() = id2cylinder.keys
 
+    /** True if any cylinder is currently active. Alloc-free (no lambda) — safe to poll on the audio thread. */
+    fun anyActive(): Boolean {
+        for (cylinder in id2cylinder.values) {
+            if (cylinder.isActive) return true
+        }
+        return false
+    }
+
     /**
      * Clear all cylinders
      */

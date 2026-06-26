@@ -30,9 +30,9 @@ class PlaybackEngine(
         cylinders.processAndMix(target)
     }
 
-    fun preallocateCylinders() {
-        cylinders.preallocateAll()
-    }
+    /** True once this engine has no active voices and all its cylinders have gone silent. */
+    fun isIdle(): Boolean =
+        scheduler.getActiveVoiceCount() == 0 && !cylinders.anyActive()
 
     companion object {
         /**

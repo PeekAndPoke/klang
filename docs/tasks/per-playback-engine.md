@@ -280,17 +280,20 @@ audio until D6 (and then only when a non-unity `Song.master` is set).
 - **Human:** a single song is bit-for-bit identical (one engine == old path); two overlapping songs on the
   same orbit stay clean; first note of a multi-orbit song is glitch-free; browser memory sane (**answers Open Q1**).
 - **Done when:** isolation spec passes; single-song listen identical; no `preallocateAll`.
+- **Status:** ✅ done (uncommitted, code-review running). Sub-steps: D2·b·1 (PlaybackEngine + single-engine
+  dispatcher render), D2·b·2 (`Map<pid,PlaybackEngine>` + lazy `engineFor` + per-pid routing + additive
+  mixdown), D2·c (warmup on the dispatcher, dropped `preallocateAll`). The #11 mixdown relies on
+  `Cylinders.processAndMix` accumulating (no scratch yet — the shared scratch lands in D6 with per-engine
+  master gain). Diagnostics emission stays per-engine for now (aggregation is D5). **D3's drain-dispose
+  was folded in here.**
 
-### D3 — Explicit cleanup + drain lifecycle · *behaviour change: disposal*
+### D3 — Explicit cleanup + drain lifecycle · *behaviour change: disposal* · ✅ FOLDED INTO D2·b·2
 
 - **Scope:** engine created lazily on first `Cmd` for an unknown pid; `Cmd.Cleanup` → drain (stop scheduling,
   ring out, dispose once `active` empty **and** all cylinders inactive); `cleanupHard` immediate; **no
   auto-GC**; pause just withholds scheduling.
-- **Unit:** lifecycle spec — `Cleanup` drains then disposes after tails; no-`Cleanup` retains the engine;
-  re-`Schedule` reuses it.
-- **Human:** stop a song with a long reverb → the tail completes, then the engine disappears (diagnostics);
-  pause → resume → no audible re-init, master retained.
-- **Done when:** lifecycle spec passes; stopping no longer clips tails.
+- **Status:** ✅ implemented in D2·b·2 — `draining` set + `disposeDrainedEngines()` + `PlaybackEngine.isIdle()`;
+  `engineFor()` removes a pid from `draining` so a `Cleanup`→re-`Schedule` cancels the pending disposal.
 
 ### D4 — Cylinder eviction (tier 2) · *memory*
 

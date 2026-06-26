@@ -9,21 +9,21 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 
 /**
- * Standard renderer that drives the DSP graph (VoiceScheduler -> Cylinders -> [MasterStage] -> Output).
+ * Standalone single-engine render-to-PCM, used by the offline renderer and the benchmarks.
  *
- * This class is stateless regarding the playback cursor. It simply renders "what is requested".
- *
- * The final post-chain (limiter + DC block + clip/interleave) lives in [MasterStage] so the
- * per-playback mixdown can reuse it once on the summed mix — see `docs/tasks/per-playback-engine.md`.
+ * It is a thin wrapper around the **same** canonical chain the live dispatcher uses —
+ * [PlaybackEngine.renderInto] (voices → cylinders → mix) followed by [MasterStage] (limiter + DC +
+ * clip). Keeping it delegating means the DSP order lives in exactly one place. The realtime path
+ * does NOT go through this class (it renders engines directly in `PlaybackEngineDispatcher`).
  */
 class KlangAudioRenderer(
     sampleRate: Int,
-    private val blockFrames: Int,
-    private val voices: VoiceScheduler,
-    private val cylinders: Cylinders,
+    blockFrames: Int,
+    voices: VoiceScheduler,
+    cylinders: Cylinders,
 ) {
     private val mix = StereoBuffer(blockFrames)
-
+    private val engine = PlaybackEngine(scheduler = voices, cylinders = cylinders)
     private val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /**
@@ -35,30 +35,9 @@ class KlangAudioRenderer(
         master.reset()
     }
 
-    /**
-     * Pre-allocates every cylinder up to the configured `maxCylinders`, so the first
-     * note of a song that touches a new orbit doesn't pay the allocation cost during
-     * its audio block. Called from the warmup handshake.
-     */
-    fun preallocateCylinders() {
-        cylinders.preallocateAll()
-    }
-
-    fun renderBlock(
-        cursorFrame: Int,
-        out: ShortArray,
-    ) {
-        // 1. Reset mix buffers
+    fun renderBlock(cursorFrame: Int, out: ShortArray) {
         mix.clear()
-        cylinders.clearAll()
-
-        // 2. Process voices
-        voices.process(cursorFrame)
-
-        // 3. Mix voices through the cylinders into the main mix
-        cylinders.processAndMix(mix)
-
-        // 4. Master/output stage: limiter -> DC block -> transparent clip + interleave.
+        engine.renderInto(mix, cursorFrame)
         master.process(mix, out)
     }
 }

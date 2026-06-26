@@ -35,7 +35,7 @@ class JvmAudioBackend(
 
     override suspend fun run(scope: CoroutineScope) {
         // Set backend start time from KlangTime relative clock
-        dispatcher.voices.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
+        dispatcher.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
 
         // Kick off JIT / cache warmup. JVM JIT is warmer than Kotlin/JS but running the same
         // path keeps behavior consistent across targets (and costs ~85 ms of silence at start).
