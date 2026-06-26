@@ -12,14 +12,13 @@ import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 
 /**
- * Per-[KlangPlayer] tracker that announces inline [EngineDsl] trees to the audio backend
- * exactly once per unique engine — the engine-side mirror of [IgnitorRegistry].
+ * Per-playback (playbackId-bound) tracker that announces inline [EngineDsl] trees to the audio
+ * backend exactly once per unique engine — the engine-side mirror of [IgnitorRegistry]. The
+ * [playbackId] stamps the command so the backend registers it on THAT playback's engine fork.
  *
- * Names come from [EngineDsl.uniqueId] (process-wide, monotonic, never collide). This class
- * only holds the set of engines this player's backend has already heard about, so we don't
- * re-send the same RegisterEngine command on every voice event.
+ * Names come from [EngineDsl.uniqueId] (process-wide, monotonic, never collide).
  *
- * Internal to klang; callers reach it via [KlangPlaybackContext.registerEngine].
+ * Internal to klang; the owning `KlangPlaybackController` calls [registerOrLookup] directly.
  */
 internal class EngineRegistry(
     private val sendControl: (KlangCommLink.Cmd) -> Unit,

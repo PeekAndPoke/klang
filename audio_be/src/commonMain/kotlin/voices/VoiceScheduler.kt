@@ -10,6 +10,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_bridge.EngineDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -27,6 +29,11 @@ class VoiceScheduler(
     )
 
     private val context = options.context
+
+    // Per-engine registry forks — custom oscs/engines for THIS playback live here and die with the
+    // engine; the shared parent ([context]) keeps only the built-ins. See per-playback-engine.md (#2).
+    private val ignitorFork = context.ignitorRegistry.fork()
+    private val engineFork = context.engineRegistry.fork()
 
     // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
@@ -119,8 +126,8 @@ class VoiceScheduler(
         sampleRate = context.sampleRate,
         sampleRateDouble = context.sampleRateDouble,
         blockFrames = context.blockFrames,
-        ignitorRegistry = context.ignitorRegistry,
-        engineRegistry = context.engineRegistry,
+        ignitorRegistry = ignitorFork,
+        engineRegistry = engineFork,
         cylinders = options.cylinders,
         voiceBuffer = voiceBuffer,
         freqModBuffer = freqModBuffer,
@@ -144,6 +151,16 @@ class VoiceScheduler(
         context.sampleStore.getComplete(req)
 
     fun getActiveVoiceCount(): Int = active.size
+
+    /** Register a custom oscillator for THIS playback — lands on the per-engine fork, not the shared parent. */
+    fun registerIgnitor(name: String, dsl: IgnitorDsl) = ignitorFork.register(name, dsl)
+
+    /** Register a custom engine for THIS playback — per-engine fork (mirror of [registerIgnitor]). */
+    fun registerEngine(name: String, dsl: EngineDsl) = engineFork.register(name, dsl)
+
+    internal fun containsIgnitor(name: String): Boolean = ignitorFork.contains(name)
+
+    internal fun resolveEngine(name: String?): EngineDsl = engineFork.get(name)
 
     fun cleanup(playbackId: String) {
         playbackContexts.remove(playbackId)
@@ -310,14 +327,14 @@ class VoiceScheduler(
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
             playbackContexts[pid] = PlaybackCtx(
                 playbackId = pid,
-                ignitorRegistry = context.ignitorRegistry.fork(),
+                ignitorRegistry = ignitorFork,
                 epoch = voice.playbackStartTime + latency,
             )
         }
     }
 
     private fun prefetchSampleSound(voice: ScheduledVoice) {
-        if (!context.ignitorRegistry.contains(voice.data.sound)) {
+        if (!ignitorFork.contains(voice.data.sound)) {
             context.sampleStore.requestIfMissing(voice.data.asSampleRequest(), voice.playbackId)
         }
     }

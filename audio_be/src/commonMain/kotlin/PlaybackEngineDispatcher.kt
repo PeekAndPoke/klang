@@ -75,10 +75,10 @@ class PlaybackEngineDispatcher(
             context.sampleStore.addSample(cmd)
 
         is KlangCommLink.Cmd.RegisterIgnitor ->
-            context.ignitorRegistry.register(cmd.name, cmd.dsl)
+            engineFor(cmd.playbackId).scheduler.registerIgnitor(cmd.name, cmd.dsl)
 
         is KlangCommLink.Cmd.RegisterEngine ->
-            context.engineRegistry.register(cmd.name, cmd.dsl)
+            engineFor(cmd.playbackId).scheduler.registerEngine(cmd.name, cmd.dsl)
     }
 
     private fun scheduleVoices(playbackId: String, voices: List<ScheduledVoice>) {

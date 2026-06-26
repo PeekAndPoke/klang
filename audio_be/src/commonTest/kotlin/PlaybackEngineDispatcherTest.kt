@@ -10,6 +10,7 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.ints.shouldBeAtLeast
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.voices.TestSamples
 import io.peekandpoke.klang.audio_bridge.EngineDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -47,22 +48,29 @@ class PlaybackEngineDispatcherTest : StringSpec({
     // Scheduled far in the future — stays in the heap, never promoted at frame 0.
     fun futureVoice(pid: String) = voice(pid, startTime = 10.0, gateEndTime = 11.0)
 
-    "RegisterIgnitor routes to the ignitor registry" {
+    "RegisterIgnitor lands on the per-playback engine fork, not the shared parent" {
         val d = newDispatcher()
-        val dsl = d.ignitorRegistry.get("sine").shouldNotBeNull()
+        val dsl = d.ignitorRegistry.get("sine").shouldNotBeNull()   // a built-in dsl to re-register under a new name
+
+        d.handle(KlangCommLink.Cmd.RegisterIgnitor(playbackId = "song", name = "myosc", dsl = dsl))
+
+        // Resolvable on the engine's fork (custom locally + built-ins via the parent)...
+        val scheduler = d.engine("song").shouldNotBeNull().scheduler
+        scheduler.containsIgnitor("myosc") shouldBe true
+        scheduler.containsIgnitor("sine") shouldBe true
+        // ...but NOT on the shared parent — it dies with the engine.
         d.ignitorRegistry.get("myosc") shouldBe null
-
-        d.handle(KlangCommLink.Cmd.RegisterIgnitor(playbackId = "test", name = "myosc", dsl = dsl))
-
-        d.ignitorRegistry.get("myosc") shouldBe dsl
     }
 
-    "RegisterEngine routes to the engine registry" {
+    "RegisterEngine lands on the per-playback engine fork, not the shared parent" {
         val d = newDispatcher()
 
-        d.handle(KlangCommLink.Cmd.RegisterEngine(playbackId = "test", name = "myeng", dsl = EngineDsl.pedal))
+        d.handle(KlangCommLink.Cmd.RegisterEngine(playbackId = "song", name = "myeng", dsl = EngineDsl.pedal))
 
-        d.engineRegistry.get("myeng") shouldBe EngineDsl.pedal
+        // Resolvable on the engine's fork...
+        d.engine("song").shouldNotBeNull().scheduler.resolveEngine("myeng") shouldBe EngineDsl.pedal
+        // ...but the shared parent doesn't know "myeng" (falls back to the default engine).
+        d.engineRegistry.get("myeng") shouldNotBe EngineDsl.pedal
     }
 
     "Sample routes to the shared sample store" {
