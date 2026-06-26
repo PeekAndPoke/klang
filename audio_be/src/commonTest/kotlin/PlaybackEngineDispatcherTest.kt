@@ -149,4 +149,28 @@ class PlaybackEngineDispatcherTest : StringSpec({
         // With the old global cylinder pool these would be the SAME object (last-writer-wins).
         (cylA === cylB) shouldBe false
     }
+
+    "a late-created engine's first voice is not judged in the past (clock snap)" {
+        val d = newDispatcher()   // startTimeSec = 0 via setBackendStartTime(0.0)
+        val out = ShortArray(blockFrames * 2)
+
+        // The backend has been running ~10s (global cursor advanced); no engines exist yet.
+        val lateFrame = sampleRate * 10
+        d.renderBlock(lateFrame, out)
+
+        // The frontend stamped playbackStartTime 100ms "ago" (delivery latency) — well past the
+        // ~13ms past-cutoff. A fresh engine starting at frame 0 would compute its epoch against the
+        // backend START time and discard this; the shared clock makes the epoch snap to "now".
+        val nowSec = lateFrame.toDouble() / sampleRate
+        val late = ScheduledVoice(
+            playbackId = "late",
+            startTime = 0.0,
+            gateEndTime = 1.0,
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, cylinder = 0),
+            playbackStartTime = nowSec - 0.1,
+        )
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "late", voice = late))
+
+        d.engine("late").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBeAtLeast 1
+    }
 })

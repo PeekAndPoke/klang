@@ -26,7 +26,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
-import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -90,9 +89,8 @@ internal class KlangPlaybackController(
     private val klangTime = KlangTime.create()
 
     // ===== Latency Compensation =====
-    /** Measured transport latency in milliseconds. Applied to signals. */
-    private var backendLatencyMs: Double = 100.0
-    private val largeDriftThresholdMs = 500.0
+    /** The single FE↔BE clock offset — GLOBAL, owned by [KlangPlayer]; read-only here. */
+    private val clockSync = context.clockSync
 
     // ===== Resync =====
     /** Grace window in seconds: voices within this window are preserved during resync */
@@ -193,17 +191,9 @@ internal class KlangPlaybackController(
             }
 
             is KlangCommLink.Feedback.Diagnostics -> {
-                val latency = feedback.outputLatencyMs
-                val rawOffset = (feedback.backendNowMs - klangTime.internalMsNow()) + latency
-                val drift = abs(rawOffset - backendLatencyMs)
-
-                backendLatencyMs = if (drift > largeDriftThresholdMs) {
-                    // Large clock discontinuity (hibernate, AudioContext suspension, etc.), Snap immediately
-                    rawOffset
-                } else {
-                    // Normal case: EMA α=0.05: ~1 second convergence at 20 Hz; smooths message-transit jitter
-                    backendLatencyMs * 0.95 + rawOffset * 0.05
-                }
+                // The FE↔BE clock offset is GLOBAL — corrected once in KlangPlayer via BackendClockSync.
+                // Diagnostics carry SYSTEM_PLAYBACK_ID and are consumed at the player, so this never
+                // actually reaches a controller; the branch exists only to keep the `when` exhaustive.
             }
 
             is KlangCommLink.Feedback.SampleReceived -> {
@@ -352,7 +342,7 @@ internal class KlangPlaybackController(
                 for (cycle in cyclesToEmit) {
                     // Calculate boundary time for this cycle
                     val playbackStartTimeSec = startTimeMs / 1000.0
-                    val latencyOffsetSec = backendLatencyMs / 1000.0
+                    val latencyOffsetSec = clockSync.offsetSec
                     val boundaryTimeSec = playbackStartTimeSec + ((cycle + 1) * secPerCycle) + latencyOffsetSec
 
                     signals(KlangPlaybackSignal.CycleCompleted(cycleIndex = cycle, atTimeSec = boundaryTimeSec))
@@ -383,7 +373,7 @@ internal class KlangPlaybackController(
         val playbackStartTimeSec = startTimeMs / 1000.0
 
         // Latency compensation for UI signals
-        val latencyOffsetSec = backendLatencyMs / 1000.0
+        val latencyOffsetSec = clockSync.offsetSec
 
         // Build voice signal events for callbacks
         val signalEvents = mutableListOf<KlangPlaybackSignal.VoicesScheduled.VoiceEvent>()

@@ -56,6 +56,9 @@ class KlangPlaybackContext internal constructor(
      * playbacks use [registerEngine] to interact with it.
      */
     internal val engines: EngineRegistry,
+
+    /** The single FE↔BE clock offset — GLOBAL, owned by [KlangPlayer]; controllers read it. */
+    internal val clockSync: BackendClockSync,
 ) {
     /**
      * Return a stable synthetic name for [dsl], registering it with the backend

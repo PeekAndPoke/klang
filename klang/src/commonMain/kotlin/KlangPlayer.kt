@@ -90,6 +90,9 @@ class KlangPlayer(
     // EngineDsl tree (mirror of [ignitors]).
     internal val engines = EngineRegistry(sendControl = ::sendControl)
 
+    // The single FE↔BE clock offset (GLOBAL) — corrected from the SYSTEM Diagnostics, read by controllers.
+    private val clockSync = BackendClockSync()
+
     // Context bundle for playback implementations (reduces constructor parameter lists)
     val playbackContext = KlangPlaybackContext(
         playerOptions = options,
@@ -101,6 +104,7 @@ class KlangPlayer(
         backendReady = backendReady,
         ignitors = ignitors,
         engines = engines,
+        clockSync = clockSync,
     )
 
     /**
@@ -156,6 +160,9 @@ class KlangPlayer(
 
                     // System messages go to player signals
                     is KlangCommLink.Feedback.Diagnostics -> {
+                        // Correct the single GLOBAL FE↔BE clock offset from the SYSTEM diagnostics stream.
+                        clockSync.onDiagnostics(feedback)
+
                         if (!hasLoggedDiagnostics) {
                             hasLoggedDiagnostics = true
                             println(

@@ -7,30 +7,22 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
-import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
  * The backend host: routes inbound [KlangCommLink.Cmd]s and renders the final block.
  *
- * It owns the shared resources (the [SampleStore] cache, the registries, the final [MasterStage])
- * and a **`Map<playbackId, PlaybackEngine>`** — one fully-isolated engine per playback. Engines are
- * created lazily on first reference and disposed once they have been told to stop ([cleanup]) and
- * have fully drained. Each engine owns its own `Cylinders`, so two playbacks on the same orbit no
- * longer collide.
- *
- * Both platform backends (JVM `SourceDataLine`, JS `AudioWorklet`) shrink to a thin pump: drain
- * commands → [renderBlock] → convert/output → forward feedback. See `docs/tasks/per-playback-engine.md`.
+ * It owns the [AudioBackendContext] (shared services + the read-only clock), the **mutable**
+ * [BackendClock] it advances each block, the final [MasterStage], and a
+ * `Map<playbackId, PlaybackEngine>` — one fully-isolated engine per playback, created lazily and
+ * disposed once told to stop ([cleanup]) and fully drained. Both platform backends shrink to a thin
+ * pump: drain commands → [renderBlock] → convert/output → forward feedback. See
+ * `docs/tasks/per-playback-engine.md`.
  */
 class PlaybackEngineDispatcher(
-    private val sampleRate: Int,
-    private val blockFrames: Int,
-    private val commLink: KlangCommLink.BackendEndpoint,
-    private val performanceTimeMs: () -> Double,
-    val ignitorRegistry: IgnitorRegistry,
-    val engineRegistry: EngineRegistry,
-    val sampleStore: SampleStore,
+    private val context: AudioBackendContext,
+    private val clock: BackendClock,
 ) {
     // playbackId -> engine. LinkedHashMap for deterministic render/iteration order.
     private val engines = LinkedHashMap<String, PlaybackEngine>()
@@ -38,38 +30,25 @@ class PlaybackEngineDispatcher(
     // playbackIds told to stop (Cmd.Cleanup); disposed once their engine has fully drained.
     private val draining = mutableSetOf<String>()
 
-    private var backendStartTimeSec = 0.0
+    private val mix = StereoBuffer(context.blockFrames)
+    private val master = MasterStage(sampleRate = context.sampleRate, blockFrames = context.blockFrames)
 
-    private val mix = StereoBuffer(blockFrames)
-    private val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+    val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
+    val engineRegistry: EngineRegistry get() = context.engineRegistry
+    val sampleStore: SampleStore get() = context.sampleStore
 
     /**
-     * Sets the shared backend epoch (one audio timeline across playbacks). Call **once at startup**,
-     * before any engine is created — re-fanning to live engines mid-session would shift every
-     * scheduler's epoch math and drop/replay already-scheduled voices.
+     * Sets the backend epoch (the one audio timeline). Call **once at startup**, before any block is
+     * rendered — the cursor advances from here.
      */
     fun setBackendStartTime(startTimeSec: Double) {
-        backendStartTimeSec = startTimeSec
-        for (engine in engines.values) {
-            engine.scheduler.setBackendStartTime(startTimeSec)
-        }
+        clock.startTimeSec = startTimeSec
     }
 
     private fun engineFor(playbackId: String): PlaybackEngine {
         // Re-scheduling to a draining playback cancels the pending disposal (e.g. resume after pause).
         draining.remove(playbackId)
-        return engines.getOrPut(playbackId) {
-            PlaybackEngine.create(
-                sampleRate = sampleRate,
-                blockFrames = blockFrames,
-                commLink = commLink,
-                performanceTimeMs = performanceTimeMs,
-                // Parent registry — the scheduler forks it per playback internally (VoiceScheduler.ensureEpoch).
-                ignitorRegistry = ignitorRegistry,
-                engineRegistry = engineRegistry,
-                sampleStore = sampleStore,
-            ).also { it.scheduler.setBackendStartTime(backendStartTimeSec) }
-        }
+        return engines.getOrPut(playbackId) { PlaybackEngine.create(context) }
     }
 
     /**
@@ -93,13 +72,13 @@ class PlaybackEngineDispatcher(
             clearScheduled(cmd.playbackId)
 
         is KlangCommLink.Cmd.Sample ->
-            sampleStore.addSample(cmd)
+            context.sampleStore.addSample(cmd)
 
         is KlangCommLink.Cmd.RegisterIgnitor ->
-            ignitorRegistry.register(cmd.name, cmd.dsl)
+            context.ignitorRegistry.register(cmd.name, cmd.dsl)
 
         is KlangCommLink.Cmd.RegisterEngine ->
-            engineRegistry.register(cmd.name, cmd.dsl)
+            context.engineRegistry.register(cmd.name, cmd.dsl)
     }
 
     private fun scheduleVoices(playbackId: String, voices: List<ScheduledVoice>) {
@@ -130,8 +109,9 @@ class PlaybackEngineDispatcher(
         draining.remove(playbackId)
     }
 
-    /** Render one block to [out]: every engine accumulates into the mix, then the master stage. */
+    /** Render one block to [out]: advance the clock, every engine accumulates into the mix, then master. */
     fun renderBlock(cursorFrame: Int, out: ShortArray) {
+        clock.cursorFrame = cursorFrame
         mix.clear()
 
         // processAndMix accumulates additively, so engines simply render into the same mix in turn.
@@ -170,26 +150,22 @@ class PlaybackEngineDispatcher(
     internal fun engine(playbackId: String): PlaybackEngine? = engines[playbackId]
 
     companion object {
-        /** Builds the backend host with its shared resources. Engines are created lazily per playback. */
+        /** Builds the backend host with its shared context + clock. Engines are created lazily per playback. */
         fun create(
             sampleRate: Int,
             blockFrames: Int,
             commLink: KlangCommLink.BackendEndpoint,
             performanceTimeMs: () -> Double,
         ): PlaybackEngineDispatcher {
-            val ignitorRegistry = IgnitorRegistry().apply { registerDefaults() }
-            val engineRegistry = EngineRegistry()
-            val sampleStore = SampleStore(commLink)
-
-            return PlaybackEngineDispatcher(
+            val clock = BackendClock(sampleRate)
+            val context = AudioBackendContext.create(
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
                 commLink = commLink,
+                clock = clock,
                 performanceTimeMs = performanceTimeMs,
-                ignitorRegistry = ignitorRegistry,
-                engineRegistry = engineRegistry,
-                sampleStore = sampleStore,
             )
+            return PlaybackEngineDispatcher(context = context, clock = clock)
         }
     }
 }

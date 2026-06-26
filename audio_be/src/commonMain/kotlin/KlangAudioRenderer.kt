@@ -5,39 +5,63 @@
 
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
  * Standalone single-engine render-to-PCM, used by the offline renderer and the benchmarks.
  *
- * It is a thin wrapper around the **same** canonical chain the live dispatcher uses —
- * [PlaybackEngine.renderInto] (voices → cylinders → mix) followed by [MasterStage] (limiter + DC +
- * clip). Keeping it delegating means the DSP order lives in exactly one place. The realtime path
- * does NOT go through this class (it renders engines directly in `PlaybackEngineDispatcher`).
+ * It owns its own [AudioBackendContext] + clock + one [PlaybackEngine], and runs the **same**
+ * canonical chain as the live dispatcher — [PlaybackEngine.renderInto] (voices → cylinders → mix)
+ * then [MasterStage] (limiter + DC + clip). The realtime path does NOT go through this class.
  */
-class KlangAudioRenderer(
-    sampleRate: Int,
-    blockFrames: Int,
-    voices: VoiceScheduler,
-    cylinders: Cylinders,
+class KlangAudioRenderer private constructor(
+    private val context: AudioBackendContext,
+    private val clock: BackendClock,
 ) {
-    private val mix = StereoBuffer(blockFrames)
-    private val engine = PlaybackEngine(scheduler = voices, cylinders = cylinders)
-    private val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val engine = PlaybackEngine.create(context)
+    private val mix = StereoBuffer(context.blockFrames)
+    private val master = MasterStage(sampleRate = context.sampleRate, blockFrames = context.blockFrames)
 
-    /**
-     * Clears stateful post-chain elements (limiter envelope + DC blocker IIR state).
-     * Used at the end of the warmup handshake so post-chain state does not survive
-     * into the first real playback block.
-     */
+    /** The single engine's scheduler — callers schedule voices here. */
+    val voices: VoiceScheduler get() = engine.scheduler
+
+    /** Parent ignitor registry — callers register custom oscillators here. */
+    val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
+
+    fun setBackendStartTime(startTimeSec: Double) {
+        clock.startTimeSec = startTimeSec
+    }
+
+    /** Clears the master post-chain (limiter envelope + DC blocker IIR state). */
     fun resetPostChain() {
         master.reset()
     }
 
     fun renderBlock(cursorFrame: Int, out: ShortArray) {
+        clock.cursorFrame = cursorFrame
         mix.clear()
         engine.renderInto(mix, cursorFrame)
         master.process(mix, out)
+    }
+
+    companion object {
+        fun create(
+            sampleRate: Int,
+            blockFrames: Int,
+            commLink: KlangCommLink.BackendEndpoint,
+            performanceTimeMs: () -> Double = { 0.0 },
+        ): KlangAudioRenderer {
+            val clock = BackendClock(sampleRate)
+            val context = AudioBackendContext.create(
+                sampleRate = sampleRate,
+                blockFrames = blockFrames,
+                commLink = commLink,
+                clock = clock,
+                performanceTimeMs = performanceTimeMs,
+            )
+            return KlangAudioRenderer(context = context, clock = clock)
+        }
     }
 }

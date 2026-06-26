@@ -5,11 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.EngineRegistry
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -21,24 +20,13 @@ import io.peekandpoke.ultra.maths.Ease
 class VoiceScheduler(
     val options: Options,
 ) {
-
+    /** A scheduler is per-playback now; the shared backend state arrives via [context]. */
     class Options(
-        val commLink: KlangCommLink.BackendEndpoint,
-        val sampleRate: Int,
-        val blockFrames: Int,
-        val ignitorRegistry: IgnitorRegistry,
-        val engineRegistry: EngineRegistry,
+        val context: AudioBackendContext,
         val cylinders: Cylinders,
-        /** Supplier for current backend time in milliseconds (from KlangTime) */
-        val performanceTimeMs: () -> Double = { 0.0 },
-        /**
-         * Shared PCM sample cache. Defaults to a private store; the dispatcher injects ONE shared
-         * store across all per-playback schedulers (sample uploads are SYSTEM-wide).
-         */
-        val sampleStore: SampleStore = SampleStore(commLink),
-    ) {
-        val sampleRateDouble = sampleRate.toDouble()
-    }
+    )
+
+    private val context = options.context
 
     // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
@@ -104,29 +92,23 @@ class VoiceScheduler(
 
     private val soloSourceTracker = SoloSourceTracker(
         rampDurationSec = 2.0,
-        sampleRate = options.sampleRate,
+        sampleRate = context.sampleRate,
     )
-
-    // Global start time for absolute time to frame conversion
-    private var backendStartTimeSec: Double = 0.0
 
     // Map playbackId -> per-playback context (registry, epoch, ...)
     private val playbackContexts = mutableMapOf<String, PlaybackCtx>()
 
-    // Track the last processed frame (for epoch recording)
-    private var lastProcessedFrame: Int = 0
-
     // Scratch buffers — pre-allocated to avoid per-block heap allocation on the audio thread
-    private val voiceBuffer = AudioBuffer(options.blockFrames)
-    private val freqModBuffer = DoubleArray(options.blockFrames)
-    private val scratchBuffers = ScratchBuffers(options.blockFrames)
+    private val voiceBuffer = AudioBuffer(context.blockFrames)
+    private val freqModBuffer = DoubleArray(context.blockFrames)
+    private val scratchBuffers = ScratchBuffers(context.blockFrames)
     private val activeSoloSourceIds = mutableSetOf<String>()
 
     // Context reused per block
     private val ctx = Voice.RenderContext(
         cylinders = options.cylinders,
-        sampleRate = options.sampleRate,
-        blockFrames = options.blockFrames,
+        sampleRate = context.sampleRate,
+        blockFrames = context.blockFrames,
         voiceBuffer = voiceBuffer,
         freqModBuffer = freqModBuffer,
         scratchBuffers = scratchBuffers,
@@ -134,11 +116,11 @@ class VoiceScheduler(
 
     // Voice factory — creates Voice instances from VoiceData
     private val voiceFactory = VoiceFactory(
-        sampleRate = options.sampleRate,
-        sampleRateDouble = options.sampleRateDouble,
-        blockFrames = options.blockFrames,
-        ignitorRegistry = options.ignitorRegistry,
-        engineRegistry = options.engineRegistry,
+        sampleRate = context.sampleRate,
+        sampleRateDouble = context.sampleRateDouble,
+        blockFrames = context.blockFrames,
+        ignitorRegistry = context.ignitorRegistry,
+        engineRegistry = context.engineRegistry,
         cylinders = options.cylinders,
         voiceBuffer = voiceBuffer,
         freqModBuffer = freqModBuffer,
@@ -156,14 +138,10 @@ class VoiceScheduler(
         playbackContexts.clear()
     }
 
-    fun addSample(msg: KlangCommLink.Cmd.Sample) = options.sampleStore.addSample(msg)
+    fun addSample(msg: KlangCommLink.Cmd.Sample) = context.sampleStore.addSample(msg)
 
     fun getCompleteSample(req: SampleRequest): SampleStore.SampleEntry.Complete? =
-        options.sampleStore.getComplete(req)
-
-    fun setBackendStartTime(startTimeSec: Double) {
-        backendStartTimeSec = startTimeSec
-    }
+        context.sampleStore.getComplete(req)
 
     fun getActiveVoiceCount(): Int = active.size
 
@@ -210,7 +188,8 @@ class VoiceScheduler(
         }
         ensureEpoch(voice)
         scheduled.push(voice)
-        promoteScheduled(lastProcessedFrame, lastProcessedFrame + options.blockFrames)
+        val cursor = context.clock.cursorFrame
+        promoteScheduled(cursor, cursor + context.blockFrames)
         prefetchSampleSound(voice)
     }
 
@@ -226,14 +205,14 @@ class VoiceScheduler(
             scheduled.push(voice)
             prefetchSampleSound(voice)
         }
-        promoteScheduled(lastProcessedFrame, lastProcessedFrame + options.blockFrames)
+        val cursor = context.clock.cursorFrame
+        promoteScheduled(cursor, cursor + context.blockFrames)
     }
 
     fun process(cursorFrame: Int) {
-        val startMs = options.performanceTimeMs()
+        val startMs = context.performanceTimeMs()
 
-        lastProcessedFrame = cursorFrame
-        val blockEnd = cursorFrame + options.blockFrames
+        val blockEnd = cursorFrame + context.blockFrames
 
         // 1. Promote scheduled to active
         promoteScheduled(cursorFrame, blockEnd)
@@ -255,7 +234,7 @@ class VoiceScheduler(
         val hasSoloSources = soloSourceIds.isNotEmpty()
 
         val targetGain = if (hasSoloSources) 1.0 - (maxSoloAmount * 0.95) else 1.0
-        val blockDurationSec = options.blockFrames.toDouble() / options.sampleRateDouble
+        val blockDurationSec = context.blockFrames.toDouble() / context.sampleRateDouble
         val currentBackgroundGain = soloMuteRamp.step(targetGain, blockDurationSec)
 
         // 3. Render Loop
@@ -284,9 +263,9 @@ class VoiceScheduler(
         }
 
         // 4. Diagnostics & Headroom
-        val endMs = options.performanceTimeMs()
+        val endMs = context.performanceTimeMs()
         val durationMs = endMs - startMs
-        val blockDurationMs = (options.blockFrames.toDouble() / options.sampleRateDouble) * 1000.0
+        val blockDurationMs = (context.blockFrames.toDouble() / context.sampleRateDouble) * 1000.0
         val headroom = 1.0 - (durationMs / blockDurationMs)
 
         if (headroom < minHeadroom) {
@@ -302,10 +281,10 @@ class VoiceScheduler(
                 KlangCommLink.Feedback.Diagnostics.CylinderState(id = cylinder.id, active = cylinder.isActive)
             }
 
-            options.commLink.feedback.send(
+            context.commLink.feedback.send(
                 KlangCommLink.Feedback.Diagnostics(
                     playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID,
-                    sampleRate = options.sampleRate,
+                    sampleRate = context.sampleRate,
                     renderHeadroom = avgHeadroom,
                     activeVoiceCount = active.size,
                     cylinders = cylinderStates,
@@ -325,26 +304,29 @@ class VoiceScheduler(
         val pid = voice.playbackId
 
         if (pid !in playbackContexts) {
-            val nowSec = backendStartTimeSec + (lastProcessedFrame.toDouble() / options.sampleRate.toDouble())
+            // Read the SHARED clock — i.e. the real current backend time — so the epoch snaps to "now"
+            // and the first voice is not judged in the past. (A fresh engine has no per-scheduler cursor.)
+            val nowSec = context.clock.nowSec()
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
             playbackContexts[pid] = PlaybackCtx(
                 playbackId = pid,
-                ignitorRegistry = options.ignitorRegistry.fork(),
+                ignitorRegistry = context.ignitorRegistry.fork(),
                 epoch = voice.playbackStartTime + latency,
             )
         }
     }
 
     private fun prefetchSampleSound(voice: ScheduledVoice) {
-        if (!options.ignitorRegistry.contains(voice.data.sound)) {
-            options.sampleStore.requestIfMissing(voice.data.asSampleRequest(), voice.playbackId)
+        if (!context.ignitorRegistry.contains(voice.data.sound)) {
+            context.sampleStore.requestIfMissing(voice.data.asSampleRequest(), voice.playbackId)
         }
     }
 
     private fun promoteScheduled(nowFrame: Int, blockEnd: Int) {
-        val blockEndSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
-        val nowSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
-        val blockSizeSec = options.blockFrames.toDouble() / options.sampleRate.toDouble()
+        val clock = context.clock
+        val blockEndSec = clock.secAt(blockEnd)
+        val nowSec = clock.secAt(nowFrame)
+        val blockSizeSec = context.blockFrames.toDouble() / context.sampleRate.toDouble()
         val oldestAllowedSec = nowSec - (5 * blockSizeSec)
 
         while (true) {
@@ -388,7 +370,7 @@ class VoiceScheduler(
             voiceFactory.makeVoice(
                 scheduled = absoluteVoice,
                 nowFrame = nowFrame,
-                backendStartTimeSec = backendStartTimeSec,
+                backendStartTimeSec = clock.startTimeSec,
                 playbackCtx = pCtx,
                 getSample = ::getCompleteSample,
             )?.let { voice ->

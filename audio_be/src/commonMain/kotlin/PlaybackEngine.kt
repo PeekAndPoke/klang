@@ -6,18 +6,14 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.EngineRegistry
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
  * One per-`playbackId` DSP instance. Owns its **full** render state — its own [VoiceScheduler]
  * (own scheduling timeline, solo state, scratch, `RenderContext`, `VoiceFactory`) and its own
- * [Cylinders] (orbits + FX). No shared mutable render state with other engines, so engines render
- * independently and can later be parallelized; the only join point is the dispatcher's mix sum.
- *
- * See `docs/tasks/per-playback-engine.md` (D2·b).
+ * [Cylinders] (orbits + FX). The only thing it does NOT own is the shared backend state
+ * ([AudioBackendContext]); in particular the audio timeline (clock) is read from there, never per
+ * engine — see `docs/tasks/per-playback-engine.md` (D2·b/D2·d).
  */
 class PlaybackEngine(
     val scheduler: VoiceScheduler,
@@ -35,35 +31,10 @@ class PlaybackEngine(
         scheduler.getActiveVoiceCount() == 0 && !cylinders.anyActive()
 
     companion object {
-        /**
-         * Builds an engine: its own [Cylinders] + a [VoiceScheduler] wired to the **shared**
-         * [sampleStore] and registries. The ignitor registry should be the engine's own fork
-         * (per-playback custom oscillators); [engineRegistry] and [sampleStore] are shared.
-         */
-        fun create(
-            sampleRate: Int,
-            blockFrames: Int,
-            commLink: KlangCommLink.BackendEndpoint,
-            performanceTimeMs: () -> Double,
-            ignitorRegistry: IgnitorRegistry,
-            engineRegistry: EngineRegistry,
-            sampleStore: SampleStore,
-        ): PlaybackEngine {
-            val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
-
-            val scheduler = VoiceScheduler(
-                VoiceScheduler.Options(
-                    commLink = commLink,
-                    sampleRate = sampleRate,
-                    blockFrames = blockFrames,
-                    ignitorRegistry = ignitorRegistry,
-                    engineRegistry = engineRegistry,
-                    cylinders = cylinders,
-                    performanceTimeMs = performanceTimeMs,
-                    sampleStore = sampleStore,
-                )
-            )
-
+        /** Builds an engine: its own [Cylinders] + a [VoiceScheduler] wired to the shared [context]. */
+        fun create(context: AudioBackendContext): PlaybackEngine {
+            val cylinders = Cylinders(blockFrames = context.blockFrames, sampleRate = context.sampleRate)
+            val scheduler = VoiceScheduler(VoiceScheduler.Options(context = context, cylinders = cylinders))
             return PlaybackEngine(scheduler = scheduler, cylinders = cylinders)
         }
     }

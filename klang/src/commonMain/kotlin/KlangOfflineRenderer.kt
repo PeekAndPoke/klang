@@ -6,11 +6,6 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.EngineRegistry
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
-import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
@@ -61,36 +56,24 @@ class KlangOfflineRenderer(
         // 1. Single-engine DSP graph for offline render-to-PCM — independent of the live
         //    per-playback dispatcher (which is the realtime host).
         val commLink = KlangCommLink()
-        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
-        val ignitorRegistry = IgnitorRegistry().apply {
-            registerDefaults()
-            // Register this render's custom ignitors on top of the built-in defaults.
-            for ((name, dsl) in customIgnitors) {
-                if (contains(name)) {
-                    println("[KlangOfflineRenderer] Custom ignitor '$name' overrides built-in sound")
-                }
-                register(name, dsl)
-            }
-        }
-        val engineRegistry = EngineRegistry()
-        val voiceScheduler = VoiceScheduler(
-            VoiceScheduler.Options(
-                commLink = commLink.backend,
-                sampleRate = sampleRate,
-                blockFrames = blockFrames,
-                ignitorRegistry = ignitorRegistry,
-                engineRegistry = engineRegistry,
-                cylinders = cylinders,
-                performanceTimeMs = { klangTime.internalMsNow() },
-            )
-        )
-        voiceScheduler.setBackendStartTime(0.0)
-        val renderer = KlangAudioRenderer(
+        val renderer = KlangAudioRenderer.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voices = voiceScheduler,
-            cylinders = cylinders,
+            commLink = commLink.backend,
+            performanceTimeMs = { klangTime.internalMsNow() },
         )
+        val ignitorRegistry = renderer.ignitorRegistry
+        val voiceScheduler = renderer.voices
+
+        // Register this render's custom ignitors on top of the built-in defaults.
+        for ((name, dsl) in customIgnitors) {
+            if (ignitorRegistry.contains(name)) {
+                println("[KlangOfflineRenderer] Custom ignitor '$name' overrides built-in sound")
+            }
+            ignitorRegistry.register(name, dsl)
+        }
+
+        renderer.setBackendStartTime(0.0)
 
         // 2. Query all events and cache voice data (toVoiceData() creates new objects)
         data class CachedEvent(

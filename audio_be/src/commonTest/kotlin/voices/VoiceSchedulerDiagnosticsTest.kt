@@ -10,10 +10,9 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeAtLeast
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBackendContext
+import io.peekandpoke.klang.audio_be.BackendClock
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.EngineRegistry
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
-import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -30,18 +29,15 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
         // Use real KlangCommLink to capture feedback messages
         val commLink = KlangCommLink(capacity = 1024)
 
-        val options = VoiceScheduler.Options(
-            commLink = commLink.backend,
+        val context = AudioBackendContext.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
-            engineRegistry = EngineRegistry(),
-            cylinders = Cylinders(maxCylinders = 4, blockFrames = blockFrames, sampleRate = sampleRate),
-            performanceTimeMs = timeMs
+            commLink = commLink.backend,
+            clock = BackendClock(sampleRate),
+            performanceTimeMs = timeMs,
         )
-
-        val scheduler = VoiceScheduler(options)
-        scheduler.setBackendStartTime(0.0)
+        val cylinders = Cylinders(maxCylinders = 4, blockFrames = blockFrames, sampleRate = sampleRate)
+        val scheduler = VoiceScheduler(VoiceScheduler.Options(context = context, cylinders = cylinders))
 
         return scheduler to commLink
     }
