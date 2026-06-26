@@ -43,8 +43,7 @@ class JvmAudioBackend(
         // reset at the end of the handshake so nothing leaks into real playback.
         val warmup = WarmupRunner(
             sampleRate = sampleRate,
-            voices = dispatcher.voices,
-            renderer = dispatcher.renderer,
+            dispatcher = dispatcher,
             feedback = commLink,
         )
         warmup.start()
@@ -90,7 +89,7 @@ class JvmAudioBackend(
                 // rendering ///////////////////////////////////////////////////////////////////////////////////////
                 // Always render — warmup voices live on the real scheduler so this exercises
                 // the actual render path for JIT / cache priming.
-                dispatcher.renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)
+                dispatcher.renderBlock(cursorFrame = currentFrame, out = outShorts)
 
                 if (warmup.isWarming) {
                     outShorts.fill(0)

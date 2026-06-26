@@ -5,8 +5,6 @@
 
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher.Companion.create
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.EngineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
@@ -14,48 +12,52 @@ import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
- * Owns the backend DSP graph and is the single place inbound [KlangCommLink.Cmd]s are routed.
+ * The backend host: routes inbound [KlangCommLink.Cmd]s and renders the final block.
  *
- * Both platform backends — the JVM `SourceDataLine` loop and the JS `AudioWorklet` — previously
- * duplicated this graph construction *and* an identical `when (cmd)` dispatch. They now build one
- * dispatcher via [create] and forward every command to [handle], shrinking the platform layer to a
- * thin pump: drain commands → render → convert/output → forward feedback.
+ * It owns the shared resources (the [SampleStore] cache, the registries, the final [MasterStage])
+ * and the [PlaybackEngine]s. Both platform backends (JVM `SourceDataLine`, JS `AudioWorklet`) shrink
+ * to a thin pump: drain commands → [renderBlock] → convert/output → forward feedback.
  *
- * This is the seam the per-playback engine layer grows behind. Today it wraps a single
- * `VoiceScheduler` + `Cylinders`; later it will own a map of per-`playbackId` engines and the final
- * mix. See `docs/tasks/per-playback-engine.md` (deliverable D1).
+ * D2·b·1 wires a **single** engine (behaviour-identical to the old single-scheduler renderer);
+ * D2·b·2 turns this into a `Map<playbackId, PlaybackEngine>` for per-playback isolation. See
+ * `docs/tasks/per-playback-engine.md`.
  */
 class PlaybackEngineDispatcher(
+    sampleRate: Int,
+    blockFrames: Int,
     val ignitorRegistry: IgnitorRegistry,
     val engineRegistry: EngineRegistry,
-    val voices: VoiceScheduler,
-    val renderer: KlangAudioRenderer,
+    val sampleStore: SampleStore,
+    private val engine: PlaybackEngine,
 ) {
+    private val mix = StereoBuffer(blockFrames)
+    private val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+
+    /** Compat accessor — the single engine's scheduler. D2·b·2 makes scheduling per-engine. */
+    val voices: VoiceScheduler get() = engine.scheduler
+
     /**
-     * Route a single inbound command to its handler — the one Cmd dispatch site in the backend.
-     *
-     * Written as an exhaustive `when` *expression* on purpose: a future [KlangCommLink.Cmd]
-     * subtype fails the build here until it is handled, rather than being silently dropped by
-     * both backends at once.
+     * Route a single inbound command. Exhaustive `when` *expression* on purpose: a new
+     * [KlangCommLink.Cmd] subtype fails the build here until it is handled.
      */
     fun handle(cmd: KlangCommLink.Cmd): Unit = when (cmd) {
         is KlangCommLink.Cmd.ScheduleVoice ->
-            voices.scheduleVoice(voice = cmd.voice, clearScheduled = cmd.clearScheduled)
+            engine.scheduler.scheduleVoice(voice = cmd.voice, clearScheduled = cmd.clearScheduled)
 
         is KlangCommLink.Cmd.ScheduleVoices ->
-            voices.scheduleVoices(cmd.voices)
+            engine.scheduler.scheduleVoices(cmd.voices)
 
         is KlangCommLink.Cmd.ReplaceVoices ->
-            voices.replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
+            engine.scheduler.replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
 
         is KlangCommLink.Cmd.Cleanup ->
-            voices.cleanup(cmd.playbackId)
+            engine.scheduler.cleanup(cmd.playbackId)
 
         is KlangCommLink.Cmd.ClearScheduled ->
-            voices.clearScheduled(cmd.playbackId)
+            engine.scheduler.clearScheduled(cmd.playbackId)
 
         is KlangCommLink.Cmd.Sample ->
-            voices.addSample(msg = cmd)
+            sampleStore.addSample(cmd)
 
         is KlangCommLink.Cmd.RegisterIgnitor ->
             ignitorRegistry.register(cmd.name, cmd.dsl)
@@ -64,46 +66,49 @@ class PlaybackEngineDispatcher(
             engineRegistry.register(cmd.name, cmd.dsl)
     }
 
+    /** Render one block to [out]: engine(s) → summed mix → master/output stage. */
+    fun renderBlock(cursorFrame: Int, out: ShortArray) {
+        // D2·b·1: a single engine renders straight into the final mix (#11 fast path, N=1).
+        mix.clear()
+        engine.renderInto(mix, cursorFrame)
+        master.process(mix, out)
+    }
+
+    /** Pre-allocate cylinders during the warmup handshake. */
+    fun preallocateCylinders() = engine.preallocateCylinders()
+
+    /** Reset the master post-chain (limiter envelope + DC blockers) after warmup. */
+    fun resetPostChain() = master.reset()
+
     companion object {
-        /**
-         * Builds the standard backend DSP graph — the single construction site shared by
-         * `JvmAudioBackend`, `KlangAudioWorklet` and `KlangOfflineRenderer`.
-         */
+        /** Builds the backend host with its shared resources and a single engine. */
         fun create(
             sampleRate: Int,
             blockFrames: Int,
             commLink: KlangCommLink.BackendEndpoint,
             performanceTimeMs: () -> Double,
         ): PlaybackEngineDispatcher {
-            val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
-
             val ignitorRegistry = IgnitorRegistry().apply { registerDefaults() }
             val engineRegistry = EngineRegistry()
+            val sampleStore = SampleStore(commLink)
 
-            val voices = VoiceScheduler(
-                VoiceScheduler.Options(
-                    commLink = commLink,
-                    sampleRate = sampleRate,
-                    blockFrames = blockFrames,
-                    ignitorRegistry = ignitorRegistry,
-                    engineRegistry = engineRegistry,
-                    cylinders = cylinders,
-                    performanceTimeMs = performanceTimeMs,
-                )
-            )
-
-            val renderer = KlangAudioRenderer(
+            val engine = PlaybackEngine.create(
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
-                voices = voices,
-                cylinders = cylinders,
+                commLink = commLink,
+                performanceTimeMs = performanceTimeMs,
+                ignitorRegistry = ignitorRegistry,
+                engineRegistry = engineRegistry,
+                sampleStore = sampleStore,
             )
 
             return PlaybackEngineDispatcher(
+                sampleRate = sampleRate,
+                blockFrames = blockFrames,
                 ignitorRegistry = ignitorRegistry,
                 engineRegistry = engineRegistry,
-                voices = voices,
-                renderer = renderer,
+                sampleStore = sampleStore,
+                engine = engine,
             )
         }
     }

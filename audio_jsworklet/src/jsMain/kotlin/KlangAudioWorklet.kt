@@ -41,17 +41,18 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         )
 
         val voices get() = dispatcher.voices
-        val renderer get() = dispatcher.renderer
 
         val warmup = WarmupRunner(
             sampleRate = sampleRate,
-            voices = dispatcher.voices,
-            renderer = dispatcher.renderer,
+            dispatcher = dispatcher,
             feedback = commLink.backend,
         )
 
         /** Route an inbound command to the shared dispatcher. */
         fun handle(cmd: KlangCommLink.Cmd) = dispatcher.handle(cmd)
+
+        /** Render one block via the shared dispatcher. */
+        fun renderBlock(cursorFrame: Int, out: ShortArray) = dispatcher.renderBlock(cursorFrame, out)
 
         // Buffers
         val renderBuffer = ShortArray(blockFrames * 2) // 16-bit Stereo PCM (2 shorts per frame)
@@ -135,7 +136,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         // 1. Render the block into our intermediate ShortArray — always, so the warmup voices
         // running on the real scheduler exercise the actual render path (V8 inline caches,
         // lazy allocations inside VoiceScheduler / KlangAudioRenderer).
-        renderer.renderBlock(cursorFrame, renderBuffer)
+        renderBlock(cursorFrame, renderBuffer)
 
         if (warmup.isWarming) {
             // Silence output + advance warmup state. At the final tick warmup voices are
