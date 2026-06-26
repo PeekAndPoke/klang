@@ -34,6 +34,10 @@ class KlangCommLink(capacity: Int = 8192) {
             override val playbackId: String,
         ) : Cmd
 
+        /**
+         * Drop all not-yet-played voices for a playback. NOT on the production hot path — the frontend
+         * clears via [ReplaceVoices] (`afterTimeSec = null`); kept as a primitive for tests.
+         */
         @WireName("clear-scheduled")
         data class ClearScheduled(
             override val playbackId: String,
@@ -46,12 +50,15 @@ class KlangCommLink(capacity: Int = 8192) {
             val afterTimeSec: Double? = null,
         ) : Cmd
 
+        /**
+         * Schedule a single voice. NOT on the production hot path — the frontend always batches via
+         * [ScheduleVoices]; kept as a primitive for tests/benchmarks. To replace a playback's voices
+         * use [ReplaceVoices], not a clear-then-schedule flag.
+         */
         @WireName("schedule-voice")
         data class ScheduleVoice(
             override val playbackId: String,
             val voice: ScheduledVoice,
-            /** If true, clears all scheduled voices for this playback before scheduling this one */
-            val clearScheduled: Boolean = false,
         ) : Cmd
 
         /**

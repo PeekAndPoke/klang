@@ -134,11 +134,6 @@ class VoiceScheduler(
         scratchBuffers = scratchBuffers,
     )
 
-    // Diagnostics state
-    private var lastDiagnosticsTimeMs = 0.0
-    private var minHeadroom = 1.0
-    private var avgHeadroom = 1.0
-
     fun clear() {
         scheduled.clear()
         active.clear()
@@ -198,11 +193,7 @@ class VoiceScheduler(
         scheduleVoices(voices)
     }
 
-    fun scheduleVoice(voice: ScheduledVoice, clearScheduled: Boolean = false) {
-        val pid = voice.playbackId
-        if (clearScheduled) {
-            this.clearScheduled(pid)
-        }
+    fun scheduleVoice(voice: ScheduledVoice) {
         ensureEpoch(voice)
         scheduled.push(voice)
         val cursor = context.clock.cursorFrame
@@ -227,8 +218,6 @@ class VoiceScheduler(
     }
 
     fun process(cursorFrame: Int) {
-        val startMs = context.performanceTimeMs()
-
         val blockEnd = cursorFrame + context.blockFrames
 
         // 1. Promote scheduled to active
@@ -278,39 +267,8 @@ class VoiceScheduler(
                 active.removeLast()
             }
         }
-
-        // 4. Diagnostics & Headroom
-        val endMs = context.performanceTimeMs()
-        val durationMs = endMs - startMs
-        val blockDurationMs = (context.blockFrames.toDouble() / context.sampleRateDouble) * 1000.0
-        val headroom = 1.0 - (durationMs / blockDurationMs)
-
-        if (headroom < minHeadroom) {
-            minHeadroom = headroom
-        }
-
-        avgHeadroom = (avgHeadroom * 9.0 + headroom) / 10.0
-
-        if (endMs - lastDiagnosticsTimeMs > 20.0) {
-            lastDiagnosticsTimeMs = endMs
-
-            val cylinderStates = options.cylinders.cylinders.map { cylinder ->
-                KlangCommLink.Feedback.Diagnostics.CylinderState(id = cylinder.id, active = cylinder.isActive)
-            }
-
-            context.commLink.feedback.send(
-                KlangCommLink.Feedback.Diagnostics(
-                    playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID,
-                    sampleRate = context.sampleRate,
-                    renderHeadroom = avgHeadroom,
-                    activeVoiceCount = active.size,
-                    cylinders = cylinderStates,
-                    backendNowMs = endMs,
-                )
-            )
-
-            minHeadroom = 1.0
-        }
+        // Diagnostics emission lives on the dispatcher now (D5): it always runs renderBlock — even
+        // with zero engines — so the gauges can report idle/zero, and it times the WHOLE block.
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

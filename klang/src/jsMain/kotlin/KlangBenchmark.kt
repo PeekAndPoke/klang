@@ -291,6 +291,6 @@ class KlangBenchmark(
                 roomSize = 0.5
             )
         )
-        scheduler.scheduleVoice(voice, clearScheduled = false)
+        scheduler.scheduleVoice(voice)
     }
 }

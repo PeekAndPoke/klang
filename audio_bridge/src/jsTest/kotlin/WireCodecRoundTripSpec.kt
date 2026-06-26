@@ -109,7 +109,7 @@ class WireCodecRoundTripSpec : StringSpec({
         )
         val cases = listOf<KlangCommLink.Cmd>(
             KlangCommLink.Cmd.Cleanup("pb"),
-            KlangCommLink.Cmd.ScheduleVoice("pb", voice, clearScheduled = true),
+            KlangCommLink.Cmd.ScheduleVoice("pb", voice),
             KlangCommLink.Cmd.ScheduleVoices("pb", listOf(voice, voice)),
             KlangCommLink.Cmd.ReplaceVoices("pb", listOf(voice), afterTimeSec = 2.0),
             KlangCommLink.Cmd.RegisterIgnitor("pb", "mysynth", dsl),

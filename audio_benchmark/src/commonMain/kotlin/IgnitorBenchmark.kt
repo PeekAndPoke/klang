@@ -136,7 +136,6 @@ class IgnitorBenchmark(
                         freqHz = (case.voiceData.freqHz ?: 440.0) + (i * 2),
                     ),
                 ),
-                clearScheduled = false,
             )
         }
 
