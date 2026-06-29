@@ -28,6 +28,38 @@ gain) is in scope to prove the wiring; the rich master chain (glue/eq/drive/ceil
 UI, and the `EngineDsl` rename are deferred (see "Deferred phases"). The foundation fixes the collision
 bug and is **behaviour-identical** for today's single-playback case.
 
+## Status — end of Q2 2026 (current)
+
+**Foundation DONE + browser-confirmed.** D1, D2, D3 (folded into D2) and D5 are complete and committed;
+single-playback audio is identical and the orbit-collision bug is fixed. Two things landed beyond the
+original plan:
+
+- **`AudioBackendContext` + `BackendClock`** (call it "D2·d"): all shared backend state (sample store,
+  registries, IPC link, config, the one read-only clock) aggregated into one injected context;
+  `VoiceScheduler.Options` collapsed to `(context, cylinders)`. The shared clock fixed the
+  **first-notes-lost** regression (a fresh engine computed its epoch against the backend *start* time instead
+  of *now*) — resolves the first-note half of Open Q1.
+- **FE/BE state-placement review** (own thread; memory `project_fe_be_state_placement`): the frontend now
+  mirrors the backend's granularity. Shipped — FE↔BE **clock offset → `KlangPlayer`** (`BackendClockSync`; it
+  was dead per-controller → UI drift); **custom oscs/engines → per-playback** (BE registry forks + FE
+  registries on `KlangPlaybackController` — fixes a registry leak); dead-message cleanup
+  (`ScheduleVoice.clearScheduled` removed; `Cmd.ScheduleVoice`/`ClearScheduled` kept + documented); the
+  `SampleRequest` universal-key invariant KDoc.
+
+**D5 was done SIMPLER than §D below:** emission moved to the dispatcher (`emitDiagnostics`, runs every block
+→ emits zeros when idle, fixing the stuck gauges), but kept the **flat** `Diagnostics` (`activeVoiceCount` +
+`cylinders`) *aggregated across engines*. The `PlaybackEngineStats` / `engines: List` reshape in §D was NOT
+adopted (unnecessary). Guard: `PlaybackEngineDispatcherDiagnosticsTest`.
+
+**Remaining:**
+
+- **D6 — the thin master path** (§H): the actual original goal (`Song.master` → `Cmd.SetMaster` → per-engine
+  gain). NOT started — the natural next feature.
+- **D4 — cylinder eviction:** still open, now **folds into the warehouse pool** (memory
+  `project_resource_warehouse_pool`) — a self-balancing pool for the 7.68 MB delay rings + cylinders that also
+  kills the first-note **allocation** hiccup (the cylinder half of Open Q1). Scheduled **last**.
+- Deferred: crossfade, metering, master UI, `EngineDsl`→`PipelineDsl` rename, worklet clock divergence.
+
 ## Decisions (locked)
 
 1. **`PlaybackEngine`** = per-`playbackId` instance owning **all per-playback state** (scheduled heap,
@@ -280,12 +312,12 @@ audio until D6 (and then only when a non-unity `Song.master` is set).
 - **Human:** a single song is bit-for-bit identical (one engine == old path); two overlapping songs on the
   same orbit stay clean; first note of a multi-orbit song is glitch-free; browser memory sane (**answers Open Q1**).
 - **Done when:** isolation spec passes; single-song listen identical; no `preallocateAll`.
-- **Status:** ✅ done (uncommitted, code-review running). Sub-steps: D2·b·1 (PlaybackEngine + single-engine
-  dispatcher render), D2·b·2 (`Map<pid,PlaybackEngine>` + lazy `engineFor` + per-pid routing + additive
-  mixdown), D2·c (warmup on the dispatcher, dropped `preallocateAll`). The #11 mixdown relies on
+- **Status:** ✅ done + committed + browser-confirmed (single song identical, isolation holds). Extended by
+  **D2·d** = `AudioBackendContext` + `BackendClock` (see the Status banner). Sub-steps: D2·b·1 (PlaybackEngine
+    + single-engine dispatcher render), D2·b·2 (`Map<pid,PlaybackEngine>` + lazy `engineFor` + per-pid routing +
+      additive mixdown), D2·c (warmup on the dispatcher, dropped `preallocateAll`). The #11 mixdown relies on
   `Cylinders.processAndMix` accumulating (no scratch yet — the shared scratch lands in D6 with per-engine
-  master gain). Diagnostics emission stays per-engine for now (aggregation is D5). **D3's drain-dispose
-  was folded in here.**
+      master gain). **D3's drain-dispose was folded in here.**
 
 ### D3 — Explicit cleanup + drain lifecycle · *behaviour change: disposal* · ✅ FOLDED INTO D2·b·2
 
@@ -313,6 +345,10 @@ audio until D6 (and then only when a non-unity `Song.master` is set).
   aggregates equal the old single-engine values for one playback.
 - **Human:** `PlayerMiniStats` gauges read correctly with one engine and with two simultaneous playbacks.
 - **Done when:** diagnostics spec passes; gauges visually unchanged for one playback.
+- **Status:** ✅ done — but SIMPLER than the §D design above (see Status banner). Emission moved to
+  `PlaybackEngineDispatcher.emitDiagnostics` (runs every block → emits zeros when idle, fixing the gauges
+  that froze on stop); kept the **flat** `Diagnostics` aggregated across engines. `PlaybackEngineStats` /
+  `engines: List` was NOT adopted. Guard: `PlaybackEngineDispatcherDiagnosticsTest`.
 
 ### D6 — Thin master path · *new feature; default no-op*
 

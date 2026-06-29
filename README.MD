@@ -133,7 +133,10 @@ https://klang.finzo.de
 | `common`                  | Common    | Shared utilities — caching, math helpers, platform abstractions                        |
 | `tones`                   | Common    | Music theory — note names, scales, frequencies, MIDI conversion                        |
 
-# Dev Diary
+# Dev Diary & History
 
 A running, informal log of what happened day to day — the wins, the fights, and the dead ends.
-See [dev-diary.md](dev-diary.md).
+See [DEV-DIARY.MD](DEV-DIARY.MD).
+
+For the bigger picture, [docs/history](docs/history/) has condensed, grouped-by-system
+summaries — one file per quarter.
