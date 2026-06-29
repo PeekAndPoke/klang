@@ -39,7 +39,7 @@ import kotlinx.html.div
 
 // ── Tool singleton ───────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing super saw parameters: voices:freqSpread. */
+/** [KlangUiToolEmbeddable] for editing super saw parameters: voices:detune. */
 object SprudelSuperSawEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Super Saw Editor"
 
@@ -65,7 +65,7 @@ private fun Tag.SprudelSuperSawEditorComp(toolCtx: KlangUiToolContext, embedded:
 private data class SuperSawPreset(
     val name: String,
     val voices: Int,
-    val freqSpread: Double,
+    val detune: Double,
 )
 
 private val PRESETS = listOf(
@@ -102,7 +102,7 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
     private val parsedParts = parseInput()
 
     private var voices by value(parsedParts.getOrNull(0)?.toIntOrNull() ?: 5)
-    private var freqSpread by value(parsedParts.getOrNull(1)?.toDoubleOrNull() ?: 0.2)
+    private var detune by value(parsedParts.getOrNull(1)?.toDoubleOrNull() ?: 0.2)
 
     private var resetCounter by value(0)
 
@@ -112,7 +112,7 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String =
-        "\"$voices:${freqSpread.fmt()}\""
+        "\"$voices:${detune.fmt()}\""
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = currentValue != buildValue()
@@ -134,7 +134,7 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
         currentValue = initialValue
         val p = parseInput()
         voices = p.getOrNull(0)?.toIntOrNull() ?: 5
-        freqSpread = p.getOrNull(1)?.toDoubleOrNull() ?: 0.2
+        detune = p.getOrNull(1)?.toDoubleOrNull() ?: 0.2
         formCtrl.resetAllFields()
         props.toolCtx.onCommit(currentValue)
         resetCounter++
@@ -147,7 +147,7 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
 
     private fun applyPreset(preset: SuperSawPreset) {
         voices = preset.voices
-        freqSpread = preset.freqSpread
+        detune = preset.detune
         formCtrl.resetAllFields()
         resetCounter++
         liveUpdate()
@@ -190,7 +190,7 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
                     marginBottom = 8.px
                 }
                 val matchedPreset = PRESETS.find {
-                    it.voices == voices && it.freqSpread == freqSpread
+                    it.voices == voices && it.detune == detune
                 }
 
                 for (preset in PRESETS) {
@@ -223,12 +223,12 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
                             subFieldInfoIcon("params", "voices", props.toolCtx, infoPopup)
                         }
                     }
-                    UiInputField(freqSpread, { freqSpread = it; liveUpdate() }) {
-                        domKey("freqSpread")
+                    UiInputField(detune, { detune = it; liveUpdate() }) {
+                        domKey("detune")
                         step(0.01)
                         label {
                             +"Spread"
-                            subFieldInfoIcon("params", "freqSpread", props.toolCtx, infoPopup)
+                            subFieldInfoIcon("params", "detune", props.toolCtx, infoPopup)
                         }
                     }
                 }

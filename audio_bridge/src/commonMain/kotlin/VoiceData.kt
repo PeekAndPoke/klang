@@ -30,7 +30,7 @@ data class VoiceData(
     /** Sound index */
     val soundIndex: Int?,
 
-    // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
+    // Oscillator parameters (generic map: "density", "voices", "detune", "panSpread", "warmth")
     val oscParams: Map<String, Double>?,
 
     // Filters

@@ -39,7 +39,7 @@ import kotlinx.html.div
 
 // ── Tool singleton ───────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing super pluck parameters: voices:freqSpread:decay:brightness:pickPosition:stiffness. */
+/** [KlangUiToolEmbeddable] for editing super pluck parameters: voices:detune:decay:brightness:pickPosition:stiffness. */
 object SprudelSuperPluckEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Super Pluck Editor"
 
@@ -65,7 +65,7 @@ private fun Tag.SprudelSuperPluckEditorComp(toolCtx: KlangUiToolContext, embedde
 private data class SuperPluckPreset(
     val name: String,
     val voices: Int,
-    val freqSpread: Double,
+    val detune: Double,
     val decay: Double,
     val brightness: Double,
     val pickPosition: Double,
@@ -108,7 +108,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
     private val parsedParts = parseInput()
 
     private var voices by value(parsedParts.getOrNull(0)?.toInt() ?: 5)
-    private var freqSpread by value(parsedParts.getOrNull(1) ?: 0.2)
+    private var detune by value(parsedParts.getOrNull(1) ?: 0.2)
     private var decay by value(parsedParts.getOrNull(2) ?: 0.996)
     private var brightness by value(parsedParts.getOrNull(3) ?: 0.5)
     private var pickPosition by value(parsedParts.getOrNull(4) ?: 0.5)
@@ -122,7 +122,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String =
-        "\"$voices:${freqSpread.fmt()}:${decay.fmt()}:${brightness.fmt()}:${pickPosition.fmt()}:${stiffness.fmt()}\""
+        "\"$voices:${detune.fmt()}:${decay.fmt()}:${brightness.fmt()}:${pickPosition.fmt()}:${stiffness.fmt()}\""
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = currentValue != buildValue()
@@ -144,7 +144,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
         currentValue = initialValue
         val p = parseInput()
         voices = p.getOrNull(0)?.toInt() ?: 5
-        freqSpread = p.getOrNull(1) ?: 0.2
+        detune = p.getOrNull(1) ?: 0.2
         decay = p.getOrNull(2) ?: 0.996
         brightness = p.getOrNull(3) ?: 0.5
         pickPosition = p.getOrNull(4) ?: 0.5
@@ -161,7 +161,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
 
     private fun applyPreset(preset: SuperPluckPreset) {
         voices = preset.voices
-        freqSpread = preset.freqSpread
+        detune = preset.detune
         decay = preset.decay
         brightness = preset.brightness
         pickPosition = preset.pickPosition
@@ -208,7 +208,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
                     marginBottom = 8.px
                 }
                 val matchedPreset = PRESETS.find {
-                    it.voices == voices && it.freqSpread == freqSpread && it.decay == decay &&
+                    it.voices == voices && it.detune == detune && it.decay == decay &&
                             it.brightness == brightness && it.pickPosition == pickPosition && it.stiffness == stiffness
                 }
 
@@ -244,12 +244,12 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
                             subFieldInfoIcon("params", "voices", props.toolCtx, infoPopup)
                         }
                     }
-                    UiInputField(freqSpread, { freqSpread = it; liveUpdate() }) {
-                        domKey("freqSpread")
+                    UiInputField(detune, { detune = it; liveUpdate() }) {
+                        domKey("detune")
                         step(0.01)
                         label {
                             +"Spread (st)"
-                            subFieldInfoIcon("params", "freqSpread", props.toolCtx, infoPopup)
+                            subFieldInfoIcon("params", "detune", props.toolCtx, infoPopup)
                         }
                     }
                 }

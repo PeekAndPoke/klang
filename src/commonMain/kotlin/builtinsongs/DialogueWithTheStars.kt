@@ -31,7 +31,7 @@ let openGuitar = (() => {
   let pAttack     = Osc.param("attack",         0.005,  "Attack time in seconds")
   let pSustain    = Osc.param("sustain",        0.8,    "Sustain level")
 
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, freqSpread = pSpread)
+  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, detune = pSpread)
       .analog(pAnalog).mul(0.2)
 
   return signal
@@ -52,7 +52,7 @@ let mutedGuitar = (() => {
   let pVoices     = Osc.param("voices",  8,    "Number of unison voices")
   let pDrive      = Osc.param("drive",   1.0,  "Primary distortion drive level")
 
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, freqSpread = pSpread)
+  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, detune = pSpread)
       .analog(pAnalog).mul(0.2)
 
   let chugTop = signal

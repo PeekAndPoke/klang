@@ -63,7 +63,7 @@ data class SprudelVoiceData(
     /** Sound index */
     var soundIndex: Int?,
 
-    // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
+    // Oscillator parameters (generic map: "density", "voices", "detune", "panSpread", "warmth")
     var oscParams: Map<String, Double>?,
 
     // ADSR amplitude envelope — grouped (see SvdAdsr). Flat fields (attack/decay/…) are accessors below.

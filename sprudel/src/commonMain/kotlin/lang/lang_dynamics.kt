@@ -666,7 +666,7 @@ fun PatternMapperFn.uni(voices: PatternLike? = null, callInfo: CallInfo? = null)
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
-private val detuneMutation = voiceSetter { putOscParam("freqSpread", it?.asDoubleOrNull()) }
+private val detuneMutation = voiceSetter { putOscParam("detune", it?.asDoubleOrNull()) }
 
 private fun applyDetune(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, detuneMutation)

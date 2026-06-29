@@ -21,7 +21,7 @@ import io.peekandpoke.klang.audio_bridge.plus
  * oscParam() functions target:
  * - freq uses [IgnitorDsl.Freq] (voice note frequency) on all pitched oscillators
  * - "analog" on all pitched oscillators
- * - "voices", "freqSpread" on super oscillators
+ * - "voices", "detune" on super oscillators
  * - "duty" on square/sqr/pulse/pulze (one pulse oscillator; 0.5 = square)
  * - "density" on dust/crackle
  * - "decay", "brightness", "pickPosition", "stiffness" on pluck
@@ -73,12 +73,12 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "silence", dsl = silence)
 
     // ─── Super oscillators ───────────────────────────────────────────────────
-    // Each gets "voices", "freqSpread", "analog" as overridable params
+    // Each gets "voices", "detune", "analog" as overridable params
 
     val superSaw = IgnitorDsl.SuperSaw(
         freq = IgnitorDsl.Freq,
         voices = slots.voices,
-        freqSpread = slots.freqSpread,
+        detune = slots.detune,
         analog = slots.analog,
     )
     register(name = "supersaw", dsl = superSaw)
@@ -86,7 +86,7 @@ fun IgnitorRegistry.registerDefaults() {
     val superSine = IgnitorDsl.SuperSine(
         freq = IgnitorDsl.Freq,
         voices = slots.voices,
-        freqSpread = slots.freqSpread,
+        detune = slots.detune,
         analog = slots.analog,
     )
     register(name = "supersine", dsl = superSine)
@@ -94,7 +94,7 @@ fun IgnitorRegistry.registerDefaults() {
     val superSquare = IgnitorDsl.SuperSquare(
         freq = IgnitorDsl.Freq,
         voices = slots.voices,
-        freqSpread = slots.freqSpread,
+        detune = slots.detune,
         analog = slots.analog,
     )
     register(name = "supersquare", dsl = superSquare)
@@ -104,7 +104,7 @@ fun IgnitorRegistry.registerDefaults() {
     val superTri = IgnitorDsl.SuperTri(
         freq = IgnitorDsl.Freq,
         voices = slots.voices,
-        freqSpread = slots.freqSpread,
+        detune = slots.detune,
         analog = slots.analog,
     )
     register(name = "supertri", dsl = superTri)
@@ -112,7 +112,7 @@ fun IgnitorRegistry.registerDefaults() {
     val superRamp = IgnitorDsl.SuperRamp(
         freq = IgnitorDsl.Freq,
         voices = slots.voices,
-        freqSpread = slots.freqSpread,
+        detune = slots.detune,
         analog = slots.analog,
     )
     register(name = "superramp", dsl = superRamp)
@@ -159,7 +159,7 @@ fun IgnitorRegistry.registerDefaults() {
     val superPluck = IgnitorDsl.SuperPluck(
         freq = IgnitorDsl.Freq,
         voices = slots.voices,
-        freqSpread = slots.freqSpread,
+        detune = slots.detune,
         decay = slots.decay,
         brightness = slots.brightness,
         pickPosition = slots.pickPosition,
@@ -217,7 +217,7 @@ fun IgnitorRegistry.registerDefaults() {
 //
 // ── Noise as Modulation (in param slots) ─────────────────────────────────────
 //   Lowpass(cutoffHz = PerlinNoise(rate=0.5))       — wandering filter
-//   SuperSaw(freqSpread = BerlinNoise)              — evolving detune
+//   SuperSaw(detune = BerlinNoise)              — evolving detune
 //   Tremolo(rate = PerlinNoise(rate=0.2))           — irregular tremolo speed
 //   Distort(amount = PerlinNoise(rate=2.0))         — breathing distortion
 //

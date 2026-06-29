@@ -42,7 +42,7 @@ object Ignitors {
     // (IgnitorDslRuntime.buildIgnitor), upstream of these factories.
     private val analogDefault = ConstantIgnitor(0.0)
     private val voicesDefault = ConstantIgnitor(7.0)
-    private val freqSpreadDefault = ConstantIgnitor(0.2)
+    private val detuneDefault = ConstantIgnitor(0.2)
     private val dutyDefault = ConstantIgnitor(0.5)
     private val densityDefault = ConstantIgnitor(0.2)
     private val rateDefault = ConstantIgnitor(1.0)
@@ -468,13 +468,18 @@ object Ignitors {
     fun superSawRaw(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
-        freqSpread: Ignitor = freqSpreadDefault,
+        detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
-        rng: Random = Random
+        rng: Random = Random,
+        // Unison character — defaults are the SUPERSAW_* tuning constants; the DSL threads per-voice overrides.
+        sideAtten: Double = SUPERSAW_SIDE_ATTEN,
+        gainJitter: Double = SUPERSAW_GAIN_JITTER,
+        detunePower: Double = SUPERSAW_DETUNE_POWER,
+        centerJitterScale: Double = SUPERSAW_CENTER_JITTER_SCALE,
     ): Ignitor = SawStackIgnitor(
-        freq, voices, freqSpread, analog, rng,
+        freq, voices, detune, analog, rng,
         polarity = 1.0,
-        sideAtten = SUPERSAW_SIDE_ATTEN, gainJitter = SUPERSAW_GAIN_JITTER, detunePower = SUPERSAW_DETUNE_POWER,
+        sideAtten = sideAtten, gainJitter = gainJitter, detunePower = detunePower, centerJitterScale = centerJitterScale,
         resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX,
     )
 
@@ -482,15 +487,22 @@ object Ignitors {
     fun superSaw(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
-        freqSpread: Ignitor = freqSpreadDefault,
+        detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
-        rng: Random = Random
-    ): Ignitor = superSawRaw(freq, voices, freqSpread, analog, rng)
+        rng: Random = Random,
+        sideAtten: Double = SUPERSAW_SIDE_ATTEN,
+        gainJitter: Double = SUPERSAW_GAIN_JITTER,
+        detunePower: Double = SUPERSAW_DETUNE_POWER,
+        centerJitterScale: Double = SUPERSAW_CENTER_JITTER_SCALE,
+    ): Ignitor = superSawRaw(
+        freq, voices, detune, analog, rng,
+        sideAtten = sideAtten, gainJitter = gainJitter, detunePower = detunePower, centerJitterScale = centerJitterScale,
+    )
 
     /**
      * Shared engine for every unison oscillator: a stack of detuned voices summed to mono with the
      * super-saw character — center-dominant [sideAtten] gains, per-voice amplitude [gainJitter],
-     * independent per-voice [AnalogDrift], even [freqSpread] spacing (shaped by [detunePower]) with the
+     * independent per-voice [AnalogDrift], even [detune] spacing (shaped by [detunePower]) with the
      * **gain-weighted mean detune removed** so the pitch centroid sits exactly on the note. [polarity]
      * flips the waveform and is baked into the voice gains (no per-sample sign flip).
      *
@@ -501,13 +513,14 @@ object Ignitors {
     private abstract class DetunedStackIgnitor(
         private val freq: Ignitor,
         private val voices: Ignitor,
-        private val freqSpread: Ignitor,
+        private val detune: Ignitor,
         private val analog: Ignitor,
         private val rng: Random,
         private val polarity: Double,
         private val sideAtten: Double,
         private val gainJitter: Double,
         private val detunePower: Double,
+        private val centerJitterScale: Double,
     ) : Ignitor {
         private var v: Int = 0
         private var voiceStates: Array<WaveVoiceState> = emptyArray()
@@ -551,7 +564,7 @@ object Ignitors {
                 buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return
             }
 
-            val spread = readParam(freqSpread, actualFreq, ctx)
+            val spread = readParam(detune, actualFreq, ctx)
             // Recompute per-voice detune increment + shape ONCE per (freq, spread).
             if (actualFreq != lastFreq || spread != lastSpread) {
                 lastFreq = actualFreq
@@ -585,7 +598,7 @@ object Ignitors {
             val center = (v - 1) / 2
             var s = 0.0
             for (n in 0 until v) {
-                val scale = if (n == center) SUPERSAW_CENTER_JITTER_SCALE else 1.0
+                val scale = if (n == center) centerJitterScale else 1.0
                 val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * gainJitter * scale
                 val g = (base[n] * jit).coerceAtLeast(0.0)
                 voiceStates[n].gain = g; s += g
@@ -620,9 +633,11 @@ object Ignitors {
 
     /** A [DetunedStackIgnitor] whose voices render the piecewise-linear [waveTrapezoid] shape. */
     private abstract class TrapezoidStackIgnitor(
-        freq: Ignitor, voices: Ignitor, freqSpread: Ignitor, analog: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double,
-    ) : DetunedStackIgnitor(freq, voices, freqSpread, analog, rng, polarity, sideAtten, gainJitter, detunePower) {
+        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
+        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double, centerJitterScale: Double,
+    ) : DetunedStackIgnitor(
+        freq, voices, detune, analog, rng, polarity, sideAtten, gainJitter, detunePower, centerJitterScale,
+    ) {
         final override fun renderVoice(
             buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, first: Boolean, pm: DoubleArray?,
         ) {
@@ -652,10 +667,12 @@ object Ignitors {
 
     /** Unison saw / ramp ([polarity] ±1): the analog-flyback saw shape per voice. */
     private class SawStackIgnitor(
-        freq: Ignitor, voices: Ignitor, freqSpread: Ignitor, analog: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double,
+        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
+        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double, centerJitterScale: Double,
         private val resetSamples: Double, private val shapeMax: Double,
-    ) : TrapezoidStackIgnitor(freq, voices, freqSpread, analog, rng, polarity, sideAtten, gainJitter, detunePower) {
+    ) : TrapezoidStackIgnitor(
+        freq, voices, detune, analog, rng, polarity, sideAtten, gainJitter, detunePower, centerJitterScale,
+    ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) {
             vs.setSawShape((resetSamples * dt).coerceAtMost(shapeMax))
         }
@@ -663,11 +680,13 @@ object Ignitors {
 
     /** Unison pulse / square / triangle: the [waveTrapezoid] pulse shape per voice ([duty] + flanks). */
     private class PulseStackIgnitor(
-        freq: Ignitor, voices: Ignitor, freqSpread: Ignitor, analog: Ignitor, rng: Random,
-        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double,
+        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
+        polarity: Double, sideAtten: Double, gainJitter: Double, detunePower: Double, centerJitterScale: Double,
         private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
         private val flankSamples: Double,
-    ) : TrapezoidStackIgnitor(freq, voices, freqSpread, analog, rng, polarity, sideAtten, gainJitter, detunePower) {
+    ) : TrapezoidStackIgnitor(
+        freq, voices, detune, analog, rng, polarity, sideAtten, gainJitter, detunePower, centerJitterScale,
+    ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) {
             vs.setPulseShape(duty, riseFlank, fallFlank, flankSamples * dt)
         }
@@ -675,9 +694,11 @@ object Ignitors {
 
     /** Unison sine: a pure sine per voice (no shape config; inherently band-limited). */
     private class SineStackIgnitor(
-        freq: Ignitor, voices: Ignitor, freqSpread: Ignitor, analog: Ignitor, rng: Random,
-        sideAtten: Double, gainJitter: Double, detunePower: Double,
-    ) : DetunedStackIgnitor(freq, voices, freqSpread, analog, rng, 1.0, sideAtten, gainJitter, detunePower) {
+        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
+        sideAtten: Double, gainJitter: Double, detunePower: Double, centerJitterScale: Double,
+    ) : DetunedStackIgnitor(
+        freq, voices, detune, analog, rng, 1.0, sideAtten, gainJitter, detunePower, centerJitterScale,
+    ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) { /* sine carries no shape */
         }
 
@@ -710,12 +731,13 @@ object Ignitors {
     fun superSine(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
-        freqSpread: Ignitor = freqSpreadDefault,
+        detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = SineStackIgnitor(
-        freq, voices, freqSpread, analog, rng,
+        freq, voices, detune, analog, rng,
         sideAtten = SUPERSINE_SIDE_ATTEN, gainJitter = SUPERSINE_GAIN_JITTER, detunePower = SUPERSINE_DETUNE_POWER,
+        centerJitterScale = SUPERSAW_CENTER_JITTER_SCALE,
     )
 
     /**
@@ -728,13 +750,14 @@ object Ignitors {
     fun superSquare(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
-        freqSpread: Ignitor = freqSpreadDefault,
+        detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = PulseStackIgnitor(
-        freq, voices, freqSpread, analog, rng,
+        freq, voices, detune, analog, rng,
         polarity = 1.0,
         sideAtten = SUPERSQUARE_SIDE_ATTEN, gainJitter = SUPERSQUARE_GAIN_JITTER, detunePower = SUPERSQUARE_DETUNE_POWER,
+        centerJitterScale = SUPERSAW_CENTER_JITTER_SCALE,
         duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
@@ -747,13 +770,14 @@ object Ignitors {
     fun superTri(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
-        freqSpread: Ignitor = freqSpreadDefault,
+        detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = PulseStackIgnitor(
-        freq, voices, freqSpread, analog, rng,
+        freq, voices, detune, analog, rng,
         polarity = 1.0,
         sideAtten = SUPERTRI_SIDE_ATTEN, gainJitter = SUPERTRI_GAIN_JITTER, detunePower = SUPERTRI_DETUNE_POWER,
+        centerJitterScale = SUPERSAW_CENTER_JITTER_SCALE,
         duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
@@ -766,13 +790,14 @@ object Ignitors {
     fun superRamp(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
-        freqSpread: Ignitor = freqSpreadDefault,
+        detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = SawStackIgnitor(
-        freq, voices, freqSpread, analog, rng,
+        freq, voices, detune, analog, rng,
         polarity = -1.0,
         sideAtten = SUPERRAMP_SIDE_ATTEN, gainJitter = SUPERRAMP_GAIN_JITTER, detunePower = SUPERRAMP_DETUNE_POWER,
+        centerJitterScale = SUPERSAW_CENTER_JITTER_SCALE,
         resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
     )
 
@@ -889,18 +914,18 @@ object Ignitors {
     fun superKarplusStrong(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
-        freqSpread: Ignitor = freqSpreadDefault,
+        detune: Ignitor = detuneDefault,
         decay: Ignitor = decayDefault,
         brightness: Ignitor = brightnessDefault,
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
-    ): Ignitor = SuperKarplusStrongIgnitor(freq, voices, freqSpread, decay, brightness, pickPosition, stiffness, analog)
+    ): Ignitor = SuperKarplusStrongIgnitor(freq, voices, detune, decay, brightness, pickPosition, stiffness, analog)
 
     private class SuperKarplusStrongIgnitor(
         private val freq: Ignitor,
         private val voices: Ignitor,
-        private val freqSpread: Ignitor,
+        private val detune: Ignitor,
         private val decay: Ignitor,
         private val brightness: Ignitor,
         private val pickPosition: Ignitor,
@@ -941,7 +966,7 @@ object Ignitors {
                 }
 
                 // Read control-rate params once per block
-                val spread = readParam(freqSpread, actualFreq, ctx)
+                val spread = readParam(detune, actualFreq, ctx)
                 val decayVal = readParam(decay, actualFreq, ctx)
                 val brightnessVal = readParam(brightness, actualFreq, ctx)
                 val stiffnessVal = readParam(stiffness, actualFreq, ctx)

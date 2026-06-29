@@ -30,7 +30,7 @@ fun runWorkletSerializationBenchmark() {
     val voiceData = createSprudelVoiceData {
         note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8
         sound = SoundValue.Named("supersaw"); soundIndex = 1
-        oscParams = mapOf("voices" to 7.0, "freqSpread" to 0.3)
+        oscParams = mapOf("voices" to 7.0, "detune" to 0.3)
         attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0; lpattack = 0.005
         hcutoff = 1350.0; distort = 0.3; pan = 0.3; cylinder = 1

@@ -205,7 +205,7 @@ class LangSndSpec : StringSpec({
         events[0].data.soundName shouldBe "crackle"
     }
 
-    // -- two params (voices:freqSpread) -----------------------------------------------------------------------------------
+    // -- two params (voices:detune) -----------------------------------------------------------------------------------
 
     "sndSuperSaw() dsl interface" {
         dslInterfaceTests(
@@ -220,7 +220,7 @@ class LangSndSpec : StringSpec({
             assertSoftly {
                 events[0].data.soundName shouldBe "supersaw"
                 events[0].data.oscParams?.get("voices") shouldBe 7.0
-                events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
+                events[0].data.oscParams?.get("detune") shouldBe 0.3
             }
         }
     }
@@ -245,7 +245,7 @@ class LangSndSpec : StringSpec({
             assertSoftly {
                 events[0].data.soundName shouldBe "supersine"
                 events[0].data.oscParams?.get("voices") shouldBe 5.0
-                events[0].data.oscParams?.get("freqSpread") shouldBe 0.2
+                events[0].data.oscParams?.get("detune") shouldBe 0.2
             }
         }
     }
@@ -270,7 +270,7 @@ class LangSndSpec : StringSpec({
             assertSoftly {
                 events[0].data.soundName shouldBe "supersquare"
                 events[0].data.oscParams?.get("voices") shouldBe 7.0
-                events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
+                events[0].data.oscParams?.get("detune") shouldBe 0.3
             }
         }
     }
@@ -295,7 +295,7 @@ class LangSndSpec : StringSpec({
             assertSoftly {
                 events[0].data.soundName shouldBe "supertri"
                 events[0].data.oscParams?.get("voices") shouldBe 5.0
-                events[0].data.oscParams?.get("freqSpread") shouldBe 0.2
+                events[0].data.oscParams?.get("detune") shouldBe 0.2
             }
         }
     }
@@ -320,7 +320,7 @@ class LangSndSpec : StringSpec({
             assertSoftly {
                 events[0].data.soundName shouldBe "superramp"
                 events[0].data.oscParams?.get("voices") shouldBe 7.0
-                events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
+                events[0].data.oscParams?.get("detune") shouldBe 0.3
             }
         }
     }

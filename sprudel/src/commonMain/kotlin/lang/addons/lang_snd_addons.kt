@@ -128,7 +128,7 @@ private val sndSuperPluckMutation = voiceSetter {
     sound = SoundValue.Named("superpluck")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "freqSpread" to parts.getOrNull(1),
+        "detune" to parts.getOrNull(1),
         "decay" to parts.getOrNull(2),
         "brightness" to parts.getOrNull(3),
         "pickPosition" to parts.getOrNull(4),
@@ -150,7 +150,7 @@ private fun applySndSuperPluck(source: SprudelPattern, args: List<SprudelDslArg<
 
 /**
  * Sets the sound to a super plucked string (multiple detuned Karplus-Strong strings)
- * and optionally configures parameters via `"voices:freqSpread:decay:brightness:pickPosition:stiffness"`.
+ * and optionally configures parameters via `"voices:detune:decay:brightness:pickPosition:stiffness"`.
  *
  * Like a 12-string guitar or chorus of harps — each string has independent noise excitation
  * and drift, creating rich evolving shimmer.
@@ -161,10 +161,10 @@ private fun applySndSuperPluck(source: SprudelPattern, args: List<SprudelDslArg<
  * note("c3 e3 g3").sndSuperPluck("3:0.1:0.93:0.2")        // 3-string, tight, dark pizzicato
  * ```
  *
- * @param params Parameters as `"voices:freqSpread:decay:brightness:pickPosition:stiffness"`.
+ * @param params Parameters as `"voices:detune:decay:brightness:pickPosition:stiffness"`.
  * @param-tool params SprudelSuperPluckSequenceEditor
  * @param-sub params voices Number of strings (1–16)
- * @param-sub params freqSpread Detune spread in semitones
+ * @param-sub params detune Detune spread in semitones
  * @param-sub params decay Feedback amount (0.9–0.999, higher = longer ring)
  * @param-sub params brightness Lowpass cutoff (0 = dark, 1 = bright)
  * @param-sub params pickPosition Pluck position (0 = bridge, 1 = neck)
@@ -180,7 +180,7 @@ fun SprudelPattern.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo
 /**
  * Parses this string as a pattern and sets sound to super plucked string.
  *
- * @param params Parameters as `"voices:freqSpread:decay:brightness:pickPosition:stiffness"`.
+ * @param params Parameters as `"voices:detune:decay:brightness:pickPosition:stiffness"`.
  * @return A new pattern with sound set to "superpluck".
  * @category tonal
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd, addon
@@ -192,7 +192,7 @@ fun String.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null
 /**
  * Returns a [PatternMapperFn] that sets the sound to super plucked string.
  *
- * @param params Parameters as `"voices:freqSpread:decay:brightness:pickPosition:stiffness"`.
+ * @param params Parameters as `"voices:detune:decay:brightness:pickPosition:stiffness"`.
  * @return A [PatternMapperFn] that sets sound to "superpluck".
  * @category tonal
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd, addon
@@ -204,7 +204,7 @@ fun sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null): Patt
 /**
  * Chains a super plucked string sound onto this [PatternMapperFn].
  *
- * @param params Parameters as `"voices:freqSpread:decay:brightness:pickPosition:stiffness"`.
+ * @param params Parameters as `"voices:detune:decay:brightness:pickPosition:stiffness"`.
  */
 @KlangScript.Function
 fun PatternMapperFn.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -777,7 +777,7 @@ private val sndSuperSawMutation = voiceSetter {
     sound = SoundValue.Named("supersaw")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "freqSpread" to parts.getOrNull(1),
+        "detune" to parts.getOrNull(1),
     )
 }
 
@@ -796,10 +796,10 @@ private fun applySndSuperSaw(source: SprudelPattern, args: List<SprudelDslArg<An
 /**
  * Sets the sound to a super sawtooth (multiple detuned sawtooth oscillators).
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @param-tool params SprudelSuperSawSequenceEditor
  * @param-sub params voices Number of oscillators (1–16)
- * @param-sub params freqSpread Detune spread in semitones
+ * @param-sub params detune Detune spread in semitones
  * @return A new pattern with sound set to "supersaw" and parameters applied.
  * @category tonal
  * @tags supersaw, saw, unison, oscillator, snd, addon
@@ -811,7 +811,7 @@ fun SprudelPattern.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? 
 /**
  * Parses this string as a pattern and sets sound to super sawtooth.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A new pattern with sound set to "supersaw".
  * @category tonal
  * @tags supersaw, saw, unison, oscillator, snd, addon
@@ -823,7 +823,7 @@ fun String.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null):
 /**
  * Returns a [PatternMapperFn] that sets the sound to super sawtooth.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A [PatternMapperFn] that sets sound to "supersaw".
  * @category tonal
  * @tags supersaw, saw, unison, oscillator, snd, addon
@@ -834,7 +834,7 @@ fun sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null): Patter
 
 /**
  * Chains a super sawtooth sound onto this [PatternMapperFn].
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  */
 @KlangScript.Function
 fun PatternMapperFn.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -849,7 +849,7 @@ private val sndSuperSineMutation = voiceSetter {
     sound = SoundValue.Named("supersine")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "freqSpread" to parts.getOrNull(1),
+        "detune" to parts.getOrNull(1),
     )
 }
 
@@ -868,10 +868,10 @@ private fun applySndSuperSine(source: SprudelPattern, args: List<SprudelDslArg<A
 /**
  * Sets the sound to a super sine (multiple detuned sine oscillators).
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @param-tool params SprudelSuperSawSequenceEditor
  * @param-sub params voices Number of oscillators (1–16)
- * @param-sub params freqSpread Detune spread in semitones
+ * @param-sub params detune Detune spread in semitones
  * @return A new pattern with sound set to "supersine" and parameters applied.
  * @category tonal
  * @tags supersine, sine, unison, oscillator, snd, addon
@@ -883,7 +883,7 @@ fun SprudelPattern.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo?
 /**
  * Parses this string as a pattern and sets sound to super sine.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A new pattern with sound set to "supersine".
  * @category tonal
  * @tags supersine, sine, unison, oscillator, snd, addon
@@ -895,7 +895,7 @@ fun String.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null)
 /**
  * Returns a [PatternMapperFn] that sets the sound to super sine.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A [PatternMapperFn] that sets sound to "supersine".
  * @category tonal
  * @tags supersine, sine, unison, oscillator, snd, addon
@@ -906,7 +906,7 @@ fun sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null): Patte
 
 /**
  * Chains a super sine sound onto this [PatternMapperFn].
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  */
 @KlangScript.Function
 fun PatternMapperFn.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -921,7 +921,7 @@ private val sndSuperSquareMutation = voiceSetter {
     sound = SoundValue.Named("supersquare")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "freqSpread" to parts.getOrNull(1),
+        "detune" to parts.getOrNull(1),
     )
 }
 
@@ -940,10 +940,10 @@ private fun applySndSuperSquare(source: SprudelPattern, args: List<SprudelDslArg
 /**
  * Sets the sound to a super square (multiple detuned square oscillators).
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @param-tool params SprudelSuperSawSequenceEditor
  * @param-sub params voices Number of oscillators (1–16)
- * @param-sub params freqSpread Detune spread in semitones
+ * @param-sub params detune Detune spread in semitones
  * @return A new pattern with sound set to "supersquare" and parameters applied.
  * @category tonal
  * @tags supersquare, square, unison, oscillator, snd, addon
@@ -955,7 +955,7 @@ fun SprudelPattern.sndSuperSquare(params: PatternLike? = null, callInfo: CallInf
 /**
  * Parses this string as a pattern and sets sound to super square.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A new pattern with sound set to "supersquare".
  * @category tonal
  * @tags supersquare, square, unison, oscillator, snd, addon
@@ -967,7 +967,7 @@ fun String.sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = nul
 /**
  * Returns a [PatternMapperFn] that sets the sound to super square.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A [PatternMapperFn] that sets sound to "supersquare".
  * @category tonal
  * @tags supersquare, square, unison, oscillator, snd, addon
@@ -978,7 +978,7 @@ fun sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = null): Pat
 
 /**
  * Chains a super square sound onto this [PatternMapperFn].
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  */
 @KlangScript.Function
 fun PatternMapperFn.sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -993,7 +993,7 @@ private val sndSuperTriMutation = voiceSetter {
     sound = SoundValue.Named("supertri")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "freqSpread" to parts.getOrNull(1),
+        "detune" to parts.getOrNull(1),
     )
 }
 
@@ -1012,10 +1012,10 @@ private fun applySndSuperTri(source: SprudelPattern, args: List<SprudelDslArg<An
 /**
  * Sets the sound to a super triangle (multiple detuned triangle oscillators).
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @param-tool params SprudelSuperSawSequenceEditor
  * @param-sub params voices Number of oscillators (1–16)
- * @param-sub params freqSpread Detune spread in semitones
+ * @param-sub params detune Detune spread in semitones
  * @return A new pattern with sound set to "supertri" and parameters applied.
  * @category tonal
  * @tags supertri, triangle, unison, oscillator, snd, addon
@@ -1027,7 +1027,7 @@ fun SprudelPattern.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? 
 /**
  * Parses this string as a pattern and sets sound to super triangle.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A new pattern with sound set to "supertri".
  * @category tonal
  * @tags supertri, triangle, unison, oscillator, snd, addon
@@ -1039,7 +1039,7 @@ fun String.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null):
 /**
  * Returns a [PatternMapperFn] that sets the sound to super triangle.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A [PatternMapperFn] that sets sound to "supertri".
  * @category tonal
  * @tags supertri, triangle, unison, oscillator, snd, addon
@@ -1050,7 +1050,7 @@ fun sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null): Patter
 
 /**
  * Chains a super triangle sound onto this [PatternMapperFn].
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  */
 @KlangScript.Function
 fun PatternMapperFn.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -1065,7 +1065,7 @@ private val sndSuperRampMutation = voiceSetter {
     sound = SoundValue.Named("superramp")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "freqSpread" to parts.getOrNull(1),
+        "detune" to parts.getOrNull(1),
     )
 }
 
@@ -1084,10 +1084,10 @@ private fun applySndSuperRamp(source: SprudelPattern, args: List<SprudelDslArg<A
 /**
  * Sets the sound to a super ramp (multiple detuned ramp oscillators).
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @param-tool params SprudelSuperSawSequenceEditor
  * @param-sub params voices Number of oscillators (1–16)
- * @param-sub params freqSpread Detune spread in semitones
+ * @param-sub params detune Detune spread in semitones
  * @return A new pattern with sound set to "superramp" and parameters applied.
  * @category tonal
  * @tags superramp, ramp, unison, oscillator, snd, addon
@@ -1099,7 +1099,7 @@ fun SprudelPattern.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo?
 /**
  * Parses this string as a pattern and sets sound to super ramp.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A new pattern with sound set to "superramp".
  * @category tonal
  * @tags superramp, ramp, unison, oscillator, snd, addon
@@ -1111,7 +1111,7 @@ fun String.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null)
 /**
  * Returns a [PatternMapperFn] that sets the sound to super ramp.
  *
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  * @return A [PatternMapperFn] that sets sound to "superramp".
  * @category tonal
  * @tags superramp, ramp, unison, oscillator, snd, addon
@@ -1122,7 +1122,7 @@ fun sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null): Patte
 
 /**
  * Chains a super ramp sound onto this [PatternMapperFn].
- * @param params Parameters as `"voices:freqSpread"`.
+ * @param params Parameters as `"voices:detune"`.
  */
 @KlangScript.Function
 fun PatternMapperFn.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

@@ -38,8 +38,8 @@ class KlangScriptOscSlotTest : StringSpec({
         evalIgnitorDsl("OscSlot.voices") shouldBe IgnitorDsl.Param("voices", 8.0)
     }
 
-    "OscSlot.freqSpread → Param(\"freqSpread\", 0.2)" {
-        evalIgnitorDsl("OscSlot.freqSpread") shouldBe IgnitorDsl.Param("freqSpread", 0.2)
+    "OscSlot.detune → Param(\"detune\", 0.2)" {
+        evalIgnitorDsl("OscSlot.detune") shouldBe IgnitorDsl.Param("detune", 0.2)
     }
 
     "OscSlot.duty → Param(\"duty\", 0.5)" {

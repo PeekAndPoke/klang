@@ -220,7 +220,7 @@ class LangDynamicsSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("voices") shouldBe 5.0
-        events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
+        events[0].data.oscParams?.get("detune") shouldBe 0.3
     }
 
     "script apply(unison()) works in compiled code" {
@@ -251,7 +251,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
+        events[0].data.oscParams?.get("detune") shouldBe 0.3
     }
 
     // ---- spread() ---------------------------------------------------------------------------------------
@@ -275,7 +275,7 @@ class LangDynamicsSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("voices") shouldBe 5.0
-        events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
+        events[0].data.oscParams?.get("detune") shouldBe 0.3
         events[0].data.oscParams?.get("panSpread") shouldBe 0.8
     }
 

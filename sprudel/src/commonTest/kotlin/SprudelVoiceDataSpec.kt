@@ -220,7 +220,7 @@ class SprudelVoiceDataSpec : StringSpec({
             bank = "MPC60"
             sound = SoundValue.Named("bd")
             soundIndex = 2
-            oscParams = mapOf("density" to 0.5, "panSpread" to 0.3, "freqSpread" to 0.1, "voices" to 3.0)
+            oscParams = mapOf("density" to 0.5, "panSpread" to 0.3, "detune" to 0.1, "voices" to 3.0)
             accelerate = 0.05
             vibrato = 0.2
             vibratoMod = 0.4
@@ -253,7 +253,7 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.soundIndex shouldBe 2
         voiceData.oscParams?.get("density") shouldBe 0.5
         voiceData.oscParams?.get("panSpread") shouldBe 0.3
-        voiceData.oscParams?.get("freqSpread") shouldBe 0.1
+        voiceData.oscParams?.get("detune") shouldBe 0.1
         voiceData.oscParams?.get("voices") shouldBe 3.0
         voiceData.accelerate shouldBe 0.05
         voiceData.vibrato shouldBe 0.2

@@ -30,7 +30,7 @@ class LangSndSuperPluckSpec : StringSpec({
             assertSoftly {
                 events[0].data.soundName shouldBe "superpluck"
                 events[0].data.oscParams?.get("voices") shouldBe 7.0
-                events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
+                events[0].data.oscParams?.get("detune") shouldBe 0.3
                 events[0].data.oscParams?.get("decay") shouldBe 0.99
                 events[0].data.oscParams?.get("brightness") shouldBe 0.8
             }
@@ -53,7 +53,7 @@ class LangSndSuperPluckSpec : StringSpec({
         with(events[0].data) {
             soundName shouldBe "superpluck"
             oscParams?.get("voices") shouldBe 7.0
-            oscParams?.get("freqSpread") shouldBe 0.3
+            oscParams?.get("detune") shouldBe 0.3
             oscParams?.get("decay") shouldBe 0.996
             oscParams?.get("brightness") shouldBe 0.5
             oscParams?.get("pickPosition") shouldBe 0.2
@@ -68,7 +68,7 @@ class LangSndSuperPluckSpec : StringSpec({
         events.size shouldBe 1
         events[0].data.soundName shouldBe "superpluck"
         events[0].data.oscParams?.get("voices") shouldBe 5.0
-        events[0].data.oscParams?.get("freqSpread") shouldBe 0.2
+        events[0].data.oscParams?.get("detune") shouldBe 0.2
         events[0].data.oscParams?.get("decay") shouldBe 0.99
     }
 })

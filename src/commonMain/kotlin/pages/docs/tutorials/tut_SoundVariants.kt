@@ -21,7 +21,7 @@ val soundVariantsTutorial = Tutorial(
             heading = "1. Glass — A Soft Sine Pad",
             text = "Our first pad is built around a unison sine — gentle, airy, no edges. A long attack lets each note bloom; a tight low-pass keeps the high partials of the detuning under control. Hold it and you can feel it breathe.",
             code = """// Pad #1: a glassy sine pad — soft, slow, transparent
-let glass = Osc.supersine(/* freq */ Osc.freq(), /* voices */ 6, /* freqSpread */ 0.15)
+let glass = Osc.supersine(/* freq */ Osc.freq(), /* voices */ 6, /* detune */ 0.15)
     .lowpass(1800)
     .adsr(0.3, 0.6, 0.8, 1.5)
 
@@ -31,7 +31,7 @@ note("a3 c4 e4 d4").sound(glass).gain(0.3).room(0.3)""",
             heading = "2. Warm — A Rich Saw Pad",
             text = "The second pad is built from a supersaw — many detuned sawtooths stacked together. Saws are bright and full of harmonics, so we tame them with a lower filter. The result is warm and chordal, the classic analog-pad colour that sits underneath everything.",
             code = """// Pad #2: a warm supersaw pad — wide, rich, woody
-let warm = Osc.supersaw(/* freq */ Osc.freq(), /* voices */ 8, /* freqSpread */ 0.2)
+let warm = Osc.supersaw(/* freq */ Osc.freq(), /* voices */ 8, /* detune */ 0.2)
     .lowpass(700)
     .adsr(0.4, 0.5, 0.7, 1.8)
 
