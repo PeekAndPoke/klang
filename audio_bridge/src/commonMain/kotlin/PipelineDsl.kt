@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.audio_bridge
 
-import io.peekandpoke.klang.audio_bridge.EngineDsl.Companion.modern
-import io.peekandpoke.klang.audio_bridge.EngineDsl.Companion.pedal
+import io.peekandpoke.klang.audio_bridge.PipelineDsl.Companion.modern
+import io.peekandpoke.klang.audio_bridge.PipelineDsl.Companion.pedal
 
 /**
  * Declarative, data-driven voice engine (the "Motör" filter/VCA pipeline).
@@ -16,19 +16,19 @@ import io.peekandpoke.klang.audio_bridge.EngineDsl.Companion.pedal
  * filter humanization). Built-ins [modern] / [pedal] reproduce the historical
  * hardcoded pipelines; users author arbitrary pipelines and may omit stages.
  *
- * Mirrors [IgnitorDsl]: a `@WireFormat` root, registered by name, referenced from `VoiceData.engine`. The
+ * Mirrors [IgnitorDsl]: a `@WireFormat` root, registered by name, referenced from `VoiceData.pipeline`. The
  * backend maps each [StageDsl] to a `BlockRenderer`. Marked `@WireFormat` so the codec is generated now (the
- * `@WireName` tags below are live); the `Cmd.RegisterEngine` plumbing that actually *sends* it is still TODO.
+ * `@WireName` tags below are live); the `Cmd.RegisterPipeline` plumbing that actually *sends* it is still TODO.
  *
  * Per-note amounts (distort/crush/cutoff/adsr times) stay on `VoiceData` — a
  * stage slot only renders when its amount is active. The engine sets order,
  * presence and feel; the note sets amounts.
  */
 @WireFormat
-data class EngineDsl(val stages: List<StageDsl>) {
+data class PipelineDsl(val stages: List<StageDsl>) {
     companion object {
         /** Classic subtractive: osc → waveshaper → VCF → VCA. ADSR (VCA) last. */
-        val modern: EngineDsl = EngineDsl(
+        val modern: PipelineDsl = PipelineDsl(
             listOf(
                 StageDsl.FilterMod,
                 StageDsl.Crush,
@@ -42,7 +42,7 @@ data class EngineDsl(val stages: List<StageDsl>) {
         )
 
         /** Guitar-pedal feel: VCA drives the waveshapers. ADSR (VCA) early. */
-        val pedal: EngineDsl = EngineDsl(
+        val pedal: PipelineDsl = PipelineDsl(
             listOf(
                 StageDsl.FilterMod,
                 StageDsl.Vca(),
@@ -58,7 +58,7 @@ data class EngineDsl(val stages: List<StageDsl>) {
 }
 
 /**
- * One stage slot in an [EngineDsl] pipeline.
+ * One stage slot in an [PipelineDsl] pipeline.
  *
  * Marker stages carry no config; [Filter] and [Vca] carry their tune-by-ear
  * character constants. All defaults equal the historical compile-time values,

@@ -164,7 +164,7 @@ arrange(
   [8, bridgeSolo],
   [8, mainTheme],
   [6, outro],
-).compressor("-12:2:6:0.02:0.25").analog(2).engine("pedal")
+).compressor("-12:2:6:0.02:0.25").analog(2).pipeline("pedal")
 
 
 // Inspired by: In Flames — "Dialogue with the Stars" (The Jester Race, 1996)

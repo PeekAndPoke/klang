@@ -8,10 +8,6 @@ package io.peekandpoke.klang.audio_be
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.EngineRegistry
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
-import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlin.math.abs
 
@@ -20,28 +16,12 @@ class KlangAudioRendererSpec : StringSpec({
     val sampleRate = 44100
     val blockFrames = 128
 
-    fun createRenderer(): KlangAudioRenderer {
-        val commLink = KlangCommLink()
-        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
-
-        val voiceScheduler = VoiceScheduler(
-            options = VoiceScheduler.Options(
-                commLink = commLink.backend,
-                sampleRate = sampleRate,
-                blockFrames = blockFrames,
-                ignitorRegistry = IgnitorRegistry(),
-                engineRegistry = EngineRegistry(),
-                cylinders = cylinders,
-            )
-        )
-
-        return KlangAudioRenderer(
+    fun createRenderer(): KlangAudioRenderer =
+        KlangAudioRenderer.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voices = voiceScheduler,
-            cylinders = cylinders,
+            commLink = KlangCommLink().backend,
         )
-    }
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Silent output

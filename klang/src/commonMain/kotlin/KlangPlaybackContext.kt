@@ -5,8 +5,6 @@
 
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_bridge.EngineDsl
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -45,31 +43,6 @@ class KlangPlaybackContext internal constructor(
      */
     val backendReady: Deferred<Unit>,
 
-    /**
-     * Per-player cache + name allocator for inline [IgnitorDsl] sounds. Internal —
-     * playbacks use [registerIgnitor] to interact with it.
-     */
-    internal val ignitors: IgnitorRegistry,
-
-    /**
-     * Per-player cache + name allocator for inline [EngineDsl] engines. Internal —
-     * playbacks use [registerEngine] to interact with it.
-     */
-    internal val engines: EngineRegistry,
-) {
-    /**
-     * Return a stable synthetic name for [dsl], registering it with the backend
-     * on first sighting. Used at the playback → wire boundary to denormalize
-     * inline `SoundValue.Osc(dsl)` references into a wire-level sound name.
-     *
-     * Structurally-equal DSL trees collapse to one name (and one BE registration).
-     */
-    fun registerIgnitor(dsl: IgnitorDsl): String = ignitors.registerOrLookup(dsl)
-
-    /**
-     * Return a stable synthetic name for [dsl], registering it with the backend on first
-     * sighting. The engine-side mirror of [registerIgnitor] — denormalizes an inline
-     * `EngineDsl` (from `.engine(engineDsl)`) into a wire-level engine name.
-     */
-    fun registerEngine(dsl: EngineDsl): String = engines.registerOrLookup(dsl)
-}
+    /** The single FE↔BE clock offset — GLOBAL, owned by [KlangPlayer]; controllers read it. */
+    internal val clockSync: BackendClockSync,
+)

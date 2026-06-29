@@ -32,7 +32,7 @@ package io.peekandpoke.klang.audio_be.filters
  * a per-note re-pitch of the resonant peak — keep it small.
  *
  * Consumer: `VoiceFactory.perVoiceCutoffOffsetMul`.
- * Keep in sync with `EngineDsl.Filter.cutoffOffsetPerAnalog` default.
+ * Keep in sync with `PipelineDsl.Filter.cutoffOffsetPerAnalog` default.
  */
 internal const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.001
 
@@ -84,6 +84,6 @@ internal const val FILTER_INV_SMOOTH_SAMPLES: Double = 1.0 / FILTER_SMOOTH_SAMPL
  * the fast layer adds ±0.5 cent of micro-wobble — Diva-default territory.
  *
  * Consumer: `VoiceFactory.toModulator` (creates the per-filter drift).
- * Keep in sync with `EngineDsl.Filter.driftRelToOsc` default.
+ * Keep in sync with `PipelineDsl.Filter.driftRelToOsc` default.
  */
 internal const val FILTER_DRIFT_RELATIVE_TO_OSC: Double = 2.5

@@ -5,42 +5,41 @@
 
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_bridge.EngineDsl
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 
 /**
- * Per-[KlangPlayer] tracker that announces inline [EngineDsl] trees to the audio backend
- * exactly once per unique engine — the engine-side mirror of [IgnitorRegistry].
+ * Per-playback (playbackId-bound) tracker that announces inline [PipelineDsl] trees to the audio
+ * backend exactly once per unique engine — the engine-side mirror of [IgnitorRegistry]. The
+ * [playbackId] stamps the command so the backend registers it on THAT playback's engine fork.
  *
- * Names come from [EngineDsl.uniqueId] (process-wide, monotonic, never collide). This class
- * only holds the set of engines this player's backend has already heard about, so we don't
- * re-send the same RegisterEngine command on every voice event.
+ * Names come from [PipelineDsl.uniqueId] (process-wide, monotonic, never collide).
  *
- * Internal to klang; callers reach it via [KlangPlaybackContext.registerEngine].
+ * Internal to klang; the owning `KlangPlaybackController` calls [registerOrLookup] directly.
  */
-internal class EngineRegistry(
+internal class PipelineRegistry(
     private val sendControl: (KlangCommLink.Cmd) -> Unit,
     private val playbackId: String = KlangCommLink.SYSTEM_PLAYBACK_ID,
 ) {
     private val lock = KlangLock()
-    private val sentToBackend = mutableSetOf<EngineDsl>()
+    private val sentToBackend = mutableSetOf<PipelineDsl>()
 
-    /** Number of unique engines already announced to this player's backend. */
+    /** Number of unique pipelines already announced to this player's backend. */
     val size: Int get() = lock.withLock { sentToBackend.size }
 
     /**
      * Return the synthetic name for [dsl] (via the global [uniqueId] map) and, on first
-     * sighting *by this player*, fire a [KlangCommLink.Cmd.RegisterEngine] to its backend.
+     * sighting *by this player*, fire a [KlangCommLink.Cmd.RegisterPipeline] to its backend.
      */
-    fun registerOrLookup(dsl: EngineDsl): String {
+    fun registerOrLookup(dsl: PipelineDsl): String {
         val name = dsl.uniqueId()
         val firstSighting = lock.withLock { sentToBackend.add(dsl) }
         if (firstSighting) {
             sendControl(
-                KlangCommLink.Cmd.RegisterEngine(
+                KlangCommLink.Cmd.RegisterPipeline(
                     playbackId = playbackId,
                     name = name,
                     dsl = dsl,

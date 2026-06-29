@@ -55,7 +55,7 @@ stack(
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>").coarse(2).coarseos(8)
     .superimpose(x => x.transpose(12).detune(0.10).velocity("<0!32 0.15!32>").pan(0.3).late(0.001),
                  x => x.transpose(12).detune(0.15).velocity("<0!32 0.15!32>").pan(0.7).late(0.0015))
-    .mute("<1!32 0!256>").engine("pedal"),
+    .mute("<1!32 0!256>").pipeline("pedal"),
   // Guitar 1
   n(`<[7 4 2 <-1 4 1 3> [0 -1 -3 -1] [0 -3] -2 <[-1 4@3] [5 6@3] [4 7@3] [4 6@3]>]!4
       [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [-1 -3] 0 <[4 6] [0, -3]>] [<7 [[7 4 6 4]!4]> [-5 -6] -7 [-2 <3 -1>]]>/4`)
@@ -67,7 +67,7 @@ stack(
     .clip("<0.96!31 0.9 0.96!31 0.825>".fast(2))
     .gain(0.6).postgain(0.365).hpf("<400!48 700!16 400!32 300!32>").lpq(1.5).lpf(saw.range(1,0).pow(1.5).mul(1000).add(1200).slow(4)).lpe(1.0).lpq(2.0)
     .pan(0.2).superimpose(pan(0.8))
-    .orbit(1).engine("pedal")
+    .orbit(1).pipeline("pedal")
   ,
   // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>")
@@ -81,7 +81,7 @@ stack(
       x => x.pan(0.65),
       x => x.postgain(0.25).hpf(180).lpf(1900)
             .scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))
-    ).orbit(2).mute("<0!128 1!16 0!16>").engine("pedal")
+    ).orbit(2).mute("<0!128 1!16 0!16>").pipeline("pedal")
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!32 [x@3 x]!32 [x!4]!64>").fast(2).velocity("1.00 0.95!3 0.98 0.95!3".fast(2))
     .scale("<e2:minor!88 e3:minor!8>").sound("saw").gain(0.5).distort("0.2:tube:1").coarse(2).postgain(0.6).clip(1.0)

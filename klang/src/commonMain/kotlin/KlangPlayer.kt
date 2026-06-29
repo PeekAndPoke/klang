@@ -81,14 +81,9 @@ class KlangPlayer(
     // Completes once the backend has emitted Feedback.BackendReady (post-warmup).
     val backendReady = CompletableDeferred<Unit>()
 
-    // Per-player ignitor name cache; allocates synthetic names + sends RegisterIgnitor
-    // on first sighting of each unique IgnitorDsl tree. Shared across all playbacks so
-    // concurrent playbacks cannot collide on synthetic names.
-    internal val ignitors = IgnitorRegistry(sendControl = ::sendControl)
-
-    // Per-player engine name cache; sends RegisterEngine on first sighting of each unique
-    // EngineDsl tree (mirror of [ignitors]).
-    internal val engines = EngineRegistry(sendControl = ::sendControl)
+    // The single FE↔BE clock offset (GLOBAL) — corrected from the SYSTEM Diagnostics, read by controllers.
+    // (Inline-osc/engine registries are playbackId-bound — they live on each KlangPlaybackController.)
+    private val clockSync = BackendClockSync()
 
     // Context bundle for playback implementations (reduces constructor parameter lists)
     val playbackContext = KlangPlaybackContext(
@@ -99,8 +94,7 @@ class KlangPlayer(
         fetcherDispatcher = fetcherDispatcher,
         callbackDispatcher = callbackDispatcher,
         backendReady = backendReady,
-        ignitors = ignitors,
-        engines = engines,
+        clockSync = clockSync,
     )
 
     /**
@@ -156,6 +150,9 @@ class KlangPlayer(
 
                     // System messages go to player signals
                     is KlangCommLink.Feedback.Diagnostics -> {
+                        // Correct the single GLOBAL FE↔BE clock offset from the SYSTEM diagnostics stream.
+                        clockSync.onDiagnostics(feedback)
+
                         if (!hasLoggedDiagnostics) {
                             hasLoggedDiagnostics = true
                             println(

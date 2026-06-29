@@ -5,21 +5,21 @@
 
 package io.peekandpoke.klang.audio_be.engines
 
-import io.peekandpoke.klang.audio_bridge.EngineDsl
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
 
 /**
  * Named preset for the voice filter pipeline topology.
  *
  * Each engine defines a different ordering (and potentially a different set) of
  * `BlockRenderer` stages in the voice's Filter stage. The song DSL selects an
- * engine per voice via `.engine("name")` — unknown or missing names fall back
+ * pipeline per voice via `.pipeline("name")` — unknown or missing names fall back
  * to [Modern].
  *
- * String-keyed lookup keeps the door open for a future `EngineDsl` similar to
+ * String-keyed lookup keeps the door open for a future `PipelineDsl` similar to
  * `IgnitorDsl` — a declarative, user-extensible way to build custom engines
  * without code changes.
  */
-enum class AudioEngine(val engineName: String, val dsl: EngineDsl) {
+enum class PipelinePreset(val pipelineName: String, val dsl: PipelineDsl) {
 
     /**
      * Default engine. Classic subtractive ordering: **osc → waveshaper → VCF → VCA**.
@@ -32,7 +32,7 @@ enum class AudioEngine(val engineName: String, val dsl: EngineDsl) {
      * and don't smear the attack. Waveshapers still precede the filter so
      * their harmonics get cleaned up.
      */
-    Modern("modern", EngineDsl.modern),
+    Modern("modern", PipelineDsl.modern),
 
     /**
      * Guitar-pedal feel: envelope drives the waveshapers, so distortion
@@ -47,16 +47,16 @@ enum class AudioEngine(val engineName: String, val dsl: EngineDsl) {
      * modulation FX. Trades "no attack smearing" for "dynamics-responsive
      * distortion" — use when you want the pedal-chain character.
      */
-    Pedal("pedal", EngineDsl.pedal);
+    Pedal("pedal", PipelineDsl.pedal);
 
     companion object {
         /**
-         * Resolves a user-facing engine name (case-insensitive) to an [AudioEngine].
+         * Resolves a user-facing engine name (case-insensitive) to an [PipelinePreset].
          * Unknown or null names return [Modern] — never throws.
          */
-        fun fromName(name: String?): AudioEngine {
+        fun fromName(name: String?): PipelinePreset {
             val key = name?.lowercase() ?: return Modern
-            return entries.firstOrNull { it.engineName == key } ?: Modern
+            return entries.firstOrNull { it.pipelineName == key } ?: Modern
         }
     }
 }

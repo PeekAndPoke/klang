@@ -11,37 +11,37 @@ import io.peekandpoke.klang.audio_be.filters.NoOpAudioFilter
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.filter.EnvelopeRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
-import io.peekandpoke.klang.audio_bridge.EngineDsl
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.StageDsl
 
 /**
  * Guards the engine registration round-trip: built-ins are seeded, custom engines register
- * and resolve by name, and a resolved [EngineDsl] drives the data-driven pipeline (arbitrary
+ * and resolve by name, and a resolved [PipelineDsl] drives the data-driven pipeline (arbitrary
  * stage order + omitted stages).
  */
-class EngineRegistrySpec : StringSpec({
+class PipelineRegistrySpec : StringSpec({
 
     "seeds built-ins, case-insensitive, falls back to modern" {
-        val reg = EngineRegistry()
-        reg.get("modern") shouldBe EngineDsl.modern
-        reg.get("pedal") shouldBe EngineDsl.pedal
-        reg.get("PEDAL") shouldBe EngineDsl.pedal
-        reg.get(null) shouldBe EngineDsl.modern
-        reg.get("does-not-exist") shouldBe EngineDsl.modern
+        val reg = PipelineRegistry()
+        reg.get("modern") shouldBe PipelineDsl.modern
+        reg.get("pedal") shouldBe PipelineDsl.pedal
+        reg.get("PEDAL") shouldBe PipelineDsl.pedal
+        reg.get(null) shouldBe PipelineDsl.modern
+        reg.get("does-not-exist") shouldBe PipelineDsl.modern
     }
 
     "a registered custom engine is resolvable by name" {
-        val custom = EngineDsl(listOf(StageDsl.Vca(expK = 2.0, declickSeconds = 0.0005), StageDsl.Filter()))
-        val reg = EngineRegistry().apply { register("droney", custom) }
+        val custom = PipelineDsl(listOf(StageDsl.Vca(expK = 2.0, declickSeconds = 0.0005), StageDsl.Filter()))
+        val reg = PipelineRegistry().apply { register("droney", custom) }
         reg.get("droney") shouldBe custom
     }
 
     "a custom engine drives arbitrary stage order + omitted stages" {
         // VCA first, then filter — and NO waveshaper stages, even though crush/distort are active.
-        val custom = EngineDsl(listOf(StageDsl.Vca(), StageDsl.Filter()))
+        val custom = PipelineDsl(listOf(StageDsl.Vca(), StageDsl.Filter()))
 
         val pipeline = buildFilterPipeline(
-            engine = custom,
+            pipeline = custom,
             modulators = emptyList(),
             startFrame = 0,
             gateEndFrame = 1000,

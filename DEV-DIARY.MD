@@ -1,6 +1,31 @@
 # Project history
 
+Condensed per-quarter summaries live in [docs/history](docs/history/). This file is the running diary, newest first.
+
 ## Diary
+
+### (2026-06-24) Multi-engine backend
+
+- per-playback PlaybackEngine ... each playback owns its full render state
+- no shared scratch -> multi-thread ready
+- groundwork for a master/loudness stage + crossfade
+- still in progress
+
+### (2026-06-24) Licensing + version stamp
+
+- AGPL v3 + per-file SPDX headers across the tree (tones/ stays MIT)
+- build-time version.json -> corner stamp + Motör title tooltip
+
+### (2026-06-23) Engine tuning, songs, optics
+
+- more by-ear tuning
+- sprudel pattern rewrites + doc updates
+- optics cleanup, a few more songs
+
+### (2026-06-20) Bugfixes
+
+- TimeShiftPattern vs CycleTime ... boundary onset dup
+- super-osc initial gain jitter ... exempt the center voice
 
 ### (2026-06-19) Housekeeping
 

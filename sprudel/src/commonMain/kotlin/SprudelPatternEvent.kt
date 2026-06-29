@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.sprudel
 
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
+import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.common.SourceLocation
@@ -34,6 +35,7 @@ data class SprudelPatternEvent(
     override val startCycles: Double get() = whole.begin.toCycles()
     override val durationCycles: Double get() = whole.duration.toCycles()
     override val sound: SoundValue? get() = data.sound
+    override val pipeline: PipelineValue? get() = data.pipeline
     override fun toVoiceData(): VoiceData = data.toVoiceData()
 
     /**

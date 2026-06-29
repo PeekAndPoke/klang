@@ -6,10 +6,6 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.EngineRegistry
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
-import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
@@ -162,32 +158,13 @@ class KlangBenchmark(
         onProgress: ((Progress) -> Unit)?,
     ): Result {
         // 1. Setup Headless Environment
-        val commLink = KlangCommLink()
-        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
-        val ignitorRegistry = IgnitorRegistry().apply {
-            registerDefaults()
-        }
-
-        val engineRegistry = EngineRegistry()
-
-        val scheduler = VoiceScheduler(
-            VoiceScheduler.Options(
-                commLink = commLink.backend,
-                sampleRate = sampleRate,
-                blockFrames = blockFrames,
-                ignitorRegistry = ignitorRegistry,
-                engineRegistry = engineRegistry,
-                cylinders = cylinders
-            )
-        )
-        scheduler.setBackendStartTime(0.0)
-
-        val renderer = KlangAudioRenderer(
+        val renderer = KlangAudioRenderer.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voices = scheduler,
-            cylinders = cylinders
+            commLink = KlangCommLink().backend,
         )
+        val scheduler = renderer.voices
+        renderer.setBackendStartTime(0.0)
 
         val outBuffer = ShortArray(blockFrames * 2)
 
@@ -314,6 +291,6 @@ class KlangBenchmark(
                 roomSize = 0.5
             )
         )
-        scheduler.scheduleVoice(voice, clearScheduled = false)
+        scheduler.scheduleVoice(voice)
     }
 }

@@ -12,17 +12,14 @@ import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 
 /**
- * Per-[KlangPlayer] tracker that announces inline [IgnitorDsl] trees to the audio backend
- * exactly once per unique DSL — gating on the process-wide [uniqueId] so two playbacks on
- * the same player share knowledge, and two distinct players each announce independently to
- * their own backends.
+ * Per-playback (playbackId-bound) tracker that announces inline [IgnitorDsl] trees to the audio
+ * backend exactly once per unique DSL — gating on the process-wide [uniqueId] so a playback never
+ * re-sends the same RegisterIgnitor on every voice event. The [playbackId] stamps the command so the
+ * backend registers the osc on THAT playback's engine fork; both sides free it when the playback stops.
  *
  * Names themselves come from [IgnitorDsl.uniqueId] (process-wide, monotonic, never collide).
- * This class only holds the set of DSLs this player's backend has already heard about so
- * we don't re-send the same RegisterIgnitor command on every voice event.
  *
- * Internal to klang; callers reach it via
- * [KlangPlaybackContext.registerIgnitor] which delegates here.
+ * Internal to klang; the owning `KlangPlaybackController` calls [registerOrLookup] directly.
  */
 internal class IgnitorRegistry(
     private val sendControl: (KlangCommLink.Cmd) -> Unit,
