@@ -5,36 +5,36 @@
 
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.EngineDsl
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
- * `Engine` object for KlangScript — builds [EngineDsl] voice-pipeline configs.
+ * `Pipeline` object for KlangScript — builds [PipelineDsl] voice-pipeline configs.
  *
- * Use a built-in (`Engine.modern()` / `Engine.pedal()`) and tweak its character, or author a
- * custom pipeline with `Engine.of(Stage.…)`. Pass the result to a pattern's `.engine(…)`:
+ * Use a built-in (`Pipeline.modern()` / `Pipeline.pedal()`) and tweak its character, or author a
+ * custom pipeline with `Pipeline.of(Stage.…)`. Pass the result to a pattern's `.pipeline(…)`:
  *
  * ```
- * let warm  = Engine.modern().expK(2.5).declick(0.0008)
- * let dirty = Engine.of(Stage.vca().expK(2.0), Stage.distort(), Stage.filter().drift(8.0))
- * note("c e g").engine(dirty)
+ * let warm  = Pipeline.modern().expK(2.5).declick(0.0008)
+ * let dirty = Pipeline.of(Stage.vca().expK(2.0), Stage.distort(), Stage.filter().drift(8.0))
+ * note("c e g").pipeline(dirty)
  * ```
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
-@KlangScript.Object("Engine")
-object KlangScriptEngine {
+@KlangScript.Object("Pipeline")
+object KlangScriptPipeline {
 
-    override fun toString(): String = "[Engine object]"
+    override fun toString(): String = "[Pipeline object]"
 
     /** The default subtractive engine: `osc → waveshaper → VCF → VCA` (ADSR last). */
     @KlangScript.Method
-    fun modern(): EngineDsl = EngineDsl.modern
+    fun modern(): PipelineDsl = PipelineDsl.modern
 
     /** Guitar-pedal engine: VCA first, so the waveshapers respond to dynamics. */
     @KlangScript.Method
-    fun pedal(): EngineDsl = EngineDsl.pedal
+    fun pedal(): PipelineDsl = PipelineDsl.pedal
 
     /**
      * Builds a custom engine from an ordered list of stages. Stages may be omitted freely —
@@ -43,11 +43,11 @@ object KlangScriptEngine {
      * @param stages the pipeline, in order (e.g. `Stage.filterMod(), Stage.vca(), Stage.filter()`)
      */
     @KlangScript.Method
-    fun of(vararg stages: StageDsl): EngineDsl = EngineDsl(stages.toList())
+    fun of(vararg stages: StageDsl): PipelineDsl = PipelineDsl(stages.toList())
 }
 
 /**
- * `Stage` object for KlangScript — builds the [StageDsl] slots of an [EngineDsl] pipeline.
+ * `Stage` object for KlangScript — builds the [StageDsl] slots of a [PipelineDsl] pipeline.
  *
  * Marker stages (`filterMod`/`crush`/`coarse`/`distort`/`tremolo`/`phaser`) carry no config.
  * `filter()` and `vca()` return *configurable* stages — chain their tuning right after, before

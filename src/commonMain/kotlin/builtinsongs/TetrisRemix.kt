@@ -46,7 +46,7 @@ export lead = note(leadPattern).slow(2)
 export bass = note(bassPattern).slow(2).struct("[x!16]")
     .sound("supersaw").unison(32).detune(0.15).warmth(0.01).clip(0.95)
     .gain(0.4).adsr("0.01:0.2:0.3:0.1").pan(0.5).superimpose(pan(0.1).transpose(12), pan(0.9).transpose(12))
-    .hpf(600).lpf("1150:1:2").lpq(1.3).distort("0.8:soft:2").postgain(0.115).engine("pedal")
+    .hpf(600).lpf("1150:1:2").lpq(1.3).distort("0.8:soft:2").postgain(0.115).pipeline("pedal")
     .orbit(2)  // .solo()
 
 // ── Drum kit: dub one-drop ──────────────────────────────────────────────

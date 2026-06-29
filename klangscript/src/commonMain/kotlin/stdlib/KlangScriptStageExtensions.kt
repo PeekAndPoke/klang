@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.EngineDsl
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
@@ -52,21 +52,21 @@ object KlangScriptFilterStageExtensions {
 }
 
 /**
- * Convenience tweaks on a whole [EngineDsl] — forward to its (single) VCA stage so a preset can
- * be nudged in one call: `Engine.modern().expK(2.5).declick(0.0008)`.
+ * Convenience tweaks on a whole [PipelineDsl] — forward to its (single) VCA stage so a preset can
+ * be nudged in one call: `Pipeline.modern().expK(2.5).declick(0.0008)`.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
-@KlangScript.TypeExtensions(EngineDsl::class)
-object KlangScriptEngineExtensions {
+@KlangScript.TypeExtensions(PipelineDsl::class)
+object KlangScriptPipelineExtensions {
 
-    private fun EngineDsl.tweakVca(f: (StageDsl.Vca) -> StageDsl.Vca): EngineDsl =
+    private fun PipelineDsl.tweakVca(f: (StageDsl.Vca) -> StageDsl.Vca): PipelineDsl =
         copy(stages = stages.map { if (it is StageDsl.Vca) f(it) else it })
 
     /** Sugar for the engine's VCA `expK`. */
     @KlangScript.Method
-    fun expK(self: EngineDsl, k: Double): EngineDsl = self.tweakVca { it.copy(expK = k) }
+    fun expK(self: PipelineDsl, k: Double): PipelineDsl = self.tweakVca { it.copy(expK = k) }
 
     /** Sugar for the engine's VCA `declick` seconds. */
     @KlangScript.Method
-    fun declick(self: EngineDsl, seconds: Double): EngineDsl = self.tweakVca { it.copy(declickSeconds = seconds) }
+    fun declick(self: PipelineDsl, seconds: Double): PipelineDsl = self.tweakVca { it.copy(declickSeconds = seconds) }
 }

@@ -136,10 +136,10 @@ data class SprudelVoiceData(
     var patternId: String?,
 
     /**
-     * Voice pipeline engine name — selects the topology of the Filter stage.
+     * Voice pipeline name — selects the topology of the Filter stage.
      * Known values: `"modern"` (default), `"pedal"`. Unknown/null → modern.
      */
-    var engine: String?,
+    var pipeline: String?,
 
     // Custom value
     var value: SprudelVoiceValue?,
@@ -670,7 +670,7 @@ data class SprudelVoiceData(
             compressor = other.compressor ?: compressor,
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
-            engine = other.engine ?: engine,
+            pipeline = other.pipeline ?: pipeline,
             value = other.value ?: value
         )
     }
@@ -718,7 +718,7 @@ data class SprudelVoiceData(
         compressor = other.compressor ?: compressor
         solo = other.solo ?: solo
         // patternId intentionally preserved (never taken from other) — matches merge()
-        engine = other.engine ?: engine
+        pipeline = other.pipeline ?: pipeline
         value = other.value ?: value
     }
 
@@ -971,7 +971,7 @@ data class SprudelVoiceData(
             compressor = compressor,
             solo = solo,
             sourceId = patternId,
-            engine = engine,
+            pipeline = pipeline,
         )
     }
 
@@ -1404,7 +1404,7 @@ internal val blueprint = SprudelVoiceData(
     compressor = null,
     solo = null,
     patternId = null,
-    engine = null,
+    pipeline = null,
     value = null,
 )
 

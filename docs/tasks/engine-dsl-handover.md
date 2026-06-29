@@ -31,19 +31,26 @@ inline-**oscillator** path — it's the exact analog.
 
 ## What's missing (the application path — your job)
 
-1. **Pattern surface for an inline DSL.** `lang_engine.kt:53` `fun SprudelPattern.engine(name: PatternLike)`
-   only takes a **name** today (`.engine("pedal")`). Add an overload that takes an **`EngineDsl`** and stores
-   the inline DSL on the event — exactly how `sound(IgnitorDsl)` stores `SoundValue.Osc(dsl)` on the event
-   (`lang_tonal.kt:359`, test `LangSoundSpec.kt:132`). (You may want an `EngineValue.Dsl` carrier, or stash
-   the dsl on `VoiceData` directly — your call.)
-2. **Denormalize in `queryEvents`.** In `KlangPlaybackController.queryEvents` (`~:369-379`), the osc path
-   pre-registers every inline osc then resolves it to its `uniqueId()` name in `toVoiceData`. Do the same for
-   engines: detect inline-engine events → `registerEngine(dsl)` (pre-register) → set
-   `VoiceData.engine = dsl.uniqueId()`. After that, the existing backend plumbing above just works.
+The detailed, **chosen** recipe already lives in memory `engine-dsl` (**§#5b**) — follow that; it's the
+authority. In brief (note it deliberately adds **no** new sprudel voice-data type — unlike the osc carrier):
 
-**Template to copy = the inline-oscillator path:** `sound(IgnitorDsl)` → `SoundValue.Osc` →
-`queryEvents` `registerIgnitor(it.osc)` → `toVoiceData` resolves `data.sound = osc.uniqueId()`. The engine
-case is the 1:1 mirror (`registerEngine` + `data.engine = dsl.uniqueId()`).
+1. **`.engine(EngineDsl)` denormalizes to a name.** `lang_engine.kt`'s `.engine()` already takes a
+   `PatternLike` (≈Any) — dispatch inside `engineMutation`: `is EngineDsl → engine = it.uniqueId()` (the 1:1
+   mirror of `lang_tonal.kt` `soundMutation`'s `is IgnitorDsl → SoundValue.Osc`). `VoiceData.engine` stays a
+   `String` (the uniqueId); no overload, no carrier type.
+2. **Reverse map + pre-register.** Add a `name → EngineDsl` reverse map in `audio_bridge` (populated inside
+   `uniqueId()`) + `lookupEngineByName(name)`; in `KlangPlaybackController.queryEvents` (beside the inline-
+   ignitor pre-registration, `~:377-379`) + `KlangOfflineRenderer`, scan voices' `data.engine` names →
+   `lookupEngineByName` → `registerEngine(dsl)`. Built-ins aren't in the reverse map → only custom engines
+   register. The backend plumbing above then resolves it.
+
+**One correction to the memory's #5b:** `registerEngine` now lives on **`KlangPlaybackController`**
+(per-playback, stamped with the controller's `playbackId`) — the per-playback/FE-BE work moved it there from
+`KlangPlaybackContext`, which is what #5b still names.
+
+(The inline-**oscillator** path — `sound(IgnitorDsl)` → `SoundValue.Osc` → `registerIgnitor` +
+`data.sound = osc.uniqueId()` — is the structural cousin to glance at, but engines use the no-carrier variant
+above.)
 
 ## Rename heads-up (`EngineDsl` → `PipelineDsl`)
 

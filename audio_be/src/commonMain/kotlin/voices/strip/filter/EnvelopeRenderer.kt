@@ -30,7 +30,7 @@ class EnvelopeRenderer(
     private val envelope: Voice.Envelope,
     private val startFrame: Int,
     private val gateEndFrame: Int,
-    // Per-engine VCA character (the EngineDsl Vca stage). Defaults == the globals,
+    // Per-engine VCA character (the PipelineDsl Vca stage). Defaults == the globals,
     // so the built-in engines render byte-for-byte as before.
     private val expK: Double = ADSR_EXP_K,
     private val declickSeconds: Double = ENV_DECLICK_SECONDS,

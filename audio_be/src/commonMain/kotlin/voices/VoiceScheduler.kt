@@ -10,8 +10,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_bridge.EngineDsl
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -33,7 +33,7 @@ class VoiceScheduler(
     // Per-engine registry forks — custom oscs/engines for THIS playback live here and die with the
     // engine; the shared parent ([context]) keeps only the built-ins. See per-playback-engine.md (#2).
     private val ignitorFork = context.ignitorRegistry.fork()
-    private val engineFork = context.engineRegistry.fork()
+    private val pipelineFork = context.pipelineRegistry.fork()
 
     // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
@@ -127,7 +127,7 @@ class VoiceScheduler(
         sampleRateDouble = context.sampleRateDouble,
         blockFrames = context.blockFrames,
         ignitorRegistry = ignitorFork,
-        engineRegistry = engineFork,
+        pipelineRegistry = pipelineFork,
         cylinders = options.cylinders,
         voiceBuffer = voiceBuffer,
         freqModBuffer = freqModBuffer,
@@ -151,11 +151,11 @@ class VoiceScheduler(
     fun registerIgnitor(name: String, dsl: IgnitorDsl) = ignitorFork.register(name, dsl)
 
     /** Register a custom engine for THIS playback — per-engine fork (mirror of [registerIgnitor]). */
-    fun registerEngine(name: String, dsl: EngineDsl) = engineFork.register(name, dsl)
+    fun registerPipeline(name: String, dsl: PipelineDsl) = pipelineFork.register(name, dsl)
 
     internal fun containsIgnitor(name: String): Boolean = ignitorFork.contains(name)
 
-    internal fun resolveEngine(name: String?): EngineDsl = engineFork.get(name)
+    internal fun resolvePipeline(name: String?): PipelineDsl = pipelineFork.get(name)
 
     fun cleanup(playbackId: String) {
         playbackContexts.remove(playbackId)

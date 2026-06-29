@@ -5,11 +5,11 @@
 
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_bridge.EngineDsl
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -54,15 +54,15 @@ internal class KlangPlaybackController(
     private val callbackDispatcher = context.callbackDispatcher
     private val backendReady = context.backendReady
 
-    // Per-playback (playbackId-bound) inline-DSL trackers — announce custom oscs/engines to THIS
+    // Per-playback (playbackId-bound) inline-DSL trackers — announce custom oscs/pipelines to THIS
     // playback's backend engine once per unique DSL, and are freed with the controller. Global state
     // lives on KlangPlayer; this mirrors the BE's per-PlaybackEngine registry forks.
     private val ignitors = IgnitorRegistry(sendControl = sendControl, playbackId = playbackId)
-    private val engines = EngineRegistry(sendControl = sendControl, playbackId = playbackId)
+    private val pipelines = PipelineRegistry(sendControl = sendControl, playbackId = playbackId)
     private val registerIgnitor: (IgnitorDsl) -> String = ignitors::registerOrLookup
 
-    /** Announce an inline engine DSL to this playback's backend (awaiting the `.engine(dsl)` app path). */
-    fun registerEngine(dsl: EngineDsl): String = engines.registerOrLookup(dsl)
+    /** Announce an inline pipeline DSL to this playback's backend (awaiting the `.pipeline(dsl)` app path). */
+    fun registerPipeline(dsl: PipelineDsl): String = pipelines.registerOrLookup(dsl)
 
     companion object {
         /**

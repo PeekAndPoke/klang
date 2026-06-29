@@ -14,38 +14,38 @@ import io.peekandpoke.klang.audio_be.voices.strip.filter.DistortionRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.EnvelopeRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 
-class AudioEngineSpec : StringSpec({
+class PipelinePresetSpec : StringSpec({
 
     "fromName resolves modern (case-insensitive)" {
-        AudioEngine.fromName("modern") shouldBe AudioEngine.Modern
-        AudioEngine.fromName("MODERN") shouldBe AudioEngine.Modern
-        AudioEngine.fromName("Modern") shouldBe AudioEngine.Modern
+        PipelinePreset.fromName("modern") shouldBe PipelinePreset.Modern
+        PipelinePreset.fromName("MODERN") shouldBe PipelinePreset.Modern
+        PipelinePreset.fromName("Modern") shouldBe PipelinePreset.Modern
     }
 
     "fromName resolves pedal (case-insensitive)" {
-        AudioEngine.fromName("pedal") shouldBe AudioEngine.Pedal
-        AudioEngine.fromName("PEDAL") shouldBe AudioEngine.Pedal
-        AudioEngine.fromName("Pedal") shouldBe AudioEngine.Pedal
+        PipelinePreset.fromName("pedal") shouldBe PipelinePreset.Pedal
+        PipelinePreset.fromName("PEDAL") shouldBe PipelinePreset.Pedal
+        PipelinePreset.fromName("Pedal") shouldBe PipelinePreset.Pedal
     }
 
     "fromName falls back to Modern for null" {
-        AudioEngine.fromName(null) shouldBe AudioEngine.Modern
+        PipelinePreset.fromName(null) shouldBe PipelinePreset.Modern
     }
 
     "fromName falls back to Modern for unknown name" {
-        AudioEngine.fromName("classic") shouldBe AudioEngine.Modern
-        AudioEngine.fromName("does-not-exist") shouldBe AudioEngine.Modern
-        AudioEngine.fromName("") shouldBe AudioEngine.Modern
+        PipelinePreset.fromName("classic") shouldBe PipelinePreset.Modern
+        PipelinePreset.fromName("does-not-exist") shouldBe PipelinePreset.Modern
+        PipelinePreset.fromName("") shouldBe PipelinePreset.Modern
     }
 
     "Modern engine: ADSR is the LAST renderer in the pipeline" {
-        val pipeline = activePipeline(AudioEngine.Modern)
+        val pipeline = activePipeline(PipelinePreset.Modern)
         // Last renderer must be EnvelopeRenderer
         (pipeline.last() is EnvelopeRenderer) shouldBe true
     }
 
     "Modern engine: waveshapers come BEFORE the envelope" {
-        val pipeline = activePipeline(AudioEngine.Modern)
+        val pipeline = activePipeline(PipelinePreset.Modern)
         val crushIdx = pipeline.indexOfFirst { it is CrushRenderer }
         val distIdx = pipeline.indexOfFirst { it is DistortionRenderer }
         val envIdx = pipeline.indexOfFirst { it is EnvelopeRenderer }
@@ -54,7 +54,7 @@ class AudioEngineSpec : StringSpec({
     }
 
     "Pedal engine: ADSR is BEFORE all waveshapers" {
-        val pipeline = activePipeline(AudioEngine.Pedal)
+        val pipeline = activePipeline(PipelinePreset.Pedal)
         val envIdx = pipeline.indexOfFirst { it is EnvelopeRenderer }
         val crushIdx = pipeline.indexOfFirst { it is CrushRenderer }
         val distIdx = pipeline.indexOfFirst { it is DistortionRenderer }
@@ -63,21 +63,21 @@ class AudioEngineSpec : StringSpec({
     }
 
     "Pedal engine: envelope is NOT the last renderer" {
-        val pipeline = activePipeline(AudioEngine.Pedal)
+        val pipeline = activePipeline(PipelinePreset.Pedal)
         (pipeline.last() is EnvelopeRenderer) shouldBe false
     }
 
     // ── Minimal pipeline tests (all waveshapers inactive) ─────────────────────
 
     "Modern minimal: with all effects off, envelope is still last" {
-        val pipeline = minimalPipeline(AudioEngine.Modern)
+        val pipeline = minimalPipeline(PipelinePreset.Modern)
         // Pipeline should be: AudioFilterRenderer + EnvelopeRenderer (at minimum)
         pipeline.size shouldBe 2
         (pipeline.last() is EnvelopeRenderer) shouldBe true
     }
 
     "Pedal minimal: with all effects off, envelope is still first" {
-        val pipeline = minimalPipeline(AudioEngine.Pedal)
+        val pipeline = minimalPipeline(PipelinePreset.Pedal)
         // Pipeline should be: EnvelopeRenderer + AudioFilterRenderer (at minimum)
         pipeline.size shouldBe 2
         (pipeline.first() is EnvelopeRenderer) shouldBe true
@@ -85,8 +85,8 @@ class AudioEngineSpec : StringSpec({
 })
 
 /** Builds a pipeline with everything OFF (no crush, no distort, no tremolo, no phaser). */
-private fun minimalPipeline(engine: AudioEngine) = buildFilterPipeline(
-    engine = engine.dsl,
+private fun minimalPipeline(preset: PipelinePreset) = buildFilterPipeline(
+    pipeline = preset.dsl,
     modulators = emptyList(),
     startFrame = 0,
     gateEndFrame = 1000,
@@ -109,8 +109,8 @@ private fun minimalPipeline(engine: AudioEngine) = buildFilterPipeline(
  * Builds a pipeline with crush + distort active so we can locate the
  * waveshaper renderers in the assertions above.
  */
-private fun activePipeline(engine: AudioEngine) = buildFilterPipeline(
-    engine = engine.dsl,
+private fun activePipeline(preset: PipelinePreset) = buildFilterPipeline(
+    pipeline = preset.dsl,
     modulators = emptyList(),
     startFrame = 0,
     gateEndFrame = 1000,
