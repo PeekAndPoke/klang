@@ -11,6 +11,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 
 class SprudelVoiceDataSpec : StringSpec({
@@ -332,7 +333,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         iResponse = "ir$seed"
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
         loopBegin = b + 85; loopEnd = b + 86
-        vowel = "v$seed"; compressor = "comp$seed"; solo = b + 88; patternId = "pid$seed"; pipeline = "eng$seed"
+        vowel = "v$seed"; compressor = "comp$seed"; solo = b + 88; patternId = "pid$seed"; pipeline = PipelineValue.Named("eng$seed")
         value = SprudelVoiceValue.Num(b + 87)
     }
 }

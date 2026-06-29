@@ -8,19 +8,31 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
+import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
 // -- pipeline() -------------------------------------------------------------------------------------------------------
 
-// Lowercased on storage for consistency. PipelinePreset.fromName also lowercases defensively
-// so non-sprudel callers (e.g. raw VoiceData) are still case-insensitive.
-private val pipelineMutation = voiceSetter { name -> pipeline = name?.toString()?.lowercase() }
+// A name is stored as PipelineValue.Named (lowercased for consistency — PipelinePreset.fromName also
+// lowercases defensively so non-sprudel callers, e.g. raw VoiceData, are still case-insensitive).
+private val pipelineMutation = voiceSetter { name ->
+    pipeline = name?.toString()?.lowercase()?.let { PipelineValue.Named(it) }
+}
 
 private fun applyPipeline(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    // An inline pipeline DSL is stamped directly onto every source event as PipelineValue.Dsl — it
+    // denormalizes to a synthetic name at the wire boundary. Mirrors the inline-ignitor `sound(dsl)` path.
+    val singleArg = args.singleOrNull()?.value
+    if (singleArg is PipelineDsl) {
+        return source.reinterpretVoice { vd -> vd.copy(pipeline = PipelineValue.Dsl(singleArg)) }
+    }
+
     return source._applyControlFromParams(args, pipelineMutation) { src, ctrl ->
         src.pipeline = ctrl.pipeline
         src

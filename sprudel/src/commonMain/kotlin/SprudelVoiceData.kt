@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -136,10 +137,11 @@ data class SprudelVoiceData(
     var patternId: String?,
 
     /**
-     * Voice pipeline name — selects the topology of the Filter stage.
-     * Known values: `"modern"` (default), `"pedal"`. Unknown/null → modern.
+     * The voice pipeline this voice references. Either a [PipelineValue.Named] (a built-in like
+     * `"modern"`/`"pedal"`, or a pre-registered custom) or a [PipelineValue.Dsl] inlining a [PipelineDsl]
+     * stage chain — the latter gets denormalized to a synthetic name in [toVoiceData]. Unknown/null → modern.
      */
-    var pipeline: String?,
+    var pipeline: PipelineValue?,
 
     // Custom value
     var value: SprudelVoiceValue?,
@@ -755,6 +757,14 @@ data class SprudelVoiceData(
             is SoundValue.Osc -> s.osc.uniqueId()
         }
 
+        // Inline pipelines ([PipelineValue.Dsl]) resolve to their stable synthetic name (uniqueId);
+        // names pass through. Mirrors the sound resolution above.
+        val pipelineName: String? = when (val p = pipeline) {
+            null -> null
+            is PipelineValue.Named -> p.name
+            is PipelineValue.Dsl -> p.pipeline.uniqueId()
+        }
+
         // Build filter list from flat fields, each with its own resonance
         val filters = buildList {
             cutoff?.let { cutoffValue ->
@@ -971,7 +981,7 @@ data class SprudelVoiceData(
             compressor = compressor,
             solo = solo,
             sourceId = patternId,
-            pipeline = pipeline,
+            pipeline = pipelineName,
         )
     }
 

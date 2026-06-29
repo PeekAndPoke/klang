@@ -1,10 +1,14 @@
 # EngineDsl → PipelineDsl rename (+ then wire the inline `.pipeline(dsl)` path)
 
-> **Status:** **Phase A (the rename) DONE** — committed-ready, byte-identical, fully green: all-module
-> `jvmTest`, JS wire-codec round-trips (`audio_bridge`/`sprudel` jsTest — schema hash auto-shifted), worklet
-> compile, root songs. `voicedata_golden.txt` regenerated (diff is purely `engine=`→`pipeline=`, 2352/2352,
-> nothing else). Zero stray pre-rename tokens. **Phase B (inline `.pipeline(dsl)` application path = old #5b)
-> is next — not started.**
+> **Status:** **BOTH PHASES DONE — fully green (uncommitted).**
+> - **Phase A (rename):** byte-identical, all-module `jvmTest` + JS wire round-trips + worklet/root compile;
+    > `voicedata_golden.txt` regenerated (pure `engine=`→`pipeline=`, 2352/2352); zero stray tokens. *(committed
+    > separately by the user.)*
+> - **Phase B (inline `.pipeline(PipelineDsl)` path):** DONE. New authoring carrier `PipelineValue`
+    > (`Named`|`Dsl`, mirror of `SoundValue`); `.pipeline(dsl)` stamps `PipelineValue.Dsl`; `queryEvents`
+    > (live) + `KlangOfflineRenderer` pre-register inline pipelines → `VoiceData.pipeline = dsl.uniqueId()`.
+    > `LangPipelineSpec` extended (inline-DSL stamp + uniqueId resolution); all JVM+JS green. **Ready for the
+    > first by-ear custom-pipeline test.**
 
 ## Context
 

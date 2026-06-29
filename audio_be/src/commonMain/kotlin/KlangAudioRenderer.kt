@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -29,6 +30,9 @@ class KlangAudioRenderer private constructor(
 
     /** Parent ignitor registry — callers register custom oscillators here. */
     val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
+
+    /** Parent pipeline registry — callers register custom voice pipelines here. */
+    val pipelineRegistry: PipelineRegistry get() = context.pipelineRegistry
 
     fun setBackendStartTime(startTimeSec: Double) {
         clock.startTimeSec = startTimeSec

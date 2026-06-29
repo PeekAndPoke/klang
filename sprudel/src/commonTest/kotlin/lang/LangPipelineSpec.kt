@@ -8,12 +8,15 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
+import io.peekandpoke.klang.audio_bridge.PipelineValue
+import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPipelineSpec : StringSpec({
 
-    "engine dsl interface" {
+    "pipeline dsl interface" {
         val pat = "c3"
         val pipelineVal = "pedal"
 
@@ -26,7 +29,7 @@ class LangPipelineSpec : StringSpec({
             "script pipeline(v)" to SprudelPattern.compile("""note("$pat").apply(pipeline("$pipelineVal"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.pipeline shouldBe "pedal"
+            events[0].data.pipeline shouldBe PipelineValue.Named("pedal")
         }
     }
 
@@ -35,14 +38,14 @@ class LangPipelineSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.pipeline shouldBe "pedal"
+        events[0].data.pipeline shouldBe PipelineValue.Named("pedal")
     }
 
     "pipeline() lowercases the value" {
         val p = note("c3").pipeline("PEDAL")
         val events = p.queryArc(0.0, 1.0)
 
-        events[0].data.pipeline shouldBe "pedal"
+        events[0].data.pipeline shouldBe PipelineValue.Named("pedal")
     }
 
     "pipeline() works with string pattern sequences" {
@@ -50,8 +53,8 @@ class LangPipelineSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.pipeline shouldBe "modern"
-        events[1].data.pipeline shouldBe "pedal"
+        events[0].data.pipeline shouldBe PipelineValue.Named("modern")
+        events[1].data.pipeline shouldBe PipelineValue.Named("pedal")
     }
 
     "pipeline() as string extension" {
@@ -59,8 +62,8 @@ class LangPipelineSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.pipeline shouldBe "pedal"
-        events[1].data.pipeline shouldBe "pedal"
+        events[0].data.pipeline shouldBe PipelineValue.Named("pedal")
+        events[1].data.pipeline shouldBe PipelineValue.Named("pedal")
     }
 
     "pipeline() as pattern mapper function" {
@@ -68,7 +71,7 @@ class LangPipelineSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.pipeline shouldBe "pedal"
+        events[0].data.pipeline shouldBe PipelineValue.Named("pedal")
     }
 
     "pipeline() as chained pattern mapper" {
@@ -76,7 +79,7 @@ class LangPipelineSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.pipeline shouldBe "pedal"
+        events[0].data.pipeline shouldBe PipelineValue.Named("pedal")
         events[0].data.gain shouldBe 0.5
     }
 
@@ -93,10 +96,27 @@ class LangPipelineSpec : StringSpec({
         val override = base.pipeline("pedal")
         val events = override.queryArc(0.0, 1.0)
 
-        events[0].data.pipeline shouldBe "pedal"
+        events[0].data.pipeline shouldBe PipelineValue.Named("pedal")
     }
 
-    "engine not set: defaults to null" {
+    "pipeline() with an inline PipelineDsl stamps a PipelineValue.Dsl" {
+        val dsl = PipelineDsl.pedal
+        val p = note("c3").pipeline(dsl)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.pipeline shouldBe PipelineValue.Dsl(dsl)
+    }
+
+    "inline pipeline DSL resolves to its uniqueId name in VoiceData" {
+        val dsl = PipelineDsl(listOf())   // a distinct custom pipeline
+        val p = note("c3").pipeline(dsl)
+        val voiceData = p.queryArc(0.0, 1.0)[0].data.toVoiceData()
+
+        voiceData.pipeline shouldBe dsl.uniqueId()
+    }
+
+    "pipeline not set: defaults to null" {
         val p = note("c3")
         val events = p.queryArc(0.0, 1.0)
 

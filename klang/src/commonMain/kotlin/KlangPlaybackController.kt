@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
+import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -377,6 +378,13 @@ internal class KlangPlaybackController(
             .map { it.sound }
             .filterIsInstance<SoundValue.Osc>()
             .forEach { registerIgnitor(it.osc) }
+
+        // Same for inline pipelines: announce each unique PipelineDsl so its synthetic name
+        // (from PipelineDsl.uniqueId(), resolved in toVoiceData) is known before scheduling.
+        events.asSequence()
+            .map { it.pipeline }
+            .filterIsInstance<PipelineValue.Dsl>()
+            .forEach { registerPipeline(it.pipeline) }
 
         // Transform to ScheduledVoice using absolute time from KlangTime epoch
         val secPerCycle = 1.0 / cyclesPerSecond
