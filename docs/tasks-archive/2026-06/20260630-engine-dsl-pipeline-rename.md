@@ -1,5 +1,8 @@
 # EngineDsl → PipelineDsl rename (+ then wire the inline `.pipeline(dsl)` path)
 
+> **ARCHIVED 2026-06-30 — DONE + COMMITTED** (PipelineDsl rename + inline `.pipeline(dsl)` path are in
+> `main`-bound history; both phases shipped). Master plan: `docs/tasks/engine-dsl.md`.
+
 > **Status:** **BOTH PHASES DONE — fully green (uncommitted).**
 > - **Phase A (rename):** byte-identical, all-module `jvmTest` + JS wire round-trips + worklet/root compile;
     > `voicedata_golden.txt` regenerated (pure `engine=`→`pipeline=`, 2352/2352); zero stray tokens. *(committed

@@ -14,7 +14,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  *
  * Each slot is the same `IgnitorDsl.Param(name, default)` singleton that built-in
  * sounds use, exposed for custom sounds that want to opt in to sprudel
- * modulation (`.analog()`, `.voices()`, `.freqSpread()`, etc).
+ * modulation (`.analog()`, `.voices()`, `.spread()`, etc).
  *
  * ```KlangScript(Executable)
  * let pad = Osc.sine().analog(OscSlot.analog).lowpass(2000)
@@ -26,7 +26,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  *
  * Without opting in, custom sounds ignore sprudel modulation (the data-class
  * defaults are sealed `Constant(0.0)`). Opting in wires the named slot to
- * `oscParams[name]` lookup at voice-trigger time.
+ * `oscParams[ name ]` lookup at voice-trigger time.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("OscSlot")
@@ -41,9 +41,9 @@ object KlangScriptOscSlot {
     @KlangScript.Property
     val voices: IgnitorDsl = IgnitorDsl.Slots.voices
 
-    /** Open `freqSpread` slot (default 0.2). Used by super-oscillators. */
+    /** Open `spread` slot (default 0.2). Used by super-oscillators. */
     @KlangScript.Property
-    val freqSpread: IgnitorDsl = IgnitorDsl.Slots.freqSpread
+    val spread: IgnitorDsl = IgnitorDsl.Slots.spread
 
     /** Open `duty` slot (default 0.5). Used by pulze. */
     @KlangScript.Property

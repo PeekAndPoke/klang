@@ -92,18 +92,19 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.supersaw()")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.freq shouldBe IgnitorDsl.Freq
-        dsl.voices shouldBe IgnitorDsl.Constant(8.0)
-        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.2)
-        dsl.analog shouldBe IgnitorDsl.Constant(0.0)
+        // Defaults come from IgnitorDsl.Slots (overridable Params), matching the backend `.sound("supersaw")`.
+        dsl.voices shouldBe IgnitorDsl.Slots.voices
+        dsl.spread shouldBe IgnitorDsl.Slots.spread
+        dsl.analog shouldBe IgnitorDsl.Slots.analog
     }
 
     "Osc.supersaw(440) backward compat — freq only" {
         val dsl = evalIgnitorDsl("Osc.supersaw(440)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.freq shouldBe IgnitorDsl.Constant(440.0)
-        dsl.voices shouldBe IgnitorDsl.Constant(8.0)
-        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.2)
-        dsl.analog shouldBe IgnitorDsl.Constant(0.0)
+        dsl.voices shouldBe IgnitorDsl.Slots.voices
+        dsl.spread shouldBe IgnitorDsl.Slots.spread
+        dsl.analog shouldBe IgnitorDsl.Slots.analog
     }
 
     "Osc.supersaw with voices=1 — degenerate single voice" {
@@ -112,12 +113,12 @@ class StdLibOscTest : StringSpec({
         dsl.voices shouldBe IgnitorDsl.Constant(1.0)
     }
 
-    // Positional args: supersaw(freq, voices, freqSpread). Use .analog() to opt in.
+    // Positional args: supersaw(freq, voices, detune). Use .analog() to opt in.
     "Osc.supersaw with all params" {
         val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), 4, 0.1).analog(0.3)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
-        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.1)
+        dsl.spread shouldBe IgnitorDsl.Constant(0.1)
         dsl.analog shouldBe IgnitorDsl.Constant(0.3)
     }
 
@@ -127,15 +128,15 @@ class StdLibOscTest : StringSpec({
         dsl.voices.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
-    // Positional args: supersine(freq, voices, freqSpread). Use .analog() to opt in.
-    "Osc.supersine with voices and freqSpread" {
+    // Positional args: supersine(freq, voices, detune). Use .analog() to opt in.
+    "Osc.supersine with voices and detune" {
         val dsl = evalIgnitorDsl("Osc.supersine(Osc.freq(), 6, 0.15)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSine>()
         dsl.voices shouldBe IgnitorDsl.Constant(6.0)
-        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.15)
+        dsl.spread shouldBe IgnitorDsl.Constant(0.15)
     }
 
-    // Positional args: supersquare(freq, voices, freqSpread). Use .analog() to opt in.
+    // Positional args: supersquare(freq, voices, detune). Use .analog() to opt in.
     "Osc.supersquare with voices and analog" {
         val dsl = evalIgnitorDsl("Osc.supersquare(Osc.freq(), 3, 0.2).analog(0.2)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSquare>()
@@ -143,32 +144,41 @@ class StdLibOscTest : StringSpec({
         dsl.analog shouldBe IgnitorDsl.Constant(0.2)
     }
 
-    // Positional args: supertri(freq, voices, freqSpread). Use .analog() to opt in.
+    // Positional args: supertri(freq, voices, detune). Use .analog() to opt in.
     "Osc.supertri with voices" {
         val dsl = evalIgnitorDsl("Osc.supertri(Osc.freq(), 12)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperTri>()
         dsl.voices shouldBe IgnitorDsl.Constant(12.0)
     }
 
-    // Positional args: superramp(freq, voices, freqSpread). Use .analog() to opt in.
+    // Positional args: superramp(freq, voices, detune). Use .analog() to opt in.
     "Osc.superramp with all params" {
         val dsl = evalIgnitorDsl("Osc.superramp(Osc.freq(), 5, 0.4).analog(0.1)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperRamp>()
         dsl.voices shouldBe IgnitorDsl.Constant(5.0)
-        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.4)
+        dsl.spread shouldBe IgnitorDsl.Constant(0.4)
         dsl.analog shouldBe IgnitorDsl.Constant(0.1)
     }
 
-    // Positional args: superpluck(freq, voices, freqSpread). Use .analog() to opt in.
-    "Osc.superpluck with voices and freqSpread" {
+    // Positional args: superpluck(freq, voices, detune). Use .analog() to opt in.
+    "Osc.superpluck with voices and detune" {
         val dsl = evalIgnitorDsl("Osc.superpluck(Osc.freq(), 4, 0.05)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperPluck>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
-        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.05)
+        dsl.spread shouldBe IgnitorDsl.Constant(0.05)
     }
 
-    "Osc.whitenoise() returns WhiteNoise" {
-        evalIgnitorDsl("Osc.whitenoise()").shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
+    "Osc.whitenoise() returns WhiteNoise with flat color (0.0)" {
+        val dsl = evalIgnitorDsl("Osc.whitenoise()")
+        dsl.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
+        // KlangScript bakes the literal default → Constant(0.0) (the engine bypasses the tilt at 0)
+        dsl.color shouldBe IgnitorDsl.Constant(0.0)
+    }
+
+    "Osc.whitenoise(color = -0.5) sets the spectral-tilt knob" {
+        val dsl = evalIgnitorDsl("Osc.whitenoise(-0.5)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
+        dsl.color shouldBe IgnitorDsl.Constant(-0.5)
     }
 
     "Osc.perlin() returns PerlinNoise" {
@@ -187,6 +197,19 @@ class StdLibOscTest : StringSpec({
         dsl.shouldBeInstanceOf<IgnitorDsl.Dust>()
         dsl.density.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.density as IgnitorDsl.Constant).value shouldBe 0.5
+    }
+
+    "Osc.dust(tail = 4, bipolar = 1) sets the heavy-tail + bipolar knobs (named args)" {
+        val dsl = evalIgnitorDsl("Osc.dust(0.5, 4, 1)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Dust>()
+        dsl.tail shouldBe IgnitorDsl.Constant(4.0)
+        dsl.bipolar shouldBe IgnitorDsl.Constant(1.0)
+    }
+
+    "Osc.brownnoise(depth = 0.3) sets the white-leak knob" {
+        val dsl = evalIgnitorDsl("Osc.brownnoise(0.3)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.BrownNoise>()
+        dsl.depth shouldBe IgnitorDsl.Constant(0.3)
     }
 
     "Osc.pluck() returns Pluck" {

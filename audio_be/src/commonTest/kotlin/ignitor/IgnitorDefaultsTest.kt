@@ -98,9 +98,9 @@ class IgnitorDefaultsTest : StringSpec({
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 
-    "supersaw responds to oscParam 'freqSpread'" {
+    "supersaw responds to oscParam 'detune'" {
         val bufDefault = createAndGenerate("supersaw")
-        val bufOverride = createAndGenerate("supersaw", oscParams = mapOf("freqSpread" to 0.8))
+        val bufOverride = createAndGenerate("supersaw", oscParams = mapOf("spread" to 0.8))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 

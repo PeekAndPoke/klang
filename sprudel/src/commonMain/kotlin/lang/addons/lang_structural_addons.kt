@@ -22,8 +22,6 @@ import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.lang.addons.pattern.MergePattern
-import io.peekandpoke.klang.sprudel.lang.addons.pattern.SoloPattern
 import io.peekandpoke.klang.sprudel.lang.applyCat
 import io.peekandpoke.klang.sprudel.lang.asDoubleOrNull
 import io.peekandpoke.klang.sprudel.lang.asIntOrNull
@@ -35,8 +33,10 @@ import io.peekandpoke.klang.sprudel.lang.struct
 import io.peekandpoke.klang.sprudel.lang.toPattern
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.pattern.MergePattern
 import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
+import io.peekandpoke.klang.sprudel.pattern.SoloPattern
 import kotlin.math.floor
 
 // -- morse() ----------------------------------------------------------------------------------------------------------

@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -63,7 +64,7 @@ data class SprudelVoiceData(
     /** Sound index */
     var soundIndex: Int?,
 
-    // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
+    // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "warmth")
     var oscParams: Map<String, Double>?,
 
     // ADSR amplitude envelope — grouped (see SvdAdsr). Flat fields (attack/decay/…) are accessors below.
@@ -146,7 +147,6 @@ data class SprudelVoiceData(
     // Custom value
     var value: SprudelVoiceValue?,
 ) {
-
     // --- Flat-field accessors over the grouped storage -------------------------------------------------
     // Bridge so the rest of the engine/DSL/tests keep using the flat names (data.attack, data.cutoff, …)
     // while storage is grouped. A non-null write lazily creates the group; a null write only clears an

@@ -82,50 +82,67 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 
 Multiple detuned copies for thick, lush sounds.
 
-| Method                                                  | Description             |
-|---------------------------------------------------------|-------------------------|
-| `Osc.supersaw(freq?, voices?, freqSpread?, analog?)`    | Detuned sawtooth chorus |
-| `Osc.supersine(freq?, voices?, freqSpread?, analog?)`   | Detuned sine chorus     |
-| `Osc.supersquare(freq?, voices?, freqSpread?, analog?)` | Detuned square chorus   |
-| `Osc.supertri(freq?, voices?, freqSpread?, analog?)`    | Detuned triangle chorus |
-| `Osc.superramp(freq?, voices?, freqSpread?, analog?)`   | Detuned ramp chorus     |
+| Method                                     | Description             |
+|--------------------------------------------|-------------------------|
+| `Osc.supersaw(freq?, voices?, spread?)`    | Detuned sawtooth chorus |
+| `Osc.supersine(freq?, voices?, spread?)`   | Detuned sine chorus     |
+| `Osc.supersquare(freq?, voices?, spread?)` | Detuned square chorus   |
+| `Osc.supertri(freq?, voices?, spread?)`    | Detuned triangle chorus |
+| `Osc.superramp(freq?, voices?, spread?)`   | Detuned ramp chorus     |
 
-**Parameters** (all optional, apply to every super oscillator):
+**Constructor params** (all optional):
 
-| Param        | Default | Description                             |
-|--------------|---------|-----------------------------------------|
-| `voices`     | 8       | Number of detuned voices                |
-| `freqSpread` | 0.2     | Frequency spread between voices         |
-| `analog`     | 0.0     | Random per-voice pitch drift (0 = none) |
+| Param    | Default | Description                     |
+|----------|---------|---------------------------------|
+| `voices` | 8       | Number of detuned voices        |
+| `spread` | 0.2     | Frequency spread between voices |
+
+**Chained character knobs** (return the same super-osc subtype): `.analog(x)` (per-voice pitch drift),
+`.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`.
 
 ```javascript
-// Args order: supersaw(freq, voices, freqSpread, analog)
+// Named args (recommended) — override only what you want:
 
 // Thin 3-voice supersaw
-Osc.supersaw(Osc.freq(), /* voices */ 3, /* freqSpread */ 0.1)
+Osc.supersaw(voices = 3, spread = 0.1)
 
-// Wide 12-voice pad with analog drift
-Osc.supersaw(Osc.freq(), /* voices */ 12, /* freqSpread */ 0.3, /* analog */ 0.2)
+// Wide 12-voice pad with analog drift (analog is a chained knob, not a constructor arg)
+Osc.supersaw(voices = 12, spread = 0.3).analog(0.2)
 ```
 
 ### Noise Sources
 
-| Method                  | Description                             |
-|-------------------------|-----------------------------------------|
-| `Osc.whitenoise()`      | Flat spectrum noise                     |
-| `Osc.brownnoise()`      | Low-frequency weighted (-6 dB/oct)      |
-| `Osc.pinknoise()`       | Balanced noise (-3 dB/oct)              |
-| `Osc.perlin(rate?)`     | Smooth organic noise (default rate=1.0) |
-| `Osc.berlin(rate?)`     | Angular piecewise-linear noise          |
-| `Osc.dust(density?)`    | Sparse random impulses (default 0.2)    |
-| `Osc.crackle(density?)` | Bipolar random crackle                  |
+| Method                                      | Description                                                     |
+|---------------------------------------------|-----------------------------------------------------------------|
+| `Osc.whitenoise(color?)`                    | Flat spectrum; `color` tilts it (see below)                     |
+| `Osc.brownnoise(depth?)`                    | Low-frequency weighted (-6 dB/oct); `depth` = white-leak        |
+| `Osc.pinknoise()`                           | Balanced noise (-3 dB/oct) — canonical exact pink, no knobs     |
+| `Osc.perlin(rate?, octaves?, persistence?)` | Smooth organic noise; fBm via `octaves`/`persistence`           |
+| `Osc.berlin(rate?, octaves?, persistence?)` | Angular piecewise-linear noise; same fBm knobs                  |
+| `Osc.dust(density?, tail?, bipolar?)`       | Sparse random impulses (default density 0.2)                    |
+| `Osc.crackle(chaos?)`                       | Chaotic crackle (bipolar pops); `chaos` ≈1.0 sparse … 2.0 dense |
+
+**Noise knobs** (all default to today's behavior — a bare call is unchanged):
+
+| Knob          | On                | Meaning                                                                                    |
+|---------------|-------------------|--------------------------------------------------------------------------------------------|
+| `color`       | `whitenoise`      | Spectral tilt −1..1: `0` flat (default), `<0` darken toward pink/brown, `>0` brighten      |
+| `depth`       | `brownnoise`      | Per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter       |
+| `octaves`     | `perlin`/`berlin` | fBm octaves: `1` plain (default, perf-neutral), higher = more fractal detail (capped at 8) |
+| `persistence` | `perlin`/`berlin` | fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves)              |
+| `tail`        | `dust`            | Heavy-tailed amplitude exponent: `1` uniform (default), `>1` = mostly-tiny / rare-loud     |
+| `bipolar`     | `dust`            | `>0.5` = random ±sign pops; default `0` = unipolar                                         |
+| `chaos`       | `crackle`         | Drives the chaotic map: ~1.0 sparse, 1.5 = clear crackle (default), ~2.0 dense/noisy       |
+
+> ⚠ `Osc.crackle()` is a **chaotic generator** now (SuperCollider's Crackle map → bipolar pops), no longer a
+> dust alias. For the old sparse-impulse behavior, use `Osc.dust()`.
 
 ### Physical Models
 
-| Method                                                 | Description                     |
-|--------------------------------------------------------|---------------------------------|
-| `Osc.pluck(freq?)`                                     | Karplus-Strong plucked string   |
-| `Osc.superpluck(freq?, voices?, freqSpread?, analog?)` | Unison plucked strings (chorus) |
+| Method                                    | Description                     |
+|-------------------------------------------|---------------------------------|
+| `Osc.pluck(freq?)`                        | Karplus-Strong plucked string   |
+| `Osc.superpluck(freq?, voices?, spread?)` | Unison plucked strings (chorus) |
 
 ### Utility
 
@@ -323,13 +340,13 @@ Osc.sine(Osc.freq().plus(Osc.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
 | `superramp`   |                          | SuperRamp(Freq, voices=8, spread=0.2)                           |
 | `pluck`       | `ks`, `string`           | Pluck(Freq, decay=0.996, brightness=0.5, pick=0.5, stiffness=0) |
 | `superpluck`  |                          | SuperPluck(Freq, voices=8, spread=0.2, ...)                     |
-| `whitenoise`  | `white`                  | WhiteNoise                                                      |
-| `brownnoise`  | `brown`                  | BrownNoise                                                      |
+| `whitenoise`  | `white`                  | WhiteNoise(color=0)                                             |
+| `brownnoise`  | `brown`                  | BrownNoise(depth=0.02)                                          |
 | `pinknoise`   | `pink`                   | PinkNoise                                                       |
-| `perlinnoise` | `perlin`                 | PerlinNoise(rate=1)                                             |
-| `berlinnoise` | `berlin`                 | BerlinNoise(rate=1)                                             |
-| `dust`        |                          | Dust(density=0.2)                                               |
-| `crackle`     |                          | Crackle(density=0.2)                                            |
+| `perlinnoise` | `perlin`                 | PerlinNoise(rate=1, octaves=1, persistence=0.5)                 |
+| `berlinnoise` | `berlin`                 | BerlinNoise(rate=1, octaves=1, persistence=0.5)                 |
+| `dust`        |                          | Dust(density=0.2, tail=1, bipolar=0)                            |
+| `crackle`     |                          | Crackle(chaos=1.5) — chaotic, NOT a dust alias                  |
 | `sgpad`       |                          | (Saw + Saw.detune(0.1)) / 2 -> onePoleLowpass(3000)             |
 | `sgbell`      |                          | Sine.fm(Sine, ratio=1.4, depth=300, decay=0.5)                  |
 | `sgbuzz`      |                          | Square.lowpass(2000)                                            |
@@ -522,6 +539,24 @@ let rim = Osc.sine(800)
         .lowpass(3000)
         .adsr(0.001, 0.03, 0.0, 0.005)
 ```
+
+**Vinyl crackle** — old-record texture from primitives (no dedicated generator; the Motör stays raw)
+
+Layer dust through band/high-pass for the "tick" ring, plus a quiet hiss bed. The dust authenticity knobs
+do the heavy lifting: `bipolar` gives natural ±pops, and a high `tail` makes pops mostly-tiny / rare-loud
+(the vinyl signature). Build it once in KlangScript and reuse it via export/import.
+
+```javascript
+// sparse loud pops + denser quiet crackle, both heavy-tailed & bipolar, through a resonant ring,
+// over a faint pink-noise hiss bed and an optional sub-rumble
+let vinyl = Osc.dust(0.08, /* tail */ 6, /* bipolar */ 1).bandpass(2500, 4)
+        .plus(Osc.dust(0.02, /* tail */ 3, /* bipolar */ 1).bandpass(1500).mul(0.6))
+        .plus(Osc.pinknoise().highpass(3000).mul(0.03))   // hiss bed
+        .plus(Osc.brownnoise(0.005).lowpass(120).mul(0.04)) // optional deep rumble
+```
+
+For a busier, more "broken-groove" crackle, swap in `Osc.crackle(1.7)` (the chaotic generator) as the
+pop source instead of the heavy-tailed dust.
 
 ---
 

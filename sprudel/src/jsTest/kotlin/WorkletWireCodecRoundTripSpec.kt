@@ -45,7 +45,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
         val data = createSprudelVoiceData {
             note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
-            oscParams = mapOf("voices" to 7.0, "freqSpread" to 0.3, "panSpread" to 0.4)
+            oscParams = mapOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
             attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
             attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
             cutoff = 1625.0; resonance = 1.2; lpattack = 0.01; lpdecay = 0.1; lpsustain = 0.5; lprelease = 0.2; lpenv = 1.0

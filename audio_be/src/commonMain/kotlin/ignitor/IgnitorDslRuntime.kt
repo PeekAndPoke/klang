@@ -185,48 +185,80 @@ private fun IgnitorDsl.buildRaw(
         // ── Sources: apply accumulated mod ──
 
         is IgnitorDsl.Sine -> applyMod(Ignitors.sine(freq.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Sawtooth -> applyMod(Ignitors.sawtooth(freq.noMod(), analog.noMod()), accumulatedMod)
+        is IgnitorDsl.Sawtooth -> applyMod(
+            Ignitors.sawtooth(freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax),
+            accumulatedMod
+        )
         is IgnitorDsl.Square -> applyMod(Ignitors.square(freq.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Triangle -> applyMod(Ignitors.triangle(freq.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Ramp -> applyMod(Ignitors.ramp(freq.noMod(), analog.noMod()), accumulatedMod)
+        is IgnitorDsl.Ramp -> applyMod(
+            Ignitors.ramp(freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax),
+            accumulatedMod
+        )
         is IgnitorDsl.Zawtooth -> applyMod(Ignitors.zawtooth(freq.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Zamp -> applyMod(Ignitors.zamp(freq.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Pulze -> applyMod(Ignitors.pulze(freq.noMod(), duty.noMod(), analog.noMod()), accumulatedMod)
+        is IgnitorDsl.Pulze -> applyMod(
+            Ignitors.pulze(
+                freq.noMod(), duty.noMod(), analog.noMod(),
+                flankSamples = flankSamples, riseFlank = riseFlank, fallFlank = fallFlank,
+            ),
+            accumulatedMod
+        )
         is IgnitorDsl.RawPulze -> applyMod(Ignitors.rawPulze(freq.noMod(), duty.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Impulse -> applyMod(Ignitors.impulse(freq.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Silence -> applyMod(Ignitors.silence(), accumulatedMod)
 
         // Noise sources ignore phaseMod — skip ModApplyingIgnitor to avoid wasting cycles.
-        is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(Random)
-        is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(Random)
+        is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(Random, color.noMod())
+        is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(Random, depth.noMod())
         is IgnitorDsl.PinkNoise -> Ignitors.pinkNoise(Random)
-        is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(Random, rate.noMod())
-        is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(Random, rate.noMod())
-        is IgnitorDsl.Dust -> Ignitors.dust(Random, density.noMod())
-        is IgnitorDsl.Crackle -> Ignitors.crackle(Random, density.noMod())
+        is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(Random, rate.noMod(), octaves.noMod(), persistence.noMod())
+        is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(Random, rate.noMod(), octaves.noMod(), persistence.noMod())
+        is IgnitorDsl.Dust -> Ignitors.dust(Random, density.noMod(), tail.noMod(), bipolar.noMod())
+        is IgnitorDsl.Crackle -> Ignitors.crackle(Random, chaos.noMod())
 
         is IgnitorDsl.SuperSaw -> applyMod(
-            Ignitors.superSaw(freq.noMod(), voices.noMod(), freqSpread.noMod(), analog.noMod()),
+            Ignitors.superSaw(
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+                centerJitterScale = centerJitterScale,
+            ),
             accumulatedMod
         )
 
         is IgnitorDsl.SuperSine -> applyMod(
-            Ignitors.superSine(freq.noMod(), voices.noMod(), freqSpread.noMod(), analog.noMod()),
+            Ignitors.superSine(
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+                centerJitterScale = centerJitterScale,
+            ),
             accumulatedMod
         )
 
         is IgnitorDsl.SuperSquare -> applyMod(
-            Ignitors.superSquare(freq.noMod(), voices.noMod(), freqSpread.noMod(), analog.noMod()),
+            Ignitors.superSquare(
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+                centerJitterScale = centerJitterScale,
+            ),
             accumulatedMod
         )
 
         is IgnitorDsl.SuperTri -> applyMod(
-            Ignitors.superTri(freq.noMod(), voices.noMod(), freqSpread.noMod(), analog.noMod()),
+            Ignitors.superTri(
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+                centerJitterScale = centerJitterScale,
+            ),
             accumulatedMod
         )
 
         is IgnitorDsl.SuperRamp -> applyMod(
-            Ignitors.superRamp(freq.noMod(), voices.noMod(), freqSpread.noMod(), analog.noMod()),
+            Ignitors.superRamp(
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+                centerJitterScale = centerJitterScale,
+            ),
             accumulatedMod
         )
 
@@ -246,7 +278,7 @@ private fun IgnitorDsl.buildRaw(
             Ignitors.superKarplusStrong(
                 freq.noMod(),
                 voices.noMod(),
-                freqSpread.noMod(),
+                spread.noMod(),
                 decay.noMod(),
                 brightness.noMod(),
                 pickPosition.noMod(),

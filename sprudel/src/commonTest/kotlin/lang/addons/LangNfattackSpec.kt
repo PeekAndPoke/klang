@@ -114,6 +114,8 @@ class LangNfattackSpec : StringSpec({
             "script string.nfa(ctrl)" to SprudelPattern.compile(""""$pat".nfa("$ctrl")"""),
             "nfa(ctrl)" to seq(pat).apply(nfa(ctrl)),
             "script nfa(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfa("$ctrl"))"""),
+            "chained nfa(ctrl)" to seq(pat).apply(nfa(ctrl).nfa(ctrl)),
+            "script chained nfa(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfa("$ctrl").nfa("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfattack shouldBe 0.5

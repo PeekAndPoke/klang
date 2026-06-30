@@ -52,6 +52,7 @@ private fun applyFlipSign(pattern: SprudelPattern): SprudelPattern {
  * @tags flipSign, negate, invert, arithmetic, value, addon
  */
 @KlangScript.Function
+@Suppress("UNUSED_PARAMETER") // callInfo is part of the uniform DSL signature; this unary op has no arg to locate
 fun SprudelPattern.flipSign(callInfo: CallInfo? = null): SprudelPattern = applyFlipSign(this)
 
 /**
@@ -115,6 +116,7 @@ private fun applyOneMinusValue(pattern: SprudelPattern): SprudelPattern {
  * @tags oneMinusValue, invert, complement, arithmetic, value, addon
  */
 @KlangScript.Function
+@Suppress("UNUSED_PARAMETER") // callInfo is part of the uniform DSL signature; this unary op has no arg to locate
 fun SprudelPattern.oneMinusValue(callInfo: CallInfo? = null): SprudelPattern = applyOneMinusValue(this)
 
 /** Calculates `1.0 - value` for a string pattern. */
@@ -162,6 +164,7 @@ private fun applyNot(pattern: SprudelPattern): SprudelPattern {
  * @tags not, logical, boolean, gate, invert, addon
  */
 @KlangScript.Function
+@Suppress("UNUSED_PARAMETER") // callInfo is part of the uniform DSL signature; this unary op has no arg to locate
 fun SprudelPattern.not(callInfo: CallInfo? = null): SprudelPattern = applyNot(this)
 
 /**
@@ -220,6 +223,7 @@ private fun applyAbs(pattern: SprudelPattern): SprudelPattern {
  * @tags abs, absolute, value, arithmetic, addon
  */
 @KlangScript.Function
+@Suppress("UNUSED_PARAMETER") // callInfo is part of the uniform DSL signature; this unary op has no arg to locate
 fun SprudelPattern.abs(callInfo: CallInfo? = null): SprudelPattern = applyAbs(this)
 
 /**

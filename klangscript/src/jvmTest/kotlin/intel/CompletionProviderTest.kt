@@ -285,7 +285,7 @@ class CompletionProviderTest : StringSpec({
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.memberCompletions(KlangType("OscSlot"), "").map { it.name }
         names.toSet().containsAll(
-            listOf("analog", "voices", "freqSpread", "duty", "density", "decay", "brightness", "pickPosition", "stiffness", "rate")
+            listOf("analog", "voices", "spread", "duty", "density", "decay", "brightness", "pickPosition", "stiffness", "rate")
         ) shouldBe true
     }
 
@@ -295,7 +295,7 @@ class CompletionProviderTest : StringSpec({
         val provider = CompletionProvider(stdlibRegistry())
         val byFqcn = KlangType("OscSlot", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot")
         val names = provider.memberCompletions(byFqcn, "").map { it.name }
-        names.toSet().containsAll(listOf("analog", "voices", "freqSpread")) shouldBe true
+        names.toSet().containsAll(listOf("analog", "voices", "spread")) shouldBe true
     }
 
     "member: cross-module-style FQCN (Kotlin simpleName + fqcn) still matches" {
@@ -308,7 +308,7 @@ class CompletionProviderTest : StringSpec({
             fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot",
         )
         val names = provider.memberCompletions(crossModuleQuery, "").map { it.name }
-        names.toSet().containsAll(listOf("analog", "voices", "freqSpread")) shouldBe true
+        names.toSet().containsAll(listOf("analog", "voices", "spread")) shouldBe true
     }
 
     "member: same-simpleName-different-FQCN must not bleed" {

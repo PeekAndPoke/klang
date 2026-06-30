@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.script.ksp
 
+import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
@@ -14,6 +15,7 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -923,14 +925,6 @@ class KlangScriptProcessor(
         // named-arg calls to varargs are prohibited unless using spread syntax.
         if (isVararg) {
             val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
-            val returnType = resolveCastType(fn.returnType?.resolve())
-            // File-level ext has an explicit receiver param that we need to pass through.
-            val selfArgForVararg = if (hasExtensionReceiver) "typedReceiver." else ""
-            val fnCall = if (hasExtensionReceiver) {
-                "${selfArgForVararg}$fnName(*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
-            } else {
-                "$fnName(typedReceiver, *args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
-            }
             // For the `cls =` argument of convertArgToKotlin we must pass a KClass,
             // but function types like `(SprudelPattern) -> SprudelPattern` can't use
             // `::class`. In that case pass `Function1::class` and let the unchecked
@@ -1218,7 +1212,7 @@ class KlangScriptProcessor(
                 appendLine("        variants = listOf(")
                 appendLine("            KlangProperty(")
                 appendLine("                name = \"${prop.name}\",")
-                appendLine("                type = ${generateKlangType(propType)},")
+                appendLine("                type = ${generateKlangType(propType, includeSupertypes = true)},")
                 appendLine("                description = \"\"\"$description\"\"\",")
                 if (kdoc.samples.isNotEmpty()) {
                     appendLine("                samples = listOf(")
@@ -1274,7 +1268,6 @@ class KlangScriptProcessor(
                 val variants = memberPropsGrouped[propName]!!
                 val first = variants.first().prop
                 val kdoc = KDocParser.parse(first.docString)
-                val description = kdoc.description.escapeForRawString()
                 val category = kdoc.category ?: "uncategorized"
                 val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
                 val aliasesString = kdoc.aliases.joinToString(", ") { "\"$it\"" }
@@ -1295,7 +1288,7 @@ class KlangScriptProcessor(
                     appendLine("            KlangProperty(")
                     appendLine("                name = \"${doc.name}\",")
                     appendLine("                owner = KlangType(simpleName = \"${doc.ownerName}\"$ownerFqcnArg),")
-                    appendLine("                type = ${generateKlangType(propType)},")
+                    appendLine("                type = ${generateKlangType(propType, includeSupertypes = true)},")
                     appendLine("                description = \"\"\"$vDescription\"\"\",")
                     appendLine("                library = \"$libraryName\",")
                     appendLine("            )${if (vIdx < variants.lastIndex) "," else ""}")
@@ -1424,7 +1417,7 @@ class KlangScriptProcessor(
                 appendLine("                params = emptyList(),")
             }
             if (returnType != null) {
-                appendLine("                returnType = ${generateKlangType(returnType)},")
+                appendLine("                returnType = ${generateKlangType(returnType, includeSupertypes = true)},")
             }
             appendLine("                description = \"\"\"$description\"\"\",")
             appendLine("                returnDoc = \"\"\"$returnDoc\"\"\",")
@@ -1579,7 +1572,7 @@ class KlangScriptProcessor(
         return resolveKotlinType(type)
     }
 
-    private fun generateKlangType(type: KSType): String {
+    private fun generateKlangType(type: KSType, includeSupertypes: Boolean = false): String {
         val declaration = type.declaration
         val simpleName = declaration.simpleName.asString()
         val fqcn = declaration.qualifiedName?.asString()
@@ -1592,14 +1585,49 @@ class KlangScriptProcessor(
         }
         val isTypeAlias = declaration is KSTypeAlias
         val isNullable = type.nullability == Nullability.NULLABLE
+        val supertypesExpr = if (includeSupertypes) supertypeListExpr(declaration) else ""
 
         return buildString {
             append("KlangType(simpleName = \"$displayName\"")
             if (fqcn != null) append(", fqcn = \"$fqcn\"")
             if (isTypeAlias) append(", isTypeAlias = true")
             if (isNullable) append(", isNullable = true")
+            if (supertypesExpr.isNotEmpty()) append(", supertypes = $supertypesExpr")
             append(")")
         }
+    }
+
+    /**
+     * Emit a `listOf(KlangType(...), ...)` of the transitive supertypes of [declaration]
+     * (or `""` when there are none), so the static type-inferrer can resolve a method
+     * declared on a base type when the receiver is a narrowed subtype — e.g.
+     * `Osc.supersaw()` returns `IgnitorDsl.SuperSaw`, but `.lowpass()`/`.adsr()` are
+     * registered on `IgnitorDsl`. Mirrors the runtime's reflective supertype walk
+     * (`Environment.getAllRegisteredSupertypes`).
+     *
+     * Only class/interface declarations have supertypes; `kotlin.*` ancestors (`Any`, …)
+     * carry no script-registered methods and are dropped. Supertype entries are flat
+     * (no nested supertypes) — [getAllSuperTypes] already returns the full ancestor set,
+     * which the registry walks as a single chain.
+     */
+    private fun supertypeListExpr(declaration: KSDeclaration): String {
+        val cls = declaration as? KSClassDeclaration ?: return ""
+        val supers = cls.getAllSuperTypes()
+            .mapNotNull { st ->
+                val decl = st.declaration
+                val stFqcn = decl.qualifiedName?.asString() ?: return@mapNotNull null
+                if (stFqcn.startsWith("kotlin.")) return@mapNotNull null
+                val display = when {
+                    inModuleObjectFqcnToScriptName.containsKey(stFqcn) ->
+                        inModuleObjectFqcnToScriptName.getValue(stFqcn)
+
+                    else -> typeDisplayName(decl.simpleName.asString())
+                }
+                "KlangType(simpleName = \"$display\", fqcn = \"$stFqcn\")"
+            }
+            .distinct()
+            .toList()
+        return if (supers.isEmpty()) "" else "listOf(${supers.joinToString(", ")})"
     }
 
     private fun typeDisplayName(kotlinName: String): String {
@@ -1686,7 +1714,7 @@ class KlangScriptProcessor(
      * own arity-dispatch when the user calls the function positionally, and
      * to a "use positional" error when the caller omits the slot in a named
      * call. This is the conservative choice: a paste failure here would
-     * break the build of [GeneratedStdlibRegistration]; a missing thunk
+     * break the build of [ GeneratedStdlibRegistration ]; a missing thunk
      * just degrades to slightly-less-flexible named-arg ergonomics.
      */
     private fun safeDefaultThunk(param: KSValueParameter): String? {

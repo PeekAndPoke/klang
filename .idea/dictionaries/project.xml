@@ -3,19 +3,40 @@
     <words>
       <w>Adsr</w>
       <w>Ignitors</w>
+      <w>Korobeiniki</w>
       <w>Majorable</w>
+      <w>Oscparam</w>
       <w>Perfectable</w>
       <w>Sprudel</w>
+      <w>Zamp</w>
       <w>Zawtooth</w>
       <w>adsr</w>
+      <w>brownnoise</w>
+      <w>coarseos</w>
+      <w>highpass</w>
+      <w>karplus</w>
       <w>lerp</w>
       <w>majorable</w>
+      <w>notchf</w>
+      <w>nres</w>
+      <w>nresonance</w>
+      <w>oscp</w>
+      <w>oscparam</w>
       <w>perfectable</w>
+      <w>pinknoise</w>
       <w>playhead</w>
+      <w>postgain</w>
+      <w>pulze</w>
       <w>roomsize</w>
       <w>sprudel</w>
       <w>sprudel's</w>
+      <w>superpluck</w>
+      <w>superramp</w>
+      <w>supersine</w>
+      <w>supertri</w>
+      <w>tremoloed</w>
       <w>voicings</w>
+      <w>zamp</w>
       <w>zawtooth</w>
     </words>
   </dictionary>

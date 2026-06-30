@@ -46,7 +46,7 @@ import * from "sprudel"
 let kick = s("bd!4").gain(1.0).hpf(60).adsr("0.06:0.20:0.2:0.02").orbit(1)
 let hat  = s("hh!8").gain(0.35).hpf(6000).adsr("0.001:0.04:0.0:0.04").orbit(2)
 let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
-    .sound("supersaw").detune(0.1).unison(15).legato(0.7).hpf(160).lpf(sine.range(450, 700).slow(7)).lpe(1.5).lpq(1.5).lpadsr("0.005:0.08:0.7:0.05")
+    .sound("supersaw").spread(0.1).unison(15).legato(0.7).hpf(160).lpf(sine.range(450, 700).slow(7)).lpe(1.5).lpq(1.5).lpadsr("0.005:0.08:0.7:0.05")
     .adsr("0.01:0.2:0.4:0.05").distort("0.5:gentle:2").postgain(0.22).warmth(0.05).body("membrane")
     .gain(1.0).orbit(0) // . solo()
 let core = stack(kick, hat, bass)
@@ -58,7 +58,7 @@ let oh   = s("[~ ~ ~ oh]!4").gain(0.19).hpf(4000).orbit(2)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.3).hpf(800).orbit(2)
 
 // ── Lead phrases (5 shapes of the recorder melody) ──────────────────
-let leadStyle = mel =>mel.sound("supertri").unison(3).detune(0.07).euclid(3, 8).warmth(0.02)
+let leadStyle = mel =>mel.sound("supertri").unison(3).spread(0.07).euclid(3, 8).warmth(0.02)
        .hpf(400).lpf(sine.range(2600, 2700).slow(0.5)).lpe(0.25).lpq(2.5).adsr("0.03:0.3:0.5:0.08")
        .clip(0.7).distort("0.1:gentle:2").postgain(0.3)
        .delay(0.18).delaytime(pure(3/16).div(cps)).delayfeedback(0.32)
@@ -71,7 +71,7 @@ let leadE = leadStyle(note(`<[a5 e5 d6 c6] [a5 f5 d5 c5] [f5  d5 g5  bb4] [e5 g5
 
 // ── Pad ─────────────────────────────────────────────────────────────
 let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing(rank = sine.range(0, 1.9).fast(7).add(perlin.range(0, 0.3)))
-    .sound("superpulse").unison(3).detune(0.20).lpf("1500:1:2.5").adsr("1.5:0.5:0.3:1.0").legato(1.4)
+    .sound("superpulse").unison(3).spread(0.20).lpf("1500:1:2.5").adsr("1.5:0.5:0.3:1.0").legato(1.4)
     .pan(0.3).superimpose(pan(0.2).transpose(-12), pan(0.8).transpose(12).velocity(0.9)).lpenv(1.2)
     .phaser(1/6).phaserdepth(saw.range(0.3, 0.6).slow(16)).phasersweep(900).phasercenter(1400)
     .gain(0.06).orbit(5).room(0.4).rsize(6) //  .solo()
@@ -97,7 +97,7 @@ let hitSub  = note("d1").sound("sine")
     .orbit(6)
 let hitCrash = s("cr").gain(0.75).hpf(200).orbit(8).room(0.25).rsize(4).adsr("0.005:0.3:1.0:2.0")
 let hitStab = chord("Dm").voicing()
-    .sound("superpulse").unison(8).detune(0.25).distort(0.3)
+    .sound("superpulse").unison(8).spread(0.25).distort(0.3)
     .adsr("0.005:0.3:0.5:10.0")
     .lpf("80:1.2:60").lpadsr("2.5:0.5:0.5:10.0")
     .pan(0.2).superimpose(pan(0.8), transpose(-12).pan(0.5), transpose(-24).pan(0.5), pan(0.5).transpose(12).velocity(0.8))
@@ -146,7 +146,7 @@ let quietBuild = stack(
     // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
     // enter at section-local cycle 32 (= second half of the build)
     chord("<Am Dm Bb C Gm F Am Dm>").voicing().struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
-        .sound("superpulse").unison(2).detune(0.15).hpf(400).lpf(4000).lpq(1.5)
+        .sound("superpulse").unison(2).spread(0.15).hpf(400).lpf(4000).lpq(1.5)
         .adsr("0.005:0.08:0.25:0.2").legato(0.7)
         .gain(0.16).orbit(5).room(0.4).rsize(6)
         .filterWhen(t => t % 64 >= 48),
@@ -159,7 +159,7 @@ let quietBuild = stack(
         .sound("supersaw").unison(4).warmth(0.1).gain(0.40).adsr("0.005:0.2:0.7:0.15").pan(0.5)
         .superimpose(transpose("<0 12 24 12>/8").pan(0.7).superimpose(pan(0.3)))
         .phaser(1/13).phaserdepth(0.25).phasercenter(3500).phasersweep(1000)
-        .detune(sine.range(0.15, 0.40).slow(64)).hpf(200).lpf(4200).lpq(1.2)
+        .spread(sine.range(0.15, 0.40).slow(64)).hpf(200).lpf(4200).lpq(1.2)
         .velocity(saw.range(-0.4, 0.8).min(0).slow(64))
         .orbit(7),
 )
@@ -194,7 +194,7 @@ let darkBuild = stack(
     // Tetris bassline — same pattern, pumps, LPF closes, more grit
     note(`<[a1 e2 a2 e2 c2 e2 a1 e2] [d2 a2 d3 a2 f2 a2 d2 a2] [bb1 f2 bb2 f2 d2 f2 bb1 f2] [c2 g2 c3 g2 e2 g2 c2 g2]
           [g1 d2 g2 d2 bb1 d2 g1 d2] [f1 c2 f2 c2 a1 c2 f1 c2] [a1  e2 a2  e2 c2 e2 a1  e2] [d2 a2 d3 a2 f2 a2 d2 a2]>`)
-        .sound("supersaw").unison(12).detune(sine.range(0.05, 0.40).slow(64))
+        .sound("supersaw").unison(12).spread(sine.range(0.05, 0.40).slow(64))
         .warmth(saw.range(0.5, 0.2).slow(64)).gain(0.25).distort(saw.range(0.35, 0.5).slow(64)).postgain(0.7)
         .pan(0.3).superimpose(pan(0.7))
         .superimpose(transpose("<-12 0 12 0>/8").gain(0.2).pan(0.1), transpose("<0 12 24 12>/8").gain(saw.range(0.1, 0.2).slow(64)).pan(0.8))
@@ -204,13 +204,13 @@ let darkBuild = stack(
     // Syncopated pad stabs — keep the 90s rhythm but darken with section
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.3)))
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]").transpose(0)
-        .sound("superpulse").unison(2).detune(0.05).pan(0.2).superimpose(pan(0.8))
+        .sound("superpulse").unison(2).spread(0.05).pan(0.2).superimpose(pan(0.8))
         .hpf(400).lpf(saw.range(800, 1500).slow(32)).lpenv(3).warmth(0.5)
         .adsr("0.005:0.1:0.25:0.1").legato(0.7)
         .gain(0.11).orbit(5).room(0.4).rsize(6),
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift
     note("<a5 d6 bb5 c6 g5 f5 a5 d6>")
-        .sound("supersine").unison(8).detune(0.07).adsr("0.5:0.3:0.5:0.5")
+        .sound("supersine").unison(8).spread(0.07).adsr("0.5:0.3:0.5:0.5")
         .hpf(1500).lpf(3000).lpenv(2).bandf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibmod(0.1)
         .gain(saw.range(0.0, 0.4).slow(64))
         .pan(sine.range(0.05, 0.95).slow(3))

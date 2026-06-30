@@ -76,4 +76,27 @@ class BerlinNoiseSpec : StringSpec({
         min.shouldBeBetween(0.0, 0.2, 0.0)
         max.shouldBeBetween(0.8, 1.0, 0.0)
     }
+
+    "BerlinNoise.fbm: octaves<=1 is byte-identical to noise (the perf-neutral default)" {
+        val noise = BerlinNoise(Random(13))
+        for (i in 0..200) {
+            val t = i * 0.15
+            noise.fbm(t, octaves = 1, persistence = 0.5) shouldBe noise.noise(t)
+            noise.fbm(t, octaves = 0, persistence = 0.5) shouldBe noise.noise(t)
+        }
+    }
+
+    "BerlinNoise.fbm: more octaves changes the output (fractal detail takes effect)" {
+        val noise = BerlinNoise(Random(13))
+        val single = (0..200).map { noise.fbm(it * 0.15, 1, 0.5) }
+        val multi = (0..200).map { noise.fbm(it * 0.15, 4, 0.5) }
+        single shouldNotBe multi
+    }
+
+    "BerlinNoise.fbm: stays within 0..1 (amplitude-normalized)" {
+        val noise = BerlinNoise(Random(42))
+        for (i in 0..2000) {
+            noise.fbm(i * 0.05, octaves = 5, persistence = 0.6).shouldBeBetween(0.0, 1.0, 0.01)
+        }
+    }
 })

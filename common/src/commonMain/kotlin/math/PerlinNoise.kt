@@ -69,4 +69,28 @@ class PerlinNoise(random: Random = Random(0)) {
 
         return res * 0.25 // Tuning factor to keep it roughly within -1..1
     }
+
+    /**
+     * Fractal Brownian motion: sums [octaves] evaluations of [noise] at ×2 frequency (lacunarity 2.0) and
+     * ×[persistence] amplitude per octave, normalized by the amplitude sum so the result keeps [noise]'s
+     * ≈[-1, 1] range. Higher octaves add finer detail; lower [persistence] makes the upper octaves quieter.
+     *
+     * [octaves] <= 1 short-circuits to a single [noise] call — byte-identical to the single-octave path, so the
+     * default (octaves = 1) carries zero extra cost. Cost then scales **linearly** with [octaves]; callers
+     * should cap it (the engine caps at 8).
+     */
+    fun fbm(x: Double, octaves: Int, persistence: Double): Double {
+        if (octaves <= 1) return noise(x)
+        var sum = 0.0
+        var amp = 1.0
+        var freq = 1.0
+        var norm = 0.0
+        for (o in 0 until octaves) {
+            sum += amp * noise(x * freq)
+            norm += amp
+            freq *= 2.0
+            amp *= persistence
+        }
+        return if (norm > 0.0) sum / norm else 0.0
+    }
 }

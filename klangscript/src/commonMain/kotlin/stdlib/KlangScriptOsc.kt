@@ -11,6 +11,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.pulze
 import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.ramp
 import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.square
+import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.supersaw
 
 /**
  * Osc object for KlangScript — builds IgnitorDsl signal graphs.
@@ -57,24 +58,43 @@ object KlangScriptOsc {
         IgnitorDsl.Sine(freq = freq.toIgnitorDsl())
 
     /**
-     * Creates a sawtooth wave oscillator (PolyBLEP anti-aliased).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * Creates a sawtooth wave oscillator (analog flyback shape, no PolyBLEP — softens with pitch).
+     *
+     * The shape is configurable via chained methods on the returned [IgnitorDsl.Sawtooth] —
+     * `.resetSamples(x)` (analog flyback time in samples) and `.shapeMax(x)` (max flyback fraction), plus
+     * `.analog(x)`. Put shape config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
+     *
+     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     *
+     * ```KlangScript
+     * Osc.saw().resetSamples(4.0).analog(5.0)
+     * ```
      */
     @KlangScript.Method
-    fun saw(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
+    fun saw(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl.Sawtooth =
         IgnitorDsl.Sawtooth(freq = freq.toIgnitorDsl())
 
     /**
-     * Creates a square wave oscillator — a 50%-duty [pulze]. (`square`/`pulse`/`pulze` are aliases of
-     * the one pulse oscillator; its `duty` is an osc-param.)
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * Creates a square wave oscillator — a variable-duty [pulze] (`square`/`pulse`/`pulze` are the one
+     * pulse oscillator; its `duty` defaults to 50%).
+     *
+     * Configurable via chained methods on the returned [IgnitorDsl.Pulze] — `.duty(x)` (pulse width),
+     * `.flankSamples(x)` / `.riseFlank(x)` / `.fallFlank(x)` (edge shape), plus `.analog(x)`. Put shape
+     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
+     *
+     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     *
+     * ```KlangScript
+     * Osc.square().duty(0.3).flankSamples(4.0)
+     * ```
      */
     @KlangScript.Method
-    fun square(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
+    fun square(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl.Pulze =
         IgnitorDsl.Pulze(freq = freq.toIgnitorDsl())
 
     /**
-     * Creates a triangle wave oscillator.
+     * Creates a triangle wave oscillator. No shape knobs (its flanks are fixed fully-open); use `.analog(x)`
+     * via the base osc methods if you want drift.
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
@@ -83,10 +103,18 @@ object KlangScriptOsc {
 
     /**
      * Creates a ramp (reverse sawtooth) wave oscillator.
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     *
+     * Configurable via `.resetSamples(x)` / `.shapeMax(x)` (analog flyback shape) and `.analog(x)` on the
+     * returned [IgnitorDsl.Ramp]. Put shape config first, then base wrappers last.
+     *
+     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     *
+     * ```KlangScript
+     * Osc.ramp().resetSamples(4.0).analog(5.0)
+     * ```
      */
     @KlangScript.Method
-    fun ramp(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
+    fun ramp(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl.Ramp =
         IgnitorDsl.Ramp(freq = freq.toIgnitorDsl())
 
     /**
@@ -115,7 +143,7 @@ object KlangScriptOsc {
 
     /**
      * Creates a raw pulse ("pulze") — naive/aliased pulse with variable duty cycle (the raw
-     * counterpart of [square]/[pulse]).
+     * counterpart of [square]).
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
@@ -128,128 +156,228 @@ object KlangScriptOsc {
 
     // ── Noise Sources ────────────────────────────────────────────────────────
 
-    /** Creates a white noise source (flat spectrum). Each call yields a fresh DSL instance. */
+    /**
+     * Creates a white noise source. Each call yields a fresh DSL instance.
+     * @param color spectral tilt: 0 = flat white (default), <0 darkens toward pink/brown, >0 brightens (−1..1).
+     */
     @KlangScript.Method
-    fun whitenoise(): IgnitorDsl = IgnitorDsl.WhiteNoise()
+    fun whitenoise(color: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.WhiteNoise(color = color.toIgnitorDsl())
 
-    /** Creates a brown noise source (1/f^2 spectrum, deeper). Each call yields a fresh DSL instance. */
+    /**
+     * Creates a brown noise source (1/f^2 spectrum, deeper). Each call yields a fresh DSL instance.
+     * @param depth per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter.
+     */
     @KlangScript.Method
-    fun brownnoise(): IgnitorDsl = IgnitorDsl.BrownNoise()
+    fun brownnoise(depth: IgnitorDslLike = 0.02): IgnitorDsl =
+        IgnitorDsl.BrownNoise(depth = depth.toIgnitorDsl())
 
     /** Creates a pink noise source (1/f spectrum). Each call yields a fresh DSL instance. */
     @KlangScript.Method
     fun pinknoise(): IgnitorDsl = IgnitorDsl.PinkNoise()
 
-    /** Creates a Perlin noise source (smooth organic noise). */
+    /**
+     * Creates a Perlin noise source (smooth organic noise).
+     * @param rate walk speed (default 1.0).
+     * @param octaves fractal-Brownian-motion octaves: 1 = plain (default), higher = more detail (capped at 8).
+     * @param persistence fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves).
+     */
     @KlangScript.Method
-    fun perlin(rate: IgnitorDslLike = 1.0): IgnitorDsl =
-        IgnitorDsl.PerlinNoise(rate = rate.toIgnitorDsl())
+    fun perlin(
+        rate: IgnitorDslLike = 1.0,
+        octaves: IgnitorDslLike = 1.0,
+        persistence: IgnitorDslLike = 0.5,
+    ): IgnitorDsl =
+        IgnitorDsl.PerlinNoise(
+            rate = rate.toIgnitorDsl(),
+            octaves = octaves.toIgnitorDsl(),
+            persistence = persistence.toIgnitorDsl(),
+        )
 
-    /** Creates a Berlin noise source (piecewise-linear interpolated noise). */
+    /**
+     * Creates a Berlin noise source (piecewise-linear interpolated noise).
+     * @param rate walk speed (default 1.0).
+     * @param octaves fBm octaves: 1 = plain (default), higher = more detail (capped at 8).
+     * @param persistence fBm amplitude falloff per octave (default 0.5).
+     */
     @KlangScript.Method
-    fun berlin(rate: IgnitorDslLike = 1.0): IgnitorDsl =
-        IgnitorDsl.BerlinNoise(rate = rate.toIgnitorDsl())
+    fun berlin(
+        rate: IgnitorDslLike = 1.0,
+        octaves: IgnitorDslLike = 1.0,
+        persistence: IgnitorDslLike = 0.5,
+    ): IgnitorDsl =
+        IgnitorDsl.BerlinNoise(
+            rate = rate.toIgnitorDsl(),
+            octaves = octaves.toIgnitorDsl(),
+            persistence = persistence.toIgnitorDsl(),
+        )
 
-    /** Creates a dust source (sparse random impulses). */
+    /**
+     * Creates a dust source (sparse random impulses).
+     * @param density impulse rate 0..1.
+     * @param tail heavy-tailed amplitude exponent: 1 = uniform (default), >1 = mostly-tiny / rare-loud (vinyl pops).
+     * @param bipolar random ±sign when > 0.5; default 0 = unipolar.
+     */
     @KlangScript.Method
-    fun dust(density: IgnitorDslLike = 0.2): IgnitorDsl =
-        IgnitorDsl.Dust(density = density.toIgnitorDsl())
+    fun dust(
+        density: IgnitorDslLike = 0.2,
+        tail: IgnitorDslLike = 1.0,
+        bipolar: IgnitorDslLike = 0.0,
+    ): IgnitorDsl =
+        IgnitorDsl.Dust(
+            density = density.toIgnitorDsl(),
+            tail = tail.toIgnitorDsl(),
+            bipolar = bipolar.toIgnitorDsl(),
+        )
 
-    /** Creates a crackle source (noise bursts). */
+    /**
+     * Creates a crackle source (chaotic recurrence → bipolar pops).
+     * @param chaos drives the chaotic map: ~1.0 sparse, 1.5 = clear crackle (default), ~2.0 dense/noisy.
+     */
     @KlangScript.Method
-    fun crackle(density: IgnitorDslLike = 0.2): IgnitorDsl =
-        IgnitorDsl.Crackle(density = density.toIgnitorDsl())
+    fun crackle(chaos: IgnitorDslLike = 1.5): IgnitorDsl =
+        IgnitorDsl.Crackle(chaos = chaos.toIgnitorDsl())
 
     // ── Super Oscillators ────────────────────────────────────────────────────
 
     /**
-     * Creates a supersaw (multiple detuned sawtooth oscillators).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * Creates a supersaw (multiple detuned sawtooth voices).
+     *
+     * The common settings are optional params; the rest are chained config methods on the returned
+     * [IgnitorDsl.SuperSaw] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
+     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
+     *
+     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
      * @param voices number of detuned voices (default 8).
-     * @param freqSpread frequency spread between voices (default 0.2).
+     * @param spread unison frequency spread between voices (default 0.2).
+     *
+     * ```KlangScript
+     * Osc.supersaw(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * ```
      */
     @KlangScript.Method
     fun supersaw(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = 8.0,
-        freqSpread: IgnitorDslLike = 0.2,
-    ): IgnitorDsl =
+        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
+        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
+    ): IgnitorDsl.SuperSaw =
         IgnitorDsl.SuperSaw(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
-            freqSpread = freqSpread.toIgnitorDsl(),
+            spread = spread.toIgnitorDsl(),
         )
 
     /**
      * Creates a supersine (multiple detuned sine oscillators).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     *
+     * The common settings are optional params; the rest are chained config methods on the returned
+     * [IgnitorDsl.SuperSine] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
+     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
+     *
+     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
      * @param voices number of detuned voices (default 8).
-     * @param freqSpread frequency spread between voices (default 0.2).
+     * @param spread unison frequency spread between voices (default 0.2).
+     *
+     * ```KlangScript
+     * Osc.supersine(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * ```
      */
     @KlangScript.Method
     fun supersine(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = 8.0,
-        freqSpread: IgnitorDslLike = 0.2,
-    ): IgnitorDsl =
+        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
+        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
+    ): IgnitorDsl.SuperSine =
         IgnitorDsl.SuperSine(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
-            freqSpread = freqSpread.toIgnitorDsl(),
+            spread = spread.toIgnitorDsl(),
         )
 
     /**
      * Creates a supersquare (multiple detuned square oscillators).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     *
+     * The common settings are optional params; the rest are chained config methods on the returned
+     * [IgnitorDsl.SuperSquare] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
+     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
+     *
+     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
      * @param voices number of detuned voices (default 8).
-     * @param freqSpread frequency spread between voices (default 0.2).
+     * @param spread unison frequency spread between voices (default 0.2).
+     *
+     * ```KlangScript
+     * Osc.supersquare(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * ```
      */
     @KlangScript.Method
     fun supersquare(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = 8.0,
-        freqSpread: IgnitorDslLike = 0.2,
-    ): IgnitorDsl =
+        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
+        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
+    ): IgnitorDsl.SuperSquare =
         IgnitorDsl.SuperSquare(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
-            freqSpread = freqSpread.toIgnitorDsl(),
+            spread = spread.toIgnitorDsl(),
         )
 
     /**
      * Creates a supertri (multiple detuned triangle oscillators).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     *
+     * The common settings are optional params; the rest are chained config methods on the returned
+     * [IgnitorDsl.SuperTri] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
+     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
+     *
+     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
      * @param voices number of detuned voices (default 8).
-     * @param freqSpread frequency spread between voices (default 0.2).
+     * @param spread unison frequency spread between voices (default 0.2).
+     *
+     * ```KlangScript
+     * Osc.supertri(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * ```
      */
     @KlangScript.Method
     fun supertri(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = 8.0,
-        freqSpread: IgnitorDslLike = 0.2,
-    ): IgnitorDsl =
+        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
+        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
+    ): IgnitorDsl.SuperTri =
         IgnitorDsl.SuperTri(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
-            freqSpread = freqSpread.toIgnitorDsl(),
+            spread = spread.toIgnitorDsl(),
         )
 
     /**
-     * Creates a superramp (multiple detuned ramp oscillators).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * Creates a superramp (multiple detuned ramp oscillators — the mirror of [supersaw]).
+     *
+     * The common settings are optional params; the rest are chained config methods on the returned
+     * [IgnitorDsl.SuperRamp] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
+     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
+     *
+     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
      * @param voices number of detuned voices (default 8).
-     * @param freqSpread frequency spread between voices (default 0.2).
+     * @param spread unison frequency spread between voices (default 0.2).
+     *
+     * ```KlangScript
+     * Osc.superramp(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * ```
      */
     @KlangScript.Method
     fun superramp(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = 8.0,
-        freqSpread: IgnitorDslLike = 0.2,
-    ): IgnitorDsl =
+        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
+        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
+    ): IgnitorDsl.SuperRamp =
         IgnitorDsl.SuperRamp(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
-            freqSpread = freqSpread.toIgnitorDsl(),
+            spread = spread.toIgnitorDsl(),
         )
 
     // ── Physical Models ──────────────────────────────────────────────────────
@@ -282,7 +410,7 @@ object KlangScriptOsc {
      * Creates a unison Karplus-Strong plucked string model.
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      * @param voices number of detuned voices (default 8).
-     * @param freqSpread frequency spread between voices (default 0.2).
+     * @param spread frequency spread between voices (default 0.2).
      * @param decay loop decay per pass (default 0.996). Higher = longer sustain (0..1).
      * @param brightness initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright.
      * @param pickPosition relative pick position along the string (default 0.5). 0 = bridge, 1 = nut.
@@ -292,7 +420,7 @@ object KlangScriptOsc {
     fun superpluck(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
         voices: IgnitorDslLike = 8.0,
-        freqSpread: IgnitorDslLike = 0.2,
+        spread: IgnitorDslLike = 0.2,
         decay: IgnitorDslLike = 0.996,
         brightness: IgnitorDslLike = 0.5,
         pickPosition: IgnitorDslLike = 0.5,
@@ -301,7 +429,7 @@ object KlangScriptOsc {
         IgnitorDsl.SuperPluck(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
-            freqSpread = freqSpread.toIgnitorDsl(),
+            spread = spread.toIgnitorDsl(),
             decay = decay.toIgnitorDsl(),
             brightness = brightness.toIgnitorDsl(),
             pickPosition = pickPosition.toIgnitorDsl(),

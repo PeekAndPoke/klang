@@ -114,6 +114,8 @@ class LangNfsustainSpec : StringSpec({
             "script string.nfs(ctrl)" to SprudelPattern.compile(""""$pat".nfs("$ctrl")"""),
             "nfs(ctrl)" to seq(pat).apply(nfs(ctrl)),
             "script nfs(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfs("$ctrl"))"""),
+            "chained nfs(ctrl)" to seq(pat).apply(nfs(ctrl).nfs(ctrl)),
+            "script chained nfs(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfs("$ctrl").nfs("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfsustain shouldBe 0.5

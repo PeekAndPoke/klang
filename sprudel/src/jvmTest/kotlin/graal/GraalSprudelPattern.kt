@@ -116,7 +116,7 @@ class GraalSprudelPattern(
             value.safeGetMember("density").safeNumberOrNull()?.let { put("density", it) }
             value.safeGetMember("unison").safeNumberOrNull()?.let { put("voices", it) }
             value.safeGetMember("spread").safeNumberOrNull()?.let { put("panSpread", it) }
-            value.safeGetMember("detune").safeNumberOrNull()?.let { put("freqSpread", it) }
+            value.safeGetMember("spread").safeNumberOrNull()?.let { put("spread", it) }
             value.safeGetMember("warmth").safeNumberOrNull()?.let { put("warmth", it) }
         }.ifEmpty { null }
 

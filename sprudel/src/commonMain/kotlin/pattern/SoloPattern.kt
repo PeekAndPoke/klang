@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.sprudel.lang.addons.pattern
+package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.common.math.CycleTime

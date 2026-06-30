@@ -19,6 +19,13 @@ package io.peekandpoke.klang.script.types
  * @param isTypeAlias Whether this type is an alias for another type
  * @param isNullable Whether this type is nullable
  * @param unionMembers Members of a union type (e.g., String | Number), or null if not a union
+ * @param supertypes Transitive script-registered supertypes of this type (`kotlin.*`
+ *   ancestors excluded), emitted by KSP for return/property types. Lets the static
+ *   type-inferrer resolve a base-type method on a narrowed subtype receiver — e.g.
+ *   `Osc.supersaw()` returns `IgnitorDsl.SuperSaw`, yet `.lowpass()`/`.adsr()` are
+ *   registered on `IgnitorDsl`. Mirrors the runtime's reflective supertype walk
+ *   (`Environment.getAllRegisteredSupertypes`). Empty for primitives and types built
+ *   by hand (e.g. in tests), so receiver matching is unchanged for those.
  */
 data class KlangType(
     val simpleName: String,
@@ -26,6 +33,7 @@ data class KlangType(
     val isTypeAlias: Boolean = false,
     val isNullable: Boolean = false,
     val unionMembers: List<KlangType>? = null,
+    val supertypes: List<KlangType> = emptyList(),
 ) {
     /** Whether this type is a union type. */
     val isUnion: Boolean get() = !unionMembers.isNullOrEmpty()

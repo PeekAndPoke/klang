@@ -59,6 +59,10 @@ class LangOscparamSpec : StringSpec({
                     seq(pat).apply(oscp("mykey", ctrl)),
             "script oscp(key, ctrl)" to
                     SprudelPattern.compile("""seq("$pat").apply(oscp("mykey", "$ctrl"))"""),
+            "chained oscp(key, ctrl)" to
+                    seq(pat).apply(oscp("mykey", ctrl).oscp("mykey", ctrl)),
+            "script chained oscp(key, ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").apply(oscp("mykey", "$ctrl").oscp("mykey", "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("mykey") shouldBe 0.1

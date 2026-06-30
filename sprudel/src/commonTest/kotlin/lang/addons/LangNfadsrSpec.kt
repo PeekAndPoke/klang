@@ -33,6 +33,10 @@ class LangNfadsrSpec : StringSpec({
                     note(pat).apply(nfadsr(ctrl)),
             "script nfadsr(ctrl)" to
                     SprudelPattern.compile("""note("$pat").apply(nfadsr("$ctrl"))"""),
+            "chained nfadsr(ctrl)" to
+                    note(pat).apply(nfadsr(ctrl).nfadsr(ctrl)),
+            "script chained nfadsr(ctrl)" to
+                    SprudelPattern.compile("""note("$pat").apply(nfadsr("$ctrl").nfadsr("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {

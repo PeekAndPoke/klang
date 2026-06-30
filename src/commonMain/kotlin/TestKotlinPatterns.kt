@@ -14,7 +14,6 @@ import io.peekandpoke.klang.sprudel.lang.clip
 import io.peekandpoke.klang.sprudel.lang.delay
 import io.peekandpoke.klang.sprudel.lang.delayfeedback
 import io.peekandpoke.klang.sprudel.lang.delaytime
-import io.peekandpoke.klang.sprudel.lang.detune
 import io.peekandpoke.klang.sprudel.lang.distort
 import io.peekandpoke.klang.sprudel.lang.early
 import io.peekandpoke.klang.sprudel.lang.fast
@@ -26,6 +25,7 @@ import io.peekandpoke.klang.sprudel.lang.n
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.orbit
 import io.peekandpoke.klang.sprudel.lang.pan
+import io.peekandpoke.klang.sprudel.lang.panSpread
 import io.peekandpoke.klang.sprudel.lang.perlin
 import io.peekandpoke.klang.sprudel.lang.range
 import io.peekandpoke.klang.sprudel.lang.room
@@ -85,8 +85,8 @@ object TestKotlinPatterns {
         ).sound("supersaw")
             .filterWhen(predicate = { it >= 31.5 })
 //            .struct("<x*2>")
-            .spread(0.5).unison(sine.range(4, 12).slow(32))
-            .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
+            .panSpread(0.5).unison(sine.range(4, 12).slow(32))
+            .spread(sine.range(0.05, 0.3).early(1.5).slow(12))
             .orbit(2).gain(0.55)
             .pan(sine.slow(48).range(0.3, 0.7))
             .adsr("0.01:0.3:0.4:0.5")
@@ -150,7 +150,7 @@ object TestKotlinPatterns {
         // bass
         note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
             .orbit(3)
-            .sound("supersaw").unison(4).detune(0.1)
+            .sound("supersaw").unison(4).spread(0.1)
             .adsr("0.0:0.3:0.0:0.8")
             .lpf(800)
             .gain(0.7).pan(-0.5),
@@ -168,7 +168,7 @@ object TestKotlinPatterns {
             .scale("<c3:major>/2")
             .s("supersaw")
             .distort(0.7)
-            .superimpose({ x -> x.detune("<0.5>") })
+            .superimpose({ x -> x.spread("<0.5>") })
 //        .lpenv(perlin.slow(3).range(1, 4))
             .lpf(perlin.range(100, 2000).slow(4))
             .gain(0.3),

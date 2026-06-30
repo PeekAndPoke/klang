@@ -114,6 +114,8 @@ class LangNresonanceSpec : StringSpec({
             "script string.notchq(ctrl)" to SprudelPattern.compile(""""$pat".notchq("$ctrl")"""),
             "notchq(ctrl)" to seq(pat).apply(notchq(ctrl)),
             "script notchq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notchq("$ctrl"))"""),
+            "chained notchq(ctrl)" to seq(pat).apply(notchq(ctrl).notchq(ctrl)),
+            "script chained notchq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notchq("$ctrl").notchq("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nresonance shouldBe 0.5

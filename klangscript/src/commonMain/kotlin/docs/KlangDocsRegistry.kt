@@ -140,9 +140,14 @@ class KlangDocsRegistry {
      */
     fun getCallable(name: String, receiverType: KlangType?): KlangCallable? {
         val symbol = _symbols[name] ?: return null
-        return symbol.variants
-            .filterIsInstance<KlangCallable>()
-            .firstOrNull { typeMatches(it.receiver, receiverType) }
+        val callables = symbol.variants.filterIsInstance<KlangCallable>()
+        // Try the receiver's own type first, then its supertypes (most-specific wins),
+        // so an inherited base-type method (e.g. `IgnitorDsl.lowpass`) resolves on a
+        // narrowed subtype receiver (e.g. `IgnitorDsl.SuperSaw`).
+        for (candidate in receiverChain(receiverType)) {
+            callables.firstOrNull { typeMatches(it.receiver, candidate) }?.let { return it }
+        }
+        return null
     }
 
     /**
@@ -153,13 +158,14 @@ class KlangDocsRegistry {
      * @return Matching symbols sorted by name
      */
     fun getVariantsForReceiver(receiverType: KlangType): List<KlangSymbol> {
+        val chain = receiverChain(receiverType)
         return _symbols.values.filter { symbol ->
             symbol.variants.any { variant ->
                 val owner = when (variant) {
                     is KlangCallable -> variant.receiver
                     is KlangProperty -> variant.owner
                 }
-                typeMatches(owner, receiverType)
+                chain.any { typeMatches(owner, it) }
             }
         }.sortedBy { it.name }
     }
@@ -180,12 +186,13 @@ class KlangDocsRegistry {
     fun getSymbolWithReceiver(name: String, receiverType: KlangType?): KlangSymbol? {
         val symbol = _symbols[name] ?: return null
         if (receiverType == null) return symbol
+        val chain = receiverChain(receiverType)
         val filtered = symbol.variants.filter { variant ->
             val owner = when (variant) {
                 is KlangCallable -> variant.receiver
                 is KlangProperty -> variant.owner
             }
-            typeMatches(owner, receiverType)
+            chain.any { typeMatches(owner, it) }
         }
         if (filtered.isEmpty()) return null
         // Promote the filtered variant's library into the symbol's origin so the
@@ -199,6 +206,20 @@ class KlangDocsRegistry {
         }
         return symbol.copy(variants = filtered, origin = newOrigin)
     }
+
+    /**
+     * The query type followed by its (script-registered) supertypes, most-specific
+     * first. Receiver-matched lookups walk this chain so a narrowed subtype receiver
+     * falls through to the base type that actually declares an inherited method
+     * (e.g. `IgnitorDsl.SuperSaw` → `IgnitorDsl`). A null query yields a single null
+     * element (top-level lookup).
+     *
+     * [KlangType.supertypes] is populated by KSP only for inferred return/property
+     * types; hand-built query types carry none, so this collapses to `[query]` and
+     * matching behaves exactly as before.
+     */
+    private fun receiverChain(query: KlangType?): List<KlangType?> =
+        if (query == null) listOf(null) else listOf(query) + query.supertypes
 
     /**
      * Match a registered owner type against a query type.

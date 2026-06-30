@@ -1,5 +1,30 @@
 # Engine DSL — configurable engines & oscillators from KlangScript
 
+> **STATUS (2026-06-30, branch `dsl-enhancements`).** The code DSL was renamed `EngineDsl` → **`PipelineDsl`**
+> in Phase 1; this doc keeps the original name for continuity.
+> - **Phase 1 (PipelineDsl) — DONE + committed.** Data-driven pipeline + `modern`/`pedal` + Vca/Filter character
+    > threaded + by-name registration (per-playback, fork-ready) + KlangScript `Engine`/`Stage` surface + the inline
+    > `.pipeline(dsl)` application path. (Rename + handover details archived alongside this file.)
+> - **Phase 2 oscillator SOURCES — DONE (uncommitted).** The whole super-* unison family
+    > (`supersaw/ramp/sine/square/tri`: `spreadPower/sideAtten/gainJitter/centerJitter` + `Slots` unification) and the
+    > single shape oscillators (`saw`/`ramp`/`square`(`Pulze`)/`triangle`: `resetSamples/shapeMax` resp.
+    > `flankSamples/riseFlank/fallFlank`) are now typed `IgnitorDsl` subtypes with chained config methods, dual-language
+    > specs, and the **static supertype inferrer** (so base `.lowpass()`/`.adsr()` still resolve on a narrowed osc).
+    > `WaveIgnitor` gained a `shapeMax` param. Defaults == the engine constants (guarded by `SuperOscDefaultsSyncSpec`
+    >
+
++ `WaveOscDefaultsSyncSpec`), so behavior-preserving. Detailed osc working notes:
+  > `docs/tasks-archive/2026-06/20260630-osc-dsl-phase2.md`.
+
+> - **Phase 2 STILL OPEN (deferred):** configurable *wrappers* — `IgnitorDsl.Adsr` (declick/expK/curves) and
+    > `Lowpass/Highpass/Bandpass` feel knobs (§2.1) — and the **analog-drift carriers** (the ~5 musical drift params,
+    > bucket E). Sine/impulse/zaw/zamp/noise have no tunable character → intentionally untouched. `pluck/superpluck`
+    > character is already ctor fields → chained-method consistency is optional.
+> - **Phase 3 (`Osc.EngineDefault` + engine tuning profile) is NEXT** — the oscillator sources now expose every knob
+    > an engine profile would default. NOTE the wrinkle: the character knobs are plain `Double` (not `IgnitorDsl`
+    > nodes), so the `EngineDefault` sentinel slots cleanly into the node fields (`freq/voices/spread/analog`) but the
+    > `Double` knobs need a parallel resolution path.
+
 ## Context
 
 Tuning the Motör engine today means: edit an `internal const val` → recompile → listen. There are **~67**
