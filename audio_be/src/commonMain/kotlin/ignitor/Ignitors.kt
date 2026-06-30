@@ -125,6 +125,10 @@ object Ignitors {
         private val duty: Ignitor = ConstantIgnitor(0.5),
         private val riseFlank: Double = 0.0,
         private val fallFlank: Double = 0.0,
+        // SAW-only: caps the saw flyback fraction; read solely in the WaveKind.SAW branch. The PULSE kind
+        // (square/triangle) ignores it — no per-shape WaveIgnitor split needed since the DSL types already
+        // separate SAW (Sawtooth/Ramp expose shapeMax) from PULSE (Pulze/Triangle don't).
+        private val shapeMax: Double = SAW_SHAPE_MAX,
     ) : Ignitor {
         private val voice = WaveVoiceState()
         private var driftInit = false
@@ -146,7 +150,7 @@ object Ignitors {
             if (kind == WaveKind.SAW) {
                 if (dt != lastDt) {
                     lastDt = dt
-                    voice.setSawShape((flankSamples * dt).coerceAtMost(SAW_SHAPE_MAX))
+                    voice.setSawShape((flankSamples * dt).coerceAtMost(shapeMax))
                 }
                 renderHoisted(buffer, off, end, dt, pm)
                 return
@@ -219,13 +223,21 @@ object Ignitors {
     fun sawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = WaveIgnitor(freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = SAW_RESET_SAMPLES)
+        resetSamples: Double = SAW_RESET_SAMPLES,
+        shapeMax: Double = SAW_SHAPE_MAX,
+    ): Ignitor = WaveIgnitor(
+        freq, analog, WaveKind.SAW, polarity = 1.0, flankSamples = resetSamples, shapeMax = shapeMax,
+    )
 
     /** Reverse sawtooth — the negated [sawtooth] (own `RAMP_RESET_SAMPLES` flyback knob). */
     fun ramp(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = WaveIgnitor(freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = RAMP_RESET_SAMPLES)
+        resetSamples: Double = RAMP_RESET_SAMPLES,
+        shapeMax: Double = RAMP_SHAPE_MAX,
+    ): Ignitor = WaveIgnitor(
+        freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = resetSamples, shapeMax = shapeMax,
+    )
 
     /** Square wave — a 50%-duty [pulze] (Kotlin convenience; the DSL drives `duty` via an osc-param). */
     fun square(
@@ -339,9 +351,12 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         duty: Ignitor = dutyDefault,
         analog: Ignitor = analogDefault,
+        flankSamples: Double = PULSE_MIN_FLANK_SAMPLES,
+        riseFlank: Double = PULSE_RISE_FLANK,
+        fallFlank: Double = PULSE_FALL_FLANK,
     ): Ignitor = WaveIgnitor(
-        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
-        duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK,
+        freq, analog, WaveKind.PULSE, polarity = 1.0, flankSamples = flankSamples,
+        duty = duty, riseFlank = riseFlank, fallFlank = fallFlank,
     )
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
@@ -732,11 +747,15 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
-        rng: Random = Random
+        rng: Random = Random,
+        sideAtten: Double = SUPERSINE_SIDE_ATTEN,
+        gainJitter: Double = SUPERSINE_GAIN_JITTER,
+        spreadPower: Double = SUPERSINE_SPREAD_POWER,
+        centerJitterScale: Double = SUPERSINE_CENTER_JITTER_SCALE,
     ): Ignitor = SineStackIgnitor(
         freq, voices, detune, analog, rng,
-        sideAtten = SUPERSINE_SIDE_ATTEN, gainJitter = SUPERSINE_GAIN_JITTER, spreadPower = SUPERSINE_SPREAD_POWER,
-        centerJitterScale = SUPERSINE_CENTER_JITTER_SCALE,
+        sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+        centerJitterScale = centerJitterScale,
     )
 
     /**
@@ -751,12 +770,16 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
-        rng: Random = Random
+        rng: Random = Random,
+        sideAtten: Double = SUPERSQUARE_SIDE_ATTEN,
+        gainJitter: Double = SUPERSQUARE_GAIN_JITTER,
+        spreadPower: Double = SUPERSQUARE_SPREAD_POWER,
+        centerJitterScale: Double = SUPERSQUARE_CENTER_JITTER_SCALE,
     ): Ignitor = PulseStackIgnitor(
         freq, voices, detune, analog, rng,
         polarity = 1.0,
-        sideAtten = SUPERSQUARE_SIDE_ATTEN, gainJitter = SUPERSQUARE_GAIN_JITTER, spreadPower = SUPERSQUARE_SPREAD_POWER,
-        centerJitterScale = SUPERSQUARE_CENTER_JITTER_SCALE,
+        sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+        centerJitterScale = centerJitterScale,
         duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
@@ -771,12 +794,16 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
-        rng: Random = Random
+        rng: Random = Random,
+        sideAtten: Double = SUPERTRI_SIDE_ATTEN,
+        gainJitter: Double = SUPERTRI_GAIN_JITTER,
+        spreadPower: Double = SUPERTRI_SPREAD_POWER,
+        centerJitterScale: Double = SUPERTRI_CENTER_JITTER_SCALE,
     ): Ignitor = PulseStackIgnitor(
         freq, voices, detune, analog, rng,
         polarity = 1.0,
-        sideAtten = SUPERTRI_SIDE_ATTEN, gainJitter = SUPERTRI_GAIN_JITTER, spreadPower = SUPERTRI_SPREAD_POWER,
-        centerJitterScale = SUPERTRI_CENTER_JITTER_SCALE,
+        sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+        centerJitterScale = centerJitterScale,
         duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
@@ -791,12 +818,16 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
-        rng: Random = Random
+        rng: Random = Random,
+        sideAtten: Double = SUPERRAMP_SIDE_ATTEN,
+        gainJitter: Double = SUPERRAMP_GAIN_JITTER,
+        spreadPower: Double = SUPERRAMP_SPREAD_POWER,
+        centerJitterScale: Double = SUPERRAMP_CENTER_JITTER_SCALE,
     ): Ignitor = SawStackIgnitor(
         freq, voices, detune, analog, rng,
         polarity = -1.0,
-        sideAtten = SUPERRAMP_SIDE_ATTEN, gainJitter = SUPERRAMP_GAIN_JITTER, spreadPower = SUPERRAMP_SPREAD_POWER,
-        centerJitterScale = SUPERRAMP_CENTER_JITTER_SCALE,
+        sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
+        centerJitterScale = centerJitterScale,
         resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
     )
 

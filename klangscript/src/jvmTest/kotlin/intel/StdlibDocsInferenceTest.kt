@@ -53,9 +53,11 @@ class StdlibDocsInferenceTest : StringSpec({
         inferrer.inferType(parseExpr("Osc.sine()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.saw() returns IgnitorDsl" {
+    "real stdlib: Osc.saw() returns the narrow Sawtooth subtype" {
+        // Phase 2: saw() narrows to IgnitorDsl.Sawtooth so the shape config methods (.resetSamples/.shapeMax)
+        // are discoverable; the supertype walk keeps the base IgnitorDsl methods (.lowpass/.adsr) resolvable.
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.saw()"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Osc.saw()"))?.simpleName shouldBe "Sawtooth"
     }
 
     "real stdlib: Osc.supersaw() returns the narrow SuperSaw subtype" {

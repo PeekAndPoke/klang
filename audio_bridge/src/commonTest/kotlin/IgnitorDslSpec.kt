@@ -28,10 +28,12 @@ class IgnitorDslSpec : StringSpec({
     }
 
     "Variants.collectParams unions over children" {
+        // analog is given an explicit Constant so the oscillators' default Slots.analog Param leaf
+        // doesn't enter the union — this test is about the freq Params.
         val dsl = IgnitorDsl.Variants(
             listOf(
-                IgnitorDsl.Sine(freq = IgnitorDsl.Param("a", 440.0)),
-                IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("b", 220.0)),
+                IgnitorDsl.Sine(freq = IgnitorDsl.Param("a", 440.0), analog = IgnitorDsl.Constant(0.0)),
+                IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("b", 220.0), analog = IgnitorDsl.Constant(0.0)),
             )
         )
         val params = mutableListOf<IgnitorDsl.Param>()
@@ -57,8 +59,8 @@ class IgnitorDslSpec : StringSpec({
     "getParamSlots returns exactly the Params collectParams gathers" {
         val dsl = IgnitorDsl.Variants(
             listOf(
-                IgnitorDsl.Sine(freq = IgnitorDsl.Param("a", 440.0)),
-                IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("b", 220.0)),
+                IgnitorDsl.Sine(freq = IgnitorDsl.Param("a", 440.0), analog = IgnitorDsl.Constant(0.0)),
+                IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("b", 220.0), analog = IgnitorDsl.Constant(0.0)),
             )
         )
         val viaCollect = mutableListOf<IgnitorDsl.Param>().also { dsl.collectParams(it) }
@@ -67,6 +69,8 @@ class IgnitorDslSpec : StringSpec({
     }
 
     "getParamSlots is empty when the tree has no Param leaves" {
-        IgnitorDsl.Sine(freq = IgnitorDsl.Constant(440.0)).getParamSlots() shouldBe emptyList()
+        // analog defaults to the Slots.analog Param, so pin it to a Constant to get a Param-free tree.
+        IgnitorDsl.Sine(freq = IgnitorDsl.Constant(440.0), analog = IgnitorDsl.Constant(0.0))
+            .getParamSlots() shouldBe emptyList()
     }
 })

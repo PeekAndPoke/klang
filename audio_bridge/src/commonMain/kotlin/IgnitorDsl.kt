@@ -120,7 +120,7 @@ sealed interface IgnitorDsl {
     @WireName("sine")
     data class Sine(
         val freq: IgnitorDsl = Freq,
-        val analog: IgnitorDsl = Constant(0.0),
+        val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -131,7 +131,11 @@ sealed interface IgnitorDsl {
     @WireName("sawtooth")
     data class Sawtooth(
         val freq: IgnitorDsl = Freq,
-        val analog: IgnitorDsl = Constant(0.0),
+        val analog: IgnitorDsl = Slots.analog,
+        /** Analog flyback time in samples — lower = brighter/sharper reset, higher = softer (default 2.0). */
+        val resetSamples: Double = 2.0,
+        /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps very high notes sane. */
+        val shapeMax: Double = 0.5,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -146,7 +150,7 @@ sealed interface IgnitorDsl {
     @WireName("square")
     data class Square(
         val freq: IgnitorDsl = Freq,
-        val analog: IgnitorDsl = Constant(0.0),
+        val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -157,7 +161,10 @@ sealed interface IgnitorDsl {
     @WireName("triangle")
     data class Triangle(
         val freq: IgnitorDsl = Freq,
-        val analog: IgnitorDsl = Constant(0.0),
+        val analog: IgnitorDsl = Slots.analog,
+        // No shape knobs: the triangle is the pulse engine with both flanks fully open (rise = fall = 1.0),
+        // which makes the min-flank floor (PULSE_MIN_FLANK_SAMPLES) always overridden — there is nothing
+        // tunable here (see Ignitors.triangle / WaveVoiceState.setPulseShape). Stays a plain oscillator.
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -182,7 +189,7 @@ sealed interface IgnitorDsl {
     @WireName("zawtooth")
     data class Zawtooth(
         val freq: IgnitorDsl = Freq,
-        val analog: IgnitorDsl = Constant(0.0),
+        val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -193,7 +200,7 @@ sealed interface IgnitorDsl {
     @WireName("zamp")
     data class Zamp(
         val freq: IgnitorDsl = Freq,
-        val analog: IgnitorDsl = Constant(0.0),
+        val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -204,7 +211,7 @@ sealed interface IgnitorDsl {
     @WireName("impulse")
     data class Impulse(
         val freq: IgnitorDsl = Freq,
-        val analog: IgnitorDsl = Constant(0.0),
+        val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -215,8 +222,14 @@ sealed interface IgnitorDsl {
     @WireName("pulze")
     data class Pulze(
         val freq: IgnitorDsl = Freq,
-        val duty: IgnitorDsl = Constant(0.5),
-        val analog: IgnitorDsl = Constant(0.0),
+        val duty: IgnitorDsl = Slots.duty,
+        val analog: IgnitorDsl = Slots.analog,
+        /** Minimum flank length in samples (a floor on every edge → softens with pitch). Default 2.0. */
+        val flankSamples: Double = 2.0,
+        /** Rising-edge flank fraction of the plateau (0 = sharpest/min floor, 1 = full ramp). Default 0.0. */
+        val riseFlank: Double = 0.0,
+        /** Falling-edge flank fraction of the plateau (0 = sharpest/min floor, 1 = full ramp). Default 0.0. */
+        val fallFlank: Double = 0.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); duty.collectParams(out); analog.collectParams(out)
@@ -230,8 +243,8 @@ sealed interface IgnitorDsl {
     @WireName("raw-pulze")
     data class RawPulze(
         val freq: IgnitorDsl = Freq,
-        val duty: IgnitorDsl = Constant(0.5),
-        val analog: IgnitorDsl = Constant(0.0),
+        val duty: IgnitorDsl = Slots.duty,
+        val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); duty.collectParams(out); analog.collectParams(out)
@@ -259,7 +272,7 @@ sealed interface IgnitorDsl {
     /** Perlin noise generator. Smooth, continuous random signal useful for organic modulation. */
     @WireName("perlin-noise")
     data class PerlinNoise(
-        val rate: IgnitorDsl = Constant(1.0),
+        val rate: IgnitorDsl = Slots.rate,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             rate.collectParams(out)
@@ -269,7 +282,7 @@ sealed interface IgnitorDsl {
     /** Berlin noise generator. Bipolar variant of Perlin noise (output ranges -1..+1). */
     @WireName("berlin-noise")
     data class BerlinNoise(
-        val rate: IgnitorDsl = Constant(1.0),
+        val rate: IgnitorDsl = Slots.rate,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             rate.collectParams(out)
@@ -279,7 +292,7 @@ sealed interface IgnitorDsl {
     /** Dust noise generator. Emits sparse random impulses at a controllable density. */
     @WireName("dust")
     data class Dust(
-        val density: IgnitorDsl = Constant(0.2),
+        val density: IgnitorDsl = Slots.density,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             density.collectParams(out)
@@ -289,7 +302,7 @@ sealed interface IgnitorDsl {
     /** Crackle noise generator. Similar to [Dust] but with bipolar impulses for a crackle texture. */
     @WireName("crackle")
     data class Crackle(
-        val density: IgnitorDsl = Constant(0.2),
+        val density: IgnitorDsl = Slots.density,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             density.collectParams(out)
@@ -300,7 +313,11 @@ sealed interface IgnitorDsl {
     @WireName("ramp")
     data class Ramp(
         val freq: IgnitorDsl = Freq,
-        val analog: IgnitorDsl = Constant(0.0),
+        val analog: IgnitorDsl = Slots.analog,
+        /** Analog flyback time in samples — lower = brighter/sharper reset, higher = softer (default 2.0). */
+        val resetSamples: Double = 2.0,
+        /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps high notes sane. */
+        val shapeMax: Double = 0.5,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -339,9 +356,18 @@ sealed interface IgnitorDsl {
     @WireName("supersine")
     data class SuperSine(
         val freq: IgnitorDsl = Freq,
-        val voices: IgnitorDsl = Constant(8.0),
-        val spread: IgnitorDsl = Constant(0.2),
-        val analog: IgnitorDsl = Constant(0.0),
+        val voices: IgnitorDsl = Slots.voices,
+        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        val spread: IgnitorDsl = Slots.spread,
+        val analog: IgnitorDsl = Slots.analog,
+        /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
+        val spreadPower: Double = 1.2,
+        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        val sideAtten: Double = 0.1,
+        /** Per-voice random amplitude offset (±fraction); 0 = off. */
+        val gainJitter: Double = 0.15,
+        /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
+        val centerJitterScale: Double = 0.4,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -352,9 +378,18 @@ sealed interface IgnitorDsl {
     @WireName("supersquare")
     data class SuperSquare(
         val freq: IgnitorDsl = Freq,
-        val voices: IgnitorDsl = Constant(8.0),
-        val spread: IgnitorDsl = Constant(0.2),
-        val analog: IgnitorDsl = Constant(0.0),
+        val voices: IgnitorDsl = Slots.voices,
+        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        val spread: IgnitorDsl = Slots.spread,
+        val analog: IgnitorDsl = Slots.analog,
+        /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
+        val spreadPower: Double = 1.2,
+        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        val sideAtten: Double = 0.1,
+        /** Per-voice random amplitude offset (±fraction); 0 = off. */
+        val gainJitter: Double = 0.15,
+        /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
+        val centerJitterScale: Double = 0.4,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -365,9 +400,18 @@ sealed interface IgnitorDsl {
     @WireName("supertri")
     data class SuperTri(
         val freq: IgnitorDsl = Freq,
-        val voices: IgnitorDsl = Constant(8.0),
-        val spread: IgnitorDsl = Constant(0.2),
-        val analog: IgnitorDsl = Constant(0.0),
+        val voices: IgnitorDsl = Slots.voices,
+        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        val spread: IgnitorDsl = Slots.spread,
+        val analog: IgnitorDsl = Slots.analog,
+        /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
+        val spreadPower: Double = 1.2,
+        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        val sideAtten: Double = 0.1,
+        /** Per-voice random amplitude offset (±fraction); 0 = off. */
+        val gainJitter: Double = 0.15,
+        /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
+        val centerJitterScale: Double = 0.4,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -378,9 +422,18 @@ sealed interface IgnitorDsl {
     @WireName("superramp")
     data class SuperRamp(
         val freq: IgnitorDsl = Freq,
-        val voices: IgnitorDsl = Constant(8.0),
-        val spread: IgnitorDsl = Constant(0.2),
-        val analog: IgnitorDsl = Constant(0.0),
+        val voices: IgnitorDsl = Slots.voices,
+        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        val spread: IgnitorDsl = Slots.spread,
+        val analog: IgnitorDsl = Slots.analog,
+        /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
+        val spreadPower: Double = 1.2,
+        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        val sideAtten: Double = 0.1,
+        /** Per-voice random amplitude offset (±fraction); 0 = off. */
+        val gainJitter: Double = 0.15,
+        /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
+        val centerJitterScale: Double = 0.4,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -401,11 +454,11 @@ sealed interface IgnitorDsl {
     @WireName("pluck")
     data class Pluck(
         val freq: IgnitorDsl = Freq,
-        val decay: IgnitorDsl = Constant(0.996),
-        val brightness: IgnitorDsl = Constant(0.5),
-        val pickPosition: IgnitorDsl = Constant(0.5),
-        val stiffness: IgnitorDsl = Constant(0.0),
-        val analog: IgnitorDsl = Constant(0.0),
+        val decay: IgnitorDsl = Slots.decay,
+        val brightness: IgnitorDsl = Slots.brightness,
+        val pickPosition: IgnitorDsl = Slots.pickPosition,
+        val stiffness: IgnitorDsl = Slots.stiffness,
+        val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); decay.collectParams(out); brightness.collectParams(out); pickPosition.collectParams(out)
@@ -417,13 +470,13 @@ sealed interface IgnitorDsl {
     @WireName("superpluck")
     data class SuperPluck(
         val freq: IgnitorDsl = Freq,
-        val voices: IgnitorDsl = Constant(8.0),
-        val spread: IgnitorDsl = Constant(0.2),
-        val decay: IgnitorDsl = Constant(0.996),
-        val brightness: IgnitorDsl = Constant(0.5),
-        val pickPosition: IgnitorDsl = Constant(0.5),
-        val stiffness: IgnitorDsl = Constant(0.0),
-        val analog: IgnitorDsl = Constant(0.0),
+        val voices: IgnitorDsl = Slots.voices,
+        val spread: IgnitorDsl = Slots.spread,
+        val decay: IgnitorDsl = Slots.decay,
+        val brightness: IgnitorDsl = Slots.brightness,
+        val pickPosition: IgnitorDsl = Slots.pickPosition,
+        val stiffness: IgnitorDsl = Slots.stiffness,
+        val analog: IgnitorDsl = Slots.analog,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); decay.collectParams(out); brightness.collectParams(

@@ -1,5 +1,13 @@
 # Phase 2 — typed oscillator subtype DSLs (supersaw first)
 
+> **ARCHIVED 2026-06-30 — all oscillator SOURCES done.** Every shape/character-bearing oscillator is now a typed
+> `IgnitorDsl` subtype with chained config methods + dual-language specs: the super-* unison family
+> (`supersaw/ramp/sine/square/tri`) and the single shape oscillators (`saw`/`ramp`/`square`(`Pulze`)/`triangle`).
+> The static supertype inferrer + `WaveIgnitor.shapeMax` landed too. Remaining Phase-2 items (configurable
+> *wrappers* `Adsr`/`Lowpass/Highpass/Bandpass`, and analog-drift carriers) + Phase 3 are tracked in the master
+> plan `docs/tasks/engine-dsl.md`. Uncommitted on branch `dsl-enhancements`. This doc is the detailed osc working
+> log; the master plan supersedes it.
+
 ## Status — supersaw DONE (2026-06-30)
 
 Supersaw is the first typed oscillator subtype and the template for the rest. Shipped:
@@ -22,8 +30,18 @@ Supersaw is the first typed oscillator subtype and the template for the rest. Sh
   chain, and the default — KlangScript source `shouldBe` the Kotlin builder + `.copy()`. Template to copy.
 - Suite green: klangscript JVM+JS, audio_bridge/audio_be JVM, root song smoke.
 
-**Next per the plan below:** repeat the template for `superramp/supersquare/supertri/supersine`, then
-`saw`/`pulse` shape, then the analog-drift constants. Each gets its own dual-language spec.
+**Whole super-* unison family DONE (2026-06-30, uncommitted).** Replicated the supersaw template to
+`superramp/supersine/supersquare/supertri`: character fields (`spreadPower/sideAtten/gainJitter/centerJitterScale`,
+literal defaults guarded by the renamed `SuperOscDefaultsSyncSpec`) + `Slots.*` defaults (the "#5 Slots
+unification" — they now respond to `unison()`/`spread()` like supersaw) on the `IgnitorDsl.Super*` data classes;
+`Ignitors.super*` factories widened to accept the 4 character params (defaults = `SUPER{FAMILY}_*` consts);
+`IgnitorDslRuntime` branches thread them; `KlangScriptOsc.super*` narrowed to `IgnitorDsl.Super*` + `Slots`
+defaults; new `KlangScriptSuper{Ramp,Sine,Square,Tri}Extensions` + dual-language
+`KlangScriptSuper{Ramp,Sine,Square,Tri}Spec`.
+Behavior-preserving (defaults unchanged). Green: audio_bridge JVM+JS-codec, audio_be JVM, klangscript JVM, root smoke.
+
+**Next per the plan below:** the `saw`/`pulse` shape constants, then the analog-drift constants. Each gets its own
+dual-language spec.
 
 ## Open notes (decided, not yet applied)
 

@@ -1,5 +1,9 @@
 # EngineDsl — handover: what's already wired FE→BE
 
+> **ARCHIVED 2026-06-30 — handover consumed.** The PipelineDsl rename + Phase 1 it described are done +
+> committed; Phase 2 oscillator sources are done. Current state lives in the master plan
+> `docs/tasks/engine-dsl.md`.
+
 > For the agent picking up the EngineDsl enhancements + the `EngineDsl` → `PipelineDsl` rename.
 > Written end of Q2 2026, after the per-playback-engine + FE/BE state-placement work.
 > Companion plan: `docs/tasks/engine-dsl.md`.
