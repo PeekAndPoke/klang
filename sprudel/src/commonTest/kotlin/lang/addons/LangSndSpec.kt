@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
+import io.peekandpoke.klang.sprudel.lang.gain
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.soundName
 
@@ -86,6 +87,20 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.soundName shouldBe "ramp"
+        }
+    }
+
+    "sndZamp() dsl interface" {
+        dslInterfaceTests(
+            "pattern.sndZamp()" to note("c3").sndZamp(),
+            "string.sndZamp()" to "c3".sndZamp(),
+            "script pattern.sndZamp()" to SprudelPattern.compile("""note("c3").sndZamp()"""),
+            "script string.sndZamp()" to SprudelPattern.compile(""""c3".sndZamp()"""),
+            "apply(sndZamp())" to note("c3").apply(sndZamp()),
+            "script apply(sndZamp())" to SprudelPattern.compile("""note("c3").apply(sndZamp())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.soundName shouldBe "zamp"
         }
     }
 
@@ -330,5 +345,42 @@ class LangSndSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
         events[0].data.soundName shouldBe "superramp"
+    }
+
+    // -- chained-mapper forms (PatternMapperFn.sndX) ----------------------------------------------------------------
+
+    "every snd chained-mapper (PatternMapperFn.sndX) form sets the sound — Kotlin and KlangScript" {
+        // Form (d): the `PatternMapperFn.sndX` overload, reached by chaining the sound-setter onto a
+        // leading `gain()` mapper. The per-op blocks above cover the pattern/string/apply forms; this
+        // covers the chained-mapper form for every snd oscillator, in both languages.
+        listOf(
+            Triple(note("c3").apply(gain(1.0).sndSine()), """note("c3").apply(gain(1.0).sndSine())""", "sine"),
+            Triple(note("c3").apply(gain(1.0).sndSaw()), """note("c3").apply(gain(1.0).sndSaw())""", "sawtooth"),
+            Triple(note("c3").apply(gain(1.0).sndSquare()), """note("c3").apply(gain(1.0).sndSquare())""", "square"),
+            Triple(note("c3").apply(gain(1.0).sndTriangle()), """note("c3").apply(gain(1.0).sndTriangle())""", "triangle"),
+            Triple(note("c3").apply(gain(1.0).sndRamp()), """note("c3").apply(gain(1.0).sndRamp())""", "ramp"),
+            Triple(note("c3").apply(gain(1.0).sndZamp()), """note("c3").apply(gain(1.0).sndZamp())""", "zamp"),
+            Triple(note("c3").apply(gain(1.0).sndNoise()), """note("c3").apply(gain(1.0).sndNoise())""", "whitenoise"),
+            Triple(note("c3").apply(gain(1.0).sndBrown()), """note("c3").apply(gain(1.0).sndBrown())""", "brownnoise"),
+            Triple(note("c3").apply(gain(1.0).sndPink()), """note("c3").apply(gain(1.0).sndPink())""", "pinknoise"),
+            Triple(note("c3").apply(gain(1.0).sndPulze()), """note("c3").apply(gain(1.0).sndPulze())""", "pulze"),
+            Triple(note("c3").apply(gain(1.0).sndDust()), """note("c3").apply(gain(1.0).sndDust())""", "dust"),
+            Triple(note("c3").apply(gain(1.0).sndCrackle()), """note("c3").apply(gain(1.0).sndCrackle())""", "crackle"),
+            Triple(note("c3").apply(gain(1.0).sndSuperSaw()), """note("c3").apply(gain(1.0).sndSuperSaw())""", "supersaw"),
+            Triple(note("c3").apply(gain(1.0).sndSuperSine()), """note("c3").apply(gain(1.0).sndSuperSine())""", "supersine"),
+            Triple(note("c3").apply(gain(1.0).sndSuperSquare()), """note("c3").apply(gain(1.0).sndSuperSquare())""", "supersquare"),
+            Triple(note("c3").apply(gain(1.0).sndSuperTri()), """note("c3").apply(gain(1.0).sndSuperTri())""", "supertri"),
+            Triple(note("c3").apply(gain(1.0).sndSuperRamp()), """note("c3").apply(gain(1.0).sndSuperRamp())""", "superramp"),
+            Triple(note("c3").apply(gain(1.0).sndPluck()), """note("c3").apply(gain(1.0).sndPluck())""", "pluck"),
+            Triple(note("c3").apply(gain(1.0).sndSuperPluck()), """note("c3").apply(gain(1.0).sndSuperPluck())""", "superpluck"),
+        ).forEach { (kotlinPattern, script, sound) ->
+            dslInterfaceTests(
+                "kotlin chained $sound" to kotlinPattern,
+                "script chained $sound" to SprudelPattern.compile(script),
+            ) { _, events ->
+                events.shouldNotBeEmpty()
+                events[0].data.soundName shouldBe sound
+            }
+        }
     }
 })

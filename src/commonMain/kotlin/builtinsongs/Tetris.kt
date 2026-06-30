@@ -15,14 +15,15 @@ internal val tetrisSong = Song(
     title = "Stein um Stein",
     rpm = 39.5,
     icon = "gamepad",
-    code = """import * from "stdlib"
+    code = """
+import * from "stdlib"
 import * from "sprudel"
 
 // ── Patterns: the raw musical content ───────────────────────────────────
 
 // The iconic Tetris (Korobeiniki) melody.
-export leadPattern = `<[e5 [b4 c5] d5 [c5 b4]]    [a4 [a4 c5] e5 [d5 c5]]      [b4 [~ c5] d5 e5]           [c5 a4 a4 ~]
-                       [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]       [b4 [b4 c5] d5 e5]          [c5 a4 a4 ~]>`
+export leadPattern = `<[e5 [b4 c5] d5 [c5 b4]]    [a4 [a4 c5] e5 [d5 c5]]       [b4 [~ c5] d5 e5]          [c5 a4 a4 ~]
+                       [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]        [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]>`
 
 // Bass line — bouncy, driving.
 export bassPattern = `<[[e2 e3]*4] [[a2 a3]*4]    [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5|a5|a5|e5]]
@@ -70,9 +71,9 @@ export bassShape = (p) => p
     ).phaser(1/13).phaserdepth(0.20).phasercenter(2000).phasersweep(1000)
     .spread(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(300).lpf(3000).lpe(1.5).lpq(1.6)
 
-// Sub voice: tremoloed triangle, soft distortion, pedal engine.
+// Sub voice: tremoloed triangle, soft distortion
 export subShape = (p) => p
-    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7).distort("0.3:tube:2").postgain(0.65).analog(2.5)
+    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7).distort("0.3:tube:2").postgain(0.70).analog(2.5)
     .adsr("0.01:0.2:0.4:0.09").tremolo("0.1:8::0:0").hpf(70).lpf(200).lpe(2) // . solo()
 
 // Drums: tight, panned right, fast.

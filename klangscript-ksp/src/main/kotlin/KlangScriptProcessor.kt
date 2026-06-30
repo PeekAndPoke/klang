@@ -925,14 +925,6 @@ class KlangScriptProcessor(
         // named-arg calls to varargs are prohibited unless using spread syntax.
         if (isVararg) {
             val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
-            val returnType = resolveCastType(fn.returnType?.resolve())
-            // File-level ext has an explicit receiver param that we need to pass through.
-            val selfArgForVararg = if (hasExtensionReceiver) "typedReceiver." else ""
-            val fnCall = if (hasExtensionReceiver) {
-                "${selfArgForVararg}$fnName(*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
-            } else {
-                "$fnName(typedReceiver, *args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
-            }
             // For the `cls =` argument of convertArgToKotlin we must pass a KClass,
             // but function types like `(SprudelPattern) -> SprudelPattern` can't use
             // `::class`. In that case pass `Function1::class` and let the unchecked
@@ -1276,7 +1268,6 @@ class KlangScriptProcessor(
                 val variants = memberPropsGrouped[propName]!!
                 val first = variants.first().prop
                 val kdoc = KDocParser.parse(first.docString)
-                val description = kdoc.description.escapeForRawString()
                 val category = kdoc.category ?: "uncategorized"
                 val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
                 val aliasesString = kdoc.aliases.joinToString(", ") { "\"$it\"" }

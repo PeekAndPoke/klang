@@ -114,6 +114,8 @@ class LangNfreleaseSpec : StringSpec({
             "script string.nfr(ctrl)" to SprudelPattern.compile(""""$pat".nfr("$ctrl")"""),
             "nfr(ctrl)" to seq(pat).apply(nfr(ctrl)),
             "script nfr(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfr("$ctrl"))"""),
+            "chained nfr(ctrl)" to seq(pat).apply(nfr(ctrl).nfr(ctrl)),
+            "script chained nfr(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfr("$ctrl").nfr("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfrelease shouldBe 0.5

@@ -24,14 +24,14 @@ let wait = 14
 let koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(cutoffHz = Osc.constant(2000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
+      .lowpass(cutoffHz = Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
 
 let shaku = Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
-      .plus(Osc.perlin(21).mul(0.10).highpass(2000).adsr(0.02, 0.2, 0.03, 0.02))
+      .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
       .highpass(cutoffHz = 300, analog = Osc.slot.analog)
-      .lowpass(cutoffHz = 3500, q = 1.0, analog = Osc.slot.analog)
+      .lowpass(cutoffHz = 3800, q = 1.0, analog = Osc.slot.analog)
       .analog(0.2).vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
@@ -54,7 +54,7 @@ let sub = Osc.sine().lowpass(200)
       .adsr(0.005, 0.4, 0.0, 0.05)
 
 let pad = Osc.supertri(freq = Osc.freq(), voices = 5).analog(5.0)
-      .lowpass(cutoffHz = Osc.sine(0.3).plus(2).times(400).plus(Osc.freq()), q = 2, analog = Osc.slot.analog)
+      .lowpass(cutoffHz = Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()), q = 2, analog = Osc.slot.analog)
       .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve("scurve")
 
 
@@ -77,7 +77,7 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).sound(shaku).slow(14).gain(0.25).pan(perlin.range(0.3, 0.7).slow(24)).body("glass")
+  `).sound(shaku).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(24)).body("glass")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
@@ -109,6 +109,7 @@ stack(
 
 
 
+            
             
             """,
 )

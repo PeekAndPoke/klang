@@ -114,6 +114,8 @@ class LangNfenvSpec : StringSpec({
             "script string.nfe(ctrl)" to SprudelPattern.compile(""""$pat".nfe("$ctrl")"""),
             "nfe(ctrl)" to seq(pat).apply(nfe(ctrl)),
             "script nfe(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfe("$ctrl"))"""),
+            "chained nfe(ctrl)" to seq(pat).apply(nfe(ctrl).nfe(ctrl)),
+            "script chained nfe(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfe("$ctrl").nfe("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfenv shouldBe 0.5

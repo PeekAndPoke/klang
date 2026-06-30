@@ -114,6 +114,8 @@ class LangNfdecaySpec : StringSpec({
             "script string.nfd(ctrl)" to SprudelPattern.compile(""""$pat".nfd("$ctrl")"""),
             "nfd(ctrl)" to seq(pat).apply(nfd(ctrl)),
             "script nfd(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfd("$ctrl"))"""),
+            "chained nfd(ctrl)" to seq(pat).apply(nfd(ctrl).nfd(ctrl)),
+            "script chained nfd(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfd("$ctrl").nfd("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfdecay shouldBe 0.5

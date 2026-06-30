@@ -33,6 +33,10 @@ class LangBpadsrSpec : StringSpec({
                     note(pat).apply(bpadsr(ctrl)),
             "script bpadsr(ctrl)" to
                     SprudelPattern.compile("""note("$pat").apply(bpadsr("$ctrl"))"""),
+            "chained bpadsr(ctrl)" to
+                    note(pat).apply(bpadsr(ctrl).bpadsr(ctrl)),
+            "script chained bpadsr(ctrl)" to
+                    SprudelPattern.compile("""note("$pat").apply(bpadsr("$ctrl").bpadsr("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {

@@ -53,4 +53,20 @@ class IgnitorDslSpec : StringSpec({
     "Variants.maxReleaseSec returns 0 for empty children" {
         IgnitorDsl.Variants(emptyList()).maxReleaseSec() shouldBe 0.0
     }
+
+    "getParamSlots returns exactly the Params collectParams gathers" {
+        val dsl = IgnitorDsl.Variants(
+            listOf(
+                IgnitorDsl.Sine(freq = IgnitorDsl.Param("a", 440.0)),
+                IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("b", 220.0)),
+            )
+        )
+        val viaCollect = mutableListOf<IgnitorDsl.Param>().also { dsl.collectParams(it) }
+        dsl.getParamSlots() shouldBe viaCollect
+        dsl.getParamSlots().map { it.name } shouldBe listOf("a", "b")
+    }
+
+    "getParamSlots is empty when the tree has no Param leaves" {
+        IgnitorDsl.Sine(freq = IgnitorDsl.Constant(440.0)).getParamSlots() shouldBe emptyList()
+    }
 })
