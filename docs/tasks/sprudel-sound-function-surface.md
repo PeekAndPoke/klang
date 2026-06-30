@@ -1,7 +1,22 @@
-# Sprudel Sound-Function Surface — Redesign
+# Sprudel Sound-Function Surface — Redesign (the `snd*` family: compound-string vs named/per-param)
 
-> Status: **NOT STARTED** — design outline only. Captured 2026-06-05 from a quick brain-dump; the surface
-> and the tool-window story still need to be thought through before implementation.
+> Status: **NOT STARTED (design).** This is the tracked home for the `snd*`-family cleanup — "single compound
+> colon-string vs. named / per-param control patterns." Captured 2026-06-05; refreshed **2026-06-30** with
+> what changed since (see the update block below).
+>
+> ### 2026-06-30 update — what's changed
+> - **Named arguments now work in KlangScript** (`name = value`). The old "positional-only, use `/* name */`
+    > comments" convention below is **superseded** — the redesign can lean on real named args. See
+    > `[[KlangScript supports named arguments]]` (memory) for the KSP safe-literal-default caveat.
+> - The **noise-generator knobs** work (2026-06-30) deliberately extended the `snd*` family in the
+    > **compound colon-string** form as the *interim*: `sndCrackle("1.7")` (chaos), `sndNoise("-0.5")` (color),
+    > `sndBrown("0.5")` (depth), `sndDust("0.2:4")` (density:tail). This was an explicit "do the compound string
+    > now, defer the real fix" decision — so the family is now larger and the per-param blocker is more pressing.
+> - **The blocker is unchanged and is the whole point of this task:** a compound `"a:b:c"` string is one value,
+    > so you cannot modulate one sub-param with its own control pattern. Per-param control-pattern support
+    > (the project rule "all params accept control patterns") needs the positional/named surface below.
+> - The Osc-side already models the target shape: `Osc.crackle(chaos = 1.7)`, `Osc.dust(density, tail, bipolar)`
+    > take per-param named args today — the `snd*` sprudel surface is what lags.
 
 ## Why
 
@@ -30,10 +45,12 @@ problems with their current surface:
 
 ## Proposed direction (NOT decided — user's quick suggestions)
 
-1. **Lowercase, multi-positional params** — `.saw(p1, p2, …)`, `.supersaw(voices, freqSpread, analog, …)`,
-   `.pluck(decay, brightness, pickPosition, stiffness)`. Each positional param is independently patternable
-   (its own control pattern), which fixes problem 2. Per project convention use positional
-   `/* name */`-comment args, never `name:` syntax (see `/code-style`).
+1. **Lowercase, multi-positional + named params** — `.saw(p1, p2, …)`, `.supersaw(voices, spread, …)`,
+   `.pluck(decay, brightness, pickPosition, stiffness)`. Each param is independently patternable (its own
+   control pattern), which fixes problem 2. **Named args now work** (`name = value`) — so the surface can be
+   `.supersaw(voices = 8, spread = 0.3)` (override only what you want), not just positional. (Note: the super-osc
+   spread param is `spread`, not `freqSpread`, post-rename; and `analog` is a chained character knob, not a
+   constructor positional.)
 2. **Keep a single-string composite shorthand** — when a function is called with exactly one **string**
    argument, treat it as the legacy `"p1:p2:p3"` composite (sugar / back-compat). So
    `.supersaw("8:0.3:0.2")` and `.supersaw(/* voices */ 8, /* spread */ 0.3, /* analog */ 0.2)` both work.

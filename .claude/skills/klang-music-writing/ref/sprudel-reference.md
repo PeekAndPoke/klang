@@ -292,17 +292,17 @@ selection — extended to ignitor variants and per-note gain.
 
 ### Sound Selection
 
-| Function           | Aliases | Description                 | Example                                |
-|--------------------|---------|-----------------------------|----------------------------------------|
-| `sound(name)`      | `s`     | Set sound/instrument        | `sound("bd sd hh cp")`                 |
-| `analog(amt)`      |         | Analog oscillator drift     | `note("c3").s("supersaw").analog(0.2)` |
-| `unison(n)`        | `uni`   | Voice doubling              | `note("c3").s("saw").unison(6)`        |
-| `detune(amt)`      |         | Pitch spread between voices | `note("c3").s("supersaw").detune(0.1)` |
-| `density(amt)`     | `d`     | Oscillator density (noise)  | `note("a").s("dust").density(40)`      |
-| `warmth(amt)`      |         | Analog warmth amount        | `s("bd").distort(3).warmth(0.3)`       |
-| `sndPluck(params)` |         | Karplus-Strong shorthand    | `note("c3").sndPluck("0.999:0.8")`     |
-| `sndSuperSaw()`    |         | Super-saw shorthand         | `note("c3").sndSuperSaw()`             |
-| `bank(name)`       |         | Sample bank                 | `s("bd").bank("RolandTR808")`          |
+| Function           | Aliases         | Description                     | Example                                |
+|--------------------|-----------------|---------------------------------|----------------------------------------|
+| `sound(name)`      | `s`             | Set sound/instrument            | `sound("bd sd hh cp")`                 |
+| `analog(amt)`      |                 | Analog oscillator drift         | `note("c3").s("supersaw").analog(0.2)` |
+| `unison(n)`        | `uni`, `voices` | Voice doubling                  | `note("c3").s("saw").unison(6)`        |
+| `spread(amt)`      |                 | Frequency spread between voices | `note("c3").s("supersaw").spread(0.1)` |
+| `density(amt)`     | `d`             | Oscillator density (noise)      | `note("a").s("dust").density(40)`      |
+| `warmth(amt)`      |                 | Analog warmth amount            | `s("bd").distort(3).warmth(0.3)`       |
+| `sndPluck(params)` |                 | Karplus-Strong shorthand        | `note("c3").sndPluck("0.999:0.8")`     |
+| `sndSuperSaw()`    |                 | Super-saw shorthand             | `note("c3").sndSuperSaw()`             |
+| `bank(name)`       |                 | Sample bank                     | `s("bd").bank("RolandTR808")`          |
 
 ### Filters
 
@@ -470,7 +470,7 @@ s("hh*8").pan(rand)
 s("sd").delay(0.5).delaytime(pure(1/8).div(cps))
 
 // Organic modulation
-note("c3").s("supersaw").detune(perlin.range(0.0, 0.3).slow(16))
+note("c3").s("supersaw").spread(perlin.range(0.0, 0.3).slow(16))
 ```
 
 ---

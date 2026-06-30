@@ -664,6 +664,67 @@ fun uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
 fun PatternMapperFn.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.unison(voices, callInfo) }
 
+/**
+ * Alias for [unison]. Sets the number of unison voices — the name that matches the ignitor `voices` param.
+ *
+ * ```KlangScript(Playable)
+ * note("c3").s("supersaw").voices(5)               // 5 stacked sawtooth oscillators
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").s("supersaw").voices("<3 6 10 16>").spread(0.3)  // unison-count pattern
+ * ```
+ *
+ * @param voices The number of unison voices.
+ *
+ * @alias unison
+ * @category dynamics
+ * @tags voices, unison, uni, stacking, supersaw
+ */
+@KlangScript.Function
+fun SprudelPattern.voices(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.unison(voices, callInfo)
+
+/**
+ * Alias for [unison]. Parses this string as a pattern and sets the number of unison voices.
+ *
+ * ```KlangScript(Playable)
+ * "c3 e3 g3".s("supersaw").voices("<1 5 10 16>").spread(0.3).note()  // unison-count pattern
+ * ```
+ *
+ * @param voices The number of unison voices.
+ */
+@KlangScript.Function
+fun String.voices(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
+
+/**
+ * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
+ *
+ * ```KlangScript(Playable)
+ * "c3 e3 g3".s("supersaw").apply(voices("<1 5 10 16>")).spread(0.3).note()  // unison-count pattern
+ * ```
+ *
+ * @param voices The number of unison voices.
+ */
+@KlangScript.Function
+fun voices(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.unison(voices, callInfo) }
+
+/**
+ * Alias for [unison]. Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous
+ * mapper.
+ *
+ * ```KlangScript(Playable)
+ * note("c3").s("supersaw").apply(voices(5).spread(0.3))  // unison + spread chained
+ * ```
+ *
+ * @param voices The number of unison voices.
+ */
+@KlangScript.Function
+fun PatternMapperFn.voices(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.unison(voices, callInfo) }
+
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
 private val spreadMutation = voiceSetter { putOscParam("spread", it?.asDoubleOrNull()) }

@@ -4,6 +4,24 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-06-30) Noise generators get knobs
+
+- white noise spectral tilt (color) ... darken toward pink/brown, brighten toward blue/violet
+- crackle is a *real* chaotic generator now (SuperCollider's Crackle map -> bipolar pops), no longer a dust alias
+- perlin/berlin gained fBm (octaves + persistence) ... octaves=1 short-circuits, so the default stays perf-neutral
+- brown depth + dust tail/bipolar ... heavy-tailed rare-loud pops = the vinyl-crackle signature
+- every default is behavior-preserving AND perf-neutral ... a knob costs only when you turn it
+- new Slots are oscParam-addressable; KlangScript named params + sprudel snd* compound strings; vinyl = a documented
+  recipe, motör stays raw
+
+### (2026-06-29) Pipeline DSL + typed oscillator subtypes
+
+- EngineDsl -> PipelineDsl rename ... inline .pipeline(dsl) works end to end
+- oscillators are typed IgnitorDsl subtypes now (the super-* unison family + saw/ramp/square/triangle)
+- chained config methods (.spreadPower / .resetSamples / .sideAtten / ...) on narrowed return types
+- a static supertype inferrer so base .lowpass()/.adsr() still resolve on a narrowed osc
+- named arguments finally work in KlangScript ... Osc.supersaw(voices = 9, spread = 0.1)
+
 ### (2026-06-24) Multi-engine backend
 
 - per-playback PlaybackEngine ... each playback owns its full render state

@@ -82,30 +82,32 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 
 Multiple detuned copies for thick, lush sounds.
 
-| Method                                                  | Description             |
-|---------------------------------------------------------|-------------------------|
-| `Osc.supersaw(freq?, voices?, freqSpread?, analog?)`    | Detuned sawtooth chorus |
-| `Osc.supersine(freq?, voices?, freqSpread?, analog?)`   | Detuned sine chorus     |
-| `Osc.supersquare(freq?, voices?, freqSpread?, analog?)` | Detuned square chorus   |
-| `Osc.supertri(freq?, voices?, freqSpread?, analog?)`    | Detuned triangle chorus |
-| `Osc.superramp(freq?, voices?, freqSpread?, analog?)`   | Detuned ramp chorus     |
+| Method                                     | Description             |
+|--------------------------------------------|-------------------------|
+| `Osc.supersaw(freq?, voices?, spread?)`    | Detuned sawtooth chorus |
+| `Osc.supersine(freq?, voices?, spread?)`   | Detuned sine chorus     |
+| `Osc.supersquare(freq?, voices?, spread?)` | Detuned square chorus   |
+| `Osc.supertri(freq?, voices?, spread?)`    | Detuned triangle chorus |
+| `Osc.superramp(freq?, voices?, spread?)`   | Detuned ramp chorus     |
 
-**Parameters** (all optional, apply to every super oscillator):
+**Constructor params** (all optional):
 
-| Param        | Default | Description                             |
-|--------------|---------|-----------------------------------------|
-| `voices`     | 8       | Number of detuned voices                |
-| `freqSpread` | 0.2     | Frequency spread between voices         |
-| `analog`     | 0.0     | Random per-voice pitch drift (0 = none) |
+| Param    | Default | Description                     |
+|----------|---------|---------------------------------|
+| `voices` | 8       | Number of detuned voices        |
+| `spread` | 0.2     | Frequency spread between voices |
+
+**Chained character knobs** (return the same super-osc subtype): `.analog(x)` (per-voice pitch drift),
+`.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`.
 
 ```javascript
-// Args order: supersaw(freq, voices, freqSpread, analog)
+// Named args (recommended) — override only what you want:
 
 // Thin 3-voice supersaw
-Osc.supersaw(Osc.freq(), /* voices */ 3, /* freqSpread */ 0.1)
+Osc.supersaw(voices = 3, spread = 0.1)
 
-// Wide 12-voice pad with analog drift
-Osc.supersaw(Osc.freq(), /* voices */ 12, /* freqSpread */ 0.3, /* analog */ 0.2)
+// Wide 12-voice pad with analog drift (analog is a chained knob, not a constructor arg)
+Osc.supersaw(voices = 12, spread = 0.3).analog(0.2)
 ```
 
 ### Noise Sources
@@ -137,10 +139,10 @@ Osc.supersaw(Osc.freq(), /* voices */ 12, /* freqSpread */ 0.3, /* analog */ 0.2
 
 ### Physical Models
 
-| Method                                                 | Description                     |
-|--------------------------------------------------------|---------------------------------|
-| `Osc.pluck(freq?)`                                     | Karplus-Strong plucked string   |
-| `Osc.superpluck(freq?, voices?, freqSpread?, analog?)` | Unison plucked strings (chorus) |
+| Method                                    | Description                     |
+|-------------------------------------------|---------------------------------|
+| `Osc.pluck(freq?)`                        | Karplus-Strong plucked string   |
+| `Osc.superpluck(freq?, voices?, spread?)` | Unison plucked strings (chorus) |
 
 ### Utility
 
