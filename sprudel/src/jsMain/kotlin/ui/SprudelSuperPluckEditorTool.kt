@@ -245,11 +245,11 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
                         }
                     }
                     UiInputField(detune, { detune = it; liveUpdate() }) {
-                        domKey("detune")
+                        domKey("spread")
                         step(0.01)
                         label {
                             +"Spread (st)"
-                            subFieldInfoIcon("params", "detune", props.toolCtx, infoPopup)
+                            subFieldInfoIcon("params", "spread", props.toolCtx, infoPopup)
                         }
                     }
                 }

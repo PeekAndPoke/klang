@@ -1,5 +1,51 @@
 # Phase 2 — typed oscillator subtype DSLs (supersaw first)
 
+## Status — supersaw DONE (2026-06-30)
+
+Supersaw is the first typed oscillator subtype and the template for the rest. Shipped:
+
+- `Osc.supersaw()` narrows its return to `IgnitorDsl.SuperSaw` with chained config methods
+  (`.freq/.voices/.spread/.analog` + character `.spreadPower/.sideAtten/.gainJitter/.centerJitter`),
+  defaults synced to the `SUPERSAW_*` engine constants (guarded by `SuperSawDefaultsSyncSpec`).
+- **Static inferrer now walks supertypes** (the blocker the narrowing exposed): base `IgnitorDsl`
+  methods (`.lowpass()`/`.adsr()`/…) resolve on a `SuperSaw` receiver again. Implemented as:
+  - `KlangType.supertypes: List<KlangType>` (new field, default empty).
+  - KSP `generateKlangType(…, includeSupertypes = true)` emits `getAllSuperTypes()` minus `kotlin.*`
+    on **return** + **property** types (`KlangScriptProcessor.supertypeListExpr`). Base-type returns
+    (only ancestor = `Any`) get nothing → lean (~40 entries, the narrowed subtypes).
+  - `KlangDocsRegistry.receiverChain(query)` = query + its supertypes (most-specific first); routed
+    through `getCallable` / `getVariantsForReceiver` / `getSymbolWithReceiver`. Hand-built query types
+    carry no supertypes → existing behavior unchanged. Mirrors runtime `Environment.getAllRegisteredSupertypes`.
+  - The 3 previously-failing inference tests fixed (`StdlibDocsInferenceTest` test 1 expectation updated
+    `supersaw()`→`"SuperSaw"`; the 2 chain tests pass via the supertype walk).
+- **Dual-language equivalence spec** `KlangScriptSuperSawSpec` (commonTest): each fluent method, the full
+  chain, and the default — KlangScript source `shouldBe` the Kotlin builder + `.copy()`. Template to copy.
+- Suite green: klangscript JVM+JS, audio_bridge/audio_be JVM, root song smoke.
+
+**Next per the plan below:** repeat the template for `superramp/supersquare/supertri/supersine`, then
+`saw`/`pulse` shape, then the analog-drift constants. Each gets its own dual-language spec.
+
+## Open notes (decided, not yet applied)
+
+- **#5 Slots unification (user, 2026-06-30):** unify the param-default Slots across the whole super-* family
+  *now*; keep the set of default Slots **as minimal as possible**, with **no overlaps or ambiguities** (one
+  Slot per distinct concept). Apply when we resolve the naming.
+
+- **Align sprudel DSL fn names ↔ Ignitor param/Slot names (user, 2026-06-30; AFTER main task).** The sprudel
+  pattern functions that write `oscParams` should match the Ignitor Slot keys. Audit result (writers in
+  `sprudel/.../lang/lang_dynamics.kt` via `putOscParam`):
+  - `unison()` → writes key `"voices"` — **MISALIGNED. Add a `voices()` alias** (keep `unison()` too; both →
+    `oscParams["voices"]`). The one real gap.
+  - `spread()`→`"spread"` ✅, `panSpread()`→`"panSpread"` ✅ (exists — created in the detune→spread rename;
+    no-op while oscs are mono), `density()`→`"density"` ✅, `analog()`→`"analog"` ✅, `duty()`→`"duty"` ✅,
+    `warmth()`→`"warmth"` ✅ (warmth isn't a Slot but the name matches).
+  - Slots `decay / brightness / pickPosition / stiffness / rate` have **no dedicated sprudel fn** (set only via
+    the positional `snd("superpluck", "voices:spread:decay:brightness:pickPosition:stiffness")` string). Adding
+    dedicated `.decay()/.brightness()/…` is optional/future, not an alignment fix.
+  - **Then: docs sweep** — every doc/KDoc that mentions these params + their DSL fns. Known stale: the
+    `snd(...)` param-string KDoc in `lang_snd_addons.kt` still reads `"voices:freqSpread:…"` (→ `"voices:spread:…"`);
+    the `spread()`/`unison()` KDoc; and any tutorials referencing `detune`/`freqSpread`/`spread`.
+
 ## Context
 
 Phase 1 (PipelineDsl) made the voice *pipeline* configurable. Phase 2 does the same for **oscillators**:

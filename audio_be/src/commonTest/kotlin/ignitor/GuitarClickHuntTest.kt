@@ -51,7 +51,7 @@ class GuitarClickHuntTest : StringSpec({
     fun coreSupersaw(): IgnitorDsl = IgnitorDsl.SuperSaw(
         freq = IgnitorDsl.Freq,
         voices = IgnitorDsl.Constant(2.0),
-        detune = IgnitorDsl.Param("spread", spread),
+        spread = IgnitorDsl.Param("spread", spread),
         analog = IgnitorDsl.Param("analog", analog),
     ).mulD(0.35)
 
@@ -68,7 +68,7 @@ class GuitarClickHuntTest : StringSpec({
     fun lowEndBranch(): IgnitorDsl = IgnitorDsl.SuperSaw(
         freq = IgnitorDsl.Freq,
         voices = IgnitorDsl.Constant(2.0),
-        detune = IgnitorDsl.Constant(0.15),
+        spread = IgnitorDsl.Constant(0.15),
         analog = IgnitorDsl.Constant(0.1),
     ).mulD(0.05).highpass(110.0).lowpass(300.0)
 

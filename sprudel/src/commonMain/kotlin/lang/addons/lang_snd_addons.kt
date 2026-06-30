@@ -128,7 +128,7 @@ private val sndSuperPluckMutation = voiceSetter {
     sound = SoundValue.Named("superpluck")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "detune" to parts.getOrNull(1),
+        "spread" to parts.getOrNull(1),
         "decay" to parts.getOrNull(2),
         "brightness" to parts.getOrNull(3),
         "pickPosition" to parts.getOrNull(4),
@@ -777,7 +777,7 @@ private val sndSuperSawMutation = voiceSetter {
     sound = SoundValue.Named("supersaw")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "detune" to parts.getOrNull(1),
+        "spread" to parts.getOrNull(1),
     )
 }
 
@@ -849,7 +849,7 @@ private val sndSuperSineMutation = voiceSetter {
     sound = SoundValue.Named("supersine")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "detune" to parts.getOrNull(1),
+        "spread" to parts.getOrNull(1),
     )
 }
 
@@ -921,7 +921,7 @@ private val sndSuperSquareMutation = voiceSetter {
     sound = SoundValue.Named("supersquare")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "detune" to parts.getOrNull(1),
+        "spread" to parts.getOrNull(1),
     )
 }
 
@@ -993,7 +993,7 @@ private val sndSuperTriMutation = voiceSetter {
     sound = SoundValue.Named("supertri")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "detune" to parts.getOrNull(1),
+        "spread" to parts.getOrNull(1),
     )
 }
 
@@ -1065,7 +1065,7 @@ private val sndSuperRampMutation = voiceSetter {
     sound = SoundValue.Named("superramp")
     putOscParams(
         "voices" to parts.getOrNull(0),
-        "detune" to parts.getOrNull(1),
+        "spread" to parts.getOrNull(1),
     )
 }
 

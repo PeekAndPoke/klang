@@ -68,7 +68,7 @@ export bassShape = (p) => p
       x => x.pan(0.8),
       x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
     ).phaser(1/13).phaserdepth(0.20).phasercenter(2000).phasersweep(1000)
-    .detune(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(300).lpf(3000).lpe(1.5).lpq(1.6)
+    .spread(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(300).lpf(3000).lpe(1.5).lpq(1.6)
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.
 export subShape = (p) => p

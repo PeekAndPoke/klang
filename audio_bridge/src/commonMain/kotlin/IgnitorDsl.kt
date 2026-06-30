@@ -99,7 +99,7 @@ sealed interface IgnitorDsl {
     object Slots {
         val analog: IgnitorDsl = Param(name = "analog", default = 0.0)
         val voices: IgnitorDsl = Param(name = "voices", default = 8.0)
-        val detune: IgnitorDsl = Param(name = "detune", default = 0.2)
+        val spread: IgnitorDsl = Param(name = "spread", default = 0.2)
         val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
         val density: IgnitorDsl = Param(name = "density", default = 0.2)
         val decay: IgnitorDsl = Param(name = "decay", default = 0.996)
@@ -318,11 +318,11 @@ sealed interface IgnitorDsl {
     data class SuperSaw(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Slots.voices,
-        /** Unison detune spread between the voices (the pattern-level `.detune()` sets this). */
-        val detune: IgnitorDsl = Slots.detune,
+        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val detunePower: Double = 1.2,
+        val spreadPower: Double = 1.2,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
         val sideAtten: Double = 0.1,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
@@ -331,7 +331,7 @@ sealed interface IgnitorDsl {
         val centerJitterScale: Double = 0.4,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); voices.collectParams(out); detune.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -340,11 +340,11 @@ sealed interface IgnitorDsl {
     data class SuperSine(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
-        val detune: IgnitorDsl = Constant(0.2),
+        val spread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); voices.collectParams(out); detune.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -353,11 +353,11 @@ sealed interface IgnitorDsl {
     data class SuperSquare(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
-        val detune: IgnitorDsl = Constant(0.2),
+        val spread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); voices.collectParams(out); detune.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -366,11 +366,11 @@ sealed interface IgnitorDsl {
     data class SuperTri(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
-        val detune: IgnitorDsl = Constant(0.2),
+        val spread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); voices.collectParams(out); detune.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -379,11 +379,11 @@ sealed interface IgnitorDsl {
     data class SuperRamp(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
-        val detune: IgnitorDsl = Constant(0.2),
+        val spread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); voices.collectParams(out); detune.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -418,7 +418,7 @@ sealed interface IgnitorDsl {
     data class SuperPluck(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
-        val detune: IgnitorDsl = Constant(0.2),
+        val spread: IgnitorDsl = Constant(0.2),
         val decay: IgnitorDsl = Constant(0.996),
         val brightness: IgnitorDsl = Constant(0.5),
         val pickPosition: IgnitorDsl = Constant(0.5),
@@ -426,7 +426,7 @@ sealed interface IgnitorDsl {
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); voices.collectParams(out); detune.collectParams(out); decay.collectParams(out); brightness.collectParams(
+            freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); decay.collectParams(out); brightness.collectParams(
                 out
             )
             pickPosition.collectParams(out); stiffness.collectParams(out); analog.collectParams(out)

@@ -224,11 +224,11 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
                         }
                     }
                     UiInputField(detune, { detune = it; liveUpdate() }) {
-                        domKey("detune")
+                        domKey("spread")
                         step(0.01)
                         label {
                             +"Spread"
-                            subFieldInfoIcon("params", "detune", props.toolCtx, infoPopup)
+                            subFieldInfoIcon("params", "spread", props.toolCtx, infoPopup)
                         }
                     }
                 }

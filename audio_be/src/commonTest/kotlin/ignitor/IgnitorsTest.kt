@@ -769,7 +769,7 @@ class ExcitersTest : StringSpec({
     "supersaw - single voice equals sawtooth character" {
         // Single voice supersaw should have sawtooth-like zero crossings
         val buf =
-            generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 1.0), detune = ParamIgnitor("detune", 0.0)), freqHz = 440.0)
+            generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 1.0), detune = ParamIgnitor("spread", 0.0)), freqHz = 440.0)
         val crossings = buf.zeroCrossings()
         // 440Hz over 100ms ≈ 44 cycles, saw has ~1-2 crossings per cycle
         crossings shouldBeGreaterThanOrEqual 40
@@ -905,7 +905,7 @@ class ExcitersTest : StringSpec({
     "supersaw DSL - multiple oscParams applied together" {
         val dsl = IgnitorDsl.SuperSaw()
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "detune" to 0.5)), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "spread" to 0.5)), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         // Output should differ due to different voices and spread
@@ -916,10 +916,10 @@ class ExcitersTest : StringSpec({
     // Other DSL oscParams overrides
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "supersaw DSL - oscParams override detune" {
-        val dsl = IgnitorDsl.SuperSaw(detune = IgnitorDsl.Param("detune", 0.1))
+    "supersaw DSL - oscParams override spread" {
+        val dsl = IgnitorDsl.SuperSaw(spread = IgnitorDsl.Param("spread", 0.1))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("detune" to 0.5)), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("spread" to 0.5)), freqHz = 440.0)
         bufDefault.any { it != 0.0 } shouldBe true
         bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true

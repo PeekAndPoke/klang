@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.script.intel
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveAtLeastSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -57,9 +58,28 @@ class StdlibDocsInferenceTest : StringSpec({
         inferrer.inferType(parseExpr("Osc.saw()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.supersaw() returns IgnitorDsl" {
+    "real stdlib: Osc.supersaw() returns the narrow SuperSaw subtype" {
+        // Phase 2: supersaw() narrows its return to IgnitorDsl.SuperSaw so the typed
+        // config methods (.spreadPower/.sideAtten/…) are discoverable. The supertype
+        // walk (below) keeps the base IgnitorDsl methods resolvable on it.
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.supersaw()"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Osc.supersaw()"))?.simpleName shouldBe "SuperSaw"
+    }
+
+    "real stdlib: Osc.supersaw() carries IgnitorDsl as a supertype" {
+        val inferrer = ExpressionTypeInferrer(stdlibRegistry())
+        val type = inferrer.inferType(parseExpr("Osc.supersaw()"))!!
+        type.supertypes.map { it.simpleName } shouldContain "IgnitorDsl"
+    }
+
+    "real stdlib: base IgnitorDsl method resolves on a narrowed SuperSaw receiver" {
+        // getCallable must walk the receiver's supertypes: .lowpass() is registered on
+        // IgnitorDsl, yet the receiver here is the narrowed SuperSaw.
+        val reg = stdlibRegistry()
+        val superSaw = reg.getCallable("supersaw", KlangType("Osc"))!!.returnType!!
+        val lowpass = reg.getCallable("lowpass", superSaw)
+        lowpass shouldNotBe null
+        lowpass!!.returnType?.simpleName shouldBe "IgnitorDsl"
     }
 
     "real stdlib: Osc.whitenoise() returns IgnitorDsl" {

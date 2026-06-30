@@ -47,11 +47,11 @@ class CallInfoTest : StringSpec({
     }
 
     "detune passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").detune("0.3")""")
+        assertCallInfoPresent("""seq("0 1").spread("0.3")""")
     }
 
     "spread passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").spread("0.8")""")
+        assertCallInfoPresent("""seq("0 1").panSpread("0.8")""")
     }
 
     "density passes CallInfo from KlangScript" {

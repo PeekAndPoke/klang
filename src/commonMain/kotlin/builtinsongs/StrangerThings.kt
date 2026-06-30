@@ -36,7 +36,7 @@ stack(
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [0 -1 0 4 6 9 7 6] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(1).s("supersaw").unison(15).detune(saw.range(0.05, 0.35).slow(16))
+    .orbit(1).s("supersaw").unison(15).spread(saw.range(0.05, 0.35).slow(16))
     .gain(0.6).distort(1.0).postgain(0.10).adsr("0.005:2.0:0.5:0.1").lpadsr("0.005:5.0:0.5:0.1").clip(1.1)
     .pan(0.5) // . solo()
     .hpf(400).lpf(1200).lpenv(perlin.range(2.0, 3.5).lpq(3.0).slow(8)).analog(5).body("wood")
@@ -45,7 +45,7 @@ stack(
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c2,c3] [d1,d1,d2,a2]]>/4").clip(0.7).struct("x!4").slow(16)
-    .orbit(2).s("supersaw").unison(9).detune(saw.range(0.05, 0.45).slow(64)).warmth(0.01) // . mute()
+    .orbit(2).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).warmth(0.01) // . mute()
     .gain(1.0).adsr("0.01:0.6:0.8:2.75").postgain(0.50).coarse(2).coarseos(2) // solo()
     .superimpose(
       x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")

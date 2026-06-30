@@ -214,13 +214,13 @@ class LangDynamicsSpec : StringSpec({
         }
     }
 
-    "apply(unison().detune()) chains unison and detune mappers" {
-        val p = note("a").apply(unison(5).detune(0.3))
+    "apply(unison().spread()) chains unison and detune mappers" {
+        val p = note("a").apply(unison(5).spread(0.3))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("voices") shouldBe 5.0
-        events[0].data.oscParams?.get("detune") shouldBe 0.3
+        events[0].data.oscParams?.get("spread") shouldBe 0.3
     }
 
     "script apply(unison()) works in compiled code" {
@@ -235,52 +235,52 @@ class LangDynamicsSpec : StringSpec({
 
     "detune dsl interface" {
         dslInterfaceTests(
-            "pattern.detune(amount)" to note("a").detune(0.3),
-            "script pattern.detune(amount)" to SprudelPattern.compile("""note("a").detune(0.3)"""),
-            "string.detune(amount)" to "a".detune(0.3),
-            "script string.detune(amount)" to SprudelPattern.compile(""""a".detune(0.3)"""),
-            "detune(amount) via apply" to note("a").apply(detune(0.3)),
-            "script detune(amount) via apply" to SprudelPattern.compile("""note("a").apply(detune(0.3))"""),
+            "pattern.spread(amount)" to note("a").spread(0.3),
+            "script pattern.spread(amount)" to SprudelPattern.compile("""note("a").spread(0.3)"""),
+            "string.spread(amount)" to "a".spread(0.3),
+            "script string.spread(amount)" to SprudelPattern.compile(""""a".spread(0.3)"""),
+            "spread(amount) via apply" to note("a").apply(spread(0.3)),
+            "script detune(amount) via apply" to SprudelPattern.compile("""note("a").apply(spread(0.3))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "script apply(detune()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(detune(0.3))""")!!
+    "script apply(spread()) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(spread(0.3))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.oscParams?.get("detune") shouldBe 0.3
+        events[0].data.oscParams?.get("spread") shouldBe 0.3
     }
 
     // ---- spread() ---------------------------------------------------------------------------------------
 
     "spread dsl interface" {
         dslInterfaceTests(
-            "pattern.spread(amount)" to note("a").spread(0.8),
-            "script pattern.spread(amount)" to SprudelPattern.compile("""note("a").spread(0.8)"""),
-            "string.spread(amount)" to "a".spread(0.8),
-            "script string.spread(amount)" to SprudelPattern.compile(""""a".spread(0.8)"""),
-            "spread(amount) via apply" to note("a").apply(spread(0.8)),
-            "script spread(amount) via apply" to SprudelPattern.compile("""note("a").apply(spread(0.8))"""),
+            "pattern.panSpread(amount)" to note("a").panSpread(0.8),
+            "script pattern.panSpread(amount)" to SprudelPattern.compile("""note("a").panSpread(0.8)"""),
+            "string.panSpread(amount)" to "a".panSpread(0.8),
+            "script string.panSpread(amount)" to SprudelPattern.compile(""""a".panSpread(0.8)"""),
+            "panSpread(amount) via apply" to note("a").apply(panSpread(0.8)),
+            "script spread(amount) via apply" to SprudelPattern.compile("""note("a").apply(panSpread(0.8))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "apply(unison().detune().spread()) chains three mappers" {
-        val p = note("a").apply(unison(5).detune(0.3).spread(0.8))
+    "apply(unison().spread().panSpread()) chains three mappers" {
+        val p = note("a").apply(unison(5).spread(0.3).panSpread(0.8))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("voices") shouldBe 5.0
-        events[0].data.oscParams?.get("detune") shouldBe 0.3
+        events[0].data.oscParams?.get("spread") shouldBe 0.3
         events[0].data.oscParams?.get("panSpread") shouldBe 0.8
     }
 
-    "script apply(spread()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(spread(0.8))""")!!
+    "script apply(panSpread()) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(panSpread(0.8))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

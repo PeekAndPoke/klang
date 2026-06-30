@@ -384,7 +384,7 @@ object JsCompatTestData {
         Example(SKIP, "Gain & Pan", """note("c").gain(0.5).pan("-1.0 1.0")"""),
         Example("Legato", """note("c e").legato(0.5)"""),
         Example("Clip", """note("c e").clip(0.5)"""),
-        Example("Unison/Detune/Spread", """note("c").unison(4).detune(0.1).spread(0.5)"""),
+        Example("Unison/Detune/Spread", """note("c").unison(4).spread(0.1).panSpread(0.5)"""),
 
         // ADSR Envelopes
         Example("ADSR single", """note("c").attack(0.1).decay(0.2).sustain(0.5).release(1.0)"""),

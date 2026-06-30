@@ -15,8 +15,8 @@ import io.peekandpoke.klang.script.stdlib.KlangScriptSuperSawExtensions.gainJitt
  * [IgnitorDsl.SuperSaw], so they chain — put these *before* the base wrappers (`.lowpass()`/`.adsr()`),
  * which return the base [IgnitorDsl] and so come last (config-first ordering).
  *
- * `voices`/`detune`/`analog`/`freq` accept an [IgnitorDslLike] (a number → [IgnitorDsl.Constant], or an
- * `Osc.*` graph for audio-rate modulation). The character knobs (`detunePower`/`sideAtten`/`gainJitter`/
+ * `voices`/`spread`/`analog`/`freq` accept an [IgnitorDslLike] (a number → [IgnitorDsl.Constant], or an
+ * `Osc.*` graph for audio-rate modulation). The character knobs (`spreadPower`/`sideAtten`/`gainJitter`/
  * `centerJitter`) are plain scalars read once per voice — they mirror the `SUPERSAW_*` engine constants.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
@@ -33,10 +33,10 @@ object KlangScriptSuperSawExtensions {
     fun voices(self: IgnitorDsl.SuperSaw, voices: IgnitorDslLike): IgnitorDsl.SuperSaw =
         self.copy(voices = voices.toIgnitorDsl())
 
-    /** Unison detune spread between the voices (default 0.2). Same as the pattern-level `.detune()`. */
+    /** Unison frequency spread between the voices (default 0.2). Same as the pattern-level `.spread()`. */
     @KlangScript.Method
-    fun detune(self: IgnitorDsl.SuperSaw, detune: IgnitorDslLike): IgnitorDsl.SuperSaw =
-        self.copy(detune = detune.toIgnitorDsl())
+    fun spread(self: IgnitorDsl.SuperSaw, spread: IgnitorDslLike): IgnitorDsl.SuperSaw =
+        self.copy(spread = spread.toIgnitorDsl())
 
     /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. */
     @KlangScript.Method
@@ -45,8 +45,8 @@ object KlangScriptSuperSawExtensions {
 
     /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward (default 1.2). */
     @KlangScript.Method
-    fun detunePower(self: IgnitorDsl.SuperSaw, detunePower: Double): IgnitorDsl.SuperSaw =
-        self.copy(detunePower = detunePower)
+    fun spreadPower(self: IgnitorDsl.SuperSaw, spreadPower: Double): IgnitorDsl.SuperSaw =
+        self.copy(spreadPower = spreadPower)
 
     /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice (default 0.1). */
     @KlangScript.Method

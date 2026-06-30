@@ -664,81 +664,83 @@ fun uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
 fun PatternMapperFn.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.unison(voices, callInfo) }
 
-// -- detune() ---------------------------------------------------------------------------------------------------------
-
-private val detuneMutation = voiceSetter { putOscParam("detune", it?.asDoubleOrNull()) }
-
-private fun applyDetune(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args, detuneMutation)
-}
-
-/**
- * Sets the oscillator frequency spread in cents for unison/supersaw effects.
- *
- * Controls how much each unison voice is detuned from the base pitch. Use with `unison`
- * to set the number of voices. Higher values produce a wider, more detuned sound.
- *
- * ```KlangScript(Playable)
- * note("c3").s("supersaw").unison(5).detune(0.5)   // 5 voices spread 0.5 half tones
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").s("supersaw").detune("<0.05 0.10 0.20 0.40>")  // escalating detune each beat
- * ```
- *
- * @param amount The detuning in cents.
- *
- * @category dynamics
- * @tags detune, spread, unison, cents, supersaw
- */
-@KlangScript.Function
-fun SprudelPattern.detune(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyDetune(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern and sets the oscillator frequency spread.
- *
- * ```KlangScript(Playable)
- * "c3*4".detune("<0.05 0.10 0.20 0.40>").s("supersaw").note() // escalating detune each beat
- * ```
- *
- * @param amount The detuning in cents.
- */
-@KlangScript.Function
-fun String.detune(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).detune(amount, callInfo)
-
-/**
- * Creates a [PatternMapperFn] that sets the oscillator frequency spread for a pattern.
- *
- * ```KlangScript(Playable)
- * note("c3*4").s("supersaw").apply(detune("<0.05 0.10 0.20 0.40>"))  // escalating detune each beat
- * ```
- * @param amount The detuning in cents.
- */
-@KlangScript.Function
-fun detune(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.detune(amount, callInfo) }
-
-/**
- * Creates a chained [PatternMapperFn] that sets the oscillator frequency spread after the previous mapper.
- *
- * ```KlangScript(Playable)
- * note("c3").s("supersaw").apply(unison(5).detune(0.3))  // unison + detune chained
- * ```
- *
- * @param amount The detuning in cents.
- */
-@KlangScript.Function
-fun PatternMapperFn.detune(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.detune(amount, callInfo) }
-
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
-private val spreadMutation = voiceSetter { putOscParam("panSpread", it?.asDoubleOrNull()) }
+private val spreadMutation = voiceSetter { putOscParam("spread", it?.asDoubleOrNull()) }
 
 private fun applySpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, spreadMutation)
+}
+
+/**
+ * Sets the unison frequency spread (in semitones) for super-oscillators.
+ *
+ * Controls how far each unison voice is detuned from the on-pitch center voice — the classic
+ * supersaw "detune" width. Use with `unison` to set the number of voices; higher values
+ * produce a wider, more chorused sound. (Renamed from `detune()`: in Klang, `detune` shifts an
+ * oscillator's *pitch* — this fans the unison stack apart, so it is `spread`.)
+ *
+ * ```KlangScript(Playable)
+ * note("c3").s("supersaw").unison(5).spread(0.1)   // 5 voices spread ±0.05 semitones
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("supersaw").spread("<0.05 0.10 0.20 0.40>")  // escalating spread each beat
+ * ```
+ *
+ * @param amount The unison spread in semitones.
+ *
+ * @category dynamics
+ * @tags spread, detune, unison, supersaw
+ */
+@KlangScript.Function
+fun SprudelPattern.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applySpread(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and sets the unison frequency spread.
+ *
+ * ```KlangScript(Playable)
+ * "c3*4".spread("<0.05 0.10 0.20 0.40>").s("supersaw").note() // escalating spread each beat
+ * ```
+ *
+ * @param amount The unison spread in semitones.
+ */
+@KlangScript.Function
+fun String.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).spread(amount, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that sets the unison frequency spread for a pattern.
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("supersaw").apply(spread("<0.05 0.10 0.20 0.40>"))  // escalating spread each beat
+ * ```
+ * @param amount The unison spread in semitones.
+ */
+@KlangScript.Function
+fun spread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.spread(amount, callInfo) }
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the unison frequency spread after the previous mapper.
+ *
+ * ```KlangScript(Playable)
+ * note("c3").s("supersaw").apply(unison(5).spread(0.1))  // unison + spread chained
+ * ```
+ *
+ * @param amount The unison spread in semitones.
+ */
+@KlangScript.Function
+fun PatternMapperFn.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.spread(amount, callInfo) }
+
+// -- panSpread() ------------------------------------------------------------------------------------------------------
+
+private val panSpreadMutation = voiceSetter { putOscParam("panSpread", it?.asDoubleOrNull()) }
+
+private fun applyPanSpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretStringField(args, panSpreadMutation)
 }
 
 /**
@@ -747,61 +749,48 @@ private fun applySpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * Controls how widely the unison voices are spread across the stereo field. Use with
  * `unison` to set the number of voices.
  *
- * ```KlangScript(Playable)
- * note("c3").s("supersaw").unison(5).spread(0.8)   // wide stereo spread
- * ```
+ * NOTE: the super-oscillators are currently summed to mono, so `panSpread` is wired but not yet
+ * audible — kept as a forward hook for per-voice stereo placement.
  *
  * ```KlangScript(Playable)
- * note("c3*4").s("supersaw").spread("<0.2 0.5 0.8 1.0>")         // gradually widen each beat
+ * note("c3").s("supersaw").unison(5).panSpread(0.8)   // wide stereo spread (future)
  * ```
  *
  * @param amount The stereo pan spread, between 0 and 1.
  *
  * @category dynamics
- * @tags spread, pan, stereo, unison, supersaw
+ * @tags panSpread, pan, stereo, unison, supersaw
  */
 @KlangScript.Function
-fun SprudelPattern.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applySpread(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPanSpread(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the stereo pan spread for unison voices.
  *
- * ```KlangScript(Playable)
- * "c3*4".spread("<0.2 0.5 0.8 1.0>").s("supersaw").note()         // gradually widen each beat
- * ```
- *
  * @param amount The stereo pan spread, between 0 and 1.
  */
 @KlangScript.Function
-fun String.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).spread(amount, callInfo)
+fun String.panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).panSpread(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
  *
- * ```KlangScript(Playable)
- * "c3*4".apply(spread("<0.2 0.5 0.8 1.0>")).s("supersaw").note()         // gradually widen each beat
- * ```
- *
  * @param amount The stereo pan spread, between 0 and 1.
  */
 @KlangScript.Function
-fun spread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.spread(amount, callInfo) }
+fun panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.panSpread(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the stereo pan spread after the previous mapper.
  *
- * ```KlangScript(Playable)
- * note("c3").s("supersaw").apply(unison(5).spread(0.8))  // unison + spread chained
- * ```
- *
  * @param amount The stereo pan spread, between 0 and 1.
  */
 @KlangScript.Function
-fun PatternMapperFn.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.spread(amount, callInfo) }
+fun PatternMapperFn.panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.panSpread(amount, callInfo) }
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 

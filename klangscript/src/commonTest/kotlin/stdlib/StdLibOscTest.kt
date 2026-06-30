@@ -92,18 +92,19 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.supersaw()")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.freq shouldBe IgnitorDsl.Freq
-        dsl.voices shouldBe IgnitorDsl.Constant(8.0)
-        dsl.detune shouldBe IgnitorDsl.Constant(0.2)
-        dsl.analog shouldBe IgnitorDsl.Constant(0.0)
+        // Defaults come from IgnitorDsl.Slots (overridable Params), matching the backend `.sound("supersaw")`.
+        dsl.voices shouldBe IgnitorDsl.Slots.voices
+        dsl.spread shouldBe IgnitorDsl.Slots.spread
+        dsl.analog shouldBe IgnitorDsl.Slots.analog
     }
 
     "Osc.supersaw(440) backward compat — freq only" {
         val dsl = evalIgnitorDsl("Osc.supersaw(440)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.freq shouldBe IgnitorDsl.Constant(440.0)
-        dsl.voices shouldBe IgnitorDsl.Constant(8.0)
-        dsl.detune shouldBe IgnitorDsl.Constant(0.2)
-        dsl.analog shouldBe IgnitorDsl.Constant(0.0)
+        dsl.voices shouldBe IgnitorDsl.Slots.voices
+        dsl.spread shouldBe IgnitorDsl.Slots.spread
+        dsl.analog shouldBe IgnitorDsl.Slots.analog
     }
 
     "Osc.supersaw with voices=1 — degenerate single voice" {
@@ -117,7 +118,7 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), 4, 0.1).analog(0.3)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
-        dsl.detune shouldBe IgnitorDsl.Constant(0.1)
+        dsl.spread shouldBe IgnitorDsl.Constant(0.1)
         dsl.analog shouldBe IgnitorDsl.Constant(0.3)
     }
 
@@ -132,7 +133,7 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.supersine(Osc.freq(), 6, 0.15)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSine>()
         dsl.voices shouldBe IgnitorDsl.Constant(6.0)
-        dsl.detune shouldBe IgnitorDsl.Constant(0.15)
+        dsl.spread shouldBe IgnitorDsl.Constant(0.15)
     }
 
     // Positional args: supersquare(freq, voices, detune). Use .analog() to opt in.
@@ -155,7 +156,7 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.superramp(Osc.freq(), 5, 0.4).analog(0.1)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperRamp>()
         dsl.voices shouldBe IgnitorDsl.Constant(5.0)
-        dsl.detune shouldBe IgnitorDsl.Constant(0.4)
+        dsl.spread shouldBe IgnitorDsl.Constant(0.4)
         dsl.analog shouldBe IgnitorDsl.Constant(0.1)
     }
 
@@ -164,7 +165,7 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.superpluck(Osc.freq(), 4, 0.05)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperPluck>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
-        dsl.detune shouldBe IgnitorDsl.Constant(0.05)
+        dsl.spread shouldBe IgnitorDsl.Constant(0.05)
     }
 
     "Osc.whitenoise() returns WhiteNoise" {

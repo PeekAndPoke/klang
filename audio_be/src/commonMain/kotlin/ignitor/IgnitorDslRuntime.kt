@@ -207,30 +207,30 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.SuperSaw -> applyMod(
             Ignitors.superSaw(
-                freq.noMod(), voices.noMod(), detune.noMod(), analog.noMod(),
-                sideAtten = sideAtten, gainJitter = gainJitter, detunePower = detunePower,
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
             ),
             accumulatedMod
         )
 
         is IgnitorDsl.SuperSine -> applyMod(
-            Ignitors.superSine(freq.noMod(), voices.noMod(), detune.noMod(), analog.noMod()),
+            Ignitors.superSine(freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod()),
             accumulatedMod
         )
 
         is IgnitorDsl.SuperSquare -> applyMod(
-            Ignitors.superSquare(freq.noMod(), voices.noMod(), detune.noMod(), analog.noMod()),
+            Ignitors.superSquare(freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod()),
             accumulatedMod
         )
 
         is IgnitorDsl.SuperTri -> applyMod(
-            Ignitors.superTri(freq.noMod(), voices.noMod(), detune.noMod(), analog.noMod()),
+            Ignitors.superTri(freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod()),
             accumulatedMod
         )
 
         is IgnitorDsl.SuperRamp -> applyMod(
-            Ignitors.superRamp(freq.noMod(), voices.noMod(), detune.noMod(), analog.noMod()),
+            Ignitors.superRamp(freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod()),
             accumulatedMod
         )
 
@@ -250,7 +250,7 @@ private fun IgnitorDsl.buildRaw(
             Ignitors.superKarplusStrong(
                 freq.noMod(),
                 voices.noMod(),
-                detune.noMod(),
+                spread.noMod(),
                 decay.noMod(),
                 brightness.noMod(),
                 pickPosition.noMod(),
