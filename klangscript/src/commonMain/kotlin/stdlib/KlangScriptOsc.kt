@@ -156,37 +156,87 @@ object KlangScriptOsc {
 
     // ── Noise Sources ────────────────────────────────────────────────────────
 
-    /** Creates a white noise source (flat spectrum). Each call yields a fresh DSL instance. */
+    /**
+     * Creates a white noise source. Each call yields a fresh DSL instance.
+     * @param color spectral tilt: 0 = flat white (default), <0 darkens toward pink/brown, >0 brightens (−1..1).
+     */
     @KlangScript.Method
-    fun whitenoise(): IgnitorDsl = IgnitorDsl.WhiteNoise()
+    fun whitenoise(color: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.WhiteNoise(color = color.toIgnitorDsl())
 
-    /** Creates a brown noise source (1/f^2 spectrum, deeper). Each call yields a fresh DSL instance. */
+    /**
+     * Creates a brown noise source (1/f^2 spectrum, deeper). Each call yields a fresh DSL instance.
+     * @param depth per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter.
+     */
     @KlangScript.Method
-    fun brownnoise(): IgnitorDsl = IgnitorDsl.BrownNoise()
+    fun brownnoise(depth: IgnitorDslLike = 0.02): IgnitorDsl =
+        IgnitorDsl.BrownNoise(depth = depth.toIgnitorDsl())
 
     /** Creates a pink noise source (1/f spectrum). Each call yields a fresh DSL instance. */
     @KlangScript.Method
     fun pinknoise(): IgnitorDsl = IgnitorDsl.PinkNoise()
 
-    /** Creates a Perlin noise source (smooth organic noise). */
+    /**
+     * Creates a Perlin noise source (smooth organic noise).
+     * @param rate walk speed (default 1.0).
+     * @param octaves fractal-Brownian-motion octaves: 1 = plain (default), higher = more detail (capped at 8).
+     * @param persistence fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves).
+     */
     @KlangScript.Method
-    fun perlin(rate: IgnitorDslLike = 1.0): IgnitorDsl =
-        IgnitorDsl.PerlinNoise(rate = rate.toIgnitorDsl())
+    fun perlin(
+        rate: IgnitorDslLike = 1.0,
+        octaves: IgnitorDslLike = 1.0,
+        persistence: IgnitorDslLike = 0.5,
+    ): IgnitorDsl =
+        IgnitorDsl.PerlinNoise(
+            rate = rate.toIgnitorDsl(),
+            octaves = octaves.toIgnitorDsl(),
+            persistence = persistence.toIgnitorDsl(),
+        )
 
-    /** Creates a Berlin noise source (piecewise-linear interpolated noise). */
+    /**
+     * Creates a Berlin noise source (piecewise-linear interpolated noise).
+     * @param rate walk speed (default 1.0).
+     * @param octaves fBm octaves: 1 = plain (default), higher = more detail (capped at 8).
+     * @param persistence fBm amplitude falloff per octave (default 0.5).
+     */
     @KlangScript.Method
-    fun berlin(rate: IgnitorDslLike = 1.0): IgnitorDsl =
-        IgnitorDsl.BerlinNoise(rate = rate.toIgnitorDsl())
+    fun berlin(
+        rate: IgnitorDslLike = 1.0,
+        octaves: IgnitorDslLike = 1.0,
+        persistence: IgnitorDslLike = 0.5,
+    ): IgnitorDsl =
+        IgnitorDsl.BerlinNoise(
+            rate = rate.toIgnitorDsl(),
+            octaves = octaves.toIgnitorDsl(),
+            persistence = persistence.toIgnitorDsl(),
+        )
 
-    /** Creates a dust source (sparse random impulses). */
+    /**
+     * Creates a dust source (sparse random impulses).
+     * @param density impulse rate 0..1.
+     * @param tail heavy-tailed amplitude exponent: 1 = uniform (default), >1 = mostly-tiny / rare-loud (vinyl pops).
+     * @param bipolar random ±sign when > 0.5; default 0 = unipolar.
+     */
     @KlangScript.Method
-    fun dust(density: IgnitorDslLike = 0.2): IgnitorDsl =
-        IgnitorDsl.Dust(density = density.toIgnitorDsl())
+    fun dust(
+        density: IgnitorDslLike = 0.2,
+        tail: IgnitorDslLike = 1.0,
+        bipolar: IgnitorDslLike = 0.0,
+    ): IgnitorDsl =
+        IgnitorDsl.Dust(
+            density = density.toIgnitorDsl(),
+            tail = tail.toIgnitorDsl(),
+            bipolar = bipolar.toIgnitorDsl(),
+        )
 
-    /** Creates a crackle source (noise bursts). */
+    /**
+     * Creates a crackle source (chaotic recurrence → bipolar pops).
+     * @param chaos drives the chaotic map: ~1.0 sparse, 1.5 = clear crackle (default), ~2.0 dense/noisy.
+     */
     @KlangScript.Method
-    fun crackle(density: IgnitorDslLike = 0.2): IgnitorDsl =
-        IgnitorDsl.Crackle(density = density.toIgnitorDsl())
+    fun crackle(chaos: IgnitorDslLike = 1.5): IgnitorDsl =
+        IgnitorDsl.Crackle(chaos = chaos.toIgnitorDsl())
 
     // ── Super Oscillators ────────────────────────────────────────────────────
 

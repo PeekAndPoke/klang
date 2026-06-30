@@ -140,7 +140,7 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "berlin", dsl = berlinNoise)
 
     register(name = "dust", dsl = IgnitorDsl.Dust(density = slots.density))
-    register(name = "crackle", dsl = IgnitorDsl.Crackle(density = slots.density))
+    register(name = "crackle", dsl = IgnitorDsl.Crackle(chaos = slots.chaos))
 
     // ─── Physical models ────────────────────────────────────────────────────
 

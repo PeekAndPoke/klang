@@ -196,6 +196,33 @@ class LangSndSpec : StringSpec({
         events[0].data.soundName shouldBe "dust"
     }
 
+    "sndDust(\"density:tail\") compound string sets both oscParams" {
+        val events = note("c3").sndDust("0.3:4").queryArc(0.0, 1.0)
+        events.shouldNotBeEmpty()
+        assertSoftly {
+            events[0].data.oscParams?.get("density") shouldBe 0.3
+            events[0].data.oscParams?.get("tail") shouldBe 4.0
+        }
+    }
+
+    "sndNoise(\"color\") compound string sets the spectral-tilt oscParam" {
+        val events = note("c3").sndNoise("-0.5").queryArc(0.0, 1.0)
+        events.shouldNotBeEmpty()
+        assertSoftly {
+            events[0].data.soundName shouldBe "whitenoise"
+            events[0].data.oscParams?.get("color") shouldBe -0.5
+        }
+    }
+
+    "sndBrown(\"depth\") compound string sets the white-leak oscParam" {
+        val events = note("c3").sndBrown("0.5").queryArc(0.0, 1.0)
+        events.shouldNotBeEmpty()
+        assertSoftly {
+            events[0].data.soundName shouldBe "brownnoise"
+            events[0].data.oscParams?.get("depth") shouldBe 0.5
+        }
+    }
+
     "sndCrackle() dsl interface" {
         dslInterfaceTests(
             "pattern.sndCrackle()" to note("c3").sndCrackle("0.5"),
@@ -208,7 +235,7 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "crackle"
-                events[0].data.oscParams?.get("density") shouldBe 0.5
+                events[0].data.oscParams?.get("chaos") shouldBe 0.5
             }
         }
     }

@@ -801,10 +801,11 @@ private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 }
 
 /**
- * Sets the oscillator density for supersaw or noise density for dust/crackle generators.
+ * Sets the oscillator density for supersaw or impulse density for the dust generator.
  *
  * For supersaw: controls how tightly packed the oscillators are.
  * For noise generators (e.g. `dust`): controls the number of events per second.
+ * (Note: `crackle` is a chaotic generator now — it is driven by `chaos`, not `density`.)
  *
  * ```KlangScript(Playable)
  * note("a").s("dust").density(40)   // 40 noise events per second
@@ -863,7 +864,7 @@ fun PatternMapperFn.density(amount: PatternLike? = null, callInfo: CallInfo? = n
     this.chain { p -> p.density(amount, callInfo) }
 
 /**
- * Alias for [density]. Sets the oscillator density for supersaw or noise density for dust/crackle.
+ * Alias for [density]. Sets the oscillator density for supersaw or impulse density for dust.
  *
  * ```KlangScript(Playable)
  * note("a").s("dust").d(40)   // 40 noise events per second

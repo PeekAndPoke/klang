@@ -38,4 +38,27 @@ class BerlinNoise(random: Random) {
 
         return v0 + currentPercent * (v1 - v0)
     }
+
+    /**
+     * Fractal Brownian motion over [noise]: sums [octaves] evaluations at ×2 frequency (lacunarity 2.0) and
+     * ×[persistence] amplitude per octave, normalized by the amplitude sum so the result keeps [noise]'s
+     * ≈[0, 1] range. Higher octaves add finer detail; lower [persistence] makes the upper octaves quieter.
+     *
+     * [octaves] <= 1 short-circuits to a single [noise] call — byte-identical to the single-octave path, so the
+     * default (octaves = 1) carries zero extra cost. Cost scales **linearly** with [octaves] (engine caps at 8).
+     */
+    fun fbm(t: Double, octaves: Int, persistence: Double): Double {
+        if (octaves <= 1) return noise(t)
+        var sum = 0.0
+        var amp = 1.0
+        var freq = 1.0
+        var norm = 0.0
+        for (o in 0 until octaves) {
+            sum += amp * noise(t * freq)
+            norm += amp
+            freq *= 2.0
+            amp *= persistence
+        }
+        return if (norm > 0.0) sum / norm else 0.0
+    }
 }

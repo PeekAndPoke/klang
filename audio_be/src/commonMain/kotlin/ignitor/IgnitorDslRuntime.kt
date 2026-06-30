@@ -209,13 +209,13 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Silence -> applyMod(Ignitors.silence(), accumulatedMod)
 
         // Noise sources ignore phaseMod — skip ModApplyingIgnitor to avoid wasting cycles.
-        is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(Random)
-        is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(Random)
+        is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(Random, color.noMod())
+        is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(Random, depth.noMod())
         is IgnitorDsl.PinkNoise -> Ignitors.pinkNoise(Random)
-        is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(Random, rate.noMod())
-        is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(Random, rate.noMod())
-        is IgnitorDsl.Dust -> Ignitors.dust(Random, density.noMod())
-        is IgnitorDsl.Crackle -> Ignitors.crackle(Random, density.noMod())
+        is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(Random, rate.noMod(), octaves.noMod(), persistence.noMod())
+        is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(Random, rate.noMod(), octaves.noMod(), persistence.noMod())
+        is IgnitorDsl.Dust -> Ignitors.dust(Random, density.noMod(), tail.noMod(), bipolar.noMod())
+        is IgnitorDsl.Crackle -> Ignitors.crackle(Random, chaos.noMod())
 
         is IgnitorDsl.SuperSaw -> applyMod(
             Ignitors.superSaw(

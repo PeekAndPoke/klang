@@ -136,3 +136,41 @@ internal const val PULSE_RISE_FLANK: Double = 0.0
 
 /** Pulse falling-edge flank fraction (0 = sharpest / min floor, 1 = full ramp). */
 internal const val PULSE_FALL_FLANK: Double = 0.0
+
+// ── Crackle (chaotic recurrence) ───────────────────────────────────────────────────────────────────
+// SuperCollider's Crackle map: y[n] = |chaos·y[n-1] − y[n-2] − CRACKLE_C|, then DC-blocked to bipolar
+// pops. No PRNG — typically cheaper than the dust it used to alias. Tune by ear.
+
+/** Default chaos parameter (SC's classic 1.5 → clear crackle; ~1.0 sparse, ~2.0 dense/noisy). */
+internal const val CRACKLE_CHAOS_DEFAULT: Double = 1.5
+
+/** Upper bound on chaos — the map diverges for chaos ≳ 2, so coerce there (numerical stability). */
+internal const val CRACKLE_CHAOS_MAX: Double = 2.0
+
+/** Small constant offset in the chaotic map (SC uses 0.05). */
+internal const val CRACKLE_C: Double = 0.05
+
+/** DC-blocker pole (≈35 Hz high-pass @ 44.1k) that recenters the unipolar map to bipolar pops. */
+internal const val CRACKLE_DC_POLE: Double = 0.995
+
+// ── White-noise spectral tilt ("color") ────────────────────────────────────────────────────────────
+// One-pole tilt after the white source: color 0 = flat white (filter bypassed → perf-neutral default);
+// <0 crossfades toward the one-pole LP (darken, −6 dB/oct above the pivot); >0 toward the complementary
+// HP (brighten). Range −1..1.
+
+/** Default tilt (0 = flat white, filter bypassed). */
+internal const val NOISE_TILT_DEFAULT: Double = 0.0
+
+/** One-pole LP coefficient for the tilt pivot (`g` in `lp += g·(x−lp)`; ≈1 kHz pivot @ 44.1k). Tune by ear. */
+internal const val NOISE_TILT_LP_COEF: Double = 0.15
+
+// ── Brown noise ──────────────────────────────────────────────────────────────────────────────────
+/** Per-sample white-leak `k` in `out = (out + k·white)/(1+k)`. Lower = deeper/slower brown. */
+internal const val BROWN_LEAK_DEFAULT: Double = 0.02
+
+// ── Dust ─────────────────────────────────────────────────────────────────────────────────────────
+/** Heavy-tailed amplitude exponent: 1 = uniform (default, behavior-preserving); >1 = rare-loud pops. */
+internal const val DUST_TAIL_DEFAULT: Double = 1.0
+
+/** Bipolar flag (>0.5 = on); 0 = unipolar (today's behavior). */
+internal const val DUST_BIPOLAR_DEFAULT: Double = 0.0

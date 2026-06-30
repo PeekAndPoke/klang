@@ -44,7 +44,7 @@ stack(
       x.hpf(800).lpf(1500).lpq(5).bandf(notch).bandq(1.0).transpose(12).postgain(0.06).pan(0.2).superimpose(pan(0.8)).body("glass")
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
-  note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c2,c3] [d1,d1,d2,a2]]>/4").clip(0.7).struct("x!4").slow(16)
+  note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a2]]>/4").clip(0.7).struct("x!4").slow(16)
     .orbit(2).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).warmth(0.01) // . mute()
     .gain(1.0).adsr("0.01:0.6:0.8:2.75").postgain(0.50).coarse(2).coarseos(2) // solo()
     .superimpose(
@@ -63,14 +63,14 @@ stack(
     .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
   , // Perc 1 -----------------------------------------------------------------------------------------------------------------------
   sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-    .orbit(5).gain(0.7).pan(0.5).adsr("0.02:0.3:0.5:1").degrade(0.01).hpf(120).lpf(7500)
+    .orbit(5).gain(0.7).pan(0.5).adsr("0.017:0.3:0.5:1").degrade(0.01).hpf(120).lpf(7500)
     .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(7).sound("brown")
     .orbit(0).gain(0.12).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr("0.2:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(48)).bandq(sine.range(0.25, 5.0).slow(48).early(12))
   ,
-).delay("0.2::0.5").delaytime(pure(1/8).div(cps)).room("0.1:10.0").compressor("-15:2:6:0.01:0.2")
+).delay("0.2::0.5").delaytime(pure(1/8).div(cps)).room("0.1:10.0").compressor("-10:2:6:0.01:0.05")
 
 
 

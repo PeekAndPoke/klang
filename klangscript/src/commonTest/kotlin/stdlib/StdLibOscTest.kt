@@ -168,8 +168,17 @@ class StdLibOscTest : StringSpec({
         dsl.spread shouldBe IgnitorDsl.Constant(0.05)
     }
 
-    "Osc.whitenoise() returns WhiteNoise" {
-        evalIgnitorDsl("Osc.whitenoise()").shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
+    "Osc.whitenoise() returns WhiteNoise with flat color (0.0)" {
+        val dsl = evalIgnitorDsl("Osc.whitenoise()")
+        dsl.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
+        // KlangScript bakes the literal default → Constant(0.0) (the engine bypasses the tilt at 0)
+        dsl.color shouldBe IgnitorDsl.Constant(0.0)
+    }
+
+    "Osc.whitenoise(color = -0.5) sets the spectral-tilt knob" {
+        val dsl = evalIgnitorDsl("Osc.whitenoise(-0.5)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
+        dsl.color shouldBe IgnitorDsl.Constant(-0.5)
     }
 
     "Osc.perlin() returns PerlinNoise" {
@@ -188,6 +197,19 @@ class StdLibOscTest : StringSpec({
         dsl.shouldBeInstanceOf<IgnitorDsl.Dust>()
         dsl.density.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.density as IgnitorDsl.Constant).value shouldBe 0.5
+    }
+
+    "Osc.dust(tail = 4, bipolar = 1) sets the heavy-tail + bipolar knobs (named args)" {
+        val dsl = evalIgnitorDsl("Osc.dust(0.5, 4, 1)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Dust>()
+        dsl.tail shouldBe IgnitorDsl.Constant(4.0)
+        dsl.bipolar shouldBe IgnitorDsl.Constant(1.0)
+    }
+
+    "Osc.brownnoise(depth = 0.3) sets the white-leak knob" {
+        val dsl = evalIgnitorDsl("Osc.brownnoise(0.3)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.BrownNoise>()
+        dsl.depth shouldBe IgnitorDsl.Constant(0.3)
     }
 
     "Osc.pluck() returns Pluck" {

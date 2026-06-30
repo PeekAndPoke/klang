@@ -9,7 +9,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors.dust
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.berlinNoise
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.perlinNoise
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.pulze
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.readParam
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.sawtooth
@@ -24,6 +25,7 @@ import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
 import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -45,6 +47,13 @@ object Ignitors {
     private val dutyDefault = ConstantIgnitor(0.5)
     private val densityDefault = ConstantIgnitor(0.2)
     private val rateDefault = ConstantIgnitor(1.0)
+    private val octavesDefault = ConstantIgnitor(1.0)
+    private val persistenceDefault = ConstantIgnitor(0.5)
+    private val chaosDefault = ConstantIgnitor(CRACKLE_CHAOS_DEFAULT)
+    private val colorDefault = ConstantIgnitor(NOISE_TILT_DEFAULT)
+    private val brownDepthDefault = ConstantIgnitor(BROWN_LEAK_DEFAULT)
+    private val tailDefault = ConstantIgnitor(DUST_TAIL_DEFAULT)
+    private val bipolarDefault = ConstantIgnitor(DUST_BIPOLAR_DEFAULT)
     private val decayDefault = ConstantIgnitor(0.996)
     private val brightnessDefault = ConstantIgnitor(0.5)
     private val pickPositionDefault = ConstantIgnitor(0.5)
@@ -255,13 +264,34 @@ object Ignitors {
     )
 
     /** White noise generator. Flat spectrum with equal energy at all frequencies. */
-    fun whiteNoise(rng: Random): Ignitor = WhiteNoiseIgnitor(rng)
+    /**
+     * White noise with an optional first-order spectral tilt ([color]). `color == 0` → flat white with
+     * the filter bypassed (the per-sample cost is exactly today's pure-rng loop — perf-neutral default).
+     * `color < 0` crossfades toward a one-pole LP (darken); `color > 0` toward the complementary HP
+     * (brighten). [color] is read control-rate (once per block).
+     */
+    fun whiteNoise(rng: Random, color: Ignitor = colorDefault): Ignitor = WhiteNoiseIgnitor(rng, color)
 
-    private class WhiteNoiseIgnitor(private val rng: Random) : Ignitor {
+    private class WhiteNoiseIgnitor(private val rng: Random, private val color: Ignitor) : Ignitor {
+        private var lp = 0.0 // one-pole LP state for the tilt (persists across blocks)
+
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            // control-rate read with no buffer fill for Constant/Param color → perf-neutral default
+            val c = color.blockStartValue(0.0, ctx).coerceIn(-1.0, 1.0)
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                buffer[i] = (rng.nextDouble() * 2.0 - 1.0)
+            if (c == 0.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = (rng.nextDouble() * 2.0 - 1.0)
+                }
+            } else {
+                val darken = if (c < 0.0) -c else 0.0 // crossfade white→lp
+                val brighten = if (c > 0.0) c else 0.0 // crossfade white→hp
+                for (i in ctx.offset until end) {
+                    val white = rng.nextDouble() * 2.0 - 1.0
+                    lp += NOISE_TILT_LP_COEF * (white - lp)
+                    val hp = white - lp
+                    buffer[i] = white + darken * (lp - white) + brighten * (hp - white)
+                }
             }
         }
     }
@@ -360,16 +390,22 @@ object Ignitors {
     )
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
-    fun brownNoise(rng: Random): Ignitor = BrownNoiseIgnitor(rng)
+    /**
+     * Brown (random-walk) noise. [depth] is the per-sample white-leak `k` in `out = (out + k·white)/(1+k)`
+     * (read control-rate). `depth = BROWN_LEAK_DEFAULT` reproduces the original `/1.02` walk byte-for-byte.
+     */
+    fun brownNoise(rng: Random, depth: Ignitor = brownDepthDefault): Ignitor = BrownNoiseIgnitor(rng, depth)
 
-    private class BrownNoiseIgnitor(private val rng: Random) : Ignitor {
+    private class BrownNoiseIgnitor(private val rng: Random, private val depth: Ignitor) : Ignitor {
         private var out: Double = 0.0
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val k = depth.blockStartValue(0.0, ctx).coerceAtLeast(0.0)
+            val denom = 1.0 + k
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 val white = rng.nextDouble() * 2.0 - 1.0
-                out = (out + 0.02 * white) / 1.02
+                out = (out + k * white) / denom
                 buffer[i] = out
             }
         }
@@ -405,20 +441,34 @@ object Ignitors {
     }
 
     /** Perlin noise: smooth organic noise using 1D Perlin noise. Output range -1..1. */
-    fun perlinNoise(rng: Random, rate: Ignitor = rateDefault): Ignitor =
-        PerlinNoiseIgnitor(rng, rate)
+    fun perlinNoise(
+        rng: Random,
+        rate: Ignitor = rateDefault,
+        octaves: Ignitor = octavesDefault,
+        persistence: Ignitor = persistenceDefault,
+    ): Ignitor = PerlinNoiseIgnitor(rng, rate, octaves, persistence)
 
-    private class PerlinNoiseIgnitor(rng: Random, private val rate: Ignitor) : Ignitor {
+    private class PerlinNoiseIgnitor(
+        rng: Random,
+        private val rate: Ignitor,
+        private val octaves: Ignitor,
+        private val persistence: Ignitor,
+    ) : Ignitor {
         private val noise = PerlinNoise(rng)
         private var pos: Double = rng.nextDouble() * 256.0
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            ctx.scratchBuffers.use { rateBuf ->
-                rate.generate(rateBuf, 0.0, ctx)
-                val step = rateBuf[ctx.offset] * PERLIN_STEP
+            ctx.scratchBuffers.use { buf ->
+                // control-rate: read rate/octaves/persistence once per block, reusing one scratch buffer.
+                rate.generate(buf, 0.0, ctx)
+                val step = buf[ctx.offset] * PERLIN_STEP
+                octaves.generate(buf, 0.0, ctx)
+                val oct = buf[ctx.offset].toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
+                persistence.generate(buf, 0.0, ctx)
+                val pers = buf[ctx.offset]
                 val end = ctx.offset + ctx.length
                 for (i in ctx.offset until end) {
-                    buffer[i] = noise.noise(pos)
+                    buffer[i] = noise.fbm(pos, oct, pers)
                     pos += step
                 }
             }
@@ -426,34 +476,58 @@ object Ignitors {
     }
 
     /** Berlin noise: piecewise-linear interpolated random noise, scaled to -1..1. */
-    fun berlinNoise(rng: Random, rate: Ignitor = rateDefault): Ignitor =
-        BerlinNoiseIgnitor(rng, rate)
+    fun berlinNoise(
+        rng: Random,
+        rate: Ignitor = rateDefault,
+        octaves: Ignitor = octavesDefault,
+        persistence: Ignitor = persistenceDefault,
+    ): Ignitor = BerlinNoiseIgnitor(rng, rate, octaves, persistence)
 
-    private class BerlinNoiseIgnitor(rng: Random, private val rate: Ignitor) : Ignitor {
+    private class BerlinNoiseIgnitor(
+        rng: Random,
+        private val rate: Ignitor,
+        private val octaves: Ignitor,
+        private val persistence: Ignitor,
+    ) : Ignitor {
         private val noise = BerlinNoise(rng)
         private var pos: Double = rng.nextDouble() * 256.0
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            ctx.scratchBuffers.use { rateBuf ->
-                rate.generate(rateBuf, 0.0, ctx)
-                val step = rateBuf[ctx.offset] * PERLIN_STEP
+            ctx.scratchBuffers.use { buf ->
+                rate.generate(buf, 0.0, ctx)
+                val step = buf[ctx.offset] * PERLIN_STEP
+                octaves.generate(buf, 0.0, ctx)
+                val oct = buf[ctx.offset].toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
+                persistence.generate(buf, 0.0, ctx)
+                val pers = buf[ctx.offset]
                 val end = ctx.offset + ctx.length
                 for (i in ctx.offset until end) {
                     // BerlinNoise outputs 0..1, scale to -1..1
-                    buffer[i] = (noise.noise(pos) * 2.0 - 1.0)
+                    buffer[i] = (noise.fbm(pos, oct, pers) * 2.0 - 1.0)
                     pos += step
                 }
             }
         }
     }
 
-    /** Dust: sparse random impulses. [density] 0.0..1.0 controls impulse rate. [maxRateHz] caps the rate. */
-    fun dust(rng: Random, density: Ignitor = densityDefault, maxRateHz: Double = 200.0): Ignitor =
-        DustIgnitor(rng, density, maxRateHz)
+    /**
+     * Dust: sparse random impulses. [density] 0.0..1.0 controls impulse rate; [maxRateHz] caps the rate.
+     * [tail] shapes the impulse amplitude (`amp^tail`, 1 = uniform); [bipolar] (>0.5) gives random ±sign.
+     * At the defaults (tail = 1, bipolar off) the inner loop is byte-identical to the original dust.
+     */
+    fun dust(
+        rng: Random,
+        density: Ignitor = densityDefault,
+        tail: Ignitor = tailDefault,
+        bipolar: Ignitor = bipolarDefault,
+        maxRateHz: Double = 200.0,
+    ): Ignitor = DustIgnitor(rng, density, tail, bipolar, maxRateHz)
 
     private class DustIgnitor(
         private val rng: Random,
         private val density: Ignitor,
+        private val tail: Ignitor,
+        private val bipolar: Ignitor,
         private val maxRateHz: Double,
     ) : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -462,17 +536,64 @@ object Ignitors {
                 val d = densityBuf[ctx.offset].coerceIn(0.0, 1.0)
                 val rateHz = d * maxRateHz
                 val p = (rateHz / ctx.sampleRateD).coerceIn(0.0, 1.0)
+                // control-rate knobs (no buffer fill for Constant/Param) — read once per block
+                val k = tail.blockStartValue(0.0, ctx).coerceAtLeast(0.0)
+                val bip = bipolar.blockStartValue(0.0, ctx) > 0.5
                 val end = ctx.offset + ctx.length
-                for (i in ctx.offset until end) {
-                    buffer[i] = if (rng.nextDouble() < p) rng.nextDouble() else 0.0
+                if (!bip && k == 1.0) {
+                    // perf-neutral, byte-identical default
+                    for (i in ctx.offset until end) {
+                        buffer[i] = if (rng.nextDouble() < p) rng.nextDouble() else 0.0
+                    }
+                } else {
+                    for (i in ctx.offset until end) {
+                        buffer[i] = if (rng.nextDouble() < p) {
+                            if (bip) {
+                                val a = rng.nextDouble() * 2.0 - 1.0 // [-1,1)
+                                if (k == 1.0) a else sign(a) * abs(a).pow(k) // shape magnitude, keep sign
+                            } else {
+                                val a = rng.nextDouble() // [0,1)
+                                if (k == 1.0) a else a.pow(k)
+                            }
+                        } else 0.0
+                    }
                 }
             }
         }
     }
 
-    /** Crackle: sparse random impulses with higher max rate than [dust]. */
-    fun crackle(rng: Random, density: Ignitor = densityDefault, maxRateHz: Double = 800.0): Ignitor {
-        return dust(rng, density, maxRateHz)
+    /**
+     * Crackle: a chaotic recurrence (SuperCollider's Crackle map), DC-blocked to bipolar pops.
+     * `y[n] = |chaos·y[n-1] − y[n-2] − CRACKLE_C|`; [chaos] ≈1.0 sparse … 2.0 dense/noisy. Uses no PRNG
+     * for the signal — the rng only seeds the map away from the (0,0) fixed point.
+     */
+    fun crackle(rng: Random, chaos: Ignitor = chaosDefault): Ignitor = CrackleIgnitor(rng, chaos)
+
+    private class CrackleIgnitor(rng: Random, private val chaos: Ignitor) : Ignitor {
+        // chaotic-map state, seeded away from the (0,0) fixed point so it starts oscillating
+        private var y1 = 0.3 + rng.nextDouble() * 0.3
+        private var y2 = 0.3 + rng.nextDouble() * 0.3
+
+        // one-pole DC blocker: the map output is unipolar (abs), this recenters it to bipolar pops
+        private var dcX = 0.0
+        private var dcY = 0.0
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            ctx.scratchBuffers.use { chaosBuf ->
+                chaos.generate(chaosBuf, 0.0, ctx)
+                val a = chaosBuf[ctx.offset].coerceIn(0.0, CRACKLE_CHAOS_MAX)
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    var y0 = abs(a * y1 - y2 - CRACKLE_C)
+                    if (y0 != y0) y0 = 0.5 // NaN-guard: re-seed if the map ever diverges
+                    y2 = y1
+                    y1 = y0
+                    dcY = y0 - dcX + CRACKLE_DC_POLE * dcY
+                    dcX = y0
+                    buffer[i] = dcY
+                }
+            }
+        }
     }
 
     /**
@@ -1118,6 +1239,9 @@ object Ignitors {
 
     /** Base step per sample for Perlin/Berlin noise. rate=1.0 walks ~144 noise-units/sec at 48kHz. */
     private const val PERLIN_STEP = 0.003
+
+    /** fBm octave cap — bounds the linear per-sample cost of [perlinNoise]/[berlinNoise]. */
+    private const val PERLIN_FBM_MAX_OCTAVES = 8
 
     // ═════════════════════════════════════════════════════════════════════════════
     // wrapPhase(), smallNumFastMod(), applySemitoneDetuneToFrequency()

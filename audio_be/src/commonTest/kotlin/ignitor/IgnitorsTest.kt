@@ -22,6 +22,11 @@ import kotlin.random.Random
 private fun gain(value: Double) = ParamIgnitor("gain", value)
 private fun density(value: Double) = ParamIgnitor("density", value)
 private fun duty(value: Double) = ParamIgnitor("duty", value)
+private fun chaos(value: Double) = ConstantIgnitor(value)
+private fun color(value: Double) = ConstantIgnitor(value)
+private fun tail(value: Double) = ConstantIgnitor(value)
+private fun bipolar(value: Double) = ConstantIgnitor(value)
+private fun depth(value: Double) = ConstantIgnitor(value)
 
 /**
  * Audio-output tests for Ignitor oscillator primitives.
@@ -340,6 +345,35 @@ class ExcitersTest : StringSpec({
         differs shouldBe true
     }
 
+    "white noise - color=0 is byte-identical to the plain pure-white loop (perf-neutral default)" {
+        val plain = generate(Ignitors.whiteNoise(Random(42)), freqHz = 440.0).toList()
+        val tilt0 = generate(Ignitors.whiteNoise(Random(42), color(0.0)), freqHz = 440.0).toList()
+        tilt0 shouldBe plain
+    }
+
+    "white noise - color tilt changes the output (filter engages off-center)" {
+        val flat = generate(Ignitors.whiteNoise(Random(42), color(0.0)), freqHz = 440.0).toList()
+        val dark = generate(Ignitors.whiteNoise(Random(42), color(-0.8)), freqHz = 440.0).toList()
+        val bright = generate(Ignitors.whiteNoise(Random(42), color(0.8)), freqHz = 440.0).toList()
+        (flat == dark) shouldBe false
+        (flat == bright) shouldBe false
+        (dark == bright) shouldBe false
+    }
+
+    "white noise - darkening reduces high-frequency content vs brightening" {
+        // sample-to-sample variance is a cheap HF proxy: a one-pole LP smooths it down, the HP raises it
+        fun hfEnergy(c: Double): Double {
+            val buf = generate(Ignitors.whiteNoise(Random(42), color(c)), freqHz = 440.0).toList()
+            var sum = 0.0
+            for (i in 1 until buf.size) {
+                val d = buf[i] - buf[i - 1]
+                sum += d * d
+            }
+            return sum
+        }
+        hfEnergy(-0.8) shouldBeLessThan hfEnergy(0.8)
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Cross-oscillator: independent instances
     // ═════════════════════════════════════════════════════════════════════════════
@@ -543,6 +577,25 @@ class ExcitersTest : StringSpec({
         (peak2 / peak1) shouldBe (0.5 plusOrMinus 0.05)
     }
 
+    "brown noise - default depth reproduces the original /1.02 walk byte-for-byte" {
+        val def = generate(Ignitors.brownNoise(Random(42)), freqHz = 440.0).toList()
+        val explicit = generate(Ignitors.brownNoise(Random(42), depth(0.02)), freqHz = 440.0).toList()
+        explicit shouldBe def
+    }
+
+    "brown noise - higher depth brightens (more high-frequency content)" {
+        fun hfEnergy(d: Double): Double {
+            val buf = generate(Ignitors.brownNoise(Random(42), depth(d)), freqHz = 440.0).toList()
+            var sum = 0.0
+            for (i in 1 until buf.size) {
+                val delta = buf[i] - buf[i - 1]
+                sum += delta * delta
+            }
+            return sum
+        }
+        hfEnergy(0.3) shouldBeGreaterThan hfEnergy(0.02)
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Pink Noise
     // ═════════════════════════════════════════════════════════════════════════════
@@ -668,22 +721,59 @@ class ExcitersTest : StringSpec({
         countHigh shouldBeGreaterThanOrEqual countLow
     }
 
+    "dust - bipolar emits negative impulses (unipolar default does not)" {
+        val uni = generate(Ignitors.dust(Random(42), density = density(0.9)), freqHz = 440.0).toList()
+        val bip = generate(Ignitors.dust(Random(42), density = density(0.9), bipolar = bipolar(1.0)), freqHz = 440.0)
+            .toList()
+        uni.any { it < 0.0 } shouldBe false
+        bip.any { it < 0.0 } shouldBe true
+    }
+
+    "dust - heavier tail lowers the average impulse amplitude (same seed → same hits)" {
+        fun meanNonzero(t: Double): Double {
+            val buf = generate(Ignitors.dust(Random(42), density = density(0.9), tail = tail(t)), freqHz = 440.0)
+                .toList().filter { it != 0.0 }
+            return buf.sum() / buf.size
+        }
+        // every impulse base in [0,1) is raised to `tail` → tail=4 shrinks them vs the uniform tail=1
+        meanNonzero(4.0) shouldBeLessThan meanNonzero(1.0)
+    }
+
+    "dust - tail=1 + unipolar is byte-identical to the plain default loop (perf-neutral default)" {
+        val plain = generate(Ignitors.dust(Random(42), density = density(0.5)), freqHz = 440.0).toList()
+        val explicit = generate(
+            Ignitors.dust(Random(42), density = density(0.5), tail = tail(1.0), bipolar = bipolar(0.0)),
+            freqHz = 440.0,
+        ).toList()
+        explicit shouldBe plain
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Crackle
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "crackle - mostly silence" {
-        val buf = generate(Ignitors.crackle(Random(42), density = density(0.2)), freqHz = 440.0)
-        val silentCount = buf.count { it == 0.0 }
-        silentCount shouldBeGreaterThanOrEqual (buf.size * 0.5).toInt()
+    "crackle - bipolar output (chaotic map is DC-blocked → swings both ways)" {
+        val buf = generate(Ignitors.crackle(Random(42), chaos(1.5)), freqHz = 440.0).toList()
+        buf.any { it > 0.0 } shouldBe true
+        buf.any { it < 0.0 } shouldBe true
     }
 
-    "crackle - denser than dust at same density (higher maxRateHz)" {
-        val bufDust = generate(Ignitors.dust(Random(42), density = density(0.5)), freqHz = 440.0)
-        val bufCrackle = generate(Ignitors.crackle(Random(42), density = density(0.5)), freqHz = 440.0)
-        val countDust = bufDust.count { it > 0.0 }
-        val countCrackle = bufCrackle.count { it > 0.0 }
-        countCrackle shouldBeGreaterThanOrEqual countDust
+    "crackle - deterministic for a given seed + chaos" {
+        val a = generate(Ignitors.crackle(Random(42), chaos(1.5)), freqHz = 440.0).toList()
+        val b = generate(Ignitors.crackle(Random(42), chaos(1.5)), freqHz = 440.0).toList()
+        a shouldBe b
+    }
+
+    "crackle - chaos parameter changes the texture" {
+        val low = generate(Ignitors.crackle(Random(42), chaos(1.2)), freqHz = 440.0).toList()
+        val high = generate(Ignitors.crackle(Random(42), chaos(1.9)), freqHz = 440.0).toList()
+        (low == high) shouldBe false
+    }
+
+    "crackle - stays finite/bounded even at max chaos (no NaN/Inf divergence)" {
+        // chaos coerced to CRACKLE_CHAOS_MAX; the map + NaN-guard must keep output finite
+        val buf = generate(Ignitors.crackle(Random(7), chaos(5.0)), freqHz = 440.0).toList()
+        buf.all { it == it && abs(it) < 1.0e6 } shouldBe true // NaN-guard: `it == it` rejects NaN
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

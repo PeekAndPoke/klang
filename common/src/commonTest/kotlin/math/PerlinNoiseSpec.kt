@@ -76,4 +76,27 @@ class PerlinNoiseSpec : StringSpec({
         min.shouldBeBetween(-1.0, -0.8, 0.0)
         max.shouldBeBetween(0.8, 1.0, 0.0)
     }
+
+    "PerlinNoise.fbm: octaves<=1 is byte-identical to noise (the perf-neutral default)" {
+        val noise = PerlinNoise(Random(7))
+        for (i in 0..200) {
+            val t = i * 0.137
+            noise.fbm(t, octaves = 1, persistence = 0.5) shouldBe noise.noise(t)
+            noise.fbm(t, octaves = 0, persistence = 0.5) shouldBe noise.noise(t)
+        }
+    }
+
+    "PerlinNoise.fbm: more octaves changes the output (fractal detail takes effect)" {
+        val noise = PerlinNoise(Random(7))
+        val single = (0..200).map { noise.fbm(it * 0.137, 1, 0.5) }
+        val multi = (0..200).map { noise.fbm(it * 0.137, 4, 0.5) }
+        single shouldNotBe multi
+    }
+
+    "PerlinNoise.fbm: stays within the noise range (amplitude-normalized)" {
+        val noise = PerlinNoise(Random(0))
+        for (i in 0..2000) {
+            noise.fbm(i * 0.05, octaves = 5, persistence = 0.6).shouldBeBetween(-1.0, 1.0, 0.01)
+        }
+    }
 })

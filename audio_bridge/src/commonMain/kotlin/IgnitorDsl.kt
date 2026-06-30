@@ -98,15 +98,22 @@ sealed interface IgnitorDsl {
      */
     object Slots {
         val analog: IgnitorDsl = Param(name = "analog", default = 0.0)
-        val voices: IgnitorDsl = Param(name = "voices", default = 8.0)
-        val spread: IgnitorDsl = Param(name = "spread", default = 0.2)
-        val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
-        val density: IgnitorDsl = Param(name = "density", default = 0.2)
-        val decay: IgnitorDsl = Param(name = "decay", default = 0.996)
+        val bipolar: IgnitorDsl = Param(name = "bipolar", default = 0.0)
         val brightness: IgnitorDsl = Param(name = "brightness", default = 0.5)
+        val chaos: IgnitorDsl = Param(name = "chaos", default = 1.5)
+        val decay: IgnitorDsl = Param(name = "decay", default = 0.996)
+        val color: IgnitorDsl = Param(name = "color", default = 0.0)
+        val density: IgnitorDsl = Param(name = "density", default = 0.2)
+        val depth: IgnitorDsl = Param(name = "depth", default = 0.02)
+        val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
+        val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
+        val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
         val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.5)
-        val stiffness: IgnitorDsl = Param(name = "stiffness", default = 0.0)
         val rate: IgnitorDsl = Param(name = "rate", default = 1.0)
+        val spread: IgnitorDsl = Param(name = "spread", default = 0.2)
+        val stiffness: IgnitorDsl = Param(name = "stiffness", default = 0.0)
+        val tail: IgnitorDsl = Param(name = "tail", default = 1.0)
+        val voices: IgnitorDsl = Param(name = "voices", default = 8.0)
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -174,6 +181,9 @@ sealed interface IgnitorDsl {
     /**
      * White noise generator. Produces uniformly distributed random samples.
      *
+     * [color] is an optional spectral tilt: `0` = flat white (default, filter bypassed); `<0` darkens
+     * toward pink/brown (one-pole LP); `>0` brightens toward blue/violet (complementary HP). Range −1..1.
+     *
      * [uid] is an instance-discriminator used by the runtime identity cache: each call to
      * `Osc.whitenoise()` creates a fresh [WhiteNoise] with a unique uid, so two such calls
      * yield two independent noise streams when composed (`a + b`). Binding to a variable and
@@ -181,8 +191,13 @@ sealed interface IgnitorDsl {
      * same stream twice.
      */
     @WireName("white-noise")
-    data class WhiteNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
-        override fun collectParams(out: MutableList<Param>) {}
+    data class WhiteNoise(
+        val color: IgnitorDsl = Slots.color,
+        val uid: Int = nextNoiseUid(),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            color.collectParams(out)
+        }
     }
 
     /** Zawtooth wave oscillator. Naive sawtooth without PolyBLEP anti-aliasing (brighter/harsher). */
@@ -253,11 +268,20 @@ sealed interface IgnitorDsl {
 
     /**
      * Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope.
+     *
+     * [depth] is the per-sample white-leak coefficient `k` in `out = (out + k·white)/(1+k)`: lower =
+     * deeper / slower-walking brown (default 0.02); higher = brighter (more white mixed in each sample).
+     *
      * See [WhiteNoise] for the [uid] instance-discriminator story.
      */
     @WireName("brown-noise")
-    data class BrownNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
-        override fun collectParams(out: MutableList<Param>) {}
+    data class BrownNoise(
+        val depth: IgnitorDsl = Slots.depth,
+        val uid: Int = nextNoiseUid(),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            depth.collectParams(out)
+        }
     }
 
     /**
@@ -273,9 +297,13 @@ sealed interface IgnitorDsl {
     @WireName("perlin-noise")
     data class PerlinNoise(
         val rate: IgnitorDsl = Slots.rate,
+        /** fBm octaves: 1 = plain single-octave (default); higher = more fractal detail (engine caps at 8). */
+        val octaves: IgnitorDsl = Slots.octaves,
+        /** fBm amplitude falloff per octave (0..1, default 0.5; lower = quieter upper octaves). */
+        val persistence: IgnitorDsl = Slots.persistence,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            rate.collectParams(out)
+            rate.collectParams(out); octaves.collectParams(out); persistence.collectParams(out)
         }
     }
 
@@ -283,9 +311,13 @@ sealed interface IgnitorDsl {
     @WireName("berlin-noise")
     data class BerlinNoise(
         val rate: IgnitorDsl = Slots.rate,
+        /** fBm octaves: 1 = plain single-octave (default); higher = more fractal detail (engine caps at 8). */
+        val octaves: IgnitorDsl = Slots.octaves,
+        /** fBm amplitude falloff per octave (0..1, default 0.5; lower = quieter upper octaves). */
+        val persistence: IgnitorDsl = Slots.persistence,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            rate.collectParams(out)
+            rate.collectParams(out); octaves.collectParams(out); persistence.collectParams(out)
         }
     }
 
@@ -293,19 +325,27 @@ sealed interface IgnitorDsl {
     @WireName("dust")
     data class Dust(
         val density: IgnitorDsl = Slots.density,
+        /** Heavy-tailed amplitude exponent: 1 = uniform (default); >1 = mostly-tiny, rare-loud (vinyl pops). */
+        val tail: IgnitorDsl = Slots.tail,
+        /** Bipolar pops (random ±sign) when > 0.5; default 0 = unipolar (today's behavior). */
+        val bipolar: IgnitorDsl = Slots.bipolar,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            density.collectParams(out)
+            density.collectParams(out); tail.collectParams(out); bipolar.collectParams(out)
         }
     }
 
-    /** Crackle noise generator. Similar to [Dust] but with bipolar impulses for a crackle texture. */
+    /**
+     * Crackle noise generator — a chaotic recurrence (SuperCollider's Crackle map), DC-blocked to
+     * bipolar pops. [chaos] (≈1.0 sparse … 2.0 dense/noisy) drives the map. Unlike [Dust] it uses no
+     * PRNG. (For the old sparse-impulse behavior crackle used to alias, use [Dust] directly.)
+     */
     @WireName("crackle")
     data class Crackle(
-        val density: IgnitorDsl = Slots.density,
+        val chaos: IgnitorDsl = Slots.chaos,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            density.collectParams(out)
+            chaos.collectParams(out)
         }
     }
 

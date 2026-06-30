@@ -446,8 +446,26 @@ fun PatternMapperFn.sndZamp(params: PatternLike? = null, callInfo: CallInfo? = n
 
 // -- sndNoise() -------------------------------------------------------------------------------------------------------
 
+private val sndNoiseMutation = voiceSetter {
+    val parts = it?.toString()?.split(":")
+        ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
+
+    sound = SoundValue.Named("whitenoise")
+    putOscParams(
+        "color" to parts.getOrNull(0),
+    )
+}
+
 private fun applySndNoise(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("whitenoise")) }
+    return if (args.isEmpty()) {
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("whitenoise")) }
+    } else {
+        source._applyControlFromParams(args, sndNoiseMutation) { src, ctrl ->
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
+        }
+    }
 }
 
 /**
@@ -485,8 +503,26 @@ fun PatternMapperFn.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = 
 
 // -- sndBrown() -------------------------------------------------------------------------------------------------------
 
+private val sndBrownMutation = voiceSetter {
+    val parts = it?.toString()?.split(":")
+        ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
+
+    sound = SoundValue.Named("brownnoise")
+    putOscParams(
+        "depth" to parts.getOrNull(0),
+    )
+}
+
 private fun applySndBrown(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("brownnoise")) }
+    return if (args.isEmpty()) {
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("brownnoise")) }
+    } else {
+        source._applyControlFromParams(args, sndBrownMutation) { src, ctrl ->
+            src.sound = ctrl.sound ?: src.sound
+            src.putOscParamsFrom(ctrl)
+            src
+        }
+    }
 }
 
 /**
@@ -639,6 +675,7 @@ private val sndDustMutation = voiceSetter {
     sound = SoundValue.Named("dust")
     putOscParams(
         "density" to parts.getOrNull(0),
+        "tail" to parts.getOrNull(1),
     )
 }
 
@@ -707,7 +744,7 @@ private val sndCrackleMutation = voiceSetter {
 
     sound = SoundValue.Named("crackle")
     putOscParams(
-        "density" to parts.getOrNull(0),
+        "chaos" to parts.getOrNull(0),
     )
 }
 
@@ -724,11 +761,9 @@ private fun applySndCrackle(source: SprudelPattern, args: List<SprudelDslArg<Any
 }
 
 /**
- * Sets the sound to a crackle generator with configurable density.
+ * Sets the sound to a crackle generator (chaotic recurrence → bipolar pops) with configurable chaos.
  *
- * @param params Crackle parameter as `"density"`.
- * @param-tool params SprudelDustSequenceEditor
- * @param-sub params density Crackle density
+ * @param params Crackle parameter as `"chaos"` (~1.0 sparse, 1.5 = clear crackle, ~2.0 dense/noisy).
  * @return A new pattern with sound set to "crackle" and parameters applied.
  * @category tonal
  * @tags crackle, noise, snd, addon
@@ -740,7 +775,7 @@ fun SprudelPattern.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? =
 /**
  * Parses this string as a pattern and sets sound to crackle generator.
  *
- * @param params Crackle parameter as `"density"`.
+ * @param params Crackle parameter as `"chaos"`.
  * @return A new pattern with sound set to "crackle".
  * @category tonal
  * @tags crackle, noise, snd, addon
@@ -752,7 +787,7 @@ fun String.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? = null): 
 /**
  * Returns a [PatternMapperFn] that sets the sound to crackle generator.
  *
- * @param params Crackle parameter as `"density"`.
+ * @param params Crackle parameter as `"chaos"`.
  * @return A [PatternMapperFn] that sets sound to "crackle".
  * @category tonal
  * @tags crackle, noise, snd, addon
