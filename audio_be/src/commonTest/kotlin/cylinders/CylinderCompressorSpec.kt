@@ -45,7 +45,7 @@ class OrbitCompressorSpec : StringSpec({
 
     "compressor is created when first voice has compressor settings" {
         val cylinder = createOrbit()
-        cylinder.updateFromVoice(voiceWithCompressor())
+        cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0)
 
         cylinder.compressor.compressor shouldNotBe null
     }
@@ -59,7 +59,8 @@ class OrbitCompressorSpec : StringSpec({
                 kneeDb = 4.0,
                 attackSeconds = 0.005,
                 releaseSeconds = 0.2
-            )
+            ),
+            blockStart = 0,
         )
 
         val c = cylinder.compressor.compressor!!
@@ -72,42 +73,52 @@ class OrbitCompressorSpec : StringSpec({
 
     "no compressor when voice has no compressor settings" {
         val cylinder = createOrbit()
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice())
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0)
 
         cylinder.compressor.compressor shouldBe null
     }
 
     "compressor instance is reused on subsequent voices (not recreated)" {
         val cylinder = createOrbit()
-        cylinder.updateFromVoice(voiceWithCompressor())
+        cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0)
         val firstInstance = cylinder.compressor.compressor
 
-        cylinder.updateFromVoice(voiceWithCompressor())
+        cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0)
 
         cylinder.compressor.compressor shouldBe firstInstance  // same reference, not a new object
     }
 
-    "compressor parameters are updated without recreating the instance" {
+    "a second voice does NOT change the owner's compressor while the owner is alive (first-writer-wins)" {
         val cylinder = createOrbit()
-        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -20.0, ratio = 4.0))
+        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -20.0, ratio = 4.0), blockStart = 0)
         val firstInstance = cylinder.compressor.compressor!!
 
-        cylinder.updateFromVoice(
-            voiceWithCompressor(
-                thresholdDb = -10.0,
-                ratio = 8.0,
-                kneeDb = 2.0,
-                attackSeconds = 0.001,
-                releaseSeconds = 0.05
-            )
-        )
+        // Different voice, same block → denied by the single orbit lease.
+        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -10.0, ratio = 8.0), blockStart = 0)
 
-        cylinder.compressor.compressor shouldBe firstInstance   // same instance
-        firstInstance.thresholdDb shouldBe -10.0  // parameters updated
-        firstInstance.ratio shouldBe 8.0
-        firstInstance.kneeDb shouldBe 2.0
-        firstInstance.attackSeconds shouldBe 0.001
-        firstInstance.releaseSeconds shouldBe 0.05
+        cylinder.compressor.compressor shouldBe firstInstance  // same instance, untouched
+        firstInstance.thresholdDb shouldBe -20.0               // owner's params, NOT the second voice's
+        firstInstance.ratio shouldBe 4.0
+    }
+
+    "when the compressor owner ends, a later voice takes over and its compressor params apply" {
+        val cylinder = createOrbit()
+        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -20.0), blockStart = 0)
+        cylinder.compressor.compressor!!.thresholdDb shouldBe -20.0
+
+        // Owner stops checking in; a new compressor voice claims after the one-block grace.
+        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -8.0), blockStart = 2 * blockFrames)
+        cylinder.compressor.compressor!!.thresholdDb shouldBe -8.0 // new owner's params (instance reused)
+    }
+
+    "when a non-compressor voice takes over the orbit, the compressor is cleared" {
+        val cylinder = createOrbit()
+        cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0)
+        cylinder.compressor.compressor shouldNotBe null
+
+        // Compressor owner ends; a plain voice (no compressor) becomes the owner → compressor cleared.
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 2 * blockFrames)
+        cylinder.compressor.compressor shouldBe null
     }
 
     "envelope state is preserved across voice updates (not reset)" {
@@ -119,7 +130,8 @@ class OrbitCompressorSpec : StringSpec({
                 kneeDb = 0.0,
                 attackSeconds = 0.001,
                 releaseSeconds = 0.1
-            )
+            ),
+            blockStart = 0,
         )
         val compressor = cylinder.compressor.compressor!!
 
@@ -144,7 +156,8 @@ class OrbitCompressorSpec : StringSpec({
                 kneeDb = 0.0,
                 attackSeconds = 0.001,
                 releaseSeconds = 0.1
-            )
+            ),
+            blockStart = 0,
         )
 
         // Process immediately after — should be at roughly the same compression level

@@ -28,6 +28,13 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
  */
 class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Identity — globally-unique, monotonic. Used by per-orbit effect ownership (VoiceLease) to tell voices
+    // apart by value (not by object reference, which a future voice pool could recycle). Defaulted so every
+    // constructed voice gets a fresh id. Voice creation is single-threaded (the render thread).
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    val id: Int = nextId(),
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Lifecycle & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     val startFrame: Int,
@@ -248,4 +255,12 @@ class Voice(
         val room: Double, val roomSize: Double, val roomFade: Double? = null,
         val roomLp: Double? = null, val roomDim: Double? = null, val iResponse: String? = null,
     )
+
+    companion object {
+        // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain
+        // counter is enough; a wrap after 2^31 ids is harmless (identity only has to hold between two voices
+        // that are co-active on the same orbit).
+        private var idCounter: Int = 0
+        private fun nextId(): Int = idCounter++
+    }
 }

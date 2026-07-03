@@ -21,9 +21,10 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
  * wet-only `BodyFilter`, so the dry/wet blend is intact). It is **mono**, so we keep one instance per
  * stereo channel (independent SVF state).
  *
- * Config is routed from a voice via [configure] in `Cylinder.updateFromVoice`. A voice WITHOUT body
- * passes `null` and must NOT switch the orbit's body off — hence `null` is a no-op. The cylinder calls
- * [reset] when it fully deactivates so a reused orbit reconfigures cleanly.
+ * Ownership: `Cylinder.updateFromVoice` only calls [configure] for the voice that OWNS the orbit's body
+ * (via [VoiceLease] — first-writer-wins while alive). Because only the owner configures, `null` (the owner
+ * has no body) authoritatively turns the resonator OFF — it is NOT a no-op. The cylinder calls [reset] when
+ * it fully deactivates so a reused orbit reconfigures cleanly.
  *
  * NOTE: near-verbatim twin of [KatalystFormantEffect] (only the band type + factory fn differ). Left
  * un-deduped on purpose — both will fold into a single generic resonator once the Katalyst DSL lands.
@@ -38,11 +39,14 @@ class KatalystBodyEffect(
     private var left: AudioFilter? = null
     private var right: AudioFilter? = null
 
-    /** Configure from a voice's body. `null` leaves the current config untouched (see class kdoc). */
+    /** Configure from the OWNER voice's body. `null` (owner has no body) turns the resonator off. */
     fun configure(body: FilterDef.Body?) {
-        if (body == null) return
-        // Rebuild only when the material/mix actually changes — effectively once per orbit, since
-        // body.bands/mix are query-time constants (no per-block modulation).
+        if (body == null) {
+            if (left != null) reset() // owner has no body → turn off, once
+            return
+        }
+        // Rebuild only when the material/mix actually changes — with ownership this is once per owner
+        // change (a live owner re-offers the same config every block, which short-circuits here).
         if (body.bands != curBands || body.mix != curMix) {
             left = LowPassHighPassFilters.createBody(body.bands, body.mix, sampleRate)
             right = LowPassHighPassFilters.createBody(body.bands, body.mix, sampleRate)

@@ -11,8 +11,8 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_bridge.FilterDef
 
 /**
- * Contract for the orbit-level body resonator: inactive until a body voice configures it, `null`
- * (a non-body voice) is a no-op that does NOT switch it off, and `reset()` deactivates it.
+ * Contract for the orbit-level body resonator: inactive until configured; since only the OWNER voice
+ * configures it (via VoiceLease), `null` (owner has no body) turns it off; and `reset()` deactivates it.
  */
 class KatalystBodyEffectSpec : StringSpec({
 
@@ -53,13 +53,13 @@ class KatalystBodyEffectSpec : StringSpec({
         (mix.left[n - 1] != 1.0) shouldBe true
     }
 
-    "configure(null) leaves an already-configured body active (non-body voice must not switch it off)" {
+    "configure(null) turns the body off (only the owner configures now, so null = owner has no body)" {
         val (ctx, mix) = contextWithConstantMix(1.0)
         val fx = KatalystBodyEffect(sampleRate)
         fx.configure(woodish)
-        fx.configure(null) // e.g. a non-body voice on the same orbit updates the cylinder
+        fx.configure(null) // the owning voice has no body → resonator off
         fx.process(ctx)
-        (mix.left[n - 1] != 1.0) shouldBe true
+        mix.left[n - 1] shouldBe 1.0 // mix untouched — body is off
     }
 
     "reset() deactivates the body" {

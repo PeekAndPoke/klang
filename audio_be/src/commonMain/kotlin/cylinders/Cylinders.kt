@@ -138,7 +138,7 @@ class Cylinders(
      *
      * When a new cylinder is created, it will be initialized with the given voice.
      */
-    fun getOrInit(id: Int, voice: Voice): Cylinder {
+    fun getOrInit(id: Int, voice: Voice, blockStart: Int): Cylinder {
         val safeId = id % maxCylinders
 
         return id2cylinder.getOrPut(safeId) {
@@ -149,7 +149,7 @@ class Cylinders(
                 silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck
             )
         }.also {
-            it.updateFromVoice(voice)
+            it.updateFromVoice(voice, blockStart)
         }
     }
 }

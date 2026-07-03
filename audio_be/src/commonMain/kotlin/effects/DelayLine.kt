@@ -98,6 +98,15 @@ class DelayLine(
         return false
     }
 
+    /**
+     * Clears the ring buffer and resets the write head so a reused delay line does not replay a previous
+     * owner's tail. Parameter values (delay time / feedback) are preserved. Used by cylinder cleanup.
+     */
+    fun reset() {
+        buffer.clear()
+        writePos = 0
+    }
+
     fun process(input: StereoBuffer, output: StereoBuffer, length: Int) {
         // Per-block constants — channel- and chunk-independent. Hoisted out of
         // the inner loop so they're computed once per process() call rather

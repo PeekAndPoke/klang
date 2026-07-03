@@ -13,8 +13,9 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
  * Orbit-level **vowel / formant** resonator — the [KatalystBodyEffect] counterpart for `vowel(...)`.
  *
  * Like body, a vowel is a timbre shaper of the whole orbit, so it runs once on the summed stereo mix
- * (one mono [LowPassHighPassFilters.createFormant] instance per channel) instead of per voice. See
- * [KatalystBodyEffect] for the routing/`null`-is-no-op/reset contract.
+ * (one mono [LowPassHighPassFilters.createFormant] instance per channel) instead of per voice. Only the
+ * orbit's owning voice configures it (see `Cylinder`'s VoiceLease), so `null` (owner has no vowel) turns
+ * the resonator OFF; [reset] deactivates it on orbit teardown.
  *
  * NOTE: near-verbatim twin of [KatalystBodyEffect] (only the band type + factory fn differ). Left
  * un-deduped on purpose — both will fold into a single generic resonator once the Katalyst DSL lands.
@@ -29,9 +30,12 @@ class KatalystFormantEffect(
     private var left: AudioFilter? = null
     private var right: AudioFilter? = null
 
-    /** Configure from a voice's vowel. `null` leaves the current config untouched. */
+    /** Configure from the OWNER voice's vowel. `null` (owner has no vowel) turns the resonator off. */
     fun configure(vowel: FilterDef.Formant?) {
-        if (vowel == null) return
+        if (vowel == null) {
+            if (left != null) reset() // owner has no vowel → turn off, once
+            return
+        }
         if (vowel.bands != curBands || vowel.mix != curMix) {
             left = LowPassHighPassFilters.createFormant(vowel.bands, vowel.mix, sampleRate)
             right = LowPassHighPassFilters.createFormant(vowel.bands, vowel.mix, sampleRate)
