@@ -224,4 +224,17 @@ tasks {
         classpath = jvmMain.runtimeDependencyFiles + jvmMain.output.allOutputs
         dependsOn("jvmMainClasses")
     }
+
+    // Song-level CPU benchmark: compiles real song code, renders offline, times per-block.
+    // Usage: ./gradlew runSongBenchmark            (all suites)
+    //        ./gradlew runSongBenchmark --args=ladders
+    register<JavaExec>("runSongBenchmark") {
+        group = "application"
+        description = "Run the song-level CPU benchmark (voices / ladders / experiments / frozen songs)"
+        mainClass.set("io.peekandpoke.klang.SongBenchmarkMainKt")
+
+        val jvmMain = kotlin.jvm().compilations["main"]
+        classpath = jvmMain.runtimeDependencyFiles + jvmMain.output.allOutputs
+        dependsOn("jvmMainClasses")
+    }
 }
