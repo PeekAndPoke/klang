@@ -46,19 +46,19 @@ stack(                                                                          
     .pipeline("pedal").body("wood").bodyMix(0.3)
   , // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
-    .orbit(1).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
+    .orbit(2).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
     .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort("1:tube:4").distort(0.85)
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr("0.005:2.5:0.0:0.027").lpadsr("0.005:1.0:0.0:0.01")    
     .hpf(110).lpf(3200).lpe(0.6).lpq(1.8)
     .coarse(2).coarseos(4).pan(0.3).superimpose(
       x => x.pan(0.7),
-      x => x.postgain(0.09).hpf(220).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-6 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
+      x => x.postgain(0.09).hpf(220).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
     ).superimpose(hpf(3500).lpf(6200).postgain(0.02)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("wood").bodyMix(0.30)
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.98 0.99 0.98".fast(2))  // . mute()
-    .orbit(4).scale("e1:minor").sound("saw").gain(0.5).distort("0.05:soft:2").postgain(0.21).clip(0.65)
+    .orbit(3).scale("e1:minor").sound("saw").gain(0.5).distort("0.05:soft:2").postgain(0.21).clip(0.65)
     .adsr("0.007:5.0:0.0:0.015").lpadsr("0.001:0.05:0.0:0.01").hpf(60).hpq(1.0).lpf(200).lpe(35).lpq(1.0)  //  .solo()
     .pan(0.50).mute("<0!128 1!32>") // .pipeline("pedal")
   , // Drums

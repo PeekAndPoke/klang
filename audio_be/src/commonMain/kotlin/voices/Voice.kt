@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
+import io.peekandpoke.klang.audio_bridge.FilterDef
 
 // Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
 // object), causing heap allocation on every operation. Int maps directly to a JS number.
@@ -45,6 +46,11 @@ class Voice(
     val delay: Delay,
     val reverb: Reverb,
     val phaser: Phaser,
+
+    // Orbit-level resonators — carried here (not baked into the per-voice filter chain) so the
+    // Cylinder can configure its body/vowel Katalyst from the voice. See docs/tasks/body-vowel-to-orbit-katalyst.md.
+    val body: FilterDef.Body? = null,
+    val vowel: FilterDef.Formant? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Cut group

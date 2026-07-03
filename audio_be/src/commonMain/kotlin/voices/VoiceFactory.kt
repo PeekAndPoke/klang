@@ -100,8 +100,13 @@ class VoiceFactory(
         // (cutoff offset / drive / drift). Default StageDsl.Filter() == today's constants.
         val filterStage = pipelineRegistry.get(data.pipeline).stages
             .firstNotNullOfOrNull { it as? StageDsl.Filter } ?: StageDsl.Filter()
-        val filters = data.filters.filters.map { it.toFilter(analog, filterStage) }
-        val modulators = data.filters.filters.zip(filters).mapNotNull { (def, filter) ->
+        // Body / vowel are orbit-level Katalyst effects now — pull them out of the per-voice filter
+        // chain (they're routed to the Cylinder via the Voice). Everything else stays per-voice.
+        val bodyDef = data.filters.getByType<FilterDef.Body>()
+        val vowelDef = data.filters.getByType<FilterDef.Formant>()
+        val voiceFilterDefs = data.filters.filters.filter { it !is FilterDef.Body && it !is FilterDef.Formant }
+        val filters = voiceFilterDefs.map { it.toFilter(analog, filterStage) }
+        val modulators = voiceFilterDefs.zip(filters).mapNotNull { (def, filter) ->
             def.toModulator(filter, sampleRate, analog, filterStage)
         }
         val bakedFilters = filters.combine()
@@ -249,6 +254,7 @@ class VoiceFactory(
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, freqHz ?: 0.0,
+                    body = bodyDef, vowel = vowelDef,
                 )
             }
 
@@ -323,6 +329,7 @@ class VoiceFactory(
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, baseSamplePitchHz, data.cut,
+                    body = bodyDef, vowel = vowelDef,
                 )
             }
 
@@ -466,6 +473,8 @@ class VoiceFactory(
         signal: Ignitor,
         freqHz: Double,
         cut: Int? = null,
+        body: FilterDef.Body? = null,
+        vowel: FilterDef.Formant? = null,
     ): Voice {
         val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
         val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toInt()
@@ -536,6 +545,8 @@ class VoiceFactory(
             delay = delay,
             reverb = reverb,
             phaser = phaser,
+            body = body,
+            vowel = vowel,
             ducking = ducking,
             compressor = compressor,
             cut = cut,

@@ -9,6 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBodyEffect
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFormantEffect
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import kotlin.math.abs
@@ -24,10 +26,20 @@ class OrbitBusPipelineSpec : StringSpec({
 
     fun createOrbit() = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
 
-    "cylinder has 4-stage pipeline: Delay, Reverb, Phaser, Compressor" {
+    "cylinder has 6-stage pipeline: Body, Vowel, Delay, Reverb, Phaser, Compressor" {
         val cylinder = createOrbit()
 
-        cylinder.pipeline.size shouldBe 4
+        cylinder.pipeline.size shouldBe 6
+    }
+
+    "orbit runs exactly ONE body and ONE vowel pass regardless of voice count (per-orbit, not per-voice)" {
+        val cylinder = createOrbit()
+
+        cylinder.pipeline.filterIsInstance<KatalystBodyEffect>().size shouldBe 1
+        cylinder.pipeline.filterIsInstance<KatalystFormantEffect>().size shouldBe 1
+        // body/vowel run first — before the time/dynamics effects.
+        (cylinder.pipeline[0] is KatalystBodyEffect) shouldBe true
+        (cylinder.pipeline[1] is KatalystFormantEffect) shouldBe true
     }
 
     "cylinder bus context shares buffers with cylinder" {

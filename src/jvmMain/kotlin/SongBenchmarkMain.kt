@@ -47,6 +47,7 @@ fun main(args: Array<String>) {
         "ladders" -> SongBenchmarkCases.ladders()
         "experiments", "exp" -> SongBenchmarkCases.experiments()
         "songs", "full" -> SongBenchmarkCases.frozenSongs()
+        "live" -> SongBenchmarkCases.live()
         else -> SongBenchmarkCases.all()
     }
 

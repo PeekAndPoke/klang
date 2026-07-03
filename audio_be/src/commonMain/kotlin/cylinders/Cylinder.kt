@@ -6,11 +6,13 @@
 package io.peekandpoke.klang.audio_be.cylinders
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBodyEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystCompressorEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDuckingEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystEffect
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFormantEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystPhaserEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
 import io.peekandpoke.klang.audio_be.effects.Compressor
@@ -34,6 +36,12 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
     // Bus pipeline effects
     // ════════════════════════════════════════════════════════════════════════════
 
+    // Body / vowel resonators — timbre shapers of the whole orbit (moved off the per-voice chain).
+    // They run first so they colour the dry mix before the time/dynamics effects.
+    val body = KatalystBodyEffect(sampleRate.toDouble())
+
+    val vowel = KatalystFormantEffect(sampleRate.toDouble())
+
     val delay = KatalystDelayEffect(
         delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
     )
@@ -51,12 +59,12 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
     val ducking = KatalystDuckingEffect()
 
     /**
-     * The bus effect pipeline: Delay → Reverb → Phaser → Compressor.
+     * The bus effect pipeline: Body → Vowel → Delay → Reverb → Phaser → Compressor.
      *
      * Ducking is NOT in this pipeline — it's applied separately by [Cylinders] after all orbits
      * are processed, because it needs cross-orbit access to the sidechain source.
      */
-    val pipeline: List<KatalystEffect> = listOf(delay, reverb, phaser, compressor)
+    val pipeline: List<KatalystEffect> = listOf(body, vowel, delay, reverb, phaser, compressor)
 
     // ════════════════════════════════════════════════════════════════════════════
     // Buffers and context
@@ -97,6 +105,11 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
      */
     fun updateFromVoice(voice: Voice) {
         isActive = true
+
+        // Body / vowel (orbit-level resonators). null = no-op so a non-body voice on the orbit does not
+        // switch the orbit's body off; a body voice (re)configures it (last-writer-wins).
+        body.configure(voice.body)
+        vowel.configure(voice.vowel)
 
         // Delay
         delay.delayLine.delayTimeSeconds = voice.delay.time
@@ -225,6 +238,9 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
         isActive = false
         silentBlockCount = 0
+        // Drop orbit-level body/vowel config so a reused/reactivated orbit reconfigures cleanly.
+        body.reset()
+        vowel.reset()
     }
 
     private fun isMixBufferSilent(): Boolean {
