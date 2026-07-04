@@ -1,16 +1,16 @@
 # Sprudel UI Tools — Status Overview
 
-Last updated: 2026-04-13 (renamed Strudel→Sprudel, status refreshed).
+Last updated: 2026-07-04 (archive sweep — rename reconciliation, Tremolo added).
 
 Since last revision, these editor tools have been added (see `sprudel/src/jsMain/kotlin/ui/`):
 `SprudelDistortEditorTool`, `SprudelDistortShapeEditorTool`, `SprudelDustEditorTool`,
 `SprudelPhaserEditorTool`, `SprudelPluckEditorTool`, `SprudelPulzeEditorTool`,
-`SprudelSuperPluckEditorTool`, `SprudelSuperSawEditorTool`. Tier tables below still
+`SprudelSuperPluckEditorTool`, `SprudelSuperSawEditorTool`, `SprudelTremoloEditorTool`. Tier tables below still
 reflect proposals — cross-check the directory before starting a "new" tool.
 
 ## Summary
 
-Every DSL function that accepts parameters now has a dedicated editor tool with a clean tooltip title.
+Most core DSL params have editor tools; a backlog of ~16 param editors remains (see the Tier tables below).
 Combined-format functions (`freq:resonance:env`, `threshold:ratio:knee:attack:release`, etc.) have
 multi-field editors with SVG visualizations. The compressor editor includes preset buttons.
 
@@ -52,29 +52,29 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 
 ### Tier 2 — Medium Impact (synthesis, pitch, rhythm)
 
-| #  | DSL Function                               | Proposed Editor                  | Format / UI Idea                           |
-|----|--------------------------------------------|----------------------------------|--------------------------------------------|
-| 25 | `fmh()`                                    | `SprudelFmHarmonicityEditorTool` | numeric slider with harmonic ratio presets |
-| 26 | `fmenv()`                                  | `SprudelFmEnvEditorTool`         | numeric slider (0–5000 Hz depth)           |
-| 27 | `fmattack()` / `fmdecay()` / `fmsustain()` | reuse `SprudelNumericEditorTool` | individual ADSR component sliders          |
-| 28 | `unison()` / `uni()`                       | `SprudelUnisonEditorTool`        | integer picker (1–8 voices)                |
-| 29 | `detune()`                                 | `SprudelDetuneEditorTool`        | numeric slider (0–50 cents)                |
-| 30 | `transpose()`                              | `SprudelTransposeEditorTool`     | semitone slider (-24 to +24)               |
-| 31 | `swing()`                                  | `SprudelSwingEditorTool`         | numeric slider (0–1) with timing diagram   |
-| 32 | `distort()` / `dist()`                     | `SprudelDistortEditorTool`       | numeric slider (0–1)                       |
-| 33 | `shape()`                                  | `SprudelShapeEditorTool`         | numeric slider (0–1) waveshaper            |
+| #  | DSL Function                               | Proposed Editor                  | Format / UI Idea                                                                                   |
+|----|--------------------------------------------|----------------------------------|----------------------------------------------------------------------------------------------------|
+| 25 | `fmh()`                                    | `SprudelFmHarmonicityEditorTool` | numeric slider with harmonic ratio presets                                                         |
+| 26 | `fmenv()`                                  | `SprudelFmEnvEditorTool`         | numeric slider (0–5000 Hz depth)                                                                   |
+| 27 | `fmattack()` / `fmdecay()` / `fmsustain()` | reuse `SprudelNumericEditorTool` | individual ADSR component sliders                                                                  |
+| 28 | `unison()` / `uni()`                       | `SprudelUnisonEditorTool`        | integer picker (1–8 voices)                                                                        |
+| 29 | ~~`detune()`~~ **OBSOLETE**                | —                                | `detune()` renamed to `spread()` (unison freq-spread); the freq-spread editor is now #39's sibling |
+| 30 | `transpose()`                              | `SprudelTransposeEditorTool`     | semitone slider (-24 to +24)                                                                       |
+| 31 | `swing()`                                  | `SprudelSwingEditorTool`         | numeric slider (0–1) with timing diagram                                                           |
+| 32 | `distort()` / `dist()`                     | `SprudelDistortEditorTool`       | numeric slider (0–1)                                                                               |
+| 33 | `shape()`                                  | `SprudelShapeEditorTool`         | numeric slider (0–1) waveshaper                                                                    |
 
 ### Tier 3 — Lower Priority (advanced / less frequent)
 
-| #  | DSL Function                           | Proposed Editor            | Format / UI Idea                    |
-|----|----------------------------------------|----------------------------|-------------------------------------|
-| 34 | `degrade()` / `degradeBy()`            | `SprudelDegradeEditorTool` | probability slider (0–100%)         |
-| 35 | `vowel()`                              | `SprudelVowelEditorTool`   | vowel picker (a, e, i, o, u)        |
-| 36 | `loop()` / `loopBegin()` / `loopEnd()` | `SprudelLoopEditorTool`    | toggle + range bar                  |
-| 37 | `phaser*()` family                     | `SprudelPhaserEditorTool`  | combined center/depth/sweep editor  |
-| 38 | `tremolo*()` family                    | `SprudelTremoloEditorTool` | combined depth/rate/shape editor    |
-| 39 | `spread()`                             | `SprudelSpreadEditorTool`  | numeric slider (0–1) stereo width   |
-| 40 | `freq()`                               | `SprudelFreqEditorTool`    | frequency slider (20–20000 Hz, log) |
+| #  | DSL Function                           | Proposed Editor              | Format / UI Idea                    |
+|----|----------------------------------------|------------------------------|-------------------------------------|
+| 34 | `degrade()` / `degradeBy()`            | `SprudelDegradeEditorTool`   | probability slider (0–100%)         |
+| 35 | `vowel()`                              | `SprudelVowelEditorTool`     | vowel picker (a, e, i, o, u)        |
+| 36 | `loop()` / `loopBegin()` / `loopEnd()` | `SprudelLoopEditorTool`      | toggle + range bar                  |
+| 37 | `phaser*()` family                     | `SprudelPhaserEditorTool`    | combined center/depth/sweep editor  |
+| 38 | `tremolo*()` family                    | `SprudelTremoloEditorTool`   | combined depth/rate/shape editor    |
+| 39 | `panSpread()` (was `spread()`)         | `SprudelPanSpreadEditorTool` | numeric slider (0–1) stereo width   |
+| 40 | `freq()`                               | `SprudelFreqEditorTool`      | frequency slider (20–20000 Hz, log) |
 
 ## Tool Registry
 

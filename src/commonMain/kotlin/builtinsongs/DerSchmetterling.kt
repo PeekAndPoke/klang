@@ -40,8 +40,8 @@ stack(                                                                          
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)  // . solo()
     .sound("supersaw").unison(9).spread(0.08).gain(0.75).postgain(0.115).distort("1:tube:4").distort(0.80)    
-    .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr("0.005:2.5:0.0:0.029").lpadsr("0.005:1.1:0.0:0.015")    
-    .hpf("<550!16 360!16 550!16 800!16>").lpf("3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4)).lpe(0.6).lpq(2.0)
+    .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr("0.005:2.5:0.0:0.028").lpadsr("0.005:1.1:0.0:0.011")    
+    .hpf("<550!16 360!16 550!16 800!16>").lpf("3250".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4)).lpe(0.6).lpq(2.0)
     .coarse(2).coarseos(4).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.02))
     .pipeline("pedal").body("wood").bodyMix(0.3)
   , // Guitar 2
@@ -49,11 +49,11 @@ stack(                                                                          
     .orbit(2).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
     .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort("1:tube:4").distort(0.85)
-    .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr("0.005:2.5:0.0:0.027").lpadsr("0.005:1.0:0.0:0.01")    
+    .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr("0.005:2.5:0.0:0.028").lpadsr("0.005:1.0:0.0:0.01")    
     .hpf(110).lpf(3200).lpe(0.6).lpq(1.8)
     .coarse(2).coarseos(4).pan(0.3).superimpose(
       x => x.pan(0.7),
-      x => x.postgain(0.09).hpf(220).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
+      x => x.postgain(0.09).hpf(220).lpf(3200).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
     ).superimpose(hpf(3500).lpf(6200).postgain(0.02)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("wood").bodyMix(0.30)
   , // Bass

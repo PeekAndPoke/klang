@@ -8,7 +8,7 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 
 ### H3. `AstToKBlocks.convertStmt()` silently drops loop statements
 
-- **File:** `klangblocks/.../AstToKBlocks.kt:57` — `else -> null`
+- **File:** `klangblocks/.../AstToKBlocks.kt:105` — `else -> null` (in `convertStmt`, :68)
 - **Impact:** `WhileStatement`, `DoWhileStatement`, `ForStatement`, `BreakStatement`, `ContinueStatement` are silently
   lost on round-trip through the block editor
 - **Fix:** Add block representations for these statements, or at minimum surface a warning
@@ -20,13 +20,13 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 
 ### M9. Sprudel `Pair` allocations in pattern query hot paths
 
-- `PatternQueryUtils.kt:114,130,156,170` — inline functions return `Pair` (not elided by inlining)
+- `PatternQueryUtils.kt:63,79,90,112,123` — inline functions return `Pair` (not elided by inlining)
 - **Fix:** Use a reusable mutable result holder or destructure differently
 
 ### M10. Sprudel per-query sorting
 
-- `StackPattern.kt:29` — `sortedBy` on every query (O(n log n) + allocation)
-- `EuclideanPattern.kt:378` — same issue
+- `StackPattern.kt:35` — `sortedBy` on every query (O(n log n) + allocation)
+- `EuclideanPattern.kt:336` — same issue
 - **Fix:** Remove or make debug-only
 
 ---
@@ -42,14 +42,14 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 
 ### L3. Boxed types in non-hot-path code (low impact but violate project rule)
 
-- `klangscript/RuntimeValue.kt:44,47` — `toLongOrNull()`, `toLongOr()` helpers
+- `klangscript/RuntimeValue.kt:50,53` — `toLongOrNull()`, `toLongOr()` helpers
 - `klangscript/NativeInterop.kt:70-71,93-95` — `Short`, `Byte`, `LongArray`, `ByteArray`, `ShortArray` class matching
 - `klangui/comp/_utils.kt:16` — `lowercaseChar()` returns Char
 - `common/BerlinNoise.kt:17` — Long multiplication for hash
 
 ### L4. Sprudel DSL boilerplate duplication
 
-- `lang_pattern_picking.kt` (2594 lines) — 5 near-identical `dispatch*` functions, ~16 functions per variant
+- `lang_pattern_picking.kt` (2387 lines) — 5 near-identical `dispatch*` functions, ~16 functions per variant
 - `lang_euclid.kt` — arg-parsing `when` block duplicated 10+ times
 - `SprudelVoiceValue.kt:292-349` — fraction parsing duplicated between decoder branches
 - **Constraint:** only unify internals; user-facing DSL functions and registration must not change

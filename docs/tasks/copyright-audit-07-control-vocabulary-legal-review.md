@@ -1,5 +1,7 @@
 # Copyright Audit 07 — Control-vocabulary legal review
 
+> **BLOCKED — awaiting external IP counsel. Not startable internally; do not rewrite preemptively.**
+
 **Bucket C · 🟡 lawyer decision · NOT a code task (until counsel advises)**
 
 > **UPDATE (2026-06-24) — task 08 (Tidal comparison) materially narrows this.** A verified comparison

@@ -1,5 +1,9 @@
 # KlangScript — Named Arguments + Builder Refactor
 
+> **ARCHIVED — ~85% DONE.** Core shipped: parser/runtime (`Argument.Named`, `CallArgs`, `ParamSpec`), the
+`createFunction`/`FunctionBuilder0..10` builders, KSP default-value extraction, the `NamedArgumentChecker`, and docs
+> signature rendering. Remaining docs-polish is tracked in `docs/tasks/klangscript-named-args-docs-polish.md`.
+
 ## Goal
 
 Add Kotlin-style named arguments to KlangScript (`foo(param = 1)`) and rework the native-interop

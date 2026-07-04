@@ -1,6 +1,6 @@
 # Audio Pipeline — Open Topics
 
-Last updated: 2026-06-05.
+Last updated: 2026-07-04.
 
 Recent progress:
 
@@ -24,11 +24,20 @@ Voice currently carries cylinder config (delay.time, reverb.roomSize, phaser.*, 
 ducking.*) that should move to Bus-level configuration. This would decouple voice data from
 bus parameters and allow per-cylinder effect settings independent of voice scheduling.
 
+> **Cross-ref:** a per-orbit **Katalyst** effect pipeline now exists
+> (`audio_be/.../cylinders/katalyst/` — `KatalystBodyEffect`, `KatalystFormantEffect`,
+> `KatalystDelayEffect`, `KatalystReverbEffect`, `KatalystPhaserEffect`, `KatalystCompressorEffect`,
+> `KatalystDuckingEffect`), which is the natural home for this bus-level config. Align this topic with it.
+
 ## 2. Master Configuration & Analog Saturation
 
 Enhance `KlangAudioRenderer` to support configurable mastering chains (e.g., "Transparent" vs
 "Analog Warmth") with parameters for compression, saturation drive, and asymmetric bias.
 See archived `klang-audio-master-configuration.md` for full implementation plan.
+
+> **Cross-ref:** the master *surface* (the structural home for these settings) is being built in
+> `per-playback-engine.md` §H / **D6** (the thin master path: `Song.master` → `Cmd.SetMaster` →
+> per-engine gain). Keep this topic's rich mastering chain aligned with that surface so the two don't diverge.
 
 ## 3. New Oscillator Candidates
 
@@ -57,8 +66,10 @@ Current Oversampler (15-tap half-band FIR + linear interpolation) works but has 
 - **A1/A2/A5:** Linear interpolation creates images that intermodulate through the waveshaper.
   Fix: replace with zero-stuffing + half-band FIR on both upsample and downsample paths.
   Upgrade to 31-43 tap half-band for 50-60 dB rejection (vs ~20 dB current).
-- **S7:** No `reset()` on Oversampler — stale filter state may bleed into recycled voice attacks.
-- **S8:** `(Float) -> Float` lambda boxes per sample in Kotlin/JS. Inline `process()` to fix.
+- ~~**S7:** No `reset()` on Oversampler — stale filter state may bleed into recycled voice attacks.~~ **DONE** (
+  `Oversampler.reset()` exists).
+- ~~**S8:** `(Float) -> Float` lambda boxes per sample in Kotlin/JS. Inline `process()` to fix.~~ **DONE** (non-boxing
+  `process()`, see the comment on avoiding a `(Double) -> Double` callback).
 
 See archived `20260409-distortion-oversampling.md` for full review findings (A1-A9, S1-S11).
 

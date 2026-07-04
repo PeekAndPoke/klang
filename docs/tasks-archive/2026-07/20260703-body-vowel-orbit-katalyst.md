@@ -1,5 +1,9 @@
 # Move body / vowel from per-voice filters to orbit-level Katalyst effects
 
+> **ARCHIVED 2026-07-04 — DONE.** Orbit-level Katalyst body/vowel shipped (see
+`audio_be/.../cylinders/katalyst/KatalystBodyEffect.kt`, `KatalystFormantEffect.kt`, wired in `Cylinder.kt`). Only
+> by-ear sign-off / song re-orbiting remains.
+
 Status: **IMPLEMENTED + measured 2026-07-03.** Awaiting by-ear sign-off + song re-orbiting (see conflict table).
 
 ## Result (same-machine A/B, frozen Der Schmetterling, JVM)

@@ -1,5 +1,10 @@
 # Engine DSL — configurable engines & oscillators from KlangScript
 
+> **ARCHIVED — DESIGN RECORD.** Phase 1 shipped (PipelineDsl rename, `c6580eba…`); Phase 2 oscillator subtypes shipped;
+> Katalyst (Phase 4) has materialized. Remaining Phase 2 wrapper knobs + Phase 3 profiles are tracked with current names
+> in `docs/tasks/engine-tuning-profile.md`. Names below are pre-rename (`EngineDsl`→`PipelineDsl`, `Cmd.RegisterEngine`→
+`RegisterPipeline`, `AudioEngine`→`PipelinePreset`, `@Serializable`→`@WireName`).
+
 > **STATUS (2026-06-30, branch `dsl-enhancements`).** The code DSL was renamed `EngineDsl` → **`PipelineDsl`**
 > in Phase 1; this doc keeps the original name for continuity.
 > - **Phase 1 (PipelineDsl) — DONE + committed.** Data-driven pipeline + `modern`/`pedal` + Vca/Filter character

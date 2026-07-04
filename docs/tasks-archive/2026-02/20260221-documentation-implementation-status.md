@@ -1,5 +1,8 @@
 # Strudel DSL Documentation - Implementation Status
 
+> **ARCHIVED — DONE.** Status companion to the strudel-dsl-documentation design; every "Next Step" shipped. Historical
+> record.
+
 **Date**: 2026-02-21
 
 ## Functions that need docs and examples
