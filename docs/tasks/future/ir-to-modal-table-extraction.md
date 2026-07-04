@@ -14,18 +14,19 @@ new `body()` materials from real instruments instead of hand-tuning every mode b
 
 The `body()` / `bodyMix()` resonator is a **parametric modal model**: a parallel bank of resonant SVF bandpasses
 (`BodyFilter`), one per mode, mixed over the dry source via `ParallelMixFilter` (floor + peaks). Materials are
-hand-authored tables in `resolveBodyModes()`:
+hand-authored tables:
 
-- `sprudel/src/commonMain/kotlin/SprudelVoiceData.kt:989` — `resolveBodyModes(material)`, four tables
-  (`wood`, `tube`, `glass`, `membrane`), eight `m(freq, db, q)` modes each.
+- `sprudel/src/commonMain/kotlin/SprudelBodyMaterials.kt` — the public `modesFor(material)` catalogue (as of
+  2026-07-04 ~15 materials — woods `wood`/`cedar`/`spruce`/`mahogany`/`rosewood`/`maple`/`oak`, `violin`,
+  `tube`/`glass`/`membrane`, metals `brass`/`steel`/`bell`, + `none`), each ~8 `m(freq, db, q)` modes. (Extracted
+  from the old private `SprudelVoiceData.resolveBodyModes`.)
 - `audio_be/src/commonMain/kotlin/filters/BodyFilter.kt` — the parallel SVF-BPF bank; divides each band by `Q`
   so `db` is the *actual* peak emphasis (independent of sharpness).
-- `audio_bridge/src/commonMain/kotlin/FilterDef.kt` — `FilterDef.Body` / `Body.Mode` wire contract.
-- See also memory note `project_body_resonator`.
+- `audio_bridge/src/commonMain/kotlin/FilterDef.kt` — `FilterDef.Body` / `Body.Mode` wire contract (+ nullable
+  `floor`, set by the `bodyFloor()` DSL).
 
-These tables were authored by ear (the comment at `resolveBodyModes()` explicitly calls them "starting-point
-tables — expect to tune `db`, the mode sets, and `BODY_FLOOR` by ear"). This task is about **deriving** them
-from real recordings instead.
+These tables are authored by ear — caricatures anchored on a few real acoustic "tells" (see the credited
+sources), the rest sparse fill. This task is about **deriving** them from real recordings instead.
 
 ## Why it works — the IR *is* a sum of decaying sinusoids
 

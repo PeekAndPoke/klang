@@ -16,6 +16,11 @@
 - **Live-update double-voice fix**: `VoiceScheduler.replaceVoices` now dedups incoming voices vs
   already-active ones (`ScheduledVoice.isDuplicate` = startTime+data); grace window 50→200 ms in
   `KlangPlaybackController`. Root cause + the per-playback engine model: `ref/architecture.md`.
+- **Benchmarks**: isolated `Body`/`Vowel` cases in `EffectBenchmark`; a `+vowel(a)` case in the song
+  benchmark. Body (8-band) is the priciest single filter (~= reverb), vowel ~62% of it. **The old
+  "superimpose × body = super-additive" finding is now OBSOLETE** — body moved to orbit-level, so
+  cost(body|super) ≈ cost(body|no-super) (applied once per orbit, not per copy). `analog` still
+  multiplies (per-voice). Refresh: `docs/benchmarks/2026-07-04_*_song_jvm.md`.
 
 ## Song-level CPU benchmark + Der Schmetterling deep-dive (2026-07-03)
 

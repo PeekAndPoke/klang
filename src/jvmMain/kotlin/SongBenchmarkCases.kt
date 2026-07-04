@@ -219,6 +219,7 @@ object SongBenchmarkCases {
         voice("FX: base +pipeline(pedal)", "exp-fx", """$fxBase.pipeline("pedal")"""),
         voice("FX: base +body(wood)", "exp-fx", """$fxBase.body("wood").bodyMix(0.3)"""),
         voice("FX: base +body(glass)", "exp-fx", """$fxBase.body("glass").bodyMix(0.3)"""),
+        voice("FX: base +vowel(a)", "exp-fx", """$fxBase.vowel("a").vowelMix(0.3)"""),
         voice("FX: base +room", "exp-fx", """$fxBase.room("0.10:8:0.12")"""),
         voice("FX: base +pipeline+body+room", "exp-fx", """$fxBase.pipeline("pedal").body("wood").bodyMix(0.3).room("0.10:8:0.12")"""),
     )
