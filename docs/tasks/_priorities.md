@@ -95,6 +95,11 @@ The release-defining set, regardless of when they're sequenced:
 17. **NICE** · **Sprudel test-coverage sweep** — [
     `sprudel-test-coverage-and-review.md`](sprudel-test-coverage-and-review.md) 🟡 — *ongoing, user-paced*
     Form-(d) chained-mapper cases; done opportunistically as files are touched.
+18. **NICE** · **Voice culling** — [`voice-culling.md`](voice-culling.md) 🔴
+    Sound-preserving, all-platform CPU win: terminate voices whose *real output* has decayed below −80 dB
+    (ignitor-agnostic — no ADSR inference; gated by a per-voice `cullAfter` life-fraction). Reclaims wasted
+    silent-tail rendering on dense `sustain=0` sections (Der Schmetterling). Complements the orbit-body move;
+    measure the win via `runSongBenchmark`.
 
 ## Blocked / off-plan / parked
 

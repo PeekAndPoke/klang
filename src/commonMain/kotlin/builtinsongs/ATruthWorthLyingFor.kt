@@ -57,21 +57,21 @@ stack( // Gitarre! -------------------------------------------------------------
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").hpf(600).lpf(2100).lpe(1.5).lpq(2.0).clip(0.96) // .solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 7000).oscp("spread", 0.04).postgain(0.13).body("wood").bodyMix(0.3)
+    .orbit(1).fast(4).scale("C3:chromatic").hpf(600).lpf(2500).lpe(1.5).lpq(2.0).clip(0.96) // .solo()
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.04).postgain(0.13).body("wood").bodyMix(0.3)
     .transpose(tp).pan(0.3).superimpose(pan(0.7)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0  8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").hpf(1000).lpf(2150).lpe(1.5).lpq(2.25).clip(0.96).late(0.001)  // . solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 7000).oscp("spread", 0.05).postgain(0.11).body("wood").bodyMix(0.3)
+    .orbit(2).fast(4).scale("C4:chromatic").hpf(1000).lpf(2550).lpe(1.5).lpq(2.25).clip(0.96).late(0.001)  // . solo()
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.05).postgain(0.10).body("wood").bodyMix(0.3)
     .transpose(tp).pan(0.16).superimpose(pan(0.84)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,5|10|10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 2 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|10|17|17|17|17|22]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9925).hpf(120).lpf(2800).lpe(1.3).lpq(1.75).postgain(0.13)
+  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9925).hpf(120).lpf(2700).lpe(1.5).lpq(1.75).postgain(0.13)
     .s(guitar).oscparam("drive", drive).oscp("brightness", 6000).oscp("spread", 0.08).body("wood").bodyMix(0.3) //  . mute()
     .transpose(tp).pan(0.45).superimpose(pan(0.65).late(0.001)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay >= 4) //  .solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------
@@ -79,8 +79,8 @@ stack( // Gitarre! -------------------------------------------------------------
           [0]                                     [[[8]@12     [8]@4]          [10]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 2 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8] [7]]                    [[[8]!4 [8]!3 [10]]          [10]*8]>`).repeat(2),
-  ).orbit(4).scale("C2:chromatic").clip(0.95).sound("saw").gain(1.5).distort("0.8:tube:2").analog(1).postgain(0.20)
-    .adsr("0.005:0.3:0.2:0.025").lpadsr("0.005:0.1:0.4:0.075").lpe(10.0).hpf(80).hpq(1.25).lpf(280).velocity("<[1.0 0.95 0.975 0.95]>")
+  ).orbit(4).scale("C2:chromatic").clip(0.95).sound("saw").gain(1.5).distort("0.8:tube:2").analog(1).postgain(0.16)
+    .adsr("0.005:0.5:0.2:0.025").lpadsr("0.005:0.1:0.0:0.075").lpe(20.0).hpf(80).hpq(1.25).lpf(200).velocity("<[1.0 0.95 0.975 0.95]>")
     .pan(0.55).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").orbit(5).bandf("1800 600 1200 600").gain("0.075") // .solo()
@@ -90,12 +90,12 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).orbit(6).early(0.002).adsr("0.005:0.2:0.2:0.5").gain(0.8).hpf(100).lpf(11500)
+  ).orbit(6).early(0.002).adsr("0.005:0.2:0.2:0.5").gain(0.7).hpf(90).lpf(11500)
     .superimpose(bandf(195).bandq(1.1).gain(0.2)).filterWhen(t => t % stay >= 3.95)  // .solo()
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
-    .orbit(7).late(-0.003).adsr("0.007:0.2:0.8:0.7").gain(0.85).hpf(2000).lpf(13500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
-).room(0.02).rsize(3.0).compressor("-6:3:10:0.02:0.25") /*
+    .orbit(7).late(-0.003).adsr("0.007:0.2:0.9:0.7").gain(0.85).hpf(800).lpf(13500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
+).room(0.02).rsize(3.0).compressor("-6:3:10:0.02:0.05") /*
 
 
 
