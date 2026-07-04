@@ -1,5 +1,9 @@
 # KlangBlocks — Implementation Plan (Take 1, Rev 2)
 
+> **ARCHIVED — DONE / SUPERSEDED.** KlangBlocks shipped; the living spec is `klangblocks/CLAUDE.md` +
+`klangblocks/ref/*.md`. This is a historical design record — names have drifted (`:strudel`→`:sprudel`, `KBlocksToCode`→
+`KBCodeGen`, `DragState/DropTarget`→`DropAction/DropDestination`).
+
 > **Status**: In progress — MVP playable
 > **Author**: Claude + user
 > **Date**: 2026-02-27

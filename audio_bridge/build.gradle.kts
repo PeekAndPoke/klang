@@ -35,7 +35,7 @@ kotlin {
         commonMain {
             dependencies {
                 // Wire types are serialized by the KSP-generated codec (`:audio-wire-codec-ksp`), not kotlinx —
-                // so no serialization plugin/deps here. See docs/tasks/wireformat-enhancements.md.
+                // so no serialization plugin/deps here. See docs/tasks-archive/2026-06/20260611-wireformat-enhancements.md.
                 api(project(":common"))
                 api(project(":tones"))
             }

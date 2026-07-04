@@ -25,7 +25,8 @@ The fix: a per-`playbackId` **`PlaybackEngine`** that owns its scheduling + DSP 
 
 **This doc covers the foundation only.** A *thin* master path (Song → `Cmd.SetMaster` → per-engine output
 gain) is in scope to prove the wiring; the rich master chain (glue/eq/drive/ceiling), crossfade, metering,
-UI, and the `EngineDsl` rename are deferred (see "Deferred phases"). The foundation fixes the collision
+and UI are deferred (see "Deferred phases"). The `EngineDsl`→`PipelineDsl` rename is now **done + merged**.
+The foundation fixes the collision
 bug and is **behaviour-identical** for today's single-playback case.
 
 ## Status — end of Q2 2026 (current)
@@ -58,7 +59,8 @@ adopted (unnecessary). Guard: `PlaybackEngineDispatcherDiagnosticsTest`.
 - **D4 — cylinder eviction:** still open, now **folds into the warehouse pool** (memory
   `project_resource_warehouse_pool`) — a self-balancing pool for the 7.68 MB delay rings + cylinders that also
   kills the first-note **allocation** hiccup (the cylinder half of Open Q1). Scheduled **last**.
-- Deferred: crossfade, metering, master UI, `EngineDsl`→`PipelineDsl` rename, worklet clock divergence.
+- Deferred: crossfade, metering, master UI, worklet clock divergence. (The `EngineDsl`→`PipelineDsl` rename is now *
+  *done + merged**.)
 
 ## Decisions (locked)
 
@@ -70,13 +72,14 @@ adopted (unnecessary). Guard: `PlaybackEngineDispatcherDiagnosticsTest`.
     + global resources + final mix; **lazy-creates** an engine for an unknown `playbackId`; **centralizes
       `Cmd` dispatch** (currently duplicated between `JvmAudioBackend.kt:114-148` and
       `KlangAudioWorklet.kt:121-148`). Platform backends become thin pumps.
-3. **Accept the "engine" naming collision for now.** `EngineDsl` is really a per-voice *pipeline*; the
-   rename `EngineDsl` → `PipelineDsl` is **deferred** (do not churn the in-flight
-   `engine-dsl-osc-dsl-parameterization` branch). Memory note `engine_dsl_misnamed` recorded.
+3. **~~Accept the "engine" naming collision for now.~~ DONE.** `EngineDsl` was really a per-voice *pipeline*; the
+   rename `EngineDsl` → `PipelineDsl` (and `EngineRegistry` → `PipelineRegistry`) is now **complete and merged**.
+   Memory note `engine_dsl_misnamed` recorded the history.
 4. **Shared resources** (in the dispatcher): the **`SampleStore`** sample cache — the one real
    extraction, because `Cmd.Sample` uploads are SYSTEM-wide and PCM is MBs — plus the backend clock
-   (one timeline), the `IgnitorRegistry` *parent* (per-engine fork stays), the `EngineRegistry`
-   (per-engine fork deferred to the EngineDsl branch), and the final stage **`MasterStage`** (limiter +
+   (one timeline), the `IgnitorRegistry` *parent* (per-engine fork stays), the `PipelineRegistry`
+   (per-engine fork still deferred; the `EngineDsl`→`PipelineDsl` rename itself is done), and the final stage *
+   *`MasterStage`** (limiter +
    DC + clip) run **once** on the summed mix. `VoiceFactory` and per-block scratch are **per-engine** (#5).
 5. **Each engine owns its full render state** — its own `RenderContext` + scratch
    (`voiceBuffer`/`freqModBuffer`/`ScratchBuffers`) + `VoiceFactory`. **No shared `RenderContext`, no
@@ -110,7 +113,7 @@ adopted (unnecessary). Guard: `PlaybackEngineDispatcherDiagnosticsTest`.
 ```
 PlaybackEngineDispatcher (host, singleton, commonMain)
   global:  SampleStore(cache) · backend clock · VoiceFactory · scratch singletons
-           IgnitorRegistry(parent) · EngineRegistry · KlangAudioRenderer(limiter+DC+clip)
+           IgnitorRegistry(parent) · PipelineRegistry · KlangAudioRenderer(limiter+DC+clip)
   handles: KlangCommLink.Cmd  (lazy-create engine on unknown pid; route; Cmd.Cleanup→drain→dispose)
   renders: 1 engine → renderInto(mix) directly  |  N engines → each renderInto(scratch); mix += scratch
            mix → KlangAudioRenderer(safety limiter → DC → clip) → out
@@ -118,24 +121,24 @@ PlaybackEngineDispatcher (host, singleton, commonMain)
   ├─ PlaybackEngine[B]   …
   └─ …
 platform backend (Jvm / JsWorklet) = thin: pump ring buffer → dispatcher.handle(cmd); dispatcher.renderBlock(out)
-voice = Ignitor + EngineDsl(→Pipeline) → Cylinder (in its PlaybackEngine)
+voice = Ignitor + PipelineDsl → Cylinder (in its PlaybackEngine)
 ```
 
 ## Resource scope (global vs per-engine)
 
-| Resource                                                   | Scope                           | Why                                                |
-|------------------------------------------------------------|---------------------------------|----------------------------------------------------|
-| Sample cache (PCM)                                         | **global** (dispatcher)         | large, shared across playbacks                     |
-| `ScratchBuffers`/`voiceBuffer`/`freqMod` + mixdown scratch | **global singletons**           | per-block transient; engines render sequentially   |
-| backend clock / start time / cursor frame                  | **global**                      | one audio timeline                                 |
-| `VoiceFactory`                                             | **global**                      | stateless factory                                  |
-| `IgnitorRegistry`                                          | global **parent** + engine fork | defaults shared; per-playback custom osc (exists)  |
-| `EngineRegistry`                                           | **global** (fork later)         | per-engine fork deferred to EngineDsl branch       |
-| limiter + DC blockers                                      | **global** (final stage)        | safety brick on the summed output                  |
-| scheduled heap · active voices · solo/mute                 | **per engine**                  | per-playback timeline & mute                       |
-| epoch                                                      | **per engine**                  | per-playback time origin (exists in `PlaybackCtx`) |
-| `Cylinders` (orbits + FX) · `master`                       | **per engine** (lazy cylinders) | isolation (the bug fix); mixdown buffer is shared  |
-| `Oversampler`, filters, envelopes, delay lines             | **per voice**                   | inter-block state — not shareable                  |
+| Resource                                                   | Scope                           | Why                                                   |
+|------------------------------------------------------------|---------------------------------|-------------------------------------------------------|
+| Sample cache (PCM)                                         | **global** (dispatcher)         | large, shared across playbacks                        |
+| `ScratchBuffers`/`voiceBuffer`/`freqMod` + mixdown scratch | **global singletons**           | per-block transient; engines render sequentially      |
+| backend clock / start time / cursor frame                  | **global**                      | one audio timeline                                    |
+| `VoiceFactory`                                             | **global**                      | stateless factory                                     |
+| `IgnitorRegistry`                                          | global **parent** + engine fork | defaults shared; per-playback custom osc (exists)     |
+| `PipelineRegistry`                                         | **global** (fork later)         | per-engine fork still deferred (rename done + merged) |
+| limiter + DC blockers                                      | **global** (final stage)        | safety brick on the summed output                     |
+| scheduled heap · active voices · solo/mute                 | **per engine**                  | per-playback timeline & mute                          |
+| epoch                                                      | **per engine**                  | per-playback time origin (exists in `PlaybackCtx`)    |
+| `Cylinders` (orbits + FX) · `master`                       | **per engine** (lazy cylinders) | isolation (the bug fix); mixdown buffer is shared     |
+| `Oversampler`, filters, envelopes, delay lines             | **per voice**                   | inter-block state — not shareable                     |
 
 ## Current state (grounded)
 
@@ -380,5 +383,6 @@ audio until D6 (and then only when a non-unity `Song.master` is set).
    `Cmd.Crossfade(fromId, toId, durationMs)` (sample-accurate ramp in the backend).
 3. **Metering** — peak/RMS/gain-reduction into `PlaybackEngineStats` + UI master meters.
 4. **UI master panel** + live `Cmd.SetMaster` (debounced like RPM); persist master with the song.
-5. **`EngineDsl` → `PipelineDsl` rename** + per-engine `EngineRegistry` fork — coordinate with the in-flight branch.
+5. Per-engine `PipelineRegistry` fork — the `EngineDsl` → `PipelineDsl` rename itself is **done + merged**; only the
+   per-engine fork remains.
 6. **Delay-ring right-sizing** (memory optimization for many simultaneous decks).

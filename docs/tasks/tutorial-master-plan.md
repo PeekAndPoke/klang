@@ -1,6 +1,6 @@
 # Tutorial Master Plan
 
-**Date:** 2026-04-07 | **Status:** Under consideration
+**Date:** 2026-04-07 | **Status:** Expansion backlog (Q3 Act 2 — after the fix-first pass)
 
 ## Philosophy
 
@@ -24,6 +24,11 @@
 ---
 
 ## Coverage Gap Summary
+
+> **Note (2026-07-04):** the "~14% covered / ~67% zero coverage" figures below **predate the 38-tutorial
+> factory build-out**. 38 tutorials now ship (`src/commonMain/kotlin/pages/docs/tutorials/`,
+> `TutorialRegistry.kt`; build log at `src/jsMain/kotlin/pages/docs/tutorials/GENERATION_LOG.md`), so this
+> is now the **expand** backlog — not a from-zero gap analysis. Re-measure before using these numbers.
 
 Of ~180 implemented concepts, only ~14% are well-covered by existing tutorials. ~67% have zero coverage.
 
@@ -64,6 +69,10 @@ grouping, `<>` alternation
 ---
 
 ## New Concept Tutorials (36)
+
+> **Note:** the `H*/M*/L*/A*/G*` code taxonomy below was **not** the scheme actually used — the shipped
+> tutorials are named by the factory's own slugs (`tut_*`, see `TutorialRegistry.kt`). Treat these codes as
+> planning IDs only, not as identifiers of the shipped files.
 
 ### Phase 1: Critical Beginner Gaps — Make FIRST
 

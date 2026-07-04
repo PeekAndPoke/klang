@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.builtinsongs.derSchmetterlingSong
+
 /**
  * Benchmark cases for "Der Schmetterling" (frozen 2026-07-03).
  *
@@ -256,6 +258,31 @@ object SongBenchmarkCases {
             code = FrozenSongs.strangerThings_2026_07_03,
             group = "full-song",
             rpm = 34.0,
+            cycles = 48,
+            warmupPasses = 1,
+            measurePasses = 3,
+        ),
+    )
+
+    /**
+     * The CURRENT (live) built-in Der Schmetterling — reads `builtinsongs/DerSchmetterling.kt` as edited,
+     * next to the frozen snapshot for a same-run comparison. Use `--args=live`.
+     */
+    fun live(): List<SongBenchmark.Case> = listOf(
+        SongBenchmark.Case(
+            name = "Der Schmetterling (FROZEN 07-03)",
+            code = FrozenSongs.derSchmetterling_2026_07_03,
+            group = "full-song",
+            rpm = 34.5,
+            cycles = 48,
+            warmupPasses = 1,
+            measurePasses = 3,
+        ),
+        SongBenchmark.Case(
+            name = "Der Schmetterling (LIVE, current code)",
+            code = derSchmetterlingSong.code,
+            group = "full-song",
+            rpm = derSchmetterlingSong.rpm,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,

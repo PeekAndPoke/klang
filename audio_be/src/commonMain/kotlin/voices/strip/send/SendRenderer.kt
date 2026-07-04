@@ -24,7 +24,7 @@ class SendRenderer(
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
-        val cylinder = ctx.renderContext.cylinders.getOrInit(voice.cylinderId, voice)
+        val cylinder = ctx.renderContext.cylinders.getOrInit(voice.cylinderId, voice, ctx.renderContext.blockStart)
 
         // Equal Power Panning
         // Input: 0.0 (Left) .. 1.0 (Right)

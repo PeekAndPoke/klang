@@ -19,17 +19,17 @@ Sprudel DSL** — plus a note on ignitor-internal filters.
 
 - **Wire:** `audio_bridge/FilterEnvDef.kt` — `FilterEnvDef(attack, decay, sustain, release, depth)` and its
   `Resolved` — **no curve fields**. `FilterDef.LowPass.envelope: FilterEnvDef?` is the only filter envelope.
-- **Backend:** `audio_be/voices/VoiceFactory.kt:~414-420` builds the filter modulator's `Voice.Envelope`
+- **Backend:** `audio_be/voices/VoiceFactory.kt:~426-433` builds the filter modulator's `Voice.Envelope`
   from `envData.resolve()` **without passing curves** → falls back to `Voice.Envelope` defaults
   (`Voice.kt:157-159`). The renderer already supports per-curve filter envelopes
   (`EnvelopeCalc.calculateControlRateEnvelope` reads `env.decayCurve` / `env.releaseCurve`) — it's just never
   fed anything but the default.
 - **Sprudel:** `.lpadsr` / `.lpe` / `.lpq` / `.lpf` set times/depth/Q/cutoff (`lang_filters.kt`,
-  `lang_effects_addons.kt`); `FilterEnvDef` is assembled in `SprudelVoiceData.kt:~755-776` from the `Svd*`
+  `lang_effects_addons.kt`); `FilterEnvDef` is assembled in `SprudelVoiceData.kt:~772-782` from the `Svd*`
   filter fields. **No curve fields, no curve DSL.**
 
 The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → `AdsrDef.Std` curves → resolve →
-`Voice.Envelope.of(resolvedAdsr)` (`VoiceFactory.kt:464`, passes the curves through).
+`Voice.Envelope.of(resolvedAdsr)` (`VoiceFactory.kt:479`, passes the curves through).
 
 ## Plan
 
@@ -45,7 +45,7 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 
 ### 2. Backend rendering — `audio_be` ("Ignitors")
 
-- `VoiceFactory.kt:~415`: pass `resolved.attackCurve / decayCurve / releaseCurve` into the filter
+- `VoiceFactory.kt:~428`: pass `resolved.attackCurve / decayCurve / releaseCurve` into the filter
   `Voice.Envelope(...)` (today it relies on the ctor defaults). One small change; `EnvelopeCalc` already
   honours them.
 - **Ignitor-internal filters** (the `IgnitorDsl` `.lowpass()` family / Phase-2 configurable wrappers,
@@ -55,7 +55,7 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 ### 3. Sprudel DSL
 
 - `SprudelVoiceData.kt`: add `lpAttackCurve / lpDecayCurve / lpReleaseCurve` (nullable) to the `Svd*` filter
-  group; thread into the `FilterEnvDef` construction (`:~755-776`).
+  group; thread into the `FilterEnvDef` construction (`:~772-782`).
 - New DSL function **`lpadsrCurves("a:d:r")`** (mirror of `adsrCurves`, parse `AdsrCurve` per stage) in
   `lang_filters.kt` (or `lang_effects_addons.kt`); plus mapper/string-receiver overloads per the DSL
   conventions. Follow [[feedback_klangscript_no_named_params]] / `/sprudel-dev-knowhow` for the function shape.
@@ -86,6 +86,6 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 | Layer     | Files                                                                                                                     |
 |-----------|---------------------------------------------------------------------------------------------------------------------------|
 | Wire      | `audio_bridge/.../FilterEnvDef.kt`, `FilterDef.kt`; codec ([[project_worklet_serialization]])                             |
-| Backend   | `audio_be/.../voices/VoiceFactory.kt` (~415), `voices/Voice.kt`, `voices/strip/EnvelopeCalc.kt`                           |
-| DSL       | `sprudel/.../SprudelVoiceData.kt` (~755-776 + `Svd*` group), `lang/lang_filters.kt`, `lang/addons/lang_effects_addons.kt` |
-| Templates | amp curves: `.adsrCurves` → `AdsrDef` → `Voice.Envelope.of` (`VoiceFactory.kt:464`)                                       |
+| Backend   | `audio_be/.../voices/VoiceFactory.kt` (~428), `voices/Voice.kt`, `voices/strip/EnvelopeCalc.kt`                           |
+| DSL       | `sprudel/.../SprudelVoiceData.kt` (~772-782 + `Svd*` group), `lang/lang_filters.kt`, `lang/addons/lang_effects_addons.kt` |
+| Templates | amp curves: `.adsrCurves` → `AdsrDef` → `Voice.Envelope.of` (`VoiceFactory.kt:479`)                                       |

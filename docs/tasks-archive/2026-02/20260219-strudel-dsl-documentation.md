@@ -1,5 +1,8 @@
 # Strudel DSL Documentation Strategy
 
+> **ARCHIVED — SUPERSEDED.** DSL docs shipped via `klangscript-ksp` + `KlangDocsRegistry` + `KlangScriptDocsPage` — not
+> the `DslDocs`/`@StrudelDsl` design below. `strudel`→`sprudel` throughout. Historical record.
+
 ## Goals
 
 Create comprehensive, multi-format documentation for all Strudel DSL functions that serves:

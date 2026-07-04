@@ -173,6 +173,27 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 
 ## Function Reference
 
+> ## ⚠️ PER-ORBIT (BUS) vs PER-VOICE EFFECTS — READ THIS
+>
+> Some effects run **once per orbit** (on the whole orbit's mixed signal), NOT per note. All voices on the
+> same `orbit(n)` **share** these, and they are configured **last-writer-wins** — if two voices on one orbit
+> ask for different settings, one silently loses. **To give voices independent bus effects, put them on
+> different orbits.**
+>
+> | Scope | Effects |
+> |-------|---------|
+> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delay` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserdepth`/`phasercenter`/`phasersweep`), `compressor`, ducking |
+> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bandf`/`notchf` (+ their `*env`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+>
+> Example — two guitars that each need their **own** wood body must be on separate orbits:
+> ```javascript
+> stack(
+>   guitarA.orbit(1).body("wood"),   // orbit 1's body
+>   guitarB.orbit(2).body("wood"),   // orbit 2's body — independent
+> )
+> ```
+> If both were `orbit(1)`, they'd share ONE body over their summed signal (fuller, but not two bodies).
+
 ### Tempo & Time
 
 | Function         | Aliases | Description                       | Example                                |

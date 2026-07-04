@@ -1,9 +1,14 @@
 # Engine tuning profile — Phase 3 + the Phase 2 wrapper/drift leftovers
 
+> **This doc supersedes the now-archived `engine-dsl.md` design record**
+> (`docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md`) and is the **authoritative tracker**
+> for the remaining EngineDsl/PipelineDsl work.
+
 > **STATUS (2026-06-30, branch `engine-dsl-osc-dsl-parameterization`):** NOT STARTED. This is the remaining
 > tail of the EngineDsl/osc-DSL work-stream. **Done & committed already:** Phase 1 (PipelineDsl), Phase 2
 > oscillator *sources* (super-* unison family + single-shape oscs + static supertype inferrer + `WaveIgnitor.shapeMax`),
-> and the noise-generator calibration knobs. Full design + history live in `docs/tasks/engine-dsl.md` (§2.1, §3);
+> and the noise-generator calibration knobs. Full design + history live in the archived
+`docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md` (§2.1, §3);
 > this doc is the focused punch-list of what's left.
 >
 > ⚠ The design in `engine-dsl.md` predates two renames — use the **current** names here: super-osc spread param is
@@ -26,8 +31,10 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
 `@KlangScript.TypeExtensions` chained methods → dual-language + render-effect + sync-guard specs. Each field
 **defaults to today's `OscillatorTuning` const** (behavior-identical).
 
-1. **`IgnitorDsl.Adsr` wrapper subtype** — expose `declickSeconds` (the ignitor `AdsrIgnitor` gains a declick
-   one-pole, same as the VCA — it has none today), `expK`, and `attackCurve`/`decayCurve`/`releaseCurve`.
+1. **`IgnitorDsl.Adsr` wrapper subtype — already exists** (`IgnitorDsl.kt:932`, with
+   `attackCurve`/`decayCurve`/`releaseCurve`). Remaining work is to **extend it with** `declickSeconds`
+   (the ignitor `AdsrIgnitor` gains a declick one-pole, same as the VCA — it has none today) and `expK` —
+   not create it new.
    `.adsr()` should return the subtype so config-first chaining works; base lookups still resolve via the
    static supertype inferrer.
 2. **Filter feel knobs** — `Lowpass`/`Highpass`/`Bandpass` subtypes expose their drift/cutoff-offset/drive-scale
@@ -80,4 +87,5 @@ wrapper). Settle this before flipping defaults — it shapes §B.2/§B.4.
 - `audio_be/.../ignitor/IgnitorDslRuntime.kt` (`buildIgnitor` resolution), `OscillatorTuning.kt`,
   `AnalogDriftCoeffs.kt`, `AdsrIgnitor`, `FilterPipelineBuilder.kt`.
 - `klangscript/.../stdlib/` — `Osc.EngineDefault`, `Engine.tune(...)`, wrapper `@TypeExtensions`.
-- Full design reference: `docs/tasks/engine-dsl.md` §2.1 (wrappers), §3 (Phase 3).
+- Full design reference: archived `docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md` §2.1 (wrappers),
+  §3 (Phase 3).

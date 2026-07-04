@@ -11,20 +11,22 @@ to avoid blocking the main thread.
 The receiver-aware code completion work (see `receiver-aware-editor.md` — DONE) plus the
 2026-05-22 analyzer overhaul provide:
 
-| Component                                | Location                | What It Does                                                              |
-|------------------------------------------|-------------------------|---------------------------------------------------------------------------|
-| `ExpressionTypeInferrer`                 | `klangscript/intel/`    | Infers types through call chains; scope-aware (consults a `TypeScope?`)   |
-| `TypeScope`                              | `klangscript/intel/`    | Lexical type environment; mirrors interpreter's `Environment.kt`          |
-| `AnalyzedAst.symbolAt(pos)`              | `klangscript/intel/`    | **Single hover entry point** — receiver filter + local shadow + bare fall |
-| `AnalyzedAst.receiverTypeBeforeDot(pos)` | `klangscript/intel/`    | **Single completion entry point** — type of the chain ending before a dot |
-| `AnalyzedAst.bindingMap`                 | `klangscript/intel/`    | Identifier → local binding (let/const/export/arrow-param) at each ref     |
-| `KlangSymbol.Origin`                     | `klangscript/types/`    | Sealed: `Library(name)` / `Local(LocalKind)` / null — drives popup chip   |
-| `KlangDocsRegistry`                      | `klangscript/docs/`     | Strict receiver-aware lookup (returns null when no variant matches)       |
-| `AstIndex`                               | `klangscript/ast/`      | O(log n) cursor-to-node lookup, public API                                |
-| `KlangScriptParser`                      | `klangscript/parser/`   | Full recursive-descent parser                                             |
-| CodeMirror linter bindings               | `klangjs/.../Lint.kt`   | `Diagnostic`, `linter()`, `setDiagnostics()`                              |
-| Linter extension                         | `CodeMirrorComp.kt:112` | Wired up but source returns `[]`                                          |
-| `setErrors()`                            | `CodeMirrorComp.kt:228` | Converts `EditorError` → `Diagnostic` and renders                         |
+| Component                                   | Location                | What It Does                                                                                                                        |
+|---------------------------------------------|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `ExpressionTypeInferrer`                    | `klangscript/intel/`    | Infers types through call chains; scope-aware (consults a `TypeScope?`)                                                             |
+| `TypeScope`                                 | `klangscript/intel/`    | Lexical type environment; mirrors interpreter's `Environment.kt`                                                                    |
+| `AnalyzedAst.symbolAt(pos)`                 | `klangscript/intel/`    | **Single hover entry point** — receiver filter + local shadow + bare fall                                                           |
+| `AnalyzedAst.receiverTypeBeforeDot(pos)`    | `klangscript/intel/`    | **Single completion entry point** — type of the chain ending before a dot                                                           |
+| `AnalyzedAst.bindingMap`                    | `klangscript/intel/`    | Identifier → local binding (let/const/export/arrow-param) at each ref                                                               |
+| `KlangSymbol.Origin`                        | `klangscript/types/`    | Sealed: `Library(name)` / `Local(LocalKind)` / null — drives popup chip                                                             |
+| `KlangDocsRegistry`                         | `klangscript/docs/`     | Strict receiver-aware lookup (returns null when no variant matches)                                                                 |
+| `AstIndex`                                  | `klangscript/ast/`      | O(log n) cursor-to-node lookup, public API                                                                                          |
+| `KlangScriptParser`                         | `klangscript/parser/`   | Full recursive-descent parser                                                                                                       |
+| CodeMirror linter bindings                  | `klangjs/.../Lint.kt`   | `Diagnostic`, `linter()`, `setDiagnostics()`                                                                                        |
+| Linter extension                            | `CodeMirrorComp.kt:112` | Wired up but source returns `[]`                                                                                                    |
+| `setErrors()`                               | `CodeMirrorComp.kt:228` | Converts `EditorError` → `Diagnostic` and renders                                                                                   |
+| `AnalyzerDiagnostic` / `DiagnosticSeverity` | `klangscript/intel/`    | **DONE (named-args work).** Diagnostic data types + severity enum already exist (`AnalyzerDiagnostic.kt`)                           |
+| `AnalyzedAst.build(...)` checker pipeline   | `klangscript/intel/`    | **DONE.** `build(..., computeDiagnostics)` runs checkers over the program; `NamedArgumentChecker` already occupies the checker slot |
 
 See `klangscript/ref/intel-analyzer.md` for the canonical analyzer architecture doc
 ("analyzer-owns-decisions" principle — consumers stay dumb).
@@ -116,7 +118,8 @@ wrong receiver for method call), emit a context-specific diagnostic with a sugge
 **Implementation**: After resolving the callable, compare `args.size` against `params.size` (respecting `isVararg`).
 Skip type checking — `PatternLike` accepts almost anything.
 
-### Tier 4 — Variable type tracking
+### Tier 4 — Variable type tracking — **DONE 2026-05-22
+** (variable inference wired into hover + completion; reassignment / return-type inference remain TBD)
 
 | Check                 | Example                                   | Status                                                                                                                                                                                                                                                     |
 |-----------------------|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -128,7 +131,22 @@ Skip type checking — `PatternLike` accepts almost anything.
 
 ## Implementation Plan
 
+### Step 0 — Cheap unblock (wire the linter stub)
+
+The CodeMirror `linterSource` is **still a stub** —
+`val linterSource = js("(function(view) { return []; })")` in `CodeMirrorComp.kt:129`. Wiring it to
+`AnalyzedAst.diagnostics` (already produced by the `build(...)` pipeline) is the first real step and
+**immediately surfaces the already-built `NamedArgumentChecker`** with zero new analysis code. Do this
+before any new checkers.
+
 ### Step 1: `KlangScriptAnalyzer` (commonMain)
+
+> **Note (post-named-args):** the diagnostic **infrastructure already exists** — `AnalyzerDiagnostic` /
+> `DiagnosticSeverity` are built, and `AnalyzedAst.build(..., computeDiagnostics)` already runs a checker
+> pipeline (currently just `NamedArgumentChecker`). So the remaining work is **adding checkers**
+> (Tier 1 unknown symbols, Tier 2 wrong-context, Tier 3 arg-count) into the existing pipeline — **not**
+> net-new infra. The standalone `KlangScriptAnalyzer` sketch below predates that pipeline; fold its checks
+> into the `AnalyzedAst.build` checker slot instead of adding a parallel entry point.
 
 **New file**: `klangscript/src/commonMain/kotlin/intel/KlangScriptAnalyzer.kt`
 

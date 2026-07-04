@@ -1,6 +1,7 @@
 # Sprudel DSL — test-coverage gap + overall module review
 
-> **STATUS (2026-06-30, branch `engine-dsl-osc-dsl-parameterization`):** IN PROGRESS, user-paced. ~5 addon
+> **STATUS (2026-06-30):** IN PROGRESS, user-paced. Started on branch `engine-dsl-osc-dsl-parameterization`
+> (now merged); continue on the current branch. ~5 addon
 > files done; the rest happen as the user reviews the module file-by-file (pasting IDE warnings). This doc
 > captures the systematic gap so it can be finished deliberately rather than ad-hoc.
 

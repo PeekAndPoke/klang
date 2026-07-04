@@ -1,6 +1,7 @@
 # Mini-Notation Extensions: Attribute Blocks and MIDI Recording
 
-> **Status (2026-04-13)**: Phase 1 (`{key=value}` parser + AST + renderer + resolver) is DONE.
+> **Status (2026-04-13)**: Phase 1 (`{key=value}` parser + AST + renderer + resolver) is **SHIPPED** (commit
+`b609e6af`).
 > `MnNode.Attrs` in `MnNode.kt`, `applyAttrs()` in `MnPatternToSprudelPattern.kt`,
 > tests in `MiniNotationAttrsSpec.kt`.
 > **Remaining work:** Phase 2 (tutorial docs — tracked in `tutorial-master-plan.md`) and
@@ -108,7 +109,7 @@ Not in scope for immediate implementation. Design notes:
 
 | Task                          | Relationship                                                                                                                                               |
 |-------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `strudel-ui-tools.md`         | Proposes a **legato editor tool** (Tier 1). Once `{legato=N}` exists in mini-notation, the editor tool could generate/read it. Not blocking.               |
+| `sprudel-ui-tools.md`         | Proposes a **legato editor tool** (Tier 1). Once `{legato=N}` exists in mini-notation, the editor tool could generate/read it. Not blocking.               |
 | `klang-blocks-take-1.md`      | Block editor converts AST ↔ blocks. `Attrs` on `Mods` will eventually need block representations. Not blocking — blocks can ignore unknown mods initially. |
 | `klang-pattern-extraction.md` | Extracts playback to generic `KlangPattern`. Mini-notation changes are upstream (parser level) and don't conflict. Could be done in parallel.              |
 
@@ -144,6 +145,12 @@ in any order.
   `miniNotationMastery`
 
 ### Mini-Notation Series (existing + new)
+
+> **Note (2026-07-04):** the planned filenames below don't match what shipped — the tutorial factory
+> produced `tut_SpeedUpSlowDown.kt` (vs. planned `tut_SpeedAndWeight`) and `tut_PickAndChoose.kt`
+> (vs. planned `tut_ChanceAndChoice`). Reconcile before writing new files: confirm whether the shipped
+> pair already satisfies rows 3 & 4 of this plan, or whether distinct tutorials are still wanted. The
+> **Attribute Blocks** tutorial (row 7, `tut_AttributeBlocks`) and Phase 3 (MIDI) remain the open remainder.
 
 | # | Tutorial                 | Difficulty   | Status          | Covers         |
 |---|--------------------------|--------------|-----------------|----------------|

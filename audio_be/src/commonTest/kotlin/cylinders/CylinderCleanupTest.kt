@@ -28,7 +28,7 @@ class OrbitCleanupTest : StringSpec({
             startFrame = 0,
             endFrame = 1000
         )
-        cylinder.updateFromVoice(voice)
+        cylinder.updateFromVoice(voice, blockStart = 0)
     }
 
     "tryDeactivate() deactivates a completely silent cylinder" {

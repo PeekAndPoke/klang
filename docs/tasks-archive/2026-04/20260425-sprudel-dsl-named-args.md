@@ -1,5 +1,8 @@
 # Sprudel DSL — Named-Arg Migration
 
+> **ARCHIVED — DONE (superseded).** Achieved via a full KSP replacement (`29323f27`): `sprudel-ksp` + `SprudelRegistry`
+> deleted, `registerSprudelGenerated()` path. The additive "parallel then retire" plan below was not the mechanism used.
+
 > **Status**: deferred. Pick up *after* `klangscript-named-arguments.md` is fully landed
 > (analyzer diagnostics + KDoc sweep + general polish). The KlangScript-side machinery is
 > in place — what's left is wiring sprudel into it.

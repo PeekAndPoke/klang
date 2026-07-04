@@ -42,7 +42,7 @@ let kick = Osc.sine()
 
 let rim = Osc.sine(800)
       .plus(Osc.whitenoise().highpass(4000).mul(0.3))
-      .lowpass(3000)
+      .lowpass(3500)
       .adsr(0.001, 0.03, 0.0, 0.005)
 
 let brush = Osc.perlin(30).mul(0.5)
@@ -65,7 +65,7 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).sound(koto).legato(0.8).slow(14).gain(0.7)
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.7)
     .superimpose(fast(2).gain(0.095).pan(0.3)).body("wood")
 
   // Shakuhachi
@@ -77,16 +77,16 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).sound(shaku).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(24)).body("glass")
+  `).orbit(1).sound(shaku).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(24)).body("glass")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
-  ,note("a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~").sound(kick).gain(0.8).hpf(100)
-  ,note("~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~").sound(rim).gain(0.4)
-  ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").sound(brush).gain(0.3)
+  ,note("a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~").orbit(2).sound(kick).gain(0.8).hpf(100)
+  ,note("~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~").orbit(2).sound(rim).gain(0.4)
+  ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").orbit(2).sound(brush).gain(0.3)
 
   // Sub-Bass
-  ,note("a1 d2 a1 f1 c2 e1 a1").sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
+  ,note("a1 d2 a1 f1 c2 e1 a1").orbit(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
     .filterWhen(x => x >= wait * 1)
 
   ,stack(
@@ -102,14 +102,14 @@ stack(
     ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.13).pan(0.3)
     // High fifth
     ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.13).pan(0.6)
-  ).hpf(160).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
+  ).orbit(4).hpf(160).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
 ).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(8)
 
 
 
 
 
-            
-            
-            """,
+
+
+    """,
 )

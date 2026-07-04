@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
+import io.peekandpoke.klang.audio_bridge.FilterDef
 
 // Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
 // object), causing heap allocation on every operation. Int maps directly to a JS number.
@@ -26,6 +27,13 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
  * Runs a composable [BlockRenderer] pipeline: **Pitch → Ignite → Filter → Send**
  */
 class Voice(
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Identity — globally-unique, monotonic. Used by per-orbit effect ownership (VoiceLease) to tell voices
+    // apart by value (not by object reference, which a future voice pool could recycle). Defaulted so every
+    // constructed voice gets a fresh id. Voice creation is single-threaded (the render thread).
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    val id: Int = nextId(),
+
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Lifecycle & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -45,6 +53,11 @@ class Voice(
     val delay: Delay,
     val reverb: Reverb,
     val phaser: Phaser,
+
+    // Orbit-level resonators — carried here (not baked into the per-voice filter chain) so the
+    // Cylinder can configure its body/vowel Katalyst from the voice. See docs/tasks/body-vowel-to-orbit-katalyst.md.
+    val body: FilterDef.Body? = null,
+    val vowel: FilterDef.Formant? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Cut group
@@ -242,4 +255,12 @@ class Voice(
         val room: Double, val roomSize: Double, val roomFade: Double? = null,
         val roomLp: Double? = null, val roomDim: Double? = null, val iResponse: String? = null,
     )
+
+    companion object {
+        // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain
+        // counter is enough; a wrap after 2^31 ids is harmless (identity only has to hold between two voices
+        // that are co-active on the same orbit).
+        private var idCounter: Int = 0
+        private fun nextId(): Int = idCounter++
+    }
 }

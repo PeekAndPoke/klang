@@ -1,5 +1,8 @@
 # WireFormat enhancements — `@WireName` discriminators + retire kotlinx for wire types
 
+> **ARCHIVED — DONE.** `@WireName` string discriminators + full de-kotlinx of the audio wire types landed (see the
+> Outcome section below).
+
 ## Outcome (2026-06-11, branch `engine-dsl-osc-dsl-parameterization`)
 
 **Done — full de-kotlinx, larger than the original plan (user opted in).** Key deviations from the plan

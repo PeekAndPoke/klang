@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrDef
+import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import kotlin.math.PI
@@ -96,6 +97,10 @@ object VoiceTestHelpers {
 
         // Cut group
         cut: Int? = null,
+
+        // Orbit-level resonators (carried to the Cylinder, not baked per-voice)
+        body: FilterDef.Body? = null,
+        vowel: FilterDef.Formant? = null,
     ): Voice {
         val voiceDurationFrames = gateEndFrame - startFrame
         val releaseFrames = endFrame - gateEndFrame
@@ -167,6 +172,8 @@ object VoiceTestHelpers {
             delay = delay,
             reverb = reverb,
             phaser = phaser,
+            body = body,
+            vowel = vowel,
             cut = cut,
             pipeline = pipeline,
             blockCtx = blockCtx,
@@ -202,6 +209,8 @@ object VoiceTestHelpers {
         distort: Voice.Distort = Voice.Distort(0.0),
         crush: Voice.Crush = Voice.Crush(0.0),
         coarse: Voice.Coarse = Voice.Coarse(0.0),
+        body: FilterDef.Body? = null,
+        vowel: FilterDef.Formant? = null,
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
@@ -210,7 +219,7 @@ object VoiceTestHelpers {
         postGain = postGain, envelope = envelope, compressor = compressor,
         ducking = ducking, filter = filter, filterModulators = filterModulators,
         delay = delay, reverb = reverb, phaser = phaser, tremolo = tremolo,
-        distort = distort, crush = crush, coarse = coarse,
+        distort = distort, crush = crush, coarse = coarse, body = body, vowel = vowel,
     )
 
     /** Create a voice with SampleIgnitor for sample playback tests. */

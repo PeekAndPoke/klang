@@ -6,13 +6,16 @@
 package io.peekandpoke.klang.audio_be.cylinders
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBodyEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystCompressorEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDuckingEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystEffect
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFormantEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystPhaserEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.VoiceLease
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Ducking
@@ -34,6 +37,12 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
     // Bus pipeline effects
     // ════════════════════════════════════════════════════════════════════════════
 
+    // Body / vowel resonators — timbre shapers of the whole orbit (moved off the per-voice chain).
+    // They run first so they colour the dry mix before the time/dynamics effects.
+    val body = KatalystBodyEffect(sampleRate.toDouble())
+
+    val vowel = KatalystFormantEffect(sampleRate.toDouble())
+
     val delay = KatalystDelayEffect(
         delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
     )
@@ -51,12 +60,12 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
     val ducking = KatalystDuckingEffect()
 
     /**
-     * The bus effect pipeline: Delay → Reverb → Phaser → Compressor.
+     * The bus effect pipeline: Body → Vowel → Delay → Reverb → Phaser → Compressor.
      *
      * Ducking is NOT in this pipeline — it's applied separately by [Cylinders] after all orbits
      * are processed, because it needs cross-orbit access to the sidechain source.
      */
-    val pipeline: List<KatalystEffect> = listOf(delay, reverb, phaser, compressor)
+    val pipeline: List<KatalystEffect> = listOf(body, vowel, delay, reverb, phaser, compressor)
 
     // ════════════════════════════════════════════════════════════════════════════
     // Buffers and context
@@ -88,15 +97,42 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
     private var silentBlockCount: Int = 0
 
+    // ONE owner per orbit: the first voice to sound owns ALL of the orbit's bus effects while it is alive
+    // (first-writer-wins). Other voices on the orbit are ignored — route to a different orbit if you want
+    // different bus settings. Overlapping voices with different reverb/delay/compressor make no musical
+    // sense, so we don't support it. This also kills the last-writer-wins per-block flip-flop (and the
+    // body-filter rebuild thrash it caused on mixed-material orbits).
+    private val lease = VoiceLease()
+
     // ════════════════════════════════════════════════════════════════════════════
     // API
     // ════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Update orbit settings from a voice.
+     * Update orbit settings from a voice. [blockStart] is the current block's start frame, used by the
+     * orbit ownership [lease] to tell voices apart across blocks (production passes it via
+     * `Cylinders.getOrInit`). Only the OWNER voice's settings are applied; other voices are ignored.
      */
-    fun updateFromVoice(voice: Voice) {
+    fun updateFromVoice(voice: Voice, blockStart: Int) {
         isActive = true
+
+        if (lease.claim(voice.id, blockStart, blockFrames)) {
+            applyBusEffects(voice)
+        }
+    }
+
+    /**
+     * Apply ALL of this orbit's bus effects from its owning [voice]. Absent effects are turned off, so the
+     * owner's config fully determines the orbit — nothing leaks from a previous owner. The owner re-applies
+     * every block; this is idempotent (body/vowel short-circuit on an unchanged config). The
+     * compressor/ducking instances are reused, so their envelope followers survive across notes AS LONG AS
+     * consecutive owners keep the effect — a takeover by a voice that has no compressor/ducking clears it,
+     * and the next owner that re-adds it starts a fresh envelope.
+     */
+    private fun applyBusEffects(voice: Voice) {
+        // Body / vowel resonators (null → off).
+        body.configure(voice.body)
+        vowel.configure(voice.vowel)
 
         // Delay
         delay.delayLine.delayTimeSeconds = voice.delay.time
@@ -116,7 +152,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
         phaser.phaser.sweep = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
         phaser.phaser.feedback = 0.5
 
-        // Ducking / Sidechain — reuse instance to preserve envelope state (like compressor)
+        // Ducking / Sidechain — reuse instance to preserve envelope state; clear when the owner has none.
         val voiceDucking = voice.ducking
         if (voiceDucking != null) {
             ducking.duckCylinderId = voiceDucking.cylinderId
@@ -135,8 +171,8 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
             ducking.clear()
         }
 
-        // Compressor — initialize once so the envelope follower state is preserved across notes.
-        // On subsequent calls only update the parameters (e.g. when alternating via `<...>`).
+        // Compressor — reuse the instance to preserve the envelope follower across notes; clear it when
+        // the owner has no compressor (so it doesn't linger from a previous owner).
         val compSettings = voice.compressor
         if (compSettings != null) {
             val existing = compressor.compressor
@@ -156,7 +192,24 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
                 existing.attackSeconds = compSettings.attackSeconds
                 existing.releaseSeconds = compSettings.releaseSeconds
             }
+        } else {
+            compressor.compressor = null
         }
+    }
+
+    /** Turn every bus effect off AND clear its internal state — called when the orbit deactivates (lease
+     *  freed) so a reused orbit starts from a clean slate and never replays a previous owner's tail. */
+    private fun resetBusEffects() {
+        body.reset()
+        vowel.reset()
+        delay.delayLine.delayTimeSeconds = 0.0
+        delay.delayLine.feedback = 0.0
+        delay.delayLine.reset() // clear the delay ring, not just the params
+        reverb.reverb.roomSize = 0.0
+        reverb.reverb.reset() // clear the comb/allpass tail, not just the params
+        phaser.phaser.depth = 0.0
+        compressor.compressor = null
+        ducking.clear()
     }
 
     fun clear() {
@@ -225,6 +278,10 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
         isActive = false
         silentBlockCount = 0
+        // Free the orbit lease and reset all bus effects so a reused/reactivated orbit starts clean and
+        // is reconfigured by whichever voice next claims it.
+        resetBusEffects()
+        lease.reset()
     }
 
     private fun isMixBufferSilent(): Boolean {

@@ -52,13 +52,25 @@ Returns the existing `Cylinder` or creates a new one, copying effect parameters 
 
 One effect bus. Holds its own stereo accumulation buffer and effect instances.
 
-| Effect       | Class        | Applied when                      |
-|--------------|--------------|-----------------------------------|
-| `DelayLine`  | `DelayLine`  | `VoiceData.delay > 0`             |
-| `Reverb`     | `Reverb`     | `VoiceData.room > 0`              |
-| `Phaser`     | `Phaser`     | Cylinder-level phaser LFO         |
-| `Compressor` | `Compressor` | Cylinder-level dynamic range      |
-| `Ducking`    | `Ducking`    | Sidechain from duckCylinder voice |
+**PER-ORBIT (bus) vs PER-VOICE — which effects run where.** The Katalyst pipeline runs **once per orbit**
+on the summed mix: `[body, vowel, delay, reverb, phaser, compressor]` (+ ducking, separate pass). Config is
+copied from voices in `updateFromVoice` **last-writer-wins**, so all voices on an orbit SHARE these; put
+voices on different orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notchf` +
+envelopes, `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pitch env, `gain`/`pan`/
+`postgain`, `unison`/`spread`, `analog`) is **per-voice** in the voice strip.
+
+| Katalyst effect            | Class           | Applied when                           |
+|----------------------------|-----------------|----------------------------------------|
+| `KatalystBodyEffect`       | `BodyFilter`    | any voice on the orbit sets `body(…)`  |
+| `KatalystFormantEffect`    | `FormantFilter` | any voice on the orbit sets `vowel(…)` |
+| `KatalystDelayEffect`      | `DelayLine`     | `VoiceData.delay > 0`                  |
+| `KatalystReverbEffect`     | `Reverb`        | `VoiceData.room > 0`                   |
+| `KatalystPhaserEffect`     | `Phaser`        | cylinder-level phaser LFO              |
+| `KatalystCompressorEffect` | `Compressor`    | cylinder-level dynamic range           |
+| `KatalystDuckingEffect`    | `Ducking`       | sidechain from duckCylinder voice      |
+
+`body`/`vowel` moved from the per-voice filter chain to the orbit bus (2026-07-03) — an 8-band SVF bank
+per voice became one per orbit; see `docs/tasks/body-vowel-to-orbit-katalyst.md`.
 
 ## Effect Classes
 

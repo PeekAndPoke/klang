@@ -65,8 +65,8 @@ export skank = chord("<Am Em F Am <Em Em Dm G#> Em Am <G E F G>>").voicing()
     .orbit(6).room(0.5).rsize(5)  // . solo()
     .filterWhen(x => x >= 8)
 
-export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").clip(0.8).distort(0.3)
-  .lpadsr("0.005:3.0:0.0:0.2").hpf(60).lpf(300).lpadsr("0.005:1.5:0.0:0.2").lpe(10.0).postgain(0.33) // .solo()
+export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").orbit(7).clip(0.8).distort(0.3)
+  .lpadsr("0.005:3.0:0.0:0.2").hpf(60).lpf(300).lpadsr("0.005:1.0:0.0:0.2").lpe(15.0).postgain(0.34) // .solo()
 
 // ── Song: dub plate with broad reverb tail and gentle bus compression ──
 export song = stack(kick, snare, hat, skank, lead, bass, sub).compressor("-6:2:6:0.02:0.05").analog(1.5)
@@ -76,7 +76,7 @@ export song = stack(kick, snare, hat, skank, lead, bass, sub).compressor("-6:2:6
 
 
 
-            
-            
-            """,
+
+
+    """,
 )
