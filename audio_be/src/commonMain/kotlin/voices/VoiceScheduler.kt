@@ -44,6 +44,9 @@ class VoiceScheduler(
         val playbackId: String,
         val soloAmount: Double,
         val sourceId: String?,
+        // The original (relative) scheduled voice, kept so the replace path can dedup a resent
+        // duplicate of a voice that has already been promoted here (see dedupAgainstActive).
+        val source: ScheduledVoice,
     )
 
     // State with active voices
@@ -190,7 +193,33 @@ class VoiceScheduler(
             clearScheduled(playbackId)
         }
 
-        scheduleVoices(voices)
+        scheduleVoices(dedupAgainstActive(voices))
+    }
+
+    /**
+     * Drops incoming replacement voices that a still-playing voice already covers. The removal in
+     * [replaceVoices] only clears the `scheduled` heap; a voice at/after the cutoff that was already
+     * promoted to `active` (FE/BE clock skew + command latency) would otherwise be doubled by its
+     * resend. We keep the playing voice and drop the duplicate — no click, no teardown.
+     *
+     * Matched by full identity ([ScheduledVoice.isDuplicate]: same `startTime`, structurally-equal
+     * `data`) — so it is chord/`superimpose`-safe: legitimately simultaneous voices differ in `data`
+     * and are never collapsed. 1-to-1 (each active voice absorbs at most one incoming) preserves
+     * multiplicity. Only unchanged, re-derived-identical events dedup; a genuinely changed voice does
+     * not match and is scheduled normally.
+     */
+    private fun dedupAgainstActive(voices: List<ScheduledVoice>): List<ScheduledVoice> {
+        if (voices.isEmpty() || active.isEmpty()) return voices
+        val claimed = BooleanArray(active.size)
+        return voices.filter { incoming ->
+            val match = active.indices.firstOrNull { i -> !claimed[i] && active[i].source.isDuplicate(incoming) }
+            if (match != null) {
+                claimed[match] = true
+                false // already playing → drop the duplicate
+            } else {
+                true // schedule it
+            }
+        }
     }
 
     fun scheduleVoice(voice: ScheduledVoice) {
@@ -351,7 +380,7 @@ class VoiceScheduler(
             )?.let { voice ->
                 val soloAmount = head.data.solo ?: 0.0
                 val sourceId = head.data.sourceId
-                active.add(ActiveVoice(voice, head.playbackId, soloAmount, sourceId))
+                active.add(ActiveVoice(voice, head.playbackId, soloAmount, sourceId, source = head))
             }
         }
     }

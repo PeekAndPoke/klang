@@ -167,6 +167,34 @@ object KlangScriptOscExtensions {
     fun adsrCurve(self: IgnitorDsl, curve: String = "square"): IgnitorDsl =
         adsrCurves(self, curve, curve, curve)
 
+    /**
+     * De-click the ADSR gain by [seconds] — a one-pole low-pass that rounds the corners at segment
+     * joins (attack→decay peak, gate-off, cutoff), removing the low-note "plop". `0` = off; a gentle
+     * value is ~0.0005–0.001. This per-ignitor envelope is not de-clicked by default.
+     *
+     * If [self] is already an [IgnitorDsl.Adsr], the value is set on it via copy; otherwise a new
+     * [IgnitorDsl.Adsr] is wrapped around [self] with default times.
+     */
+    @KlangScript.Method
+    fun declickSeconds(self: IgnitorDsl, seconds: IgnitorDslLike): IgnitorDsl = when (self) {
+        is IgnitorDsl.Adsr -> self.copy(declickSeconds = seconds.toIgnitorDsl())
+        else -> IgnitorDsl.Adsr(inner = self, declickSeconds = seconds.toIgnitorDsl())
+    }
+
+    /**
+     * Sets the curvature [k] of the ADSR `"exponential"` shape (larger = steeper initial change,
+     * faster decay drop / sharper attack finish). Only affects stages using the exponential curve.
+     * Omit for the engine default (3.0).
+     *
+     * If [self] is already an [IgnitorDsl.Adsr], the value is set on it via copy; otherwise a new
+     * [IgnitorDsl.Adsr] is wrapped around [self] with default times.
+     */
+    @KlangScript.Method
+    fun expK(self: IgnitorDsl, k: IgnitorDslLike): IgnitorDsl = when (self) {
+        is IgnitorDsl.Adsr -> self.copy(expK = k.toIgnitorDsl())
+        else -> IgnitorDsl.Adsr(inner = self, expK = k.toIgnitorDsl())
+    }
+
     private fun parseAdsrCurveName(name: String): AdsrCurve? = when (name.trim().lowercase()) {
         "linear", "lin" -> AdsrCurve.Linear
         "square", "sq", "quad", "quadratic" -> AdsrCurve.Square

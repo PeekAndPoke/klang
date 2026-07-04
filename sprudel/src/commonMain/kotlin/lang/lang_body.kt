@@ -18,7 +18,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 // -- body() -----------------------------------------------------------------------------------------------------------
 
 private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { v -> copy(body = v?.lowercase()) }
+    return source._liftOrReinterpretStringField(args) { v -> clone().also { it.body = v?.lowercase() } }
 }
 
 /**
@@ -32,19 +32,26 @@ private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *
  * When called with no argument, reinterprets the current event value as the material name.
  *
- * **Materials:** `wood` (warm box), `tube` (resonant pipe), `glass` (bright, long ring),
- * `membrane` (drum-like, fast decay).
+ * **Materials:** woods — `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`;
+ * strings — `violin`; pipe/glass — `tube`, `glass`; skin — `membrane`; metals — `brass`, `steel`,
+ * `bell`. Use `none` to reset (removes the body).
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").body("wood")              // warm wooden body
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 c3 c4").body("tube").bodyMix(0.5) // de-plasticized tube, played across octaves
+ * note("c2 c3 c4").body("cedar").bodyMix(0.4) // warm cedar guitar top, played across octaves
  * ```
  *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").body("brass").bodyMix(0.4) // metallic horn colour
+ * ```
+ *
+ * @param material The body material — one of `wood`, `cedar`, `tube`, `glass`, `membrane`, `brass`.
+ * @param-tool material SprudelBodySequenceEditor
  * @category effects
- * @tags body, resonator, modal, formant, material, wood, tube, glass
+ * @tags body, resonator, modal, formant, material, wood, cedar, spruce, mahogany, rosewood, maple, oak, violin, tube, glass, brass, steel, bell, metal, none
  */
 @KlangScript.Function
 fun SprudelPattern.body(material: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -107,3 +114,43 @@ fun bodyMix(mix: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
 @KlangScript.Function
 fun PatternMapperFn.bodyMix(mix: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bodyMix(mix, callInfo) }
+
+// -- bodyFloor() ------------------------------------------------------------------------------------------------------
+
+private val bodyFloorMutation = voiceSetter { bodyFloor = it?.asDoubleOrNull() }
+
+private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, bodyFloorMutation)
+}
+
+/**
+ * Sets the body resonator's broadband dry floor — how much of the untouched dry source stays under
+ * the resonances. Lower makes the body more audible (the resonances sit over less dry); higher is a
+ * subtler colour. When omitted, the engine default is used. Independent of [bodyMix] (which is
+ * uncapped above 1) — the floor sets the *dry* level, the mix drives the *resonances*.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").body("brass").bodyFloor(0.2)  // brass forward over a thin dry floor
+ * ```
+ *
+ * @category effects
+ * @tags body, resonator, floor, dry, mix
+ */
+@KlangScript.Function
+fun SprudelPattern.bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyBodyFloor(this, listOfNotNull(floor).asSprudelDslArgs(callInfo))
+
+/** Sets the body resonator floor on a string pattern. */
+@KlangScript.Function
+fun String.bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bodyFloor(floor, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the body resonator floor. */
+@KlangScript.Function
+fun bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bodyFloor(floor, callInfo) }
+
+/** Chains a bodyFloor step onto this [PatternMapperFn]. */
+@KlangScript.Function
+fun PatternMapperFn.bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bodyFloor(floor, callInfo) }

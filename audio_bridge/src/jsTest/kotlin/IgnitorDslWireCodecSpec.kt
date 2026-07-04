@@ -106,6 +106,9 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- envelope / FM --------------------------------------------------------------------------------------
     "Adsr" { check(IgnitorDsl.Sine().adsr(0.01, 0.3, 0.5, 0.5)) }
+    "Adsr with declick + expK" {
+        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), declickSeconds = IgnitorDsl.Constant(0.0008), expK = IgnitorDsl.Constant(4.5)))
+    }
     "Adsr with curves" {
         check(
             IgnitorDsl.Adsr(

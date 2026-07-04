@@ -159,11 +159,14 @@ internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
 /**
  * Broadband transmission floor for the body resonator (see [LowPassHighPassFilters.createBody]).
- * At full `bodyMix` the dry never drops below this fraction, so the body emphasizes its resonant
- * modes over a broadband floor instead of collapsing to a few isolated tones — the way a real
- * passive body behaves. Tunable by ear.
+ * At `bodyMix >= 1` the dry is held at this fraction (it never drops below it), so the body
+ * emphasizes its resonant modes over a broadband floor instead of collapsing to a few isolated
+ * tones — the way a real passive body behaves. A LOWER floor makes the body more audible at a
+ * given mix (the resonances sit over less dry); a higher floor is subtler. `bodyMix` itself is
+ * uncapped above 1, so the resonances can always be pushed further regardless of the floor.
+ * Tunable by ear.
  */
-internal const val BODY_FLOOR: Double = 0.6
+internal const val BODY_FLOOR: Double = 0.4
 
 /**
  * Broadband floor for the vowel/formant filter (see [LowPassHighPassFilters.createFormant]). The
@@ -266,15 +269,25 @@ object LowPassHighPassFilters {
         cutoffOffsetMul: Double = 1.0,
     ): AudioFilter = SvfNotch(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
 
-    fun createFormant(bands: List<FilterDef.Formant.Band>, mix: Double, sampleRate: Double): AudioFilter =
+    fun createFormant(
+        bands: List<FilterDef.Formant.Band>,
+        mix: Double,
+        sampleRate: Double,
+        floor: Double? = null,
+    ): AudioFilter =
         ParallelMixFilter(
             inner = FormantFilter(bands, sampleRate, gainScale = VOWEL_TAME),
             amount = mix,
-            floor = VOWEL_FLOOR,
+            floor = floor ?: VOWEL_FLOOR,
         )
 
-    fun createBody(bands: List<FilterDef.Body.Mode>, mix: Double, sampleRate: Double): AudioFilter =
-        ParallelMixFilter(BodyFilter(bands, sampleRate), amount = mix, floor = BODY_FLOOR)
+    fun createBody(
+        bands: List<FilterDef.Body.Mode>,
+        mix: Double,
+        sampleRate: Double,
+        floor: Double? = null,
+    ): AudioFilter =
+        ParallelMixFilter(BodyFilter(bands, sampleRate), amount = mix, floor = floor ?: BODY_FLOOR)
 
     // --- Implementations ---
 

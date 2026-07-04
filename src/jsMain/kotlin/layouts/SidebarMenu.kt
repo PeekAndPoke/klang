@@ -119,6 +119,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 borderTopRightRadius = 0.px
                 borderBottomRightRadius = 0.px
                 padding = Padding(10.px, 20.px)
+                cursor = Cursor.pointer
 
                 if (isSelected) {
                     backgroundColor = Color.white

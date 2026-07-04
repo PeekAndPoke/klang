@@ -46,6 +46,12 @@ sealed class FilterDef {
          * by them).
          */
         val mix: Double,
+        /**
+         * Broadband dry floor for the blend (the `vowelFloor()` DSL). `null` = engine default
+         * (`VOWEL_FLOOR`). Lower = the formants dominate a thinner source (more "vowel"); higher =
+         * more untouched source between formants.
+         */
+        val floor: Double? = null,
     ) : FilterDef() {
         /**
          * One formant band — a single SVF bandpass tuned to a vowel formant peak.
@@ -80,13 +86,19 @@ sealed class FilterDef {
      *    "lockstep" that reads as plastic. (Already how SVF centers work; called out here
      *    because it is the whole point of the effect.)
      *
-     * Bands are resolved from a named material (`wood`, `tube`, `glass`, `membrane`) at the
-     * sprudel DSL layer; this contract carries only the already-resolved modes + mix.
+     * Bands are resolved from a named material (`wood`, `cedar`, `tube`, `glass`, `membrane`,
+     * `brass`) at the sprudel DSL layer; this contract carries only the already-resolved modes + mix.
      */
     @WireName("body")
     data class Body(
         val bands: List<Mode>,
         val mix: Double,
+        /**
+         * Broadband dry floor for the blend (the `bodyFloor()` DSL). `null` = engine default
+         * (`BODY_FLOOR`). Lower = more audible body (resonances over less dry); higher = subtler
+         * colour. Independent of [mix], which is uncapped above 1.
+         */
+        val floor: Double? = null,
     ) : FilterDef() {
         /**
          * One body mode — a single SVF bandpass tuned to a resonance of the body.

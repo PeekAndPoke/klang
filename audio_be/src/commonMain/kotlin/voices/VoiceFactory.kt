@@ -359,10 +359,12 @@ class VoiceFactory(
             )
             is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble, offsetMul)
             is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble, offsetMul)
-            // Formant's bands are vowel-specific — per-voice offset would smear vowel character. Skip.
-            is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, mix, sampleRateDouble)
-            // Body modes are fixed resonances — per-voice offset would smear the body character. Skip.
-            is FilterDef.Body -> LowPassHighPassFilters.createBody(bands, mix, sampleRateDouble)
+            // Body / vowel are orbit-level Katalyst effects (KatalystBodyEffect / KatalystFormantEffect):
+            // VoiceFactory pulls them out of the per-voice chain (see voiceFilterDefs) and routes them to the
+            // Cylinder, so these arms are unreachable and exist only to satisfy the sealed `when`. floor is
+            // honored on the orbit path, not here.
+            is FilterDef.Formant, is FilterDef.Body ->
+                error("Body/Formant are orbit-level resonators, not per-voice filters")
         }
     }
 

@@ -59,6 +59,21 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 - **Perlin noise** (Ken Perlin) — organic drift and noise textures
 - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
 
+## Acoustics & Physical Modeling
+
+Klang's body-resonator materials are *caricatures* — a few resonant modes that let the ear
+recognize an instrument body, not measured replicas. The load-bearing landmark frequencies are
+anchored from the acoustics literature:
+
+- **Neville H. Fletcher & Thomas D. Rossing — *The Physics of Musical Instruments*** (Springer) —
+  the resonance landmarks behind the body-resonator materials: guitar/string body air + top-plate
+  modes (the wood tonewoods), the violin corpus + "bridge hill" (`violin`), the inharmonic bell
+  partials including the minor-third tierce (`bell`), and the brass instrument formants (`brass`)
+- **Arthur H. Benade — *Fundamentals of Musical Acoustics*** (Dover) — brass and air-column
+  acoustics informing the `brass` formant regions
+
+Everything beyond those landmarks is sparse plausible fill, tuned by ear.
+
 ## Music & Audio
 
 Making music possible:

@@ -135,6 +135,15 @@ class LangVowelSpec : StringSpec({
         voiceData.filters.filters.size shouldBe 0
     }
 
+    "vowel(\"none\") resets — clears a previously set vowel" {
+        val p = note("c3").vowel("a").vowel("none")
+
+        val voiceData = p.queryArc(0.0, 1.0)[0].data.toVoiceData()
+
+        // "none" is the explicit reset — no formant filter, even after an earlier vowel("a").
+        voiceData.filters.filters.size shouldBe 0
+    }
+
     "vowel() as string extension" {
         val p = "c3 e3".vowel("a")
 

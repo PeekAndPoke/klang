@@ -52,7 +52,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             hcutoff = 1350.0; hresonance = 0.8; hpattack = 0.02; hpenv = 0.7
             bandf = 800.0; bandq = 1.0; bpenv = 0.5
             notchf = 500.0; nresonance = 0.7; nfenv = 0.4
-            vowel = "a"; vowelMix = 0.45; body = "wood"; bodyMix = 0.4
+            vowel = "a"; vowelMix = 0.45; vowelFloor = 0.15; body = "wood"; bodyMix = 0.4; bodyFloor = 0.25
             accelerate = 0.1; vibrato = 5.0; vibratoMod = 0.3
             pAttack = 0.01; pDecay = 0.05; pRelease = 0.1; pEnv = 12.0; pCurve = 1.0; pAnchor = 0.5
             fmh = 2.0; fmAttack = 0.01; fmDecay = 0.1; fmSustain = 0.5; fmEnv = 0.8
@@ -92,8 +92,8 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             "hpf" to { hcutoff = 500.0; hresonance = 2.0; hpdecay = 0.1; hpenv = 0.6 },
             "bpf" to { bandf = 750.0; bandq = 1.2; bpsustain = 0.5; bpenv = 0.5 },
             "notch" to { notchf = 600.0; nresonance = 0.8; nfrelease = 0.2; nfenv = 0.4 },
-            "formant" to { vowel = "o" },
-            "body" to { body = "glass"; bodyMix = 0.5 },
+            "formant" to { vowel = "o"; vowelFloor = 0.1 },
+            "body" to { body = "glass"; bodyMix = 0.5; bodyFloor = 0.3 },
         )
         for ((_, cfg) in cases) {
             val data = createSprudelVoiceData { note = "c4"; freqHz = 261.6; sound = SoundValue.Named("saw"); cfg() }.toVoiceData()

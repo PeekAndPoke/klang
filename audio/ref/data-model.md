@@ -166,19 +166,24 @@ data class AdsrEnvelope(
 data class FilterDefs(val filters: List<FilterDef>)
 
 sealed class FilterDef {
-    data class LowPass(val cutoffHz: Double, val q: Double, val envelope: FilterEnvelope?)
-    data class HighPass(val cutoffHz: Double, val q: Double, val envelope: FilterEnvelope?)
-    data class BandPass(val cutoffHz: Double, val q: Double, val envelope: FilterEnvelope?)
-    data class Notch(val cutoffHz: Double, val q: Double, val envelope: FilterEnvelope?)
-    data class Formant(val cutoffHz: Double, val q: Double, val envelope: FilterEnvelope?)
-}
+    // Cutoff filters — q + optional dynamic envelope. Applied PER VOICE.
+    data class LowPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class HighPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class BandPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class Notch(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
 
-// FilterEnvelope — dynamic filter modulation
-data class FilterEnvelope(
-    val attack: Double, val decay: Double, val sustain: Double,
-    val release: Double, val depth: Double
-)
+    // Resonators — parallel modal BPF banks blended over the dry via ParallelMixFilter(mix, floor).
+    // Applied at the ORBIT level (KatalystFormantEffect / KatalystBodyEffect), NOT per voice.
+    data class Formant(val bands: List<Band>, val mix: Double, val floor: Double? = null)  // vowel()
+    data class Body(val bands: List<Mode>,   val mix: Double, val floor: Double? = null)   // body()
+    // Band / Mode are both (freq, db, q). floor null → engine default (VOWEL_FLOOR / BODY_FLOOR).
+}
 ```
+
+- Cutoff filters: `audio_be/.../filters/LowPassHighPassFilters.kt` (SVF). Envelope = `FilterEnvDef`.
+- Resonators: bands resolved sprudel-side (`SprudelBodyMaterials.modesFor` / `SprudelVoiceData.resolveVowelBands`);
+  DSP = `BodyFilter`/`FormantFilter` + `createBody`/`createFormant`; blend + declick-crossfade in
+  `ParallelMixFilter` / `KatalystFilterSwap`. See `ref/architecture.md` "Per-Playback Engine".
 
 Key method: `FilterDefs.addOrReplace(filter: FilterDef)` — replaces existing filter of same type, or appends.
 

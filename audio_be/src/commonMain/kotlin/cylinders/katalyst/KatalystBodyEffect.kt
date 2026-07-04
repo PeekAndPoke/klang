@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.FilterDef
 
@@ -33,39 +32,41 @@ class KatalystBodyEffect(
     private val sampleRate: Double,
 ) : KatalystEffect {
 
-    // `left`/`right` non-null == active; no separate flag needed.
     private var curBands: List<FilterDef.Body.Mode>? = null
     private var curMix: Double = Double.NaN
-    private var left: AudioFilter? = null
-    private var right: AudioFilter? = null
+    private var curFloor: Double? = Double.NaN
+
+    // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
+    private val swap = KatalystFilterSwap(sampleRate)
 
     /** Configure from the OWNER voice's body. `null` (owner has no body) turns the resonator off. */
     fun configure(body: FilterDef.Body?) {
         if (body == null) {
-            if (left != null) reset() // owner has no body → turn off, once
+            if (swap.active) reset() // owner has no body → turn off, once
             return
         }
-        // Rebuild only when the material/mix actually changes — with ownership this is once per owner
-        // change (a live owner re-offers the same config every block, which short-circuits here).
-        if (body.bands != curBands || body.mix != curMix) {
-            left = LowPassHighPassFilters.createBody(body.bands, body.mix, sampleRate)
-            right = LowPassHighPassFilters.createBody(body.bands, body.mix, sampleRate)
+        // Rebuild only when the material/mix/floor actually changes — with ownership this is once per
+        // owner change (a live owner re-offers the same config every block, which short-circuits here).
+        // The swap crossfades from the old bank so the change doesn't click.
+        if (body.bands != curBands || body.mix != curMix || body.floor != curFloor) {
+            swap.set(
+                LowPassHighPassFilters.createBody(body.bands, body.mix, sampleRate, body.floor),
+                LowPassHighPassFilters.createBody(body.bands, body.mix, sampleRate, body.floor),
+            )
             curBands = body.bands
             curMix = body.mix
+            curFloor = body.floor
         }
     }
 
     fun reset() {
         curBands = null
         curMix = Double.NaN
-        left = null
-        right = null
+        curFloor = Double.NaN
+        swap.clear()
     }
 
     override fun process(ctx: KatalystContext) {
-        val l = left ?: return
-        val r = right ?: return
-        l.process(ctx.mixBuffer.left, 0, ctx.blockFrames)
-        r.process(ctx.mixBuffer.right, 0, ctx.blockFrames)
+        swap.process(ctx.mixBuffer, ctx.blockFrames)
     }
 }

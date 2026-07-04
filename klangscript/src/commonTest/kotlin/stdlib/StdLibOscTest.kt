@@ -39,6 +39,19 @@ class StdLibOscTest : StringSpec({
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
+    // ── ADSR knobs: declickSeconds + expK (opt-in, wrap-or-copy onto an Adsr) ─────────
+    "Osc.saw().declickSeconds(0.001) wraps an Adsr with the declickSeconds slot set" {
+        val dsl = evalIgnitorDsl("Osc.saw().declickSeconds(0.001)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
+        dsl.declickSeconds shouldBe IgnitorDsl.Constant(0.001)
+    }
+
+    "Osc.saw().adsr(...).expK(4.0) sets the expK slot on the Adsr node" {
+        val dsl = evalIgnitorDsl("Osc.saw().adsr(0.01, 0.1, 0.5, 0.2).expK(4.0)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
+        dsl.expK shouldBe IgnitorDsl.Constant(4.0)
+    }
+
     "Osc.sine(5) returns Sine with Constant freq" {
         val dsl = evalIgnitorDsl("Osc.sine(5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()

@@ -130,7 +130,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun getPerformanceRating(voiceCount: Int): PerformanceRating {
         return when {
-            voiceCount >= 250 -> PerformanceRating(
+            voiceCount >= 350 -> PerformanceRating(
                 tier = "God-Tier",
                 message = "Your machine is a god among mortals!",
                 showWarning = false,
@@ -138,7 +138,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { rocket },
             )
 
-            voiceCount >= 200 -> PerformanceRating(
+            voiceCount >= 310 -> PerformanceRating(
                 tier = "Excellent",
                 message = "Your machine is a true work-horse!",
                 showWarning = false,
@@ -146,7 +146,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { dumbbell },
             )
 
-            voiceCount >= 160 -> PerformanceRating(
+            voiceCount >= 270 -> PerformanceRating(
                 tier = "Great",
                 message = "Your machine handles this like a champ!",
                 showWarning = false,
@@ -154,7 +154,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { thumbs_up },
             )
 
-            voiceCount >= 120 -> PerformanceRating(
+            voiceCount >= 230 -> PerformanceRating(
                 tier = "Good",
                 message = "Your machine is ready to make some music!",
                 showWarning = false,
@@ -162,15 +162,15 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { check_circle },
             )
 
-            voiceCount >= 80 -> PerformanceRating(
+            voiceCount >= 190 -> PerformanceRating(
                 tier = "Fair",
-                message = "Your machine is doing okay. Nothing fancy, but it'll work.",
+                message = "Your machine is doing okay. Nothing fancy, it'll work... mostly...",
                 showWarning = false,
                 color = Color(laf.moderate),
                 icon = { check },
             )
 
-            voiceCount >= 60 -> PerformanceRating(
+            voiceCount >= 150 -> PerformanceRating(
                 tier = "Limited",
                 message = "C'mon, it's 2026... maybe consider an upgrade?",
                 showWarning = true,

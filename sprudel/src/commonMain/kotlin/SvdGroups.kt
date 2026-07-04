@@ -129,6 +129,20 @@ data class SvdReverb(
     var iResponse: String? = null,
 )
 
+/** Body resonator: material + dry/wet mix + broadband dry floor. */
+data class SvdBody(
+    var material: String? = null,
+    var mix: Double? = null,
+    var floor: Double? = null,
+)
+
+/** Vowel / formant resonator: vowel + dry/wet mix + broadband dry floor. */
+data class SvdVowel(
+    var vowel: String? = null,
+    var mix: Double? = null,
+    var floor: Double? = null,
+)
+
 /** Sample playback manipulation. */
 data class SvdSample(
     var begin: Double? = null,
@@ -288,5 +302,25 @@ fun mergeSvdSample(base: SvdSample?, over: SvdSample?): SvdSample? {
         cut = over.cut ?: base.cut,
         loopBegin = over.loopBegin ?: base.loopBegin,
         loopEnd = over.loopEnd ?: base.loopEnd,
+    )
+}
+
+fun mergeSvdBody(base: SvdBody?, over: SvdBody?): SvdBody? {
+    if (base == null) return over?.copy()
+    if (over == null) return base.copy()
+    return SvdBody(
+        material = over.material ?: base.material,
+        mix = over.mix ?: base.mix,
+        floor = over.floor ?: base.floor,
+    )
+}
+
+fun mergeSvdVowel(base: SvdVowel?, over: SvdVowel?): SvdVowel? {
+    if (base == null) return over?.copy()
+    if (over == null) return base.copy()
+    return SvdVowel(
+        vowel = over.vowel ?: base.vowel,
+        mix = over.mix ?: base.mix,
+        floor = over.floor ?: base.floor,
     )
 }

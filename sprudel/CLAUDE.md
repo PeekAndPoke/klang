@@ -7,17 +7,18 @@ Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measu
 
 ## Key Files
 
-| File                                           | Role                                      |
-|------------------------------------------------|-------------------------------------------|
-| `SprudelPatternEvent.kt`                       | Event definition (part/whole/isOnset)     |
-| `SprudelPattern.kt`                            | Pattern interface + helpers               |
-| `SprudelVoiceData.kt` / `SprudelVoiceValue.kt` | Voice data; values inc. `Pattern` variant |
-| `BindPattern.kt`                               | Inner join (clipping)                     |
-| `TempoModifierPattern.kt`                      | fast/slow (scaling)                       |
-| `RepeatCyclesPattern.kt`                       | Cycle repetition (shifting)               |
-| `AtomicPattern.kt`                             | Basic event creation                      |
-| `SprudelPlayback.kt`                           | Schedules events, filters by `isOnset`    |
-| `lang_*.kt`                                    | User-facing DSL API                       |
+| File                                           | Role                                                                                                                                       |
+|------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| `SprudelPatternEvent.kt`                       | Event definition (part/whole/isOnset)                                                                                                      |
+| `SprudelPattern.kt`                            | Pattern interface + helpers                                                                                                                |
+| `SprudelVoiceData.kt` / `SprudelVoiceValue.kt` | Voice data; values inc. `Pattern` variant                                                                                                  |
+| `SvdGroups.kt`                                 | Mutable `Svd*` sub-objects of `SprudelVoiceData` (grouped for leaf-clone perf) + `mergeSvd*` helpers; flat fields are accessors over these |
+| `BindPattern.kt`                               | Inner join (clipping)                                                                                                                      |
+| `TempoModifierPattern.kt`                      | fast/slow (scaling)                                                                                                                        |
+| `RepeatCyclesPattern.kt`                       | Cycle repetition (shifting)                                                                                                                |
+| `AtomicPattern.kt`                             | Basic event creation                                                                                                                       |
+| `SprudelPlayback.kt`                           | Schedules events, filters by `isOnset`                                                                                                     |
+| `lang_*.kt`                                    | User-facing DSL API                                                                                                                        |
 
 ## Reference Files — Read Only What You Need
 
