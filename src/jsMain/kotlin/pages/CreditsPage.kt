@@ -215,6 +215,8 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         including the minor-third tierce (`bell`), and the brass formants (`brass`)
                         - **Arthur H. Benade — *Fundamentals of Musical Acoustics*** — brass and air-column
                         acoustics informing the `brass` formant regions
+                        - **Johan Sundberg — *The Science of the Singing Voice*** — the "singer's formant"
+                        (the ~2.8–3.4 kHz vocal "ring") behind the `croon` material
 
                         Everything beyond those landmarks is sparse plausible fill, tuned by ear.
                     """.trimIndent()

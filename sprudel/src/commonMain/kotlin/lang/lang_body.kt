@@ -33,8 +33,8 @@ private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * When called with no argument, reinterprets the current event value as the material name.
  *
  * **Materials:** woods — `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`;
- * strings — `violin`; pipe/glass — `tube`, `glass`; skin — `membrane`; metals — `brass`, `steel`,
- * `bell`. Use `none` to reset (removes the body).
+ * strings — `violin`; voice — `croon`; pipe/glass — `tube`, `glass`; skin — `membrane`; metals —
+ * `brass`, `steel`, `bell`. Use `none` to reset (removes the body).
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").body("wood")              // warm wooden body
@@ -51,7 +51,7 @@ private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @param material The body material — one of `wood`, `cedar`, `tube`, `glass`, `membrane`, `brass`.
  * @param-tool material SprudelBodySequenceEditor
  * @category effects
- * @tags body, resonator, modal, formant, material, wood, cedar, spruce, mahogany, rosewood, maple, oak, violin, tube, glass, brass, steel, bell, metal, none
+ * @tags body, resonator, modal, formant, material, wood, cedar, spruce, mahogany, rosewood, maple, oak, violin, croon, voice, tube, glass, brass, steel, bell, metal, none
  */
 @KlangScript.Function
 fun SprudelPattern.body(material: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =

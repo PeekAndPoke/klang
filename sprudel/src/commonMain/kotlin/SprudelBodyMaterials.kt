@@ -35,6 +35,8 @@ object SprudelBodyMaterials {
         "wood", "cedar", "spruce", "mahogany", "rosewood", "maple", "oak",
         // Bowed strings
         "violin",
+        // Voices
+        "croon",
         // Pipe / glass
         "tube", "glass",
         // Skin
@@ -54,6 +56,7 @@ object SprudelBodyMaterials {
         "maple" to "transparent, tight, bright",
         "oak" to "hard, dense, boxy mids",
         "violin" to "singing, bridge-hill brilliance",
+        "croon" to "warm baritone vocal color",
         "tube" to "resonant pipe",
         "glass" to "bright, long ring",
         "membrane" to "drum-like, fast decay",
@@ -189,6 +192,19 @@ object SprudelBodyMaterials {
             m(2000.0, 0.0, 6.0),
             m(2600.0, 1.0, 5.0),
             m(3200.0, -2.0, 5.0),
+        )
+        // Warm baritone vocal color (croon) — dark vowel formants (F1 ~500 / F2 ~1000 / F3 ~2500)
+        // + the **singer's formant** cluster (~2.9/3.2k, the "ring" of trained vocalists; Sundberg)
+        // + chest warmth. Higher Q than wood/metal so the formants read as "voice". Not vowel-tracking.
+        "croon" -> listOf(
+            m(120.0, 2.0, 8.0),    // chest warmth
+            m(500.0, 3.0, 14.0),   // F1 (dark, low vowel)
+            m(1000.0, 1.0, 16.0),  // F2
+            m(1700.0, -1.0, 16.0), // lower-mid dip region
+            m(2500.0, 0.0, 18.0),  // F3
+            m(2900.0, 2.0, 22.0),  // singer's-formant cluster — the "ring"
+            m(3200.0, 1.0, 22.0),  //   "
+            m(4500.0, -5.0, 10.0), // air roll-off
         )
         // Metallic horn body (brass) — honk formant (~350/520) + bright ring (~1.3k/1.8k), and
         // little high-frequency damping (Q stays high up top, unlike wood — the metal "tell").

@@ -71,6 +71,8 @@ anchored from the acoustics literature:
   partials including the minor-third tierce (`bell`), and the brass instrument formants (`brass`)
 - **Arthur H. Benade — *Fundamentals of Musical Acoustics*** (Dover) — brass and air-column
   acoustics informing the `brass` formant regions
+- **Johan Sundberg — *The Science of the Singing Voice*** — the "singer's formant" (the ~2.8–3.4 kHz
+  vocal "ring" of trained voices) behind the `croon` material
 
 Everything beyond those landmarks is sparse plausible fill, tuned by ear.
 
