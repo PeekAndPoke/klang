@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val derSchmetterlingSong = Song(
     id = "${BuiltInSongs.PREFIX}-der-schmetterling",
     title = "Der Schmetterling",
-    rpm = 34.5,
+    rpm = 34.0,
     icon = "bug",
     code = """
 import * from "stdlib"                                                                                                                         //.
@@ -26,8 +26,8 @@ stack(                                                                          
   // Lead                                                                                                                      //                              //.
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                                //          DISCO!          //.
     .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound("superramp").unison(5).spread(0.08)                 //       FOREVER!       //.
-    .hpf(1500).lpf(1575).lpe(berlin.range(2, 2.10).fast(4)).lpq(2.3).lpadsr("0.007:1.3:0.0:0.01")                                    //                  //.
-    .gain(0.50).distort("0.600:tube:4").postgain("<0.200!48 0.100!16 0.200!48 0.300!16>") // . solo()                                 //       //      //.
+    .hpf(1450).lpf(1575).lpe(berlin.range(2, 2.10).fast(4)).lpq(2.3).lpadsr("0.007:1.3:0.0:0.01")                                    //                  //.
+    .gain(0.50).distort("0.560:tube:4").postgain("<0.200!48 0.100!16 0.200!48 0.300!16>") // . solo()                                 //       //      //.
     .adsr("0.007:4.0:0.0:0.01").clip(0.89)  // . mute()                                                                              //     //.   //    //.
     .release("<0.04!16 0.11!16>").vibrato(8).vibmod(0.01)                                                                           //   //.         //  //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                        // //.              // //.
@@ -40,8 +40,8 @@ stack(                                                                          
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)) //  . solo()
     .sound("supersaw").unison(9).spread(0.08).gain(0.75).postgain(0.115).distort("1:tube:4").distort(0.80)    
-    .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.72>".fast(2)).adsr("0.005:2.5:0.0:0.028").lpadsr("0.005:1.1:0.0:0.011")    
-    .hpf("<550!16 450!16 550!16 700!16>").lpf("3150".add(saw.range(1, 0).pow(1.8).mul(900)).slow(4)).lpe(0.6).lpq(2.0)
+    .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.81 0.72>".fast(2)).adsr("0.005:2.5:0.0:0.032").lpadsr("0.005:1.1:0.0:0.011")    
+    .hpf("<550!16 450!16 550!16 700!16>").lpf("3150".add(saw.range(1, 0).pow(1.8).mul(900)).slow(4)).lpe(0.6).lpq(1.9)
     .coarse(2).coarseos(4).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))
     .pipeline("pedal").body("cedar").bodyMix(0.4)
   , // Guitar 2
@@ -49,8 +49,8 @@ stack(                                                                          
     .orbit(2).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
     .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort("1:tube:4").distort(0.85)
-    .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.72>".fast(2)).adsr("0.005:2.5:0.0:0.027").lpadsr("0.005:1.0:0.0:0.01")    
-    .hpf(120).lpf(3000).lpe(0.6).lpq(1.8)
+    .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.81 0.72>".fast(2)).adsr("0.005:2.5:0.0:0.030").lpadsr("0.005:1.0:0.0:0.01")    
+    .hpf(120).lpf(3000).lpe(0.6).lpq(1.7)
     .coarse(2).coarseos(4).pan(0.3).superimpose(
       x => x.pan(0.7),
       x => x.postgain(0.09).hpf(220).lpf(3000).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
@@ -69,7 +69,7 @@ stack(                                                                          
     .superimpose(x => x.bandf("205".add(berlin.mul(10))).bandq(4).vel(0.60).hpf(190).lpf(350)),
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
     .pan(0.515).late(0.0005).orbit(5).gain(0.32).hpf(800).lpf("10000".add(perlin.mul(300))).adsr("0.005:0.15:0.8:0.2"), // . mute()
-  sound("pink!8").orbit(6).gain(0.08).hpf(8000).pan(sine.range(0.25, 0.75).slow(3)).adsr("0.007:0.3:0.0:0.05") //  .solo(),
+  sound("pink!8").orbit(6).gain(0.07).hpf(12500).pan(sine.range(0.25, 0.75).slow(3)).adsr("0.007:0.3:0.0:0.05") //  .solo(),
   // Master
 ).analog(feel).room("0.10:8:0.12").rlp(12500).seed(timeOfDay.mul(60*60*24))
  .compressor("-6:2:5:0.02:0.05")

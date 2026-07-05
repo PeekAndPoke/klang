@@ -173,11 +173,11 @@ let darkBuild = stack(
     // Kick — full power, slightly longer body
     s("bd:2!4").gain(1.0).hpf(50).adsr("0.03:0.3:0.5:0.2").orbit(0).distort(0.1),
     // Hat
-    s("hh!8").gain(0.45).hpf(6000).adsr("0.001:0.04:0.0:0.04").orbit(2),
+    s("hh!8").gain(0.50).hpf(6000).adsr("0.001:0.04:0.0:0.04").orbit(2),
     // Clap
-    s("~ cp ~ [cp,rim]").gain(0.4).hpf(600).orbit(2),
+    s("~ cp ~ [cp,rim]").gain(0.35).hpf(600).orbit(2),
     // Open hat
-    s("[~ ~ ~ oh]!4").gain(0.35).hpf(5000).orbit(2),
+    s("[~ ~ ~ oh]!4").gain(0.40).hpf(5000).orbit(2),
     // Sub bass — sidechain pump (drops at each kick, recovers between)
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x!4]!32 [x!8]!32>")
         .sound("sine").distort("0.2:soft").legato(1.0).adsr("0.005:0.05:0.5:0.05")

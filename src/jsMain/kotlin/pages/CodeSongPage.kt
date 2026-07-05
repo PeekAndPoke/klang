@@ -21,6 +21,7 @@ import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.version
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
@@ -96,6 +97,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private val v by subscribingTo(version.map { it.version })
+
     val defaultCode = """
         import * from "stdlib"
         import * from "sprudel"
@@ -106,8 +109,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     val songId get() = props.id ?: "new"
 
     val builtIn = BuiltInSongs.songs.firstOrNull { it.id == songId }
-
-    val v = 5
 
     val rpmStream = StreamSource(builtIn?.rpm ?: 30.0)
         .persistInLocalStorage("song-$v-$songId-rpm", Double.serializer())

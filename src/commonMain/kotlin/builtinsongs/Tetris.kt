@@ -15,7 +15,8 @@ internal val tetrisSong = Song(
     title = "Stein um Stein",
     rpm = 39.5,
     icon = "gamepad",
-    code = """import * from "stdlib"
+    code = """
+import * from "stdlib"
 import * from "sprudel"
 
 // ── Patterns: the raw musical content ───────────────────────────────────
@@ -54,9 +55,9 @@ export drumsPattern = `<
 // octave-superimposed accents.
 export leadShape = (p) => p
     .sound("tri").clip(0.33).hpf(800).lpf("4500").lpe(1.5).lpq(1).warmth(0.05)
-    .orbit(0).gain(0.10).adsr("0.01:0.3:0.5:0.1").lpadsr("0.01:0.2:0.0:0.1")
+    .orbit(0).gain(0.10).adsr("0.01:0.3:0.5:0.1").lpadsr("0.009:0.2:0.1:0.1")
     .superimpose(x => x.transpose("<0 12 0 -12>/8").hpf("<800 1200 800 500>/8"),
-                x => x.sound("pink").gain(0.07).adsr("0.01:0.2:0.2:0.1")) // TODO: separate noise with steady rhythm
+                x => x.sound("pink").gain(0.07).adsr("0.009:0.1:0.1:0.1")) // TODO: separate noise with steady rhythm
     .pan(0.3).superimpose(pan(0.7)).body("wood").bodyMix(0.2)
     .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.2).analog(2.5)
 
@@ -113,5 +114,5 @@ export song = stack(
 
 
 
-    """.trimIndent(),
+    """,
 )
