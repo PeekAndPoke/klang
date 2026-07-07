@@ -86,7 +86,8 @@ object MnPatternToSprudelPattern {
         is MnNode.Choice -> choiceToPattern(node, baseLocation, atomFactory)
         is MnNode.Stack -> stackToPattern(node, baseLocation, atomFactory)
         is MnNode.Repeat -> repeatToPattern(node, baseLocation, atomFactory)
-        is MnNode.Rest -> silence
+        // Rests keep their mods — `~@3` is a weighted rest, standard notation for timing gaps.
+        is MnNode.Rest -> applyMods(silence, node.mods)
         is MnNode.Linebreak -> silence
     }
 

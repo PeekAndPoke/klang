@@ -24,7 +24,7 @@ let wait = 14
 let koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(cutoffHz = Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
+      .lowpass(cutoffHz = Osc.constant(2500).plus(Osc.constant(3200).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
 
 let shaku = Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
@@ -105,8 +105,8 @@ stack(
   ).orbit(4).hpf(160).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
 
   // Noise
-  , sound("dust").gain(0.0200)
-  , sound("pink").gain(0.0050)
+  , sound("dust").gain(0.0200).pan(sine.range(0.3, 0.7).slow(9))
+  , sound("pink").gain(0.0050).pan(cosine.range(0.3, 0.7).slow(11))
  
 ).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(8)
 

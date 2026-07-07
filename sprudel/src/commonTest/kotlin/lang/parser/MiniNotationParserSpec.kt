@@ -236,6 +236,29 @@ class MiniNotationParserSpec : StringSpec() {
             }
         }
 
+        "Parsing weighted rest 'a ~@2 b'" {
+            // Total weight = 1 + 2 + 1 = 4 — the rest takes half the cycle.
+            // Regression: MnNode.Rest used to drop its mods, so ~@2 collapsed to weight 1.
+            val pattern = parse("a ~@2 b")
+            val events = pattern.queryArc(0.0, 1.0)
+
+            assertSoftly {
+                events.size shouldBe 2
+
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "a"
+                    whole.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+                    whole.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+                }
+
+                with(events[1]) {
+                    data.note shouldBeEqualIgnoringCase "b"
+                    whole.begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+                    whole.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+                }
+            }
+        }
+
         "Parsing equal weights 'a@2 b@2'" {
             // Both have weight 2, should be equal distribution (like 'a b')
             val pattern = parse("a@2 b@2")
