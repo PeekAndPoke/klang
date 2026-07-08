@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val derSchmetterlingSong = Song(
     id = "${BuiltInSongs.PREFIX}-der-schmetterling",
     title = "Der Schmetterling",
-    rpm = 34.0,
+    rpm = 35.0,
     icon = "bug",
     code = """
 import * from "stdlib"                                                                                                                         //.
