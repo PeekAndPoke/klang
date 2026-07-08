@@ -24,7 +24,7 @@ let wait = 14
 let koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(cutoffHz = Osc.constant(2500).plus(Osc.constant(3200).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
+      .lowpass(cutoffHz = Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
 
 let shaku = Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
@@ -65,7 +65,7 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.7)
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5)
     .superimpose(fast(2).gain(0.095).pan(0.3)).body("wood")
 
   // Shakuhachi
@@ -77,7 +77,7 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).orbit(1).sound(shaku).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(24)).body("glass")
+  `).orbit(1).sound(shaku).slow(14).gain(0.30).pan(perlin.range(0.3, 0.5).slow(24)).body("glass")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
@@ -105,10 +105,11 @@ stack(
   ).orbit(4).hpf(160).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
 
   // Noise
-  , sound("dust").gain(0.0200).pan(sine.range(0.3, 0.7).slow(9))
-  , sound("pink").gain(0.0050).pan(cosine.range(0.3, 0.7).slow(11))
+  , sound("dust").gain(0.0200)
+  , sound("pink").gain(0.0050)
  
 ).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(8)
+
 
 
 

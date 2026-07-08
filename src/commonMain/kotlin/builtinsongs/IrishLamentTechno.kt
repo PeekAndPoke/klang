@@ -52,7 +52,7 @@ let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
 let core = stack(kick, hat, bass)
 
 // ── Build layers ────────────────────────────────────────────────────
-let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02").hpf(70).lpf(180).lpe(2).gain(0.40).orbit(3)
+let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02").hpf(70).lpf(180).lpe(2).gain(0.42).orbit(3)
 let clap = s("~ cp ~ cp").gain(0.22).hpf(600).orbit(1).room(0.2).rsize(3)
 let oh   = s("[~ ~ ~ oh]!4").gain(0.20).hpf(4000).orbit(1)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.4).hpf(800).orbit(1)
@@ -140,9 +140,9 @@ let quietBuild = stack(
         .adsr("0.002:0.08:0.5:0.05").distort("0.4:soft:2").postgain(0.4)
         .gain(saw.range(0.0, 0.45).slow(64)).orbit(4),
     // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.3, 0.70).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.05),
+    mel3.velocity(saw.range(0.3, 0.65).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.05),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(-0.1, 0.75).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.10),
+    mel1.velocity(saw.range(-0.1, 0.70).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.10),
     // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
     // enter at section-local cycle 32 (= second half of the build)
     chord("<Am Dm Bb C Gm F Am Dm>").voicing().struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
@@ -160,7 +160,7 @@ let quietBuild = stack(
         .superimpose(transpose("<0 12 24 12>/8").pan(0.7).superimpose(pan(0.3)))
         .phaser(1/13).phaserdepth(0.25).phasercenter(3500).phasersweep(1000)
         .spread(sine.range(0.15, 0.40).slow(64)).hpf(300).lpf(5000).lpq(1.2)
-        .velocity(saw.range(-0.4, 0.6).min(0).slow(64))
+        .velocity(saw.range(-0.3, 0.6).min(0).slow(64))
         .orbit(6),
 )
 
@@ -171,7 +171,7 @@ let quietBuild = stack(
 // in a syncopated rhythm, drifting slowly across the stereo field.
 let darkBuild = stack(
     // Kick — full power, slightly longer body
-    s("bd:2!4").gain(1.0).hpf(50).adsr("0.03:0.3:0.5:0.2").orbit(0).distort(0.1),
+    s("bd:1!4").gain(1.1).hpf(50).adsr("0.03:0.3:0.5:0.2").orbit(0).distort(0.1),
     // Hat
     s("hh!8").gain(0.50).hpf(6000).adsr("0.001:0.04:0.0:0.04").orbit(2),
     // Clap
@@ -213,14 +213,14 @@ let darkBuild = stack(
         .sound("supersine").unison(8).spread(0.15).adsr("0.5:0.3:0.5:0.5")
         .hpf(1500).lpf(3000).lpenv(2).bandf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibmod(0.1)
         .gain(saw.range(0.0, 0.7).slow(64)).body("glass")
-        .pan(sine.range(0.05, 0.95).slow(3))
+        .pan(sine.range(0.05, 0.75).slow(3))
         .delay(0.4).delaytime(pure(2/8).div(cps)).delayfeedback(0.45)
         .orbit(7).room(0.7).rsize(10),
 
       // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.6, 1.00).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
+    mel3.velocity(saw.range(0.6, 0.95).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(0.6, 1.1).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
+    mel1.velocity(saw.range(0.6, 1.05).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
 
 )
 
