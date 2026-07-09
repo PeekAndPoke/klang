@@ -60,8 +60,9 @@ export snare = sound("[~ ~ sd sd ~ ~ sd ~]!2").orbit(5).gain(0.475).hpf(200).ads
 export skank = chord("<Am Em F Am <Em Em Dm G#> Em Am <G E F G>>").voicing()
     .struct("[~ x]!4").legato(1.0)
     .sound("supertri").unison(6).spread(0.05)
-    .gain(0.9).adsr("0.02:0.2:0.0:0.1").postgain(1.6)
-    .hpf(700).lpf(8000).lpadsr("0.02:0.1:0.0:0.1").lpe(2.5).warmth(0.1).pan(0.5)
+    .gain(0.90).adsr("0.02:0.2:0.0:0.1").postgain(1.6)
+    .hpf(1000).lpf(8000).lpadsr("0.02:0.1:0.0:0.1").lpe(2.5).warmth(0.1)
+    .pan(0.2).superimpose(pan(0.8))
     .orbit(6).room(0.5).rsize(5)  // . solo()
     .filterWhen(x => x >= 8)
 
@@ -73,6 +74,7 @@ export song = stack(kick, snare, hat, skank, lead, bass, sub)
   .compressor("-6:2:6:0.02:0.05").analog(3.5)
 
 // Composed by: peekandpoke + Claude (echo of Korobeiniki, by way of King Tubby)
+
 
 
 
