@@ -34,7 +34,7 @@ stack(
     .sound("pulse").warmth(0.8).crush(5).gain(0.06).clip(0.35).pan(berlin.slow(2)).adsr("0.03:0.08:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body("membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
-  n("<[0 2 4 6 7 6 4 2]!14 [0 -1 0 4 6 9 7 6] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
+  n("<[0 2 4 6 7 6 4 2]!14 [0 -3 0 2 6 9 7 6] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(2).s("supersaw").unison(15).spread(saw.range(0.05, 0.35).slow(16))
     .gain(0.6).distort(0.8).postgain(0.13).adsr("0.008:3.0:0.5:0.1").lpadsr("0.008:5.0:0.2:0.1").clip(1.05)
@@ -49,7 +49,7 @@ stack(
     .superimpose(
       x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
-    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.75).body("glass").vowel("e i e u i a o".slow(28)).vowelMix(0.20)
+    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.75).body("glass").vowel("e i e i a".slow(20)).vowelMix(0.20)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.0)).vibrato("0.51".add(perlin.div(20))).vibmod(0.06)
         .crush("1.95".add(berlin2.mul(0.75).slow(4))).crushos(2).lpf(5.75 * 440).hpf(300).postgain(0.45)
@@ -65,11 +65,12 @@ stack(
     .orbit(6).gain(0.6).pan(0.5).adsr("0.017:0.3:0.5:1").degrade(0.01).hpf(80).lpf(7500)
     .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
   , // Shore ---------------------------------------------------------------------------------------------------------
-  note("c").fast(7).sound("brown")
-    .orbit(7).gain(0.12).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr("0.2:1.0:1.0:2.5")
+  note("c").fast(4).sound("brown").legato(2)
+    .orbit(7).gain(0.13).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr("0.5:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(6)).bandq(sine.range(0.25, 5.0).slow(48).early(12))
   ,
 ).delay("0.2::0.5").delaytime(pure(1/8).div(cps)).room("0.1:10:0.1:12000").compressor("-10:2:6:0.01:0.05")
+
 
 
 
