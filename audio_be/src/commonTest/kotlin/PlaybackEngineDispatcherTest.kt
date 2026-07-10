@@ -109,6 +109,55 @@ class PlaybackEngineDispatcherTest : StringSpec({
         d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBeAtLeast 1
     }
 
+    "ReplaceVoices does not double a voice already promoted to active (live-update race)" {
+        val d = newDispatcher()
+        val out = ShortArray(blockFrames * 2)
+        val far = sampleRate * 10 // frame where the startTime=10s voice becomes due
+
+        // 1. Schedule a future voice — stays in the heap at frame 0.
+        d.handle(
+            KlangCommLink.Cmd.ScheduleVoices(
+                playbackId = "song",
+                voices = listOf(voice("song", startTime = 10.0, gateEndTime = 20.0))
+            )
+        )
+        // 2. Advance the clock so it is promoted to active (the race precondition).
+        d.renderBlock(far, out)
+        d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBe 1
+
+        // 3. A live update re-sends the SAME voice (its replacement) while it is already active.
+        d.handle(
+            KlangCommLink.Cmd.ReplaceVoices(
+                playbackId = "song",
+                voices = listOf(voice("song", startTime = 10.0, gateEndTime = 20.0)),
+                afterTimeSec = null
+            )
+        )
+        d.renderBlock(far + blockFrames, out)
+
+        // Without the identity dedup the resend promotes alongside the active one → 2 (the bug).
+        d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBe 1
+    }
+
+    "ReplaceVoices keeps legit simultaneous same-time voices (chord/superimpose safety)" {
+        val d = newDispatcher()
+        val out = ShortArray(blockFrames * 2)
+        val far = sampleRate * 10
+
+        // Two voices at the SAME time differing only in payload — like two chord tones / layers.
+        val a = voice("song", startTime = 10.0, gateEndTime = 20.0)
+        val b = a.copy(data = a.data.copy(freqHz = 660.0))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(a, b)))
+        d.renderBlock(far, out)
+        d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBe 2
+
+        // Re-send both. Full-identity 1-to-1 matching drops each against its own twin — both are kept,
+        // never collapsed to one (which a sourceId+time key would wrongly do).
+        d.handle(KlangCommLink.Cmd.ReplaceVoices(playbackId = "song", voices = listOf(a, b), afterTimeSec = null))
+        d.renderBlock(far + blockFrames, out)
+        d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBe 2
+    }
+
     "ReplaceVoices for an unknown playback does not create an engine (no leak)" {
         val d = newDispatcher()
 

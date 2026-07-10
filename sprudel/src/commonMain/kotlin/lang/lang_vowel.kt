@@ -17,7 +17,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 // -- vowel() ----------------------------------------------------------------------------------------------------------
 
 private fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { v -> copy(vowel = v?.lowercase()) }
+    return source._liftOrReinterpretStringField(args) { v -> clone().also { it.vowel = v?.lowercase() } }
 }
 
 /**
@@ -33,6 +33,7 @@ private fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * - Standard: `a`, `e`, `i`, `o`, `u`
  * - German Umlauts: `ae` (ä), `oe` (ö), `ue` (ü)
  * - German Diphthongs (nucleus): `ei` (→ a), `au` (→ a), `eu` / `äu` (→ open o)
+ * - `none` — resets (removes the vowel filter)
  *
  * **Supported Voice Types:**
  * - `soprano` (default)
@@ -110,3 +111,42 @@ fun vowelMix(mix: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
 @KlangScript.Function
 fun PatternMapperFn.vowelMix(mix: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.vowelMix(mix, callInfo) }
+
+// -- vowelFloor() -----------------------------------------------------------------------------------------------------
+
+private val vowelFloorMutation = voiceSetter { vowelFloor = it?.asDoubleOrNull() }
+
+private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, vowelFloorMutation)
+}
+
+/**
+ * Sets the vowel/formant broadband dry floor — how much untouched dry source stays between the
+ * formants. Lower makes the formants dominate a thinner source (more overtly "vowel"); higher keeps
+ * more of the original source audible between formants. When omitted, the engine default is used.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").vowel("a").vowelFloor(0.1)   // strong, dominant 'a' vowel
+ * ```
+ *
+ * @category effects
+ * @tags vowel, formant, floor, dry, wet, vocal
+ */
+@KlangScript.Function
+fun SprudelPattern.vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyVowelFloor(this, listOfNotNull(floor).asSprudelDslArgs(callInfo))
+
+/** Sets the vowel formant floor on a string pattern. */
+@KlangScript.Function
+fun String.vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vowelFloor(floor, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the vowel formant floor. */
+@KlangScript.Function
+fun vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.vowelFloor(floor, callInfo) }
+
+/** Chains a vowelFloor step onto this [PatternMapperFn]. */
+@KlangScript.Function
+fun PatternMapperFn.vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.vowelFloor(floor, callInfo) }

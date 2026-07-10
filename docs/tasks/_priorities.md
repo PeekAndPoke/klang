@@ -31,10 +31,10 @@ The release-defining set, regardless of when they're sequenced:
    Multi-engine foundation shipped in Q2; **D6** (`MasterDsl` → `Cmd.SetMaster` → `Song.master` →
    per-engine output gain) is *the* next feature. Then richer master chain (glue/eq/drive/ceiling),
    crossfade, metering. **Highest priority.**
-2. **MUST** · **Pipeline DSL finish** — [`engine-tuning-profile.md`](engine-tuning-profile.md) 🔴
-   *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs (Adsr `declickSeconds`/
-   `expK`; filter drift/cutoffOffset/driveScale; analog-drift carriers). Phase 3 engine-identity
-   profiles (`EngineDefault`/`EngineTuning`/`.tune()`, e.g. c64/nes) lean **NICE** within this item.
+2. **MUST** · **Pipeline DSL finish** — [`engine-tuning-profile.md`](engine-tuning-profile.md) 🟡
+   *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
+   done (2026-07-04, as oscParam slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
+   Phase 3 engine-identity profiles (`EngineDefault`/`EngineTuning`/`.tune()`, e.g. c64/nes) lean **NICE**.
 3. **MUST** · **Katalyst DSL** — [`katalyst-dsl.md`](katalyst-dsl.md) 🔴 *(effects shipped; authoring surface not)*
    Author per-orbit effect chains from KlangScript — the counterpart to the Ignitor/Pipeline DSLs.
    ⚠️ Q3 lists Katalyzers in the *lower* track; you've flagged it must-have. Reads as an Act-1

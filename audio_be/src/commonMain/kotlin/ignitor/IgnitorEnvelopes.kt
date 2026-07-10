@@ -5,8 +5,11 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.ADSR_EXP_K
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.adsrExpNorm
 import io.peekandpoke.klang.audio_be.adsrExpShape
+import io.peekandpoke.klang.audio_be.envDeclickCoeff
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
@@ -32,9 +35,12 @@ fun Ignitor.adsr(
     attackCurve: AdsrCurve = AdsrCurve.Square,
     decayCurve: AdsrCurve = AdsrCurve.Exponential,
     releaseCurve: AdsrCurve = AdsrCurve.Square,
+    declickSeconds: Ignitor = ParamIgnitor("declickSeconds", 0.0),
+    expK: Ignitor = ParamIgnitor("expK", ADSR_EXP_K),
 ): Ignitor = AdsrIgnitor(
     this, attackSec, decaySec, sustainLevel, releaseSec,
     attackCurve, decayCurve, releaseCurve,
+    declickSeconds, expK,
 )
 
 private class AdsrIgnitor(
@@ -46,10 +52,16 @@ private class AdsrIgnitor(
     private val attackCurve: AdsrCurve,
     private val decayCurve: AdsrCurve,
     private val releaseCurve: AdsrCurve,
+    private val declickSeconds: Ignitor,
+    private val expK: Ignitor,
 ) : Ignitor {
     private var currentLevel: Double = 0.0
     private var releaseStartLevel: Double = 0.0
     private var releaseStarted: Boolean = false
+
+    // Opt-in de-click one-pole on the output gain, primed to the first rendered level.
+    private var smoothedLevel: Double = 0.0
+    private var smoothPrimed: Boolean = false
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
@@ -59,6 +71,13 @@ private class AdsrIgnitor(
             val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx).coerceAtLeast(0.0)
             val sustainLevelVal = Ignitors.readParam(sustainLevel, freqHz, ctx).coerceIn(0.0, 1.0)
             val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx).coerceAtLeast(0.0)
+
+            // declick + expK are control-rate slots: read per block, derive their coefficients once here.
+            val declickSecondsVal = Ignitors.readParam(declickSeconds, freqHz, ctx)
+            val declickOn = declickSecondsVal > 0.0
+            val declickCoeff = if (declickOn) envDeclickCoeff(declickSecondsVal, ctx.sampleRateD) else 0.0
+            val expKVal = Ignitors.readParam(expK, freqHz, ctx)
+            val expNorm = adsrExpNorm(expKVal)
 
             val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
             val decayFrames = (decaySecVal * ctx.sampleRate).toInt()
@@ -92,7 +111,7 @@ private class AdsrIgnitor(
                         AdsrCurve.Cube -> omp * omp * omp
                         AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
                         AdsrCurve.InvSquare -> omp * (2.0 - omp)
-                        AdsrCurve.Exponential -> adsrExpShape(omp)
+                        AdsrCurve.Exponential -> adsrExpShape(omp, expKVal, expNorm)
                     }
                     currentLevel = releaseStartLevel * shape
                 } else {
@@ -106,7 +125,7 @@ private class AdsrIgnitor(
                                 AdsrCurve.Cube -> p * p * p
                                 AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
                                 AdsrCurve.InvSquare -> p * (2.0 - p)
-                                AdsrCurve.Exponential -> adsrExpShape(p)
+                                AdsrCurve.Exponential -> adsrExpShape(p, expKVal, expNorm)
                             }
                         }
 
@@ -120,7 +139,7 @@ private class AdsrIgnitor(
                                 AdsrCurve.Cube -> omp * omp * omp
                                 AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
                                 AdsrCurve.InvSquare -> omp * (2.0 - omp)
-                                AdsrCurve.Exponential -> adsrExpShape(omp)
+                                AdsrCurve.Exponential -> adsrExpShape(omp, expKVal, expNorm)
                             }
                             sustainLevelVal + (1.0 - sustainLevelVal) * shape
                         }
@@ -130,7 +149,21 @@ private class AdsrIgnitor(
 
                 if (currentLevel < 0.0) currentLevel = 0.0
 
-                buffer[i] = (input[i] * currentLevel)
+                // Opt-in de-click: one-pole low-pass on the gain, primed to the first rendered
+                // level so always-on voices / mid-phase block starts don't fade in.
+                val gain = if (declickOn) {
+                    if (!smoothPrimed) {
+                        smoothedLevel = currentLevel
+                        smoothPrimed = true
+                    } else {
+                        smoothedLevel += declickCoeff * (currentLevel - smoothedLevel)
+                    }
+                    smoothedLevel
+                } else {
+                    currentLevel
+                }
+
+                buffer[i] = (input[i] * gain)
                 absPos++
             }
         }
@@ -146,10 +179,13 @@ fun Ignitor.adsr(
     attackCurve: AdsrCurve = AdsrCurve.Square,
     decayCurve: AdsrCurve = AdsrCurve.Exponential,
     releaseCurve: AdsrCurve = AdsrCurve.Square,
+    declickSeconds: Double = 0.0,
+    expK: Double = ADSR_EXP_K,
 ): Ignitor = adsr(
     ParamIgnitor("attackSec", attackSec),
     ParamIgnitor("decaySec", decaySec),
     ParamIgnitor("sustainLevel", sustainLevel),
     ParamIgnitor("releaseSec", releaseSec),
     attackCurve, decayCurve, releaseCurve,
+    ParamIgnitor("declickSeconds", declickSeconds), ParamIgnitor("expK", expK),
 )

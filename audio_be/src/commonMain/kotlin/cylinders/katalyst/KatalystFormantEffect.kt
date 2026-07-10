@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.FilterDef
 
@@ -24,37 +23,39 @@ class KatalystFormantEffect(
     private val sampleRate: Double,
 ) : KatalystEffect {
 
-    // `left`/`right` non-null == active; no separate flag needed.
     private var curBands: List<FilterDef.Formant.Band>? = null
     private var curMix: Double = Double.NaN
-    private var left: AudioFilter? = null
-    private var right: AudioFilter? = null
+    private var curFloor: Double? = Double.NaN
+
+    // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
+    private val swap = KatalystFilterSwap(sampleRate)
 
     /** Configure from the OWNER voice's vowel. `null` (owner has no vowel) turns the resonator off. */
     fun configure(vowel: FilterDef.Formant?) {
         if (vowel == null) {
-            if (left != null) reset() // owner has no vowel → turn off, once
+            if (swap.active) reset() // owner has no vowel → turn off, once
             return
         }
-        if (vowel.bands != curBands || vowel.mix != curMix) {
-            left = LowPassHighPassFilters.createFormant(vowel.bands, vowel.mix, sampleRate)
-            right = LowPassHighPassFilters.createFormant(vowel.bands, vowel.mix, sampleRate)
+        // The swap crossfades from the old bank so a live vowel/mix/floor change doesn't click.
+        if (vowel.bands != curBands || vowel.mix != curMix || vowel.floor != curFloor) {
+            swap.set(
+                LowPassHighPassFilters.createFormant(vowel.bands, vowel.mix, sampleRate, vowel.floor),
+                LowPassHighPassFilters.createFormant(vowel.bands, vowel.mix, sampleRate, vowel.floor),
+            )
             curBands = vowel.bands
             curMix = vowel.mix
+            curFloor = vowel.floor
         }
     }
 
     fun reset() {
         curBands = null
         curMix = Double.NaN
-        left = null
-        right = null
+        curFloor = Double.NaN
+        swap.clear()
     }
 
     override fun process(ctx: KatalystContext) {
-        val l = left ?: return
-        val r = right ?: return
-        l.process(ctx.mixBuffer.left, 0, ctx.blockFrames)
-        r.process(ctx.mixBuffer.right, 0, ctx.blockFrames)
+        swap.process(ctx.mixBuffer, ctx.blockFrames)
     }
 }

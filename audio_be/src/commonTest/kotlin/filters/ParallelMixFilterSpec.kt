@@ -78,6 +78,25 @@ class ParallelMixFilterSpec : StringSpec({
         }
     }
 
+    "ParallelMixFilter - amount > 1 is accepted and keeps scaling the wet (uncapped, floor path)" {
+        val buf3 = sine(440.0, blockFrames)
+        val buf100 = sine(440.0, blockFrames)
+        val dry = AudioBuffer(blockFrames) { buf3[it] }
+
+        // floor=0.4. At amount >= 1 the dry is pinned at the floor; the wet keeps scaling with amount.
+        // amount=3   → out = 0.4·dry + 3·(2·dry)   = 6.4·dry
+        // amount=100 → out = 0.4·dry + 100·(2·dry) = 200.4·dry
+        ParallelMixFilter(doubler, amount = 3.0, floor = 0.4).process(buf3, 0, buf3.size)
+        ParallelMixFilter(doubler, amount = 100.0, floor = 0.4).process(buf100, 0, buf100.size)
+
+        for (i in 0 until blockFrames) {
+            buf3[i] shouldBe (dry[i] * 0.4 + (2.0 * dry[i]) * 3.0)
+            buf100[i] shouldBe (dry[i] * 0.4 + (2.0 * dry[i]) * 100.0)
+        }
+        // The big value genuinely does more — never silently clamped to amount = 1.
+        rms(buf100) shouldBeGreaterThan (rms(buf3) * 10.0)
+    }
+
     "ParallelMixFilter wrapping BodyFilter - boosts on-mode AND keeps off-mode at the floor (never thins)" {
         val onBand = sine(430.0, blockFrames)     // on a wood mode (db=0)
         val offBand = sine(12000.0, blockFrames)  // far above every mode

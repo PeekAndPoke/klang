@@ -41,6 +41,7 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                     renderTidalCard()
                     renderFiltersCard()
                     renderDspAlgorithmsCard()
+                    renderAcousticsCard()
                     renderMusicAndAudioCard()
                     renderSamplesCard()
                     renderBrowserCard()
@@ -189,6 +190,35 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
 
                         - **[CodeMirror 6](https://codemirror.net)** — the code editor at the heart of the coding experience
                         - **[Lezer](https://lezer.codemirror.net)** — parser generator powering syntax highlighting
+                    """.trimIndent()
+                )
+            }
+        }
+    }
+
+    private fun FlowContent.renderAcousticsCard() {
+        noui.card {
+            noui.content {
+                ui.header H2 { +"Acoustics & Physical Modeling" }
+
+                ui.divider()
+
+                MarkdownDisplay(
+                    """
+                        Klang's body-resonator materials are *caricatures* — a few resonant modes that let the
+                        ear recognize an instrument body, not measured replicas. The load-bearing landmark
+                        frequencies are anchored from the acoustics literature:
+
+                        - **Neville H. Fletcher & Thomas D. Rossing — *The Physics of Musical Instruments*** — the
+                        resonance landmarks behind the body materials: guitar/string air + top-plate modes (the
+                        wood tonewoods), the violin corpus + "bridge hill" (`violin`), the inharmonic bell partials
+                        including the minor-third tierce (`bell`), and the brass formants (`brass`)
+                        - **Arthur H. Benade — *Fundamentals of Musical Acoustics*** — brass and air-column
+                        acoustics informing the `brass` formant regions
+                        - **Johan Sundberg — *The Science of the Singing Voice*** — the "singer's formant"
+                        (the ~2.8–3.4 kHz vocal "ring") behind the `croon` material
+
+                        Everything beyond those landmarks is sparse plausible fill, tuned by ear.
                     """.trimIndent()
                 )
             }

@@ -102,10 +102,14 @@ sealed interface IgnitorDsl {
         val brightness: IgnitorDsl = Param(name = "brightness", default = 0.5)
         val chaos: IgnitorDsl = Param(name = "chaos", default = 1.5)
         val decay: IgnitorDsl = Param(name = "decay", default = 0.996)
+        val declickSeconds: IgnitorDsl = Param(name = "declickSeconds", default = 0.0)
         val color: IgnitorDsl = Param(name = "color", default = 0.0)
         val density: IgnitorDsl = Param(name = "density", default = 0.2)
         val depth: IgnitorDsl = Param(name = "depth", default = 0.02)
         val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
+
+        // expK default mirrors audio_be ADSR_EXP_K (audio_be consts aren't visible from audio_bridge).
+        val expK: IgnitorDsl = Param(name = "expK", default = 3.0)
         val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
         val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
         val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.5)
@@ -938,10 +942,23 @@ sealed interface IgnitorDsl {
         val attackCurve: AdsrCurve? = null,
         val decayCurve: AdsrCurve? = null,
         val releaseCurve: AdsrCurve? = null,
+        /**
+         * De-click smoothing on the final gain, in seconds (`Slots.declickSeconds`, default `0` = off —
+         * this per-ignitor envelope is intentionally not de-clicked). `>0` runs a one-pole low-pass on
+         * the gain that rounds the C1 corners at segment joins (attack→decay peak, gate-off, cutoff),
+         * killing the low-note "plop" the same way the amp VCA does. `oscParam`-addressable / patternable.
+         */
+        val declickSeconds: IgnitorDsl = Slots.declickSeconds,
+        /**
+         * Curvature of [AdsrCurve.Exponential] segments (`Slots.expK`, default mirrors `ADSR_EXP_K` = 3.0).
+         * Larger = steeper initial change (faster decay drop / sharper attack finish). `oscParam`-addressable.
+         */
+        val expK: IgnitorDsl = Slots.expK,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
             sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            declickSeconds.collectParams(out); expK.collectParams(out)
         }
     }
 

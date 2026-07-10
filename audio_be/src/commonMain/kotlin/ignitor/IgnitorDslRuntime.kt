@@ -337,6 +337,8 @@ private fun IgnitorDsl.buildRaw(
             attackCurve ?: AdsrCurve.Square,
             decayCurve ?: AdsrCurve.Exponential,
             releaseCurve ?: AdsrCurve.Square,
+            declickSeconds = declickSeconds.noMod(),
+            expK = expK.noMod(),
         )
 
         // ── Effects: pass mod through to inner ──

@@ -1,5 +1,27 @@
 # Klang Audio — Memory
 
+## Body / Vowel resonators + live-update fixes (2026-07-04)
+
+- **Body & vowel are ORBIT-level Katalyst effects**, not per-voice filters: `KatalystBodyEffect` /
+  `KatalystFormantEffect` (`cylinders/katalyst/`) run once on the summed orbit mix; the owner voice
+  configures them via `VoiceLease` (first-writer-wins). `VoiceFactory` pulls `FilterDef.Body`/`Formant`
+  OUT of the per-voice chain — its `toFilter` arms for them are unreachable (`error()`). The two
+  effects are **intentional un-deduped twins** — change one, mirror the other.
+- **Materials** = pure data in `SprudelBodyMaterials` (sprudel commonMain): `names` / `descriptions`
+  / `modesFor(name)` → `List<FilterDef.Body.Mode>(freq,db,q)`; `none` = reset (vowel `none` too). Blend
+  = `ParallelMixFilter(inner, mix, floor)`; `floor` user-settable via `bodyFloor()`/`vowelFloor()`
+  (`FilterDef.Body/Formant.floor`, null → `BODY_FLOOR`/`VOWEL_FLOOR`), `bodyMix` uncapped >1 (raw).
+  Sprudel fields grouped in `SvdBody`/`SvdVowel`. UI: `SprudelBodyEditorTool` (sprudel jsMain).
+- **Live-change declick**: `KatalystFilterSwap` crossfades the bank on any material/mix/floor rebuild.
+- **Live-update double-voice fix**: `VoiceScheduler.replaceVoices` now dedups incoming voices vs
+  already-active ones (`ScheduledVoice.isDuplicate` = startTime+data); grace window 50→200 ms in
+  `KlangPlaybackController`. Root cause + the per-playback engine model: `ref/architecture.md`.
+- **Benchmarks**: isolated `Body`/`Vowel` cases in `EffectBenchmark`; a `+vowel(a)` case in the song
+  benchmark. Body (8-band) is the priciest single filter (~= reverb), vowel ~62% of it. **The old
+  "superimpose × body = super-additive" finding is now OBSOLETE** — body moved to orbit-level, so
+  cost(body|super) ≈ cost(body|no-super) (applied once per orbit, not per copy). `analog` still
+  multiplies (per-voice). Refresh: `docs/benchmarks/2026-07-04_*_song_jvm.md`.
+
 ## Song-level CPU benchmark + Der Schmetterling deep-dive (2026-07-03)
 
 New song-level benchmark harness in the **root** module: `src/jvmMain/kotlin/SongBenchmark*.kt` +
@@ -52,6 +74,27 @@ reads as a "plop" (2nd-difference corner/floor ratio ~525x at 40Hz vs ~4x at
   per-sample slew < 0.1). `EnvelopeTest` rewritten to assert phase *behaviour*
   (monotonic direction, settled endpoints, the de-click fade) since mid-ramp
   values now lag; exact raw-curve shape stays in `EnvelopeShapeTest` (generator).
+
+## Ignitor ADSR knobs — declick + expK as Slots (2026-07-04)
+
+`.adsr(...)` (per-ignitor envelope, `IgnitorEnvelopes.AdsrIgnitor`) gained two knobs on
+`IgnitorDsl.Adsr`, wired as **`IgnitorDsl.Slots` Params** (like the noise knobs), so they're
+`oscParam`-addressable, patternable, and discoverable via `collectParams()`. Both
+**behaviour-identical by default**:
+
+- `declickSeconds` (`Slots.declickSeconds`, default `0.0` = off — this surface is intentionally
+  NOT de-clicked; see the VCA entry above). >0 runs the same one-pole (`envDeclickCoeff`) on the
+  output gain, primed to the first rendered level (no fade-in on always-on / mid-phase starts).
+- `expK` (`Slots.expK`, default `3.0` = mirrors `ADSR_EXP_K`, duplicated in `audio_bridge`). Feeds
+  the parameterized `adsrExpShape(x, k, norm)` the amp VCA already used.
+
+Both are `IgnitorDsl` fields read per-block via `readParam` in `AdsrIgnitor` (declick coeff + `expNorm`
+derived once per block — NOT ctor-precomputed, since they can now be modulated). KlangScript
+`.declickSeconds(x)` / `.expK(x)` take `IgnitorDslLike` (copy-onto-`Adsr` or wrap, same idiom as
+`adsrCurves`). Guards: `AdsrIgnitorKnobsSpec` (defaults identical, declick rounds the attack→decay
+corner, larger expK steepens the exp decay, + oscParam override reaches both slots), `StdLibOscTest`
+(dual-language build), `IgnitorDslWireCodecSpec` (round-trip). First of the `engine-tuning-profile`
+Part-A wrapper knobs; filter feel knobs + analog-drift carriers still open.
 
 ## Oscillator Engine Unified (2026-06-05)
 

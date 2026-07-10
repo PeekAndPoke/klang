@@ -60,6 +60,9 @@ fun registerSprudelUiTools(registry: KlangUiToolRegistry = KlangUiToolRegistry) 
     registry.register("SprudelWaveformEditor", SprudelWaveformEditorTool)
     registry.register("SprudelWaveformSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelWaveformEditorTool))
 
+    registry.register("SprudelBodyEditor", SprudelBodyEditorTool)
+    registry.register("SprudelBodySequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBodyEditorTool))
+
     registry.register("SprudelSampleEditor", SprudelSampleEditorTool)
     registry.register("SprudelSampleSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelSampleEditorTool))
 

@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
+import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
 import kotlin.math.sin
@@ -226,6 +227,26 @@ class EffectBenchmark(
             step
         }
 
+        // Representative resonator tables (the `wood` body + a soprano-ish `a` vowel) — mode/band
+        // COUNT and Q range drive the cost, so exact values are not important for the benchmark.
+        private val BODY_WOOD_MODES = listOf(
+            FilterDef.Body.Mode(100.0, 3.0, 12.0),
+            FilterDef.Body.Mode(200.0, 2.0, 11.0),
+            FilterDef.Body.Mode(300.0, 1.0, 10.0),
+            FilterDef.Body.Mode(430.0, 0.0, 9.0),
+            FilterDef.Body.Mode(650.0, -1.0, 8.0),
+            FilterDef.Body.Mode(900.0, -2.0, 7.0),
+            FilterDef.Body.Mode(1300.0, -4.0, 6.0),
+            FilterDef.Body.Mode(1900.0, -6.0, 5.0),
+        )
+        private val VOWEL_A_BANDS = listOf(
+            FilterDef.Formant.Band(600.0, 0.0, 60.0),
+            FilterDef.Formant.Band(1040.0, -7.0, 70.0),
+            FilterDef.Formant.Band(2250.0, -9.0, 110.0),
+            FilterDef.Formant.Band(2450.0, -9.0, 120.0),
+            FilterDef.Formant.Band(2750.0, -20.0, 130.0),
+        )
+
         fun defaultCases(): List<Case> = listOf(
             // Filters
             monoFilterCase("OnePoleLPF (1k)") { sr -> LowPassHighPassFilters.OnePoleLPF(1000.0, sr) },
@@ -234,6 +255,15 @@ class EffectBenchmark(
             monoFilterCase("SvfHPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfHPF(1000.0, 1.0, sr) },
             monoFilterCase("SvfBPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfBPF(1000.0, 1.0, sr) },
             monoFilterCase("SvfNotch (1k, q=1)") { sr -> LowPassHighPassFilters.SvfNotch(1000.0, 1.0, sr) },
+
+            // Resonators — orbit-level body/vowel banks: ParallelMixFilter over an N-band parallel
+            // SVF-BPF (BodyFilter / FormantFilter). This is what body()/vowel() run per orbit.
+            monoFilterCase("Body (wood, 8-band, mix0.5)") { sr ->
+                LowPassHighPassFilters.createBody(BODY_WOOD_MODES, 0.5, sr)
+            },
+            monoFilterCase("Vowel (a, 5-band, mix0.5)") { sr ->
+                LowPassHighPassFilters.createFormant(VOWEL_A_BANDS, 0.5, sr)
+            },
 
             // ── Filter humanization (analog > 0) — cost of the tanh feedback saturation ──
             // Compared against the analog=0 cases above, the delta is the saturation cost

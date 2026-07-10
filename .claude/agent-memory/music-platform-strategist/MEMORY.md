@@ -12,3 +12,7 @@
   out as state-verb half-measure, updated 2026-04-11
 - [Project Disco strategic plan](project_disco_strategy.md) — Full social-launch plan: mascot Pip, low-poly 3D,
   archive-not-delete, 6-drop roadmap, HN at drop #3, saved 2026-04-15
+- [Brand architecture: Klang vs Motör](project_brand_architecture_klang_motor.md) — Motör=engine/behind-glass,
+  Klang=consumer; "Klang" crowded/weak in audio; klang.art registered; filing guidance, 2026-07-09
+- [Motörhead trademark risk](project_motorhead_trademark_risk.md) — Verified: Kilmister Trust holds MOTÖRHEAD; why
+  "Motör Hits"→"Klang Hits"; app-store takedown is the acute risk, 2026-07-09

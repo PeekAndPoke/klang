@@ -104,8 +104,12 @@ internal class KlangPlaybackController(
     private val clockSync = context.clockSync
 
     // ===== Resync =====
-    /** Grace window in seconds: voices within this window are preserved during resync */
-    private val resyncGraceWindowSec = 0.05
+    /**
+     * Grace window in seconds: on a live update, voices starting within this window are preserved
+     * (not replaced) so imminent notes keep playing; only voices beyond it are re-sent. Wider = fewer
+     * FE/BE-skew races (see the scheduler's replace-path dedup) at the cost of edits applying later.
+     */
+    private val resyncGraceWindowSec = 0.2
 
     // ===== Public API =====
     @Suppress("unused")
@@ -520,8 +524,8 @@ internal class KlangPlaybackController(
 
     /**
      * Re-requests the current cycle and sends events to backend.
-     * Uses a 50ms grace window: voices about to play within the window are preserved,
-     * only voices beyond the cutoff are replaced.
+     * Uses the [resyncGraceWindowSec] grace window: voices about to play within the window are
+     * preserved, only voices beyond the cutoff are replaced.
      */
     private fun resyncCurrentCycle() {
         val nowCycle = getNowCycle()

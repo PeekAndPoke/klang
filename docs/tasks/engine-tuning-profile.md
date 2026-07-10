@@ -4,8 +4,11 @@
 > (`docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md`) and is the **authoritative tracker**
 > for the remaining EngineDsl/PipelineDsl work.
 
-> **STATUS (2026-06-30, branch `engine-dsl-osc-dsl-parameterization`):** NOT STARTED. This is the remaining
-> tail of the EngineDsl/osc-DSL work-stream. **Done & committed already:** Phase 1 (PipelineDsl), Phase 2
+> **STATUS (updated 2026-07-05, branch `ignitor-dsl-surface`):** IN PROGRESS — **Part A #1 (Adsr
+> `declickSeconds`/`expK`) DONE; Part A #2 (filter feel knobs) DONE/RESOLVED — already on the pipeline
+> `StageDsl.Filter`, don't duplicate on the ignitor filters.** Remaining: Part A #3 (drift carriers — folds
+> into Part B) + Part B (Phase 3 `EngineTuning`), the headline piece. **Done & committed already:** Phase 1 (
+> PipelineDsl), Phase 2
 > oscillator *sources* (super-* unison family + single-shape oscs + static supertype inferrer + `WaveIgnitor.shapeMax`),
 > and the noise-generator calibration knobs. Full design + history live in the archived
 `docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md` (§2.1, §3);
@@ -31,17 +34,28 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
 `@KlangScript.TypeExtensions` chained methods → dual-language + render-effect + sync-guard specs. Each field
 **defaults to today's `OscillatorTuning` const** (behavior-identical).
 
-1. **`IgnitorDsl.Adsr` wrapper subtype — already exists** (`IgnitorDsl.kt:932`, with
-   `attackCurve`/`decayCurve`/`releaseCurve`). Remaining work is to **extend it with** `declickSeconds`
-   (the ignitor `AdsrIgnitor` gains a declick one-pole, same as the VCA — it has none today) and `expK` —
-   not create it new.
-   `.adsr()` should return the subtype so config-first chaining works; base lookups still resolve via the
-   static supertype inferrer.
-2. **Filter feel knobs** — `Lowpass`/`Highpass`/`Bandpass` subtypes expose their drift/cutoff-offset/drive-scale
-   feel knobs (the same constants `FilterPipelineBuilder` reads today). (Cross-check against the already-shipped
-   `FilterStageDsl` from PipelineDsl Phase 1 so we don't duplicate the filter-character surface.)
+1. ✅ **DONE (2026-07-04) — `IgnitorDsl.Adsr` gained `declickSeconds` + `expK`.** Both landed as
+   **`IgnitorDsl.Slots` Params** (`Slots.declickSeconds` = 0.0/off; `Slots.expK` = 3.0 mirroring `ADSR_EXP_K`)
+   — i.e. **nodes/slots, not plain `Double`** → oscParam-addressable / patternable / in `collectParams()`,
+   read per-block in `AdsrIgnitor`. `AdsrIgnitor` got the opt-in declick one-pole (`envDeclickCoeff`, primed
+   to first level) + parameterized `adsrExpShape(x, k, norm)`. KlangScript `.declickSeconds(x)` / `.expK(x)`
+   take `IgnitorDslLike` (config chaining via the copy-onto-`Adsr`-or-wrap idiom, like `adsrCurves` — no
+   return-type narrowing needed). Behaviour-identical by default. Guards: `AdsrIgnitorKnobsSpec`,
+   `StdLibOscTest`, `IgnitorDslWireCodecSpec`. **Precedent for #2/#3 + the §Part B wrinkle:** character
+   knobs go in as Slots (nodes), sidestepping the plain-`Double` resolution problem.
+2. ✅ **DONE / RESOLVED (2026-07-05) — the filter feel knobs already live on the pipeline `StageDsl.Filter`.**
+   `StageDsl.Filter(cutoffOffsetPerAnalog, drivePerAnalog, driftRelToOsc)` (PipelineDsl Phase 1) is **fully
+   wired**: `FilterPipelineBuilder` (`:63`) + `VoiceFactory` read the stage values (`stage.cutoffOffsetPerAnalog`
+   → `perVoiceCutoffOffsetMul`, `stage.drivePerAnalog` → the SVF, `stage.driftRelToOsc` → the filter
+   `AnalogDrift`), with `KlangScriptStageExtensions` chained methods + `WireCodecRoundTripSpec`. That IS the
+   filter-character surface (the voice-strip filter). **Do NOT duplicate on the ignitor `Lowpass`/`Highpass`/
+   `Bandpass` wrappers** — those are a separate in-graph surface (cutoff/q/analog; their `analog` already gives
+   the SVF drive), and the per-voice cutoff-offset/drift paths are voice-strip-only (`VoiceFactory`).
 3. **Analog-drift carrier params** — the ~5 *musical* drift params (the calibrated ones from the
    analog-drift-tuning work, NOT the derived math coefficients) become configurable fields on the carriers.
+   OPEN — not exposed on any DSL surface today (only the `analog` *amount* is). **Overlaps Part B:** these are
+   exactly the per-engine drift character an `EngineTuning` profile would set (`driftFastTauSec`/`driftSlowTauSec`/…)
+   → fold into Phase 3 rather than adding standalone per-osc fields, unless per-instance drift tuning is wanted.
 
 > Sine/impulse/zaw/zamp/noise have no tunable character → intentionally untouched. `pluck`/`superpluck`
 > character is already ctor fields → chained-method consistency is optional.

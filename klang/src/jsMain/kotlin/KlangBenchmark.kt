@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
@@ -102,12 +103,12 @@ class KlangBenchmark(
 
             // Small delay between iterations
             if (iteration < iterations - 1) {
-                delay(500)
+                delay(500.milliseconds)
             }
         }
 
         // Small delay before final result to ensure UI updates
-        delay(100)
+        delay(100.milliseconds)
 
         // Calculate average result
         val avgMaxSafeVoices = (results.map { it.maxSafeVoices }.average()).toInt()
@@ -238,7 +239,7 @@ class KlangBenchmark(
             onProgress?.invoke(progressUpdate)
 
             // Yield to the browser to allow UI updates
-            delay(10)
+            delay(10.milliseconds)
 
             if (currentRtf >= targetRtf) {
                 // Use the actual active voice count, backing off by batchSize to the last safe measurement
