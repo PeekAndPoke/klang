@@ -20,6 +20,7 @@ import * from "stdlib"
 import * from "sprudel"
 
 let drive = 4 // <--- Do not put 11
+let feel  = 10
 
 let stay = 64
 let tp = "[0 1 2 3 -2 -10 -3 4]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
@@ -52,7 +53,7 @@ let guitar = (() => {
 })()
 
 stack( // Gitarre! ----------------------------------------------------------------------------
-  morse("Gitarre!").n("-5").scale("c4:chromatic").sound("tri").clip(0.5).orbit(7).fast(2).transpose(tp).analog(2)
+  morse("Gitarre!").n("-5").scale("c4:chromatic").sound("tri").clip(0.5).orbit(7).fast(2).transpose(tp)
     .gain(0.8).distort(1).warmth(0.3).postgain("0.25 0.10 0.15 0.25".slow(stay)).hpf(1800).lpf(2450).lpe(2).lpq(1.5).pan(0.5) // .solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
@@ -83,8 +84,8 @@ stack( // Gitarre! -------------------------------------------------------------
     .adsr("0.005:0.5:0.2:0.025").lpadsr("0.005:0.1:0.0:0.075").hpf(70).lpf(180).lpe(20.0).lpq(1).velocity("<[1.0 0.95 0.975 0.95]>")
     .pan(0.55).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
-  s("cp cp cp cp").orbit(5).bandf("1800 600 1200 600").gain("0.075") // .solo()
-  ,note("a").sound("brown").gain(0.03).crush(6) // .solo()
+  s("cp cp cp cp").orbit(5).bandf("1800 600 1200 600").gain("0.1") // .solo()
+  ,note("a").sound("brown").gain(0.1).hpf(3000).lpf(13500).crush(6).crushos(4) // .solo()
   , // Drums 1 -----------------------------------------------------------------------------------------------
   cat(s(`<[lt,sd]                                 [[lt,sd]!3 ~                ~!12]
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
@@ -94,8 +95,8 @@ stack( // Gitarre! -------------------------------------------------------------
     .superimpose(bandf(195).bandq(1.1).gain(0.2)).filterWhen(t => t % stay >= 3.95)  // .solo()
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
-    .orbit(7).late(-0.003).adsr("0.007:0.2:0.9:0.7").gain(0.80).hpf(800).lpf(13500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
-).room(0.02).rsize(3.0).compressor("-6:3:10:0.02:0.05") /*
+    .orbit(7).late(0.001).adsr("0.007:0.2:0.9:0.7").gain(0.85).hpf(800).lpf(12500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
+).analog(feel).room(0.02).rsize(3.0).compressor("-6:3:10:0.02:0.05") /*
 
 
 

@@ -65,8 +65,8 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5)
-    .superimpose(fast(2).gain(0.095).pan(0.3)).body("wood")
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body("wood")
+    .superimpose(fast(2).velocity(0.15).pan(0.3).superimpose(pan(0.7)))
 
   // Shakuhachi
   ,note(`
@@ -91,22 +91,22 @@ stack(
 
   ,stack(
     // Root
-    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.4).hpf(100)
+    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.4).hpf(140)
     // Third (minor/major character)
-    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.7).hpf(120)
+    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.7).hpf(180)
     // Fifth
-    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.2).hpf(140)
+    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.2).hpf(220)
     // Octave
     ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.15).pan(0.8).hpf(600)
     // High third
-    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.15).pan(0.3).hpf(650)
+    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.15).pan(0.3).hpf(800)
     // High fifth
-    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.15).pan(0.6).hpf(700)
-  ).orbit(4).hpf(160).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
+    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.15).pan(0.6).hpf(1000)
+  ).orbit(4).coarse(3).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
 
   // Noise
-  , sound("dust").gain(0.0200)
-  , sound("pink").gain(0.0050)
+  , sound("dust").gain(0.0200).lpf(13500)
+  , sound("pink").gain(0.0050).lpf(15000),
  
 ).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(8)
 
