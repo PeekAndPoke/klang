@@ -21,7 +21,7 @@ import * from "sprudel"
 
 let wait = 16
 let keep = 32 * 6
-let notch = sine.range(1 * 440, 3 * 440).slow(16) // 440, 880, 1560 ?
+let notch = sine.range(1 * 300, 3 * 300).slow(32)
 
 stack(
   // Claps --------------------------------------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ stack(
     .superimpose(
       x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
-    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.75).body("glass").vowel("e i e i a".slow(20)).vowelMix(0.20)
+    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.5).body("glass").vowel("e i e i a".slow(20)).vowelMix(0.20)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.0)).vibrato("0.51".add(perlin.div(20))).vibmod(0.06)
         .crush("1.95".add(berlin2.mul(0.75).slow(4))).crushos(2).lpf(5.75 * 440).hpf(300).postgain(0.45)
