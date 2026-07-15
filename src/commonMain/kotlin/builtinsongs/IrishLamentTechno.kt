@@ -46,13 +46,14 @@ import * from "sprudel"
 let kick = s("bd!4").gain(1.0).hpf(60).adsr("0.06:0.20:0.2:0.02").orbit(0)
 let hat  = s("hh!8").gain(0.375).hpf(6000).adsr("0.001:0.04:0.0:0.04").orbit(1)
 let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
-    .sound("supersaw").spread(0.1).unison(15).legato(0.7).hpf(160).lpf(sine.range(450, 1000).slow(7)).lpe(1.5).lpq(1.5).lpadsr("0.005:0.08:0.7:0.05")
-    .adsr("0.01:0.2:0.4:0.05").distort("0.5:gentle:2").postgain(0.22).warmth(0.05).body("membrane")
-    .gain(0.75).orbit(2) // . solo()
+  .sound("supersaw").spread(0.1).unison(15).legato(0.7).hpf(160).lpf(sine.range(450, 1000).slow(7))
+  .lpe(1.5).lpq(1.5).lpadsr("0.005:0.08:0.7:0.05").adsr("0.01:0.2:0.4:0.05")
+  .gain(0.75).distort("0.5:gentle:2").postgain(0.22).warmth(0.05).body("membrane").orbit(2) // . solo()
 let core = stack(kick, hat, bass)
 
 // ── Build layers ────────────────────────────────────────────────────
-let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02").hpf(70).lpf(180).lpe(2).gain(0.42).orbit(3)
+let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02")
+  .hpf(70).lpf(180).lpe(2).gain(0.42).orbit(3)
 let clap = s("~ cp ~ cp").gain(0.22).hpf(600).orbit(1).room(0.2).rsize(3)
 let oh   = s("[~ ~ ~ oh]!4").gain(0.20).hpf(4000).orbit(1)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.4).hpf(800).orbit(1)
@@ -171,7 +172,7 @@ let quietBuild = stack(
 // in a syncopated rhythm, drifting slowly across the stereo field.
 let darkBuild = stack(
     // Kick — full power, slightly longer body
-    s("bd:1!4").gain(1.1).hpf(50).adsr("0.03:0.3:0.5:0.2").orbit(0).distort(0.1),
+    s("bd:1!4").gain(1.1).hpf(35).adsr("0.03:0.3:0.5:0.2").orbit(0).distort(0.1),
     // Hat
     s("hh!8").gain(0.50).hpf(6000).adsr("0.001:0.04:0.0:0.04").orbit(2),
     // Clap
@@ -199,7 +200,7 @@ let darkBuild = stack(
         .pan(0.3).superimpose(pan(0.7))
         .superimpose(transpose("<-12 0 12 0>/8").gain(0.2).pan(0.1), transpose("<0 12 24 12>/8").gain(saw.range(0.1, 0.2).slow(64)).pan(0.8))
         .phaser(1/11).phaserdepth(0.25).phasercenter(3500).phasersweep(500)
-        .hpf(300).lpf(saw.range(3500, 5000).slow(64)).lpe(1.2).lpq(2.5).adsr("0.005:0.35:0.5:0.12")
+        .hpf(300).lpf(saw.range(3500, 4500).slow(64)).lpe(1.2).lpq(2.5).adsr("0.005:0.35:0.5:0.12")
         .orbit(5),
     // Syncopated pad stabs — keep the 90s rhythm but darken with section
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.3)))
@@ -261,5 +262,6 @@ arrange(
 
 
 
+    
     """,
 )
