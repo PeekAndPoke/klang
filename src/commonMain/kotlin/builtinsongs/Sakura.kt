@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val sakuraSong = Song(
     id = "${BuiltInSongs.PREFIX}-synthkura",
     title = "Die Kirschblüte",
-    rpm = 32.0,
+    rpm = 30.0,
     icon = "globe asia",
     code = """
 import * from "stdlib"
@@ -65,8 +65,8 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body("wood")
-    .superimpose(fast(2).velocity(0.15).pan(0.3).superimpose(pan(0.7)))
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body("mahogany")
+    .superimpose(fast(2).velocity(0.1).pan(0.3).superimpose(pan(0.7)))
 
   // Shakuhachi
   ,note(`
@@ -77,7 +77,7 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).orbit(1).sound(shaku).slow(14).gain(0.30).pan(perlin.range(0.3, 0.5).slow(24)).body("glass")
+  `).orbit(1).sound(shaku).slow(14).gain(0.28).pan(perlin.range(0.3, 0.5).slow(24)).body("glass")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
@@ -91,11 +91,11 @@ stack(
 
   ,stack(
     // Root
-    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.4).hpf(140)
+    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.4).hpf(120)
     // Third (minor/major character)
-    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.7).hpf(180)
+    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.7).hpf(160)
     // Fifth
-    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.2).hpf(220)
+    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.225).pan(0.2).hpf(200)
     // Octave
     ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.15).pan(0.8).hpf(600)
     // High third

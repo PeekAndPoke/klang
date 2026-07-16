@@ -52,7 +52,7 @@ stack(
     ).lpf(4.0 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.5).body("glass").vowel("e i e i a".slow(20)).vowelMix(0.30)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.0)).vibrato("0.51".add(perlin.div(20))).vibmod(0.06)
-        .crush("1.95".add(berlin2.mul(0.75).slow(4))).crushos(2).lpf(5.75 * 440).hpf(180).postgain(0.45)
+        .crush("1.95".add(berlin2.mul(0.75).slow(4))).crushos(2).lpf(5.75 * 440).hpf(240).postgain(0.45)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))

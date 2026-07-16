@@ -39,6 +39,7 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                 ui.two.column.stackable.doubling.cards {
                     renderStrudelCard()
                     renderTidalCard()
+                    renderMusicCodersCard()
                     renderFiltersCard()
                     renderDspAlgorithmsCard()
                     renderAcousticsCard()
@@ -124,6 +125,36 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                     noui.item {
                         a(href = "https://github.com/tidalcycles/Tidal", target = "_blank") { +"Tidal on GitHub" }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.renderMusicCodersCard() {
+        noui.card {
+            noui.content {
+                ui.header H2 { +"Music Coders" }
+
+                ui.divider()
+
+                MarkdownDisplay(
+                    """
+                        The people who make live coding visible — and got this whole journey started:
+
+                        - **[Switch Angel](https://www.youtube.com/@Switch-Angel)** — it was a YouTube short
+                        of a Strudel live coding session that first sparked the curiosity behind Klang.
+                        Without that video, this project would not exist. On top of that, the majority of
+                        the samples in the default drum kit ([uzu-drumkit](https://github.com/tidalcycles/uzu-drumkit))
+                        were contributed by her — the kicks, snares, and hats you hear first are her sounds.
+                    """.trimIndent()
+                )
+
+                ui.divider()
+
+                ui.list {
+                    noui.item {
+                        a(href = "https://www.youtube.com/@Switch-Angel", target = "_blank") { +"Switch Angel on YouTube" }
                     }
                 }
             }
@@ -326,7 +357,8 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         Huge thanks to everyone who created, curated, and hosts them:
 
                         - **[TidalCycles Dirt-Samples](https://github.com/tidalcycles/Dirt-Samples)** — the classic live-coding sample collection
-                        - **[uzu-drumkit](https://github.com/tidalcycles/uzu-drumkit)** — the default drum kit
+                        - **[uzu-drumkit](https://github.com/tidalcycles/uzu-drumkit)** — the default drum kit,
+                        with most samples contributed by [Switch Angel](https://www.youtube.com/@Switch-Angel)
                         - **Tidal Drum Machines** — emulation samples of classic drum machines
                         - **[Versilian Community Sample Library (VCSL)](https://github.com/sgossner/VCSL)** by Versilian Studios — CC0 acoustic-instrument samples
                         - **[dough-samples](https://github.com/felixroos/dough-samples)** by Felix Roos — hosting and curation of the bundled sample sets (Dirt-Samples, VCSL, mridangam, piano, drum machines)
