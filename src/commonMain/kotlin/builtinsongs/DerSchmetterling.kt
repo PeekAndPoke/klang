@@ -39,7 +39,7 @@ stack(                                                                          
       [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 2]!4]> [-5 -6] [-7,-14] [-5 <-1 -4 -4 1>]]>/4`)
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)) //  . solo()
-    .sound("supersaw").unison(9).spread(0.06).gain(0.75).postgain(0.115).distort("1:tube:8").distort(0.80)    
+    .sound("supersaw").unison(7).spread(0.06).gain(0.75).postgain(0.115).distort("1:tube:8").distort(0.85)    
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.81 0.72>".fast(2)).adsr("0.005:2.7:0.0:0.032").lpadsr("0.005:0.8:0.0:0.011")    
     .hpf("<550!16 450!16 550!16 700!16>").lpf("3200".add(saw.range(1, 0).pow(3.0).mul(400)).slow(8)).lpe(1.0).lpq(1.4)
     .coarse(2).coarseos(8).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3050).lpf(5000).lpq(0.7).postgain(0.025))
@@ -48,17 +48,17 @@ stack(                                                                          
   n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
     .orbit(2).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2) // . mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
-    .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort("1:tube:8").distort(0.85)
+    .sound("supersaw").unison(5).spread(0.09).gain(0.75).postgain(0.11).distort("1:tube:8").distort(0.90)
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.81 0.72>".fast(2)).adsr("0.005:2.7:0.0:0.032").lpadsr("0.005:0.8:0.0:0.01")    
-    .hpf(120).lpf(2100).lpe(1.0).lpq(1.3)
+    .hpf(115).lpf(2100).lpe(1.0).lpq(1.3)
     .coarse(2).coarseos(8).pan(0.3).superimpose(
       x => x.pan(0.7),
       x => x.postgain(0.10).hpf(360).lpf(3050).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
-    ).superimpose(hpf(3000).lpf(4800).lpq(0.7).postgain(0.025)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("rosewood").bodyMix(0.2)
+    ).superimpose(hpf(3000).lpf(4800).lpq(0.7).postgain(0.02)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("rosewood").bodyMix(0.2)
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.94 0.96 0.94".fast(2))  // . mute()
-    .orbit(3).scale("e1:minor").sound("saw").gain(0.5).distort("0.20:soft:2").postgain(0.22).clip(0.65)
+    .orbit(3).scale("e1:minor").sound("saw").gain(0.5).distort("0.20:soft:2").postgain(0.23).clip(0.65)
     .adsr("0.007:4.0:0.0:0.015").lpadsr("0.007:0.075:0.0:0.01").hpf(60).lpf(200).lpe(25).lpq(0.8)  //  .solo()
     .pan(0.50).mute("<0!128 1!32>") // .pipeline("pedal")
   , // Drums
