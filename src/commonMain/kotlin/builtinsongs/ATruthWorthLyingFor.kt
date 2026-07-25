@@ -59,13 +59,13 @@ stack( // Gitarre! -------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(1).fast(4).scale("C3:chromatic").hpf(600).lpf(3100).lpe(1.5).lpq(1.50).clip(0.96) // .solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.05).postgain(0.080).body("mahogany").bodyMix(0.5)
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.05).postgain(0.090).body("mahogany").bodyMix(0.5)
     .transpose(tp).pan(0.25).superimpose(pan(0.75)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0  8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(2).fast(4).scale("C4:chromatic").hpf(1200).lpf(3200).lpe(1.5).lpq(1.50).clip(0.96).late(0.001)  // . solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6200).oscp("spread", 0.04).postgain(0.065).body("oak").bodyMix(0.5)
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6200).oscp("spread", 0.04).postgain(0.075).body("oak").bodyMix(0.5)
     .transpose(tp).pan(0.10).superimpose(pan(0.90)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
