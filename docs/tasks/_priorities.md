@@ -2,9 +2,9 @@
 
 > **Draft for review.** Two axes here, kept separate on purpose:
 > - **Importance** — the release bar: **MUST** (non-negotiable) · **SHOULD** (strongly wanted, do
-    > before nice-to-haves) · **NICE** (opportunistic / polish).
+>   before nice-to-haves) · **NICE** (opportunistic / polish).
 > - **Sequence** — *when* in Q3 (`../history/2026-Q3.md`): Act 1 finish the engine → Act 2 the quarter
-    > of tutorials → a lower track. "Sound first" breaks ties.
+>   of tutorials → a lower track. "Sound first" breaks ties.
 >
 > The two don't always line up — where they diverge it's flagged ⚠️ for us to resolve together.
 >
@@ -120,6 +120,10 @@ The release-defining set, regardless of when they're sequenced:
 - **NICE · ⚪ far-future** — **High-performance native/Wasm backend** — [
   `future/high-performance-audio-backend.md`](future/high-performance-audio-backend.md) — closing the gap to native
   DAWs; explicitly parked until *after* launch ("sound first"; hard performance is late-game).
+- **NICE · ⚪ far-future** — **Federated song sharing** — [
+  `future/federated-song-sharing.md`](future/federated-song-sharing.md) — multi-server imports
+  (`klang.art:user/song@v1.0`), immutable version tags + content addressing, per-server blob storage; captured
+  2026-08-01, post-launch by design.
 
 ---
 
