@@ -19,7 +19,7 @@ internal val derSchmetterlingSong = Song(
 import * from "stdlib"                                                                                                                         //.
 import * from "sprudel"                                                                                                                       ////.
                                                                                                                                              //  //.
-let feel = 20.0    // 0.0 .. ice | 100.0 .. fire                                                                                            //    //.
+let feel = 30.0    // 0.0 .. ice | 100.0 .. fire                                                                                            //    //.
                                                                                                                                            //      //.
                                                                                                                                           //        //.
 stack(                                                                                                                       //////////////          //////////////.
@@ -50,7 +50,7 @@ stack(                                                                          
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
     .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.115).distort("1:tube:4").distort(0.85)
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.81 0.72>".fast(2)).adsr("0.005:3.0:0.0:0.031").lpadsr("0.005:0.6:0.0:0.01")    
-    .hpf(110).lpf(2100).lpe(1.0).lpq(1.3)
+    .hpf(105).lpf(2100).lpe(1.0).lpq(1.3)
     .coarse(2).coarseos(4).pan(0.3).superimpose(
       x => x.pan(0.7),
       x => x.postgain(0.115).hpf(260).lpf(3050).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
@@ -58,8 +58,8 @@ stack(                                                                          
     ).superimpose(hpf(3000).lpf(5500).lpq(0.7).postgain(0.02)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("rosewood").bodyMix(0.2)
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.94 0.96 0.94".fast(2))  // . mute()
-    .orbit(3).scale("e1:minor").sound("saw").gain(0.5).distort("0.18:soft:4").postgain(0.20).clip(0.65)
-    .adsr("0.015:4.0:0.0:0.015").lpadsr("0.007:0.075:0.0:0.01").hpf(55).lpf(200).lpe(25).lpq(0.8)  //  .solo()
+    .orbit(3).scale("e1:minor").sound("saw").gain(0.5).distort("0.20:soft:4").postgain(0.20).clip(0.65)
+    .adsr("0.015:4.0:0.0:0.015").lpadsr("0.007:0.075:0.0:0.01").hpf(50).lpf(200).lpe(25).lpq(0.8)  //  .solo()
     .pan(0.20).superimpose(pan(0.80)).mute("<0!128 1!32>") // .pipeline("pedal")
   , // Drums
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").mute("<0!128 1!32>")  // . solo()
@@ -72,7 +72,7 @@ stack(                                                                          
   sound("brown!8").orbit(6).coarse(sine.range(8, 64).slow(16)).gain(0.50).hpf(4000)
     .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.2:0.4:0.02")  // .solo(),
   // Master
-  ,master(Master.of(MasterFx.reverb().wet(0.05).roomSize(5), MasterFx.gain(2.5), MasterFx.limiter()))
+  ,master(Master.of(MasterFx.reverb().wet(0.025).damp(0.9).roomSize(3), MasterFx.gain(2.5), MasterFx.limiter()))
 ).analog(feel).room("0.1:8:0.12:12000").seed(timeOfDay.mul(60*60*24))
 
 
