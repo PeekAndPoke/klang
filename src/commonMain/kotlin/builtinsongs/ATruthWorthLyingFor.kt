@@ -23,7 +23,7 @@ let drive = 4 // <--- Do not put 11
 let feel  = 10
 
 let stay = 64
-let tp = "[0 1 2 3 -2 -10 -3 4]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
+let tp = "[0 1 3 -2 -4 -10 -3 2]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
 
 let guitar = (() => {
 
@@ -79,7 +79,7 @@ stack( // Gitarre! -------------------------------------------------------------
   cat(n(`<[0]                                     [[0]!3 ~                     ~!12]
           [0]                                     [[[8]@12     [8]@4]          [10]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
-          [0!11 5 8 8 [8] [7]]                    [[[8]!4 [8]!3 [10]]          [10]*8]>`).repeat(2),
+          [0!11 5 8 8 [8] [7]]                    [[7 8 8 8 [8]!3 [10]]          [10]*8]>`).repeat(2),
   ).orbit(4).scale("C2:chromatic").clip(0.95).sound("saw").gain(1.2).distort("0.8:tube:4").analog(1).postgain(0.19)
     .adsr("0.005:0.5:0.2:0.025").lpadsr("0.005:0.1:0.0:0.075").hpf(70).lpf(180).lpe(20.0).lpq(1).velocity("<[1.0 0.95 0.975 0.95]>")
     .pan(0.55).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()

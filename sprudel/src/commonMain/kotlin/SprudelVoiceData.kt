@@ -11,6 +11,8 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.MasterDsl
+import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -137,6 +139,20 @@ data class SprudelVoiceData(
      * stage chain — the latter gets denormalized to a synthetic name in [toVoiceData]. Unknown/null → modern.
      */
     var pipeline: PipelineValue?,
+
+    /**
+     * The master chain this event switches the playback's bus to, from its start time onward.
+     * Either a [MasterValue.Named] (a pre-registered custom) or a [MasterValue.Dsl] inlining a
+     * [MasterDsl] — the latter is denormalized to a synthetic name in [toVoiceData]. Null = no change.
+     */
+    var master: MasterValue?,
+
+    /**
+     * Control-only event: carries engine-level data (a [master] swap) and is never synthesized.
+     * Set by the top-level `master(...)` carrier; a `note("c3").master(...)` leaves it null so the
+     * note still sounds.
+     */
+    var control: Boolean?,
 
     // Custom value
     var value: SprudelVoiceValue?,
@@ -703,6 +719,11 @@ data class SprudelVoiceData(
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
             pipeline = other.pipeline ?: pipeline,
+            master = other.master ?: master,
+            // control is NOT merged (like patternId): it says "this event makes no sound", which is
+            // a property of the carrier itself. Taking it from `other` would let a merged-in master
+            // carrier silence real notes.
+            control = control,
             value = other.value ?: value
         )
     }
@@ -749,6 +770,8 @@ data class SprudelVoiceData(
         solo = other.solo ?: solo
         // patternId intentionally preserved (never taken from other) — matches merge()
         pipeline = other.pipeline ?: pipeline
+        master = other.master ?: master
+        // control intentionally NOT merged — see merge()
         value = other.value ?: value
     }
 
@@ -791,6 +814,13 @@ data class SprudelVoiceData(
             null -> null
             is PipelineValue.Named -> p.name
             is PipelineValue.Dsl -> p.pipeline.uniqueId()
+        }
+
+        // Same denormalization for the master chain reference.
+        val masterName: String? = when (val m = master) {
+            null -> null
+            is MasterValue.Named -> m.name
+            is MasterValue.Dsl -> m.master.uniqueId()
         }
 
         // Build filter list from flat fields, each with its own resonance
@@ -1011,6 +1041,8 @@ data class SprudelVoiceData(
             solo = solo,
             sourceId = patternId,
             pipeline = pipelineName,
+            master = masterName,
+            control = control,
         )
     }
 
@@ -1381,6 +1413,8 @@ internal val blueprint = SprudelVoiceData(
     solo = null,
     patternId = null,
     pipeline = null,
+    master = null,
+    control = null,
     value = null,
 )
 

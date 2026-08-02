@@ -105,10 +105,12 @@ stack(
   ).orbit(4).coarse(3).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
 
   // Noise
-  , sound("dust").gain(0.0200).lpf(13500)
-  , sound("pink").gain(0.0050).lpf(15000),
+  , sound("dust").gain(0.0250).vel(sine.range(0.750, 1.0).slow(21)).lpf(13500)
+  , sound("pink").gain(0.0075).vel(sine.range(0.625, 1.0).slow(13)).lpf(15000)
+  , sound("brown").gain(0.0125).vel(sine.range(0.500, 1.0).slow(8)).lpf(15000)
  
 ).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(8)
+
 
 
 

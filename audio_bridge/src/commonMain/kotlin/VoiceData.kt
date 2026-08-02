@@ -148,6 +148,30 @@ data class VoiceData(
      * Unknown or null values fall back to modern.
      */
     val pipeline: String? = null,
+
+    /**
+     * Master-chain name — selects the [MasterDsl] applied to this playback's bus from this event's
+     * start time onward (last writer wins per playback).
+     *
+     * Resolved from the authoring-layer `MasterValue` at the wire boundary: an inline chain
+     * denormalizes to its `MasterDsl.uniqueId()`, a named reference passes through. Null means
+     * "no change" — the playback keeps whatever master it already had.
+     *
+     * A master reference rides *any* event, so `note("c3").master(…)` swaps the master at that
+     * note's onset and still sounds the note. An event that carries *only* a master is marked
+     * [control].
+     */
+    val master: String? = null,
+
+    /**
+     * Control-only event: carries engine/bus configuration (e.g. [master]) and is **never
+     * synthesized**.
+     *
+     * The scheduler consumes such an event at its start time and drops it before voice creation.
+     * The flag has to be explicit: a voice with `sound == null` is *not* silent — the ignitor
+     * registry resolves a null sound to the default oscillator.
+     */
+    val control: Boolean? = null,
 ) {
     companion object {
         val empty = VoiceData(

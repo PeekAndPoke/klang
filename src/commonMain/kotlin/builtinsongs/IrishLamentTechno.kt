@@ -71,7 +71,7 @@ let leadE = leadStyle(note(`<[a5 e5 d6 c6] [a5 f5 d5 c5] [f5  d5 g5  bb4] [e5 g5
 
 // ── Pad ─────────────────────────────────────────────────────────────
 let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing(rank = sine.range(0, 1.9).fast(7).add(perlin.range(0, 0.3)))
-    .sound("superpulse").unison(3).spread(0.20).hpf(250).lpf("1800").lpq(1).lpe(1.2).adsr("1.5:0.5:0.3:1.0").legato(1.4)
+    .sound("superpulse").unison(3).spread(0.20).hpf(250).lpf("1650").lpq(1).lpe(1.2).adsr("1.5:0.5:0.3:1.0").legato(1.4)
     .pan(0.3).superimpose(pan(0.2).transpose(-12), pan(0.8).transpose(12).velocity(0.9))
     .phaser(1/6).phaserdepth(saw.range(0.3, 0.6).slow(16)).phasersweep(900).phasercenter(1400)
     .gain(0.065).orbit(5).room(0.4).rsize(6) //  .solo()
@@ -207,7 +207,7 @@ let darkBuild = stack(
         .sound("superpulse").unison(2).spread(0.05).pan(0.2).superimpose(pan(0.8))
         .hpf(400).lpf(saw.range(1500, 2500).slow(32)).lpenv(3).warmth(0.5)
         .adsr("0.005:0.1:0.25:0.1").legato(0.7)
-        .gain(0.10).orbit(6).room(0.4).rsize(6),
+        .gain(0.11).orbit(6).room(0.4).rsize(6),
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift
     note("<a5 d6 bb5 c6 g5 f5 a5 d6>")
         .sound("supersine").unison(8).spread(0.15).adsr("0.5:0.3:0.5:0.5")
@@ -246,15 +246,12 @@ arrange(
   [16, finale],       // 64-79: + leadE (loops once) + pad + 16-cycle wind fade
   [4, hit],           // 80-83: unison hit lands on beat 1 right as wind ends
   [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
-  [64, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
+  [80, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
 ).compressor("-10:2:6:0.01:0.1")
  .room(0.15).rsize(6).analog(2.0)
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing
 // Composed by: Claude, Motör, peekandpoke
-
-
-
 
 
 

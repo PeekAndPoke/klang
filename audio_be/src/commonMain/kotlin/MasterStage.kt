@@ -20,17 +20,38 @@ class MasterStage(
     sampleRate: Int,
     private val blockFrames: Int,
 ) {
+    /**
+     * The house limiter character. Also the defaults of the *opt-in* `MasterStageDsl.Limiter`
+     * stage (a user-authored master chain) — kept in sync by `MasterDefaultsSyncSpec`.
+     */
+    companion object {
+        /** Ceiling at -1 dB. */
+        const val LIMITER_THRESHOLD_DB: Double = -1.0
+
+        /** Brickwall ratio. */
+        const val LIMITER_RATIO: Double = 20.0
+
+        /**
+         * 2 dB soft knee — 2026-04-30 fix for britzeling on heavily-distorted content.
+         * With kneeDb=0 the gain curve had a C¹ kink at the threshold corner; every
+         * envelope crossing of -1 dBFS injected high-order harmonics at audio rate.
+         * The 2 dB knee makes the corner smooth without changing the brickwall character.
+         */
+        const val LIMITER_KNEE_DB: Double = 2.0
+
+        /** 1 ms allows transients to retain punch before clamping. */
+        const val LIMITER_ATTACK_SECONDS: Double = 0.001
+
+        const val LIMITER_RELEASE_SECONDS: Double = 0.1
+    }
+
     private val limiter = Compressor(
         sampleRate = sampleRate,
-        thresholdDb = -1.0,    // Ceiling at -1dB
-        ratio = 20.0,          // Brickwall ratio
-        // 2 dB soft knee — 2026-04-30 fix for britzeling on heavily-distorted content.
-        // With kneeDb=0 the gain curve had a C¹ kink at the threshold corner; every
-        // envelope crossing of -1 dBFS injected high-order harmonics at audio rate.
-        // The 2 dB knee makes the corner smooth without changing the brickwall character.
-        kneeDb = 2.0,
-        attackSeconds = 0.001, // 1ms allows transients to retain punch before clamping
-        releaseSeconds = 0.1,
+        thresholdDb = LIMITER_THRESHOLD_DB,
+        ratio = LIMITER_RATIO,
+        kneeDb = LIMITER_KNEE_DB,
+        attackSeconds = LIMITER_ATTACK_SECONDS,
+        releaseSeconds = LIMITER_RELEASE_SECONDS,
     )
 
     // Master-out DC blockers. ~7 Hz cutoff (coefficient = 0.999 at 44.1k / ~7.6 Hz at 48k).

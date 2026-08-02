@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
+import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -65,6 +66,7 @@ class KlangOfflineRenderer(
         )
         val ignitorRegistry = renderer.ignitorRegistry
         val pipelineRegistry = renderer.pipelineRegistry
+        val masterRegistry = renderer.masterRegistry
         val voiceScheduler = renderer.voices
 
         // Register this render's custom ignitors on top of the built-in defaults.
@@ -107,6 +109,12 @@ class KlangOfflineRenderer(
             .map { it.pipeline }
             .filterIsInstance<PipelineValue.Dsl>()
             .forEach { pipelineRegistry.register(it.pipeline.uniqueId(), it.pipeline) }
+
+        // Same for inline masters — so an offline render is as faithful as live playback.
+        rawEvents.asSequence()
+            .map { it.master }
+            .filterIsInstance<MasterValue.Dsl>()
+            .forEach { masterRegistry.register(it.master.uniqueId(), it.master) }
 
         val events = rawEvents.map { CachedEvent(it.startCycles, it.durationCycles, it.toVoiceData()) }
 

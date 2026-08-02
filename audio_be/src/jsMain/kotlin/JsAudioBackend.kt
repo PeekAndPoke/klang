@@ -174,6 +174,7 @@ class JsAudioBackend(
                         is KlangCommLink.Cmd.ClearScheduled,
                         is KlangCommLink.Cmd.RegisterIgnitor,
                         is KlangCommLink.Cmd.RegisterPipeline,
+                        is KlangCommLink.Cmd.RegisterMaster,
                         is KlangCommLink.Cmd.ReplaceVoices,
                         is KlangCommLink.Cmd.ScheduleVoice,
                         is KlangCommLink.Cmd.ScheduleVoices,

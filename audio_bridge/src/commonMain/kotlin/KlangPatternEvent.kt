@@ -44,6 +44,16 @@ interface KlangPatternEvent {
      */
     val pipeline: PipelineValue? get() = null
 
+    /**
+     * The master chain this event references, if any. Default `null` for pattern types that don't
+     * carry [MasterValue]. Pattern languages that may carry an inline master (e.g. sprudel) override
+     * to expose the event's [MasterValue].
+     *
+     * Used by the playback's wire-emission step to pre-register inline masters with the backend before
+     * events that reference them are scheduled. Mirror of [pipeline].
+     */
+    val master: MasterValue? get() = null
+
     /** Convert to engine-level voice data. */
     fun toVoiceData(): VoiceData
 }

@@ -9,13 +9,14 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
+import io.peekandpoke.klang.audio_bridge.MasterDsl
+import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_engine.KlangPlaybackController.Companion.MIN_RPM
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
@@ -60,10 +61,14 @@ internal class KlangPlaybackController(
     // lives on KlangPlayer; this mirrors the BE's per-PlaybackEngine registry forks.
     private val ignitors = IgnitorRegistry(sendControl = sendControl, playbackId = playbackId)
     private val pipelines = PipelineRegistry(sendControl = sendControl, playbackId = playbackId)
+    private val masters = MasterRegistry(sendControl = sendControl, playbackId = playbackId)
     private val registerIgnitor: (IgnitorDsl) -> String = ignitors::registerOrLookup
 
     /** Announce an inline pipeline DSL to this playback's backend (awaiting the `.pipeline(dsl)` app path). */
     fun registerPipeline(dsl: PipelineDsl): String = pipelines.registerOrLookup(dsl)
+
+    /** Announce an inline master DSL to this playback's backend. */
+    fun registerMaster(dsl: MasterDsl): String = masters.registerOrLookup(dsl)
 
     companion object {
         /**
@@ -390,6 +395,13 @@ internal class KlangPlaybackController(
             .filterIsInstance<PipelineValue.Dsl>()
             .forEach { registerPipeline(it.pipeline) }
 
+        // Same for inline masters: a `master(…)` event re-emits every cycle, but the registry only
+        // announces each structurally-unique chain once (see MasterRegistry).
+        events.asSequence()
+            .map { it.master }
+            .filterIsInstance<MasterValue.Dsl>()
+            .forEach { registerMaster(it.master) }
+
         // Transform to ScheduledVoice using absolute time from KlangTime epoch
         val secPerCycle = 1.0 / cyclesPerSecond
         val playbackStartTimeSec = startTimeMs / 1000.0
@@ -412,15 +424,18 @@ internal class KlangPlaybackController(
             // the global IgnitorDsl.uniqueId() map (pre-registered above).
             val voiceData = event.toVoiceData()
 
-            // Collect signal event
-            signalEvents.add(
-                KlangPlaybackSignal.VoicesScheduled.VoiceEvent(
-                    startTime = absoluteStartTime + latencyOffsetSec,
-                    endTime = absoluteEndTime + latencyOffsetSec,
-                    data = voiceData,
-                    sourceLocations = event.sourceLocations,
+            // Collect signal event — control-only events (a `master(…)` carrier) are engine
+            // configuration, not notes: they must not show up as phantom voices in the UI.
+            if (voiceData.control != true) {
+                signalEvents.add(
+                    KlangPlaybackSignal.VoicesScheduled.VoiceEvent(
+                        startTime = absoluteStartTime + latencyOffsetSec,
+                        endTime = absoluteEndTime + latencyOffsetSec,
+                        data = voiceData,
+                        sourceLocations = event.sourceLocations,
+                    )
                 )
-            )
+            }
 
             ScheduledVoice(
                 playbackId = playbackId,

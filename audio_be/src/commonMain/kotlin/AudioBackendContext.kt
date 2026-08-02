@@ -8,6 +8,8 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
+import io.peekandpoke.klang.audio_be.master.MasterBus
+import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
@@ -29,6 +31,8 @@ class AudioBackendContext(
     /** Parent ignitor registry — each engine's scheduler forks it per playback. */
     val ignitorRegistry: IgnitorRegistry,
     val pipelineRegistry: PipelineRegistry,
+    /** Parent master registry — each engine's [MasterBus] forks it per playback. */
+    val masterRegistry: MasterRegistry,
     /** The single audio timeline (read-only here; written by the main loop via [BackendClock]). */
     val clock: RenderClock,
     /** Wall clock in ms — for render-headroom measurement + FE drift reporting. */
@@ -55,6 +59,7 @@ class AudioBackendContext(
             sampleStore = SampleStore(commLink),
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
             pipelineRegistry = PipelineRegistry(),
+            masterRegistry = MasterRegistry(),
             clock = clock,
             performanceTimeMs = performanceTimeMs,
         )

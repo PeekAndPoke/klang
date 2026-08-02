@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -86,6 +87,19 @@ class KlangCommLink(capacity: Int = 8192) {
             override val playbackId: String,
             val name: String,
             val dsl: PipelineDsl,
+        ) : Cmd
+
+        /**
+         * Registers a custom MasterDsl in the backend's master registry.
+         *
+         * Sent once per unique chain, before any voice referencing [name] is scheduled — the same
+         * send-once contract as [RegisterIgnitor] / [RegisterPipeline].
+         */
+        @WireName("register-master")
+        data class RegisterMaster(
+            override val playbackId: String,
+            val name: String,
+            val dsl: MasterDsl,
         ) : Cmd
 
         sealed interface Sample : Cmd {

@@ -155,19 +155,21 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 
 ## Entry Points
 
-| Function                | Description                 | Example                              |
-|-------------------------|-----------------------------|--------------------------------------|
-| `sound(pat)` / `s(pat)` | Play samples/synths by name | `s("bd sd hh cp")`                   |
-| `note(pat)`             | Play by note name           | `note("c3 e3 g3 c4")`                |
-| `n(pat)`                | Play by scale index         | `n("0 2 4 7").scale("C4:major")`     |
-| `chord(pat)`            | Play chord names            | `chord("<Am C F G>")`                |
-| `stack(p1, p2, ...)`    | Layer simultaneously        | `stack(s("bd sd"), s("hh*4"))`       |
-| `cat(p1, p2, ...)`      | Sequence across cycles      | `cat(s("bd sd"), s("cp cp"))`        |
-| `fastcat(p1, p2, ...)`  | Sequence within one cycle   | `fastcat(s("bd"), s("sd"))`          |
-| `arrange([n,p], ...)`   | Timed sections              | `arrange([4, melody], [2, silence])` |
-| `silence` / `rest`      | Empty pattern               | `arrange([4, melody], [4, silence])` |
-| `pure(value)`           | Constant pattern            | `pure(1/8).div(cps)`                 |
-| `seq(values...)`        | Sequence from values        | `seq("c3", "e3", "g3")`              |
+| Function                   | Description                                                                                                      | Example                                                                        |
+|----------------------------|------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| `sound(pat)` / `s(pat)`    | Play samples/synths by name                                                                                      | `s("bd sd hh cp")`                                                             |
+| `note(pat)`                | Play by note name                                                                                                | `note("c3 e3 g3 c4")`                                                          |
+| `n(pat)`                   | Play by scale index                                                                                              | `n("0 2 4 7").scale("C4:major")`                                               |
+| `chord(pat)`               | Play chord names                                                                                                 | `chord("<Am C F G>")`                                                          |
+| `stack(p1, p2, ...)`       | Layer simultaneously                                                                                             | `stack(s("bd sd"), s("hh*4"))`                                                 |
+| `master(chain)`            | Set the song's master bus (silent control layer — put it in the `stack`)                                         | `stack(lead, bass, master(Master.of(MasterFx.gain(2.0), MasterFx.limiter())))` |
+| `master(Master.default())` | Switch the master back **off** — deleting the `master(...)` line does not, since a master means "change to this" | `master(Master.default())`                                                     |
+| `cat(p1, p2, ...)`         | Sequence across cycles                                                                                           | `cat(s("bd sd"), s("cp cp"))`                                                  |
+| `fastcat(p1, p2, ...)`     | Sequence within one cycle                                                                                        | `fastcat(s("bd"), s("sd"))`                                                    |
+| `arrange([n,p], ...)`      | Timed sections                                                                                                   | `arrange([4, melody], [2, silence])`                                           |
+| `silence` / `rest`         | Empty pattern                                                                                                    | `arrange([4, melody], [4, silence])`                                           |
+| `pure(value)`              | Constant pattern                                                                                                 | `pure(1/8).div(cps)`                                                           |
+| `seq(values...)`           | Sequence from values                                                                                             | `seq("c3", "e3", "g3")`                                                        |
 
 ---
 
@@ -184,6 +186,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > |-------|---------|
 > | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delay` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserdepth`/`phasercenter`/`phasersweep`), `compressor`, ducking |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bandf`/`notchf` (+ their `*env`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+> | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master.of(...))` with `MasterFx.gain` (make-up level), `MasterFx.limiter`, `MasterFx.reverb`, `MasterFx.delay` |
 >
 > Example — two guitars that each need their **own** wood body must be on separate orbits:
 > ```javascript
