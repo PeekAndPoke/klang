@@ -47,5 +47,9 @@ landed; the authoring surface didn't.
 - Effects + hardcoded order: `audio_be/.../cylinders/katalyst/`, `Cylinder.kt:68`.
 - Prior design (Phase 4 Katalyzer): archived `../tasks-archive/2026-06/20260630-engine-dsl-design-record.md`.
 - Counterpart DSL work: `engine-tuning-profile.md` (Pipeline DSL finish).
-- Master stage: `per-playback-engine.md` §H / D6.
+- Master stage: `per-playback-engine.md` §H / D6 — **and `master-dsl.md` (2026-08-02) is the pattern to follow**: it
+  sets both the application path (in-pattern, registration + id-on-voice)
+  AND the reuse rule (thin shells over the shared `audio_be/effects/` DSP classes; wire stages as
+  `sealed @WireName` variants). Katalyst DSL and Master DSL share one effect vocabulary, different hosts (orbit bus /
+  master bus).
 - Memory: `project_katalyzers`, `project_engine_naming`, `pipeline_stage_design`, `osc_ignitor_misnamed`.

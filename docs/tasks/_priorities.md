@@ -27,9 +27,11 @@ The release-defining set, regardless of when they're sequenced:
 
 ## Act 1 — Finish & polish the engine
 
-1. **MUST** · **Master / loudness stage** — [`per-playback-engine.md`](per-playback-engine.md) (§H / D6) 🟡
-   Multi-engine foundation shipped in Q2; **D6** (`MasterDsl` → `Cmd.SetMaster` → `Song.master` →
-   per-engine output gain) is *the* next feature. Then richer master chain (glue/eq/drive/ceiling),
+1. **MUST** · **Master / loudness stage** — [`per-playback-engine.md`](per-playback-engine.md) (§H / D6) 🟡 Multi-engine
+   foundation shipped in Q2; **D6** is *the* next feature — **REVISED 2026-08-02:
+   master-in-pattern** (`master(Master()...)` rides the voice stream via the Ignitor/Pipeline registration playbook;
+   supersedes `Song.master`/`Cmd.SetMaster`; sets the Katalyst application-path precedent). **Detailed plan: [
+   `master-dsl.md`](master-dsl.md)** (parts 1–7 incl. crossfade). Then richer master chain (glue/eq/drive/ceiling),
    crossfade, metering. **Highest priority.**
 2. **MUST** · **Pipeline DSL finish** — [`engine-tuning-profile.md`](engine-tuning-profile.md) 🟡
    *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`

@@ -18,7 +18,7 @@
   (remember: no concurrent Gradle builds — KSP cache corruption).
 - Only unmerged branch: `code-blocks-with-mutator` — a stale klangblocks MVP from 2026-02. Ignore.
 
-## 2. What the last conversations were about (Jul 4 → Aug 1)
+## 2. What the last conversations were about (Jul 4 → Aug 2)
 
 Chronological digest of the final work sessions, so nothing gets lost:
 
@@ -55,6 +55,11 @@ Chronological digest of the final work sessions, so nothing gets lost:
    content-addressed blobs, tag-time flattening of transitive imports, and pull-based `@latest`. Captured (post-launch,
    sound-first) in
    [`future/federated-song-sharing.md`](future/federated-song-sharing.md).
+8. **D6 pivot + review standard (Aug 2)** — two decisions: (a) **master-in-pattern** — the D6 master path was redesigned
+   to ride the voice stream (see Step 2.1 below); detailed plan in
+   [`master-dsl.md`](master-dsl.md). (b) **New `/review-loop` standard** codified as a skill:
+   reviews loop until a clean round (fixes get re-reviewed by fresh agents), and every new test is mutation-checked
+   (mutate → red → restore). Applies to all future work, starting with D6.
 
 ## 3. Loose ends (small but easy to lose)
 
@@ -83,9 +88,13 @@ to get the ears back.
 
 **Step 2 — Act 1, finish the engine** (the Q3 "sound first" core, in order):
 
-1. **D6 thin master path** — [`per-playback-engine.md`](per-playback-engine.md) §H:
-   `Song.master` → `Cmd.SetMaster` → per-engine output gain. *The* next feature; the reason the whole multi-engine
-   foundation was built. Then richer master chain / crossfade / metering.
+1. **D6 master path** — [`per-playback-engine.md`](per-playback-engine.md) §H, **REVISED 2026-08-02:
+   master-in-pattern** — `master(Master().gain().limiter())` rides the voice stream via the Ignitor/Pipeline
+   registration playbook (rest-carrier event once per cycle;
+   `"~".slow(8).master(...)` makes it patternable → fades/endings; no `Song.master`, no
+   `Cmd.SetMaster`, no settings UI). **Detailed plan: [`master-dsl.md`](master-dsl.md).** *The*
+   next feature; the reason the whole multi-engine foundation was built. Then richer master chain / crossfade /
+   metering.
 2. **Engine tuning profile Phase 3** — [`engine-tuning-profile.md`](engine-tuning-profile.md)
    Part B (`EngineDefault` sentinel + `EngineTuning` profile, e.g. future c64/nes identities); Part A #3 (analog-drift
    carrier params) folds into it. Parts A #1/#2 are done.

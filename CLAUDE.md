@@ -1,5 +1,7 @@
 # Klang Project
 
+Enjoy the ride. Errors happen, no worries, we find them, we fix them. Der Weg ist das Ziel. Sound first!
+
 ## Available Agent
 
 | Agent                       | Trigger                                                                                                       | Description                                                                                                                                                         |
@@ -10,16 +12,17 @@
 
 Use `/skill-name` or describe what you need in natural language to invoke a skill.
 
-| Skill                    | Trigger                                                                                        | Description                                                                               |
-|--------------------------|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| `/skill-builder`         | "create a skill", "build a skill", "audit a skill"                                             | Guide skill creation, optimization, and auditing following Claude Code best practices     |
-| `/sprudel-dev-knowhow`   | "work on sprudel", "implement sprudel feature", "sprudel tests"                                | Load sprudel module architecture, critical rules, current status, and feature checklist   |
-| `/klangscript-knowhow`   | "work on klangscript", "add language feature", "klangscript parser", "klangscript interpreter" | Load klangscript context incrementally (dispatcher + targeted ref files)                  |
-| `/klangblocks-knowhow`   | "work on klangblocks", "block editor", "ast to blocks", "round-trip test", "code gen"          | Load klangblocks context incrementally (dispatcher + targeted ref files)                  |
-| `/klangaudio-knowhow`    | "work on audio", "audio engine", "voice synthesis", "effects", "sample loading", "orbits"      | Load audio subsystem context (audio_bridge / audio_be / audio_fe / audio_jsworklet)       |
-| `/code-style`            | "apply code style", "check code style", "clean up code style", "follow code conventions"       | Project code style rules (curly braces, formatting, etc.)                                 |
-| `/ultra-libs-knowhow`    | "ultra libs", "ultra.html", "ultra events", "io.peekandpoke.ultra"                             | Source reference for all `io.peekandpoke.ultra.*` modules (html, streams, common, etc.)   |
-| `/kraft-knowhow`         | "kraft", "kraft component", "kraft forms", "kraft routing", "io.peekandpoke.kraft"             | Source reference for the Kraft UI framework (components, VDom, forms, routing, etc.)      |
-| `/klang-music-writing`   | "write music", "compose", "make a beat", "create an instrument", "sound design"                | LLM-ready reference for writing sprudel patterns and designing ignitor instruments        |
-| `/klang-music-recording` | "record audio", "render to wav", "export wav", "offline render", "record.sh"                   | Offline WAV rendering pipeline: CLI commands, KlangOfflineRenderer, WavFileWriter         |
-| `/six-hats`              | "six hats", "thinking hats", "multi-perspective analysis"                                      | Run Six Thinking Hats method: 5 parallel agents (Red/Black/Yellow/Green/Blue) + synthesis |
+| Skill                    | Trigger                                                                                        | Description                                                                                               |
+|--------------------------|------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| `/skill-builder`         | "create a skill", "build a skill", "audit a skill"                                             | Guide skill creation, optimization, and auditing following Claude Code best practices                     |
+| `/sprudel-dev-knowhow`   | "work on sprudel", "implement sprudel feature", "sprudel tests"                                | Load sprudel module architecture, critical rules, current status, and feature checklist                   |
+| `/klangscript-knowhow`   | "work on klangscript", "add language feature", "klangscript parser", "klangscript interpreter" | Load klangscript context incrementally (dispatcher + targeted ref files)                                  |
+| `/klangblocks-knowhow`   | "work on klangblocks", "block editor", "ast to blocks", "round-trip test", "code gen"          | Load klangblocks context incrementally (dispatcher + targeted ref files)                                  |
+| `/klangaudio-knowhow`    | "work on audio", "audio engine", "voice synthesis", "effects", "sample loading", "orbits"      | Load audio subsystem context (audio_bridge / audio_be / audio_fe / audio_jsworklet)                       |
+| `/code-style`            | "apply code style", "check code style", "clean up code style", "follow code conventions"       | Project code style rules (curly braces, formatting, etc.)                                                 |
+| `/review-loop`           | "review this change", "code review", "review loop", "mutation check", "apply review findings"  | Review standard: reviews loop until a clean round (fixes get re-reviewed); new tests are mutation-checked |
+| `/ultra-libs-knowhow`    | "ultra libs", "ultra.html", "ultra events", "io.peekandpoke.ultra"                             | Source reference for all `io.peekandpoke.ultra.*` modules (html, streams, common, etc.)                   |
+| `/kraft-knowhow`         | "kraft", "kraft component", "kraft forms", "kraft routing", "io.peekandpoke.kraft"             | Source reference for the Kraft UI framework (components, VDom, forms, routing, etc.)                      |
+| `/klang-music-writing`   | "write music", "compose", "make a beat", "create an instrument", "sound design"                | LLM-ready reference for writing sprudel patterns and designing ignitor instruments                        |
+| `/klang-music-recording` | "record audio", "render to wav", "export wav", "offline render", "record.sh"                   | Offline WAV rendering pipeline: CLI commands, KlangOfflineRenderer, WavFileWriter                         |
+| `/six-hats`              | "six hats", "thinking hats", "multi-perspective analysis"                                      | Run Six Thinking Hats method: 5 parallel agents (Red/Black/Yellow/Green/Blue) + synthesis                 |

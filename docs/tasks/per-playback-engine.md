@@ -54,8 +54,9 @@ adopted (unnecessary). Guard: `PlaybackEngineDispatcherDiagnosticsTest`.
 
 **Remaining:**
 
-- **D6 — the thin master path** (§H): the actual original goal (`Song.master` → `Cmd.SetMaster` → per-engine
-  gain). NOT started — the natural next feature.
+- **D6 — the master path** (§H): the actual original goal. NOT started — the natural next feature. **⚠ REVISED
+  2026-08-02: master-in-pattern** — `master(Master()...)` rides the voice stream via the Ignitor/Pipeline registration
+  playbook; `Song.master`/`Cmd.SetMaster` are superseded (see the rewritten §H).
 - **D4 — cylinder eviction:** still open, now **folds into the warehouse pool** (memory
   `project_resource_warehouse_pool`) — a self-balancing pool for the 7.68 MB delay rings + cylinders that also
   kills the first-note **allocation** hiccup (the cylinder half of Open Q1). Scheduled **last**.
@@ -248,16 +249,53 @@ schedules the existing synth+sample warmup voices to JIT the path, then `cleanup
 Runtime engines allocate cylinders lazily; the JIT'd path keeps construction cheap. First-note-many-orbits
 hitch tracked in Open Q1.
 
-### H. Thin master path (Song → engine)
+### H. Master path — REVISED 2026-08-02: master-in-pattern
 
-- `audio_bridge`: `MasterDsl` (`@WireFormat`, v1 minimal: `gain: Double = 1.0`; ceiling/glue/eq later) +
-  `MasterDsl.default`.
-- `KlangCommLink.Cmd.SetMaster(playbackId, dsl: MasterDsl)` — new command (mirrors `RegisterEngine`).
-- `Song.master: MasterDsl = MasterDsl.default` (verify `klang` module can reference the bridge type).
-- Frontend: on play, send `Cmd.SetMaster(pid, song.master)` *before* the first `ScheduleVoices`
-  (playback start choreography in `KlangPlaybackController`).
-- `PlaybackEngine.renderInto` applies `master.gain` to its bus (post-`processAndMix`, pre-sum). The global
-  safety limiter stays at the final mix. UI live-edit deferred.
+> **Design revision (2026-08-02).** Master settings do NOT live outside the code — no `Song.master`,
+> no `Cmd.SetMaster`, no play choreography, no settings UI. They ride the pattern, exactly like
+> Ignitors and Pipelines. Any `Song.master` / `SetMaster` wording elsewhere in this doc is
+> superseded by this section. **Detailed implementation plan: [`master-dsl.md`](master-dsl.md)**
+> (parts 1–7 incl. the crossfade design).
+
+**The mechanism — the Ignitor/Pipeline playbook, run a third time:**
+
+1. **`MasterDsl`** (`audio_bridge`, `@WireName` trust-codec like `PipelineDsl`; v1 minimal:
+   `Master().gain(x).limiter(...)`; glue/eq/drive later) + `MasterDsl.default` == today's hardcoded master — **a song
+   without `master()` sounds exactly like today** (behavior-preserving).
+2. **Registration + caching** as for Ignitors/Pipelines: `Cmd.RegisterMaster(uniqueId, dsl)`,
+   `registerOrLookup` + send-once on the FE, per-playback registry on the BE; voices carry the
+   `masterId` only once the data is known to be registered.
+3. **Carrier**: `MasterValue.Named | Dsl` mirroring `PipelineValue` — `SprudelVoiceData.master:
+   MasterValue?` → denormalized to `VoiceData.master: String?` at the wire boundary.
+4. **Sprudel surface:**
+    - Top-level `master(Master()...)` → a **rest-carrier pattern**: one non-sounding event per cycle carrying only the
+      master reference (`"~".master(...)` under the hood). Composes into existing songs:
+      `stack(lead, bass, …, master(...))`.
+    - Mapper form for timed/patterned master: `"~".slow(8).master(...)` — master lives in musical time (fade-outs,
+      endings, per-section loudness: an *arrangement instrument*).
+5. **KlangScript**: `Master` object + `@TypeExtensions` chained config — same template as
+   `Pipeline`/`Stage`.
+6. **Backend application**: master events are **data-only scheduled voices** (consumed by the scheduler at their
+   `startTime`, never synthesized). `PlaybackEngine` swaps its active master AT the event time with a short gain ramp /
+   crossfade (precedent: `KatalystFilterSwap`) — no zipper/clicks. **Last writer wins** per engine (strudel convention).
+   The global safety limiter at the final mix STAYS.
+7. **Offline renderer**: pre-register masters in `queryEvents` + `KlangOfflineRenderer` exactly like
+   `PipelineValue` — code fully describes the sound; offline renders stay faithful automatically.
+
+**Why this supersedes the old design:** one mechanism for ALL engine-side config (Ignitor / Pipeline / Master — and it
+sets the **Katalyst DSL application-path precedent**, see
+`katalyst-dsl.md`); no play-choreography ordering hazard (`SetMaster` before first voices) — the master arrives *in* the
+voice stream, inherently time-ordered; master is patternable; no FE settings UI; live-coding the master rides the normal
+live-update path (full-identity `ReplaceVoices` dedup already compares `data`, so per-cycle re-emission is safe —
+distinct startTimes).
+
+**Open decisions:**
+
+- The rest-carrier must survive sprudel→wire — rests normally produce NO voice; needs the
+  "data-only voice" concept end-to-end (emit, schedule, consume, never synthesize).
+- Ramp length / crossfade shape for master swaps (tune by ear).
+- Top-level `master()` re-emits identical events every cycle (fine) vs FE-side dedup — decide by measurement, default to
+  re-emit.
 
 ## File-by-file change list
 
@@ -278,10 +316,13 @@ hitch tracked in Open Q1.
 - `audio_be/.../Voice.kt` (RenderContext) — one `RenderContext` per engine (own cylinders + shared scratch
   refs); no swappable pointer needed.
 - `audio_bridge/.../infra/KlangCommLink.kt` — `Diagnostics` reshape + `PlaybackEngineStats`; new
-  `Cmd.SetMaster`.
-- **new** `audio_bridge/.../MasterDsl.kt` — `@WireFormat` master config (minimal).
-- `src/commonMain/kotlin/Song.kt` — add `master: MasterDsl`.
-- `klang/.../KlangPlaybackController.kt` (+ frontend ctrl) — send `Cmd.SetMaster` on play.
+  `Cmd.RegisterMaster` (2026-08-02 revision — `Cmd.SetMaster` superseded).
+- **new** `audio_bridge/.../MasterDsl.kt` — `@WireName` master config (minimal) + `MasterValue`
+  carrier (mirrors `PipelineValue`).
+- `sprudel` — new `lang_master`: top-level `master(dsl)` rest-carrier + `.master()` mapper;
+  `SprudelVoiceData.master: MasterValue?` (2026-08-02 revision).
+- `klang/.../KlangPlaybackController.kt` — pre-register masters in `queryEvents` (like pipelines); no play choreography.
+  `Song.kt` unchanged (2026-08-02 revision).
 - `audio_be/src/jvmMain/.../JvmAudioBackend.kt`, `audio_jsworklet/.../KlangAudioWorklet.kt` — thin pumps;
   remove the duplicated `when(cmd)`.
 
