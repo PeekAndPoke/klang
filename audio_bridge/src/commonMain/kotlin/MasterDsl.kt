@@ -89,29 +89,59 @@ sealed interface MasterStageDsl {
      * Master reverb — the shared Freeverb `Reverb` (audio_be `effects/`) used as an *insert*: the
      * backend feeds it a copy of the bus scaled by [wet] and mixes its output back.
      *
-     * @param wet how much of the bus is sent into the reverb (0.0 = off).
-     * @param roomSize Freeverb room size.
-     * @param damp Freeverb high-frequency damping.
+     * **Every parameter here is the twin of a sprudel one, on the same scale** — a number means the
+     * same thing whether you write it on an orbit or on the master. (It did not always: `roomSize`
+     * was once raw 0..1 here while sprudel's was 0..10, so the same `3` meant a 1 s tail on an orbit
+     * and a 12.5 s one on the master.)
+     *
+     * @param wet how much of the bus is sent into the reverb (0.0 = off). Orbit twin: `room(x)`.
+     * @param roomSize tail length on the **sprudel `roomsize()` scale, ~0..10** (the backend divides
+     *   by 10 — see `Reverb.normalizeRoomSize`). 3 ≈ 1 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest
+     *   reachable tail is ~0.7 s. Values above 10 are bounded — a comb network past unity produces
+     *   DC, not a longer tail (see `Reverb.normalizeRoomSize`). Orbit twin: `roomsize()`/`rsize()`.
+     * @param damp Freeverb high-frequency damping, 0 = bright .. 1 = dark. **Ignored when [roomLp]
+     *   is set.** No orbit twin (sprudel reaches damping through `roomlp` instead).
+     * @param roomFade **overrides [roomSize]** for the tail, and is NOT on the same scale — it is
+     *   the normalized 0..1 value directly, and despite the name it is not a time. Orbit twin:
+     *   `roomfade()` / `rfade()`. Null = no override.
+     * @param roomLp high-frequency damping as an absolute cutoff **in Hz**; overrides [damp].
+     *   Orbit twin: `roomlp()` / `rlp()`. Null = no override.
      */
     @WireName("reverb")
     data class Reverb(
         val wet: Double = 0.25,
-        val roomSize: Double = 0.5,
+        val roomSize: Double = DEFAULT_ROOM_SIZE,
         val damp: Double = 0.5,
-    ) : MasterStageDsl
+        val roomFade: Double? = null,
+        val roomLp: Double? = null,
+    ) : MasterStageDsl {
+        companion object {
+            /**
+             * Default room size on the **authored** scale.
+             *
+             * `5.0 / 10 == 0.5`, the Freeverb default — so this is behaviour-preserving despite the
+             * literal changing. Guarded by `MasterDefaultsSyncSpec`.
+             */
+            const val DEFAULT_ROOM_SIZE: Double = 5.0
+        }
+    }
 
     /**
      * Master delay — the shared `DelayLine` (audio_be `effects/`) used as an *insert* (same
      * send-copy trick as [Reverb]).
      *
-     * @param wet how much of the bus is sent into the delay (0.0 = off).
-     * @param timeSeconds delay time.
-     * @param feedback feedback amount; ≥ 1.0 is unstable but bounded by the DSP's soft cap.
+     * @param wet how much of the bus is sent into the delay (0.0 = off). Orbit twin: `delay(x)`.
+     * @param timeSeconds delay time in seconds. Orbit twin: `delaytime()`.
+     * @param feedback feedback amount; ≥ 1.0 recirculates without loss and self-oscillates — allowed
+     *   (raw engine), with [cap] deciding how loud. Orbit twin: `delayfeedback()` / `delayfb()`.
+     * @param cap ceiling the feedback saturates toward (default 1.0 = unchanged). Orbit twin:
+     *   `delaycap()` / `dcap()`.
      */
     @WireName("delay")
     data class Delay(
         val wet: Double = 0.25,
         val timeSeconds: Double = 0.25,
         val feedback: Double = 0.3,
+        val cap: Double = 1.0,
     ) : MasterStageDsl
 }

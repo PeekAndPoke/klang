@@ -250,7 +250,7 @@ class Voice(
         val shape: String?, var currentPhase: Double = 0.0,
     )
 
-    class Delay(val amount: Double, val time: Double, val feedback: Double)
+    class Delay(val amount: Double, val time: Double, val feedback: Double, val cap: Double = 1.0)
     class Reverb(
         val room: Double, val roomSize: Double, val roomFade: Double? = null,
         val roomLp: Double? = null, val roomDim: Double? = null, val iResponse: String? = null,

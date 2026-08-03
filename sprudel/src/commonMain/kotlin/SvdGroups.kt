@@ -117,6 +117,8 @@ data class SvdDelay(
     var delay: Double? = null,
     var delayTime: Double? = null,
     var delayFeedback: Double? = null,
+    /** Ceiling the delay feedback saturates toward. `delaycap`/`dcap`; default 1.0 at the engine. */
+    var delayCap: Double? = null,
 )
 
 /** Reverb. */
@@ -274,6 +276,7 @@ fun mergeSvdDelay(base: SvdDelay?, over: SvdDelay?): SvdDelay? {
         delay = over.delay ?: base.delay,
         delayTime = over.delayTime ?: base.delayTime,
         delayFeedback = over.delayFeedback ?: base.delayFeedback,
+        delayCap = over.delayCap ?: base.delayCap,
     )
 }
 

@@ -328,3 +328,64 @@ parked for a decision.
 - **Cache eviction can rebuild on the audio thread.** Returning to a master last used more than
   `MAX_CACHED_CHAINS` (8) edits ago is a cache miss that rebuilds inside `process()`. Bounded and documented, but a
   live-coding A/B across many edits can hit it. Proper fix needs off-thread building (→ resource-warehouse-pool work).
+
+---
+
+## Reverb parameter parity (2026-08-03)
+
+Triggered by a real symptom: `MasterFx.reverb().wet(0.025).damp(0.9).roomSize(3)` gave a ~12.5 s tail where ~1 s was
+meant. Two causes, both now fixed:
+
+1. **`roomSize` was on a 10× different scale.** Sprudel divides `roomsize` by 10 (`VoiceFactory`); the master did not.
+   `roomSize(3)` was 0.3 on an orbit but the maximum on the master. Now ONE `Reverb.normalizeRoomSize()` serves both
+   buses.
+2. **`roomFade`/`roomLp` existed only on the orbit** — and `roomFade` is what actually sets the tail
+   (`effectiveSize = roomFade ?: roomSize`). Both are now on the master too, same names, same scales.
+
+Also fixed along the way: the sprudel `roomfade`/`rfade` KDoc claimed **seconds** across 8 overloads with *playable*
+examples (`roomfade(2.0)` → comb feedback 1.26); `reverb("…")`'s addon doc contradicted `room("…")`'s; and the
+audibility gate on **both** buses tested `roomSize` while the DSP decays from `roomFade ?: roomSize`, which made
+`room(0.6).roomfade(0.1)` silent on an orbit.
+
+### The reverted experiment — worth keeping in the record
+
+The first attempt honoured "the engine stays raw, no clamping" by removing the `coerceIn` and soft-capping the comb
+feedback instead, with the ceiling as a user param (`rcap`, `MasterFx…cap()`), so out-of-range values would
+"self-oscillate rather than diverge". **Two review rounds proved that premise false**, numerically:
+
+- **`softCap` is a rail, not an asymptote.** `fastTanh` hard-clamps for |x| ≥ 3, so `softCap` returns *exactly* ±1.0 for
+  |x| ≥ 1.10. In a loop with gain > 1 every sample latches: measured output DC +0.12 with **AC-RMS 0.00000**, both
+  channels bit-identical. The `ANTI_DENORMAL` 1e-18 bias alone ramps the network to that rail from silence in ~4 s.
+  There is no wash above unity — only DC.
+- **A cap at 1.0 is not transparent.** A comb's internal gain is `1/(1−feedback)` — 6.25× at
+  `rsize(5)`, 50× at `rsize(10)` — which is why `FIXED_GAIN = 0.015` exists. The comb *state*
+  routinely exceeds the 0.95 knee at ordinary settings: measured −3…−4 dB and level-dependent squash on
+  `IrishLamentTechno.kt:218` (`.room(0.7).rsize(10)`).
+- **Raising the cap made things quieter.** The DC pedestal scales with the ceiling, the master limiter then ducks the
+  whole mix, and the DC blocker strips the pedestal itself.
+
+**Conclusion (user decision):** clamp `roomSize`/`roomFade` to 0..1. This is not a taste clamp — above unity a Freeverb
+network has no sound to preserve. The bound and its reasoning live in
+`Reverb.normalizeRoomSize`'s KDoc so nobody "fixes" it back.
+
+**The delay keeps its `cap`** (`delaycap`/`dcap`, `MasterFx.delay().cap()`): there the soft-cap was already in place,
+and `feedback >= 1.0` genuinely self-oscillates as audio.
+
+### Guards added (all mutation-checked)
+
+`MasterOrbitReverbParitySpec` is the one that would have caught the original bug — it drives the **real** production
+path on each side (`VoiceFactory` vs `MasterChain.build`) and asserts they agree. Plus `ReverbStabilitySpec` (scale
+bound + no DC pedestal), scale/None-finite/stage-drop cases in
+`MasterChainSpec`, the default-equivalence guard in `MasterDefaultsSyncSpec`, `LangFeedbackCapSpec`
+(delay cap incl. form- (d) and an explicit merge assertion — the merge helpers were provably untested), and the new
+fields in both wire round-trip specs.
+
+### Open
+
+- **By ear**: Der Schmetterling and `ATruthWorthLyingFor` keep `roomSize(3)`; both tails go 12.5 s → ~1.0 s, so `wet`
+  (0.025 / 0.01) was dialled against the old wash and needs raising — start ~0.05–0.1. Optionally swap Schmetterling's
+  `damp(0.9)` for `roomLp(12000)`.
+- **Round 2 of `/review-loop` on the revert itself has not been run** — the revert and the doc/gate fixes are, by the
+  standard's own rule, unreviewed changes.
+- `roomDim` / `iResponse` remain stored-but-unread on both paths (`Reverb.kt` TODO).
+- Freeverb's ~0.71 s tail floor (`FEEDBACK_OFFSET`) — nothing on either bus can go shorter.

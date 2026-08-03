@@ -581,6 +581,11 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || delayFx != null) delayFxOrNew().delayFeedback = v
         }
+    var delayCap: Double?
+        get() = delayFx?.delayCap
+        set(v) {
+            if (v != null || delayFx != null) delayFxOrNew().delayCap = v
+        }
 
     var room: Double?
         get() = reverb?.room
@@ -1024,6 +1029,7 @@ data class SprudelVoiceData(
             delay = delay,
             delayTime = delayTime,
             delayFeedback = delayFeedback,
+            delayCap = delayCap,
             room = room,
             roomSize = roomSize,
             roomFade = roomFade,

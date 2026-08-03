@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.effects.Reverb.Companion.FEEDBACK_OFFSET
 
 /**
  * High-performance stereo reverb based on the Freeverb algorithm
@@ -48,11 +49,19 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  *   (24× ABS + compare + branch) — the rest of the engine uses
  *   `flushDenormal` because those components have only 1–2 IIR stages.
  *
- * **Strudel parameter mapping**:
- * - `room`     → wet/dry send amount (caller-side; not a parameter here).
- * - `size`     → [roomSize] (decay tail length via comb feedback).
- * - `roomLp`   → [roomLp] (HF damping cutoff; overrides [damp]).
- * - `roomFade` → [roomFade] (overrides [roomSize]).
+ * **Parameter mapping — note the two different scales.** Everything a user authors goes through
+ * [normalizeRoomSize] or lands here raw; both buses (per-orbit and master) MUST agree:
+ * - `room` / `wet` → send amount (caller-side; not a parameter here), 0..1.
+ * - `roomsize` / `roomSize` → [roomSize]. Authored on the **~0..10** scale
+ *   ([AUTHORED_ROOM_SIZE_SCALE]), normalized to 0..1 here. Tail length, via comb feedback
+ *   `feedback = (roomFade ?: roomSize) · FEEDBACK_SCALE + FEEDBACK_OFFSET`: authored 3 ≈ 1.0 s,
+ *   5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest reachable tail is ~0.7 s ([FEEDBACK_OFFSET]).
+ * - `roomfade` / `roomFade` → [roomFade]. **Overrides [roomSize], and is NOT on the same scale** —
+ *   it is the normalized 0..1 value directly, and it is *not* a time despite the name.
+ * - `roomlp` / `roomLp` → [roomLp] (HF damping cutoff in Hz; overrides [damp]).
+ *
+ * Values above the normalized 1.0 are clamped by [normalizeRoomSize] — not for taste, but because a
+ * comb network above unity produces DC rather than a longer tail (see that function's KDoc).
  */
 class Reverb(
     val sampleRate: Int,
@@ -114,6 +123,7 @@ class Reverb(
             if (value != null && !value.isFinite()) return
             field = value
         }
+
 
     // TODO(klang): future hooks — see docs/agent-tasks/ignitor-dsl-open-items.md.
     //   roomDim   — dimensional / modulated-allpass reverb variant.
@@ -299,6 +309,31 @@ class Reverb(
     }
 
     companion object {
+        /**
+         * The **authored** room-size scale — what `roomsize()` (sprudel) and
+         * `MasterFx.reverb().roomSize()` (master) speak: roughly 0..10.
+         *
+         * [roomSize] itself is normalized 0..1. Keeping the conversion here means both buses go
+         * through one definition instead of each inventing its own — the two silently disagreed
+         * before (sprudel divided by 10, the master did not), so the same number meant a ~1 s tail
+         * on an orbit and a ~12.5 s tail on the master.
+         */
+        const val AUTHORED_ROOM_SIZE_SCALE: Double = 10.0
+
+        /**
+         * Authored room size (the ~0..10 [AUTHORED_ROOM_SIZE_SCALE]) → the normalized 0..1 that
+         * [roomSize] consumes.
+         *
+         * **Clamped to 0..1, and that is not a taste clamp.** Past 1.0 the comb feedback exceeds
+         * unity, and a Freeverb network above unity does not make a bigger room — every comb sample
+         * latches at the saturation rail and the output becomes pure DC (measured: AC-RMS 0.0, both
+         * channels identical), which the master DC blocker then strips while the limiter ducks the
+         * rest of the mix. The `ANTI_DENORMAL` bias alone ramps it there from silence in ~4 s. There
+         * is no sound above 1.0 to preserve — see docs/tasks-archive for the measurements.
+         */
+        fun normalizeRoomSize(authored: Double): Double =
+            (authored / AUTHORED_ROOM_SIZE_SCALE).coerceIn(0.0, 1.0)
+
         /** Reference sample rate the canonical Freeverb tunings were tuned for. */
         private const val REFERENCE_SAMPLE_RATE: Int = 44100
 
@@ -306,6 +341,7 @@ class Reverb(
          * Comb-feedback mapping: `feedback = roomSize · FEEDBACK_SCALE + FEEDBACK_OFFSET`.
          * For `roomSize ∈ [0, 1]`, feedback ∈ [0.70, 0.98] — the canonical Jezar range.
          */
+
         private const val FEEDBACK_SCALE: Double = 0.28
         private const val FEEDBACK_OFFSET: Double = 0.7
 

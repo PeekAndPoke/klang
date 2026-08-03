@@ -65,10 +65,11 @@ object KlangScriptMaster {
  * `MasterFx` object for KlangScript — builds the [MasterStageDsl] stages of a [MasterDsl] chain.
  *
  * Every stage returns a *configurable* value: chain its tuning right after, before adding the next
- * stage — `MasterFx.limiter().thresholdDb(-0.5)`, `MasterFx.reverb().wet(0.4).roomSize(0.8)`.
+ * stage — `MasterFx.limiter().thresholdDb(-0.5)`, `MasterFx.reverb().wet(0.4).roomSize(8)`.
  *
  * The counterpart of `Stage` (voice pipeline) for the master bus. Effects are the same DSP the
- * per-orbit Katalyst effects use — only the host differs.
+ * per-orbit Katalyst effects use — only the host differs, and **the parameters use the same names
+ * and the same scales as their sprudel twins**, so a number means the same thing on either bus.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("MasterFx")
@@ -91,11 +92,15 @@ object KlangScriptMasterFx {
     @KlangScript.Method
     fun limiter(): MasterStageDsl.Limiter = MasterStageDsl.Limiter()
 
-    /** Master reverb (shared Freeverb, used as an insert). Chain `wet` / `roomSize` / `damp`. */
+    /**
+     * Master reverb (shared Freeverb, used as an insert).
+     *
+     * Chain `wet` / `roomSize` (sprudel `roomsize` scale, ~0..10) / `damp` / `roomFade` / `roomLp`.
+     */
     @KlangScript.Method
     fun reverb(): MasterStageDsl.Reverb = MasterStageDsl.Reverb()
 
-    /** Master delay (shared delay line, used as an insert). Chain `wet` / `time` / `feedback`. */
+    /** Master delay (shared delay line, used as an insert). Chain `wet` / `time` / `feedback` / `cap`. */
     @KlangScript.Method
     fun delay(): MasterStageDsl.Delay = MasterStageDsl.Delay()
 }

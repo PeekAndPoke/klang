@@ -235,20 +235,22 @@ let s4       = stack(core, sub, clap, oh, rim, leadD, pad)
 let finale   = stack(core, sub, clap, oh, rim, leadE, pad, riser)
 let pause    = silence
 
-arrange(
-  [16, warm],         // 0-15: LOOP POINT — kick + hat + bass already running
-  [8, withSub],       // 16-23: + sub
-  [8, withPerc],      // 24-31: + clap + oh + rim
-  [8, s1],            // 32-39: + leadA
-  [8, s2],            // 40-47: + leadB + pad
-  [8, s3],            // 48-55: + leadC + pad
-  [8, s4],            // 56-63: + leadD + pad
-  [16, finale],       // 64-79: + leadE (loops once) + pad + 16-cycle wind fade
-  [4, hit],           // 80-83: unison hit lands on beat 1 right as wind ends
-  [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
-  [80, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
-).compressor("-10:2:6:0.01:0.1")
- .room(0.15).rsize(6).analog(2.0)
+stack(
+  arrange(
+    [16, warm],         // 0-15: LOOP POINT — kick + hat + bass already running
+    [8, withSub],       // 16-23: + sub
+    [8, withPerc],      // 24-31: + clap + oh + rim
+    [8, s1],            // 32-39: + leadA
+    [8, s2],            // 40-47: + leadB + pad
+    [8, s3],            // 48-55: + leadC + pad
+    [8, s4],            // 56-63: + leadD + pad
+    [16, finale],       // 64-79: + leadE (loops once) + pad + 16-cycle wind fade
+    [4, hit],           // 80-83: unison hit lands on beat 1 right as wind ends
+    [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
+    [80, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
+  ),
+  master(Master.of(MasterFx.gain(1.5), MasterFx.reverb().wet(0.01).roomSize(5), MasterFx.limiter()))
+).analog(3.0)
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing
 // Composed by: Claude, Motör, peekandpoke
@@ -258,5 +260,6 @@ arrange(
 
 
 
+    
     """,
 )

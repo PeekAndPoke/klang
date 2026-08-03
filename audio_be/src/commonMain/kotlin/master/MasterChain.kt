@@ -40,8 +40,9 @@ internal class MasterChain private constructor(
     /** Array, not List — iterated once per block in the render callback; no iterator allocation. */
     private val stages: Array<MasterFx>,
     /** The time-based units, kept for [reset] / [hasActiveTail]; empty for a chain without tails. */
-    private val reverbs: Array<Reverb>,
-    private val delays: Array<DelayLine>,
+    /** Exposed (module-internal) so specs can assert what actually reached the DSP. */
+    val reverbs: Array<Reverb>,
+    val delays: Array<DelayLine>,
     private val limiters: Array<Compressor>,
 ) {
     /** True when this chain does anything at all — an empty chain is a pure pass-through. */
@@ -205,19 +206,30 @@ internal class MasterChain private constructor(
          */
         private fun buildReverb(stage: MasterStageDsl.Reverb, sampleRate: Int, blockFrames: Int): BuiltReverb? {
             val wet = finite(stage.wet, 0.0)
-            val roomSize = finite(stage.roomSize, 0.5)
+            // The authored value is on the sprudel ~0..10 scale; ONE shared conversion for both
+            // buses. The fallback must be the *authored* default, not the normalized one — a 0.5
+            // here would normalize to 0.05, fall under MIN_TIME_FX and silently delete the stage.
+            val roomSize = Reverb.normalizeRoomSize(
+                finite(stage.roomSize, MasterStageDsl.Reverb.DEFAULT_ROOM_SIZE)
+            )
 
-            if (wet <= MIN_WET || roomSize < MIN_TIME_FX) {
+            // Compared AFTER normalization, and against the EFFECTIVE size — `roomFade` overrides
+            // `roomSize` in the DSP, so gating on roomSize alone would drop a stage that would have
+            // been audible. Same question `KatalystReverbEffect` asks on the orbit bus.
+            val effectiveSize = stage.roomFade?.takeIf { it.isFinite() } ?: roomSize
+            if (wet <= MIN_WET || effectiveSize < MIN_TIME_FX) {
                 return null
             }
 
-            // Coerced to 0..1 exactly like the orbit path (`Cylinder.updateFromVoice`): Freeverb
-            // derives its comb feedback from roomSize, so a value above 1.0 makes the combs diverge
-            // to NaN — and NaN on the master floods the shared mix for every playback. Stability
-            // guard on a normalized 0..1 parameter, not a taste clamp.
+            // roomFade/roomLp are assigned through their setters, which drop non-finite values;
+            // do NOT move them into the constructor. roomFade overrides roomSize for the comb
+            // feedback, so it carries the same 0..1 bound (see `Reverb.normalizeRoomSize`); damp is
+            // bounded for the same reason — past 2.5 the comb one-pole coefficient exceeds 1.
             val reverb = Reverb(sampleRate = sampleRate).also {
-                it.roomSize = roomSize.coerceIn(0.0, 1.0)
+                it.roomSize = roomSize
                 it.damp = finite(stage.damp, 0.5).coerceIn(0.0, 1.0)
+                it.roomFade = stage.roomFade?.coerceIn(0.0, 1.0)
+                it.roomLp = stage.roomLp
             }
             val send = StereoBuffer(blockFrames)
 
@@ -253,7 +265,9 @@ internal class MasterChain private constructor(
                 delayTimeSeconds = time,
                 // A property initializer bypasses the class's own non-finite setter guard.
                 feedback = finite(stage.feedback, 0.0),
-            )
+            ).also {
+                it.feedbackCap = finite(stage.cap, 1.0)
+            }
             val send = StereoBuffer(blockFrames)
 
             return BuiltDelay(

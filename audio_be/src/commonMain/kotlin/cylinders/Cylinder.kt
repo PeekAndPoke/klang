@@ -136,11 +136,16 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
         // Delay
         delay.delayLine.delayTimeSeconds = voice.delay.time
+        delay.delayLine.feedbackCap = voice.delay.cap
         delay.delayLine.feedback = voice.delay.feedback
 
         // Reverb (reverb.room is used by SendRenderer for send amount)
-        reverb.reverb.roomSize = voice.reverb.roomSize.coerceIn(0.0, 1.0)
-        reverb.reverb.roomFade = voice.reverb.roomFade
+        // Already normalized (and clamped) by `Reverb.normalizeRoomSize` in VoiceFactory — a comb
+        // network above unity yields DC, not a longer tail, so there is no sound above 1.0 to keep.
+        reverb.reverb.roomSize = voice.reverb.roomSize
+        // roomFade overrides roomSize for the comb feedback, so it lives on the same axis and
+        // needs the same bound (it is authored 0..1 directly, not on the /10 scale).
+        reverb.reverb.roomFade = voice.reverb.roomFade?.coerceIn(0.0, 1.0)
         reverb.reverb.roomLp = voice.reverb.roomLp
         reverb.reverb.roomDim = voice.reverb.roomDim
         reverb.reverb.iResponse = voice.reverb.iResponse

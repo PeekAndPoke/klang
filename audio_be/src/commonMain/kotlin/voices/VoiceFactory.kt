@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
@@ -144,12 +145,13 @@ class VoiceFactory(
             amount = data.delay ?: 0.0,
             time = data.delayTime ?: 0.0,
             feedback = data.delayFeedback ?: 0.0,
+            cap = data.delayCap ?: 1.0,
         )
 
         // Reverb
         val reverb = Voice.Reverb(
             room = data.room ?: 0.0,
-            roomSize = (data.roomSize ?: 0.0) / 10.0,
+            roomSize = Reverb.normalizeRoomSize(data.roomSize ?: 0.0),
             roomFade = data.roomFade,
             roomLp = data.roomLp,
             roomDim = data.roomDim,

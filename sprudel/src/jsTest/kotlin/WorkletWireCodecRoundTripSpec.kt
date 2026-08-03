@@ -62,7 +62,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             tremoloSync = 4.0; tremoloDepth = 0.4; tremoloSkew = 0.5; tremoloPhase = 0.0; tremoloShape = "sine"
             duckCylinder = 0; duckAttack = 0.05; duckDepth = 0.5
             cylinder = 1; pan = 0.3
-            delay = 0.3; delayTime = 0.25; delayFeedback = 0.4
+            delay = 0.3; delayTime = 0.25; delayFeedback = 0.4; delayCap = 2.5
             room = 0.5; roomSize = 0.8; roomFade = 0.3; roomLp = 8000.0; roomDim = 2000.0; iResponse = "hall"
             begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1; loopBegin = 0.1; loopEnd = 0.9
             compressor = "0.3:4:0.1:0.01:0.1"; solo = 1.0; pipeline = PipelineValue.Named("pedal")

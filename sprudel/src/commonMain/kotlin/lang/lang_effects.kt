@@ -953,6 +953,20 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * multiple patterns to separate reverb buses.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room mix.
  *
+ * **Compound form** — `room("mix:roomSize:roomFade:roomLp:roomDim")` sets several at once. Mind the
+ * scales, they are not the same:
+ *
+ * | slot | param | scale |
+ * |---|---|---|
+ * | 1 | mix | 0..1 |
+ * | 2 | `roomsize` | **~0..10** (3 ≈ 1 s tail, 5 ≈ 1.4 s, 10 ≈ 12.5 s) |
+ * | 3 | `roomfade` | **0..1** — *overrides* slot 2; not a time |
+ * | 4 | `roomlp` | Hz |
+ * | 5 | `roomdim` | currently unused by the engine |
+ *
+ * So `room("0.3:5:0.1")` is mix 0.3 with a **0.1** tail — the `5` is inert, because slot 3 wins.
+ * The master bus takes the same values as `MasterFx.reverb().wet(0.3).roomFade(0.1)`.
+ *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").clip(0.5).s("sine").room(0.5)   // 50% reverb
  * ```
@@ -1341,25 +1355,30 @@ private fun applyRoomFade(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 }
 
 /**
- * Sets the reverb fade time in seconds for this pattern.
+ * Overrides `roomsize` to set the reverb tail for this pattern.
+ *
+ * **0..1, not seconds** despite the name (0 = ~0.7 s, 1 = ~12.5 s), and a different scale from
+ * `roomsize` (~0..10). Whenever this is set it wins over `roomsize`.
  *
  * Controls how long the reverb tail takes to fade out. Longer values create more sustained
  * tails that persist after the dry signal ends.
  * When [time] is omitted, the pattern's own numeric values are reinterpreted as fade time.
  *
- * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
+ * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
+ *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
  * @return A new pattern with the reverb fade time applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").room(0.6).roomfade(2.0)    // 2-second reverb fade
+ * note("c3 e3").room(0.6).roomsize(8).roomfade(0.1)   // roomfade wins: a short tail
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").roomfade("<0.5 1 2 4>")     // increasing fade time each beat
+ * note("c3*4").roomfade("<0.05 0.1 0.2 0.4>")  // tail grows each beat
  * ```
  *
  * ```KlangScript(Playable)
- * seq("0.5 1 2 4").roomfade()              // reinterpret values as fade time
+ * seq("0.05 0.1 0.2 0.4").roomfade()       // reinterpret values as the tail override
  * ```
  *
  * @alias rfade
@@ -1371,14 +1390,16 @@ fun SprudelPattern.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nul
     applyRoomFade(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
 
 /**
- * Parses this string as a pattern and sets the reverb fade time.
+ * Parses this string as a pattern and sets the reverb tail override (0..1).
  *
  * When [time] is omitted, the string's numeric values are reinterpreted as fade time.
  *
- * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
+ * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
+ *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
  *
  * ```KlangScript(Playable)
- * "c3 e3".roomfade(2.0).room(0.6).note()   // 2-second fade on string pattern
+ * "c3 e3".roomfade(0.1).room(0.6).note()   // short tail on string pattern
  * ```
  */
 @KlangScript.Function
@@ -1386,20 +1407,22 @@ fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomfade(time, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the reverb fade time.
+ * Returns a [PatternMapperFn] that sets the reverb tail override (0..1).
  *
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
  * When [time] is omitted, the pattern's own numeric values are reinterpreted as fade time.
  *
- * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
- * @return A [PatternMapperFn] that sets the reverb fade time.
+ * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
+ *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ * @return A [PatternMapperFn] that sets the reverb tail override (0..1).
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(roomfade(2.0)).room(0.6)   // 2-second fade via mapper
+ * note("c3 e3").apply(roomfade(0.1)).room(0.6)   // short tail via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, roomfade(4.0))            // long fade every 4th cycle
+ * note("c3*4").every(4, roomfade(0.6))            // long tail every 4th cycle
  * ```
  *
  * @alias rfade
@@ -1410,17 +1433,19 @@ fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): Spru
 fun roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomfade(time, callInfo) }
 
 /**
- * Creates a chained [PatternMapperFn] that sets the reverb fade time after the previous mapper.
+ * Creates a chained [PatternMapperFn] that sets the reverb tail override (0..1) after the previous mapper.
  *
- * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
- * @return A new [PatternMapperFn] chaining this fade time after the previous mapper.
+ * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
+ *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ * @return A new [PatternMapperFn] chaining this tail override after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.6).roomfade(2.0))   // wet mix then fade time
+ * note("c3 e3").apply(room(0.6).roomfade(0.1))   // wet mix then tail
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).roomfade(4.0))  // big reverb every 4th cycle
+ * note("c3*4").every(4, room(0.8).roomfade(0.6))  // big reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1428,19 +1453,24 @@ fun PatternMapperFn.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nu
     this.chain { p -> p.roomfade(time, callInfo) }
 
 /**
- * Alias for [roomfade]. Sets the reverb fade time in seconds for this pattern.
+ * Alias for [roomfade]. Overrides `roomsize` to set the reverb tail for this pattern.
+ *
+ * **0..1, not seconds** despite the name (0 = ~0.7 s, 1 = ~12.5 s), and a different scale from
+ * `roomsize` (~0..10). Whenever this is set it wins over `roomsize`.
  *
  * When [time] is omitted, the pattern's own numeric values are reinterpreted as fade time.
  *
- * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
+ * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
+ *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
  * @return A new pattern with the reverb fade time applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").room(0.6).rfade(2.0)    // 2-second reverb fade
+ * note("c3 e3").room(0.6).rsize(8).rfade(0.1)   // rfade wins: a short tail
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").rfade("<0.5 1 2 4>")     // increasing fade time each beat
+ * note("c3*4").rfade("<0.05 0.1 0.2 0.4>")  // tail grows each beat
  * ```
  *
  * @alias roomfade
@@ -1452,14 +1482,16 @@ fun SprudelPattern.rfade(time: PatternLike? = null, callInfo: CallInfo? = null):
     this.roomfade(time, callInfo)
 
 /**
- * Alias for [roomfade]. Parses this string as a pattern and sets the reverb fade time.
+ * Alias for [roomfade]. Parses this string as a pattern and sets the reverb tail override (0..1).
  *
  * When [time] is omitted, the string's numeric values are reinterpreted as fade time.
  *
- * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
+ * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
+ *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
  *
  * ```KlangScript(Playable)
- * "c3 e3".rfade(2.0).room(0.6).note()   // 2-second fade on string pattern
+ * "c3 e3".rfade(0.1).room(0.6).note()   // short tail on string pattern
  * ```
  */
 @KlangScript.Function
@@ -1467,17 +1499,17 @@ fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomfade(time, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the reverb fade time. Alias for [roomfade].
+ * Returns a [PatternMapperFn] that sets the reverb tail override (0..1). Alias for [roomfade].
  *
- * @param time The fade time in seconds.
- * @return A [PatternMapperFn] that sets the reverb fade time.
+ * @param time Tail override, **0..1** (not seconds). Overrides `roomsize`.
+ * @return A [PatternMapperFn] that sets the reverb tail override (0..1).
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(rfade(2.0)).room(0.6)   // 2-second fade via mapper
+ * note("c3 e3").apply(rfade(0.1)).room(0.6)   // 2-second fade via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, rfade(4.0))            // long fade every 4th cycle
+ * note("c3*4").every(4, rfade(0.1))            // long fade every 4th cycle
  * ```
  *
  * @alias roomfade
@@ -1488,17 +1520,19 @@ fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
 fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomfade(time, callInfo) }
 
 /**
- * Creates a chained [PatternMapperFn] that sets the reverb fade time (alias for roomfade) after the previous mapper.
+ * Creates a chained [PatternMapperFn] that sets the reverb tail override (0..1) (alias for roomfade) after the previous mapper.
  *
- * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
- * @return A new [PatternMapperFn] chaining this fade time after the previous mapper.
+ * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
+ *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ * @return A new [PatternMapperFn] chaining this tail override after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.6).rfade(2.0))   // wet mix then fade time
+ * note("c3 e3").apply(room(0.6).rfade(0.1))   // wet mix then fade time
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).rfade(4.0))  // big reverb every 4th cycle
+ * note("c3*4").every(4, room(0.8).rfade(0.1))  // big reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -4179,3 +4213,143 @@ fun tremshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
 @KlangScript.Function
 fun PatternMapperFn.tremshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremoloshape(shape, callInfo) }
+
+// -- delaycap() / dcap() ----------------------------------------------------------------------------------------------
+
+private val delayCapMutation = voiceSetter { delayCap = it?.asDoubleOrNull() }
+
+private fun applyDelayCap(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, delayCapMutation)
+}
+
+/**
+ * Sets the ceiling the delay's feedback saturates toward (default 1.0).
+ *
+ * The engine is raw: `delayfeedback` at or above 1.0 recirculates without loss and the delay
+ * **self-oscillates** forever. This decides how loud that runaway sits — it does not forbid it.
+ * Below the ceiling the signal is untouched, so the default changes nothing.
+ *
+ * The master bus has the same knob as `MasterFx.delay().cap(...)`.
+ *
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the cap.
+ *
+ * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+ * @return A new pattern with the delay feedback ceiling applied.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 ~ ~ ~").delay(0.6).delayfeedback(1.0).delaycap(2.0)   // endless echo, held at 2.0
+ * ```
+ *
+ * @alias dcap
+ * @category effects
+ * @tags delaycap, dcap, delay, feedback, saturation, selfoscillation
+ */
+@KlangScript.Function
+fun SprudelPattern.delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDelayCap(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and sets the delay feedback ceiling.
+ *
+ * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+ * @return A new pattern with the delay feedback ceiling applied.
+ *
+ * ```KlangScript(Playable)
+ * "c3 ~ ~ ~".delaycap(2.0).delay(0.6).delayfeedback(1.0).note()
+ * ```
+ */
+@KlangScript.Function
+fun String.delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delaycap(amount, callInfo)
+
+/**
+ * Returns a [PatternMapperFn] that sets the delay feedback ceiling.
+ *
+ * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+ * @return A [PatternMapperFn] that sets the delay feedback ceiling.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 ~ ~ ~").apply(delaycap(2.0)).delay(0.6).delayfeedback(1.0)
+ * ```
+ *
+ * @alias dcap
+ * @category effects
+ * @tags delaycap, dcap, delay, feedback, saturation, selfoscillation
+ */
+@KlangScript.Function
+fun delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.delaycap(amount, callInfo) }
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the delay feedback ceiling after the previous mapper.
+ *
+ * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+ * @return A new [PatternMapperFn] chaining the ceiling after the previous mapper.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 ~ ~ ~").apply(delay(0.6).delaycap(2.0))
+ * ```
+ */
+@KlangScript.Function
+fun PatternMapperFn.delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delaycap(amount, callInfo) }
+
+/**
+ * Alias for [delaycap]. Sets the delay feedback ceiling.
+ *
+ * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+ * @return A new pattern with the delay feedback ceiling applied.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 ~ ~ ~").delay(0.6).delayfb(1.0).dcap(2.0)
+ * ```
+ *
+ * @alias delaycap
+ * @category effects
+ * @tags dcap, delaycap, delay, feedback, saturation
+ */
+@KlangScript.Function
+fun SprudelPattern.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.delaycap(amount, callInfo)
+
+/**
+ * Parses this string as a pattern and sets the delay feedback ceiling. Alias for [delaycap].
+ *
+ * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+ * @return A new pattern with the delay feedback ceiling applied.
+ *
+ * ```KlangScript(Playable)
+ * "c3 ~ ~ ~".dcap(2.0).delay(0.6).delayfb(1.0).note()
+ * ```
+ */
+@KlangScript.Function
+fun String.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delaycap(amount, callInfo)
+
+/**
+ * Returns a [PatternMapperFn] that sets the delay feedback ceiling. Alias for [delaycap].
+ *
+ * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+ * @return A [PatternMapperFn] that sets the delay feedback ceiling.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 ~ ~ ~").apply(dcap(2.0)).delay(0.6).delayfb(1.0)
+ * ```
+ */
+@KlangScript.Function
+fun dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.delaycap(amount, callInfo) }
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the delay feedback ceiling. Alias for [delaycap].
+ *
+ * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+ * @return A new [PatternMapperFn] chaining the ceiling after the previous mapper.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 ~ ~ ~").apply(delay(0.6).dcap(2.0))
+ * ```
+ */
+@KlangScript.Function
+fun PatternMapperFn.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delaycap(amount, callInfo) }

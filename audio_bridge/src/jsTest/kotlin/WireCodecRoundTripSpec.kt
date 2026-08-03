@@ -50,8 +50,14 @@ class WireCodecRoundTripSpec : StringSpec({
             MasterDsl.of(MasterStageDsl.Gain(gain = 2.5)),
             MasterDsl.of(
                 MasterStageDsl.Gain(gain = 1.8),
-                MasterStageDsl.Reverb(wet = 0.4, roomSize = 0.8, damp = 0.3),
-                MasterStageDsl.Delay(wet = 0.2, timeSeconds = 0.375, feedback = 0.45),
+                // every reverb field set, including both nullable overrides + the ceiling
+                MasterStageDsl.Reverb(
+                    wet = 0.4, roomSize = 8.0, damp = 0.3,
+                    roomFade = 0.12, roomLp = 9000.0,
+                ),
+                // ...and the nullable branch: overrides absent
+                MasterStageDsl.Reverb(wet = 0.4, roomSize = 8.0),
+                MasterStageDsl.Delay(wet = 0.2, timeSeconds = 0.375, feedback = 0.45, cap = 3.0),
                 MasterStageDsl.Limiter(
                     thresholdDb = -0.5, ratio = 12.0, kneeDb = 1.0,
                     attackSeconds = 0.002, releaseSeconds = 0.25,

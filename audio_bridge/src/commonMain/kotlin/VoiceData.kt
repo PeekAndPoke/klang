@@ -111,7 +111,9 @@ data class VoiceData(
     // Delay
     val delay: Double?, // Mix amount (0.0 to 1.0)
     val delayTime: Double?, // Time in seconds
-    val delayFeedback: Double?, // Feedback amount (0.0 to <1.0)
+    val delayFeedback: Double?, // Feedback amount; >= 1.0 self-oscillates, bounded by delayCap
+    /** Ceiling the delay feedback saturates toward (default 1.0). Sprudel `delaycap`/`dcap`. */
+    val delayCap: Double? = null,
 
     // Reverb
     val room: Double?,

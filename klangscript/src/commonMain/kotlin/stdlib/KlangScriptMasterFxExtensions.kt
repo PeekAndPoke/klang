@@ -58,18 +58,40 @@ object KlangScriptMasterLimiterExtensions {
 @KlangScript.TypeExtensions(MasterStageDsl.Reverb::class)
 object KlangScriptMasterReverbExtensions {
 
-    /** How much of the bus is sent into the reverb (default 0.25; 0.0 = off). */
+    /** How much of the bus is sent into the reverb (default 0.25; 0.0 = off). Orbit twin: `room()`. */
     @KlangScript.Method
     fun wet(self: MasterStageDsl.Reverb, wet: Double): MasterStageDsl.Reverb = self.copy(wet = wet)
 
-    /** Freeverb room size (default 0.5). */
+    /**
+     * Tail length, on the **same scale as sprudel `roomsize()`** — typical 1..10, default 5.
+     *
+     * 3 ≈ a 1 s tail, 5 ≈ 1.4 s, 10 ≈ 12.5 s; the shortest reachable is ~0.7 s. Above 10 is bounded:
+     * a comb network past unity produces DC rather than a longer tail, so there is nothing there.
+     */
     @KlangScript.Method
     fun roomSize(self: MasterStageDsl.Reverb, size: Double): MasterStageDsl.Reverb =
         self.copy(roomSize = size)
 
-    /** Freeverb high-frequency damping (default 0.5). */
+    /** High-frequency damping, 0 = bright .. 1 = dark (default 0.5). **Ignored when `roomLp` is set.** */
     @KlangScript.Method
     fun damp(self: MasterStageDsl.Reverb, damp: Double): MasterStageDsl.Reverb = self.copy(damp = damp)
+
+    /**
+     * **Overrides `roomSize`** for the tail — and is NOT on the same scale: this is the normalized
+     * **0..1** value (0 ≈ 0.7 s, 1 ≈ 12.5 s), and despite the name it is not a time.
+     * Orbit twin: `roomfade()` / `rfade()`.
+     */
+    @KlangScript.Method
+    fun roomFade(self: MasterStageDsl.Reverb, amount: Double): MasterStageDsl.Reverb =
+        self.copy(roomFade = amount)
+
+    /**
+     * High-frequency damping as an absolute cutoff **in Hz**; overrides `damp`.
+     * Orbit twin: `roomlp()` / `rlp()`.
+     */
+    @KlangScript.Method
+    fun roomLp(self: MasterStageDsl.Reverb, hz: Double): MasterStageDsl.Reverb = self.copy(roomLp = hz)
+
 }
 
 /** Config methods on the master delay stage (`MasterFx.delay()`). */
@@ -86,8 +108,18 @@ object KlangScriptMasterDelayExtensions {
     fun time(self: MasterStageDsl.Delay, seconds: Double): MasterStageDsl.Delay =
         self.copy(timeSeconds = seconds)
 
-    /** Feedback amount (default 0.3); ≥ 1.0 is unstable but bounded by the DSP's soft cap. */
+    /**
+     * Feedback amount (default 0.3). At or above 1.0 the delay recirculates without loss and
+     * self-oscillates — allowed, with `cap` deciding how loud. Orbit twin: `delayfeedback()`.
+     */
     @KlangScript.Method
     fun feedback(self: MasterStageDsl.Delay, feedback: Double): MasterStageDsl.Delay =
         self.copy(feedback = feedback)
+
+    /**
+     * Ceiling the feedback saturates toward (default 1.0 = unchanged).
+     * Orbit twin: `delaycap()` / `dcap()`.
+     */
+    @KlangScript.Method
+    fun cap(self: MasterStageDsl.Delay, cap: Double): MasterStageDsl.Delay = self.copy(cap = cap)
 }

@@ -8,6 +8,8 @@ package io.peekandpoke.klang.audio_be.master
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.MasterStage
+import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 
@@ -34,5 +36,22 @@ class MasterDefaultsSyncSpec : StringSpec({
         limiter.kneeDb shouldBe MasterStage.LIMITER_KNEE_DB
         limiter.attackSeconds shouldBe MasterStage.LIMITER_ATTACK_SECONDS
         limiter.releaseSeconds shouldBe MasterStage.LIMITER_RELEASE_SECONDS
+    }
+
+    "the master reverb default is the authored twin of the Freeverb default" {
+        // 5.0 authored / 10 == 0.5, the DSP's own default — so changing the literal from 0.5 to 5.0
+        // was behaviour-preserving. If either side moves without the other, the master's default
+        // reverb silently changes length.
+        Reverb.normalizeRoomSize(MasterStageDsl.Reverb().roomSize) shouldBe Reverb(44100).roomSize
+        MasterStageDsl.Reverb().damp shouldBe Reverb(44100).damp
+    }
+
+    "the feedback ceilings default to the DSP's own" {
+        MasterStageDsl.Delay().cap shouldBe DelayLine(maxDelaySeconds = 1.0, sampleRate = 44100).feedbackCap
+    }
+
+    "the new reverb overrides default to absent" {
+        MasterStageDsl.Reverb().roomFade shouldBe null
+        MasterStageDsl.Reverb().roomLp shouldBe null
     }
 })
