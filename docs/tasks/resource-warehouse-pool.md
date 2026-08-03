@@ -35,7 +35,8 @@ Folds in **D4** (cylinder eviction) from `per-playback-engine.md`.
 
 ## Master chains — the second customer (added 2026-08-02)
 
-The Master DSL (`master-dsl.md`, shipped on branch `master-dsl`) reuses the shared DSP, so a master chain owns exactly
+The Master DSL ([shipped/archived](../tasks-archive/2026-08/20260803-master-dsl.md)) reuses the shared DSP, so a master
+chain owns exactly
 the resources this pool is meant to manage: a Freeverb (~180 KB of comb/allpass buffers) and a `DelayLine` ring sized to
 the declared time — up to **7.68 MB** at the 10 s cap, the same figure as a cylinder's ring.
 

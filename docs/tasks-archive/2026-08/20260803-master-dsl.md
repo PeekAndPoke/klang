@@ -1,5 +1,11 @@
 # Master DSL — master-in-pattern (D6, detailed plan)
 
+> **ARCHIVED 2026-08-03 — SHIPPED.** The master path (D6, the original goal of the whole
+> per-playback-engine work) is built, reviewed and by-ear confirmed. Merged on `master-dsl`; the
+> reverb/delay parameter-parity follow-up landed as `d78ff3da`. Remaining loose ends were carried
+> forward to `docs/tasks/master-dsl-followups.md` — everything in the "Still open" section below is
+> historical context for those.
+>
 > **Created 2026-08-02. IMPLEMENTED 2026-08-02 on branch `master-dsl`** (round-1 review applied; see
 > §Implementation notes at the end for where the build deviated from this plan). Priority: **MUST #1** (`_priorities.md`
 > item 1). This is the

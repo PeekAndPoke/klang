@@ -254,7 +254,8 @@ hitch tracked in Open Q1.
 > **Design revision (2026-08-02).** Master settings do NOT live outside the code — no `Song.master`,
 > no `Cmd.SetMaster`, no play choreography, no settings UI. They ride the pattern, exactly like
 > Ignitors and Pipelines. Any `Song.master` / `SetMaster` wording elsewhere in this doc is
-> superseded by this section. **Detailed implementation plan: [`master-dsl.md`](master-dsl.md)**
+> superseded by this section. **Detailed plan (SHIPPED 2026-08-03, archived): [
+`20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)**
 > (parts 1–7 incl. the crossfade design).
 
 **The mechanism — the Ignitor/Pipeline playbook, run a third time:**

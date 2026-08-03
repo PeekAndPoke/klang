@@ -14,7 +14,7 @@
 
 The release-defining set, regardless of when they're sequenced:
 
-- **Master / loudness stage** (Act 1) — the point of the whole backend rework.
+- ✅ **Master / loudness stage** (Act 1) — **DONE 2026-08-03.** The point of the whole backend rework.
 - **Pipeline DSL finish** (Act 1) — nail the engine's authoring surface.
 - **Katalyst DSL** — per-orbit effect authoring, counterpart to the Ignitor/Pipeline DSLs.
   ⚠️ Q3 sequences Katalyzers in the *lower* track, but it's flagged **must-have** — it likely belongs
@@ -27,12 +27,13 @@ The release-defining set, regardless of when they're sequenced:
 
 ## Act 1 — Finish & polish the engine
 
-1. **MUST** · **Master / loudness stage** — [`per-playback-engine.md`](per-playback-engine.md) (§H / D6) 🟡 Multi-engine
-   foundation shipped in Q2; **D6** is *the* next feature — **REVISED 2026-08-02:
-   master-in-pattern** (`master(Master()...)` rides the voice stream via the Ignitor/Pipeline registration playbook;
-   supersedes `Song.master`/`Cmd.SetMaster`; sets the Katalyst application-path precedent). **Detailed plan: [
-   `master-dsl.md`](master-dsl.md)** (parts 1–7 incl. crossfade). Then richer master chain (glue/eq/drive/ceiling),
-   crossfade, metering. **Highest priority.**
+1. ✅ **DONE 2026-08-03** · **Master / loudness stage** — the point of the whole backend rework. Shipped as
+   **master-in-pattern**: `master(Master.of(MasterFx.gain(2.5), MasterFx.limiter()))`
+   rides the voice stream (Ignitor/Pipeline registration playbook), crossfades on swap, works offline, and
+   `Master.default()` switches it back off. Plus the reverb/delay **parameter-parity**
+   fix (`d78ff3da`) — the same word now means the same thing on the orbit and master buses. Archived: [
+   `20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md); loose ends in [
+   `master-dsl-followups.md`](master-dsl-followups.md).
 2. **MUST** · **Pipeline DSL finish** — [`engine-tuning-profile.md`](engine-tuning-profile.md) 🟡
    *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
    done (2026-07-04, as oscParam slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
