@@ -97,8 +97,8 @@ sealed interface MasterStageDsl {
      * @param wet how much of the bus is sent into the reverb (0.0 = off). Orbit twin: `room(x)`.
      * @param roomSize tail length on the **sprudel `roomsize()` scale, ~0..10** (the backend divides
      *   by 10 — see `Reverb.normalizeRoomSize`). 3 ≈ 1 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest
-     *   reachable tail is ~0.7 s. Values above 10 are bounded — a comb network past unity produces
-     *   DC, not a longer tail (see `Reverb.normalizeRoomSize`). Orbit twin: `roomsize()`/`rsize()`.
+     *   reachable tail is ~0.7 s. Values above 10 are bounded — past unity the comb network has no
+     *   steady state and runs away (see `Reverb.normalizeRoomSize`). Orbit twin: `roomsize()`/`rsize()`.
      * @param damp Freeverb high-frequency damping, 0 = bright .. 1 = dark. **Ignored when [roomLp]
      *   is set.** No orbit twin (sprudel reaches damping through `roomlp` instead).
      * @param roomFade **overrides [roomSize]** for the tail, and is NOT on the same scale — it is

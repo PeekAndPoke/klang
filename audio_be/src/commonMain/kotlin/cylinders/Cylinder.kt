@@ -141,7 +141,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
         // Reverb (reverb.room is used by SendRenderer for send amount)
         // Already normalized (and clamped) by `Reverb.normalizeRoomSize` in VoiceFactory — a comb
-        // network above unity yields DC, not a longer tail, so there is no sound above 1.0 to keep.
+        // network above unity has no steady state, it runs away to Inf/NaN.
         reverb.reverb.roomSize = voice.reverb.roomSize
         // roomFade overrides roomSize for the comb feedback, so it lives on the same axis and
         // needs the same bound (it is authored 0..1 directly, not on the /10 scale).
@@ -274,7 +274,11 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
         if (silentBlockCount < silentBlocksBeforeTailCheck) return
 
         fun delayHasTail() = delay.delayLine.delayTimeSeconds > 0.001 && delay.delayLine.hasTail()
-        fun reverbHasTail() = reverb.reverb.roomSize > 0.001 && reverb.reverb.hasTail()
+
+        // Same effective-size question as the render gate — a roomfade-only orbit has roomSize 0.0
+        // and would otherwise report "no tail" while its combs still hold energy.
+        fun reverbHasTail() =
+            (reverb.reverb.roomFade != null || reverb.reverb.roomSize > 0.001) && reverb.reverb.hasTail()
 
         if (reverbHasTail() || delayHasTail()) {
             silentBlockCount = 0

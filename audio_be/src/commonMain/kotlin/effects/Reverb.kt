@@ -61,7 +61,8 @@ import io.peekandpoke.klang.audio_be.effects.Reverb.Companion.FEEDBACK_OFFSET
  * - `roomlp` / `roomLp` → [roomLp] (HF damping cutoff in Hz; overrides [damp]).
  *
  * Values above the normalized 1.0 are clamped by [normalizeRoomSize] — not for taste, but because a
- * comb network above unity produces DC rather than a longer tail (see that function's KDoc).
+ * comb network above unity has no steady state: it grows without bound to Inf/NaN (see that
+ * function's KDoc).
  */
 class Reverb(
     val sampleRate: Int,
@@ -324,15 +325,25 @@ class Reverb(
          * Authored room size (the ~0..10 [AUTHORED_ROOM_SIZE_SCALE]) → the normalized 0..1 that
          * [roomSize] consumes.
          *
-         * **Clamped to 0..1, and that is not a taste clamp.** Past 1.0 the comb feedback exceeds
-         * unity, and a Freeverb network above unity does not make a bigger room — every comb sample
-         * latches at the saturation rail and the output becomes pure DC (measured: AC-RMS 0.0, both
-         * channels identical), which the master DC blocker then strips while the limiter ducks the
-         * rest of the mix. The `ANTI_DENORMAL` bias alone ramps it there from silence in ~4 s. There
-         * is no sound above 1.0 to preserve — see docs/tasks-archive for the measurements.
+         * **Clamped to 0..1, and that is not a taste clamp.** Past 1.0 the comb feedback exceeds unity and the network has
+         * no steady state at all: the comb buffers grow without bound until they reach Inf/NaN, at
+         * which point the reverb is dead and — on the master, which feeds the shared mix — every
+         * playback is railed until a reload. There is no "bigger room" up there to preserve.
+         *
+         * (An earlier attempt kept it unclamped and soft-capped the feedback instead, so extreme
+         * values would self-oscillate. Measured, they do not: the saturator rails at exactly ±1.0,
+         * so every comb sample latches and the output is pure DC with zero AC content. Reverted —
+         * see docs/tasks/master-dsl.md.)
          */
-        fun normalizeRoomSize(authored: Double): Double =
-            (authored / AUTHORED_ROOM_SIZE_SCALE).coerceIn(0.0, 1.0)
+        fun normalizeRoomSize(authored: Double): Double {
+            // NaN-guard — coerceIn passes NaN straight through, and a NaN here would be dropped by
+            // the roomSize setter, silently leaving a pooled reverb on its previous owner's room.
+            if (authored != authored) {
+                return 0.0
+            }
+
+            return (authored / AUTHORED_ROOM_SIZE_SCALE).coerceIn(0.0, 1.0)
+        }
 
         /** Reference sample rate the canonical Freeverb tunings were tuned for. */
         private const val REFERENCE_SAMPLE_RATE: Int = 44100

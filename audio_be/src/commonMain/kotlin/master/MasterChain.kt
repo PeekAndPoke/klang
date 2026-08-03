@@ -39,8 +39,10 @@ internal fun interface MasterFx {
 internal class MasterChain private constructor(
     /** Array, not List — iterated once per block in the render callback; no iterator allocation. */
     private val stages: Array<MasterFx>,
-    /** The time-based units, kept for [reset] / [hasActiveTail]; empty for a chain without tails. */
-    /** Exposed (module-internal) so specs can assert what actually reached the DSP. */
+    /**
+     * The time-based units, kept for [reset] / [hasActiveTail]; empty for a chain without tails.
+     * Module-internal rather than private so specs can assert what actually reached the DSP.
+     */
     val reverbs: Array<Reverb>,
     val delays: Array<DelayLine>,
     private val limiters: Array<Compressor>,
@@ -213,18 +215,19 @@ internal class MasterChain private constructor(
                 finite(stage.roomSize, MasterStageDsl.Reverb.DEFAULT_ROOM_SIZE)
             )
 
-            // Compared AFTER normalization, and against the EFFECTIVE size — `roomFade` overrides
-            // `roomSize` in the DSP, so gating on roomSize alone would drop a stage that would have
-            // been audible. Same question `KatalystReverbEffect` asks on the orbit bus.
-            val effectiveSize = stage.roomFade?.takeIf { it.isFinite() } ?: roomSize
-            if (wet <= MIN_WET || effectiveSize < MIN_TIME_FX) {
+            // `roomFade` overrides `roomSize` in the DSP, so an explicit fade means "render", at any
+            // value — 0.0 is the shortest tail (~0.7 s), not "off". Gating on roomSize alone dropped
+            // stages that would have been audible. Same question `KatalystReverbEffect` asks.
+            val hasFade = stage.roomFade?.isFinite() == true
+            if (wet <= MIN_WET || (!hasFade && roomSize < MIN_TIME_FX)) {
                 return null
             }
 
             // roomFade/roomLp are assigned through their setters, which drop non-finite values;
             // do NOT move them into the constructor. roomFade overrides roomSize for the comb
-            // feedback, so it carries the same 0..1 bound (see `Reverb.normalizeRoomSize`); damp is
-            // bounded for the same reason — past 2.5 the comb one-pole coefficient exceeds 1.
+            // feedback, so it carries the same 0..1 bound (past unity the combs run away to NaN —
+            // see `Reverb.normalizeRoomSize`); damp is bounded because past 2.5 the comb one-pole
+            // coefficient exceeds 1 and the filter diverges.
             val reverb = Reverb(sampleRate = sampleRate).also {
                 it.roomSize = roomSize
                 it.damp = finite(stage.damp, 0.5).coerceIn(0.0, 1.0)

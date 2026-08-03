@@ -52,7 +52,7 @@ stack(
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
     ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.5).body("glass").vowel("e o e i a u".slow(24)).vowelMix(0.40)
     .superimpose(
-      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.0)).vibrato("0.51".add(perlin.div(20))).vibmod(0.06)
+      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.5)).vibrato("0.51".add(perlin.div(20))).vibmod(0.06)
         .crush("2.0".add(berlin2.mul(0.75).slow(4))).crushos(4).lpf(7.75 * 440).hpf(300).postgain(0.45)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
@@ -69,8 +69,14 @@ stack(
   note("c").fast(4).sound("brown").legato(2)
     .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr("0.5:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(6)).bandq(sine.range(0.25, 5.0).slow(48).early(12))
-  ,
-).delay("0.2::0.5").delaytime(pure(1/8).div(cps)).room("0.1:10:0.1:12000").compressor("-10:2:6:0.01:0.05")
+  , // Master ------------------------------------------------------------------------------------------------------
+  master(Master.of(
+    MasterFx.delay().wet(0.2).time(1/8 / 33).feedback(0.5),
+    MasterFx.reverb().wet(0.1).roomSize(10).roomFade(0.1).roomLp(12000),
+    MasterFx.gain(1.5),
+    MasterFx.limiter(),
+  ))
+)
 
 
 

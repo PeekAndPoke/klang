@@ -66,7 +66,7 @@ object KlangScriptMasterReverbExtensions {
      * Tail length, on the **same scale as sprudel `roomsize()`** — typical 1..10, default 5.
      *
      * 3 ≈ a 1 s tail, 5 ≈ 1.4 s, 10 ≈ 12.5 s; the shortest reachable is ~0.7 s. Above 10 is bounded:
-     * a comb network past unity produces DC rather than a longer tail, so there is nothing there.
+     * past unity the comb network has no steady state and runs away, so there is nothing there.
      */
     @KlangScript.Method
     fun roomSize(self: MasterStageDsl.Reverb, size: Double): MasterStageDsl.Reverb =

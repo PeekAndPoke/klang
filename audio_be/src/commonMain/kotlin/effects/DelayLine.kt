@@ -130,7 +130,11 @@ class DelayLine(
         val delayInt = delaySamples.toInt()
         val alpha = delaySamples - delayInt
         val fb = feedback
-        val cap = feedbackCap
+        // Sanitised once per block, not per sample. `softCapTo`'s branches are loop-invariant here,
+        // and this file's own PERF note records that a previously added per-sample check cost
+        // ~+33% JVM / +30% JS at the rate this path runs.
+        val rawCap = feedbackCap
+        val cap = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
 
         // Split loop at the ring-buffer wrap boundary so the inner loop has no
         // 'if (pos >= bufferSize)' check.
@@ -190,7 +194,13 @@ class DelayLine(
             //         here; that cost ~+33% JVM / +30% JS at the rate this path
             //         runs (every delay sample × stereo). Removed 2026-05-22.
             val newSample = input[inputIndex] + (delayedSignal * fb)
-            buffer[pos] = ClippingFuncs.softCapTo(newSample, cap)
+            // cap is pre-sanitised (finite, > 0) so this reduces to the scaled softCap; at the
+            // default 1.0 it is the exact pre-change `softCap(newSample)`.
+            buffer[pos] = if (cap == 1.0) {
+                ClippingFuncs.softCap(newSample)
+            } else {
+                cap * ClippingFuncs.softCap(newSample / cap)
+            }
 
             // --- 3. Wet output, additive. Caller owns the dry mix.
             output[inputIndex] = output[inputIndex] + delayedSignal

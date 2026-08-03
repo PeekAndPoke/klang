@@ -1365,8 +1365,8 @@ private fun applyRoomFade(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * When [time] is omitted, the pattern's own numeric values are reinterpreted as fade time.
  *
  * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
- *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
- *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded —
+ *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  * @return A new pattern with the reverb fade time applied.
  *
  * ```KlangScript(Playable)
@@ -1395,8 +1395,8 @@ fun SprudelPattern.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nul
  * When [time] is omitted, the string's numeric values are reinterpreted as fade time.
  *
  * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
- *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
- *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded —
+ *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  *
  * ```KlangScript(Playable)
  * "c3 e3".roomfade(0.1).room(0.6).note()   // short tail on string pattern
@@ -1413,8 +1413,8 @@ fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * When [time] is omitted, the pattern's own numeric values are reinterpreted as fade time.
  *
  * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
- *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
- *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded —
+ *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  * @return A [PatternMapperFn] that sets the reverb tail override (0..1).
  *
  * ```KlangScript(Playable)
@@ -1436,8 +1436,8 @@ fun roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * Creates a chained [PatternMapperFn] that sets the reverb tail override (0..1) after the previous mapper.
  *
  * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
- *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
- *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded —
+ *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  * @return A new [PatternMapperFn] chaining this tail override after the previous mapper.
  *
  * ```KlangScript(Playable)
@@ -1461,8 +1461,8 @@ fun PatternMapperFn.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nu
  * When [time] is omitted, the pattern's own numeric values are reinterpreted as fade time.
  *
  * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
- *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
- *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded —
+ *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  * @return A new pattern with the reverb fade time applied.
  *
  * ```KlangScript(Playable)
@@ -1487,8 +1487,8 @@ fun SprudelPattern.rfade(time: PatternLike? = null, callInfo: CallInfo? = null):
  * When [time] is omitted, the string's numeric values are reinterpreted as fade time.
  *
  * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
- *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
- *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded —
+ *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  *
  * ```KlangScript(Playable)
  * "c3 e3".rfade(0.1).room(0.6).note()   // short tail on string pattern
@@ -1523,8 +1523,8 @@ fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * Creates a chained [PatternMapperFn] that sets the reverb tail override (0..1) (alias for roomfade) after the previous mapper.
  *
  * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
- *   scale from `roomsize` (~0..10). Overrides `roomsize`. Above 1 the reverb self-oscillates
- *   (see `roomcap`). Omit to reinterpret the pattern's values as the override.
+ *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded —
+ *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  * @return A new [PatternMapperFn] chaining this tail override after the previous mapper.
  *
  * ```KlangScript(Playable)

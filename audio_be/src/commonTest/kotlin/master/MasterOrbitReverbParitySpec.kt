@@ -8,13 +8,16 @@ package io.peekandpoke.klang.audio_be.master
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
+import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -70,7 +73,13 @@ class MasterOrbitReverbParitySpec : StringSpec({
             getSample = { null },
         ) ?: error("makeVoice returned null")
 
-        return voice.reverb.roomSize
+        // ...and then through the cylinder, which is what actually writes the DSP. Reading
+        // `voice.reverb.roomSize` here would stop one step short and miss a second /10 introduced
+        // in `Cylinder` — exactly the class of bug this spec exists to catch.
+        val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
+        cylinder.updateFromVoice(voice, blockStart = 0)
+
+        return cylinder.reverb.reverb.roomSize
     }
 
     /** What the MASTER path hands the Freeverb for the same authored room size. */
@@ -147,5 +156,45 @@ class MasterOrbitReverbParitySpec : StringSpec({
 
         chain.isActive shouldBe true
         chain.reverbs.firstOrNull().shouldNotBeNull().roomFade shouldBe 0.5
+    }
+
+    "an explicit roomFade renders on the ORBIT bus, at any value including 0.0" {
+        // The orbit half of the gate fix. roomSize defaults to 0.0 there, so testing it alone made
+        // a roomfade-only voice silent; and 0.0 is the engine's SHORTEST tail, not "off".
+        fun rendersWith(roomFade: Double?, roomSize: Double): Boolean {
+            val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
+            cylinder.updateFromVoice(
+                VoiceTestHelpers.createSynthVoice(
+                    blockFrames = blockFrames,
+                    reverb = Voice.Reverb(room = 0.6, roomSize = roomSize, roomFade = roomFade),
+                ),
+                blockStart = 0,
+            )
+
+            // Feed the send and look for wet output. Freeverb's shortest comb is 1116 samples, so
+            // a single 128-frame block returns silence no matter what — render past that.
+            val ctx = cylinder.katalystContext
+            var heard = false
+
+            repeat(30) {
+                for (i in 0 until blockFrames) {
+                    ctx.reverbSendBuffer.left[i] = 0.5
+                    ctx.reverbSendBuffer.right[i] = 0.5
+                }
+                ctx.mixBuffer.clear()
+                cylinder.reverb.process(ctx)
+
+                if ((0 until blockFrames).any { ctx.mixBuffer.left[it] != 0.0 }) {
+                    heard = true
+                }
+            }
+
+            return heard
+        }
+
+        rendersWith(roomFade = 0.0, roomSize = 0.0) shouldBe true    // shortest tail, still a tail
+        rendersWith(roomFade = 0.3, roomSize = 0.0) shouldBe true    // roomfade-only
+        rendersWith(roomFade = null, roomSize = 0.0) shouldBe false  // genuinely nothing set
+        rendersWith(roomFade = null, roomSize = 0.5) shouldBe true
     }
 })

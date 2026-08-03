@@ -26,41 +26,6 @@ class ReverbStabilitySpec : StringSpec({
     val sampleRate = 44100
     val blockFrames = 128
 
-    /** Renders [blocks] blocks, feeding a burst only into the first one, and reports the peak. */
-    fun render(reverb: Reverb, blocks: Int, burst: Double = 0.8): Double {
-        val input = StereoBuffer(blockFrames)
-        val output = StereoBuffer(blockFrames)
-        var peak = 0.0
-
-        for (b in 0 until blocks) {
-            input.clear()
-            if (b == 0) {
-                for (i in 0 until blockFrames) {
-                    input.left[i] = burst
-                    input.right[i] = burst
-                }
-            }
-            output.clear()
-            reverb.process(input, output, blockFrames)
-
-            for (i in 0 until blockFrames) {
-                val l = abs(output.left[i])
-                val r = abs(output.right[i])
-                if (l > peak) {
-                    peak = l
-                }
-                if (r > peak) {
-                    peak = r
-                }
-                // The headline guarantee: never NaN, never infinite, whatever was authored.
-                output.left[i].isFinite() shouldBe true
-                output.right[i].isFinite() shouldBe true
-            }
-        }
-
-        return peak
-    }
-
 
 
 

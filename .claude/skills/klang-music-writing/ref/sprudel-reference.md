@@ -352,30 +352,30 @@ All filters accept pattern values and have envelope variants (`lpenv`, `lpadsr`,
 
 ### Effects
 
-| Function              | Aliases               | Description                            | Example                                   |
-|-----------------------|-----------------------|----------------------------------------|-------------------------------------------|
-| `room(mix)`           | `reverb`              | Reverb amount (0-1)                    | `note("c3").room(0.3)`                    |
-| `roomsize(size)`      | `rsize`, `sz`, `size` | Reverb room size                       | `note("c3").room(0.3).rsize(5)`           |
-| `roomdim(dim)`        | `rdim`                | Reverb damping/dimension               | `note("c3").room(0.3).rdim(0.5)`          |
-| `roomfade(fade)`      | `rfade`               | Reverb fade time                       | `note("c3").room(0.3).rfade(2)`           |
-| `roomlp(freq)`        | `rlp`                 | Reverb lowpass                         | `note("c3").room(0.3).rlp(3000)`          |
-| `delay(mix)`          |                       | Delay amount (0-1)                     | `s("sd").delay(0.5)`                      |
-| `delaytime(time)`     |                       | Delay time in cycles                   | `s("sd").delay(0.5).delaytime(0.33)`      |
-| `delayfeedback(fb)`   | `delayfb`, `dfb`      | Delay feedback                         | `s("sd").delay(0.5).delayfeedback(0.3)`   |
-| `distort(amt)`        | `dist`                | Distortion amount                      | `s("bd").distort(0.5)`                    |
-| `distortshape(shape)` | `distshape`, `dshape` | Distortion shape                       | `s("bd").distort(2).distshape("fold")`    |
-| `crush(bits)`         |                       | Bitcrusher                             | `s("hh").crush(8)`                        |
-| `coarse(amt)`         |                       | Sample-rate reduction                  | `note("c3").s("saw").coarse(3)`           |
-| `phaser(params)`      | `ph`                  | Phaser effect                          | `note("c3").phaser(1)`                    |
-| `phaserdepth(d)`      | `phasdp`, `phd`       | Phaser depth                           | `note("c3").phaser(1).phaserdepth(0.5)`   |
-| `phasercenter(hz)`    | `phc`                 | Phaser center freq                     | `note("c3").phaser(1).phc(1000)`          |
-| `phasersweep(hz)`     | `phs`                 | Phaser sweep range                     | `note("c3").phaser(1).phs(500)`           |
-| `tremolo(params)`     |                       | Tremolo rate                           | `note("c3").tremolo(4)`                   |
-| `tremolodepth(d)`     | `tremdepth`           | Tremolo depth                          | `note("c3").tremolo(4).tremolodepth(0.5)` |
-| `tremolosync(n)`      | `tremsync`            | Sync tremolo to cycle                  | `note("c3").tremolosync(8)`               |
-| `tremoloshape(s)`     | `tremshape`           | Tremolo LFO shape                      | `note("c3").tremolo(4).tremshape("sine")` |
-| `compressor(params)`  | `comp`                | Compressor (thresh:ratio:knee:att:rel) | `s("bd sd").comp("-20:4:3:0.01:0.3")`     |
-| `iresponse(path)`     | `ir`                  | Impulse response convolution           | `note("c3").ir("hall.wav")`               |
+| Function                | Aliases                                                                                  | Description                                   | Example                                   |
+|-------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------------------|
+| `room(mix)`             | `reverb`                                                                                 | Reverb amount (0-1)                           | `note("c3").room(0.3)`                    |
+| `roomsize(size)`        | `rsize`, `sz`, `size`                                                                    | Reverb room size                              | `note("c3").room(0.3).rsize(5)`           |
+| `roomdim(dim)`          | `rdim`                                                                                   | Reverb damping/dimension                      | `note("c3").room(0.3).rdim(0.5)`          |
+| `roomfade(x)` / `rfade` | Reverb tail **override**, 0..1 (NOT seconds) — wins over `roomsize`, which is then inert | `note("c3").room(0.3).roomsize(8).rfade(0.1)` |
+| `roomlp(freq)`          | `rlp`                                                                                    | Reverb lowpass                                | `note("c3").room(0.3).rlp(3000)`          |
+| `delay(mix)`            |                                                                                          | Delay amount (0-1)                            | `s("sd").delay(0.5)`                      |
+| `delaytime(time)`       |                                                                                          | Delay time in cycles                          | `s("sd").delay(0.5).delaytime(0.33)`      |
+| `delayfeedback(fb)`     | `delayfb`, `dfb`                                                                         | Delay feedback                                | `s("sd").delay(0.5).delayfeedback(0.3)`   |
+| `distort(amt)`          | `dist`                                                                                   | Distortion amount                             | `s("bd").distort(0.5)`                    |
+| `distortshape(shape)`   | `distshape`, `dshape`                                                                    | Distortion shape                              | `s("bd").distort(2).distshape("fold")`    |
+| `crush(bits)`           |                                                                                          | Bitcrusher                                    | `s("hh").crush(8)`                        |
+| `coarse(amt)`           |                                                                                          | Sample-rate reduction                         | `note("c3").s("saw").coarse(3)`           |
+| `phaser(params)`        | `ph`                                                                                     | Phaser effect                                 | `note("c3").phaser(1)`                    |
+| `phaserdepth(d)`        | `phasdp`, `phd`                                                                          | Phaser depth                                  | `note("c3").phaser(1).phaserdepth(0.5)`   |
+| `phasercenter(hz)`      | `phc`                                                                                    | Phaser center freq                            | `note("c3").phaser(1).phc(1000)`          |
+| `phasersweep(hz)`       | `phs`                                                                                    | Phaser sweep range                            | `note("c3").phaser(1).phs(500)`           |
+| `tremolo(params)`       |                                                                                          | Tremolo rate                                  | `note("c3").tremolo(4)`                   |
+| `tremolodepth(d)`       | `tremdepth`                                                                              | Tremolo depth                                 | `note("c3").tremolo(4).tremolodepth(0.5)` |
+| `tremolosync(n)`        | `tremsync`                                                                               | Sync tremolo to cycle                         | `note("c3").tremolosync(8)`               |
+| `tremoloshape(s)`       | `tremshape`                                                                              | Tremolo LFO shape                             | `note("c3").tremolo(4).tremshape("sine")` |
+| `compressor(params)`    | `comp`                                                                                   | Compressor (thresh:ratio:knee:att:rel)        | `s("bd sd").comp("-20:4:3:0.01:0.3")`     |
+| `iresponse(path)`       | `ir`                                                                                     | Impulse response convolution                  | `note("c3").ir("hall.wav")`               |
 
 Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`
 
