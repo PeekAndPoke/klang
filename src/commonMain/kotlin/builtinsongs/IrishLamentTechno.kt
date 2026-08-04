@@ -247,7 +247,7 @@ stack(
     [16, finale],       // 64-79: + leadE (loops once) + pad + 16-cycle wind fade
     [4, hit],           // 80-83: unison hit lands on beat 1 right as wind ends
     [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
-    [80, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
+    [96, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
   ),
   master(Master.of(MasterFx.gain(1.5), MasterFx.reverb().wet(0.01).roomSize(5), MasterFx.limiter()))
 ).analog(3.0)
@@ -261,5 +261,6 @@ stack(
 
 
     
+
     """,
 )

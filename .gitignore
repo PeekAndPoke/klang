@@ -54,3 +54,5 @@ src/jsMain/resources/version.json
 
 ### Claude Code ###
 .claude/worktrees/
+# Runtime holder record for console/with-build-lock.sh — the flock itself is per-process.
+.claude/build.lock
