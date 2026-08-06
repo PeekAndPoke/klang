@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.DB20_OVER_LN10
+import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.ENV_COEFF_BLEND_DB
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.LN10_OVER_20
 import kotlin.math.abs
 import kotlin.math.exp
@@ -48,6 +49,19 @@ class Compressor(
     kneeDb: Double = 6.0,
     attackSeconds: Double = 0.003,
     releaseSeconds: Double = 0.1,
+    /**
+     * Lookahead in seconds. `0.0` (the default) keeps the classic feed-forward one-pole path with
+     * no delay line and no added latency — which is what every per-orbit compressor uses, and must,
+     * since latency on one orbit would shift it against the rest of the mix.
+     *
+     * Above [MIN_LOOKAHEAD_FRAMES] worth of samples this switches to the anticipating path, which
+     * delays the signal by this much and is therefore only appropriate where the delay is uniform
+     * for everything downstream — i.e. the final master bus.
+     *
+     * A constructor `val`, deliberately, unlike every other parameter here: the rings are sized once
+     * from it and must never be reallocated on the audio thread.
+     */
+    val lookaheadSeconds: Double = 0.0,
 ) {
     // Compressor parameters (all mutable for real-time changes; setters silently ignore non-finite values).
     var thresholdDb: Double = guardOr(thresholdDb, -20.0)
@@ -71,11 +85,19 @@ class Compressor(
             updateCoefficients()
         }
 
+    /**
+     * How fast the gain closes. One concept, two mechanisms: a one-pole time constant when
+     * [lookaheadSeconds] is 0, the smoothing length when it is not.
+     *
+     * On the lookahead path this re-splits the box taps but never reallocates past the ceiling fixed
+     * at construction, so writing it from a live settings change stays audio-thread safe.
+     */
     var attackSeconds: Double = guardOr(attackSeconds, 0.003)
         set(value) {
             if (!value.isFinite()) return
             field = value
             updateCoefficients()
+            if (delayFrames > 0) resizeSmoothing()
         }
 
     var releaseSeconds: Double = guardOr(releaseSeconds, 0.1)
@@ -101,8 +123,60 @@ class Compressor(
     private var attackCoeff: Double = 0.0
     private var releaseCoeff: Double = 0.0
 
+    // ── Lookahead state ──────────────────────────────────────────────────────
+    // Sized once, here. Nothing below is ever reallocated: `lookaheadSeconds` is a
+    // constructor val precisely so the ring cannot be resized on the audio thread.
+
+    /** Signal delay D in frames. 0 disables the whole lookahead path. */
+    private val delayFrames: Int = run {
+        val frames = (lookaheadSeconds * sampleRate).toInt()
+        if (frames < MIN_LOOKAHEAD_FRAMES) 0 else frames
+    }
+
+    /** Signal delay rings (one per channel, one shared write index). */
+    private val delayL = DoubleArray(if (delayFrames > 0) delayFrames else 0)
+    private val delayR = DoubleArray(if (delayFrames > 0) delayFrames else 0)
+    private var delayPos = 0
+
+    // Monotonic-increasing deque for the running MINIMUM of the required gain over a window of
+    // `delayFrames + 1`. Primitive-backed: ArrayDeque<Double> boxes on Kotlin/JS.
+    private val minVals = DoubleArray(if (delayFrames > 0) delayFrames + 2 else 0)
+    private val minIdx = IntArray(if (delayFrames > 0) delayFrames + 2 else 0)
+    private var minHead = 0
+    private var minTail = 0
+    private var sampleCounter = 0
+
+    // Two cascaded box filters: combined support b1 + b2 - 1 taps, coverage condition
+    // b1 + b2 - 2 <= delayFrames.
+    private var boxA = DoubleArray(0)
+    private var boxB = DoubleArray(0)
+    private var boxAPos = 0
+    private var boxBPos = 0
+    private var boxASum = 0.0
+    private var boxBSum = 0.0
+
+    /** Release-stage state: instant down, one-pole up. Runs BEFORE the smoother. */
+    private var releaseGain = 1.0
+
     init {
         updateCoefficients()
+        if (delayFrames > 0) {
+            resizeSmoothing()
+            resetLookaheadState()
+        }
+    }
+
+    /**
+     * Rebuild the two box filters from [attackSeconds], honouring `b1 + b2 - 2 <= delayFrames`.
+     * Called from the setter too, so a live attack change re-splits the taps — but never
+     * reallocates beyond the ceiling fixed at construction.
+     */
+    private fun resizeSmoothing() {
+        val requested = (attackSeconds * sampleRate).toInt()
+        val total = requested.coerceIn(2, delayFrames + 2)
+        val half = (total / 2).coerceAtLeast(1)
+        if (boxA.size != half) boxA = DoubleArray(half)
+        if (boxB.size != half) boxB = DoubleArray(half)
     }
 
     /**
@@ -110,6 +184,26 @@ class Compressor(
      */
     fun process(left: AudioBuffer, right: AudioBuffer, blockSize: Int) {
         val makeupLinear = computeMakeupLinear()
+
+        // Two loop bodies, branched OUTSIDE the per-sample loop: `envelopeStep` is inlined into each
+        // so the zero-lookahead path stays exactly as specialized as it was.
+        if (delayFrames > 0) {
+            for (i in 0 until blockSize) {
+                val l = left[i]
+                val r = right[i]
+                val gain = lookaheadStep(max(abs(l), abs(r))) * makeupLinear
+                // Emit the DELAYED sample, then park the current one. One shared write index.
+                val outL = delayL[delayPos]
+                val outR = delayR[delayPos]
+                delayL[delayPos] = l
+                delayR[delayPos] = r
+                delayPos = if (delayPos + 1 == delayFrames) 0 else delayPos + 1
+                left[i] = outL * gain
+                right[i] = outR * gain
+            }
+            return
+        }
+
         for (i in 0 until blockSize) {
             val totalGain = envelopeStep(max(abs(left[i]), abs(right[i]))) * makeupLinear
             left[i] = left[i] * totalGain
@@ -161,6 +255,85 @@ class Compressor(
         } else {
             1.0
         }
+    }
+
+    /**
+     * Per-sample lookahead gain: **min-hold → release → two cascaded boxes**.
+     *
+     * The ordering is load-bearing. Taking `min(smoothed, onePoleRelease)` *after* the smoother is
+     * C0 at the crossover — the box path leaves its minimum with slope 0, accelerates, then meets
+     * the release path and the gain slope drops ~40x in one sample. That is the same corner
+     * [ENV_COEFF_BLEND_DB] exists to remove. Running release *before* the boxes keeps the whole
+     * trajectory C1, and safety is preserved because `release <= held` pointwise, so
+     * `box(release) <= box(held) <= required`.
+     *
+     * Why the ceiling is actually met: the min-hold window is `delayFrames + 1`, so the sample
+     * emerging from the delay ring lies inside the hold window of **every** tap the smoother is
+     * averaging. An average is >= its minimum, so the smoothed gain is <= what that sample requires.
+     * Derivation in `docs/tasks/master-limiter-lookahead.md` §2.3.
+     */
+    private fun lookaheadStep(inputLevel: Double): Double {
+        // NaN-guard — max(NaN, x) propagates NaN, which would poison the deque ordering (every
+        // comparison false) and then sit in the ring for delayFrames samples. MasterStage maps NaN
+        // to Short.MIN_VALUE, i.e. a full-scale click.
+        val level = if (inputLevel != inputLevel) 0.0 else inputLevel
+
+        val inputDb = if (level > SILENCE_LIN) DB20_OVER_LN10 * ln(level) else SILENCE_DB
+        val reductionDb = calculateGainReduction(inputDb)
+        val required = if (reductionDb < GAIN_SKIP_THRESHOLD_DB) exp(reductionDb * LN10_OVER_20) else 1.0
+
+        // ── Running MINIMUM over the next (delayFrames + 1) samples ──
+        while (minTail != minHead) {
+            val back = if (minTail == 0) minVals.size - 1 else minTail - 1
+            if (minVals[back] >= required) minTail = back else break
+        }
+        minVals[minTail] = required
+        minIdx[minTail] = sampleCounter
+        minTail = if (minTail + 1 == minVals.size) 0 else minTail + 1
+        while (minIdx[minHead] <= sampleCounter - (delayFrames + 1)) {
+            minHead = if (minHead + 1 == minVals.size) 0 else minHead + 1
+        }
+        val held = minVals[minHead]
+        sampleCounter++
+
+        // ── Release stage: instant down, one-pole up ──
+        val recovered = releaseGain + releaseCoeff * (1.0 - releaseGain)
+        releaseGain = if (held < recovered) held else recovered
+
+        // ── Two cascaded box filters (C1 step response) ──
+        val a = boxA
+        boxASum += releaseGain - a[boxAPos]
+        a[boxAPos] = releaseGain
+        boxAPos = if (boxAPos + 1 == a.size) 0 else boxAPos + 1
+        val stage1 = boxASum / a.size
+
+        val b = boxB
+        boxBSum += stage1 - b[boxBPos]
+        b[boxBPos] = stage1
+        boxBPos = if (boxBPos + 1 == b.size) 0 else boxBPos + 1
+
+        return boxBSum / b.size
+    }
+
+    /** Prime the lookahead state to "wide open, silent rings". */
+    private fun resetLookaheadState() {
+        delayL.fill(0.0)
+        delayR.fill(0.0)
+        delayPos = 0
+        minHead = 0
+        minTail = 0
+        sampleCounter = 0
+        releaseGain = 1.0
+        boxA.fill(1.0)
+        boxB.fill(1.0)
+        boxAPos = 0
+        boxBPos = 0
+        boxASum = boxA.size.toDouble()
+        boxBSum = boxB.size.toDouble()
+        // Seed the deque with a unity entry so the first sample has a valid front.
+        minVals[0] = 1.0
+        minIdx[0] = 0
+        minTail = 1
     }
 
     /** Block-rate makeup-gain linear multiplier; precomputed once per `process()` call. */
@@ -215,6 +388,7 @@ class Compressor(
      */
     fun reset() {
         envelopeDb = SILENCE_DB
+        if (delayFrames > 0) resetLookaheadState()
     }
 
     companion object {
@@ -224,6 +398,12 @@ class Compressor(
         private const val LN10: Double = 2.302585092994046
         private const val DB20_OVER_LN10: Double = 8.685889638065035   // 20 / ln(10)
         private const val LN10_OVER_20: Double = 0.11512925464970229   // ln(10) / 20
+
+        /**
+         * Below this many frames the smoother degenerates (two boxes need >= 1 tap each) and the
+         * gain would step rather than ramp — a click. Sub-minimum lookahead takes the classic path.
+         */
+        const val MIN_LOOKAHEAD_FRAMES: Int = 8
 
         // Envelope follower silence floor.
         private const val SILENCE_DB: Double = -100.0

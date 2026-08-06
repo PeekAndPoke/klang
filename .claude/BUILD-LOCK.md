@@ -1,7 +1,7 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-04 (file created)**
+**SINCE: 2026-08-04**
 **STATE: FREE — take the lock before building.**
 
 Convention adopted from the sibling `ultra` project. Two layers, because they catch different failures:
@@ -64,6 +64,33 @@ content may be stale but the lock itself never is. Only the printed holder recor
 
 ---
 
-## What the last holder changed
+## What the last holder changed — master limiter lookahead, 2026-08-04
 
-*(nothing yet — first entry goes here)*
+**Phases 0–2 of `docs/tasks/master-limiter-lookahead.md` are IN. `audio_be:jvmTest` is green (946).**
+Not committed — the tree is yours to review.
+
+**The knock is fixed.** `effects/Compressor.kt` gained a `lookaheadSeconds` constructor `val`
+(default `0.0` = the old path, untouched, which is what every per-orbit compressor uses). Above it, the gain is built by
+**min-hold (D+1) → release → two cascaded boxes → delay (D)**. `MasterStage` now runs it at 5 ms and its DC blockers
+moved **before** the limiter.
+
+Measured on the real code, 55 Hz kick: +12 dB over the ceiling used to exit at **+11.67 dBFS with 5.2 ms of hard
+clipping**; it now exits at **−0.37 dBFS, zero samples clipped**.
+
+**Two things to know if you touch this:**
+
+1. **`MasterStage` no longer has one limiter character — it has two.** `LIMITER_*` is the house limiter (global,
+   post-sum, 5 ms lookahead, smoothing = the whole window).
+   `AUTHORED_LIMITER_*` is the opt-in `MasterFx.limiter()` (per-playback, **lookahead 0**, 1 ms one-pole attack). They
+   differ **on purpose** — an authored limiter with latency would delay its playback against every other one.
+   `MasterDefaultsSyncSpec` asserts both sides, so the asymmetry is data, not a comment. Do not "re-sync" them.
+2. **`lookaheadSeconds` is a constructor `val`, unlike every other param.** The rings are sized once from it. Making it
+   a `var` would resize a buffer on the audio thread.
+
+**Still open (Phase 3+):** `MasterStageDsl.Limiter` has no `lookaheadSeconds` yet, so
+`MasterFx.limiter().lookahead(...)` does not exist — the wire/DSL surface is unbuilt. And **Phase 4, the by-ear gate,
+has not run.** The 5 ms default is provisional: the measurement behind it may be attributing to smoothing what the
+release actually does (plan §Phase 4, flagged OPEN).
+
+`audio_be:jvmTest` 946 green. No CPU regression on `runSongBenchmark`
+(Der Schmetterling medRTF 0.086 with lookahead vs 0.094 without — the difference is run-to-run variance, not a speedup).

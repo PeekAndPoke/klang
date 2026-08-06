@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.audio_be
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 
 /**
@@ -29,14 +31,28 @@ class MasterStageSpec : StringSpec({
     }
 
     "output is interleaved L/R and routes channels independently" {
+        // The master limiter has lookahead, so a left-only impulse emerges
+        // LIMITER_LOOKAHEAD_SECONDS later — past the end of a single 64-frame block. Render enough
+        // blocks to carry it through, then look for it wherever it lands.
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
-        val mix = StereoBuffer(blockFrames)
-        mix.left[0] = 0.5   // left-only impulse, well below the -1 dB limiter threshold
         val out = ShortArray(blockFrames * 2)
+        val leftSeen = mutableListOf<Int>()
+        val rightSeen = mutableListOf<Int>()
 
-        master.process(mix, out)
+        repeat(8) { block ->
+            val mix = StereoBuffer(blockFrames)
+            // left-only impulse in the first block, well below the -1 dB limiter threshold
+            if (block == 0) mix.left[0] = 0.5
 
-        (out[0].toInt() != 0) shouldBe true   // left frame 0 carries signal
-        out[1] shouldBe 0.toShort()           // right frame 0 stays silent
+            master.process(mix, out)
+
+            for (i in 0 until blockFrames) {
+                if (out[i * 2].toInt() != 0) leftSeen += block * blockFrames + i
+                if (out[i * 2 + 1].toInt() != 0) rightSeen += block * blockFrames + i
+            }
+        }
+
+        leftSeen.shouldNotBeEmpty()          // the left impulse does come out...
+        rightSeen.shouldBeEmpty()            // ...and never leaks into the right channel
     }
 })

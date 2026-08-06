@@ -436,22 +436,29 @@ Each phase ends green and committable. ⚠️ **Shipped-song sound changes at Ph
 `MasterStage` is on the summed mix, so every song is affected the moment its limiter changes. Only Phases 0 and 1 are
 sound-neutral. Phase 4 is the by-ear *gate*, not the first point of change.
 
-### Phase 0 — capture the reference vector FIRST (sound-neutral)
+### Phase 0 — write the failing guard (sound-neutral)
 
-**Before touching `Compressor`.**
+> **Simplified 2026-08-04 (user): "backward compat is NOT an issue."** The original Phase 0 existed
+> to capture a byte-identical reference vector so the `lookaheadSeconds = 0` path could be proven
+> unchanged. That guard was purely about not altering shipped songs' per-orbit compression — which we
+> are now free to do. **Dropped**, and with it the blocker that `audio_be` has no test-resources
+> directory.
+>
+> ⚠️ **What this does NOT relax:** the authored limiter still defaults to `lookaheadSeconds = 0.0`,
+> and lookahead is still master-only. Those exist to prevent **cross-playback and cross-orbit
+> desync** (§3, Phase 3) — a correctness constraint, not a compatibility one.
 
-1. **Capture the byte-identical reference.** Render fixed inputs through the *current* `Compressor`
-   and check the output in. ⚠️ **`audio_be` has no test resources directory** — its source sets are
-   `commonMain / commonTest / jsMain / jvmMain / wasmJsMain`, and common tests cannot read files (the repo's only test
-   resources are under `sprudel/src/jvmTest/resources`). So the vector goes in as a **generated Kotlin source constant
-   in `commonTest`**, not a resource file. Decide the shape here; do not discover it on day one. Capture **two**
-   configurations: the house limiter settings *and* an orbit-shaped one (`Compressor.parseSettings` defaults: 4:1 / 6
-   dB / 3 ms / 100 ms), because the path this guard actually protects is the **per-orbit** compressor.
-2. **Write `LimiterLookaheadSpec` and watch it fail.**
-   ⚠️ It must compile **today**, so write it against the *current* API — no `lookaheadSeconds`
-   argument, which does not exist until Phase 1. Assert the real invariant ("no sample exceeds 1.0 linear" on the
-   `Compressor` output, drive ≤ +18 dB over threshold per §2.4) and watch it go red for the right reason. Phase 1 adds
-   the parameter and turns it green.
+**Write `LimiterLookaheadSpec` and watch it fail.**
+
+It must compile **today**, so write it against the *current* API — no `lookaheadSeconds` argument, which does not exist
+until Phase 1. Assert the real invariant:
+
+- **no output sample exceeds 1.0 linear**, measured on the `Compressor` output **before** any clip (§6 — measuring after
+  `MasterStage`'s clip is trivially true and would be a toothless guard);
+- drive bounded at **≤ +18 dB over threshold**, because ≥ +20 dB legitimately exceeds the ceiling at ratio 20:1 (§2.4).
+
+It must go **red for the right reason** — the transient escaping, not a compile error or a bad assertion. Phase 1 adds
+the parameter and turns it green.
 
 ### Phase 1 — DSP: lookahead in `Compressor` (no behaviour change at default)
 

@@ -28,14 +28,31 @@ class MasterDefaultsSyncSpec : StringSpec({
         MasterDsl.default.stages shouldBe emptyList()
     }
 
-    "the opt-in Limiter stage defaults match the house safety limiter" {
+    "the opt-in Limiter stage shares the house CHARACTER — threshold, ratio, knee, release" {
         val limiter = MasterStageDsl.Limiter()
 
         limiter.thresholdDb shouldBe MasterStage.LIMITER_THRESHOLD_DB
         limiter.ratio shouldBe MasterStage.LIMITER_RATIO
         limiter.kneeDb shouldBe MasterStage.LIMITER_KNEE_DB
-        limiter.attackSeconds shouldBe MasterStage.LIMITER_ATTACK_SECONDS
         limiter.releaseSeconds shouldBe MasterStage.LIMITER_RELEASE_SECONDS
+    }
+
+    "the opt-in Limiter's TIMING deliberately differs — and the difference is asserted, not assumed" {
+        // The house limiter runs once on the summed mix, so its lookahead delays everything
+        // uniformly and nothing can desync. The authored one runs per playback, where the same
+        // delay WOULD desync it against other playbacks. So the two legitimately diverge, and this
+        // is where that is written down — a `shouldNotBe` would prove nothing.
+        MasterStageDsl.Limiter().attackSeconds shouldBe MasterStage.AUTHORED_LIMITER_ATTACK_SECONDS
+
+        // ...and the authored default really is "no added latency".
+        MasterStage.AUTHORED_LIMITER_LOOKAHEAD_SECONDS shouldBe 0.0
+    }
+
+    "the house limiter smooths across its whole lookahead window" {
+        // Peak performance is invariant to the smoothing length (the min-hold does the
+        // anticipating), while LF cleanliness tracks it — so at a fixed latency, maximum smoothing
+        // is the right default. This encodes that intent as a relation rather than two loose numbers.
+        MasterStage.LIMITER_ATTACK_SECONDS shouldBe MasterStage.LIMITER_LOOKAHEAD_SECONDS
     }
 
     "the master reverb default is the authored twin of the Freeverb default" {
