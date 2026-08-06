@@ -342,6 +342,44 @@ This is the standing click-diagnostic harness; it prints and guards nothing, by 
 
 ---
 
+## F16 — The master limiter does not limit transients; the hard clip does 🔧
+
+**HIGH — user-reported symptom ("knock"), root-caused 2026-08-04.** Being fixed under
+[`docs/tasks/master-limiter-lookahead.md`](../tasks/master-limiter-lookahead.md).
+
+`Compressor` (`effects/Compressor.kt`) is feed-forward with **no lookahead and no delay line**, so the detector sees a
+sample at the same instant the signal does. `MasterStage.process` is limiter → DC blocker → **hard clip at ±1.0**.
+
+**Evidence — measured against the real `Compressor` with `MasterStage`'s own constants**
+(−1 dB, 20:1, 2 dB knee, 1 ms attack, 100 ms release), 55 Hz kick-like transient:
+
+| Kick peak in | Peak out        | Hard-clipped for |
+|--------------|-----------------|------------------|
+| 0 dBFS       | −0.33 dBFS      | 0 ms             |
+| +6 dBFS      | **+5.67 dBFS**  | **3.99 ms**      |
+| +12 dBFS     | **+11.67 dBFS** | **5.22 ms**      |
+| +18 dBFS     | **+17.67 dBFS** | **5.90 ms**      |
+
+At t = 1 ms into a +18 dB transient the gain is still **exactly 0.00 dB**. The ceiling is enforced by the clip, not the
+limiter — so every loud transient is a 2–6 ms hard-clipped burst, and the window grows with the amount of limiting. On
+low-frequency content that is the reported knock.
+
+**Ruled out** (both measured, so they do not get re-investigated):
+
+- *Envelope ripple / low-frequency pumping* — steady-state gain ripple is ≤ 1 dB pk-pk even at 40 Hz.
+- *Cold-envelope startup* — with the envelope fully warm (bed at −1 dBFS, already limiting) a +12 dB kick still reaches
+  +8.43 dBFS and clips for 3.27 ms.
+- *The `ENV_COEFF_BLEND_DB` crackle fix* — disabling it changes the peak by 0.14 dB.
+
+It is structural: a feed-forward limiter cannot reduce a peak it has not seen.
+
+**Sub-finding — a documented invariant that is false.** `MasterStage.kt:58` states the DC blockers *"run AFTER the
+limiter so input is already ±1-bounded — no rail-edge transient, no need for downstream softCap."* They are in fact
+receiving up to +8 dBFS. A 7 Hz high-pass fed a clipped asymmetric burst rings with a low-frequency tail, compounding
+the thump.
+
+---
+
 ## Notes (not findings — recorded so they are not re-derived)
 
 - **`VoiceFactoryFilterOrderSpec` test 2 is redundant, not toothless.** Reinstating the canonical highpass-first sort in
