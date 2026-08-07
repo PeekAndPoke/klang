@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_engine
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -49,7 +50,7 @@ class KlangOfflineRendererSampleTest : StringSpec({
     }
 
     "render with sample sounds produces non-zero audio" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocks = mutableListOf<ShortArray>()
 
         renderer.render(
@@ -65,7 +66,7 @@ class KlangOfflineRendererSampleTest : StringSpec({
     }
 
     "render with alternating samples loads a new sample every cycle" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocks = mutableListOf<ShortArray>()
 
         renderer.render(
@@ -78,7 +79,7 @@ class KlangOfflineRendererSampleTest : StringSpec({
         )
 
         // Each cycle should produce audio (4 different samples across 4 cycles)
-        val blocksPerCycle = 48_000 / 512
+        val blocksPerCycle = 48_000 / AudioBackendContext.RENDER_QUANTUM_FRAMES
 
         for (cycle in 0 until 4) {
             val cycleStart = cycle * blocksPerCycle
@@ -91,7 +92,7 @@ class KlangOfflineRendererSampleTest : StringSpec({
     }
 
     "render without samples parameter produces silence for sample sounds" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocks = mutableListOf<ShortArray>()
 
         renderer.render(

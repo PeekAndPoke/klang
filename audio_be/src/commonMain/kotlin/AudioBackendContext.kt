@@ -42,6 +42,26 @@ class AudioBackendContext(
 
     companion object {
         /**
+         * The canonical DSP block size. **Every host must render in blocks of this size.**
+         *
+         * This is NOT a latency/throughput knob — it is a *tone* parameter, because several parts
+         * of the engine update once per block and therefore derive their rate from it:
+         *
+         *  - `VoiceFactory.driftUpdateRate` = `sampleRate / blockFrames` — the analog-drift time
+         *    constants (`AnalogDriftCoeffs`) are derived from it, so a different block size gives
+         *    audibly different drift.
+         *  - SVF cutoff smoothing / `FilterModRenderer` — per-block recompute granularity.
+         *  - `VoiceScheduler.oldestAllowedSec` = `now - 5 * blockDuration` — the late-voice drop window.
+         *  - `MasterBus` chain crossfades — start rounds to the current block.
+         *
+         * 128 because that is the Web Audio API render quantum: the browser worklet gets its block
+         * size handed to it by Chrome and cannot choose (`KlangAudioWorklet.process`). The browser
+         * is therefore the blueprint, and the JVM backend + offline renderer follow it so a WAV
+         * render sounds like what you hear live.
+         */
+        const val RENDER_QUANTUM_FRAMES: Int = 128
+
+        /**
          * Builds a context with the standard shared services (sample cache + seeded registries).
          * The caller creates the mutable [BackendClock], passes it in (as a read-only [RenderClock]),
          * and keeps its own reference to advance it.

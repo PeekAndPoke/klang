@@ -65,7 +65,8 @@ class VoiceFactory(
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
      *
      * For oscillator voices, [nowFrame] is not used (startFrame comes from the schedule).
-     * For sample voices, [nowFrame] is used as the start frame to avoid late-start artifacts.
+     * For sample voices, [nowFrame] is only a *floor* on the scheduled start frame — see
+     * `sampleStartFrame` below.
      *
      * Returns null if the voice cannot be created (unknown sound, missing sample, etc.).
      */
@@ -312,7 +313,23 @@ class VoiceFactory(
                     sample.meta.anchor * sample.sampleRate
                 }
 
-                val voiceDurationFrames = gateEndFrame - nowFrame
+                // Sample-accurate onset, same as the oscillator branch: `Voice.render` clips the
+                // voice into the block itself (offset = startFrame - blockStart), so a sample that
+                // starts mid-block starts mid-block. Rounding down to the block start (which this
+                // used to do unconditionally) fires every hit EARLY by 0..blockFrames-1 frames —
+                // not a constant offset but per-hit jitter, which is what wrecks the groove.
+                //
+                // [nowFrame] remains a floor for the LATE case: a voice whose scheduled start is
+                // already behind the current block would otherwise run its ADSR from a past frame
+                // while `SampleIgnitor`'s playhead still starts at the beginning of the PCM — the
+                // envelope and the sample would be out of sync (the original "late-start artifact").
+                //
+                // The floor BOUNDS that desync to one block rather than eliminating it: commands are
+                // drained before the cursor advances, so a voice arriving between blocks is promoted
+                // against the block just rendered and first sounds in the next one. Strictly better
+                // than the old code, which hit that worst case on every voice — but not a guarantee.
+                val sampleStartFrame = maxOf(startFrame, nowFrame)
+                val voiceDurationFrames = gateEndFrame - sampleStartFrame
 
                 val signal = SampleIgnitor(
                     pcm = sample.pcm,
@@ -327,7 +344,7 @@ class VoiceFactory(
                 )
 
                 buildVoice(
-                    data, resolvedAdsr, nowFrame, gateEndFrame, voiceDurationFrames, cylinder,
+                    data, resolvedAdsr, sampleStartFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, baseSamplePitchHz, data.cut,

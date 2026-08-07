@@ -30,7 +30,15 @@ class WarmupRunner(
     private val dispatcher: PlaybackEngineDispatcher,
     /** Comm link used only to emit [KlangCommLink.Feedback.BackendReady]. */
     private val feedback: KlangCommLink.BackendEndpoint,
-    /** Number of audio blocks to warm up for. 8 blocks ≈ 85 ms at 48 kHz / 512 frames. */
+    /**
+     * Number of audio blocks to warm up for. 8 blocks ≈ 21 ms at 48 kHz /
+     * [AudioBackendContext.RENDER_QUANTUM_FRAMES] frames.
+     *
+     * A block count, not a duration — deliberately. What is being primed is per-block work (JIT of
+     * the render path, lazy allocations, inline caches), so the useful unit is *renders performed*,
+     * and 8 has always been the browser's window. It used to be ~85 ms on the JVM only because that
+     * backend ran a 4× larger block; that divergence is gone.
+     */
     private val warmupBlocks: Int = 8,
 ) {
     companion object {

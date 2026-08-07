@@ -37,9 +37,10 @@ class PlaybackEngine(
     /**
      * The tail-hold bound in blocks, derived per engine.
      *
-     * Must be computed from the sample rate and block size, not hard-coded: `blockFrames` is 128 in
-     * the worklet but 512 for the JVM backend, so a fixed block count would mean 20 s in the browser
-     * and 75 s on the desktop.
+     * Must be computed from the sample rate and block size, not hard-coded — a fixed block count is
+     * a different *duration* at every block size and sample rate. Every host now renders at
+     * [AudioBackendContext.RENDER_QUANTUM_FRAMES], but the sample rate still varies with the device,
+     * and pinning a block count would silently re-introduce that divergence.
      */
     private val maxTailHoldBlocks: Int =
         ((MAX_MASTER_TAIL_HOLD_SECONDS * sampleRate) / blockFrames).toInt().coerceAtLeast(1)

@@ -16,7 +16,6 @@ internal val aTruthWorthLyingForSong = Song(
     rpm = 31.0,
     icon = "guitar",
     code = """
-
 import * from "stdlib"
 import * from "sprudel"
 
@@ -24,7 +23,7 @@ let drive = 4 // <--- Do not put 11
 let feel  = 10
 
 let stay = 64
-let tp = "[0 1 2 3 -2 -10 -3 4]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
+let tp = "[0 1 -2 -3 -5 -10 -3 3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
 
 let guitar = (() => {
 
@@ -66,7 +65,7 @@ stack( // Gitarre! -------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0  8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(2).fast(4).scale("C4:chromatic").hpf(1200).lpf(3200).lpe(1.5).lpq(1.50).clip(0.96).late(0.001)  // . solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6200).oscp("spread", 0.04).postgain(0.080).body("oak").bodyMix(0.5)
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightness", 6200).oscp("spread", 0.04).postgain(0.075).body("oak").bodyMix(0.5)
     .transpose(tp).pan(0.10).superimpose(pan(0.90)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]

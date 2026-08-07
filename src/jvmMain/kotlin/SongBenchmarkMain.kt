@@ -60,7 +60,10 @@ fun main(args: Array<String>) {
     md.appendLine("# Song CPU Benchmark — JVM")
     md.appendLine()
     md.appendLine("- Runtime: `${System.getProperty("java.vm.name")} ${System.getProperty("java.vm.version")}`")
-    md.appendLine("- Sample rate: 48000 Hz, block: 512 frames")
+    // Read off the instance, not from constants: the report IS the artifact, so it has to record
+    // what this run actually measured. A hardcoded line here is how the previous report ended up
+    // claiming 512 frames after the engine moved to 128.
+    md.appendLine("- Sample rate: ${bench.sampleRate} Hz, block: ${bench.blockFrames} frames")
     md.appendLine("- `medianRtf` = render/audio time (steady-state avg). `peakBlockRtf` = busiest single block (≈ worst render-cycle CPU).")
     md.appendLine("- Lower is better. On JVM values are small; the browser worklet is ~10-30x slower, so multiply to relate to the 50% figure.")
     md.appendLine()

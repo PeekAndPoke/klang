@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
@@ -26,7 +27,12 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
  */
 class KlangOfflineRenderer(
     private val sampleRate: Int = 48_000,
-    private val blockFrames: Int = 512,
+    /**
+     * Must stay at [AudioBackendContext.RENDER_QUANTUM_FRAMES] for the render to match live
+     * playback — block size drives the analog-drift rate and the filter smoothing granularity,
+     * so a "faster" larger block is a different sound, not just a faster render.
+     */
+    private val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) {
     data class Result(
         val durationSec: Double,

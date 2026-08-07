@@ -10,6 +10,7 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.int
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
@@ -41,7 +42,11 @@ class RenderWavCommand(
     private val cycles by option("--cycles", help = "Number of cycles to render").int().default(4)
     private val rpm by option("--rpm", help = "Tempo in RPM").double().default(30.0)
     private val sampleRate by option("--sample-rate", help = "Sample rate in Hz").int().default(48_000)
-    private val blockSize by option("--block-size", help = "Block size in frames").int().default(512)
+    private val blockSize by option(
+        "--block-size",
+        help = "Block size in frames — changing this changes the SOUND (drift rate, filter smoothing), " +
+                "not just render speed. Leave at the default to match browser playback.",
+    ).int().default(AudioBackendContext.RENDER_QUANTUM_FRAMES)
     private val tail by option("--tail", help = "Extra seconds for reverb/delay tails").double().default(2.0)
 
     override fun run() {

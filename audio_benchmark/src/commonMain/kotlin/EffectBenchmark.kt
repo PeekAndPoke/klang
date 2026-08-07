@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_benchmark
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor
@@ -40,7 +41,7 @@ import kotlin.time.TimeSource
  */
 class EffectBenchmark(
     private val sampleRate: Int = 44100,
-    private val blockFrames: Int = 128,
+    private val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     private val warmupBlocks: Int = 10000,
     private val measureBlocks: Int = 5000,
     private val iterations: Int = 3,

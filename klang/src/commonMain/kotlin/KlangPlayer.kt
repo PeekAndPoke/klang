@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.AudioAnalyzer
 import io.peekandpoke.klang.audio_be.AudioBackend
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.samples.Samples
@@ -49,8 +50,14 @@ class KlangPlayer(
         val samples: Samples,
         /** The sample rate to use for audio playback */
         val sampleRate: Int = 48_000,
-        /** The audio rendering block size */
-        val blockSize: Int = 512,
+        /**
+         * The audio rendering block size.
+         *
+         * Defaults to the canonical [AudioBackendContext.RENDER_QUANTUM_FRAMES] — the browser
+         * worklet is forced to this value by Web Audio, and block size is a tone parameter, so
+         * every other host must match it or a render won't sound like live playback.
+         */
+        val blockSize: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     )
 
     // Shared communication link and backend

@@ -18,6 +18,14 @@ import io.peekandpoke.klang.common.SourceLocationChain
 class KlangOfflineRendererTest : StringSpec({
 
     /**
+     * True if two renders differ anywhere. Compares block-by-block via [ShortArray.contentEquals]
+     * rather than flattening — flattening would box ~100k `Short`s per render, and this spec also
+     * runs on Kotlin/JS where boxed types are the thing the project bans outright.
+     */
+    fun rendersDiffer(a: List<ShortArray>, b: List<ShortArray>): Boolean =
+        a.size != b.size || a.indices.any { !a[it].contentEquals(b[it]) }
+
+    /**
      * Minimal pattern that produces a single event at a given sound name.
      */
     fun singleNotePattern(sound: String, freqHz: Double = 440.0): KlangPattern {
@@ -39,7 +47,7 @@ class KlangOfflineRendererTest : StringSpec({
     }
 
     "render with default ignitors produces non-zero audio" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocks = mutableListOf<ShortArray>()
 
         val result = renderer.render(
@@ -56,7 +64,7 @@ class KlangOfflineRendererTest : StringSpec({
     }
 
     "render with empty customIgnitors still uses defaults" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocks = mutableListOf<ShortArray>()
 
         renderer.render(
@@ -72,7 +80,7 @@ class KlangOfflineRendererTest : StringSpec({
     }
 
     "render with custom ignitor produces non-zero audio" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocks = mutableListOf<ShortArray>()
 
         val customDsl = IgnitorDsl.Sine()
@@ -90,7 +98,7 @@ class KlangOfflineRendererTest : StringSpec({
     }
 
     "render with unknown sound produces silence" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocks = mutableListOf<ShortArray>()
 
         renderer.render(
@@ -105,7 +113,7 @@ class KlangOfflineRendererTest : StringSpec({
     }
 
     "custom ignitor overrides built-in default" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocksDefault = mutableListOf<ShortArray>()
         val blocksOverride = mutableListOf<ShortArray>()
 
@@ -132,14 +140,14 @@ class KlangOfflineRendererTest : StringSpec({
         blocksDefault.any { block -> block.any { it != 0.toShort() } } shouldBe true
         blocksOverride.any { block -> block.any { it != 0.toShort() } } shouldBe true
 
-        // But they should differ (sawtooth != sine)
-        val defaultFirst = blocksDefault.first()
-        val overrideFirst = blocksOverride.first()
-        (defaultFirst.contentEquals(overrideFirst)) shouldBe false
+        // But they should differ (sawtooth != sine).
+        // Compare the WHOLE render, not blocks.first(): at the canonical 128-frame block the first
+        // block is still inside the master limiter's 5 ms lookahead delay, so it is silence in both.
+        rendersDiffer(blocksDefault, blocksOverride) shouldBe true
     }
 
     "multiple custom ignitors are all registered" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
 
         val customs = listOf(
             "oscA" to IgnitorDsl.Sine(),
@@ -172,12 +180,12 @@ class KlangOfflineRendererTest : StringSpec({
         blocksA.any { block -> block.any { it != 0.toShort() } } shouldBe true
         blocksB.any { block -> block.any { it != 0.toShort() } } shouldBe true
 
-        // And they differ (sine vs sawtooth)
-        (blocksA.first().contentEquals(blocksB.first())) shouldBe false
+        // And they differ (sine vs sawtooth) — whole render, see the note above.
+        rendersDiffer(blocksA, blocksB) shouldBe true
     }
 
     "custom ignitor with composed DSL renders correctly" {
-        val renderer = KlangOfflineRenderer(sampleRate = 48_000, blockFrames = 512)
+        val renderer = KlangOfflineRenderer(sampleRate = 48_000)
         val blocks = mutableListOf<ShortArray>()
 
         // A more complex DSL: sine with lowpass filter
