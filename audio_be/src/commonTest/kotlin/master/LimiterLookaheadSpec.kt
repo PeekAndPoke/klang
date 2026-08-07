@@ -312,6 +312,49 @@ class LimiterLookaheadSpec : StringSpec({
 
         (recovered > 0.96) shouldBe true
     }
+
+    "a non-finite sample cannot mute the mix or leak a click" {
+        // Covers BOTH non-finite guards at once — the detector input and the ring write.
+        //
+        // Without the detector guard a single +Inf drives the required gain to 0, pins it there for
+        // the whole hold window, and the master then fades the entire mix back in over ~160 ms — a
+        // far bigger event than the click the guard was originally written for. Without the ring
+        // guard the Inf is stored and emerges `delayFrames` later as `Inf * 0.0` = NaN, which
+        // MasterStage maps to Short.MIN_VALUE: full-scale negative.
+        //
+        // Reachable in a raw engine via runaway feedback, and the DC blocker ahead of the limiter
+        // passes the first Inf through unchanged.
+        val frames = sampleRate / 2
+        val signal = DoubleArray(frames) { i -> 0.5 * sin(2.0 * PI * 220.0 * i / sampleRate) }
+        val eventAt = sampleRate / 4          // far enough in to have a clean 'before' window
+        signal[eventAt] = Double.POSITIVE_INFINITY
+
+        val left = signal.copyOf()
+        val right = signal.copyOf()
+        houseLimiter().process(left, right, frames)
+
+        // (a) nothing non-finite reaches the output...
+        left.all { it.isFinite() } shouldBe true
+
+        // (b) ...and the limiter has not collapsed.
+        //
+        // Measured as ENERGY over the 40 ms following the event, relative to an untouched stretch
+        // before it. A peak-based assertion does not work here and two earlier versions of this
+        // test failed because of it: the gain recovers within the window, so `max` picks up the
+        // recovered tail and passes whether or not the mix was muted. Energy integrates the whole
+        // window, so a mute-and-fade cannot hide inside it.
+        fun rms(from: Int, until: Int): Double {
+            var sum = 0.0
+            for (i in from until until) sum += left[i] * left[i]
+            return kotlin.math.sqrt(sum / (until - from))
+        }
+
+        val window = sampleRate / 25                     // 40 ms
+        val before = rms(eventAt - window, eventAt)
+        val after = rms(eventAt, eventAt + window)
+
+        (after > before * 0.7) shouldBe true
+    }
 })
 
 /** Local `withClue` shim — keeps the failure message pointing at the drive level that failed. */

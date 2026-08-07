@@ -98,8 +98,9 @@ class Compressor(
      * [lookaheadSeconds] is 0, the smoothing length when it is not.
      *
      * On the lookahead path this re-splits the box taps. It allocates nothing — the rings are sized
-     * once at construction — but it DOES re-prime them, so a live write briefly resets the smoother
-     * to unity. Harmless at a settings change, not something to call per block.
+     * once at construction — but it DOES re-prime them to the *current* gain (not to unity; see
+     * [primeBoxes]), so a live write causes a small gain step bounded by the smoother's own lag.
+     * Fine at a settings change, not something to call per block.
      */
     var attackSeconds: Double = guardOr(attackSeconds, 0.003)
         set(value) {
@@ -202,7 +203,7 @@ class Compressor(
      * next one lands. Applied gain is their product, which is `<= held` by construction — so the
      * ceiling argument in [lookaheadStep]'s KDoc is unaffected.
      *
-     * The fast branch is `releaseSeconds / `[FAST_RELEASE_DIVISOR]. Deliberately derived rather than
+     * The fast branch is `releaseSeconds` / [FAST_RELEASE_DIVISOR]. Deliberately derived rather than
      * exposed: `releaseSeconds` keeps meaning "the release", and no new DSL knob was added for
      * something nobody had asked to control.
      *
@@ -438,7 +439,12 @@ class Compressor(
         slowGain += releaseCoeff * (held - slowGain)
 
         // Fast: only the residual the slow branch has not taken. Instant down, one-pole up.
-        val residual = if (slowGain > SILENCE_LIN) held / slowGain else 1.0
+        // Fallback is `held`, not 1.0, so `slow * fast <= held` is unconditional: with slow <= 1,
+        // `slow * min(held, fastRecovered) <= held` holds in the degenerate branch too. (1.0 is the
+        // correct limit for the ordinary held >> slow case and gives the same answer there — but it
+        // breaks the invariant under ~200 dB of sustained reduction, and an "always" that has an
+        // exception is worse than the extra token.)
+        val residual = if (slowGain > SILENCE_LIN) held / slowGain else held
         val fastRecovered = fastGain + fastReleaseCoeff * (1.0 - fastGain)
         fastGain = if (residual < fastRecovered) residual else fastRecovered
 
