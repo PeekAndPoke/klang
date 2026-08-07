@@ -18,7 +18,7 @@ internal val derSchmetterlingSong = Song(
     code = """import * from "stdlib"                                                                                                      
 import * from "sprudel"                                                                                                                         //.
                                                                                                                                                ////.
-let feel = 30.0    // 0.0 .. ice | 100.0 .. fire                                                                                              //  //.
+let feel = 20.0    // 0.0 .. ice | 100.0 .. fire                                                                                              //  //.
                                                                                                                                              //    //.
                                                                                                                                             //      //.
 stack(                                                                                                                                     //        //.
@@ -27,7 +27,7 @@ stack(                                                                          
     .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound("superramp").unison(5).spread(0.08)                //          DISCO!          //.
     .hpf(1800).lpf(1550).lpe(berlin.range(2, 2.10).fast(4)).lpq(2.3).lpadsr("0.013:2.0:0.0:0.025")                                   //       FOREVER!       //.
     .gain(0.60).distort("0.490:tube:4").postgain("<0.200!48 0.090!16 0.200!48 0.300!16>") // . solo()                                 //                  //.
-    .adsr("0.008:4.0:0.0:0.05").clip(0.89).release("<0.04!16 0.11!16>").vibrato(8).vibmod(0.01)  // . mute()                           //       //      //.
+    .adsr("0.008:4.0:0.0:0.05").clip(0.85).release("<0.08!16 0.15!16>").vibrato(8).vibmod(0.01)  // . mute()                           //       //      //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                           //     //.   //    //.
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.25).pan(0.35).superimpose(pan(0.65)))              //   //.         //  //.
     .mute("<1!32 0!192>").pipeline("pedal").room("0.3:5:0.1")                                                                       // //.              // //.
@@ -63,10 +63,10 @@ stack(                                                                          
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").mute("<0!128 1!32>")  // . solo()
     .pan(0.5).orbit(5).gain(0.25).hpf(60).lpf(11500).adsr("0.002:0.12:0.5:0.2"),
   sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>").mute("<0!128 1!32>") // . solo()
-    .pan(0.5).late(0.0015).orbit(5).pan(0.475).gain(0.31).hpf(350).lpf(11500).adsr("0.002:0.20:0.2:0.2")
+    .pan(0.5).late(0.0005).orbit(5).pan(0.475).gain(0.31).hpf(350).lpf(11500).adsr("0.002:0.20:0.2:0.2")
     .superimpose(x => x.bandf("205".add(berlin.mul(10).fast(4))).bandq(4).vel(0.60).hpf(190).lpf(350)),
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-    .pan(0.525).late(0.0030).orbit(5).gain(0.30).hpf(800).lpf("11500".add(perlin.mul(300).fast(4))).adsr("0.005:0.15:0.8:0.2"), // . mute()
+    .pan(0.525).late(0.0010).orbit(5).gain(0.30).hpf(800).lpf("11500".add(perlin.mul(300).fast(4))).adsr("0.005:0.15:0.8:0.2"), // . mute()
   sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(6).gain(0.13).mute("<0!128 1!32>"),
   sound("pink!8").orbit(7).gain(0.05).hpf(8000).lpf(13500).lpq(0.5)
     .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05")  // .solo()

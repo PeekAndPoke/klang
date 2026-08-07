@@ -19,7 +19,8 @@ internal val finalFantasy7PreludeSong = Song(
 import * from "stdlib"
 import * from "sprudel"
 
-// Play with me! 
+// Press "Play" and then play with me!
+//
 //  0.0 .. your home 
 // 10.0 .. cathedral
 //
@@ -27,7 +28,10 @@ import * from "sprudel"
 
 const roomSize = 6.0  
 
-// Oh yeah ... headphone are advisable
+// Oh yeah 
+// ... Headphones are advisable
+// ... Hover functions for help
+// ... Hover params for more help
 
 stack(
   cat(n(`<[ 0  1 2 4] [7 8 9 11] [14 15 16 18] [21 22 23 25] [28 25 23 22] [21 18 16 15] [14 11 9 8] [7 4 2  1]
