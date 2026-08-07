@@ -25,9 +25,9 @@ stack(                                                                          
   // Lead                                                                                                                     //////////////          //////////////.
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                               //                              //.
     .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound("superramp").unison(5).spread(0.08)                //          DISCO!          //.
-    .hpf(1800).lpf(1550).lpe(berlin.range(2, 2.10).fast(4)).lpq(2.3).lpadsr("0.013:1.5:0.0:0.02")                                   //       FOREVER!       //.
-    .gain(0.60).distort("0.475:tube:4").postgain("<0.200!48 0.090!16 0.200!48 0.295!16>") // . solo()                                 //                  //.
-    .adsr("0.008:5.0:0.0:0.02").clip(0.89).release("<0.04!16 0.11!16>").vibrato(8).vibmod(0.01)  // . mute()                           //       //      //.
+    .hpf(1800).lpf(1550).lpe(berlin.range(2, 2.10).fast(4)).lpq(2.3).lpadsr("0.013:2.0:0.0:0.025")                                   //       FOREVER!       //.
+    .gain(0.60).distort("0.490:tube:4").postgain("<0.200!48 0.090!16 0.200!48 0.300!16>") // . solo()                                 //                  //.
+    .adsr("0.008:4.0:0.0:0.05").clip(0.89).release("<0.04!16 0.11!16>").vibrato(8).vibmod(0.01)  // . mute()                           //       //      //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                           //     //.   //    //.
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.25).pan(0.35).superimpose(pan(0.65)))              //   //.         //  //.
     .mute("<1!32 0!192>").pipeline("pedal").room("0.3:5:0.1")                                                                       // //.              // //.
@@ -73,9 +73,9 @@ stack(                                                                          
   // Master
   ,master(Master.of(MasterFx.reverb().wet(0.03).damp(0.8).roomSize(8),
                     MasterFx.gain(1.35),   // +3.2 dB                                                                                                                                                                                            
-                    MasterFx.limiter().thresholdDb(-8.0).ratio(2.0).kneeDb(6.0).attack(0.015).release(0.125),                                                                                                                                    
+                    MasterFx.limiter().lookahead(0.005).thresholdDb(-8.0).ratio(2.0).kneeDb(6.0).attack(0.015).release(0.125),                                                                                                                                    
                     MasterFx.gain(1.30),   // +2.9 dB                                                                                                                                                                                            
-                    MasterFx.limiter().thresholdDb(-4.0).ratio(4.0).kneeDb(4.0).attack(0.008).release(0.075),                                                                                                                                    
+                    MasterFx.limiter().lookahead(0.005).thresholdDb(-4.0).ratio(4.0).kneeDb(4.0).attack(0.008).release(0.075),                                                                                                                                    
                     MasterFx.gain(1.20),   // +2.3 dB — least, because the house brickwall is next
   ))
 ).analog(feel).seed(timeOfDay.mul(10*60*60*24))

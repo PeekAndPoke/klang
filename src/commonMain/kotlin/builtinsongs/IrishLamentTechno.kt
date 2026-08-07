@@ -202,7 +202,7 @@ let darkBuild = stack(
         .hpf(300).lpf(saw.range(3500, 5000).slow(64)).lpe(1.2).lpq(2.5).adsr("0.005:0.35:0.5:0.12")
         .orbit(5),
     // Syncopated pad stabs — keep the 90s rhythm but darken with section
-    chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.3)))
+    chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.4)))
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]").transpose(0)
         .sound("superpulse").unison(2).spread(0.05).pan(0.2).superimpose(pan(0.8))
         .hpf(400).lpf(saw.range(1500, 2500).slow(32)).lpenv(3).warmth(0.5)
@@ -213,14 +213,14 @@ let darkBuild = stack(
         .sound("supersine").unison(8).spread(0.15).adsr("0.5:0.3:0.5:0.5")
         .hpf(1500).lpf(3000).lpenv(2).bandf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibmod(0.1)
         .gain(saw.range(0.0, 0.7).slow(64)).body("glass")
-        .pan(sine.range(0.05, 0.75).slow(3))
+        .pan(sine.range(0.25, 0.75).slow(5))
         .delay(0.4).delaytime(pure(2/8).div(cps)).delayfeedback(0.45)
         .orbit(7).room(0.7).rsize(10),
 
       // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.6, 0.95).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
+    mel3.velocity(saw.range(0.6, 0.90).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(0.6, 1.15).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
+    mel1.velocity(saw.range(0.6, 1.00).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
 
 )
 
@@ -249,7 +249,7 @@ stack(
     [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
     [96, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
   ),
-  master(Master.of(MasterFx.gain(1.5), MasterFx.reverb().wet(0.01).roomSize(5), MasterFx.limiter()))
+  master(Master.of(MasterFx.reverb().wet(0.01).roomSize(5), MasterFx.gain(1.5)))
 ).analog(3.0)
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing
@@ -262,5 +262,6 @@ stack(
 
     
 
+    
     """,
 )
