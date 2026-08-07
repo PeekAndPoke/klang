@@ -251,6 +251,67 @@ are those that grow without bound:
 | `voices/Voice.kt:263`                                                           | `idCounter`                                         | 2³¹ voices ≈ months at realistic densities. Low risk, still unbounded.                                                                                                                                                                                                            |
 | `filters/LowPassHighPassFilters.kt:484`                                         | `transitionSamples`                                 | Confirm it is bounded by the transition.                                                                                                                                                                                                                                          |
 
+### `cursorFrame` — CONFIRMED BY TEST 2026-08-07, and worse than the existing comment claims
+
+`audio_jsworklet/.../KlangAudioWorklet.kt:60-65` already documents this overflow, calls 12.4 h *"sufficient for any
+continuous session"*, and states the symptom as *"silent audio stop (no crash)"*. Both the premise and the scope are
+wrong.
+
+**Measured** by driving `PlaybackEngineDispatcher.renderBlock` at two cursor positions with an otherwise identical
+scheduled voice:
+
+| cursor               | blocks with audio |
+|----------------------|-------------------|
+| 0                    | **55 / 60**       |
+| near `Int.MAX_VALUE` | **0 / 60**        |
+
+Two things that changes:
+
+1. **The failure starts BEFORE the wrap, not at it.** Scheduling goes through *seconds*
+   (`startTime = frame / sampleRate`) and converting back to frames overflows while `cursorFrame` is still positive — so
+   the timeline degrades on approach rather than flipping at the boundary.
+2. **"Sufficient for any continuous session" is the wrong test.** This is a browser tab in a live-coding tool. 12.4 h at
+   48 kHz (13.5 h at 44.1 kHz) is one long working day; left open overnight it silently stops, with no error and no
+   crash to explain it.
+
+**Same exposure on the JVM path** — `JvmAudioBackend.kt:53` has the identical `var currentFrame = 0`.
+
+**Fix options — (d) CHOSEN (user, 2026-08-07):**
+
+- **(a) Rebase periodically** — past a threshold, subtract it from the cursor *and* from every stored frame on
+  scheduled/active voices. Keeps `Int`, bounded work, runs about twice a day. The classic solution; the risk is missing
+  a stored frame and producing a large timing glitch.
+- **(b) Reset when idle** — the existing comment's own suggestion, and cheapest, but only correct when nothing is
+  scheduled or still ringing.
+- **(c) `Double` instead of `Int`** — exact integers to 2^53 ≈ 5900 years at 48 kHz. On Kotlin/JS
+  `Int` is *already* a JS number with truncation on every operation, so this may even be faster there; but it touches ~
+  126 sites and changes hot-loop arithmetic on the JVM too.
+- **(d) `Long`, as a documented exception — CHOSEN (user, 2026-08-07).** See the rule below.
+
+### The rule: `Long` is allowed for absolute counters OUTSIDE hot loops, with a comment saying why
+
+The house rule "no `Long`/boxed types in audio paths" exists because `Long` is emulated on Kotlin/JS and allocates on
+every operation. That reasoning applies to **per-sample** arithmetic. It does not apply to a value touched **once per
+block**.
+
+`cursorFrame` is the case that shows the distinction, and the split already exists in the code —
+`EnvelopeRenderer`'s KDoc states it outright: *"All per-sample arithmetic uses Int to avoid Long boxing on Kotlin/JS.
+Voice-relative offsets are computed once at the block boundary."*
+
+|                                                                                               | type       | frequency      |
+|-----------------------------------------------------------------------------------------------|------------|----------------|
+| **absolute** timeline (`cursorFrame`, `blockStart`, `startFrame`, `endFrame`, `gateEndFrame`) | **`Long`** | once per block |
+| **relative** position (`absPos`, `offset`, `length`, ring indices)                            | **`Int`**  | per sample     |
+
+The conversion happens at one line per renderer, e.g. `EnvelopeRenderer.kt:66`
+`var absPos = (ctx.blockStart + ctx.offset) - startFrame` — a single `Long` subtraction per block per voice, feeding 128
+`Int` operations. Scoped: **43 fields become `Long`, 13 conversion points gain an explicit `.toInt()`, and 56 per-sample
+sites are untouched.**
+
+**Every such `Long` must carry a comment stating (a) that it is not in a hot loop and (b) why the width is needed** —
+otherwise the next person applying the house rule mechanically will "fix" it back to `Int` and silently reintroduce a
+12-hour time bomb.
+
 **How to verify each**: this class is invisible to normal tests — nobody runs a spec for 12 h. Test it by seeding the
 counter near `Int.MAX_VALUE` and stepping across the boundary, which needs the field to be settable or the arithmetic
 extracted. Where that is impractical, prove wrap-safety by inspection and record the argument.

@@ -31,7 +31,7 @@ stack(
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(1)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(2000).bandq(7.0).hpf(1000).analog(2)
-    .sound("pulse").warmth(0.8).crush(5).gain(0.05).clip(0.35).pan(berlin.slow(2)).adsr("0.03:0.08:0.2:0.1") // .solo()
+    .sound("pulse").warmth(0.8).crush(5).gain(0.05).clip(0.35).pan(berlin.slow(2)).adsr("0.03:0.08:0.2:0.2") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body("membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()

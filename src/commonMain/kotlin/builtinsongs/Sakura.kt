@@ -78,7 +78,7 @@ stack(
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
   `).orbit(1).sound(shaku).slow(14).gain(0.23).pan(perlin.range(0.3, 0.7).slow(8))
-    .lpf(perlin.range(3600, 3800).slow(2)).body("glass")
+    .lpf(perlin.range(3600, 3800).slow(2)).body("rosewood")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
