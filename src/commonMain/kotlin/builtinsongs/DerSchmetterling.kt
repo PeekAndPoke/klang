@@ -25,9 +25,9 @@ stack(                                                                          
   // Lead                                                                                                                     //////////////          //////////////.
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                               //                              //.
     .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound("superramp").unison(5).spread(0.08)                //          DISCO!          //.
-    .hpf(1800).lpf(1550).lpe(berlin.range(2, 2.10).fast(4)).lpq(2.3).lpadsr("0.013:2.0:0.0:0.025")                                   //       FOREVER!       //.
-    .gain(0.60).distort("0.490:tube:4").postgain("<0.200!48 0.090!16 0.200!48 0.300!16>") // . solo()                                 //                  //.
-    .adsr("0.008:4.0:0.0:0.05").clip(0.85).release("<0.08!16 0.15!16>").vibrato(8).vibmod(0.01)  // . mute()                           //       //      //.
+    .hpf(1800).lpf(1550).lpe(berlin.range(2, 2.10).fast(4)).lpq(2.3).lpadsr("0.008:2.0:0.0:0.015")                                   //       FOREVER!       //.
+    .gain(0.60).distort("0.480:tube:4").postgain("<0.200!48 0.090!16 0.200!48 0.300!16>") // . solo()                                 //                  //.
+    .adsr("0.008:4.0:0.0:0.03").clip(0.85).release("<0.08!16 0.15!16>").vibrato(8).vibmod(0.01)  // . mute()                           //       //      //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                           //     //.   //    //.
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.25).pan(0.35).superimpose(pan(0.65)))              //   //.         //  //.
     .mute("<1!32 0!192>").pipeline("pedal").room("0.3:5:0.1")                                                                       // //.              // //.
