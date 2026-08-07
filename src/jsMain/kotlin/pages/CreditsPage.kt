@@ -336,8 +336,18 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         - **PolyBLEP** (Välimäki et al.) — band-limited oscillator anti-aliasing
                         - **Super-saw** after Adam Szabo's *"How to Emulate the Super Saw"* (Roland JP-8000)
                         - **Chebyshev-polynomial waveshaping** — harmonic distortion
+                        - **Padé `tanh` approximation** `x(27+x²)/(27+9x²)` — the public-domain "27/9" fast-tanh
+                        from the musicdsp.org / KVR community, used in Klang's soft-clipping (`ClippingFunctions.fastTanh`)
                         - **Perlin noise** (Ken Perlin) — organic drift and noise textures
                         - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
+                        - **Lookahead limiting** after **[Geraint Luff](https://signalsmith-audio.co.uk/writing/2022/limiter/)**
+                        (Signalsmith Audio) — the master limiter's anticipating gain path: a moving minimum of the
+                        required gain, smoothed, applied to a delayed signal. Klang's implementation is its own; the
+                        construction, and the insight that the smoothing has to fit *inside* the lookahead budget,
+                        come from that write-up
+                        - **Feed-forward dynamics topology** — the compressor's dB-domain peak detector and soft-knee
+                        parabolic gain curve follow the standard design described across the DSP literature
+                        (Giannoulis, Massberg & Reiss, *"Digital Dynamic Range Compressor Design"*, JAES 2012)
                     """.trimIndent()
                 )
             }

@@ -48,7 +48,7 @@ AUDIO BACKEND (audio thread)
          └─ Mix all orbits to master StereoBuffer
 
        KlangAudioRenderer
-         ├─ Apply master limiter (−1 dB, 20:1, 1 ms attack)
+         ├─ Apply DC blockers, then master limiter (−1 dB, 20:1, 5 ms lookahead)
          ├─ Clip ±1.0 and interleave L/R to ShortArray
          └─ Send to platform audio output
 ```
@@ -141,11 +141,12 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 
 ## Key Constants
 
-| Constant             | Value   | Location             |
-|----------------------|---------|----------------------|
-| Max orbits           | 16      | `Cylinders`          |
-| Limiter threshold    | −1 dB   | `KlangAudioRenderer` |
-| Limiter ratio        | 20:1    | `KlangAudioRenderer` |
-| Limiter attack       | 1 ms    | `KlangAudioRenderer` |
-| Limiter release      | 100 ms  | `KlangAudioRenderer` |
-| Block size (typical) | 128–256 | platform backend     |
+| Constant             | Value                                        | Location             |
+|----------------------|----------------------------------------------|----------------------|
+| Max orbits           | 16                                           | `Cylinders`          |
+| Limiter threshold    | −1 dB                                        | `KlangAudioRenderer` |
+| Limiter ratio        | 20:1                                         | `KlangAudioRenderer` |
+| Limiter attack       | 5 ms — gain-SMOOTHING length, not a one-pole | `MasterStage`        |
+| Limiter lookahead    | 5 ms — delays the whole output uniformly     | `MasterStage`        |
+| Limiter release      | 100 ms                                       | `KlangAudioRenderer` |
+| Block size (typical) | 128–256                                      | platform backend     |

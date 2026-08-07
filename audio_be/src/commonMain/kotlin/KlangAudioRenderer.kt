@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  *
  * It owns its own [AudioBackendContext] + clock + one [PlaybackEngine], and runs the **same**
  * canonical chain as the live dispatcher — [PlaybackEngine.renderInto] (voices → cylinders → mix)
- * then [MasterStage] (limiter + DC + clip). The realtime path does NOT go through this class.
+ * then [MasterStage] (DC blockers + limiter + clip). The realtime path does NOT go through this class.
  */
 class KlangAudioRenderer private constructor(
     private val context: AudioBackendContext,
@@ -37,6 +37,14 @@ class KlangAudioRenderer private constructor(
 
     /** Parent master registry — callers register custom master chains here. */
     val masterRegistry: MasterRegistry get() = context.masterRegistry
+
+    /**
+     * Frames of latency the master post-chain adds (the limiter's lookahead delay).
+     *
+     * An offline render must run this many frames PAST its musical end, or the final samples are
+     * still in the delay ring when the loop stops.
+     */
+    val latencyFrames: Int get() = master.latencyFrames
 
     fun setBackendStartTime(startTimeSec: Double) {
         clock.startTimeSec = startTimeSec

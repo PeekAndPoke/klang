@@ -86,8 +86,17 @@ object KlangScriptMasterFx {
     fun gain(gain: Double = 1.0): MasterStageDsl.Gain = MasterStageDsl.Gain(gain = gain)
 
     /**
-     * Musical brick-wall limiter. Defaults mirror the house safety limiter; chain to tune
-     * (`thresholdDb` / `ratio` / `knee` / `attack` / `release`).
+     * Musical limiter on this playback's master bus.
+     *
+     * Threshold, ratio, knee and release match the always-on safety limiter that already runs on the
+     * summed mix — but this one has **no lookahead by default**, so it shapes level rather than
+     * anticipating transients, and adds no latency. The safety limiter is the actual brick wall.
+     *
+     * Chain to tune: `thresholdDb` / `ratio` / `kneeDb` / `attack` / `release` / `lookahead`.
+     *
+     * `attack` means two things: a one-pole time constant with no lookahead, the gain-smoothing
+     * length with it. `lookahead` is opt-in because it costs exactly that much latency and stages
+     * stack — three authored limiters with lookahead are three delay lines.
      */
     @KlangScript.Method
     fun limiter(): MasterStageDsl.Limiter = MasterStageDsl.Limiter()

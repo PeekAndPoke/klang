@@ -67,22 +67,50 @@ sealed interface MasterStageDsl {
      * Musical brick-wall limiter on the master bus.
      *
      * Opt-in and distinct from the final *safety* limiter in `MasterStage`, which always runs on
-     * the summed mix. Defaults mirror that safety limiter's constants (the house limiter
-     * character); kept in sync by `MasterDefaultsSyncSpec`.
+     * the summed mix.
+     *
+     * Threshold, ratio, knee and release mirror that safety limiter. **Attack and lookahead
+     * deliberately do NOT** — this stage is per-playback, so latency here delays this playback
+     * against every other one, while the house limiter runs once on the summed mix and can afford
+     * it. `MasterDefaultsSyncSpec` asserts both the shared values and the divergence.
+     *
+     * Note the house limiter is already a brick wall on the summed mix, so this stage is usually
+     * for *shaping* rather than peak-catching — which is why lookahead is opt-in here. Stages
+     * stack, so three authored limiters with lookahead cost three delay lines.
      *
      * @param thresholdDb ceiling in dBFS.
      * @param ratio compression ratio (20.0 ≈ brick wall).
      * @param kneeDb soft-knee width in dB — a hard corner injects harmonics on every crossing.
-     * @param attackSeconds envelope attack; short values keep transient punch.
+     * @param attackSeconds how fast the gain closes: a one-pole attack when [lookaheadSeconds] is 0,
+     *   the gain-smoothing length when it is not.
      * @param releaseSeconds envelope release.
+     * @param lookaheadSeconds see the field KDoc — opt-in latency, 0 by default.
      */
     @WireName("limiter")
     data class Limiter(
         val thresholdDb: Double = -1.0,     // MasterStage limiter: thresholdDb
         val ratio: Double = 20.0,           // MasterStage limiter: ratio
         val kneeDb: Double = 2.0,           // MasterStage limiter: kneeDb
-        val attackSeconds: Double = 0.001,  // MasterStage limiter: attackSeconds
+        val attackSeconds: Double = 0.001,  // MasterStage: AUTHORED_LIMITER_ATTACK_SECONDS
         val releaseSeconds: Double = 0.1,   // MasterStage limiter: releaseSeconds
+        /**
+         * Lookahead in seconds — how far ahead the limiter sees, and how much it delays this
+         * playback. **Defaults to 0: no lookahead, no added latency.**
+         *
+         * Deliberately different from the house safety limiter, which runs at 5 ms. That one sits
+         * on the *summed* mix, so its delay shifts everything together and nothing can desync. This
+         * one sits on **one playback's** master bus — so latency here delays this playback against
+         * every other one. Opt in only when you want that trade.
+         *
+         * With lookahead on, `attackSeconds` stops being a one-pole time constant and becomes the
+         * gain-smoothing length. Same idea either way — how fast the gain closes — but widen both
+         * together: low-frequency cleanliness tracks the smoothing, not the window.
+         *
+         * Note the master crossfade blends two chains in parallel for ~60 ms, so changing this
+         * value live briefly sums the signal with a delayed copy of itself (a comb). Audible as a
+         * short phasey sweep on the edit; harmless, and only reachable if you set this at all.
+         */
+        val lookaheadSeconds: Double = 0.0, // MasterStage: AUTHORED_LIMITER_LOOKAHEAD_SECONDS
     ) : MasterStageDsl
 
     /**

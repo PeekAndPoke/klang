@@ -1,6 +1,21 @@
 # Master limiter: lookahead — fixing the transient "knock"
 
-> **Planned 2026-08-04, not started.** Fixes audit finding
+> **Phases 0-3 SHIPPED 2026-08-06** (`53834ba9` + follow-up). The knock is fixed: a +12 dB kick went
+> from +11.67 dBFS with 5.22 ms of hard clipping to **-0.37 dBFS, zero samples clipped**. By-ear
+> confirmed. `audio_be` 953 green on JVM + JS; no CPU cost (`runSongBenchmark` medRTF 0.0838 with
+> lookahead vs 0.0864 without — noise).
+>
+> **Phases 0-5 are DONE.** The 5 ms default is measurement-justified (Phase 4) and the latency is now
+> reported into the FE budget and the offline frame count (Phase 5).
+>
+> **Still open — one decision, measured and costed:** the pump is real at realistic levels (at +1…+3
+> dB drive the mix is still 1.25 dB down 100 ms after each kick and 0.44 dB at 200 ms, so the bed
+> swells continuously between hits). A **dual program-dependent release** wins on all four axes at
+> once — see §Phase 4 — and needs a go/no-go. [F17](../audio-audit/FINDINGS.md#f17) is **refuted**;
+> the real cause of the by-ear "shocks" is that a slower `attackSeconds` silently lowers the
+> detector's reading, i.e. weakens the compressor as well as slowing it.
+>
+> Fixes audit finding
 > [F16](../audio-audit/FINDINGS.md#f16) — the user-reported "knock". Priority: **SHOULD**, and it is
 > a *sound* fix, so it outranks the rest of the audit backlog ("sound first").
 >
@@ -688,12 +703,88 @@ consequences:
 - Artefacts that were previously ignored now steer the master — notably the DC blocker's own +0.53 dB onset overshoot
   (§4).
 
-⚠️ **OPEN: re-measure the window-length justification with the release in the loop.** The −42.6 / −48.0 / −57.4 dB sweep
+✅ **RESOLVED 2026-08-06 — the 5 ms default is justified, not provisional.** A Hann-windowed DFT over an integer number
+of cycles, sustained 55 Hz at +12 dB over, **with the 100 ms release in the loop**:
+0.2 ms → −34.7, 1.0 → −36.3, 2.5 → −39.7, **5.0 → −41.2 dB**. Monotone — the improvement does not evaporate when the
+release is included. Window sweep at attack = window: 1 ms → −26.3, 3 → −32.5, **5 → −41.2**, 8 → −70.3. **Today's
+pre-fix path measures −32.1 on the same material**, so 5 ms is 9 dB cleaner than what it replaced and a 1 ms window
+would have been 6 dB *worse*. Full-window smoothing also does not soften transients: 10→90% rise time is identical at
+every setting (0.73 ms)
+and peak-to-body punch improves (1.96 → 2.29 dB).
+
+*Original concern, kept for the record:* The −42.6 / −48.0 / −57.4 dB sweep
 behind the 5 ms choice was measured on the lookahead path alone. With a 100 ms release, `min()` sits on the *release*
 path for roughly half of every 55 Hz cycle, so much of that "THD-ish" number may be the release's, not the smoothing's.
 **I attempted this and my crude Goertzel metric returned the numerical noise floor — it is not resolved.** Phase 4 needs
 a proper windowed FFT over an integer number of cycles. If the 15 dB shrinks, a shorter window is defensible and the
 latency gets cheaper. **Treat 5 ms as provisional until this is measured.**
+
+### By-ear calibration results (user, 2026-08-06)
+
+Real settings from Der Schmetterling's staged chain, recorded so they are not re-derived:
+
+| stage      | ratio / threshold | attack tried | verdict                 |
+|------------|-------------------|--------------|-------------------------|
+| 1 (glue)   | 2:1 @ −8 dB       | 30 ms        | **too slow — "shocks"** |
+| 1 (glue)   | 2:1 @ −8 dB       | **15 ms**    | good                    |
+| 2 (firmer) | 4:1 @ −4 dB       | 10 ms        | slightly slow           |
+| 2 (firmer) | 4:1 @ −4 dB       | **8 ms**     | good                    |
+
+**Why 30 ms failed, and it is not just taste.** A slow attack on dense material arrives *after* the transient: the hit
+passes through, then the gain clamps the body of the note, and on material with
+~11k onsets the follower never settles between hits. The lurch is audible as a shock.
+
+⚠️ **Suspected contributor — a candidate finding for the audio-backend audit.**
+`ENV_COEFF_BLEND_DB = 2.0` (`Compressor.kt`) blends the follower coefficient toward the **release**
+value whenever `|error| < 2 dB`. It was added 2026-04-30 to kill crackle on the **brickwall** limiter, where errors are
+large and the blend rarely engages. But a *glue* stage at 2:1 / −8 dB produces 1–3 dB of reduction — squarely inside
+that window — so the blend engages almost continuously and the effective attack is far slower than the configured value.
+The blend's effect on low-ratio compression appears never to have been considered. **Worth measuring: effective attack
+vs configured attack, as a function of ratio.** If confirmed, either the window should scale with the expected error or
+the KDoc should state the interaction.
+
+### The pump — measured, with a costed fix (2026-08-07)
+
+Confirmed real at realistic drive. Options measured against the shipped linear 100 ms one-pole:
+
+| release design              | isolated-peak recovery to −0.5 dB | 55 Hz non-fundamental | beat-rate gain mod (+3 dB) | mean GR      |
+|-----------------------------|-----------------------------------|-----------------------|----------------------------|--------------|
+| linear 100 ms (**shipped**) | 187.1 ms                          | −41.1 dB              | 0.97 dB                    | −0.76 dB     |
+| **dual 100/10 ms**          | **23.5 ms**                       | **−52.9 dB**          | **0.37 dB**                | **−0.24 dB** |
+| dual 100/20 ms              | 43.2 ms                           | −57.5 dB              | 0.47 dB                    | −0.29 dB     |
+
+**A dB-domain release does NOT help** — its gap is also exponential, so it crawls in the last dB just as badly (205 ms
+vs 187). **Shortening the release** helps the pump but gives back most of what the 5 ms window bought (−41.1 → −37.4 dB
+at 50 ms).
+
+The dual release is *cleaner and louder and less pumpy simultaneously*, because on sustained material the slow branch
+absorbs the reduction and the fast branch stops moving. Shape: slow branch is a plain one-pole both directions tracking
+`held`; fast branch takes the residual `held/slow`, instant down, one-pole up; applied gain is `slow × fast`, which is
+`≤ held` by construction. Parameterise as slow = `releaseSeconds`, fast = `releaseSeconds / 10`, so the existing knob
+keeps its meaning. Cost:
+one `Double` and one divide per sample, on the single master instance. Safety unchanged (identical worst peak and
+identical settled gain on a sustained tone).
+
+### DECIDED 2026-08-07: the dual release ships
+
+Implemented in `Compressor` on the lookahead path only (the classic path keeps its single release, so per-orbit
+compressors are untouched). `releaseSeconds` keeps its meaning; the fast branch is derived as `releaseSeconds / 10`. No
+DSL change, no wire change, no song changes.
+
+**The by-ear A/B was level-matched and the verdict on the pump was "really subtle"** — on material built to be maximally
+unkind (sustained saw pad under a hard four-on-the-floor at
+`MasterFx.gain(2.2)`). Taken at face value that means the pump is below the bar on real songs.
+
+**So it is kept for the loudness, not the pumping.** At an identical peak (−0.34 dBFS in both renders) the mean level
+goes **−1.59 dB → −0.55 dB** — same ceiling, ~1 dB louder, because the mix spends less time ducked. That is about one of
+a staged gain chain's stages, for one divide per sample on a single instance.
+
+Rejected alternatives, measured, so they are not retried: a **dB-domain release** (crawls in the last dB just as badly —
+205 ms vs 187 to recover within 0.5 dB) and **simply shortening the release**
+(reduces the pump but gives back most of the lookahead's LF gain: −41.1 → −37.4 dB at 50 ms).
+
+Guarded by `LimiterLookaheadSpec` ("the bed recovers between kicks"), mutation-checked — collapsing back to a single
+release turns it red.
 
 **Three measurements to add to the harness** — peak dBFS alone hid four of this round's findings, because every failing
 variant has a defensible peak number at *some* setting:
@@ -706,9 +797,18 @@ variant has a defensible peak number at *some* setting:
    give the same peak**. With a correct construction they must. This single assertion is the direct guard against the
    whole class of shape bugs.
 
-### Phase 5 — Latency reporting
+### Phase 5 — Latency reporting ✅ DONE 2026-08-07
 
-There is currently **no delay-compensation concept anywhere in the DSP path** (confirmed — the only
+**Shipped:** `MasterStage.latencyFrames` / `.latencyMs` expose what the stage adds;
+`PlaybackEngineDispatcher.masterLatencyMs` surfaces it; `JsAudioBackend` folds it into
+`outputLatencyMs` so the code-highlight and block-editor overlays stay aligned (they were firing 5 ms early — invisible
+at ~⅓ of a frame, but a permanent uncompensated term in a budget the system otherwise maintains); and
+`KlangOfflineRenderer` renders `renderer.latencyFrames` past its musical end, so the last 5 ms no longer stays stuck in
+the delay ring (which mattered only at `tailSec = 0.0`, where the truncated tail is music rather than reverb). Guarded
+by `MasterStageSpec`, mutation-checked against both a lying `latencyFrames` and an off-by-one-block one.
+
+*Context, as it stood before:* there was **no delay-compensation concept anywhere in the DSP path** (confirmed — the
+only
 "latency compensation" in the tree is FE↔BE *clock* sync in `KlangPlaybackController.kt:107`, a different thing). A
 lookahead limiter is the first deliberate signal-path latency. Decide whether it must be:
 

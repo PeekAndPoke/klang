@@ -21,8 +21,12 @@ class MasterStage(
     private val blockFrames: Int,
 ) {
     /**
-     * The house limiter character. Also the defaults of the *opt-in* `MasterStageDsl.Limiter`
-     * stage (a user-authored master chain) — kept in sync by `MasterDefaultsSyncSpec`.
+     * The house limiter character: what runs on the summed mix, always.
+     *
+     * `MasterStageDsl.Limiter` (the *opt-in*, per-playback stage) shares threshold, ratio, knee and
+     * release, but has its own `AUTHORED_*` constants for attack and lookahead — see those below for
+     * why they must differ. `MasterDefaultsSyncSpec` asserts both the shared values and the
+     * divergence, so neither drifts by accident.
      */
     companion object {
         /** Ceiling at -1 dB. */
@@ -81,6 +85,19 @@ class MasterStage(
          */
         const val AUTHORED_LIMITER_ATTACK_SECONDS: Double = 0.001
     }
+
+    /**
+     * Latency this stage adds, in frames — the limiter's lookahead delay.
+     *
+     * The whole output is delayed by this, uniformly, so nothing desyncs *within* the audio. But it
+     * is invisible to `AudioContext.outputLatency` (it happens inside the worklet, downstream of the
+     * clock), so anything aligning visuals to audio has to add it explicitly. See
+     * `docs/tasks/master-limiter-lookahead.md` Phase 5.
+     */
+    val latencyFrames: Int get() = limiter.latencyFrames
+
+    /** [latencyFrames] in milliseconds — the unit the FE latency budget works in. */
+    val latencyMs: Double get() = limiter.latencyMs
 
     private val limiter = Compressor(
         sampleRate = sampleRate,

@@ -8,7 +8,7 @@ Severity is about *what it costs us*, not about how broken the code looks:
 **HIGH** = a wrong sound or a false sense of safety today · **MED** = a real trap that has not bitten yet · **LOW** =
 correctness of the record.
 
-Status: 🔴 open (untriaged) · 🟢 accepted-as-is · 🔧 to fix · ⚪ user-decision
+Status: 🔴 open (untriaged) · 🟢 accepted-as-is · 🔧 to fix · ✅ FIXED · ⚪ user-decision
 
 ---
 
@@ -342,10 +342,15 @@ This is the standing click-diagnostic harness; it prints and guards nothing, by 
 
 ---
 
-## F16 — The master limiter does not limit transients; the hard clip does 🔧
+## F16 — The master limiter did not limit transients; the hard clip did ✅ FIXED
 
-**HIGH — user-reported symptom ("knock"), root-caused 2026-08-04.** Being fixed under
-[`docs/tasks/master-limiter-lookahead.md`](../tasks/master-limiter-lookahead.md).
+**HIGH — user-reported symptom ("knock"), root-caused 2026-08-04, FIXED 2026-08-06** (`53834ba9` + follow-up) under [
+`docs/tasks/master-limiter-lookahead.md`](../tasks/master-limiter-lookahead.md). By-ear confirmed.
+
+> **Everything below describes the DEFECT as it was**, kept because it is the evidence and the
+> measurement baseline. After the fix, the same +12 dB kick exits at **−0.37 dBFS with zero samples
+> clipped**, and `MasterStage` runs **DC blockers → limiter → clip** with 5 ms of lookahead. Guarded
+> by `LimiterLookaheadSpec`, which was written first and watched failing at 176 samples over.
 
 `Compressor` (`effects/Compressor.kt`) is feed-forward with **no lookahead and no delay line**, so the detector sees a
 sample at the same instant the signal does. `MasterStage.process` is limiter → DC blocker → **hard clip at ±1.0**.
@@ -377,6 +382,72 @@ It is structural: a feed-forward limiter cannot reduce a peak it has not seen.
 limiter so input is already ±1-bounded — no rail-edge transient, no need for downstream softCap."* They are in fact
 receiving up to +8 dBFS. A 7 Hz high-pass fed a clipped asymmetric burst rings with a low-frequency tail, compounding
 the thump.
+
+---
+
+## F17 — REFUTED: the blend is innocent. The real cause is the detector. 🔴
+
+**The hypothesis was wrong, and the measurement is worth keeping.** A by-ear session (2026-08-06)
+found a glue compressor at 2:1 / −8 dB with a 30 ms attack producing audible "shocks" and needing 15 ms. I proposed
+`ENV_COEFF_BLEND_DB`'s ±2 dB coefficient blend as the cause, reasoning that a low-ratio stage produces 1–3 dB of
+reduction and therefore sits inside the blend window.
+
+**Measured effective attack (t90 of gain reduction), blend on vs off:**
+
+| step                            | ratio 2 @ −8 | ratio 4 @ −4 | ratio 20 @ −1 |
+|---------------------------------|--------------|--------------|---------------|
+| from silence                    | 1.04×        | 1.04×        | 1.04×         |
+| 8 dB step                       | 1.05–1.07×   | 1.05–1.07×   | 1.05–1.08×    |
+| +3 dB step at the working point | 1.15–1.24×   | 1.15–1.24×   | 1.15–1.24×    |
+
+**Identical across every ratio** — as the mechanism requires, since the blend is a function of the envelope error in dB,
+which `ratio` does not touch. Worst case 1.24×, tracking *step size* not ratio. **Do not scale `ENV_COEFF_BLEND_DB`;
+there is nothing there to fix.**
+
+### The two real causes
+
+**(a) A convention gap — `attackSeconds` is a one-pole τ, not a rise time.** Measured t10-90 is **2.33–2.54 × τ** at
+every setting. So a configured 30 ms behaves like a ~74 ms attack in the units a DAW would label it, and the 15 ms the
+user landed on gives t10-90 = 37.6 ms — almost exactly what a DAW would call "30 ms". The ear found the right number for
+a misleadingly-labelled knob.
+
+**(b) HIGH — the configured attack silently moves the effective threshold.** The dB-domain follower is fed instantaneous
+`|x|` with no rectifier smoothing, so every zero crossing yanks it toward
+`SILENCE_DB` and it settles at an attack-dependent level:
+
+| signal                                | 1 ms  | 3 ms  | 8 ms   | 30 ms      | 100 ms |
+|---------------------------------------|-------|-------|--------|------------|--------|
+| dense mix (peak +1.1, RMS −13.9 dBFS) | −7.50 | −9.96 | −12.65 | **−16.63** | −20.21 |
+| 220 Hz sine @ 0 dBFS                  | −0.68 | −1.06 | −1.68  | −3.33      | −6.05  |
+
+Going 8 → 30 ms drops the detector's reading by **4.0 dB on real material**, so the same `threshold`
+yields ~4 dB less reduction. On a dense fixture a 2:1 @ −8 dB stage at 30 ms attack produced **no gain reduction at
+all**. "Slower attack" therefore also means "weaker and later" — which is exactly the reported *passes the hit, then
+clamps the body*.
+
+This is inherent to a log-domain follower with no rectifier pre-smoothing. **The fix is the peak-detector RMS smoothing
+already listed as deferred in `Compressor.kt`'s file KDoc** — not the blend. Affects every per-orbit compressor, not
+just the master.
+
+---
+
+## Note — the pump was real on paper and marginal by ear ✅ RESOLVED
+
+Recorded because the *shape* of this result is worth remembering, not just the outcome.
+
+Adding lookahead to the master limiter created a measurable pump: the limiter went from doing ~nothing during transients
+to ducking the whole summed mix on every hit, and with a single 100 ms release the bed swelled between kicks. Everything
+about it measured badly — 0.67 dB of bed movement, 1.59 dB below the ceiling on average.
+
+**The level-matched by-ear A/B, on deliberately worst-case material, came back "really subtle".**
+
+The fix (a dual program-dependent release) shipped anyway — but for a *different* reason than the one that motivated it:
+it recovers ~1 dB of loudness at an identical peak. Had that second benefit not existed, the honest call would have been
+to drop it.
+
+**The lesson: a measurement can be entirely correct and still not describe something that matters.**
+Two sessions of this feature ran the other way — the user reported the knock and the "shocks" by ear *before* either was
+measured. Measurements found the mechanism; ears decided whether it counted.
 
 ---
 

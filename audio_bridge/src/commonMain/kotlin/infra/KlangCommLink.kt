@@ -219,7 +219,11 @@ class KlangCommLink(capacity: Int = 8192) {
             val baseLatencyMs: Double = 0.0,
             /** AudioContext.outputLatency in ms (hardware/device latency, e.g. Bluetooth). 0.0 on JVM. */
             val outputDeviceLatencyMs: Double = 0.0,
-            /** Total output latency in ms (baseLatencyMs + outputDeviceLatencyMs). */
+            /**
+             * Total output latency in ms: `baseLatencyMs + outputDeviceLatencyMs` **plus the master
+             * limiter's lookahead**, which happens inside the worklet where the browser's own
+             * latency figures cannot see it.
+             */
             val outputLatencyMs: Double = 0.0,
         ) : Feedback {
             data class CylinderState(

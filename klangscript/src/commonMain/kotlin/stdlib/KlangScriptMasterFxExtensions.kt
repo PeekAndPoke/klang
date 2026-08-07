@@ -42,10 +42,28 @@ object KlangScriptMasterLimiterExtensions {
     fun kneeDb(self: MasterStageDsl.Limiter, db: Double): MasterStageDsl.Limiter =
         self.copy(kneeDb = db)
 
-    /** Envelope attack in seconds (default 0.001). Short keeps transient punch. */
+    /**
+     * How fast the gain closes, in seconds (default 0.001).
+     *
+     * With no lookahead this is a one-pole attack — short keeps transient punch. With
+     * [lookahead] on it becomes the gain-smoothing length instead; widen both together, because
+     * low-frequency cleanliness tracks the smoothing rather than the window.
+     */
     @KlangScript.Method
     fun attack(self: MasterStageDsl.Limiter, seconds: Double): MasterStageDsl.Limiter =
         self.copy(attackSeconds = seconds)
+
+    /**
+     * Lookahead in seconds (default 0 — off).
+     *
+     * Lets the limiter start closing the gain *before* a transient arrives instead of chasing it,
+     * which is what stops loud hits punching through to the clip. The cost is latency: this
+     * playback is delayed by this much against every other one, so only reach for it when you want
+     * that trade. The always-on safety limiter on the summed mix already runs at 5 ms.
+     */
+    @KlangScript.Method
+    fun lookahead(self: MasterStageDsl.Limiter, seconds: Double): MasterStageDsl.Limiter =
+        self.copy(lookaheadSeconds = seconds)
 
     /** Envelope release in seconds (default 0.1). */
     @KlangScript.Method

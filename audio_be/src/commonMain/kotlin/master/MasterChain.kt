@@ -45,7 +45,7 @@ internal class MasterChain private constructor(
      */
     val reverbs: Array<Reverb>,
     val delays: Array<DelayLine>,
-    private val limiters: Array<Compressor>,
+    val limiters: Array<Compressor>,
 ) {
     /** True when this chain does anything at all — an empty chain is a pure pass-through. */
     val isActive: Boolean = stages.isNotEmpty()
@@ -106,6 +106,13 @@ internal class MasterChain private constructor(
          * are sized to the *declared* time, so raising the cap costs nothing for short delays.
          */
         private const val MAX_DELAY_SECONDS = 10.0
+
+        /**
+         * Ceiling on limiter lookahead. `MasterBus.register` builds chains on the audio thread, so
+         * an unbounded value would allocate there — 50 ms is ~77 KB stereo, 10 s would be ~7.7 MB.
+         * A resource bound, not a taste clamp.
+         */
+        private const val MAX_LOOKAHEAD_SECONDS = 0.05
 
         /** At or below this send level the effect is inaudible and is dropped from the chain. */
         private const val MIN_WET = 0.0001
@@ -195,6 +202,12 @@ internal class MasterChain private constructor(
             kneeDb = finite(stage.kneeDb, 2.0),
             attackSeconds = finite(stage.attackSeconds, 0.001),
             releaseSeconds = finite(stage.releaseSeconds, 0.1),
+            // Bounded, because this is the one stage parameter that SIZES AN ARRAY: a negative
+            // value throws NegativeArraySizeException on the audio thread and takes the worklet
+            // with it, and Infinity asks for Int.MAX_VALUE doubles. Not a tone clamp — the same
+            // protection every sibling gets from finite(), plus a memory ceiling like the delay's.
+            lookaheadSeconds = finite(stage.lookaheadSeconds, 0.0)
+                .coerceIn(0.0, MAX_LOOKAHEAD_SECONDS),
         )
 
         /**

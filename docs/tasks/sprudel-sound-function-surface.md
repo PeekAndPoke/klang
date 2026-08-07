@@ -4,19 +4,31 @@
 > colon-string vs. named / per-param control patterns." Captured 2026-06-05; refreshed **2026-06-30** with
 > what changed since (see the update block below).
 >
+> ### 2026-08-07 — this task now BLOCKS other work, and its scope needs widening
+> - `docs/tasks/voice-takeover.md` **Phase 2 (`glide`)** is blocked on this doc: `glide` needs a time *and*
+>   a curve, i.e. it is a compound param, and we refuse to keep spawning one function per sub-param
+>   (`glideTime()`, `glideCurve()`, …).
+> - **The scope has to widen from the `snd*` family to compound params in general.** The decision needed is
+>   a language-surface one — *one function expressing both forms* — and `adsr`, `distort`, `lpadsr`,
+>   `sndDust`, `glide`, … all wait on the same answer:
+>   `glide("0.02:scurve:2")` (compound colon-string, one value) **vs** `glide(0.02, "scurve", 2)`
+>   (per-param, each param constant **or its own pattern**).
+> - **The param-tool / UI half is an open problem with no known solution** — see "Open questions" below.
+>   It has to be answered too, not deferred, or every new compound param grows the debt.
+>
 > ### 2026-06-30 update — what's changed
 > - **Named arguments now work in KlangScript** (`name = value`). The old "positional-only, use `/* name */`
-    > comments" convention below is **superseded** — the redesign can lean on real named args. See
-    > `[[KlangScript supports named arguments]]` (memory) for the KSP safe-literal-default caveat.
+>   comments" convention below is **superseded** — the redesign can lean on real named args. See
+>   `[[KlangScript supports named arguments]]` (memory) for the KSP safe-literal-default caveat.
 > - The **noise-generator knobs** work (2026-06-30) deliberately extended the `snd*` family in the
-    > **compound colon-string** form as the *interim*: `sndCrackle("1.7")` (chaos), `sndNoise("-0.5")` (color),
-    > `sndBrown("0.5")` (depth), `sndDust("0.2:4")` (density:tail). This was an explicit "do the compound string
-    > now, defer the real fix" decision — so the family is now larger and the per-param blocker is more pressing.
+>   **compound colon-string** form as the *interim*: `sndCrackle("1.7")` (chaos), `sndNoise("-0.5")` (color),
+>   `sndBrown("0.5")` (depth), `sndDust("0.2:4")` (density:tail). This was an explicit "do the compound string
+>   now, defer the real fix" decision — so the family is now larger and the per-param blocker is more pressing.
 > - **The blocker is unchanged and is the whole point of this task:** a compound `"a:b:c"` string is one value,
-    > so you cannot modulate one sub-param with its own control pattern. Per-param control-pattern support
-    > (the project rule "all params accept control patterns") needs the positional/named surface below.
+>   so you cannot modulate one sub-param with its own control pattern. Per-param control-pattern support
+>   (the project rule "all params accept control patterns") needs the positional/named surface below.
 > - The Osc-side already models the target shape: `Osc.crackle(chaos = 1.7)`, `Osc.dust(density, tail, bipolar)`
-    > take per-param named args today — the `snd*` sprudel surface is what lags.
+>   take per-param named args today — the `snd*` sprudel surface is what lags.
 
 ## Why
 
@@ -75,6 +87,7 @@ problems with their current surface:
 
 ## Related
 
+- `docs/tasks/voice-takeover.md` — **blocked by this task** (Phase 2 `glide`); states the two required forms.
 - `docs/tasks/sprudel-ui-tools.md` — the editor-tool catalogue that the `@param-tool` annotations drive.
 - `docs/tasks/sprudel-dsl-named-args.md` — sprudel arg-handling conventions.
 - Oscillator oscParams + per-variant constants — `audio_be/.../ignitor/OscillatorTuning.kt`,

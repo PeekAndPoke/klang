@@ -87,10 +87,15 @@ clipping**; it now exits at **−0.37 dBFS, zero samples clipped**.
 2. **`lookaheadSeconds` is a constructor `val`, unlike every other param.** The rings are sized once from it. Making it
    a `var` would resize a buffer on the audio thread.
 
-**Still open (Phase 3+):** `MasterStageDsl.Limiter` has no `lookaheadSeconds` yet, so
-`MasterFx.limiter().lookahead(...)` does not exist — the wire/DSL surface is unbuilt. And **Phase 4, the by-ear gate,
-has not run.** The 5 ms default is provisional: the measurement behind it may be attributing to smoothing what the
-release actually does (plan §Phase 4, flagged OPEN).
+**Phase 3 shipped too.** `MasterFx.limiter().lookahead(seconds)` exists in KlangScript, the wire model carries
+`lookaheadSeconds` (default **0** — authored limiters are per-playback, so latency there would desync them against other
+playbacks), `MasterChain.limiters` is `internal` so specs can assert the wire→DSP hop, and the value is `finite()`
+-guarded and capped at `MAX_LOOKAHEAD_SECONDS = 0.05` because it is the one stage parameter that sizes an array on the
+audio thread.
+
+**Still open:** Phase 4's by-ear retune sheet (the user has listened and likes it; the gain-reduction measurements are
+not done) and Phase 5, latency reporting — nothing accounts for the 5 ms yet, including `KlangOfflineRenderer`'s frame
+count.
 
 `audio_be:jvmTest` 946 green. No CPU regression on `runSongBenchmark`
 (Der Schmetterling medRTF 0.086 with lookahead vs 0.094 without — the difference is run-to-run variance, not a speedup).

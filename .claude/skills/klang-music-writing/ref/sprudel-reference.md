@@ -187,6 +187,22 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delay` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserdepth`/`phasercenter`/`phasersweep`), `compressor`, ducking |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bandf`/`notchf` (+ their `*env`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master.of(...))` with `MasterFx.gain` (make-up level), `MasterFx.limiter`, `MasterFx.reverb`, `MasterFx.delay` |
+
+**Master limiter knobs.** `MasterFx.limiter()` chains: `.thresholdDb(db)` `.ratio(x)` `.kneeDb(db)`
+`.attack(seconds)` `.release(seconds)` `.lookahead(seconds)`.
+
+- An **always-on safety limiter** already runs on the summed mix (−1 dB, 20:1, 5 ms lookahead), so every song is delayed
+  5 ms and peaks are already caught. An authored `MasterFx.limiter()` is for *shaping*, not peak-catching.
+- **`.lookahead()` defaults to 0 and is opt-in**, because it costs exactly that much latency and stages stack — three
+  limiters with lookahead are three delay lines, and the delay is per-playback, so it shifts this song against anything
+  else playing.
+- With lookahead **off**, `attack` is a one-pole time constant (short = keeps transient punch). With it **on**, `attack`
+  is the gain-smoothing length — set it equal to the lookahead, since peak performance is invariant to it while
+  low-frequency cleanliness tracks it.
+- **Staged gain** works better than one big push: split the total in dB evenly across stages, with descending thresholds
+  and ascending ratios, e.g. `gain(1.45)` → `limiter().thresholdDb(-8.0).ratio(2.0).attack(0.015).release(0.25)`
+  → `gain(1.40)` → `limiter().thresholdDb(-4.0).ratio(4.0).attack(0.008).release(0.15)` → `gain(1.30)`. Slow attacks (30
+  ms+) arrive after the transient and read as "shocks" on dense material.
 >
 > Example — two guitars that each need their **own** wood body must be on separate orbits:
 > ```javascript

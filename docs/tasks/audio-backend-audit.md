@@ -213,6 +213,48 @@ the 15–25 h estimate. Explicitly OK to stop, narrow, or change the protocol he
 
 `engines/` is 1:1 covered and 114 lines — skip unless something points at it.
 
+## 6b. Error class to sweep for: **unbounded `Int` counters** (found 2026-08-06)
+
+A whole-module scan target, added because the limiter work turned one up and it would have taken the audio thread down.
+
+**The shape.** A counter that increments per sample or per block, is never reset, and is used in an arithmetic
+comparison. At 48 kHz an `Int` overflows in **12.4 hours** (13.5 h at 44.1 kHz) — and critically, of *uptime*, not of
+playback: `MasterStage.process` runs on every block even with zero engines, so a browser tab left open overnight is
+enough.
+
+**Why it is nasty rather than merely wrong.** Overflow does not throw. It silently inverts a comparison. The instance
+found in `Compressor.lookaheadStep` was a deque eviction guarded by
+`minIdx[minHead] <= sampleCounter - (delayFrames + 1)`; past the wrap the right-hand side becomes a large *positive*
+number, so the condition is true for every stored index and the loop **never terminates — inside the render callback**.
+Audio stops dead, with no exception and no log.
+
+**The fix pattern** — compare by difference, which is wrap-safe in two's complement whenever the true difference is
+bounded, and never widen to `Long` (house rule: no boxed/64-bit types in audio paths):
+
+```kotlin
+//  BAD: breaks at the wrap
+while (index <= counter - window)
+//  GOOD: wrap-safe, plus an emptiness guard
+while (head != tail && counter - index > window - 1)
+```
+
+**Candidates found by the first scan** (`grep` for `var …(Counter|Frame|Index|Blocks|Elapsed) = 0`). Ring positions that
+wrap by modulo (`delayPos`, `writePos`, `boxAPos`) are **safe** — they are bounded by construction. The ones to check
+are those that grow without bound:
+
+| Site                                                                            | Counter                                             | Notes                                                                                                                                                                                                                                                                             |
+|---------------------------------------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **`BackendClock.kt:40`**                                                        | **`cursorFrame: Int`**                              | ⚠️ **Highest priority.** The engine's entire timeline. Advances per block for the life of the backend and is threaded into `scheduler.process(cursorFrame)`, voice `startFrame`/`endFrame`/`gateEndFrame` comparisons, and `secAt()`. If this wraps, scheduling inverts globally. |
+| `cylinders/katalyst/VoiceLease.kt:34`                                           | `lastSeenFrame`                                     | Compared against a frame counter — inherits whatever `cursorFrame` does.                                                                                                                                                                                                          |
+| `ignitor/IgniteContext.kt:36`                                                   | `voiceElapsedFrames`                                | Bounded by voice lifetime, so safe *unless* a drone voice runs 12 h.                                                                                                                                                                                                              |
+| `master/MasterBus.kt:117` · `PlaybackEngine.kt:35` · `cylinders/Cylinder.kt:98` | `silentBlocks` / `quietBlocks` / `silentBlockCount` | Reset when sound returns; check the never-audible path.                                                                                                                                                                                                                           |
+| `voices/Voice.kt:263`                                                           | `idCounter`                                         | 2³¹ voices ≈ months at realistic densities. Low risk, still unbounded.                                                                                                                                                                                                            |
+| `filters/LowPassHighPassFilters.kt:484`                                         | `transitionSamples`                                 | Confirm it is bounded by the transition.                                                                                                                                                                                                                                          |
+
+**How to verify each**: this class is invisible to normal tests — nobody runs a spec for 12 h. Test it by seeding the
+counter near `Int.MAX_VALUE` and stepping across the boundary, which needs the field to be settable or the arithmetic
+extracted. Where that is impractical, prove wrap-safety by inspection and record the argument.
+
 ## 7. Constraints — put these in EVERY review prompt
 
 The module carries a large body of **deliberate** decisions. An auditor who "fixes" one of these makes things worse.

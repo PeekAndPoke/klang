@@ -154,4 +154,30 @@ class MasterChainSpec : StringSpec({
             MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.25, feedback = 1.0, cap = 3.0)
         ).delays[0].feedbackCap shouldBe 3.0
     }
+
+    "an authored lookahead reaches the Compressor — the wire-to-DSP hop, asserted" {
+        // The parameter-parity rule is only worth something if the value actually arrives. Before
+        // this, `limiters` was private and this hop could not be checked at all.
+        build(MasterStageDsl.Limiter(lookaheadSeconds = 0.004)).limiters[0].lookaheadSeconds shouldBe 0.004
+    }
+
+    "an authored limiter defaults to NO lookahead — the cross-playback desync guard" {
+        // A master chain is per playback. Any default latency here would delay one playback against
+        // every other one; the house safety limiter can afford 5 ms only because it runs once, on
+        // the summed mix. See MasterStage.AUTHORED_LIMITER_LOOKAHEAD_SECONDS.
+        build(MasterStageDsl.Limiter()).limiters[0].lookaheadSeconds shouldBe 0.0
+    }
+
+    "a hostile lookahead cannot throw or exhaust memory on the audio thread" {
+        // This is the one stage parameter that sizes an array, and chains are built on the audio
+        // thread. Negative -> NegativeArraySizeException; Infinity -> Int.MAX_VALUE doubles.
+        // Non-finite falls back to "off" via finite(), like every sibling parameter...
+        build(MasterStageDsl.Limiter(lookaheadSeconds = Double.NaN)).limiters[0].lookaheadSeconds shouldBe 0.0
+        build(MasterStageDsl.Limiter(lookaheadSeconds = Double.POSITIVE_INFINITY))
+            .limiters[0].lookaheadSeconds shouldBe 0.0
+        // ...a negative value is finite, so the range bound is what catches it...
+        build(MasterStageDsl.Limiter(lookaheadSeconds = -1.0)).limiters[0].lookaheadSeconds shouldBe 0.0
+        // ...and a merely absurd one is capped rather than rejected.
+        build(MasterStageDsl.Limiter(lookaheadSeconds = 10.0)).limiters[0].lookaheadSeconds shouldBe 0.05
+    }
 })

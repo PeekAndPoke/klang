@@ -68,6 +68,13 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
   musicdsp.org / KVR community, used in Klang's soft-clipping (`ClippingFunctions.fastTanh`)
 - **Perlin noise** (Ken Perlin) — organic drift and noise textures
 - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
+- **Lookahead limiting** after **[Geraint Luff](https://signalsmith-audio.co.uk/writing/2022/limiter/)**
+  (Signalsmith Audio) — the master limiter's anticipating gain path: a moving minimum of the required gain, smoothed,
+  applied to a delayed signal. Klang's implementation is its own; the construction, and the insight that the smoothing
+  has to fit *inside* the lookahead budget, come from that write-up
+- **Feed-forward dynamics topology** — the compressor's dB-domain peak detector and soft-knee parabolic gain curve
+  follow the standard design described across the DSP literature (Giannoulis, Massberg & Reiss, *"Digital Dynamic Range
+  Compressor Design"*, JAES 2012)
 
 ## Acoustics & Physical Modeling
 

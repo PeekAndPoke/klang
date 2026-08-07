@@ -61,6 +61,9 @@ class WireCodecRoundTripSpec : StringSpec({
                 MasterStageDsl.Limiter(
                     thresholdDb = -0.5, ratio = 12.0, kneeDb = 1.0,
                     attackSeconds = 0.002, releaseSeconds = 0.25,
+                    // Non-default on purpose: a field left at its default round-trips even if the
+                    // codec drops it entirely, which is why every field here is set explicitly.
+                    lookaheadSeconds = 0.003,
                 ),
             ),
         ).forEach { decode_MasterDsl(encode_MasterDsl(it)) shouldBe it }

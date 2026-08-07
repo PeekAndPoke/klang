@@ -44,7 +44,8 @@ class MasterDefaultsSyncSpec : StringSpec({
         // is where that is written down — a `shouldNotBe` would prove nothing.
         MasterStageDsl.Limiter().attackSeconds shouldBe MasterStage.AUTHORED_LIMITER_ATTACK_SECONDS
 
-        // ...and the authored default really is "no added latency".
+        // ...and the authored default really is "no added latency", on the wire model itself.
+        MasterStageDsl.Limiter().lookaheadSeconds shouldBe MasterStage.AUTHORED_LIMITER_LOOKAHEAD_SECONDS
         MasterStage.AUTHORED_LIMITER_LOOKAHEAD_SECONDS shouldBe 0.0
     }
 

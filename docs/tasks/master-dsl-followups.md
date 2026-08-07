@@ -29,6 +29,15 @@ Known asymmetries already spotted, as a starting list:
 - **`roomDim` / `iResponse`** are stored but never read on **both** paths (`Reverb.kt` TODO) — dead vocabulary that
   still appears in the DSL and docs.
 
+**A DELIBERATE exception, recorded so nobody "fixes" it:** `lookahead` exists on the master limiter **only** — not on
+sprudel's `compressor()`, not per-orbit, not per-voice. A lookahead limiter delays the signal it protects; on the summed
+master that delay is uniform and harmless, but on an orbit it would shift that orbit late against every other one — a
+silent timing bug that reads as "my drums feel loose". Same reasoning one level up keeps the *authored*
+`MasterFx.limiter()` at
+`lookaheadSeconds = 0` while the house limiter runs at 5 ms: the house one is global and post-sum, the authored one is
+per-playback. `MasterDefaultsSyncSpec` asserts both the shared values and the divergence. See
+`master-limiter-lookahead.md` §3 and §4.
+
 Wants its own task doc once someone starts it; this is the brief.
 
 ## 2. Engine disposal truncates a long delay tail (shared orbit + master)

@@ -118,6 +118,15 @@ class PlaybackEngineDispatcher(
     }
 
     /** Render one block to [out]: advance the clock, every engine accumulates into the mix, then master. */
+    /**
+     * Latency the master post-chain adds, in milliseconds.
+     *
+     * Belongs in the FE's latency budget: the browser reports its own output latency, but this delay
+     * happens *inside* the worklet where `AudioContext.outputLatency` cannot see it.
+     */
+    val masterLatencyMs: Double get() = master.latencyMs
+
+    /** Render one block to [out]: sum every engine into the shared mix, then run the master stage. */
     fun renderBlock(cursorFrame: Int, out: ShortArray) {
         val startMs = context.performanceTimeMs()
         clock.cursorFrame = cursorFrame

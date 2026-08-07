@@ -13,25 +13,25 @@ Cmd → PlaybackEngineDispatcher.handle
         → Voice render strip (Pitch → Ignite → Filter → Send) → Cylinder mix }
     → Cylinders.processAndMix (Katalyst FX: Delay → Reverb → Phaser → Compressor)
     → accumulate into the shared mix
-    → MasterStage (limiter → DC block → clip + interleave)
+    → MasterStage (DC block → limiter[5 ms lookahead] → clip + interleave)
     → ShortArray out
 ```
 
 ## Changed/created by the per-playback-engine work (D1 + D2)
 
-| File                                                     | What                                                                                                           |
-|----------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
-| `PlaybackEngineDispatcher.kt` **[NEW]**                  | Host: `Map<playbackId, PlaybackEngine>`, `handle(cmd)` routing, `renderBlock` mixdown, drain-dispose lifecycle |
-| `PlaybackEngine.kt` **[NEW]**                            | One isolated engine per playback (`VoiceScheduler` + `Cylinders` + `renderInto` + `isIdle`)                    |
-| `SampleStore.kt` **[NEW]**                               | Shared PCM sample cache (extracted from `VoiceScheduler`)                                                      |
-| `MasterStage.kt` **[NEW]**                               | Final stage: safety limiter → DC block → clip + interleave (extracted from `KlangAudioRenderer`)               |
-| `KlangAudioRenderer.kt` **[changed]**                    | Now a thin standalone wrapper delegating to `PlaybackEngine.renderInto + MasterStage` (offline + benchmarks)   |
-| `WarmupRunner.kt` **[changed]**                          | Runs on a dedicated warmup engine via the dispatcher; **dropped global `preallocateAll`**                      |
-| `cylinders/Cylinders.kt` **[changed]**                   | Added alloc-free `anyActive()`                                                                                 |
-| `voices/VoiceScheduler.kt` **[changed]**                 | Sample cache delegated to `SampleStore`                                                                        |
-| `voices/VoiceFactory.kt` **[changed]**                   | One `SampleStore.SampleEntry` type reference                                                                   |
-| `jvmMain/JvmAudioBackend.kt` **[changed]**               | Thin pump → `dispatcher.handle` / `dispatcher.renderBlock`                                                     |
-| `audio_jsworklet/.../KlangAudioWorklet.kt` **[changed]** | Thin pump (same)                                                                                               |
+| File                                                     | What                                                                                                              |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `PlaybackEngineDispatcher.kt` **[NEW]**                  | Host: `Map<playbackId, PlaybackEngine>`, `handle(cmd)` routing, `renderBlock` mixdown, drain-dispose lifecycle    |
+| `PlaybackEngine.kt` **[NEW]**                            | One isolated engine per playback (`VoiceScheduler` + `Cylinders` + `renderInto` + `isIdle`)                       |
+| `SampleStore.kt` **[NEW]**                               | Shared PCM sample cache (extracted from `VoiceScheduler`)                                                         |
+| `MasterStage.kt` **[NEW]**                               | Final stage: DC block → safety limiter (5 ms lookahead) → clip + interleave (extracted from `KlangAudioRenderer`) |
+| `KlangAudioRenderer.kt` **[changed]**                    | Now a thin standalone wrapper delegating to `PlaybackEngine.renderInto + MasterStage` (offline + benchmarks)      |
+| `WarmupRunner.kt` **[changed]**                          | Runs on a dedicated warmup engine via the dispatcher; **dropped global `preallocateAll`**                         |
+| `cylinders/Cylinders.kt` **[changed]**                   | Added alloc-free `anyActive()`                                                                                    |
+| `voices/VoiceScheduler.kt` **[changed]**                 | Sample cache delegated to `SampleStore`                                                                           |
+| `voices/VoiceFactory.kt` **[changed]**                   | One `SampleStore.SampleEntry` type reference                                                                      |
+| `jvmMain/JvmAudioBackend.kt` **[changed]**               | Thin pump → `dispatcher.handle` / `dispatcher.renderBlock`                                                        |
+| `audio_jsworklet/.../KlangAudioWorklet.kt` **[changed]** | Thin pump (same)                                                                                                  |
 
 > ⚠️ `voices/PlaybackCtx.kt` is **not** `PlaybackEngine` — it's the per-pid context *inside* a
 > scheduler (epoch + forked ignitor registry). Unchanged.
