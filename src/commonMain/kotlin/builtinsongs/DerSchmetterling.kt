@@ -72,9 +72,9 @@ stack(                                                                          
     .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05")  // .solo()
   // Master
   ,master(Master.of(MasterFx.reverb().wet(0.03).damp(0.8).roomSize(8),
-                    MasterFx.gain(1.45),   // +3.2 dB                                                                                                                                                                                            
+                    MasterFx.gain(1.40),   // +3.2 dB                                                                                                                                                                                            
                     MasterFx.limiter().lookahead(0.005).thresholdDb(-8.0).ratio(2.0).kneeDb(6.0).attack(0.030).release(0.125),                                                                                                                                    
-                    MasterFx.gain(1.40),   // +2.9 dB                                                                                                                                                                                            
+                    MasterFx.gain(1.35),   // +2.9 dB                                                                                                                                                                                            
                     MasterFx.limiter().lookahead(0.005).thresholdDb(-4.0).ratio(4.0).kneeDb(4.0).attack(0.015).release(0.075),                                                                                                                                    
                     MasterFx.gain(1.20),   // +2.3 dB — least, because the house brickwall is next
   ))
