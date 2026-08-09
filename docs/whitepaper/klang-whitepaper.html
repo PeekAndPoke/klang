@@ -85,6 +85,9 @@
        size in the document scales with it. */
     html {
         font-size: 125%;
+        /* the full-bleed masthead uses 100vw, which overshoots by the scrollbar
+           width — clip (not hidden: hidden would break the sticky rails) */
+        overflow-x: clip;
     }
 
     body {
@@ -107,8 +110,39 @@
        MASTHEAD
        --------------------------------------------------------------- */
     .masthead {
-        padding: 4.5rem 0 2rem;
+        /* The metal plate is always dark, in both themes — the masthead carries
+           its own fixed light-on-dark palette instead of the theme tokens. */
+        --mh-ink: #E7E9E4;
+        --mh-muted: #A9AFB4;
+        --mh-spark: #FF7A3D;
+        --mh-signal: #6FB8D6;
+        position: relative;
+        overflow: hidden;
+        width: 100vw;
+        margin-left: calc(50% - 50vw);
+        padding: 0;
+        background: #14171C; /* fallback while WebGL boots, or without it */
         border-bottom: 2px solid var(--ink);
+    }
+
+    #metal-bg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .masthead-inner {
+        position: relative;
+        z-index: 1;
+        max-width: 70rem;
+        margin: 0 auto;
+        padding: 4.5rem 1.5rem 0;
+    }
+
+    .masthead a:focus-visible {
+        outline-color: var(--mh-spark);
     }
 
     .eyebrow {
@@ -116,15 +150,16 @@
         font-size: 0.68rem;
         letter-spacing: 0.16em;
         text-transform: uppercase;
-        color: var(--muted);
+        color: var(--mh-muted);
         margin: 0 0 1.75rem;
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 0.4rem 1.1rem;
     }
 
     .eyebrow .spark {
-        color: var(--spark);
+        color: var(--mh-spark);
     }
 
     h1 {
@@ -134,19 +169,22 @@
         line-height: 0.98;
         letter-spacing: -0.035em;
         text-wrap: balance;
+        text-align: center;
+        color: var(--mh-ink);
         margin: 0 0 0.6rem;
     }
 
     h1 .ou {
-        color: var(--spark);
+        color: var(--mh-spark);
     }
 
     .deck {
         font-size: clamp(1.05rem, 2.2vw, 1.3rem);
         line-height: 1.45;
-        color: var(--muted);
+        color: var(--mh-muted);
         max-width: 34rem;
-        margin: 0 0 2.25rem;
+        margin: 0 auto 2.25rem;
+        text-align: center;
         text-wrap: balance;
     }
 
@@ -160,21 +198,22 @@
     .colophon {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 0.35rem 2rem;
         font-family: var(--f-mono);
         font-size: 0.72rem;
         letter-spacing: 0.04em;
-        color: var(--muted);
+        color: var(--mh-muted);
         padding-bottom: 1.5rem;
     }
 
     .colophon b {
-        color: var(--ink);
+        color: var(--mh-ink);
         font-weight: 600;
     }
 
     .colophon a {
-        color: var(--signal);
+        color: var(--mh-signal);
     }
 
     /* ---------------------------------------------------------------
@@ -700,34 +739,75 @@
 
     <!-- ============================ MASTHEAD ============================ -->
     <header class="masthead">
-        <p class="eyebrow">
-            <span class="spark">Werkstatthandbuch</span>
-            <span>Pre-Alpha</span>
-            <span>Kotlin Multiplatform</span>
-            <span>AGPL-3.0</span>
-            <span>August 2026</span>
-        </p>
+        <canvas id="metal-bg" aria-hidden="true"></canvas>
 
-        <h1>Klang Audio Mot<span class="ou">ö</span>r</h1>
+        <div class="masthead-inner">
+            <p class="eyebrow">
+                <span class="spark">Werkstatthandbuch</span>
+                <span>Pre-Alpha</span>
+                <span>Kotlin Multiplatform</span>
+                <span>AGPL-3.0</span>
+                <span>August 2026</span>
+            </p>
 
-        <p class="deck">
-            A real-time audio engine, a pattern language, and a scripting language —
-            written from scratch in Kotlin, running in a browser tab.
-            This is what exists, and where it might go.
-        </p>
+            <h1>Klang Audio Mot<span class="ou">ö</span>r</h1>
 
-        <svg class="trace" viewBox="0 0 900 46" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-            <!-- sawtooth (raw) fading into a filtered curve: the engine's job in one line -->
-            <polyline points="0,40 45,6 45,40 90,6 90,40 135,6 135,40 180,6 180,40 225,6 225,40 270,6 270,40"
-                      fill="none" stroke="var(--spark)" stroke-width="1.6"/>
-            <path d="M270,40 C 300,6 320,40 350,23 C 380,8 400,38 430,23 C 465,10 490,36 525,23 C 570,15 610,30 660,23 C 730,15 800,25 900,23"
-                  fill="none" stroke="var(--signal)" stroke-width="1.6"/>
-        </svg>
+            <p class="deck">
+                A real-time audio engine, a pattern language, and a scripting language —
+                written from scratch in Kotlin, running in a browser tab.
+                This is what exists, and where it might go.
+            </p>
 
-        <div class="colophon">
-            <span><b>Author</b> &nbsp;Karsten J. Gerber · PeekAndPoke</span>
-            <span><b>Demo</b> &nbsp;<a href="https://klang.finzo.de">klang.finzo.de</a></span>
-            <span><b>Scale</b> &nbsp;~230k lines Kotlin / ~1,200 files</span>
+            <svg class="trace" viewBox="0 0 900 46" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <!-- filtered signal in → a supersaw through the Motör (centre voice + detuned
+                     sides, phase-aligned at the attack, drifting apart) → filtered signal out -->
+                <path d="M0,23 C 25,19 45,27 70,23 C 100,14 130,32 160,23 C 185,8 210,38 235,23 C 248,13 258,33 270,23"
+                      fill="none" stroke="var(--mh-signal)" stroke-width="1.6"/>
+                <defs>
+                    <!-- the saw section fades to alpha 0 over its outer 15% on each side -->
+                    <linearGradient id="sawFadeGrad" gradientUnits="userSpaceOnUse" x1="270" y1="0" x2="630" y2="0">
+                        <stop offset="0" stop-color="#000"/>
+                        <stop offset="0.15" stop-color="#fff"/>
+                        <stop offset="0.85" stop-color="#fff"/>
+                        <stop offset="1" stop-color="#000"/>
+                    </linearGradient>
+                    <mask id="sawFade" maskUnits="userSpaceOnUse" x="270" y="0" width="360" height="46">
+                        <rect x="270" y="0" width="360" height="46" fill="url(#sawFadeGrad)"/>
+                    </mask>
+                </defs>
+                <!-- detuned side voices, quieter — the script below re-rolls these per
+                     visit with random detune AND random phase, so every load of the
+                     paper plays a different chord. Only the sides ride the edge-fade
+                     mask; the centre voice stays anchored and fully drawn. -->
+                <g class="saws" mask="url(#sawFade)">
+                    <polyline class="sv"
+                              points="270,40 312,12.8 312,40 354,12.8 354,40 396,12.8 396,40 438,12.8 438,40 480,12.8 480,40 522,12.8 522,40 564,12.8 564,40 606,12.8 606,40 630,24.5"
+                              fill="none" stroke="var(--mh-spark)" stroke-width="1.1" opacity="0.32"/>
+                    <polyline class="sv"
+                              points="270,40 318.5,18.2 318.5,40 367,18.2 367,40 415.5,18.2 415.5,40 464,18.2 464,40 512.5,18.2 512.5,40 561,18.2 561,40 609.5,18.2 609.5,40 630,30.8"
+                              fill="none" stroke="var(--mh-spark)" stroke-width="1.1" opacity="0.32"/>
+                    <polyline class="sv"
+                              points="270,40 313.5,22.6 313.5,40 357,22.6 357,40 400.5,22.6 400.5,40 444,22.6 444,40 487.5,22.6 487.5,40 531,22.6 531,40 574.5,22.6 574.5,40 618,22.6 618,40 630,35.2"
+                              fill="none" stroke="var(--mh-spark)" stroke-width="1.1" opacity="0.45"/>
+                    <polyline class="sv"
+                              points="270,40 317,26.1 317,40 364,26.1 364,40 411,26.1 411,40 458,26.1 458,40 505,26.1 505,40 552,26.1 552,40 599,26.1 599,40 630,30.8"
+                              fill="none" stroke="var(--mh-spark)" stroke-width="1.1" opacity="0.45"/>
+                </g>
+                <!-- the on-pitch centre voice — unmasked, on top; enters and exits at
+                     mid-ramp (y=23), so it meets both blue segments on their midline -->
+                <polyline class="center"
+                          points="270,23 292.5,6 292.5,40 337.5,6 337.5,40 382.5,6 382.5,40 427.5,6 427.5,40 472.5,6 472.5,40 517.5,6 517.5,40 562.5,6 562.5,40 607.5,6 607.5,40 630,23"
+                          fill="none" stroke="var(--mh-spark)" stroke-width="1.6"/>
+                <path d="M630,23 C 640,13 650,33 665,23 C 690,8 715,38 740,23 C 770,14 800,32 830,23 C 855,19 875,27 900,23"
+                      fill="none" stroke="var(--mh-signal)" stroke-width="1.6"/>
+            </svg>
+
+            <div class="colophon">
+                <span><b>Author</b> &nbsp;PeekAndPoke</span>
+                <span><b>Repo</b> &nbsp;<a href="https://github.com/PeekAndPoke/klang">github.com/PeekAndPoke/klang</a></span>
+                <span><b>Demo</b> &nbsp;<a href="https://klang.finzo.de">klang.finzo.de</a></span>
+                <span><b>Fun</b> &nbsp;★★★★★</span>
+            </div>
         </div>
     </header>
 
@@ -2470,5 +2550,512 @@ stack(
 
 </div>
 
+<script>
+    // Metal hexagon masthead — ported from karsten-gerber.de (MetalBackground.astro),
+    // rewritten on raw WebGL so this file stays dependency-free and self-contained.
+    // A brushed-metal hex plate, normal-mapped, lit by a warm point light that follows
+    // the pointer; when idle the light wanders on attractor physics. Links flare steel blue.
+    (function () {
+        'use strict';
+
+        var canvas = document.getElementById('metal-bg');
+        if (!canvas) return;
+        var host = canvas.parentElement;
+        var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* ---- procedural pointy-top hex normal map (same construction as the original) ---- */
+
+        function hashCell(col, row) {
+            var h = (col * 73856093) ^ (row * 19349663);
+            h = ((h >> 16) ^ h) * 0x45d9f3b;
+            h = ((h >> 16) ^ h) * 0x45d9f3b;
+            h = (h >> 16) ^ h;
+            return (h & 0xffff) / 0xffff; // 0..1
+        }
+
+        function n2c(n) {
+            return Math.max(0, Math.min(255, (n + 1.0) * 127.5));
+        }
+
+        function generateHexNormalMap(width, height) {
+            var map = document.createElement('canvas');
+            map.width = width;
+            map.height = height;
+            var ctx = map.getContext('2d');
+            var imageData = ctx.createImageData(width, height);
+            var data = imageData.data;
+
+            var R = 22;
+            var hexW = Math.sqrt(3) * R;
+            var hexH = 1.5 * R;
+            var edgeWidth = 4.5;
+            var aaWidth = 1.2;
+
+            for (var y = 0; y < height; y++) {
+                for (var x = 0; x < width; x++) {
+                    var idx = (y * width + x) * 4;
+
+                    var row = Math.floor(y / hexH);
+                    var rowOffset = (row % 2 === 1) ? hexW * 0.5 : 0;
+                    var col = Math.floor((x - rowOffset) / hexW);
+
+                    // nearest + second-nearest hex centre among the neighbours
+                    var minDist = Infinity, secondDist = Infinity, bestCol = col, bestRow = row;
+                    for (var dr = -1; dr <= 1; dr++) {
+                        for (var dc = -1; dc <= 1; dc++) {
+                            var r = row + dr, c = col + dc;
+                            var absR = ((r % 2) + 2) % 2;
+                            var roff = absR === 1 ? hexW * 0.5 : 0;
+                            var cx = c * hexW + roff + hexW * 0.5;
+                            var cy = r * hexH + R;
+                            var ddx = x - cx, ddy = y - cy;
+                            var dist = ddx * ddx + ddy * ddy;
+                            if (dist < minDist) {
+                                secondDist = minDist;
+                                minDist = dist;
+                                bestCol = c;
+                                bestRow = r;
+                            } else if (dist < secondDist) {
+                                secondDist = dist;
+                            }
+                        }
+                    }
+
+                    var absR2 = ((bestRow % 2) + 2) % 2;
+                    var winOff = absR2 === 1 ? hexW * 0.5 : 0;
+                    var winCx = bestCol * hexW + winOff + hexW * 0.5;
+                    var winCy = bestRow * hexH + R;
+
+                    // deterministic per-cell tilt
+                    var tiltX = (hashCell(bestCol, bestRow) - 0.5) * 0.14;
+                    var tiltY = (hashCell(bestCol + 1000, bestRow + 1000) - 0.5) * 0.14;
+
+                    var edgeDist = Math.sqrt(secondDist) - Math.sqrt(minDist);
+                    var dx = x - winCx, dy = y - winCy;
+                    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+                    var nx, ny, nz, grain, smooth;
+
+                    if (edgeDist < edgeWidth) {
+                        // beveled edge, smoothstep profile
+                        var t = 1.0 - edgeDist / edgeWidth;
+                        smooth = t * t * (3 - 2 * t);
+                        nx = (dx / len) * 0.85 * smooth;
+                        ny = (dy / len) * 0.85 * smooth;
+                    } else if (edgeDist < edgeWidth + aaWidth) {
+                        // feather zone: blend bevel into the tilted face
+                        var blend = (edgeDist - edgeWidth) / aaWidth;
+                        smooth = blend * blend * (3 - 2 * blend);
+                        grain = (Math.random() - 0.5) * 0.015;
+                        nx = (dx / len) * 0.05 * (1 - smooth) + (tiltX + grain) * smooth;
+                        ny = (dy / len) * 0.05 * (1 - smooth) + (tiltY + grain) * smooth;
+                    } else {
+                        // face interior: tilt + micro grain
+                        grain = (Math.random() - 0.5) * 0.015;
+                        nx = tiltX + grain;
+                        ny = tiltY + grain;
+                    }
+                    nz = Math.sqrt(Math.max(0.01, 1 - nx * nx - ny * ny));
+
+                    data[idx] = n2c(nx);
+                    data[idx + 1] = n2c(-ny); // canvas Y-down -> GL Y-up
+                    data[idx + 2] = n2c(nz);
+                    data[idx + 3] = 255;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            return map;
+        }
+
+        /* ---- WebGL setup ---- */
+
+        var VSH =
+            'attribute vec2 aPos;\n' +
+            'varying vec2 vUv;\n' +
+            'void main() { vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }';
+
+        var FSH =
+            'precision mediump float;\n' +
+            'varying vec2 vUv;\n' +
+            'uniform sampler2D uNormal;\n' +
+            'uniform vec2 uLightA;\n' +
+            'uniform vec2 uLightB;\n' +
+            'uniform vec3 uLightColor;\n' +
+            'uniform float uIntensity;\n' +
+            'uniform float uAspect;\n' +
+            // one spot: lower hover height + steeper falloff than the single-light
+            // version, so each light reads as a focused pool rather than a wash
+            'vec3 lightContrib(vec3 n, vec2 p, vec2 lp, vec3 base) {\n' +
+            '  vec3 L = vec3(lp, 1.8) - vec3(p, 0.0);\n' +
+            '  float dist = length(L);\n' +
+            '  L /= dist;\n' +
+            '  float atten = 1.0 / (1.0 + 0.5 * dist * dist);\n' +
+            '  float diff = max(dot(n, L), 0.0);\n' +
+            '  vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));\n' +
+            '  float spec = pow(max(dot(n, H), 0.0), 42.0);\n' +
+            '  return base * diff * atten * 0.9 + (base * 2.2 + 0.12) * spec * atten * 1.6;\n' +
+            '}\n' +
+            'void main() {\n' +
+            '  vec3 n = normalize(texture2D(uNormal, vUv).xyz * 2.0 - 1.0);\n' +
+            '  vec2 p = (vUv * 2.0 - 1.0) * vec2(uAspect, 1.0);\n' +
+            '  vec3 base = vec3(0.145, 0.157, 0.188);\n' +          // metal albedo 0x252830
+            '  vec3 col = base * vec3(0.20, 0.22, 0.26);\n' +       // dim ambient
+            '  col += lightContrib(n, p, uLightA, base) * uLightColor * uIntensity;\n' +
+            '  col += lightContrib(n, p, uLightB, base) * uLightColor * uIntensity;\n' +
+            '  vec3 fillDir = normalize(vec3(-1.0, -0.5, 0.5));\n' +
+            '  col += vec3(0.40, 0.47, 0.67) * base * max(dot(n, fillDir), 0.0) * 0.35;\n' + // cool fill
+            '  gl_FragColor = vec4(col, 1.0);\n' +
+            '}';
+
+        var gl = null, program = null, texture = null, uniforms = {};
+        var aspect = 1;
+        var resizeTimer = null;
+
+        function compileShader(type, src) {
+            var sh = gl.createShader(type);
+            gl.shaderSource(sh, src);
+            gl.compileShader(sh);
+            return gl.getShaderParameter(sh, gl.COMPILE_STATUS) ? sh : null;
+        }
+
+        function initGl() {
+            gl = canvas.getContext('webgl', {antialias: false, alpha: false});
+            if (!gl) return false; // the CSS fallback background stays
+
+            var vs = compileShader(gl.VERTEX_SHADER, VSH);
+            var fs = compileShader(gl.FRAGMENT_SHADER, FSH);
+            if (!vs || !fs) return false;
+
+            program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return false;
+            gl.useProgram(program);
+
+            var quad = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+            var aPos = gl.getAttribLocation(program, 'aPos');
+            gl.enableVertexAttribArray(aPos);
+            gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+            uniforms.lightA = gl.getUniformLocation(program, 'uLightA');
+            uniforms.lightB = gl.getUniformLocation(program, 'uLightB');
+            uniforms.lightColor = gl.getUniformLocation(program, 'uLightColor');
+            uniforms.intensity = gl.getUniformLocation(program, 'uIntensity');
+            uniforms.aspect = gl.getUniformLocation(program, 'uAspect');
+            gl.uniform1i(gl.getUniformLocation(program, 'uNormal'), 0);
+            return true;
+        }
+
+        function uploadNormalMap() {
+            var h = 1024;
+            var w = Math.min(4096, Math.ceil(h * aspect));
+            var map = generateHexNormalMap(w, h);
+            if (texture) gl.deleteTexture(texture);
+            texture = gl.createTexture();
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, map);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        }
+
+        /* ---- light state: pointer-follow, hover flare, idle attractor physics ---- */
+
+        var WARM = [1.0, 0.83, 0.66];       // 0xffd4a8
+        var STEEL = [0.29, 0.50, 0.71];     // 0x4a7fb5
+        var DEFAULT_INTENSITY = 0.5;
+        var HOVER_INTENSITY = 1.2;
+        // the two spots sit wide apart like a pair of eyes — each at this fraction
+        // of the plate's half-width from the followed point, level with each other
+        var EYE_SPREAD = 0.42;
+
+        var mouseX = 0, mouseY = 0.2, targetX = 0, targetY = 0.2;
+        var lightColor = WARM.slice(), targetColor = WARM.slice();
+        var intensity = DEFAULT_INTENSITY, targetIntensity = DEFAULT_INTENSITY;
+        var lastInteraction = 0, wasIdle = false;
+        var velX = 0, velY = 0, attractX = 0, attractY = 0;
+        var GRAVITY = 0.3, MAX_SPEED = 0.4, DAMPING = 0.98, NEAR = 0.2;
+        // the lights follow only this fraction of the pointer's movement,
+        // anchored at the centre of the plate
+        var FOLLOW = 0.2;
+        // the idle wander stays within this range of centre — 10% wider than the follow
+        var IDLE_RANGE = 0.3;
+        var lastFrameTime = performance.now();
+
+        function pickAttractor() {
+            var angle = Math.random() * Math.PI * 2;
+            var radius = IDLE_RANGE * (0.35 + Math.random() * 0.65);
+            attractX = Math.cos(angle) * radius;
+            attractY = Math.sin(angle) * radius * 0.7;
+        }
+
+        function clamp(v, lo, hi) {
+            return v < lo ? lo : (v > hi ? hi : v);
+        }
+
+        document.addEventListener('mousemove', function (e) {
+            // pointer position mapped into the plate's own space, softly clamped so the
+            // light drifts to the nearest edge when the pointer is below the masthead
+            var rect = host.getBoundingClientRect();
+            targetX = clamp(((e.clientX - rect.left) / rect.width) * 2 - 1, -1.3, 1.3) * FOLLOW;
+            targetY = clamp(-(((e.clientY - rect.top) / rect.height) * 2 - 1), -1.3, 1.3) * FOLLOW;
+            lastInteraction = performance.now();
+            wasIdle = false;
+        });
+
+        // gyroscope on mobile
+        if (typeof DeviceOrientationEvent !== 'undefined') {
+            window.addEventListener('deviceorientation', function (e) {
+                if (e.gamma !== null && e.beta !== null) {
+                    targetX = (e.gamma / 45) * FOLLOW;
+                    targetY = ((e.beta - 45) / 45) * FOLLOW;
+                    lastInteraction = performance.now();
+                    wasIdle = false;
+                }
+            });
+        }
+
+        // links flare the light steel blue
+        var hovering = false;
+        document.addEventListener('pointerover', function (e) {
+            if (e.target.closest && e.target.closest('a, button')) {
+                hovering = true;
+                targetColor = STEEL;
+                targetIntensity = HOVER_INTENSITY;
+            }
+        });
+        document.addEventListener('pointerout', function (e) {
+            if (e.target.closest && e.target.closest('a, button')) {
+                hovering = false;
+                targetColor = WARM;
+                targetIntensity = DEFAULT_INTENSITY;
+            }
+        });
+
+        /* ---- sizing ---- */
+
+        function resize() {
+            var rect = host.getBoundingClientRect();
+            var dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.max(1, Math.round(rect.width * dpr));
+            canvas.height = Math.max(1, Math.round(rect.height * dpr));
+            aspect = rect.width / rect.height;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.uniform1f(uniforms.aspect, aspect);
+
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                uploadNormalMap();
+                if (reducedMotion) render();
+            }, 300);
+        }
+
+        /* ---- render loop ---- */
+
+        function render() {
+            var cx = mouseX * aspect, cy = mouseY;
+            var off = aspect * EYE_SPREAD; // scales with the plate, so narrow screens keep both eyes on it
+            gl.uniform2f(uniforms.lightA, cx - off, cy);
+            gl.uniform2f(uniforms.lightB, cx + off, cy);
+            gl.uniform3f(uniforms.lightColor, lightColor[0], lightColor[1], lightColor[2]);
+            gl.uniform1f(uniforms.intensity, intensity);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            var now = performance.now();
+            var delta = Math.min(now - lastFrameTime, 100);
+            lastFrameTime = now;
+
+            if (now - lastInteraction > 3000) {
+                // idle: the light wanders between random attractors on simple physics
+                if (!wasIdle) {
+                    wasIdle = true;
+                    velX = 0;
+                    velY = 0;
+                    pickAttractor();
+                }
+                var dt = delta / 1000;
+                var dx = attractX - targetX, dy = attractY - targetY;
+                var dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+                velX += dx * GRAVITY * dt;
+                velY += dy * GRAVITY * dt;
+                velX *= DAMPING;
+                velY *= DAMPING;
+                var speed = Math.sqrt(velX * velX + velY * velY);
+                if (speed > MAX_SPEED) {
+                    velX = (velX / speed) * MAX_SPEED;
+                    velY = (velY / speed) * MAX_SPEED;
+                }
+                targetX = clamp(targetX + velX * dt, -IDLE_RANGE, IDLE_RANGE);
+                targetY = clamp(targetY + velY * dt, -IDLE_RANGE, IDLE_RANGE);
+                if (dist < NEAR) pickAttractor();
+            }
+
+            mouseX += (targetX - mouseX) * 0.18;
+            mouseY += (targetY - mouseY) * 0.18;
+            // the blue flare fades IN at a quarter of the speed it fades back out
+            var lerp = hovering ? 0.0125 : 0.05;
+            lightColor[0] += (targetColor[0] - lightColor[0]) * lerp;
+            lightColor[1] += (targetColor[1] - lightColor[1]) * lerp;
+            lightColor[2] += (targetColor[2] - lightColor[2]) * lerp;
+            intensity += (targetIntensity - intensity) * lerp;
+
+            render();
+        }
+
+        /* ---- boot ---- */
+
+        function start() {
+            if (!initGl()) return;
+            resize();
+            uploadNormalMap();
+            if (reducedMotion) {
+                // no animation: one static frame, light resting off-centre
+                mouseX = 0.25;
+                mouseY = 0.3;
+                render();
+                window.addEventListener('resize', resize);
+                return;
+            }
+            window.addEventListener('resize', resize);
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) {
+                    lastFrameTime = performance.now();
+                    lastInteraction = 0; // go straight to idle wandering
+                    wasIdle = false;
+                }
+            });
+            animate();
+        }
+
+        canvas.addEventListener('webglcontextlost', function (e) {
+            e.preventDefault();
+        });
+        canvas.addEventListener('webglcontextrestored', function () {
+            start();
+        });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', start);
+        } else {
+            start();
+        }
+    })();
+
+    // Per-visit supersaw — rolls the trace's detuned side voices fresh on every load
+    // (random detune, loudness and phase), then animates them very slowly. The scope
+    // is triggered on the anchored centre voice: the centre and the filtered blue
+    // segments stand still, while the detuned sides drift past at their beat rate
+    // against the centre — bigger detune beats faster, just like the audible thing.
+    // The three parts stay in place; only the phases crawl.
+    (function () {
+        'use strict';
+
+        var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function boot() {
+            var svg = document.querySelector('.trace');
+            if (!svg) return;
+            var sawGroup = svg.querySelector('.saws');
+            if (!sawGroup) return;
+
+            // one saw voice: rising ramps of height `amp` off the 40-baseline with
+            // period P, entering at x=270 already `phase` (0..1) of the way up its
+            // ramp, clipped at x=630
+            function sawPoints(P, phase, amp) {
+                var top = (40 - amp).toFixed(1);
+                var pts = '270,' + (40 - amp * phase).toFixed(1);
+                var x = 270 + P * (1 - phase);
+                while (x <= 630) {
+                    pts += ' ' + x.toFixed(1) + ',' + top + ' ' + x.toFixed(1) + ',40';
+                    x += P;
+                }
+                var rem = 630 - (x - P);
+                if (rem > 0.5) {
+                    pts += ' 630,' + (40 - amp * (rem / P)).toFixed(1);
+                }
+                return pts;
+            }
+
+            // drop the static fallback voices
+            svg.querySelectorAll('.sv').forEach(function (el) {
+                el.remove();
+            });
+
+            // 4 side voices, sometimes 6; each detuned off the centre period of 45,
+            // and — like the real supersaw — the further off pitch, the quieter
+            var count = Math.random() < 0.4 ? 6 : 4;
+            var NS = 'http://www.w3.org/2000/svg';
+            var voices = [];
+            for (var i = 0; i < count; i++) {
+                var detune = (1.5 + Math.random() * 5.0) * (Math.random() < 0.5 ? -1 : 1);
+                var opacity = 0.5 - Math.abs(detune) * 0.035;
+                var el = document.createElementNS(NS, 'polyline');
+                el.setAttribute('class', 'sv');
+                el.setAttribute('fill', 'none');
+                el.setAttribute('stroke', 'var(--mh-spark)');
+                el.setAttribute('stroke-width', '1.1');
+                el.setAttribute('opacity', opacity.toFixed(2));
+                // into the fade-mask group; the centre voice sits above it, unmasked
+                sawGroup.appendChild(el);
+                voices.push({
+                    el: el,
+                    P: 45 + detune,
+                    // each additional voice draws 20% smaller than the previous one
+                    // (the centre voice is the full-height reference at 34)
+                    amp: 34 * Math.pow(0.8, i + 1),
+                    // stratified: each voice gets its own slice of the cycle (jittered
+                    // within it), so the phases are guaranteed spread apart instead of
+                    // sometimes clumping the way plain uniform random does
+                    phase: (i + Math.random()) / count,
+                    beat: detune * 0.024 // beat rate vs the centre, cycles/second
+                });
+            }
+
+            function draw() {
+                for (var i = 0; i < voices.length; i++) {
+                    var v = voices[i];
+                    v.el.setAttribute('points', sawPoints(v.P, v.phase, v.amp));
+                }
+            }
+
+            draw();
+            if (reducedMotion) return; // static chord, no crawl
+
+            var lastT = performance.now();
+            var lastDraw = 0;
+
+            function tick(now) {
+                requestAnimationFrame(tick);
+                var dt = Math.min(now - lastT, 200) / 1000; // clamp tab-sleep jumps
+                lastT = now;
+                for (var i = 0; i < voices.length; i++) {
+                    var v = voices[i];
+                    v.phase = (((v.phase + v.beat * dt) % 1) + 1) % 1;
+                }
+                if (now - lastDraw >= 80) { // ~12 fps — plenty at this speed
+                    lastDraw = now;
+                    draw();
+                }
+            }
+
+            requestAnimationFrame(tick);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', boot);
+        } else {
+            boot();
+        }
+    })();
+</script>
 </body>
 </html>

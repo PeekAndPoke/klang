@@ -28,13 +28,13 @@ let supersawHp = (() => {
   let pAnalog  = OscSlot.analog
 
   // --- pitch-tracking highpass -------------------------------------------
-  let pHpTrack = Osc.param("hptrack", 1.0,   "Highpass cutoff as a multiple of the note frequency")
+  let pHpTrack = Osc.param("hptrack", 1.1,   "Highpass cutoff as a multiple of the note frequency")
   let pHpQ     = Osc.param("hpq",     0.707, "Highpass resonance")
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
     // character knobs first — plain scalars, SuperSaw-typed, must precede the filter
     .analog(pAnalog).spreadPower(2.0).sideAtten(0.6).gainJitter(0.15).centerJitter(0.02)
-    .add(Osc.square(Osc.freq()).mul(0.05).analog(pAnalog))
+    .add(Osc.sine(Osc.freq()).mul(0.05).analog(pAnalog))
     .highpass(Osc.freq().mul(pHpTrack), pHpQ, pAnalog)
    
   return signal.add(signal.bandpass(800, 0.50).mul(0.5))
@@ -51,8 +51,8 @@ stack(
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.25).pan(0.35).superimpose(pan(0.65)))
     .mute("<1!32 0!192>").room("0.3:5:0.1").body("violin").bodyMix("0.5")                                                                            
   , // Guitar 1                                                                                                        
-  n(`<[0 [0@4 -4 -3] -1 -3 [0 2 4 3] 0 2 <[-1 0@3] [3 6@2 7] [[1 2] 3@3] [[3 6] 9@2 8]>]!4
-      [[4@2 [[2 2@3] 0@2] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
+  n(`<[0 [0@4 [11 4] -3] -1 -3 [0 2 4 3] 0 2 <[-1 1 3@2] [[3 4] 6@2 7] [[1 3] 4 3 2] [[6 12 8 5]]>]!4
+      [[4@2 [6 4 2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
       [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [-5 -6] [-7,-14] [-5 <-1 -4 -4 1>]]>/4`)
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2))  // . solo()
@@ -81,15 +81,15 @@ stack(
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").mute("<0!128 1!32>")  // . solo()
     .pan(0.5).orbit(5).gain(0.23).hpf(40).lpf(6500).adsr("0.002:0.20:0.5:0.2"),
   sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>").mute("<0!128 1!32>") // . solo()
-    .pan(0.5).late(0.0015).orbit(5).pan(0.475).gain(0.25).hpf(250).lpf(9500).adsr("0.002:0.30:0.2:0.2")
+    .pan(0.5).late(0.0015).orbit(5).pan(0.475).gain(0.25).hpf(250).lpf(8500).adsr("0.002:0.30:0.2:0.2")
     .superimpose(x => x.bandf("205".add(berlin.mul(10).fast(4))).bandq(4).vel(0.60).hpf(190).lpf(350)),
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-    .pan(0.525).late(0.0030).orbit(5).gain(0.23).hpf(1000).lpf("9500".add(perlin.mul(300).fast(4))).adsr("0.005:0.5:0.8:0.2"), // . mute()
+    .pan(0.525).late(0.0030).orbit(5).gain(0.23).hpf(1000).lpf("8500".add(perlin.mul(300).fast(4))).adsr("0.005:0.5:0.8:0.2"), // . mute()
   sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(6).gain(0.10).mute("<0!128 1!32>"),
   sound("pink!8").orbit(7).gain(0.04).hpf(8000).lpf(13500).lpq(0.5)
     .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05")  // .solo()
   // Master
-  ,master(Master.of(MasterFx.reverb().wet(0.03).damp(0.6).roomSize(8), MasterFx.gain(1.50)))
+  ,master(Master.of(MasterFx.reverb().wet(0.03).damp(0.6).roomSize(8), MasterFx.gain(1.80)))
 ).analog(feel).seed(timeOfDay.mul(10*60*60*24))
 
 
@@ -103,6 +103,7 @@ stack(
 // Written by: peekandpoke
 
 // Epilepsy Warning: Do not click the oscilloscope!
+
 
 
 
