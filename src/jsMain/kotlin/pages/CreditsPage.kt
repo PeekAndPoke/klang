@@ -42,6 +42,7 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                     renderMusicCodersCard()
                     renderFiltersCard()
                     renderDspAlgorithmsCard()
+                    renderHardwareCard()
                     renderAcousticsCard()
                     renderMusicAndAudioCard()
                     renderSamplesCard()
@@ -348,6 +349,31 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         - **Feed-forward dynamics topology** — the compressor's dB-domain peak detector and soft-knee
                         parabolic gain curve follow the standard design described across the DSP literature
                         (Giannoulis, Massberg & Reiss, *"Digital Dynamic Range Compressor Design"*, JAES 2012)
+                    """.trimIndent()
+                )
+            }
+        }
+    }
+
+    private fun FlowContent.renderHardwareCard() {
+        noui.card {
+            noui.content {
+                ui.header H2 { +"Hardware Inspirations" }
+
+                ui.divider()
+
+                MarkdownDisplay(
+                    """
+                        The machines whose sounds Klang chases:
+
+                        - **Roland JP-8000** (1997) — the synthesizer that introduced the **Super Saw**:
+                        seven sawtooth oscillators — one centre, six detuned — in a single voice. The sound
+                        that defined trance, and the reason a `supersaw` lives in every live-coding
+                        environment today. Klang's super-oscillators chase that sound — by way of Adam
+                        Szabo's analysis (see *DSP Algorithms & Techniques*) — while the implementation
+                        is its own.
+                        - **Roland TR-808 & TR-909** — the drum machines whose voices echo through the
+                        bundled drum-machine sample banks (see *Samples & Soundfonts*), e.g. `bank("RolandTR808")`.
                     """.trimIndent()
                 )
             }

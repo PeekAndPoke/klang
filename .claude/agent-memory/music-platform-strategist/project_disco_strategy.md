@@ -18,6 +18,17 @@ for Motör without a "look at my new engine" framing, and that survives a founde
 Treat this plan as the baseline for any future Disco-related questions (mascot, post copy, drop scheduling, metrics
 review, monetization escalation). Don't re-derive these decisions; reference the file.
 
+## ⚠️ Status correction (2026-08-09) — the plan's *timing* is superseded, its *content* is not
+
+The Apr-2026 plan assumed a 12–16 week warm-up with drop #1 around Jul/Aug 2026. **That never started.** The
+project-wide "Sound first" phase order (set 2026-07-03) sequences: open engine work-streams → the tutorials quarter →
+launch → hard performance late-game. **Project Disco therefore sits AFTER the tutorial quarter**, not before it.
+
+So: treat every *decision* below (mascot framing, archive-not-delete, platform tiers, HN at drop #3, anti-burnout floor)
+as still live, but treat every *week number and month number* as void. The warm-up clock restarts whenever the launch
+phase actually opens. The one item that does NOT wait for the phase order is handle/domain reservation (§9 +
+`docs/strategy/brand-trademark-checklist.md`) — availability decays independently of our schedule.
+
 ## Key locked decisions
 
 - **Mascot framing:** "inhabitant of the engine," not "mascot of the engine." Original IP. Personality:

@@ -70,13 +70,13 @@ export bassShape = (p) => p
       x => x.pan(0.8),
       x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
     ).phaser(1/13).phaserdepth(0.15).phasercenter(2000).phasersweep(1200)
-    .spread(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(200).lpf(2800).lpe(1.5)
+    .spread(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(200).lpf(2900).lpe(1.3)
     .lpq(berlin.range(1.5, 2.2).seg(32).slow(32))
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.
 export subShape = (p) => p
-    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7).distort("0.4:tube:2").postgain(0.68).analog(2.5)
-    .adsr("0.01:0.2:0.4:0.09").lpadsr("0.01:0.1:0.0:0.09").hpf(60).lpf(240).lpe(20) // . solo()
+    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7).distort("0.2:tube:2").postgain(0.80).analog(2.5)
+    .adsr("0.01:0.2:0.4:0.09").lpadsr("0.01:0.1:0.0:0.09").hpf(55).lpf(200).lpe(25).lpq(1.0) // . solo()
 
 // Drums: tight, panned right, fast.
 export drumsShape = (p) => p
