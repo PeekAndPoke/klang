@@ -155,19 +155,21 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 
 ## Entry Points
 
-| Function                | Description                 | Example                              |
-|-------------------------|-----------------------------|--------------------------------------|
-| `sound(pat)` / `s(pat)` | Play samples/synths by name | `s("bd sd hh cp")`                   |
-| `note(pat)`             | Play by note name           | `note("c3 e3 g3 c4")`                |
-| `n(pat)`                | Play by scale index         | `n("0 2 4 7").scale("C4:major")`     |
-| `chord(pat)`            | Play chord names            | `chord("<Am C F G>")`                |
-| `stack(p1, p2, ...)`    | Layer simultaneously        | `stack(s("bd sd"), s("hh*4"))`       |
-| `cat(p1, p2, ...)`      | Sequence across cycles      | `cat(s("bd sd"), s("cp cp"))`        |
-| `fastcat(p1, p2, ...)`  | Sequence within one cycle   | `fastcat(s("bd"), s("sd"))`          |
-| `arrange([n,p], ...)`   | Timed sections              | `arrange([4, melody], [2, silence])` |
-| `silence` / `rest`      | Empty pattern               | `arrange([4, melody], [4, silence])` |
-| `pure(value)`           | Constant pattern            | `pure(1/8).div(cps)`                 |
-| `seq(values...)`        | Sequence from values        | `seq("c3", "e3", "g3")`              |
+| Function                   | Description                                                                                                      | Example                                                                        |
+|----------------------------|------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| `sound(pat)` / `s(pat)`    | Play samples/synths by name                                                                                      | `s("bd sd hh cp")`                                                             |
+| `note(pat)`                | Play by note name                                                                                                | `note("c3 e3 g3 c4")`                                                          |
+| `n(pat)`                   | Play by scale index                                                                                              | `n("0 2 4 7").scale("C4:major")`                                               |
+| `chord(pat)`               | Play chord names                                                                                                 | `chord("<Am C F G>")`                                                          |
+| `stack(p1, p2, ...)`       | Layer simultaneously                                                                                             | `stack(s("bd sd"), s("hh*4"))`                                                 |
+| `master(chain)`            | Set the song's master bus (silent control layer — put it in the `stack`)                                         | `stack(lead, bass, master(Master.of(MasterFx.gain(2.0), MasterFx.limiter())))` |
+| `master(Master.default())` | Switch the master back **off** — deleting the `master(...)` line does not, since a master means "change to this" | `master(Master.default())`                                                     |
+| `cat(p1, p2, ...)`         | Sequence across cycles                                                                                           | `cat(s("bd sd"), s("cp cp"))`                                                  |
+| `fastcat(p1, p2, ...)`     | Sequence within one cycle                                                                                        | `fastcat(s("bd"), s("sd"))`                                                    |
+| `arrange([n,p], ...)`      | Timed sections                                                                                                   | `arrange([4, melody], [2, silence])`                                           |
+| `silence` / `rest`         | Empty pattern                                                                                                    | `arrange([4, melody], [4, silence])`                                           |
+| `pure(value)`              | Constant pattern                                                                                                 | `pure(1/8).div(cps)`                                                           |
+| `seq(values...)`           | Sequence from values                                                                                             | `seq("c3", "e3", "g3")`                                                        |
 
 ---
 
@@ -184,6 +186,23 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > |-------|---------|
 > | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delay` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserdepth`/`phasercenter`/`phasersweep`), `compressor`, ducking |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bandf`/`notchf` (+ their `*env`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+> | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master.of(...))` with `MasterFx.gain` (make-up level), `MasterFx.limiter`, `MasterFx.reverb`, `MasterFx.delay` |
+
+**Master limiter knobs.** `MasterFx.limiter()` chains: `.thresholdDb(db)` `.ratio(x)` `.kneeDb(db)`
+`.attack(seconds)` `.release(seconds)` `.lookahead(seconds)`.
+
+- An **always-on safety limiter** already runs on the summed mix (−1 dB, 20:1, 5 ms lookahead), so every song is delayed
+  5 ms and peaks are already caught. An authored `MasterFx.limiter()` is for *shaping*, not peak-catching.
+- **`.lookahead()` defaults to 0 and is opt-in**, because it costs exactly that much latency and stages stack — three
+  limiters with lookahead are three delay lines, and the delay is per-playback, so it shifts this song against anything
+  else playing.
+- With lookahead **off**, `attack` is a one-pole time constant (short = keeps transient punch). With it **on**, `attack`
+  is the gain-smoothing length — set it equal to the lookahead, since peak performance is invariant to it while
+  low-frequency cleanliness tracks it.
+- **Staged gain** works better than one big push: split the total in dB evenly across stages, with descending thresholds
+  and ascending ratios, e.g. `gain(1.45)` → `limiter().thresholdDb(-8.0).ratio(2.0).attack(0.015).release(0.25)`
+  → `gain(1.40)` → `limiter().thresholdDb(-4.0).ratio(4.0).attack(0.008).release(0.15)` → `gain(1.30)`. Slow attacks (30
+  ms+) arrive after the transient and read as "shocks" on dense material.
 >
 > Example — two guitars that each need their **own** wood body must be on separate orbits:
 > ```javascript
@@ -349,30 +368,30 @@ All filters accept pattern values and have envelope variants (`lpenv`, `lpadsr`,
 
 ### Effects
 
-| Function              | Aliases               | Description                            | Example                                   |
-|-----------------------|-----------------------|----------------------------------------|-------------------------------------------|
-| `room(mix)`           | `reverb`              | Reverb amount (0-1)                    | `note("c3").room(0.3)`                    |
-| `roomsize(size)`      | `rsize`, `sz`, `size` | Reverb room size                       | `note("c3").room(0.3).rsize(5)`           |
-| `roomdim(dim)`        | `rdim`                | Reverb damping/dimension               | `note("c3").room(0.3).rdim(0.5)`          |
-| `roomfade(fade)`      | `rfade`               | Reverb fade time                       | `note("c3").room(0.3).rfade(2)`           |
-| `roomlp(freq)`        | `rlp`                 | Reverb lowpass                         | `note("c3").room(0.3).rlp(3000)`          |
-| `delay(mix)`          |                       | Delay amount (0-1)                     | `s("sd").delay(0.5)`                      |
-| `delaytime(time)`     |                       | Delay time in cycles                   | `s("sd").delay(0.5).delaytime(0.33)`      |
-| `delayfeedback(fb)`   | `delayfb`, `dfb`      | Delay feedback                         | `s("sd").delay(0.5).delayfeedback(0.3)`   |
-| `distort(amt)`        | `dist`                | Distortion amount                      | `s("bd").distort(0.5)`                    |
-| `distortshape(shape)` | `distshape`, `dshape` | Distortion shape                       | `s("bd").distort(2).distshape("fold")`    |
-| `crush(bits)`         |                       | Bitcrusher                             | `s("hh").crush(8)`                        |
-| `coarse(amt)`         |                       | Sample-rate reduction                  | `note("c3").s("saw").coarse(3)`           |
-| `phaser(params)`      | `ph`                  | Phaser effect                          | `note("c3").phaser(1)`                    |
-| `phaserdepth(d)`      | `phasdp`, `phd`       | Phaser depth                           | `note("c3").phaser(1).phaserdepth(0.5)`   |
-| `phasercenter(hz)`    | `phc`                 | Phaser center freq                     | `note("c3").phaser(1).phc(1000)`          |
-| `phasersweep(hz)`     | `phs`                 | Phaser sweep range                     | `note("c3").phaser(1).phs(500)`           |
-| `tremolo(params)`     |                       | Tremolo rate                           | `note("c3").tremolo(4)`                   |
-| `tremolodepth(d)`     | `tremdepth`           | Tremolo depth                          | `note("c3").tremolo(4).tremolodepth(0.5)` |
-| `tremolosync(n)`      | `tremsync`            | Sync tremolo to cycle                  | `note("c3").tremolosync(8)`               |
-| `tremoloshape(s)`     | `tremshape`           | Tremolo LFO shape                      | `note("c3").tremolo(4).tremshape("sine")` |
-| `compressor(params)`  | `comp`                | Compressor (thresh:ratio:knee:att:rel) | `s("bd sd").comp("-20:4:3:0.01:0.3")`     |
-| `iresponse(path)`     | `ir`                  | Impulse response convolution           | `note("c3").ir("hall.wav")`               |
+| Function                | Aliases                                                                                  | Description                                   | Example                                   |
+|-------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------------------|
+| `room(mix)`             | `reverb`                                                                                 | Reverb amount (0-1)                           | `note("c3").room(0.3)`                    |
+| `roomsize(size)`        | `rsize`, `sz`, `size`                                                                    | Reverb room size                              | `note("c3").room(0.3).rsize(5)`           |
+| `roomdim(dim)`          | `rdim`                                                                                   | Reverb damping/dimension                      | `note("c3").room(0.3).rdim(0.5)`          |
+| `roomfade(x)` / `rfade` | Reverb tail **override**, 0..1 (NOT seconds) — wins over `roomsize`, which is then inert | `note("c3").room(0.3).roomsize(8).rfade(0.1)` |
+| `roomlp(freq)`          | `rlp`                                                                                    | Reverb lowpass                                | `note("c3").room(0.3).rlp(3000)`          |
+| `delay(mix)`            |                                                                                          | Delay amount (0-1)                            | `s("sd").delay(0.5)`                      |
+| `delaytime(time)`       |                                                                                          | Delay time in cycles                          | `s("sd").delay(0.5).delaytime(0.33)`      |
+| `delayfeedback(fb)`     | `delayfb`, `dfb`                                                                         | Delay feedback                                | `s("sd").delay(0.5).delayfeedback(0.3)`   |
+| `distort(amt)`          | `dist`                                                                                   | Distortion amount                             | `s("bd").distort(0.5)`                    |
+| `distortshape(shape)`   | `distshape`, `dshape`                                                                    | Distortion shape                              | `s("bd").distort(2).distshape("fold")`    |
+| `crush(bits)`           |                                                                                          | Bitcrusher                                    | `s("hh").crush(8)`                        |
+| `coarse(amt)`           |                                                                                          | Sample-rate reduction                         | `note("c3").s("saw").coarse(3)`           |
+| `phaser(params)`        | `ph`                                                                                     | Phaser effect                                 | `note("c3").phaser(1)`                    |
+| `phaserdepth(d)`        | `phasdp`, `phd`                                                                          | Phaser depth                                  | `note("c3").phaser(1).phaserdepth(0.5)`   |
+| `phasercenter(hz)`      | `phc`                                                                                    | Phaser center freq                            | `note("c3").phaser(1).phc(1000)`          |
+| `phasersweep(hz)`       | `phs`                                                                                    | Phaser sweep range                            | `note("c3").phaser(1).phs(500)`           |
+| `tremolo(params)`       |                                                                                          | Tremolo rate                                  | `note("c3").tremolo(4)`                   |
+| `tremolodepth(d)`       | `tremdepth`                                                                              | Tremolo depth                                 | `note("c3").tremolo(4).tremolodepth(0.5)` |
+| `tremolosync(n)`        | `tremsync`                                                                               | Sync tremolo to cycle                         | `note("c3").tremolosync(8)`               |
+| `tremoloshape(s)`       | `tremshape`                                                                              | Tremolo LFO shape                             | `note("c3").tremolo(4).tremshape("sine")` |
+| `compressor(params)`    | `comp`                                                                                   | Compressor (thresh:ratio:knee:att:rel)        | `s("bd sd").comp("-20:4:3:0.01:0.3")`     |
+| `iresponse(path)`       | `ir`                                                                                     | Impulse response convolution                  | `note("c3").ir("hall.wav")`               |
 
 Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`
 

@@ -136,11 +136,16 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
         // Delay
         delay.delayLine.delayTimeSeconds = voice.delay.time
+        delay.delayLine.feedbackCap = voice.delay.cap
         delay.delayLine.feedback = voice.delay.feedback
 
         // Reverb (reverb.room is used by SendRenderer for send amount)
-        reverb.reverb.roomSize = voice.reverb.roomSize.coerceIn(0.0, 1.0)
-        reverb.reverb.roomFade = voice.reverb.roomFade
+        // Already normalized (and clamped) by `Reverb.normalizeRoomSize` in VoiceFactory — a comb
+        // network above unity has no steady state, it runs away to Inf/NaN.
+        reverb.reverb.roomSize = voice.reverb.roomSize
+        // roomFade overrides roomSize for the comb feedback, so it lives on the same axis and
+        // needs the same bound (it is authored 0..1 directly, not on the /10 scale).
+        reverb.reverb.roomFade = voice.reverb.roomFade?.coerceIn(0.0, 1.0)
         reverb.reverb.roomLp = voice.reverb.roomLp
         reverb.reverb.roomDim = voice.reverb.roomDim
         reverb.reverb.iResponse = voice.reverb.iResponse
@@ -269,7 +274,11 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
         if (silentBlockCount < silentBlocksBeforeTailCheck) return
 
         fun delayHasTail() = delay.delayLine.delayTimeSeconds > 0.001 && delay.delayLine.hasTail()
-        fun reverbHasTail() = reverb.reverb.roomSize > 0.001 && reverb.reverb.hasTail()
+
+        // Same effective-size question as the render gate — a roomfade-only orbit has roomSize 0.0
+        // and would otherwise report "no tail" while its combs still hold energy.
+        fun reverbHasTail() =
+            (reverb.reverb.roomFade != null || reverb.reverb.roomSize > 0.001) && reverb.reverb.hasTail()
 
         if (reverbHasTail() || delayHasTail()) {
             silentBlockCount = 0

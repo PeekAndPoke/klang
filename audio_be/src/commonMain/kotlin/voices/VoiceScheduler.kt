@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -26,9 +27,12 @@ class VoiceScheduler(
     class Options(
         val context: AudioBackendContext,
         val cylinders: Cylinders,
+        /** Sink for `master(…)` control events consumed during promotion. */
+        val masterBus: MasterBus,
     )
 
     private val context = options.context
+    private val masterBus = options.masterBus
 
     // Per-engine registry forks — custom oscs/engines for THIS playback live here and die with the
     // engine; the shared parent ([context]) keeps only the built-ins. See per-playback-engine.md (#2).
@@ -348,6 +352,22 @@ class VoiceScheduler(
             if (absoluteStartSec >= blockEndSec) break
 
             scheduled.pop()
+
+            // Engine-level control data rides the voice stream (see docs/tasks/master-dsl.md):
+            // a `master(…)` reference swaps this playback's master chain from here on. It applies
+            // whether or not the event also sounds, so `note("c3").master(…)` does both.
+            //
+            // Applied BEFORE the guards below: a late *sound* is dropped because playing it now
+            // would be wrong, but late *state* must still take effect — otherwise a worklet stall
+            // silently loses a section's master for the rest of the playback.
+            head.data.master?.let { masterBus.requestSwap(it) }
+
+            // A control-only event has now been consumed — it must never reach voice creation.
+            // The flag is explicit because a null `sound` is NOT silent: the ignitor registry
+            // resolves it to the default oscillator.
+            if (head.data.control == true) {
+                continue
+            }
 
             if (absoluteStartSec < oldestAllowedSec) {
                 continue

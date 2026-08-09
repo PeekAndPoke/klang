@@ -11,18 +11,19 @@ renderBlock(outputBuffer: ShortArray, blockFrames: Int)
   1. Clear mix buffers + orbits
   2. VoiceScheduler.processBlock()        → voices write to voiceBuffer + orbits
   3. Cylinders.processAndMix()               → cylinder effects + mix to StereoBuffer
-  4. Master limiter (−1 dB threshold)     → gain reduction applied to StereoBuffer
+  4. Master limiter (lookahead 5 ms, anticipating) (−1 dB threshold)     → gain reduction applied to StereoBuffer
   5. Clip ±1.0, interleave L/R, scale     → ShortArray (16-bit PCM)
 ```
 
 ### Master Limiter Settings
 
-| Parameter | Value  |
-|-----------|--------|
-| Threshold | −1 dB  |
-| Ratio     | 20:1   |
-| Attack    | 1 ms   |
-| Release   | 100 ms |
+| Parameter | Value                                                                        |
+|-----------|------------------------------------------------------------------------------|
+| Threshold | −1 dB                                                                        |
+| Ratio     | 20:1                                                                         |
+| Attack    | 5 ms — the gain-SMOOTHING length, not a one-pole (= the lookahead window)    |
+| Lookahead | 5 ms — anticipating: holds the ceiling on transients instead of chasing them |
+| Release   | 100 ms                                                                       |
 
 ## Cylinders
 

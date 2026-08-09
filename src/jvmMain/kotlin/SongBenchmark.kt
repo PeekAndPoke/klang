@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
@@ -44,10 +45,26 @@ import kotlin.time.TimeSource
  *                      `superimpose` / note density inflate cost).
  */
 class SongBenchmark(
-    private val sampleRate: Int = 48_000,
-    private val blockFrames: Int = 512,
+    val sampleRate: Int = 48_000,
+    /**
+     * The canonical render quantum — `peakBlockRtf` is only comparable to the browser's per-render
+     * quantum spikes if it measures the block size the browser actually renders. A larger block also
+     * amortises per-block fixed work over more frames (and changes the sound: `driftUpdateRate` is
+     * block-derived), so it would flatter the numbers AND benchmark a different signal.
+     */
+    val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     private val samples: Samples? = null,
 ) {
+    companion object {
+        /**
+         * How much of the start of each pass is excluded from the peak-block figure — long enough to
+         * cover the one-time lazy allocations (the ~7.68 MB per-orbit delay rings), short enough to
+         * still measure most of the music. Was implicitly ~341 ms when this was a 32-block constant
+         * at 512 frames.
+         */
+        private const val PEAK_SKIP_SECONDS: Double = 0.35
+    }
+
     data class Case(
         val name: String,
         val code: String,
@@ -194,14 +211,31 @@ class SongBenchmark(
         // Each pass uses a FRESH renderer, so the first blocks pay a one-time lazy-allocation spike
         // (e.g. the ~7.68 MB delay rings). Skip those when computing the steady-state peak so
         // peakBlockRtf reflects the busiest *musical* block, not cold-start allocation.
-        val peakSkipBlocks = 32
+        // A DURATION, not a block count: the allocation happens at a point in the *song* (the first
+        // voice to touch an orbit), so a fixed block count skips a different amount of music at
+        // every block size. At 512 frames `32` meant ~341 ms; at 128 it would mean ~85 ms, letting
+        // a first-note allocation on a 1/8 or 1/16 land inside the measured window and masquerade
+        // as a DSP cost.
+        // Covers the START-OF-SONG allocations only. An orbit gated in by `filterWhen` (Seltsamere
+        // Dinge brings orbits 4 and 5 in at cycles 16 and 28) allocates its cylinder deep inside the
+        // measured window, and no start-of-pass skip can ever reach that. Those spikes still land in
+        // peakBlockRtf — making the peak robust instead of time-gated (99th percentile, or drop the
+        // top N blocks) is the real fix. See docs/tasks-archive/2026-08/20260807-block-size-parity.md.
+        //
+        // Bounded so a case shorter than the skip window cannot leave maxBlockUs at 0.0 and silently
+        // report peakBlockRtf = 0.
+        val peakSkipBlocks = (PEAK_SKIP_SECONDS * sampleRate / blockFrames).toInt()
+            .coerceAtMost(numBlocks - 1)
+
         if (capture) {
             var frame = 0
             for (b in 0 until numBlocks) {
                 val t = TimeSource.Monotonic.markNow()
                 renderer.renderBlock(cursorFrame = frame, out = out)
                 val us = t.elapsedNow().toDouble(DurationUnit.MICROSECONDS)
-                if (b >= peakSkipBlocks && us > maxBlockUs) maxBlockUs = us
+                if (b >= peakSkipBlocks && us > maxBlockUs) {
+                    maxBlockUs = us
+                }
                 frame += blockFrames
             }
         } else {

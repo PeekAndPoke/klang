@@ -40,6 +40,11 @@ There are still some rough edges ... For the best experience use a chrome-browse
 
 https://klang.finzo.de
 
+# White Paper
+
+An in-depth tour of what Klang is — the engine, the languages, the DSL surfaces, and where the journey might
+go: [docs/whitepaper/klang-whitepaper.html](docs/whitepaper/klang-whitepaper.html)
+
 # Module Structure
 
 ```

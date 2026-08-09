@@ -336,4 +336,28 @@ object ClippingFuncs {
         val saturated = threshold + headroom * fastTanh((absX - threshold) / headroom)
         return if (x < 0.0) -saturated else saturated
     }
+
+    /**
+     * [softCap] with a **configurable ceiling** — the whole curve scaled to [cap].
+     *
+     * Where [softCap] always asymptotes to ±1, this asymptotes to ±[cap], so a feedback network can
+     * be allowed to run hot and self-oscillate at an authored level instead of being pinned at unity
+     * or diverging to NaN. This is what keeps "the engine stays raw" from meaning "the engine dies":
+     * a user may set any feedback they like, and the result is a *sound* whose loudness they also
+     * choose.
+     *
+     * `cap = 1.0` takes a fast path that is bit-identical to [softCap], so default behaviour is
+     * unchanged everywhere.
+     *
+     * @param x input sample.
+     * @param cap the ceiling the output saturates toward. `<= 0.0` yields silence (a zero ceiling is
+     *   silence, not a division); a non-finite cap falls back to the plain [softCap] rather than
+     *   producing `Inf * 0.0 = NaN` — the very outcome this function exists to prevent.
+     */
+    inline fun softCapTo(x: Double, cap: Double): Double = when {
+        !cap.isFinite() -> softCap(x)
+        cap <= 0.0 -> 0.0
+        cap == 1.0 -> softCap(x)
+        else -> cap * softCap(x / cap)
+    }
 }

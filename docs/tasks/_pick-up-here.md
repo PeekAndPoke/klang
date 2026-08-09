@@ -57,7 +57,8 @@ Chronological digest of the final work sessions, so nothing gets lost:
    [`future/federated-song-sharing.md`](future/federated-song-sharing.md).
 8. **D6 pivot + review standard (Aug 2)** — two decisions: (a) **master-in-pattern** — the D6 master path was redesigned
    to ride the voice stream (see Step 2.1 below); detailed plan in
-   [`master-dsl.md`](master-dsl.md). (b) **New `/review-loop` standard** codified as a skill:
+   [`20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md). (b) **New `/review-loop` standard**
+   codified as a skill:
    reviews loop until a clean round (fixes get re-reviewed by fresh agents), and every new test is mutation-checked
    (mutate → red → restore). Applies to all future work, starting with D6.
 
@@ -92,7 +93,8 @@ to get the ears back.
    master-in-pattern** — `master(Master().gain().limiter())` rides the voice stream via the Ignitor/Pipeline
    registration playbook (rest-carrier event once per cycle;
    `"~".slow(8).master(...)` makes it patternable → fades/endings; no `Song.master`, no
-   `Cmd.SetMaster`, no settings UI). **Detailed plan: [`master-dsl.md`](master-dsl.md).** *The*
+   `Cmd.SetMaster`, no settings UI). **Detailed plan: [
+   `20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md).** *The*
    next feature; the reason the whole multi-engine foundation was built. Then richer master chain / crossfade /
    metering.
 2. **Engine tuning profile Phase 3** — [`engine-tuning-profile.md`](engine-tuning-profile.md)

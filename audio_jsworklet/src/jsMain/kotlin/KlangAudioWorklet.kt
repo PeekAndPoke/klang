@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WorkletContract
@@ -26,6 +27,17 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
     ) {
         init {
             console.log("[WORKLET] Initialized. Sample rate: $sampleRate, block frames: $blockFrames")
+
+            // The browser hands us the render quantum; we cannot choose it. Everything else
+            // (JVM backend, offline WAV renderer) is pinned to RENDER_QUANTUM_FRAMES to match,
+            // so if the browser ever deviates, those renders no longer sound like live playback.
+            if (blockFrames != AudioBackendContext.RENDER_QUANTUM_FRAMES) {
+                console.warn(
+                    "[WORKLET] Render quantum is $blockFrames, but the engine's canonical block size is " +
+                            "${AudioBackendContext.RENDER_QUANTUM_FRAMES}. Offline renders will NOT match " +
+                            "live playback (analog drift rate + filter smoothing are block-rate derived)."
+                )
+            }
         }
 
         val commLink = KlangCommLink()
@@ -81,8 +93,11 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             // Detect block size from the first output channel
             val output = outputs[0]
             val numChannels = output.size
-            // Fallback to 128 if no channels (unlikely)
-            val blockFrames = if (numChannels > 0) output[0].length else 128
+            // Fall back to the canonical quantum if the browser gave us no channels (unlikely) —
+            // NOT a literal 128, so this path can never be the one host that disagrees with
+            // everything else the day RENDER_QUANTUM_FRAMES changes.
+            val blockFrames =
+                if (numChannels > 0) output[0].length else AudioBackendContext.RENDER_QUANTUM_FRAMES
 
             val ctx = Ctx(sampleRate, blockFrames)
 

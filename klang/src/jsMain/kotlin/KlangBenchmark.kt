@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.AdsrDef
@@ -22,7 +23,7 @@ import kotlin.time.TimeSource
 
 class KlangBenchmark(
     private val sampleRate: Int = 44100,
-    private val blockFrames: Int = 128,
+    private val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) {
     data class Progress(
         val currentVoices: Int,

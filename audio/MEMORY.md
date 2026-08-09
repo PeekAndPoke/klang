@@ -122,7 +122,9 @@ The `audio_be` oscillator code was consolidated (branch `dedicated-cycle-time`) 
   Filter stage is a composable `List<BlockRenderer>` built by `buildFilterPipeline()`.
   Pitch stage is still inline (pending extraction). Excite delegates to `Ignitor`.
 - **Cylinders = effect buses**: up to 16 mixing channels, each with independent delay/reverb/phaser/compressor/ducking.
-- **Master limiter**: −1 dB threshold, 20:1 ratio, 1 ms attack, 100 ms release — always last in chain.
+- **Master limiter**: −1 dB threshold, 20:1 ratio, **5 ms lookahead + 5 ms gain-smoothing**, 100 ms release — always
+  last in chain, on the summed mix. The lookahead delays the whole output by 5 ms (uniform, so nothing desyncs). The
+  *authored* `MasterFx.limiter()` differs on purpose: no lookahead, 1 ms one-pole attack, because it is per-playback.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
 
 ## Filter Saturation Dead-End — Linear SVF is the Right Choice (2026-05-28)

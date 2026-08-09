@@ -49,10 +49,11 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  *
  * Each field is optional — trailing fields can be omitted.
  * - **room**: wet/dry mix (0–1)
- * - **size**: room size (larger = longer tail)
- * - **fade**: reverb tail fade time in seconds
+ * - **size**: room size, **~0..10** (larger = longer tail; 3 ≈ 1 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s)
+ * - **fade**: tail override, **0..1** (NOT seconds, and NOT the *size* scale) — when present it
+ *   wins over *size*, which is then inert
  * - **lowpass**: lowpass filter frequency on reverb in Hz
- * - **dim**: high-frequency damping frequency in Hz
+ * - **dim**: currently unused by the engine
  *
  * When [params] is omitted, the pattern's own values are reinterpreted as reverb parameters.
  *
@@ -72,9 +73,9 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @param-tool params SprudelReverbSequenceEditor
  * @param-sub params room Wet/dry mix (0 = fully dry, 1 = fully wet)
  * @param-sub params size Room size — larger values produce longer reverb tails
- * @param-sub params fade Reverb tail fade time in seconds
+ * @param-sub params fade Tail override, 0..1 (not seconds). Overrides size.
  * @param-sub params lowpass Lowpass filter frequency on reverb output in Hz
- * @param-sub params dim High-frequency damping frequency in Hz
+ * @param-sub params dim Currently unused by the engine.
  * @return A new pattern with all specified reverb parameters applied.
  * @category effects
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon

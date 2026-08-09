@@ -1,0 +1,2474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Klang Audio Motör — A White Paper</title>
+</head>
+<body>
+<style>
+    /* ---------------------------------------------------------------
+       TOKENS — light palette on bare :root (the un-stamped default)
+       --------------------------------------------------------------- */
+    :root {
+        --paper: #EDEEEA;
+        --surface: #F6F7F4;
+        --surface-2: #E3E5DF;
+        --ink: #15181B;
+        --muted: #5B6167;
+        --faint: #868C90;
+        --rule: #C7CAC3;
+        --rule-soft: #D9DBD5;
+        --spark: #C0430F; /* ignition — the engine layer */
+        --spark-bg: #F3E3DA;
+        --signal: #1B637E; /* wire — the language layer */
+        --signal-bg: #DCE6EA;
+        --code-bg: #E7E9E3;
+        --code-str: #2F6B3E;
+        --code-cm: #878D8A;
+
+        --f-display: "Helvetica Neue", Helvetica, "Arial Nova", Arial, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+        --measure: 44rem;
+        --rail: 7.5rem;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --paper: #0F1214;
+            --surface: #161A1D;
+            --surface-2: #1D2226;
+            --ink: #E1E3DE;
+            --muted: #99A0A4;
+            --faint: #757C80;
+            --rule: #2B3135;
+            --rule-soft: #232830;
+            --spark: #FF8047;
+            --spark-bg: #2B1B13;
+            --signal: #6FB8D6;
+            --signal-bg: #14252C;
+            --code-bg: #171B1E;
+            --code-str: #8FC79C;
+            --code-cm: #6E7674;
+        }
+    }
+
+    :root[data-theme="dark"] {
+        --paper: #0F1214;
+        --surface: #161A1D;
+        --surface-2: #1D2226;
+        --ink: #E1E3DE;
+        --muted: #99A0A4;
+        --faint: #757C80;
+        --rule: #2B3135;
+        --rule-soft: #232830;
+        --spark: #FF8047;
+        --spark-bg: #2B1B13;
+        --signal: #6FB8D6;
+        --signal-bg: #14252C;
+        --code-bg: #171B1E;
+        --code-str: #8FC79C;
+        --code-cm: #6E7674;
+    }
+
+    /* ---------------------------------------------------------------
+       BASE
+       --------------------------------------------------------------- */
+    * {
+        box-sizing: border-box;
+    }
+
+    /* Root scale: the artifact viewer scaled the page up; standalone gets the same
+       treatment here. 112.5% = 18px at default browser settings, and every rem-based
+       size in the document scales with it. */
+    html {
+        font-size: 125%;
+    }
+
+    body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 1.06rem;
+        line-height: 1.62;
+        margin: 0;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .doc {
+        max-width: 70rem;
+        margin: 0 auto;
+        padding: 0 1.5rem 7rem;
+    }
+
+    /* ---------------------------------------------------------------
+       MASTHEAD
+       --------------------------------------------------------------- */
+    .masthead {
+        padding: 4.5rem 0 2rem;
+        border-bottom: 2px solid var(--ink);
+    }
+
+    .eyebrow {
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 1.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem 1.1rem;
+    }
+
+    .eyebrow .spark {
+        color: var(--spark);
+    }
+
+    h1 {
+        font-family: var(--f-display);
+        font-weight: 800;
+        font-size: clamp(2.6rem, 7vw, 4.4rem);
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+        text-wrap: balance;
+        margin: 0 0 0.6rem;
+    }
+
+    h1 .ou {
+        color: var(--spark);
+    }
+
+    .deck {
+        font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+        line-height: 1.45;
+        color: var(--muted);
+        max-width: 34rem;
+        margin: 0 0 2.25rem;
+        text-wrap: balance;
+    }
+
+    .trace {
+        display: block;
+        width: 100%;
+        height: 46px;
+        margin-bottom: 1.5rem;
+    }
+
+    .colophon {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 2rem;
+        font-family: var(--f-mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        padding-bottom: 1.5rem;
+    }
+
+    .colophon b {
+        color: var(--ink);
+        font-weight: 600;
+    }
+
+    .colophon a {
+        color: var(--signal);
+    }
+
+    /* ---------------------------------------------------------------
+       PART DIVIDER
+       --------------------------------------------------------------- */
+    .part {
+        margin: 5.5rem 0 2.5rem;
+        padding-top: 1.1rem;
+        border-top: 2px solid var(--ink);
+        display: grid;
+        grid-template-columns: var(--rail) minmax(0, 1fr);
+        gap: 2.5rem;
+        align-items: baseline;
+    }
+
+    .part-no {
+        font-family: var(--f-mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--spark);
+    }
+
+    .part h2 {
+        font-family: var(--f-display);
+        font-weight: 800;
+        font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+        letter-spacing: -0.025em;
+        line-height: 1.1;
+        margin: 0;
+        text-wrap: balance;
+    }
+
+    .part p {
+        grid-column: 2;
+        color: var(--muted);
+        max-width: var(--measure);
+        margin: 0.7rem 0 0;
+    }
+
+    /* ---------------------------------------------------------------
+       SECTIONS — margin rail + reading column
+       --------------------------------------------------------------- */
+    section {
+        display: grid;
+        grid-template-columns: var(--rail) minmax(0, 1fr);
+        gap: 2.5rem;
+        margin-top: 3.25rem;
+        scroll-margin-top: 2rem;
+    }
+
+    .rail {
+        font-family: var(--f-mono);
+        font-size: 0.7rem;
+        line-height: 1.45;
+        letter-spacing: 0.06em;
+        color: var(--faint);
+        padding-top: 0.55rem;
+        position: sticky;
+        top: 1.5rem;
+        align-self: start;
+    }
+
+    .rail .num {
+        display: block;
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 0.8rem;
+        letter-spacing: 0.02em;
+    }
+
+    .rail .tag {
+        display: block;
+        margin-top: 0.3rem;
+        text-transform: uppercase;
+        letter-spacing: 0.13em;
+    }
+
+    .rail .tag.engine {
+        color: var(--spark);
+    }
+
+    .rail .tag.lang {
+        color: var(--signal);
+    }
+
+    .body {
+        min-width: 0;
+    }
+
+    h3 {
+        font-family: var(--f-display);
+        font-weight: 700;
+        font-size: 1.42rem;
+        letter-spacing: -0.018em;
+        line-height: 1.18;
+        margin: 0 0 0.9rem;
+        text-wrap: balance;
+    }
+
+    h4 {
+        font-family: var(--f-mono);
+        font-weight: 600;
+        font-size: 0.76rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 2.1rem 0 0.7rem;
+    }
+
+    .body > p, .body > ul, .body > ol, .body > .note {
+        max-width: var(--measure);
+    }
+
+    p {
+        margin: 0 0 1.05rem;
+    }
+
+    ul, ol {
+        margin: 0 0 1.05rem;
+        padding-left: 1.15rem;
+    }
+
+    li {
+        margin-bottom: 0.4rem;
+    }
+
+    li::marker {
+        color: var(--faint);
+    }
+
+    a {
+        color: var(--signal);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 2px;
+    }
+
+    a:focus-visible, summary:focus-visible {
+        outline: 2px solid var(--spark);
+        outline-offset: 3px;
+        border-radius: 2px;
+    }
+
+    strong {
+        font-weight: 600;
+    }
+
+    em {
+        font-style: italic;
+    }
+
+    code {
+        font-family: var(--f-mono);
+        font-size: 0.83em;
+        background: var(--code-bg);
+        padding: 0.1em 0.34em;
+        border-radius: 2px;
+        word-break: break-word;
+    }
+
+    /* ---------------------------------------------------------------
+       CODE BLOCKS
+       --------------------------------------------------------------- */
+    figure {
+        margin: 1.5rem 0;
+    }
+
+    .code {
+        background: var(--code-bg);
+        border-left: 2px solid var(--signal);
+        overflow-x: auto;
+        padding: 1rem 1.15rem;
+        margin: 0;
+        position: relative;
+    }
+
+    .code.engine {
+        border-left-color: var(--spark);
+    }
+
+    .code[data-lang]::after {
+        content: attr(data-lang);
+        position: absolute;
+        top: 0;
+        right: 0;
+        font-family: var(--f-mono);
+        font-size: 0.58rem;
+        font-weight: 600;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--signal);
+        background: var(--paper);
+        border-left: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+        padding: 0.2rem 0.55rem 0.24rem;
+        pointer-events: none;
+    }
+
+    .code.engine[data-lang]::after {
+        color: var(--spark);
+    }
+
+    .code pre {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 0.775rem;
+        line-height: 1.62;
+        tab-size: 2;
+    }
+
+    .cm {
+        color: var(--code-cm);
+        font-style: italic;
+    }
+
+    .st {
+        color: var(--code-str);
+    }
+
+    .kw {
+        color: var(--spark);
+    }
+
+    figcaption {
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        letter-spacing: 0.05em;
+        color: var(--faint);
+        margin-top: 0.55rem;
+        line-height: 1.5;
+    }
+
+    /* ---------------------------------------------------------------
+       TABLES
+       --------------------------------------------------------------- */
+    .tablewrap {
+        overflow-x: auto;
+        margin: 1.4rem 0;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    th {
+        font-family: var(--f-mono);
+        font-size: 0.66rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        text-align: left;
+        color: var(--muted);
+        font-weight: 600;
+        padding: 0 0.9rem 0.5rem 0;
+        border-bottom: 1px solid var(--ink);
+        white-space: nowrap;
+    }
+
+    td {
+        padding: 0.42rem 0.9rem 0.42rem 0;
+        border-bottom: 1px solid var(--rule-soft);
+        vertical-align: top;
+    }
+
+    td:first-child {
+        white-space: nowrap;
+    }
+
+    th.r, td.r {
+        text-align: right;
+    }
+
+    tr.grp td {
+        font-family: var(--f-mono);
+        font-size: 0.64rem;
+        font-weight: 600;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding-top: 1.05rem;
+        border-bottom: 1px solid var(--rule);
+        white-space: normal;
+    }
+
+    td code {
+        background: none;
+        padding: 0;
+        font-size: 0.86em;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* ---------------------------------------------------------------
+       NOTE / CALLOUT
+       --------------------------------------------------------------- */
+    .note {
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        padding: 1rem 1.15rem;
+        margin: 1.5rem 0;
+        font-size: 0.92rem;
+    }
+
+    .note p:last-child {
+        margin-bottom: 0;
+    }
+
+    .note .lab {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.66rem;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--spark);
+        margin-bottom: 0.45rem;
+    }
+
+    .note.open .lab {
+        color: var(--signal);
+    }
+
+    /* ---------------------------------------------------------------
+       CONTENTS
+       --------------------------------------------------------------- */
+    .toc {
+        margin-top: 2.5rem;
+    }
+
+    .toc ol {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        columns: 2;
+        column-gap: 2.5rem;
+    }
+
+    .toc li {
+        break-inside: avoid;
+        font-family: var(--f-mono);
+        font-size: 0.78rem;
+        padding: 0.32rem 0;
+        border-bottom: 1px solid var(--rule-soft);
+        display: flex;
+        gap: 0.7rem;
+    }
+
+    .toc li .n {
+        color: var(--faint);
+    }
+
+    .toc a {
+        text-decoration: none;
+        color: var(--ink);
+    }
+
+    .toc a:hover {
+        color: var(--spark);
+        text-decoration: underline;
+    }
+
+    @media (max-width: 42rem) {
+        .toc ol {
+            columns: 1;
+        }
+    }
+
+    /* ---------------------------------------------------------------
+       SCHEMATIC
+       --------------------------------------------------------------- */
+    .schematic {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .schematic .bx {
+        fill: var(--surface);
+        stroke: var(--rule);
+        stroke-width: 1;
+    }
+
+    .schematic .bx-lang {
+        fill: var(--signal-bg);
+        stroke: var(--signal);
+        stroke-width: 1;
+    }
+
+    .schematic .bx-eng {
+        fill: var(--spark-bg);
+        stroke: var(--spark);
+        stroke-width: 1;
+    }
+
+    .schematic .t {
+        font-family: var(--f-mono);
+        font-size: 11px;
+        fill: var(--ink);
+    }
+
+    .schematic .t-sm {
+        font-family: var(--f-mono);
+        font-size: 9px;
+        fill: var(--muted);
+    }
+
+    .schematic .t-lab {
+        font-family: var(--f-mono);
+        font-size: 9px;
+        letter-spacing: 1.2px;
+    }
+
+    .schematic .t-lang {
+        fill: var(--signal);
+    }
+
+    .schematic .t-eng {
+        fill: var(--spark);
+    }
+
+    .schematic .arw {
+        stroke: var(--muted);
+        stroke-width: 1.2;
+        fill: none;
+    }
+
+    .schematic .bnd {
+        stroke: var(--ink);
+        stroke-width: 1;
+        stroke-dasharray: 3 4;
+        opacity: 0.55;
+    }
+
+    /* ---------------------------------------------------------------
+       STATUS LEGEND
+       --------------------------------------------------------------- */
+    .pill {
+        display: inline-block;
+        font-family: var(--f-mono);
+        font-size: 0.62rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 0.13rem 0.45rem;
+        border: 1px solid currentColor;
+        vertical-align: 0.14em;
+        margin-left: 0.5rem;
+        white-space: nowrap;
+    }
+
+    .pill.built {
+        color: var(--signal);
+    }
+
+    .pill.sketch {
+        color: var(--spark);
+    }
+
+    /* ---------------------------------------------------------------
+       CLOSING
+       --------------------------------------------------------------- */
+    .colophon-end {
+        margin-top: 5rem;
+        padding-top: 1.25rem;
+        border-top: 2px solid var(--ink);
+        font-family: var(--f-mono);
+        font-size: 0.72rem;
+        line-height: 1.75;
+        color: var(--muted);
+    }
+
+    .colophon-end b {
+        color: var(--ink);
+        font-weight: 600;
+    }
+
+    /* ---------------------------------------------------------------
+       NARROW
+       --------------------------------------------------------------- */
+    @media (max-width: 52rem) {
+        section, .part {
+            grid-template-columns: 1fr;
+            gap: 0.9rem;
+        }
+
+        .rail {
+            position: static;
+            padding-top: 0;
+            display: flex;
+            gap: 0.9rem;
+            align-items: baseline;
+        }
+
+        .rail .num {
+            display: inline;
+        }
+
+        .rail .tag {
+            display: inline;
+            margin-top: 0;
+        }
+
+        .part p {
+            grid-column: 1;
+        }
+
+        body {
+            font-size: 0.95rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation: none !important;
+            transition: none !important;
+        }
+    }
+</style>
+
+<div class="doc">
+
+    <!-- ============================ MASTHEAD ============================ -->
+    <header class="masthead">
+        <p class="eyebrow">
+            <span class="spark">Werkstatthandbuch</span>
+            <span>Pre-Alpha</span>
+            <span>Kotlin Multiplatform</span>
+            <span>AGPL-3.0</span>
+            <span>August 2026</span>
+        </p>
+
+        <h1>Klang Audio Mot<span class="ou">ö</span>r</h1>
+
+        <p class="deck">
+            A real-time audio engine, a pattern language, and a scripting language —
+            written from scratch in Kotlin, running in a browser tab.
+            This is what exists, and where it might go.
+        </p>
+
+        <svg class="trace" viewBox="0 0 900 46" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <!-- sawtooth (raw) fading into a filtered curve: the engine's job in one line -->
+            <polyline points="0,40 45,6 45,40 90,6 90,40 135,6 135,40 180,6 180,40 225,6 225,40 270,6 270,40"
+                      fill="none" stroke="var(--spark)" stroke-width="1.6"/>
+            <path d="M270,40 C 300,6 320,40 350,23 C 380,8 400,38 430,23 C 465,10 490,36 525,23 C 570,15 610,30 660,23 C 730,15 800,25 900,23"
+                  fill="none" stroke="var(--signal)" stroke-width="1.6"/>
+        </svg>
+
+        <div class="colophon">
+            <span><b>Author</b> &nbsp;Karsten J. Gerber · PeekAndPoke</span>
+            <span><b>Demo</b> &nbsp;<a href="https://klang.finzo.de">klang.finzo.de</a></span>
+            <span><b>Scale</b> &nbsp;~230k lines Kotlin / ~1,200 files</span>
+        </div>
+    </header>
+
+    <!-- ============================ CONTENTS ============================ -->
+    <section class="toc" aria-label="Contents">
+        <div class="rail"><span class="num">§</span><span class="tag">Contents</span></div>
+        <div class="body">
+            <ol>
+                <li><span class="n">01</span><a href="#s1">The shape of the thing</a></li>
+                <li><span class="n">02</span><a href="#s2">KlangScript — the language you type</a></li>
+                <li><span class="n">03</span><a href="#s3">Sprudel — patterns as functions of time</a></li>
+                <li><span class="n">04</span><a href="#s4">The Motör — the audio engine</a></li>
+                <li><span class="n">05</span><a href="#s5">Oscillators, filters, effects</a></li>
+                <li><span class="n">06</span><a href="#s6">Three DSLs above the engine, and one to come</a></li>
+                <li><span class="n">07</span><a href="#s7">A real song, in full</a></li>
+                <li><span class="n">08</span><a href="#s8">Surfaces around the engine</a></li>
+                <li><span class="n">09</span><a href="#s9">Engineering notes</a></li>
+                <li><span class="n">10</span><a href="#s10">Import / export</a></li>
+                <li><span class="n">11</span><a href="#s11">Open source, and the node idea</a></li>
+                <li><span class="n">12</span><a href="#s12">What's rough</a></li>
+                <li><span class="n">13</span><a href="#s13">An invitation</a></li>
+                <li><span class="n">A</span><a href="#appA">Appendix — the codebase by the numbers</a></li>
+                <li><span class="n">B</span><a href="#appB">Appendix — credits and lineage</a></li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- ============================ PART I ============================ -->
+    <div class="part" id="part1">
+        <span class="part-no">Part I</span>
+        <h2>What's already there</h2>
+        <p>
+            Everything in this part is built, running, and audible in the demo today.
+            Nothing here is a plan.
+        </p>
+    </div>
+
+    <!-- ---------------------------- §1 ---------------------------- -->
+    <section id="s1">
+        <div class="rail"><span class="num">01</span><span class="tag">Overview</span></div>
+        <div class="body">
+            <h3>The shape of the thing</h3>
+
+            <p>
+                Klang is a live-coding music system. You type code, it makes sound, and it keeps making
+                sound while you edit the code. There is no compile step you wait on and no audio file
+                anywhere in the loop — every sample you hear is computed, in the browser, in real time.
+            </p>
+
+            <p>
+                It is four layers stacked on each other, and each one is a separate, independently useful
+                piece of software:
+            </p>
+
+            <div class="tablewrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Module</th>
+                        <th>What it is</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><b>Language</b></td>
+                        <td><code>klangscript</code></td>
+                        <td>A small scripting language: hand-rolled lexer, parser, tree-walking interpreter, type
+                            inference. Sandboxed — no filesystem, no network, no <code>eval</code>.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Patterns</b></td>
+                        <td><code>sprudel</code></td>
+                        <td>A pattern language in the Tidal/Strudel tradition. Music as pure functions of time. Started
+                            as a Kotlin sibling of strudel.cc; has since gone its own way.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Engine</b></td>
+                        <td><code>audio_be</code> · <code>audio_fe</code> · <code>audio_bridge</code></td>
+                        <td>The Motör. Oscillators, filters, effects, voice lifecycle, mixing. Block-based DSP with a
+                            strict frontend/backend split across a thread boundary.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Surfaces</b></td>
+                        <td><code>klangscript-ui</code> · <code>klangblocks</code> · <code>klang-notebook</code></td>
+                        <td>A CodeMirror editor with real completions and hover docs, a visual block editor with
+                            round-trip AST↔blocks, and an interactive notebook.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>
+                It is Kotlin Multiplatform: the same code compiles to <b>JS</b> (browser, running the DSP
+                inside a Web Audio worklet) and to the <b>JVM</b> (desktop via <code>javax.sound.sampled</code>,
+                plus an offline WAV renderer). The JVM target is not a toy — it's how songs get rendered to
+                disk and how the benchmark harness measures the engine.
+            </p>
+
+            <p>
+                For scale: roughly 230,000 lines of Kotlin across ~1,200 files. In the core modules there is
+                about as much test code as production code — in <code>klangscript</code> and
+                <code>audio_be</code>, noticeably more. <a href="#appA">Appendix A</a> has the per-module
+                breakdown.
+            </p>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §2 ---------------------------- -->
+    <section id="s2">
+        <div class="rail"><span class="num">02</span><span class="tag lang">Language</span></div>
+        <div class="body">
+            <h3>KlangScript — the language you type</h3>
+
+            <p>
+                Songs are written in KlangScript, not Kotlin. The syntax is deliberately JavaScript-shaped
+                so it's instantly readable, but the standard library follows <em>Kotlin</em> conventions —
+                collections behave the way a Kotlin developer expects, not the way JavaScript does.
+            </p>
+
+            <p>
+                There is no <code>eval</code> and no host interop hole. The parser and interpreter are
+                hand-written; the interpreter walks the AST. That's a deliberate security boundary: a song is
+                code someone else wrote, and running a stranger's song must never be able to touch the
+                filesystem or the network. Everything a script can reach is explicitly registered from
+                Kotlin.
+            </p>
+
+            <h4>Registration is generated, not hand-maintained</h4>
+
+            <p>
+                The bridge from Kotlin into the script runtime is a KSP processor — KSP being Kotlin's
+                compile-time codegen hook. You annotate a Kotlin
+                function or object with <code>@Function</code> / <code>@Method</code> / <code>@Object</code>,
+                and the processor generates the stdlib registration, the type signatures, the completion
+                data, and the hover documentation — all from one source of truth. Adding a DSL function to
+                the engine and having it show up in the editor's autocomplete with the right parameter names
+                is one annotation, not four files.
+            </p>
+
+            <h4>It has a real module system</h4>
+
+            <p>
+                Imports and exports work today, JavaScript-shaped: wildcard, selective, aliased, namespaced,
+                with explicit export lists that prevent scope pollution.
+            </p>
+
+            <figure>
+                <div class="code" data-lang="KlangScript"><pre><span class="kw">import</span> * <span
+                        class="kw">from</span> <span class="st">"stdlib"</span>
+<span class="kw">import</span> * <span class="kw">from</span> <span class="st">"sprudel"</span>
+<span class="kw">import</span> { add, multiply } <span class="kw">from</span> <span class="st">"math"</span>
+
+<span class="kw">let</span> bass = note(<span class="st">"c1 ~ eb1 g1"</span>).sound(<span class="st">"saw"</span>).lpf(400)
+<span class="kw">let</span> feel = 20.0   <span class="cm">// 0.0 .. ice | 100.0 .. fire</span>
+
+<span class="kw">export</span> { bass, feel }</pre>
+                </div>
+                <figcaption>Every song starts with the two wildcard imports. The exported <code>bass</code> is exactly
+                    what §10's cross-server import will want to fetch.
+                </figcaption>
+            </figure>
+
+            <p>
+                That module system is the load-bearing piece for everything in Part II. The import syntax
+                already exists; what doesn't exist yet is where an import is allowed to <em>point</em>.
+            </p>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §3 ---------------------------- -->
+    <section id="s3">
+        <div class="rail"><span class="num">03</span><span class="tag lang">Patterns</span></div>
+        <div class="body">
+            <h3>Sprudel — patterns as functions of time</h3>
+
+            <p>
+                A pattern is not a list of notes. It is a pure function: give it a time span, it returns the
+                events that happen in that span. Everything else follows from that — <code>fast(2)</code>
+                scales the query, <code>rev()</code> reflects it, <code>every(4, …)</code> switches on the
+                cycle number. Patterns compose because functions compose.
+            </p>
+
+            <p>
+                The time in that sentence is measured in <b>cycles</b>. A cycle is the unit of musical
+                repetition — this world's bar — and a pattern repeats every cycle unless told otherwise.
+                Tempo is cycles per second (<code>cps</code>), and arrangement is written in cycle numbers:
+                "the shakuhachi enters at cycle 28" is a line of code you'll meet in §7.
+            </p>
+
+            <p>
+                Rhythm is written in mini-notation, a compact string language inside the host language:
+            </p>
+
+            <div class="tablewrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Syntax</th>
+                        <th>Name</th>
+                        <th>Meaning</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>a b c</code></td>
+                        <td>Sequence</td>
+                        <td>Space-separated values split one cycle equally</td>
+                    </tr>
+                    <tr>
+                        <td><code>~</code></td>
+                        <td>Rest</td>
+                        <td>A silent step</td>
+                    </tr>
+                    <tr>
+                        <td><code>[a b]</code></td>
+                        <td>Group</td>
+                        <td>Subdivide one slot</td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;a b c&gt;</code></td>
+                        <td>Alternation</td>
+                        <td>One per cycle, rotating</td>
+                    </tr>
+                    <tr>
+                        <td><code>a*4</code></td>
+                        <td>Fast</td>
+                        <td>Repeat inside the slot</td>
+                    </tr>
+                    <tr>
+                        <td><code>a@2</code></td>
+                        <td>Weight</td>
+                        <td>Take 2 relative time units</td>
+                    </tr>
+                    <tr>
+                        <td><code>a(3,8)</code></td>
+                        <td>Euclidean</td>
+                        <td>3 pulses spread over 8 steps</td>
+                    </tr>
+                    <tr>
+                        <td><code>a?</code></td>
+                        <td>Degrade</td>
+                        <td>50% chance of playing</td>
+                    </tr>
+                    <tr>
+                        <td><code>a|b|c</code></td>
+                        <td>Choice</td>
+                        <td>Random pick each cycle</td>
+                    </tr>
+                    <tr>
+                        <td><code>a:2</code></td>
+                        <td>Variant</td>
+                        <td>Pick variant 2 of that sound</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>Nesting is unlimited. Four bars of drums and a chord progression:</p>
+
+            <figure>
+                <div class="code" data-lang="KlangScript"><pre>stack(
+  sound(<span class="st">"bd sd bd sd"</span>),
+  sound(<span class="st">"hh*8"</span>).gain(0.4),
+  sound(<span class="st">"~ ~ cp ~"</span>).gain(0.7),
+
+  n(<span class="st">"0 2 4 7 6 4 2 0"</span>).scale(<span class="st">"C4:minor"</span>)
+    .sound(<span class="st">"saw"</span>).lpf(800)
+    .adsr(<span class="st">"0.01:0.1:0.5:0.2"</span>).gain(0.25),
+
+  chord(<span class="st">"&lt;Am C F G&gt;"</span>).voicing()
+    .sound(<span class="st">"supersaw"</span>).lpf(500).gain(0.2)
+)</pre>
+                </div>
+                <figcaption>Entry points: <code>sound()</code> by name, <code>n()</code> by scale degree,
+                    <code>note()</code> by note name, <code>chord()</code> by chord name.
+                </figcaption>
+            </figure>
+
+            <p>
+                The operator surface is wide — time (<code>fast</code>, <code>swing</code>, <code>compress</code>,
+                <code>inside</code>), structure (<code>every</code>, <code>jux</code>, <code>off</code>,
+                <code>chunk</code>, <code>bite</code>, <code>arrange</code>), tonality (scales, chords,
+                voicings, transposition in scale degrees), probability (<code>sometimesBy</code>,
+                <code>degradeBy</code>, seeded randomness), and arithmetic that maps over event values.
+                Continuous signals — <code>sine</code>, <code>perlin</code>, <code>rand</code> — can be fed
+                into any parameter, so a filter cutoff can be an LFO and a pan position can be noise.
+            </p>
+
+            <h4>Time is fixed-point, not rational</h4>
+
+            <p>
+                Musical time needs exact thirds, fifths and sevenths as well as exact halves — a triplet
+                inside a cycle must land <em>exactly</em> on the third, forever, with no drift. Rational
+                arithmetic gives you that, and it was the original implementation. It was also a performance
+                disaster on JS, where every <code>gcd</code> and every <code>plus</code> hit BigInt in the
+                hot path.
+            </p>
+
+            <p>
+                Time is now a fixed-point value class: <code>CycleTime</code>, with
+                <b>110,100,480 ticks per cycle</b> — that is 2<sup>20</sup> × 3 × 5 × 7. Halves down to
+                1/2<sup>20</sup>, plus thirds, fifths and sevenths and all their products, are all exactly
+                representable. It is an <code>Int</code> under the hood, and the whole class of
+                subdivision-drift bugs disappears by construction.
+            </p>
+
+            <div class="note">
+                <span class="lab">A bug worth the war story</span>
+                <p>
+                    Structural operators like <code>seq(N)…slow(N)</code> were silently mis-selecting and
+                    dropping events whenever N did not divide the tick constant. Once time was exact,
+                    <code>arrange</code> and <code>&lt;…&gt;</code> alternation could be fixed to exact
+                    integer-cycle selection. There is now a dedicated spec guarding it, because it is exactly
+                    the kind of thing that quietly comes back.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §4 ---------------------------- -->
+    <section id="s4">
+        <div class="rail"><span class="num">04</span><span class="tag engine">Engine</span></div>
+        <div class="body">
+            <h3>The Motör — the audio engine</h3>
+
+            <p>
+                First, vocabulary. Every sounding note is a <b>voice</b> — one running instance of an
+                instrument. The engine has a metaphor and uses it consistently, in the code and in the DSL:
+                a voice is lit by an <b>Ignitor</b>, the instrument's signal graph (§6 builds them). Each
+                voice is routed to a numbered effect bus called an <b>orbit</b> — that's what
+                <code>.orbit(1)</code> in a pattern picks — and the bus itself is a <b>Cylinder</b>.
+                Cylinders can carry a <b>Katalyst</b>, an orbit-level resonator or effect shared by every
+                voice on that bus. Everything sums into the <b>Master</b>. It's a naming convention, but a
+                load-bearing one: it keeps four genuinely different scopes — note, instrument, bus, mix —
+                from collapsing into the word "effect".
+            </p>
+
+            <div class="note">
+                <span class="lab">Wait — bus, orbit, cylinder?</span>
+                <p>
+                    Same thing, three lineages.
+                    <b>Bus</b> is the classical audio-engineering word: a channel several signals mix into,
+                    sharing its processing.
+                    <b>Orbit</b> is the Tidal / SuperDirt / Strudel word for exactly that, and sprudel keeps
+                    it — <code>.orbit(n)</code> — so live coders arriving from strudel.cc feel at home.
+                    <b>Cylinder</b> is the Motör's own name for the machinery that implements one — and
+                    <code>.cylinder(n)</code> works in a pattern too, as an alias.
+                </p>
+                <p>
+                    This paper says <em>orbit</em> on the pattern side and <em>Cylinder</em> on the engine
+                    side. It is the same object either way.
+                </p>
+            </div>
+
+            <h4>The signal path, and the thread boundary in the middle of it</h4>
+
+            <figure>
+                <svg class="schematic" viewBox="0 0 900 430" role="img"
+                     aria-label="Signal flow diagram: on the main thread, KlangScript source is queried by Sprudel into voice events and pushed as commands into a lock-free ring buffer; on the audio thread, a per-playback engine schedules voices, renders each through a four-stage voice strip, mixes into cylinders with orbit effects, then through the master chain and safety limiter to the device.">
+
+                    <!-- LEFT: main thread -->
+                    <text x="20" y="22" class="t-lab t-lang">MAIN THREAD</text>
+
+                    <rect x="20" y="38" width="250" height="46" class="bx-lang"/>
+                    <text x="36" y="60" class="t">KlangScript source</text>
+                    <text x="36" y="74" class="t-sm">parse → interpret</text>
+
+                    <path class="arw" d="M145,84 L145,110"/>
+                    <path class="arw" d="M139,104 L145,112 L151,104"/>
+
+                    <rect x="20" y="112" width="250" height="46" class="bx-lang"/>
+                    <text x="36" y="134" class="t">Sprudel query</text>
+                    <text x="36" y="148" class="t-sm">timespan → events</text>
+
+                    <path class="arw" d="M145,158 L145,184"/>
+                    <path class="arw" d="M139,178 L145,186 L151,178"/>
+
+                    <rect x="20" y="186" width="250" height="46" class="bx-lang"/>
+                    <text x="36" y="208" class="t">ScheduledVoice</text>
+                    <text x="36" y="222" class="t-sm">KSP-generated wire codec</text>
+
+                    <!-- BOUNDARY -->
+                    <line x1="320" y1="30" x2="320" y2="410" class="bnd"/>
+                    <text x="326" y="200" class="t-lab" fill="var(--muted)" transform="rotate(90 326 200)">
+                        LOCK-FREE RING BUFFER · SPSC
+                    </text>
+
+                    <path class="arw" d="M270,209 L370,209"/>
+                    <path class="arw" d="M364,203 L372,209 L364,215"/>
+
+                    <!-- RIGHT: audio thread -->
+                    <text x="380" y="22" class="t-lab t-eng">AUDIO THREAD · 128-FRAME BLOCKS</text>
+
+                    <rect x="380" y="38" width="500" height="42" class="bx-eng"/>
+                    <text x="396" y="58" class="t">PlaybackEngine</text>
+                    <text x="396" y="72" class="t-sm">one per playbackId — own scheduler, own cylinders, own
+                        registries
+                    </text>
+
+                    <path class="arw" d="M630,80 L630,102"/>
+                    <path class="arw" d="M624,96 L630,104 L636,96"/>
+
+                    <rect x="380" y="104" width="500" height="42" class="bx"/>
+                    <text x="396" y="124" class="t">VoiceScheduler</text>
+                    <text x="396" y="138" class="t-sm">min-heap by start time → promote due voices</text>
+
+                    <path class="arw" d="M630,146 L630,168"/>
+                    <path class="arw" d="M624,162 L630,170 L636,162"/>
+
+                    <!-- voice strip -->
+                    <rect x="380" y="170" width="500" height="66" class="bx"/>
+                    <text x="396" y="190" class="t">Voice strip &nbsp;<tspan class="t-sm">— per note, per block</tspan>
+                    </text>
+                    <rect x="396" y="200" width="104" height="24" class="bx-eng"/>
+                    <text x="408" y="216" class="t-sm">PITCH</text>
+                    <rect x="512" y="200" width="104" height="24" class="bx-eng"/>
+                    <text x="524" y="216" class="t-sm">IGNITE</text>
+                    <rect x="628" y="200" width="104" height="24" class="bx-eng"/>
+                    <text x="640" y="216" class="t-sm">SHAPE</text>
+                    <rect x="744" y="200" width="104" height="24" class="bx-eng"/>
+                    <text x="756" y="216" class="t-sm">SEND</text>
+                    <path class="arw" d="M500,212 L510,212"/>
+                    <path class="arw" d="M616,212 L626,212"/>
+                    <path class="arw" d="M732,212 L742,212"/>
+
+                    <path class="arw" d="M630,236 L630,258"/>
+                    <path class="arw" d="M624,252 L630,260 L636,252"/>
+
+                    <rect x="380" y="260" width="500" height="42" class="bx"/>
+                    <text x="396" y="280" class="t">Cylinder &nbsp;<tspan class="t-sm">— one per orbit</tspan>
+                    </text>
+                    <text x="396" y="294" class="t-sm">delay → reverb → phaser → Katalyst (body / vowel) → ducking
+                    </text>
+
+                    <path class="arw" d="M630,302 L630,324"/>
+                    <path class="arw" d="M624,318 L630,326 L636,318"/>
+
+                    <rect x="380" y="326" width="500" height="42" class="bx"/>
+                    <text x="396" y="346" class="t">Master chain</text>
+                    <text x="396" y="360" class="t-sm">authored gain / limiter / reverb / delay — dual-chain crossfade
+                        on change
+                    </text>
+
+                    <path class="arw" d="M630,368 L630,388"/>
+                    <path class="arw" d="M624,382 L630,390 L636,382"/>
+
+                    <rect x="380" y="390" width="500" height="32" class="bx-eng"/>
+                    <text x="396" y="410" class="t">Safety limiter &nbsp;<tspan class="t-sm">−1 dB · 20:1 · 5 ms
+                        lookahead → device
+                    </tspan>
+                    </text>
+                </svg>
+                <figcaption>
+                    Blue is the language side, orange the engine side. The dashed line is a real thread
+                    boundary, crossed only through the lock-free ring buffer — no locks anywhere on the right.
+                    The per-block render path is allocation-free by house rule; setup still allocates (a new
+                    engine, its delay rings), and the warmed resource pool that removes that is designed but
+                    not yet built — see §12.
+                </figcaption>
+            </figure>
+
+            <h4>Three things about that picture worth calling out</h4>
+
+            <p>
+                <b>The backend is sharded per playback.</b> It is not one global engine. A dispatcher routes
+                every command by <code>playbackId</code> to its own <code>PlaybackEngine</code>, created
+                lazily and disposed when idle. Each one owns its entire render state: its own scheduler, its
+                own cylinders, and its own ignitor and pipeline registries, forked from the shared
+                built-ins. Two songs playing at once on
+                "orbit 1" get independent orbits instead of silently fighting over one. Custom instruments
+                registered by a playback die with it, rather than leaking into the next.
+            </p>
+
+            <p>
+                <b>The block size is a tuning parameter, pinned everywhere.</b> 128 frames, in the browser
+                worklet, on the JVM, and in the offline renderer. It is not a performance dial — several
+                engine behaviours are block-derived, including the analog-drift update rate. Raising it to
+                make an offline render faster would change how the render <em>sounds</em>. Pinning it is what
+                makes the offline WAV bit-faithful to what you heard live.
+            </p>
+
+            <p>
+                <b>There is always a safety limiter.</b> −1 dB, 20:1, 5 ms lookahead on the summed mix, on
+                every song, whether or not you asked. Any limiter you author on the master is for
+                <em>shaping</em>; peak-catching is already handled. The 5 ms is a real, accepted latency cost.
+            </p>
+
+            <div class="note">
+                <span class="lab">A house rule that shapes the code</span>
+                <p>
+                    The Motör stays raw. Parameters are not clamped "for safety" unless there is a numerical
+                    reason — you can absolutely make it scream. What <em>is</em> guarded is numerical sanity:
+                    NaN/Inf guards, denormal handling, and explicit safe bounds in the DSP, because a single
+                    NaN in a feedback delay poisons the buffer forever.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §5 ---------------------------- -->
+    <section id="s5">
+        <div class="rail"><span class="num">05</span><span class="tag engine">Sources</span></div>
+        <div class="body">
+            <h3>Oscillators, filters, effects</h3>
+
+            <p>
+                Every sound source below is hand-written DSP — no wavetables, no samples underneath, no Web
+                Audio nodes doing the work. They're addressable by name from a pattern
+                (<code>.sound("supersaw")</code>) and as builders in the instrument DSL
+                (<code>Osc.supersaw()</code>).
+            </p>
+
+            <div class="tablewrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Family</th>
+                        <th>Sources</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><b>Classic</b></td>
+                        <td><code>sine</code>, <code>sawtooth</code>, <code>square</code>, <code>triangle</code>, <code>ramp</code>,
+                            <code>pulze</code> (variable duty), <code>impulse</code>, and <code>zawtooth</code> — a
+                            deliberately naive, aliasing saw, kept because it is brighter and sometimes that's what you
+                            want
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Unison</b></td>
+                        <td><code>supersaw</code>, <code>supersine</code>, <code>supersquare</code>,
+                            <code>supertri</code>, <code>superramp</code> — N detuned copies with per-voice spread, gain
+                            jitter and phase randomisation
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Physical</b></td>
+                        <td><code>pluck</code> (Karplus-Strong, with decay / brightness / pick / stiffness) and <code>superpluck</code>
+                            (unison strings)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Noise</b></td>
+                        <td><code>whitenoise</code> (tiltable), <code>pinknoise</code> (exact −3 dB/oct), <code>brownnoise</code>,
+                            <code>perlin</code> / <code>berlin</code> (with fBm octaves and persistence),
+                            <code>dust</code> (heavy-tailed, optionally bipolar), <code>crackle</code> (a chaotic map,
+                            not a dust alias)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Samples</b></td>
+                        <td>Drum banks, soundfonts, arbitrary URLs — with slicing, looping, and per-hit start
+                            positions
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>
+                <b>Filters</b>: resonant SVF lowpass / highpass / bandpass / notch, one-pole variants, and two
+                resonator banks — <code>body()</code>, which models a passive instrument body (mahogany,
+                rosewood, tube…), and <code>vowel()</code>, a formant filter. Both are blended through a
+                shared parallel-mix filter with a physical floor, so they colour without ever thinning the
+                signal out — a passive body adds no energy and never makes a sound sparse.
+            </p>
+
+            <p>
+                <b>Effects</b>: reverb, delay, phaser, compressor, sidechain ducking, distortion with nine
+                shapes and optional oversampling, bitcrush, sample-rate reduction, tremolo, vibrato, FM, pitch
+                envelopes, and per-voice analog drift.
+            </p>
+
+            <div class="note open">
+                <span class="lab">Design position</span>
+                <p>
+                    The sound model is a <em>pencil sketch</em>, not photorealism. An instrument gets two to
+                    four real acoustic "tells" — the right waveform family, a breath-noise transient, a
+                    material-appropriate cutoff, a pitch scoop — and sparse fill around them. The target is
+                    deliberately non-moving: nothing adapts, nothing randomises itself behind your back. You
+                    can learn it.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §6 ---------------------------- -->
+    <section id="s6">
+        <div class="rail"><span class="num">06</span><span class="tag engine">DSLs</span></div>
+        <div class="body">
+            <h3>Three DSLs above the engine — and one to come</h3>
+
+            <p>
+                The pattern language says <em>when</em> and <em>what</em>. Three further DSLs say <em>how</em>,
+                at three different scopes — and the fourth scope is still waiting for its DSL, at the end of
+                this section.
+            </p>
+
+            <h4>1 · Ignitor DSL — building an instrument</h4>
+
+            <p>
+                An instrument is a signal graph, composed with ordinary method chaining. Any numeric
+                parameter accepts either a number or another <code>Osc</code> node, which is how you get
+                audio-rate modulation without a separate modulation-routing concept.
+            </p>
+
+            <p>
+                To be clear about what runs where: the script builds the graph <em>once</em>, and the graph
+                crosses to the audio thread as data. What you composed is block-based arithmetic —
+                <code>.plus()</code> is a 128-frame buffer add, <code>.times()</code> a buffer multiply —
+                rendered in tight loops over <code>FloatArray</code>s. The interpreter never runs per
+                sample; it only describes the machine.
+            </p>
+
+            <figure>
+                <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// Glockenspiel: inharmonic partials + a noise transient + a filter that closes</span>
+<span class="kw">let</span> glock = Osc.sine().mul(0.5)
+    <span class="cm">// 19.02 and 27.86 semitones — deliberately inharmonic intervals:</span>
+    <span class="cm">// this is what makes it read as metal rather than as an organ</span>
+    .plus(Osc.sine().detune(19.02).mul(0.3))
+    .plus(Osc.sine().detune(27.86).mul(0.15))
+    .plus(Osc.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
+    .lowpass(Osc.constant(8000).plus(Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
+    .adsr(0.001, 1.5, 0.0, 0.3)
+
+<span class="cm">// A kick is four lines: sine, pitch drop, fast decay.</span>
+<span class="cm">// The drop depth is a named param — a slot the pattern can override.</span>
+<span class="kw">let</span> kick = Osc.sine()
+    .pitchEnvelope(Osc.param(name = <span class="st">"punch"</span>, default = 24), 0.001, 0.04)
+    .adsr(0.001, 0.2, 0.0, 0.02)
+
+note(<span class="st">"c5 e5 g5 c6"</span>).sound(glock).gain(0.3).room(0.2)
+note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">"punch"</span>, <span class="st">"&lt;24 48&gt;"</span>)  <span
+                            class="cm">// every other cycle drops harder</span></pre>
+                </div>
+            </figure>
+
+            <p>
+                That <code>Osc.param(name = "punch", default = 24)</code> in the kick is the parameter
+                system: a named slot
+                with a default, overridable per note from the pattern side — and since the override value is
+                itself a pattern, <code>"&lt;24 48&gt;"</code> alternates the drop depth cycle by cycle. The
+                two languages meet exactly there: the instrument declares the knob, the pattern plays it.
+                <code>Osc.variants(a, b, …)</code> bundles
+                several flavours of one instrument into a single sound, selected per event with the same
+                <code>:index</code> suffix that picks sample-bank variants — so
+                <code>seq("0 1 2:1 3:1")</code> can have two notes ring out and two chug, from one
+                instrument.
+            </p>
+
+            <h4>2 · Pipeline DSL — reordering the voice strip itself</h4>
+
+            <p>
+                The per-voice chain — filter modulation, crush, coarse, distort, filter, tremolo, phaser,
+                VCA (synth-speak for the amplitude stage the ADSR envelope drives) — is data, not hardcoded
+                order. Two built-ins ship: <code>modern</code>, the classic
+                subtractive order with the amplitude envelope last, and <code>pedal</code>, where the VCA
+                comes <em>early</em> so the envelope drives the waveshapers the way a guitar pedal does. You
+                can also author your own:
+            </p>
+
+            <figure>
+                <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// Double-VCA sandwich: the first VCA shapes how hard the distortion is driven</span>
+<span class="cm">// (so the envelope sculpts harmonics), the second rides the output level.</span>
+<span class="kw">let</span> chain = Pipeline.of(
+    Stage.filterMod(),
+    Stage.vca(),        <span class="cm">// early — sculpts the drive</span>
+    Stage.distort(),
+    Stage.filter(),
+    Stage.vca()         <span class="cm">// late — trims the level</span>
+)</pre>
+                </div>
+                <figcaption>Stage order is audible. This is the difference between a synth and a pedalboard.
+                </figcaption>
+            </figure>
+
+            <h4>3 · Master DSL — the whole song's bus</h4>
+
+            <p>
+                The master chain rides in the pattern stream rather than sitting in global config, which
+                means live edits to it cross-fade instead of clicking, and an offline render reproduces it
+                exactly.
+            </p>
+
+            <figure>
+                <div class="code engine" data-lang="KlangScript"><pre>stack(
+  lead, bass, drums,
+  master(Master.of(
+    MasterFx.reverb().wet(0.03).roomSize(6),  <span class="cm">// a breath of shared space, before the dynamics</span>
+    MasterFx.gain(1.45),
+    MasterFx.limiter().thresholdDb(-8.0).ratio(2.0).attack(0.015).release(0.25),
+    MasterFx.gain(1.40),
+    MasterFx.limiter().thresholdDb(-4.0).ratio(4.0).attack(0.008).release(0.15)
+  ))
+)</pre>
+                </div>
+                <figcaption>The reverb sits before the loudness staging so the limiters catch its tail too. Staged gain
+                    — split the total across descending thresholds and ascending ratios — beats one big push.
+                </figcaption>
+            </figure>
+
+            <h4>4 · Katalyst DSL — the missing quadrant <span class="pill sketch">Designed, not built</span></h4>
+
+            <p>
+                The symmetry above has a hole. Per-voice source: Ignitor DSL. Per-voice processing order:
+                Pipeline DSL. Whole-song bus: Master DSL. The fourth scope — the <em>shared</em> effects
+                path on a Cylinder — has the effects but not the authoring surface. Body, vowel, delay,
+                reverb, phaser, compressor and ducking all run at orbit level today; patterns set their
+                amounts, but the chain itself — which effects, in what order — is hardcoded in the engine.
+                The Katalyst DSL closes that quadrant: declare a per-orbit chain the way
+                <code>Pipeline.of(…)</code> declares the per-voice one, following the Master DSL's
+                registration pattern and reusing the same DSP underneath. One word per concept: the Ignitor
+                lights the voice, the Katalyst refines the bus.
+            </p>
+
+            <div class="note">
+                <span class="lab">The rule that keeps four DSLs coherent</span>
+                <p>
+                    <b>Parameter parity.</b> If a parameter exists on one surface it should exist on all of
+                    them, mean the same thing, and use the same scale — and the conversion lives in exactly one
+                    place. This is not theoretical tidiness: ignoring it produced a <code>roomSize</code> that
+                    was 10× different between the master and an orbit, and that bug was found by ear.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §7 ---------------------------- -->
+    <section id="s7">
+        <div class="rail"><span class="num">07</span><span class="tag">Real code</span></div>
+        <div class="body">
+            <h3>A real song, in full</h3>
+
+            <p>
+                Everything above, used together. This is an actual built-in song — <em>Die Kirschblüte</em> —
+                not a constructed example. Five hand-built instruments, six-part pad voicing, layered entries
+                over 42 cycles.
+            </p>
+
+            <figure>
+                <div class="code" data-lang="KlangScript"><pre><span class="kw">import</span> * <span
+                        class="kw">from</span> <span class="st">"stdlib"</span>
+<span class="kw">import</span> * <span class="kw">from</span> <span class="st">"sprudel"</span>
+
+<span class="kw">let</span> wait = 14
+
+<span class="cm">// Koto — plucked string + an octave shimmer, filter opening on attack</span>
+<span class="kw">let</span> koto = Osc.pluck()
+      .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
+      .highpass(200)
+      .lowpass(cutoffHz = Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)),
+               analog = Osc.slot.analog)
+
+<span class="cm">// Shakuhachi — sine body, triangle edge, two breath-noise layers, vibrato</span>
+<span class="kw">let</span> shaku = Osc.sine().mul(0.6)
+      .plus(Osc.triangle().mul(0.25))
+      .plus(Osc.perlin(13).mul(0.05))
+      .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
+      .highpass(cutoffHz = 300, analog = Osc.slot.analog)
+      .lowpass(cutoffHz = 3800, q = 1.0, analog = Osc.slot.analog)
+      .analog(0.2).vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
+      .pitchEnvelope(1, 0.02, 0.1)
+      .adsr(0.07, 0.15, 0.8, 0.3)
+
+<span class="kw">let</span> pad = Osc.supertri(freq = Osc.freq(), voices = 5).analog(5.0)
+      .lowpass(cutoffHz = Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()),
+               q = 2, analog = Osc.slot.analog)
+      .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve(<span class="st">"scurve"</span>)
+
+stack(
+  <span class="cm">// Melody — mahogany body, doubled an octave up and panned wide</span>
+  note(`
+    [a4 a4 b4 ~ a4 a4 b4 ~]       [a4 b4 c5 b4 a4 [b4 a4] f4@2]
+    [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body(<span class="st">"mahogany"</span>)
+    .superimpose(fast(2).velocity(0.1).pan(0.3).superimpose(pan(0.7)))
+
+  <span class="cm">// Shakuhachi enters at cycle 28, drifting in pan and cutoff</span>
+  ,note(`
+    a4@2  ~  ~  ~  ~  b4 ~
+    e5@2  ~  ~  c5@2  b4 a4
+  `).orbit(1).sound(shaku).slow(14).gain(0.23)
+    .pan(perlin.range(0.3, 0.7).slow(8))
+    .lpf(perlin.range(3600, 3800).slow(2)).body(<span class="st">"rosewood"</span>)
+    .filterWhen(x =&gt; x &gt;= wait * 2)
+
+  <span class="cm">// Pad — six independent voices, each panned and high-passed differently,</span>
+  <span class="cm">// so the chord occupies real stereo space instead of stacking in the centre</span>
+  ,stack(
+    note(<span class="st">"a2  d2  a2  f2  c2  e2  a2"</span>).sound(pad).slow(14).gain(0.250).pan(0.4).hpf(160)
+   ,note(<span class="st">"c3  f2  c3  a2  e2  gs2 c3"</span>).sound(pad).slow(14).gain(0.250).pan(0.7).hpf(280)
+   ,note(<span class="st">"e3  a2  e3  c3  g2  b2  e3"</span>).sound(pad).slow(14).gain(0.250).pan(0.2).hpf(400)
+   ,note(<span class="st">"a3  d3  a3  f3  c3  e3  a3"</span>).sound(pad).slow(14).gain(0.200).pan(0.8).hpf(600)
+  ).orbit(4).coarse(3).body(<span class="st">"tube"</span>).bodyMix(0.3).filterWhen(x =&gt; x &gt;= wait * 3)
+
+  <span class="cm">// Three noise beds, each breathing on its own slow LFO</span>
+  , sound(<span class="st">"dust"</span>).gain(0.025).vel(sine.range(0.750, 1.0).slow(21)).lpf(8000)
+  , sound(<span class="st">"pink"</span>).gain(0.010).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000)
+  , sound(<span class="st">"brown"</span>).gain(0.015).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
+
+).room(<span class="st">"0.25:7:0.75"</span>).delay(0.2).delaytime(pure(1/8).div(cps))
+ .compressor(<span class="st">"-15:2:6:0.01:0.2"</span>).analog(8)</pre>
+                </div>
+                <figcaption>Abridged — the full song is 125 lines. The <code>let wait = 14</code> at the top is the
+                    whole arrangement: every layer's entry is expressed as a multiple of it, so one number restructures
+                    the piece.
+                </figcaption>
+            </figure>
+
+            <p>
+                A few things in there are worth noticing. <code>.orbit(n)</code> assigns an effect bus, and
+                that assignment is <em>architectural</em> — orbit-level effects like <code>body()</code> and
+                reverb are shared by everything on that orbit, so two instruments that each need their own
+                wooden body must be on different orbits. <code>.filterWhen(x =&gt; x &gt;= 28)</code> is
+                arrangement as a predicate over the cycle number. And <code>analog(…)</code> threads a single
+                "how much does this drift out of tune" number to five linear destinations at once, seeded so
+                note attacks land in tune and only then wander. The <code>Osc.slot.analog</code> inside the
+                instrument definitions is the receiving end of that thread — the note's analog amount exposed
+                as a slot, so the instrument's own filters drift along with its pitch.
+            </p>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §8 ---------------------------- -->
+    <section id="s8">
+        <div class="rail"><span class="num">08</span><span class="tag">Surfaces</span></div>
+        <div class="body">
+            <h3>Surfaces around the engine</h3>
+
+            <div class="tablewrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Surface</th>
+                        <th>State</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><b>Code editor</b></td>
+                        <td>CodeMirror with completions, hover documentation and inline tool badges — all fed from the
+                            KSP-generated data, so the editor's knowledge can't drift from the runtime's.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Block editor</b></td>
+                        <td>A visual block editor with genuine round-trip: AST → blocks → generated code → AST.
+                            Round-trip fidelity is enforced by tests, not hoped for.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Notebook</b></td>
+                        <td>Cell-based execution with reactive evaluation.</td>
+                    </tr>
+                    <tr>
+                        <td><b>Tutorials</b></td>
+                        <td>38 written tutorials, running live in the page — every example is real, playable code, not a
+                            screenshot.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Songs</b></td>
+                        <td>14 built-in songs, from a 42-line sea shanty to a 267-line techno arrangement.</td>
+                    </tr>
+                    <tr>
+                        <td><b>Offline render</b></td>
+                        <td>A WAV renderer driving the same engine at the same block size. What you export is what you
+                            heard.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>
+                There are no accounts and no server. Songs you write live in browser storage. That is
+                genuinely all of it today — which is exactly what makes Part II an open question rather than
+                a migration.
+            </p>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §9 ---------------------------- -->
+    <section id="s9">
+        <div class="rail"><span class="num">09</span><span class="tag">Internals</span></div>
+        <div class="body">
+            <h3>Engineering notes</h3>
+
+            <p>
+                The parts that might interest you as much as the music does. Real-time audio in a browser is
+                a hostile environment: 128 frames at a time, no allocation, no locks, and a JS runtime that
+                boxes things you didn't know were boxed.
+            </p>
+
+            <h4>No boxed primitives, anywhere in the audio path</h4>
+            <p>
+                On Kotlin/JS, <code>Long</code> is emulated as an object pair, and <code>Char</code>,
+                <code>Short</code> and <code>Byte</code> box. The rule across the project is
+                <code>Int</code> and <code>Double</code> only. This is why time is a fixed-point
+                <code>Int</code> rather than a rational of longs.
+            </p>
+
+            <h4>The wire codec is generated</h4>
+            <p>
+                Voice data crosses from the main thread into the worklet on every scheduled note.
+                <code>kotlinx.serialization</code> was decoding at ~67 µs per voice, which is not survivable
+                at note density. A second KSP processor now generates a trust-codec directly from the
+                <code>@WireFormat</code> types: <b>67 µs → 385 ns</b>, about 174×, confirmed in the browser.
+                Protobuf was tried and rejected — it is slow on JS.
+            </p>
+
+            <h4>Voice data is mutable and single-owner</h4>
+            <p>
+                The immutable-data-class instinct is right until you're cloning a large object per note. The
+                voice parameter object was made mutable with a single owner and grouped into about a dozen
+                sub-objects, so a leaf clone touches only what changed: <b>820 ns → 47 ns</b>, roughly 17×.
+            </p>
+
+            <h4>Benchmarks run real songs</h4>
+            <p>
+                There is a harness that compiles actual song source, renders it offline, and reports
+                per-block timing — plus a real-time-factor / voice-count harness for the engine in isolation.
+                That's how it was found that a per-voice effect multiplied by <code>superimpose</code> was
+                the CPU sink in one song, which is why <code>body()</code> moved to orbit level and is now
+                applied once per orbit rather than once per layered copy.
+            </p>
+
+            <h4>Tests are mutation-checked</h4>
+            <p>
+                A new test isn't accepted because it passes — it is accepted after deliberately breaking the
+                code it covers and confirming it goes red. Mutation-testing tools were evaluated for the DSP
+                and rejected with disassembly evidence: the hot path is fully inlined, so the tooling can't
+                see it. So it's done by hand. Reviews loop until a clean round, and fixes get re-reviewed.
+            </p>
+
+            <p>
+                Alongside that: golden-file tests for the pattern language, and dedicated specs guarding
+                every bug class that has bitten twice — cycle-boundary selection, timeshift duplication at
+                cycle boundaries, analog-drift coefficients, sample onset alignment.
+            </p>
+        </div>
+    </section>
+
+    <!-- ============================ PART II ============================ -->
+    <div class="part" id="part2">
+        <span class="part-no">Part II</span>
+        <h2>Where the journey might go</h2>
+        <p>
+            Everything from here on is design, not code. Some of it is settled as an <em>idea</em> while
+            being completely unsettled as a <em>mechanism</em> — and where that's true, it's marked.
+        </p>
+    </div>
+
+    <!-- ---------------------------- §10 ---------------------------- -->
+    <section id="s10">
+        <div class="rail"><span class="num">10</span><span class="tag lang">Sharing</span></div>
+        <div class="body">
+            <h3>Import / export <span class="pill sketch">Idea set, mechanism open</span></h3>
+
+            <p>
+                This is the one I most want argued with, so here it is in full.
+            </p>
+
+            <p>
+                <b>The observation.</b> Every other music genre sits on a corpus. Sample-based music
+                literally could not exist without one — producers don't start from a blank page, they start
+                from the breaks. Live coders open empty editors. There is no canon, no "Amen break" of
+                patterns.
+            </p>
+
+            <p>
+                The interesting part is that Klang's medium is <em>text</em>, not audio. Which means lineage
+                can be exact rather than anecdotal. If you make something good and it was built from other
+                people's parts, that ancestry is machine-readable — a citation chain, not a rumour. No
+                stem-sharing platform can offer that, because binaries don't compose.
+            </p>
+
+            <h4>The shape</h4>
+
+            <p>KlangScript already has imports. The proposal is to let them cross servers:</p>
+
+            <figure>
+                <div class="code" data-lang="KlangScript"><pre><span
+                        class="cm">// today — resolves a registered library</span>
+<span class="kw">import</span> { bass } <span class="kw">from</span> <span
+                            class="st">"peekandpoke/super-song@v1.0"</span>
+
+<span class="cm">// the target — server-qualified, transitive, multi-hop</span>
+<span class="kw">import</span> { bass } <span class="kw">from</span> <span class="st">"klang.art:peekandpoke/super-song@v1.0"</span></pre>
+                </div>
+                <figcaption>The identifier <em>is</em> the fetch address, the way Go modules work. No central registry
+                    required for the naming to function.
+                </figcaption>
+            </figure>
+
+            <p>
+                Reframed honestly: this is not a distributed filesystem, it's a <b>federated package
+                registry</b> — a far better-solved problem. The design cornerstones so far:
+            </p>
+
+            <div class="tablewrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Cornerstone</th>
+                        <th>Consequence</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><b>Immutable tags</b></td>
+                        <td>Republishing <code>@v1.0</code> is an error, permanently. npm learned this via left-pad; Go
+                            enforced it from day one.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Content addressing</b></td>
+                        <td>Every file and blob is referenced by hash; a tag resolves to a manifest of hashes. Caching
+                            mostly disappears — fetch once, cache forever, verify locally, so content can come from
+                            anywhere.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Flatten at tag time</b></td>
+                        <td>When a version is tagged, the origin resolves the full transitive closure <em>then</em> and
+                            writes it into the manifest — a lockfile. An importer needs exactly one conversation to
+                            learn everything it must fetch. Hops never cascade at import time.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b><code>@latest</code> is edit-time only</b></td>
+                        <td>Publishing pins everything. A song that sounded right yesterday must sound identical today;
+                            an unpinned import contradicts that. Resolution is pull with a short TTL, the Go
+                            module-proxy model — no webhooks, no subscription registry.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>Everything cacheable is immutable</b></td>
+                        <td>Cache invalidation — the hard CDN problem — doesn't exist here. Which is what makes
+                            "everyone runs an instance" credible instead of a bandwidth trap: a hobbyist box survives a
+                            viral song because the edge eats the traffic and the origin serves each blob once.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4>The server API is deliberately tiny</h4>
+
+            <p>
+                Five endpoints. Everything except the first two is immutable and therefore HTTP-cacheable
+                as-is:
+            </p>
+
+            <figure>
+                <div class="code" data-lang="HTTP API"><pre>/.well-known/klang            <span class="cm">// discovery: API versions, capabilities, policies</span>
+/v1/resolve(name, "latest")   <span class="cm">// → version        (short TTL — the only dynamic path)</span>
+/v1/manifest(name, version)   <span class="cm">// → files, pinned closure, hashes, requires</span>
+/v1/blob(hash)                <span class="cm">// → bytes          (song files AND samples)</span>
+/v1/versions(name)            <span class="cm">// → list           (also servable as an Atom feed)</span></pre>
+                </div>
+                <figcaption>Two version axes: protocol version in the URL, capability requirements in the manifest.
+                    Manifests evolve additively — new fields only, readers ignore what they don't know — so a manifest
+                    tagged in 2027 is byte-identical in 2035.
+                </figcaption>
+            </figure>
+
+            <h4>Licensing is the mechanism, not the paperwork</h4>
+
+            <p>
+                Every published asset carries a mandatory license from a small lattice, chosen at publish and
+                stored in the manifest. Three things fall out of that:
+            </p>
+
+            <ul>
+                <li>
+                    <b>The license gates importability.</b> Redistribution-permitting → the import button
+                    exists. All-rights-reserved → stream-only, no import. Permission and mechanics become the
+                    same thing.
+                </li>
+                <li>
+                    <b>Restrictions accumulate, checkably.</b> A combined work must satisfy all input licenses
+                    at once, so the server computes the effective constraints of the closure at tag time and
+                    refuses an incompatible publish. Creative Commons already solved the compatibility chart;
+                    a small lattice makes it machine-checkable.
+                </li>
+                <li>
+                    <b>Attribution is automatic.</b> The pinned closure <em>is</em> the credits roll — generated
+                    from ground truth rather than self-reported.
+                </li>
+            </ul>
+
+            <p>
+                And because it's mechanical, it's honest by construction. That attribution graph is a
+                citation network in the scientific sense.
+            </p>
+
+            <div class="note open">
+                <span class="lab">The decision this all turns on</span>
+                <p>
+                    <b>The protocol records; it does not score.</b> No likes, no play counts, no follower
+                    counts, no leaderboards, no computed reputation, no algorithmic feed. Discovery works the
+                    way it works for papers: love something, open its credits, follow the reference to whoever
+                    made that bass, browse their catalogue. Pull, not push. A server's catalogue is a library,
+                    not a feed.
+                </p>
+                <p>
+                    This isn't only taste. Any in-system honour mechanism recurses — citations reward the
+                    roots (samples, presets) and finished songs are sink nodes; answer that with
+                    curation-as-citation and you just move the question to who honours the curator. The only
+                    termination we can find is outside the system: people. And it has a nice side effect —
+                    citation cartels attack <em>scores</em>, so with no scores there's nothing to attack. A
+                    viral wave landing here hits a credits page and nothing inside re-amplifies it. You can't
+                    stop the wave; you can decline to build the resonance chamber.
+                </p>
+                <p>
+                    Play counts are also structurally impossible, not merely unwanted: edge caching means
+                    origins never see most fetches, and the play event is client-side. Counting them would
+                    require telemetry in the player — surveillance built into the instrument.
+                </p>
+            </div>
+
+            <h4>One consequence nobody expects</h4>
+
+            <p>
+                Klang songs are infinitely long — patterns cycle forever. So a mixtape entry can't just
+                reference a song; it has to specify a <b>cycle window</b>:
+                <code>super-song@v1.0 [cycles 128..192)</code>.
+            </p>
+
+            <p>
+                Which means making a mixtape is unavoidably authorship. Choosing which cycles are <em>the</em>
+                cycles is the DJ picking the break. Effortless consumption doesn't exist even in principle —
+                the format demands a decision. And because playback re-performs the song live through the
+                engine, with per-voice drift making each pass a fresh performance, a mixtape is closer to
+                sheet music than to tape. Add author-exposed parameters — a song can publish
+                <code>feel: 0..100</code> with a default and a meaning — and an entry becomes
+                <code>(song@version, cycleWindow, overrides)</code>: score, window, and interpretation.
+            </p>
+
+            <div class="note">
+                <span class="lab">Genuinely open</span>
+                <p>
+                    Identity and migration (server-in-name couples you to your home server — the email
+                    problem). Private and unlisted songs. The exact license set. Whether non-commercial
+                    licenses are offered at all — they fragment a commons into two incompatible pools and chill
+                    exactly the remixing this is meant to encourage; the current lean is to launch without
+                    them. And whether any of it should be built before there's evidence anyone wants to remix
+                    anything.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §11 ---------------------------- -->
+    <section id="s11">
+        <div class="rail"><span class="num">11</span><span class="tag">Licence</span></div>
+        <div class="body">
+            <h3>Open source, and the node idea</h3>
+
+            <p>
+                Klang Audio Motör is free software under the <b>GNU AGPL v3</b>. The <code>tones</code>
+                module — a Kotlin port of tonal.js — is carved out as <b>MIT</b>, matching upstream. Every
+                file carries an SPDX header; <code>AUTHORS.MD</code> is the authoritative copyright list and
+                <code>CREDITS.MD</code> the list of what this stands on — condensed in
+                <a href="#appB">Appendix B</a>.
+            </p>
+
+            <p>
+                AGPL is chosen deliberately for the network case: if you run a modified Klang server, the
+                modifications are owed back. And to state the thing users need to see in writing — <b>the
+                engine's license does not reach your songs.</b> Songs are user content, not derivative works
+                of the engine.
+            </p>
+
+            <h4>Anyone can run a node</h4>
+
+            <p>
+                The intent is that a Klang server is something you install, the way you install a Mastodon or
+                Matrix instance. You run one, it hosts your songs and your samples, and it becomes a node in
+                the network. Your imports resolve through it, and it keeps a durable copy of everything your
+                songs depend on.
+            </p>
+
+            <p>That last part is doing real work:</p>
+
+            <ul>
+                <li>
+                    <b>Server death is survivable.</b> On cross-server import, your home server vendors the
+                    pinned closure — a durable copy, not an evictable cache. Every song is then self-sufficient
+                    where it lives. A dead server kills its own songs, never anything downstream. The license
+                    gate is what makes that lawful, which is why the two designs are the same design.
+                </li>
+                <li>
+                    <b>Liability distributes to operators</b>, the e-mail and Mastodon model. Each operator
+                    gatekeeps their own accounts and answers for what they host. A bad server dies here and
+                    there; the network shrugs.
+                </li>
+                <li>
+                    <b>Policy is the operator's liability dial.</b> Instance settings — bring-your-own samples
+                    on or off, open or invite-only registration, quotas, a minimum license floor — live in the
+                    discovery document next to protocol capabilities. Curated-samples-only is near-zero
+                    exposure; enabling uploads is an accepted moderation burden. Risk appetite becomes a config
+                    file, and clients adapt their UI from it.
+                </li>
+                <li>
+                    <b>Old versions are supported effectively forever.</b> In a federation every server is also
+                    a client of every other server, and the network will always contain unattended instances
+                    that never upgraded. The oldest living API version is the lingua franca. Immutability makes
+                    that nearly free — old responses are static bytes. The intended enforcement is a public
+                    conformance suite with golden wire fixtures, runnable by any third-party implementation.
+                </li>
+            </ul>
+
+            <p>
+                Which sets a hard constraint on the design: a five-endpoint API that must be right the first
+                time is a much better problem to have than a large one that must be right the first time. The
+                plan is to ship v1 <em>narrower</em> than feels comfortable — additive evolution means
+                yes-later is always possible, unsaying never is.
+            </p>
+
+            <p>
+                The intended reference instance is <code>klang.art</code>. It has no special protocol status;
+                it's just the first one.
+            </p>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §12 ---------------------------- -->
+    <section id="s12">
+        <div class="rail"><span class="num">12</span><span class="tag">Honest</span></div>
+        <div class="body">
+            <h3>What's rough</h3>
+
+            <p>
+                This is pre-alpha and it shows. Use Chrome on a laptop or desktop; other combinations are
+                untested and some are bad.
+            </p>
+
+            <ul>
+                <li>
+                    <b>The first note of a song can stutter.</b> Expensive per-engine resources — delay rings,
+                    cylinders — are allocated on first use, and the spike lands on the first thing you hear.
+                    The fix is designed (a self-balancing pool that keeps N warm and refills toward N per
+                    render cycle) and not built.
+                </li>
+                <li>
+                    <b>Voice eviction doesn't exist.</b> Nothing culls voices under load yet.
+                </li>
+                <li>
+                    <b>Many effects are not fully rounded yet.</b> The body and vowel resonators especially
+                    are proofs-of-concept — a handful of preset materials, constants tuned by ear, calibration
+                    unfinished across instruments and registers. They make the right kind of sound; they don't
+                    yet make it everywhere.
+                </li>
+                <li>
+                    <b>The frontend and backend clocks can diverge</b> when the worklet stalls — the frontend
+                    runs on wall time, the worklet derives time from frames. A sync layer absorbs part of it,
+                    not all.
+                </li>
+                <li>
+                    <b>Roughly 10× off a native DAW</b> on raw performance. There are ideas for closing that
+                    (a native daemon fed control events over a socket; Zig or Rust compiled to Wasm inside the
+                    worklet) and they are all deliberately parked until much later.
+                </li>
+                <li>
+                    <b>No accounts, no server, no sync.</b> Everything in Part II is unbuilt.
+                </li>
+            </ul>
+
+            <p>
+                The working order is engine first, then a stretch of tutorials, then whatever launch means,
+                and hard performance work last. Sound before platform — an instrument that sounds like a
+                prototype doesn't get saved by infrastructure.
+            </p>
+
+            <h4>Where to poke</h4>
+
+            <p>
+                The demo is at <a href="https://klang.finzo.de">klang.finzo.de</a> — open a built-in song,
+                change a number, hear it change. If you want to read code rather than play with it, the
+                three most interesting files are probably the pattern query machinery in
+                <code>sprudel/src/commonMain/kotlin/lang/</code>, the per-voice strip in
+                <code>audio_be/…/voices/strip/</code>, and the dispatcher in
+                <code>audio_be/…/PlaybackEngineDispatcher.kt</code>.
+            </p>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §13 ---------------------------- -->
+    <section id="s13">
+        <div class="rail"><span class="num">13</span><span class="tag">Join in</span></div>
+        <div class="body">
+            <h3>An invitation</h3>
+
+            <p>
+                This paper is a teaser, and you are reading it because we would like company. Klang has
+                been a two-hands-and-one-AI project so far, and it has reached the stage where more ears
+                and more taste make it better. Some ways in, in roughly ascending order of commitment:
+            </p>
+
+            <ol>
+                <li>
+                    <b>Play with it — and report back, unhinged but constructive.</b> The most useful thing
+                    you can tell us is where the abstractions leak: where you tried something reasonable and
+                    the system fought you. Second most useful: what surprised you by working.
+                </li>
+                <li>
+                    <b>Write a short song.</b> The built-in corpus is 14 songs; §10 dreams of a canon. Every
+                    good thirty-cycle piece extends the initial corpus — and stress-tests the DSL surface in
+                    ways no test suite can.
+                </li>
+                <li>
+                    <b>Author an instrument.</b> The Ignitor DSL (§6) makes an instrument a signal graph.
+                    Pick something the roster lacks — a harmonica, a broken church organ, rain on a tin roof —
+                    and chase its two-to-four acoustic tells.
+                </li>
+                <li>
+                    <b>Calibrate by ear.</b> The body and vowel resonators (§12) need exactly the
+                    contribution code review cannot give: someone with ears playing real material through
+                    them and saying "the mahogany gets boxy above c5". Bring taste, not patches.
+                </li>
+                <li>
+                    <b>Record a sample library.</b> Recorded for Klang, owned by the project — genuine
+                    provenance for the day any of this goes public, with no licensing shadow over the default
+                    catalogue.
+                </li>
+                <li>
+                    <b>Argue with §10.</b> The federation API intends to freeze v1 the way Go froze
+                    Go 1 — every exposed field a forever-promise. The cheapest moment to find the design
+                    mistake is before that, which is now. Tell us whether it is a good idea or a
+                    beautifully-designed mistake.
+                </li>
+                <li>
+                    <b>Hardcore: plan the Zig backend.</b> §12's ~10× gap has a deliberately parked answer —
+                    a native backend fed control events, or Zig compiled to Wasm inside the worklet. The code
+                    is for later; the planning can start with PeekAndPoke now. If systems programming at
+                    audio rates is your idea of fun, this is the one.
+                </li>
+            </ol>
+
+            <p>
+                One hint before the bigger ones: <b>talk to the authors first.</b> The engine moves fast,
+                several subsystems are mid-rework, and a short conversation saves a long rebase.
+                Der Weg ist das Ziel — but it is more fun in company.
+            </p>
+        </div>
+    </section>
+
+    <!-- ============================ APPENDIX ============================ -->
+    <div class="part" id="appendix">
+        <span class="part-no">Appendix A</span>
+        <h2>The codebase by the numbers</h2>
+    </div>
+
+    <section id="appA">
+        <div class="rail"><span class="num">A</span><span class="tag">Data</span></div>
+        <div class="body">
+            <h3>Lines of code per module</h3>
+
+            <p>
+                Counted from source on 2026-08-09, generated build output excluded. "Tests : prod" is test
+                lines per production line.
+            </p>
+
+            <div class="tablewrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Module</th>
+                        <th>What it is</th>
+                        <th class="r">Production</th>
+                        <th class="r">Tests</th>
+                        <th class="r">Tests : prod</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>sprudel</code></td>
+                        <td>Pattern language</td>
+                        <td class="r">50,859</td>
+                        <td class="r">50,160</td>
+                        <td class="r">0.99</td>
+                    </tr>
+                    <tr>
+                        <td><code>klangscript</code></td>
+                        <td>Scripting language</td>
+                        <td class="r">14,773</td>
+                        <td class="r">21,589</td>
+                        <td class="r">1.46</td>
+                    </tr>
+                    <tr>
+                        <td><code>audio_be</code></td>
+                        <td>DSP backend</td>
+                        <td class="r">15,384</td>
+                        <td class="r">18,153</td>
+                        <td class="r">1.18</td>
+                    </tr>
+                    <tr>
+                        <td><code>src</code> (app)</td>
+                        <td>Web app, tutorials, built-in songs</td>
+                        <td class="r">17,719</td>
+                        <td class="r">51</td>
+                        <td class="r">0.00</td>
+                    </tr>
+                    <tr>
+                        <td><code>klangblocks</code></td>
+                        <td>Visual block editor</td>
+                        <td class="r">5,590</td>
+                        <td class="r">3,533</td>
+                        <td class="r">0.63</td>
+                    </tr>
+                    <tr>
+                        <td><code>tones</code></td>
+                        <td>Music theory (tonal.js port, MIT)</td>
+                        <td class="r">5,386</td>
+                        <td class="r">4,089</td>
+                        <td class="r">0.76</td>
+                    </tr>
+                    <tr>
+                        <td><code>audio_bridge</code></td>
+                        <td>Wire contracts + IPC</td>
+                        <td class="r">3,777</td>
+                        <td class="r">526</td>
+                        <td class="r">0.14</td>
+                    </tr>
+                    <tr>
+                        <td><code>klangscript-ksp</code></td>
+                        <td>Codegen: stdlib registration</td>
+                        <td class="r">2,712</td>
+                        <td class="r">228</td>
+                        <td class="r">0.08</td>
+                    </tr>
+                    <tr>
+                        <td><code>klang</code></td>
+                        <td>Playback orchestration</td>
+                        <td class="r">2,585</td>
+                        <td class="r">676</td>
+                        <td class="r">0.26</td>
+                    </tr>
+                    <tr>
+                        <td><code>audio_fe</code></td>
+                        <td>Sample loading + decoding</td>
+                        <td class="r">1,712</td>
+                        <td class="r">355</td>
+                        <td class="r">0.21</td>
+                    </tr>
+                    <tr>
+                        <td><code>klangscript-ui</code></td>
+                        <td>CodeMirror editor integration</td>
+                        <td class="r">1,677</td>
+                        <td class="r">0</td>
+                        <td class="r">—</td>
+                    </tr>
+                    <tr>
+                        <td><code>klangjs</code></td>
+                        <td>External JS declarations</td>
+                        <td class="r">1,437</td>
+                        <td class="r">0</td>
+                        <td class="r">—</td>
+                    </tr>
+                    <tr>
+                        <td><code>klangui</code></td>
+                        <td>Shared UI components</td>
+                        <td class="r">1,389</td>
+                        <td class="r">0</td>
+                        <td class="r">—</td>
+                    </tr>
+                    <tr>
+                        <td><code>common</code></td>
+                        <td>Shared utilities</td>
+                        <td class="r">1,191</td>
+                        <td class="r">1,230</td>
+                        <td class="r">1.03</td>
+                    </tr>
+                    <tr>
+                        <td><code>audio_benchmark</code></td>
+                        <td>Perf harness (RTF, per-block)</td>
+                        <td class="r">1,031</td>
+                        <td class="r">0</td>
+                        <td class="r">—</td>
+                    </tr>
+                    <tr>
+                        <td><code>audio-wire-codec-ksp</code></td>
+                        <td>Codegen: worklet wire codec</td>
+                        <td class="r">411</td>
+                        <td class="r">0</td>
+                        <td class="r">—</td>
+                    </tr>
+                    <tr>
+                        <td><code>audio_jsworklet</code></td>
+                        <td>AudioWorklet entry point</td>
+                        <td class="r">215</td>
+                        <td class="r">0</td>
+                        <td class="r">—</td>
+                    </tr>
+                    <tr>
+                        <td><code>klangscript-annotations</code></td>
+                        <td>Binding annotations</td>
+                        <td class="r">153</td>
+                        <td class="r">0</td>
+                        <td class="r">—</td>
+                    </tr>
+                    <tr>
+                        <td><code>klang-notebook</code></td>
+                        <td>Notebook cell execution</td>
+                        <td class="r">29</td>
+                        <td class="r">0</td>
+                        <td class="r">—</td>
+                    </tr>
+                    <tr>
+                        <td><b>Total</b></td>
+                        <td></td>
+                        <td class="r"><b>128,030</b></td>
+                        <td class="r"><b>100,590</b></td>
+                        <td class="r"><b>0.79</b></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>
+                The distribution is the point. Nearly 90% of all test code sits on the three modules where
+                behaviour is subtle and regressions are silent — the pattern language, the scripting
+                language, and the DSP. The UI shells, the KSP processors and the worklet glue carry few or
+                no direct tests: they are exercised through what they generate and through the round-trip
+                and golden suites that sit above them. <code>src</code> is the app itself — pages, 38
+                tutorials, 14 built-in songs — content more than machinery.
+            </p>
+        </div>
+    </section>
+
+    <!-- ============================ APPENDIX B ============================ -->
+    <div class="part" id="appendixB">
+        <span class="part-no">Appendix B</span>
+        <h2>Credits and lineage</h2>
+    </div>
+
+    <section id="appB">
+        <div class="rail"><span class="num">B</span><span class="tag">Credits</span></div>
+        <div class="body">
+            <h3>What this stands on</h3>
+
+            <p>
+                §10 proposes credits as protocol — an attribution graph generated from imports, honest by
+                construction. This project already keeps the habit by hand. What follows is
+                <code>CREDITS.MD</code>, condensed; every layer of Klang has an ancestry, and it is a
+                pleasure to name it.
+            </p>
+
+            <div class="tablewrap">
+                <table>
+                    <tbody>
+                    <tr class="grp">
+                        <td colspan="2">The lineage</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://tidalcycles.org">Tidal Cycles</a> — Alex McLean</td>
+                        <td>The Haskell live-coding environment that pioneered the cyclic pattern language at the heart
+                            of all of this
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://strudel.cc">Strudel</a></td>
+                        <td>The JavaScript reimagining of Tidal. Klang exists because of Strudel — its open code, open
+                            samples and documentation were the way in. Lineage: Tidal → Strudel → Sprudel
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://www.youtube.com/@Switch-Angel">Switch Angel</a></td>
+                        <td>The YouTube short of a Strudel session that sparked the whole project — and most of the
+                            default drum kit's samples (uzu-drumkit): the kicks, snares and hats you hear first are hers
+                        </td>
+                    </tr>
+
+                    <tr class="grp">
+                        <td colspan="2">Filters &amp; DSP</td>
+                    </tr>
+                    <tr>
+                        <td>Vadim Zavalishin</td>
+                        <td><em>The Art of VA Filter Design</em> — the zero-delay-feedback (TPT) state-variable filter
+                            behind lowpass / highpass / bandpass / notch
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Andrew Simper — Cytomic</td>
+                        <td>The canonical trapezoidal-integrator SVF formulation the implementation follows</td>
+                    </tr>
+                    <tr>
+                        <td>Vadim Filatov — Obxd</td>
+                        <td>The diode-pair resonance-saturation idea that warms the filters when driven</td>
+                    </tr>
+                    <tr>
+                        <td>Jezar at Dreampoint</td>
+                        <td>Freeverb — the reverb architecture (public domain)</td>
+                    </tr>
+                    <tr>
+                        <td>Karplus &amp; Strong</td>
+                        <td>Plucked-string synthesis (<code>pluck</code>, <code>superpluck</code>)</td>
+                    </tr>
+                    <tr>
+                        <td>Välimäki et&nbsp;al.</td>
+                        <td>PolyBLEP band-limited oscillator anti-aliasing</td>
+                    </tr>
+                    <tr>
+                        <td>Adam Szabo</td>
+                        <td><em>How to Emulate the Super Saw</em> — the JP-8000 analysis behind the super-oscillators
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://signalsmith-audio.co.uk/writing/2022/limiter/">Geraint Luff</a> —
+                            Signalsmith
+                        </td>
+                        <td>The lookahead-limiter construction, and the insight that the smoothing must fit inside the
+                            lookahead budget
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Giannoulis, Massberg &amp; Reiss</td>
+                        <td><em>Digital Dynamic Range Compressor Design</em> (JAES 2012) — the compressor's feed-forward
+                            topology
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Ken Perlin · Bjorklund · musicdsp.org</td>
+                        <td>Perlin noise, Euclidean rhythms, and the public-domain "27/9" fast-tanh in the soft
+                            clipper
+                        </td>
+                    </tr>
+
+                    <tr class="grp">
+                        <td colspan="2">Hardware inspirations</td>
+                    </tr>
+                    <tr>
+                        <td>Roland JP-8000 (1997)</td>
+                        <td>The synthesizer that introduced the Super Saw — seven sawtooth oscillators, one centre and
+                            six detuned, in a single voice. The sound that defined trance, and the reason a <code>supersaw</code>
+                            lives in every live-coding environment today. Klang's super-oscillators chase that sound, by
+                            way of Szabo's analysis above; the implementation is its own
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Roland TR-808 &amp; TR-909</td>
+                        <td>The drum machines whose voices echo through the bundled sample banks — <code>bank("RolandTR808")</code>
+                        </td>
+                    </tr>
+
+                    <tr class="grp">
+                        <td colspan="2">Acoustics — the body-resonator landmarks</td>
+                    </tr>
+                    <tr>
+                        <td>Fletcher &amp; Rossing · Benade · Sundberg</td>
+                        <td><em>The Physics of Musical Instruments</em>, <em>Fundamentals of Musical Acoustics</em>,
+                            <em>The Science of the Singing Voice</em> — the resonance landmarks behind the wood, violin,
+                            bell, brass and croon materials. Everything beyond the landmarks is sparse fill, tuned by
+                            ear
+                        </td>
+                    </tr>
+
+                    <tr class="grp">
+                        <td colspan="2">Music theory &amp; samples</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://github.com/tonaljs/tonal">Tonal.js</a> — danigb</td>
+                        <td>The music-theory library ported to Kotlin as <code>tones</code>, kept MIT to match upstream
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Felix Roos</td>
+                        <td>chord-voicings (the voicing dictionaries) and dough-samples (curation and hosting of the
+                            bundled sample sets)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>The sample commons</td>
+                        <td>TidalCycles Dirt-Samples · uzu-drumkit · Tidal Drum Machines · VCSL (Versilian, CC0) ·
+                            todepond/samples (Lu Wilson) · WebAudioFont (Sergey Surikov)
+                        </td>
+                    </tr>
+
+                    <tr class="grp">
+                        <td colspan="2">Platform &amp; tools</td>
+                    </tr>
+                    <tr>
+                        <td>The modern browser</td>
+                        <td>Web Audio API, AudioWorklet, Canvas, Web Workers — none of this is possible without what
+                            browsers have become
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>CodeMirror 6 &amp; Lezer</td>
+                        <td>The editor at the heart of the live-coding experience</td>
+                    </tr>
+                    <tr>
+                        <td>Kotlin &amp; friends</td>
+                        <td>Kotlin Multiplatform, KSP, Coroutines, Serialization, Ktor, Gradle, Kotest — the
+                            foundation
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Kraft &amp; Ultra — PeekAndPoke</td>
+                        <td>The project's own open-source UI framework and Kotlin foundations, which the entire
+                            interface is built with
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>PixiJS &amp; Three.js</td>
+                        <td>Live playback highlights in the editor; the animated Motör background</td>
+                    </tr>
+
+                    <tr class="grp">
+                        <td colspan="2">AI assistance</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://claude.ai">Claude</a> — Anthropic</td>
+                        <td>A significant amount of Klang's code was written together with Claude. In §10's vocabulary
+                            this codebase is proudly <em>co-created</em> — declared here in exactly the spirit the
+                            manifest field intends
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <footer class="colophon-end">
+        <p>
+            <b>Klang Audio Motör</b> — Copyright © 2025–2026 The Klang Audio Motör Authors.<br/>
+            Licensed under the GNU Affero General Public License v3. The <code>tones</code> module: MIT.<br/>
+            Built in Kotlin Multiplatform. Written August 2026, at pre-alpha.
+        </p>
+    </footer>
+
+</div>
+
+</body>
+</html>

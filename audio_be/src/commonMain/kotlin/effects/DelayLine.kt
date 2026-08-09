@@ -70,8 +70,22 @@ class DelayLine(
         }
 
     /** Feedback amount. Setter silently ignores non-finite values. Values ≥ 1.0
-     *  are unstable but bounded by [ClippingFuncs.softCap] in the feedback path. */
+     *  self-oscillate, bounded by [feedbackCap] in the feedback path. */
     var feedback: Double = feedback
+        set(value) {
+            if (!value.isFinite()) return
+            field = value
+        }
+
+    /**
+     * Ceiling the feedback path saturates toward ([ClippingFuncs.softCapTo]).
+     *
+     * The engine is raw: any [feedback] is allowed, including ≥ 1.0, which self-oscillates. This
+     * decides *how loud* that runaway settles rather than whether it is permitted — and keeps the
+     * ring bounded so a finite input can never produce a non-finite output. Default 1.0 is
+     * bit-identical to the previous fixed behaviour. Setter silently ignores non-finite values.
+     */
+    var feedbackCap: Double = 1.0
         set(value) {
             if (!value.isFinite()) return
             field = value
@@ -116,18 +130,23 @@ class DelayLine(
         val delayInt = delaySamples.toInt()
         val alpha = delaySamples - delayInt
         val fb = feedback
+        // Sanitised once per block, not per sample. `softCapTo`'s branches are loop-invariant here,
+        // and this file's own PERF note records that a previously added per-sample check cost
+        // ~+33% JVM / +30% JS at the rate this path runs.
+        val rawCap = feedbackCap
+        val cap = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
 
         // Split loop at the ring-buffer wrap boundary so the inner loop has no
         // 'if (pos >= bufferSize)' check.
         val firstChunkLen = min(length, bufferSize - writePos)
 
-        processInternal(buffer.left, input.left, output.left, 0, firstChunkLen, writePos, delayInt, alpha, fb)
-        processInternal(buffer.right, input.right, output.right, 0, firstChunkLen, writePos, delayInt, alpha, fb)
+        processInternal(buffer.left, input.left, output.left, 0, firstChunkLen, writePos, delayInt, alpha, fb, cap)
+        processInternal(buffer.right, input.right, output.right, 0, firstChunkLen, writePos, delayInt, alpha, fb, cap)
 
         if (firstChunkLen < length) {
             val secondChunkLen = length - firstChunkLen
-            processInternal(buffer.left, input.left, output.left, firstChunkLen, secondChunkLen, 0, delayInt, alpha, fb)
-            processInternal(buffer.right, input.right, output.right, firstChunkLen, secondChunkLen, 0, delayInt, alpha, fb)
+            processInternal(buffer.left, input.left, output.left, firstChunkLen, secondChunkLen, 0, delayInt, alpha, fb, cap)
+            processInternal(buffer.right, input.right, output.right, firstChunkLen, secondChunkLen, 0, delayInt, alpha, fb, cap)
         }
 
         writePos = (writePos + length) % bufferSize
@@ -143,6 +162,7 @@ class DelayLine(
         delayInt: Int,
         alpha: Double,
         fb: Double,
+        cap: Double,
     ) {
         var pos = startWritePos
 
@@ -174,7 +194,13 @@ class DelayLine(
             //         here; that cost ~+33% JVM / +30% JS at the rate this path
             //         runs (every delay sample × stereo). Removed 2026-05-22.
             val newSample = input[inputIndex] + (delayedSignal * fb)
-            buffer[pos] = ClippingFuncs.softCap(newSample)
+            // cap is pre-sanitised (finite, > 0) so this reduces to the scaled softCap; at the
+            // default 1.0 it is the exact pre-change `softCap(newSample)`.
+            buffer[pos] = if (cap == 1.0) {
+                ClippingFuncs.softCap(newSample)
+            } else {
+                cap * ClippingFuncs.softCap(newSample / cap)
+            }
 
             // --- 3. Wet output, additive. Caller owns the dry mix.
             output[inputIndex] = output[inputIndex] + delayedSignal

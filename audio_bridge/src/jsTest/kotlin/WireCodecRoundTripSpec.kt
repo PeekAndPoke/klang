@@ -10,11 +10,13 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Feedback
+import io.peekandpoke.klang.audio_bridge.wire.decode_MasterDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_PipelineDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
+import io.peekandpoke.klang.audio_bridge.wire.encode_MasterDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_PipelineDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
@@ -40,6 +42,31 @@ class WireCodecRoundTripSpec : StringSpec({
                 )
             ),
         ).forEach { decode_PipelineDsl(encode_PipelineDsl(it)) shouldBe it }
+    }
+
+    "MasterDsl round-trips (sealed MasterStageDsl: gain / limiter / reverb / delay)" {
+        listOf(
+            MasterDsl.default,
+            MasterDsl.of(MasterStageDsl.Gain(gain = 2.5)),
+            MasterDsl.of(
+                MasterStageDsl.Gain(gain = 1.8),
+                // every reverb field set, including both nullable overrides + the ceiling
+                MasterStageDsl.Reverb(
+                    wet = 0.4, roomSize = 8.0, damp = 0.3,
+                    roomFade = 0.12, roomLp = 9000.0,
+                ),
+                // ...and the nullable branch: overrides absent
+                MasterStageDsl.Reverb(wet = 0.4, roomSize = 8.0),
+                MasterStageDsl.Delay(wet = 0.2, timeSeconds = 0.375, feedback = 0.45, cap = 3.0),
+                MasterStageDsl.Limiter(
+                    thresholdDb = -0.5, ratio = 12.0, kneeDb = 1.0,
+                    attackSeconds = 0.002, releaseSeconds = 0.25,
+                    // Non-default on purpose: a field left at its default round-trips even if the
+                    // codec drops it entirely, which is why every field here is set explicitly.
+                    lookaheadSeconds = 0.003,
+                ),
+            ),
+        ).forEach { decode_MasterDsl(encode_MasterDsl(it)) shouldBe it }
     }
 
     "SampleRequest round-trips (scalars + nulls)" {
@@ -113,9 +140,25 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Cmd.ScheduleVoices("pb", listOf(voice, voice)),
             KlangCommLink.Cmd.ReplaceVoices("pb", listOf(voice), afterTimeSec = 2.0),
             KlangCommLink.Cmd.RegisterIgnitor("pb", "mysynth", dsl),
+            KlangCommLink.Cmd.RegisterMaster("pb", "master-0", MasterDsl.of(MasterStageDsl.Gain(2.0))),
             KlangCommLink.Cmd.Sample.NotFound(SampleRequest("b", "s", 1, "c3")),
         )
         cases.forEach { decode_KlangCommLink_Cmd(encode_KlangCommLink_Cmd(it)) shouldBe it }
+    }
+
+    "ScheduledVoice round-trips the master reference + control flag" {
+        // If `control` were dropped by the codec, every master(...) carrier would decode as an
+        // audible default-oscillator voice — once per cycle, forever. Guard both directions.
+        val control = ScheduledVoice(
+            "pb", VoiceData.empty.copy(master = "master-7", control = true), 0.0, 1.0, 0.0,
+        )
+        val sounding = ScheduledVoice(
+            "pb", VoiceData.empty.copy(note = "c3", sound = "sine", master = "master-7"), 0.0, 1.0, 0.0,
+        )
+
+        listOf(control, sounding).forEach {
+            decode_ScheduledVoice(encode_ScheduledVoice(it)) shouldBe it
+        }
     }
 
     "Cmd.Sample.Chunk round-trips its DoubleArray (compared by content)" {

@@ -328,7 +328,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         bpattack = b + 61; bpdecay = b + 62; bpsustain = b + 63; bprelease = b + 64; bpenv = b + 65
         nfattack = b + 66; nfdecay = b + 67; nfsustain = b + 68; nfrelease = b + 69; nfenv = b + 70
         cylinder = seed + 71; pan = b + 72
-        delay = b + 73; delayTime = b + 74; delayFeedback = b + 75
+        delay = b + 73; delayTime = b + 74; delayFeedback = b + 75; delayCap = b + 175
         room = b + 76; roomSize = b + 77; roomFade = b + 78; roomLp = b + 79; roomDim = b + 80
         iResponse = "ir$seed"
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84

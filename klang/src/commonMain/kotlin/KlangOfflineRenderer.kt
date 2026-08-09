@@ -5,10 +5,12 @@
 
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
+import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -25,7 +27,12 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
  */
 class KlangOfflineRenderer(
     private val sampleRate: Int = 48_000,
-    private val blockFrames: Int = 512,
+    /**
+     * Must stay at [AudioBackendContext.RENDER_QUANTUM_FRAMES] for the render to match live
+     * playback — block size drives the analog-drift rate and the filter smoothing granularity,
+     * so a "faster" larger block is a different sound, not just a faster render.
+     */
+    private val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) {
     data class Result(
         val durationSec: Double,
@@ -65,6 +72,7 @@ class KlangOfflineRenderer(
         )
         val ignitorRegistry = renderer.ignitorRegistry
         val pipelineRegistry = renderer.pipelineRegistry
+        val masterRegistry = renderer.masterRegistry
         val voiceScheduler = renderer.voices
 
         // Register this render's custom ignitors on top of the built-in defaults.
@@ -107,6 +115,12 @@ class KlangOfflineRenderer(
             .map { it.pipeline }
             .filterIsInstance<PipelineValue.Dsl>()
             .forEach { pipelineRegistry.register(it.pipeline.uniqueId(), it.pipeline) }
+
+        // Same for inline masters — so an offline render is as faithful as live playback.
+        rawEvents.asSequence()
+            .map { it.master }
+            .filterIsInstance<MasterValue.Dsl>()
+            .forEach { masterRegistry.register(it.master.uniqueId(), it.master) }
 
         val events = rawEvents.map { CachedEvent(it.startCycles, it.durationCycles, it.toVoiceData()) }
 
@@ -158,7 +172,10 @@ class KlangOfflineRenderer(
         // 5. Calculate total frames
         val musicalDurationSec = cycles.toDouble() * secPerCycle
         val totalDurationSec = musicalDurationSec + tailSec
-        val totalFrames = (totalDurationSec * sampleRate).toInt()
+        // Render past the end by the engine's own output latency, otherwise the last samples are
+        // still sitting in the master limiter's lookahead delay ring when the loop stops. Matters at
+        // tailSec = 0.0, where the truncated tail is the actual music rather than a reverb tail.
+        val totalFrames = (totalDurationSec * sampleRate).toInt() + renderer.latencyFrames
 
         // 6. Render loop
         val outShorts = ShortArray(blockFrames * 2)

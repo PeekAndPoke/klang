@@ -62,7 +62,7 @@ Sprudel code (String)
 | `--cycles`      | `4`          | Number of cycles to render                           |
 | `--rpm`         | `30.0`       | Tempo in RPM (cps = rpm / 60)                        |
 | `--sample-rate` | `48000`      | Sample rate in Hz                                    |
-| `--block-size`  | `512`        | Rendering block size in frames                       |
+| `--block-size`  | `128`        | Rendering block size in frames — **leave it alone**  |
 | `--tail`        | `2.0`        | Extra seconds after last note for reverb/delay tails |
 
 ## How the Offline Renderer Works
@@ -106,8 +106,18 @@ Naming convention: `klang:<category>:<action>` (e.g., `klang:record:wav`)
 `KlangOfflineRenderer` is in `commonMain` — it works on JS too. The `onBlock` callback can feed audio data to a `Blob`,
 `AudioBuffer`, or any JS-side consumer. Only `WavFileWriter` is JVM-specific.
 
+## Block size is a SOUND parameter, not a speed knob
+
+`--block-size` defaults to `AudioBackendContext.RENDER_QUANTUM_FRAMES` (128) — the Web Audio render quantum the browser
+worklet is forced to use. Changing it changes what the render **sounds like**, because parts of the engine tick once per
+block and derive their rate from it: analog drift time constants (`driftUpdateRate = sampleRate / blockFrames`), filter
+cutoff smoothing granularity, and the late-voice drop window. A bigger block renders faster and sounds *different from
+live playback*.
+
+See `docs/tasks-archive/2026-08/20260807-block-size-parity.md`. Leave it at the default unless you are deliberately
+testing this.
+
 ## Limitations (current)
 
-- **Synth voices only** — sample-based sounds (drums etc.) are not yet supported in offline mode
 - **No silence detection** — renders for exactly `(cycles / cps) + tail` seconds, even if audio ends earlier
 - **No progress callback** — the render loop runs to completion without intermediate status updates

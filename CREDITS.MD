@@ -68,6 +68,24 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
   musicdsp.org / KVR community, used in Klang's soft-clipping (`ClippingFunctions.fastTanh`)
 - **Perlin noise** (Ken Perlin) — organic drift and noise textures
 - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
+- **Lookahead limiting** after **[Geraint Luff](https://signalsmith-audio.co.uk/writing/2022/limiter/)**
+  (Signalsmith Audio) — the master limiter's anticipating gain path: a moving minimum of the required gain, smoothed,
+  applied to a delayed signal. Klang's implementation is its own; the construction, and the insight that the smoothing
+  has to fit *inside* the lookahead budget, come from that write-up
+- **Feed-forward dynamics topology** — the compressor's dB-domain peak detector and soft-knee parabolic gain curve
+  follow the standard design described across the DSP literature (Giannoulis, Massberg & Reiss, *"Digital Dynamic Range
+  Compressor Design"*, JAES 2012)
+
+## Hardware Inspirations
+
+The machines whose sounds Klang chases:
+
+- **Roland JP-8000** (1997) — the synthesizer that introduced the **Super Saw**: seven sawtooth oscillators — one
+  centre, six detuned — in a single voice. The sound that defined trance, and the reason a `supersaw` lives in every
+  live-coding environment today. Klang's super-oscillators chase that sound — by way of Adam Szabo's analysis above —
+  while the implementation is its own.
+- **Roland TR-808 & TR-909** — the drum machines whose voices echo through the bundled drum-machine sample banks (see
+  *Samples & Soundfonts*), e.g. `bank("RolandTR808")`.
 
 ## Acoustics & Physical Modeling
 
