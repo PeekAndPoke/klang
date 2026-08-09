@@ -18,7 +18,7 @@ internal val derSchmetterlingSong = Song(
     code = """import * from "stdlib"
 import * from "sprudel"
 
-let feel = 15.0    // 0.0 .. guitar | 100.0 .. rave
+let feel = 20.0    // 0.0 .. guitar | 100.0 .. rave
 
 let supersawHp = (() => {
 
@@ -51,8 +51,8 @@ stack(
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.25).pan(0.35).superimpose(pan(0.65)))
     .mute("<1!32 0!192>").room("0.3:5:0.1").body("violin").bodyMix("0.5")                                                                            
   , // Guitar 1                                                                                                        
-  n(`<[0 [0@4 [11 4] -3] -1 -3 [0 2 4 3] 0 2 <[-1 1 3@2] [[3 4] 6@2 7] [[1 3] 4 3 2] [[6 12 8 5]]>]!4
-      [[4@2 [6 4 2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
+  n(`<[0 [0@4 [4 7] -3] -1 -3 [0 2 4 3] 0 2 <[-1 1 3@2] [[3 4] 6@2 7] [[1 3] 4 3 2] [[6 12 7 5]]>]!4
+      [[4 [4 4 2 0] [4 3 2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
       [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [-5 -6] [-7,-14] [-5 <-1 -4 -4 1>]]>/4`)
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2))  // . solo()
@@ -89,7 +89,7 @@ stack(
   sound("pink!8").orbit(7).gain(0.04).hpf(8000).lpf(13500).lpq(0.5)
     .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05")  // .solo()
   // Master
-  ,master(Master.of(MasterFx.reverb().wet(0.03).damp(0.6).roomSize(8), MasterFx.gain(1.80)))
+  ,master(Master.of(MasterFx.reverb().wet(0.05).damp(0.6).roomSize(8), MasterFx.gain(1.70)))
 ).analog(feel).seed(timeOfDay.mul(10*60*60*24))
 
 
