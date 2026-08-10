@@ -37,9 +37,10 @@ class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Lifecycle & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    val startFrame: Int,
-    val endFrame: Int,
-    private val gateEndFrame: Int,
+    // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
+    val startFrame: Double,
+    val endFrame: Double,
+    private val gateEndFrame: Double,
     val cylinderId: Int,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -104,8 +105,9 @@ class Voice(
 
         val vStart = maxOf(ctx.blockStart, startFrame)
         val vEnd = minOf(blockEnd, endFrame)
-        val offset = vStart - ctx.blockStart
-        val length = vEnd - vStart
+        // Relative to this block / this voice — Int, and everything downstream of here is Int.
+        val offset = (vStart - ctx.blockStart).toInt()
+        val length = (vEnd - vStart).toInt()
 
         // Update per-block state
         blockCtx.audioBuffer = ctx.voiceBuffer
@@ -139,7 +141,8 @@ class Voice(
         val freqModBuffer: DoubleArray,
         val scratchBuffers: ScratchBuffers,
     ) {
-        var blockStart: Int = 0
+        // Absolute backend frame — Double, see RenderClock.cursorFrame.
+        var blockStart: Double = 0.0
     }
 
     class Fm(

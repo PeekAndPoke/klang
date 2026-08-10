@@ -138,7 +138,7 @@ class VoicePipelineTest : StringSpec({
             filterModulators = listOf(modulator),
         )
 
-        val ctx = createContext(blockStart = 100) // At peak of attack
+        val ctx = createContext(blockStart = 100.0) // At peak of attack
         voice.render(ctx)
 
         // Filter should have been modulated
@@ -167,43 +167,43 @@ class VoicePipelineTest : StringSpec({
     }
 
     "voice renders correct number of samples" {
-        val voice = createSynthVoice(startFrame = 0, endFrame = 100)
+        val voice = createSynthVoice(startFrame = 0.0, endFrame = 100.0)
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx)
     }
 
     "voice starting mid-block renders partial buffer" {
-        val voice = createSynthVoice(startFrame = 50, endFrame = 150)
+        val voice = createSynthVoice(startFrame = 50.0, endFrame = 150.0)
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
     }
 
     "voice ending mid-block renders partial buffer" {
-        val voice = createSynthVoice(startFrame = 0, endFrame = 50)
+        val voice = createSynthVoice(startFrame = 0.0, endFrame = 50.0)
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
     }
 
     "voice before startFrame returns true without rendering" {
-        val voice = createSynthVoice(startFrame = 100, endFrame = 200)
+        val voice = createSynthVoice(startFrame = 100.0, endFrame = 200.0)
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
     }
 
     "voice after endFrame returns false" {
-        val voice = createSynthVoice(startFrame = 0, endFrame = 100)
+        val voice = createSynthVoice(startFrame = 0.0, endFrame = 100.0)
 
-        val ctx = createContext(blockStart = 100, blockFrames = 100)
+        val ctx = createContext(blockStart = 100.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe false

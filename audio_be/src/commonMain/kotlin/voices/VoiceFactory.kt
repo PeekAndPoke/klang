@@ -72,7 +72,7 @@ class VoiceFactory(
      */
     fun makeVoice(
         scheduled: ScheduledVoice,
-        nowFrame: Int,
+        nowFrame: Double,
         backendStartTimeSec: Double,
         playbackCtx: PlaybackCtx,
         getSample: (SampleRequest) -> SampleStore.SampleEntry.Complete?,
@@ -83,12 +83,15 @@ class VoiceFactory(
         val relativeStartTime = scheduled.startTime - backendStartTimeSec
         val relativeGateEndTime = scheduled.gateEndTime - backendStartTimeSec
 
-        val startFrame = (relativeStartTime * sampleRate).toInt()
-        val gateEndFrameFromTime = (relativeGateEndTime * sampleRate).toInt()
+        // Absolute backend frames — Double (see RenderClock.cursorFrame). `.toInt()` here would
+        // overflow after ~12.4 h of backend uptime, silently placing every new voice at a nonsense
+        // frame. Durations derived below are relative and stay Int.
+        val startFrame = kotlin.math.floor(relativeStartTime * sampleRate)
+        val gateEndFrameFromTime = kotlin.math.floor(relativeGateEndTime * sampleRate)
 
         // Handle legato (clip) logic
         val clip = data.legato
-        val originalGateDuration = gateEndFrameFromTime - startFrame
+        val originalGateDuration = (gateEndFrameFromTime - startFrame).toInt()
         val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toInt() else originalGateDuration
         val gateEndFrame = startFrame + effectiveGateDuration
 
@@ -248,7 +251,7 @@ class VoiceFactory(
                     resolvedAdsr
                 }
 
-                val voiceDurationFrames = gateEndFrame - startFrame
+                val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
                 val signal = playbackCtx.ignitorRegistry.createExciter(sound, data, freqHz ?: 0.0)
                     ?: return null
 
@@ -329,7 +332,7 @@ class VoiceFactory(
                 // against the block just rendered and first sounds in the next one. Strictly better
                 // than the old code, which hit that worst case on every voice — but not a guarantee.
                 val sampleStartFrame = maxOf(startFrame, nowFrame)
-                val voiceDurationFrames = gateEndFrame - sampleStartFrame
+                val voiceDurationFrames = (gateEndFrame - sampleStartFrame).toInt()
 
                 val signal = SampleIgnitor(
                     pcm = sample.pcm,
@@ -470,8 +473,10 @@ class VoiceFactory(
     private fun buildVoice(
         data: VoiceData,
         resolvedAdsr: AdsrDef.Resolved,
-        startFrame: Int,
-        gateEndFrame: Int,
+        // Absolute backend frames are Double (RenderClock.cursorFrame); the DURATION is relative
+        // to the voice and stays Int.
+        startFrame: Double,
+        gateEndFrame: Double,
         voiceDurationFrames: Int,
         cylinder: Int,
         gain: Double,
@@ -498,7 +503,7 @@ class VoiceFactory(
         vowel: FilterDef.Formant? = null,
     ): Voice {
         val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
-        val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toInt()
+        val endFrame = gateEndFrame + resolvedAdsr.release * sampleRate
         val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
         val voiceEndFrame = voiceDurationFrames + releaseFrames
 

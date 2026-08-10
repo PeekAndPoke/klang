@@ -179,7 +179,9 @@ class KlangOfflineRenderer(
 
         // 6. Render loop
         val outShorts = ShortArray(blockFrames * 2)
-        var currentFrame = 0
+        // Absolute backend frame — Double, see RenderClock.cursorFrame. An offline render is short
+        // enough that Int would do, but the type has to match the live path.
+        var currentFrame = 0.0
 
         while (currentFrame < totalFrames) {
             renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)

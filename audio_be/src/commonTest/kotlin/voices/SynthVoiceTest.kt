@@ -192,12 +192,12 @@ class SynthVoiceTest : StringSpec({
         }
 
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 100,
+            startFrame = 0.0,
+            endFrame = 100.0,
             signal = trackingSignal,
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx)
 
         receivedOffset shouldBe 0
@@ -216,12 +216,12 @@ class SynthVoiceTest : StringSpec({
         }
 
         val voice = createSynthVoice(
-            startFrame = 50,
-            endFrame = 150,
+            startFrame = 50.0,
+            endFrame = 150.0,
             signal = trackingSignal,
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx)
 
         receivedLength shouldBe 50
@@ -242,9 +242,9 @@ class SynthVoiceTest : StringSpec({
             signal = trackingSignal,
         )
 
-        voice.render(createContext(blockStart = 0, blockFrames = 100))
-        voice.render(createContext(blockStart = 100, blockFrames = 100))
-        voice.render(createContext(blockStart = 200, blockFrames = 100))
+        voice.render(createContext(blockStart = 0.0, blockFrames = 100))
+        voice.render(createContext(blockStart = 100.0, blockFrames = 100))
+        voice.render(createContext(blockStart = 200.0, blockFrames = 100))
 
         elapsedFrames.size shouldBe 3
         elapsedFrames[0] shouldBe 0

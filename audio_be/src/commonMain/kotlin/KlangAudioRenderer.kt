@@ -55,7 +55,10 @@ class KlangAudioRenderer private constructor(
         master.reset()
     }
 
-    fun renderBlock(cursorFrame: Int, out: ShortArray) {
+    // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
+    // grows for the life of the backend and overflows Int after ~12.4 h. Exact below 2^53
+    // (~5,950 years at 48 kHz). See RenderClock.cursorFrame. Per-sample offsets stay Int.
+    fun renderBlock(cursorFrame: Double, out: ShortArray) {
         clock.cursorFrame = cursorFrame
         mix.clear()
         engine.renderInto(mix, cursorFrame)

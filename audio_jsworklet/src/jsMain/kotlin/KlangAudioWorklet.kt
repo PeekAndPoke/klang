@@ -64,17 +64,30 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         fun handle(cmd: KlangCommLink.Cmd) = dispatcher.handle(cmd)
 
         /** Render one block via the shared dispatcher. */
-        fun renderBlock(cursorFrame: Int, out: ShortArray) = dispatcher.renderBlock(cursorFrame, out)
+        fun renderBlock(cursorFrame: Double, out: ShortArray) = dispatcher.renderBlock(cursorFrame, out)
 
         // Buffers
         val renderBuffer = ShortArray(blockFrames * 2) // 16-bit Stereo PCM (2 shorts per frame)
 
-        // Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper object),
-        // causing heap allocation on every arithmetic operation. Int maps directly to a JS number.
-        // At 48kHz, Int overflows after ~12.4 hours — sufficient for any continuous session.
-        // On overflow, cursorFrame wraps to Int.MIN_VALUE causing silent audio stop (no crash).
-        // For long-running sessions, consider resetting cursorFrame when no voices are active.
-        var cursorFrame = 0
+        // Double, not Int and not Long.
+        //
+        // This counter advances every block for the life of the worklet — whether or not anything
+        // is playing. As an Int it overflowed after ~12.4 h at 48 kHz (13.5 h at 44.1) and audio
+        // silently stopped: no crash, no error, nothing in the console. A browser tab left open
+        // overnight was enough. Confirmed by test 2026-08-07 (0/60 blocks produced audio near the
+        // boundary), and the degradation actually starts BEFORE the wrap, because scheduling
+        // round-trips through seconds and the seconds→frames conversion overflows first.
+        //
+        // Long would fix the range but is emulated on Kotlin/JS and allocates on every operation —
+        // which is why the house rule bans it in audio paths. Double is a native JS number, holds
+        // integers EXACTLY to 2^53 (~5,950 years at 48 kHz), and drifts by nothing: only +, - and
+        // compare are ever applied, and those are exact below 2^53 (verified bit-exact over 10 M
+        // accumulations). On Kotlin/JS an Int is already a JS number carrying a truncation on every
+        // operation, so this is if anything cheaper than what it replaces.
+        //
+        // ⚠️ ABSOLUTE frames are Double; per-sample offsets stay Int. The conversion happens once
+        // per block per voice — see RenderClock.cursorFrame.
+        var cursorFrame = 0.0
 
         var isPlaying = true
     }

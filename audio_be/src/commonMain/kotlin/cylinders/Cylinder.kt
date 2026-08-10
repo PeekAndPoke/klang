@@ -113,7 +113,8 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
      * orbit ownership [lease] to tell voices apart across blocks (production passes it via
      * `Cylinders.getOrInit`). Only the OWNER voice's settings are applied; other voices are ignored.
      */
-    fun updateFromVoice(voice: Voice, blockStart: Int) {
+    // blockStart is an ABSOLUTE backend frame — Double, see RenderClock.cursorFrame.
+    fun updateFromVoice(voice: Voice, blockStart: Double) {
         isActive = true
 
         if (lease.claim(voice.id, blockStart, blockFrames)) {

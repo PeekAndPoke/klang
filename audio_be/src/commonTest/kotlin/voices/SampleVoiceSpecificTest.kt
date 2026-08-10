@@ -416,12 +416,12 @@ class SampleVoiceSpecificTest : StringSpec({
         )
 
         // First render: frames 0-100
-        val ctx1 = createContext(blockStart = 0, blockFrames = 100)
+        val ctx1 = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx1)
         val firstValue = ctx1.voiceBuffer[99]
 
         // Second render: frames 100-200
-        val ctx2 = createContext(blockStart = 100, blockFrames = 100)
+        val ctx2 = createContext(blockStart = 100.0, blockFrames = 100)
         voice.render(ctx2)
         val secondValue = ctx2.voiceBuffer[0]
 

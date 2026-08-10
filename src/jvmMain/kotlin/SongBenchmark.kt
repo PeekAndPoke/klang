@@ -228,7 +228,7 @@ class SongBenchmark(
             .coerceAtMost(numBlocks - 1)
 
         if (capture) {
-            var frame = 0
+            var frame = 0.0
             for (b in 0 until numBlocks) {
                 val t = TimeSource.Monotonic.markNow()
                 renderer.renderBlock(cursorFrame = frame, out = out)
@@ -239,7 +239,7 @@ class SongBenchmark(
                 frame += blockFrames
             }
         } else {
-            var frame = 0
+            var frame = 0.0
             for (b in 0 until numBlocks) {
                 renderer.renderBlock(cursorFrame = frame, out = out)
                 frame += blockFrames

@@ -51,7 +51,7 @@ class FilterModulationTest : StringSpec({
     }
 
     // Helper to create a dummy context
-    fun createCtx(blockStart: Int = 0): Voice.RenderContext {
+    fun createCtx(blockStart: Double = 0.0): Voice.RenderContext {
         return Voice.RenderContext(
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
@@ -98,9 +98,9 @@ class FilterModulationTest : StringSpec({
         val spyFilter = SpyFilter()
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 1000.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -146,9 +146,9 @@ class FilterModulationTest : StringSpec({
 
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 1000.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -169,7 +169,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Render at the attack peak (frame 100)
-        val ctx = createCtx(blockStart = 100)
+        val ctx = createCtx(blockStart = 100.0)
         voice.render(ctx)
 
         // At peak of attack (envelope = 1.0):
@@ -197,9 +197,9 @@ class FilterModulationTest : StringSpec({
 
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 2000,
-            gateEndFrame = 2000,
+            startFrame = 0.0,
+            endFrame = 2000.0,
+            gateEndFrame = 2000.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -220,7 +220,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Render at start (frame 0)
-        val ctx = createCtx(blockStart = 0)
+        val ctx = createCtx(blockStart = 0.0)
         voice.render(ctx)
 
         // At start of attack (envelope = 0.0):
@@ -248,9 +248,9 @@ class FilterModulationTest : StringSpec({
 
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 500,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 500.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -271,7 +271,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Render at sustain phase (frame 300 = after attack 100 + decay 100)
-        val ctx = createCtx(blockStart = 300)
+        val ctx = createCtx(blockStart = 300.0)
         voice.render(ctx)
 
         // At sustain (envelope = 0.5):
@@ -312,9 +312,9 @@ class FilterModulationTest : StringSpec({
 
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 1000.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -335,7 +335,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Render at attack peak (frame 100)
-        val ctx = createCtx(blockStart = 100)
+        val ctx = createCtx(blockStart = 100.0)
         voice.render(ctx)
 
         // Filter 1: envelope = 1.0, depth = 1.0
@@ -368,9 +368,9 @@ class FilterModulationTest : StringSpec({
         val voice = createSampleVoice(
             sample = sample,
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 1000.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -390,7 +390,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Render at attack peak
-        val ctx = createCtx(blockStart = 100)
+        val ctx = createCtx(blockStart = 100.0)
         voice.render(ctx)
 
         // At peak (envelope = 1.0):
@@ -410,9 +410,9 @@ class FilterModulationTest : StringSpec({
 
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 1000.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -432,7 +432,7 @@ class FilterModulationTest : StringSpec({
             freqHz = 440.0,
         )
 
-        val ctx = createCtx(blockStart = 0)
+        val ctx = createCtx(blockStart = 0.0)
         voice.render(ctx)
 
         // Should be called exactly once per render (control rate)
@@ -464,9 +464,9 @@ class FilterModulationTest : StringSpec({
         // Voice starts at frame 100
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 100,
-            endFrame = 1000,
-            gateEndFrame = 1000,
+            startFrame = 100.0,
+            endFrame = 1000.0,
+            gateEndFrame = 1000.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -488,7 +488,7 @@ class FilterModulationTest : StringSpec({
 
         // Render at frame 50 (block starts before voice starts)
         // Voice starts at frame 100, so it's at the beginning of its envelope
-        val ctx = createCtx(blockStart = 50)
+        val ctx = createCtx(blockStart = 50.0)
         voice.render(ctx)
 
         // Envelope should be at start (position 0):
@@ -519,9 +519,9 @@ class FilterModulationTest : StringSpec({
 
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 300,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 300.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -542,7 +542,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Render at start of release (frame 300)
-        val ctx1 = createCtx(blockStart = 300)
+        val ctx1 = createCtx(blockStart = 300.0)
         voice.render(ctx1)
 
         // At start of release: envelope = sustainLevel = 0.5
@@ -551,7 +551,7 @@ class FilterModulationTest : StringSpec({
 
         // Render halfway through release (frame 400 = gateEnd + 100 of 200 release)
         spyFilter.reset()
-        val ctx2 = createCtx(blockStart = 400)
+        val ctx2 = createCtx(blockStart = 400.0)
         voice.render(ctx2)
 
         // Halfway through release: envelope = 0.5 - (100/200 * 0.5) = 0.25
@@ -560,7 +560,7 @@ class FilterModulationTest : StringSpec({
 
         // Render at end of release (frame 500 = gateEnd + 200 = full release done)
         spyFilter.reset()
-        val ctx3 = createCtx(blockStart = 500)
+        val ctx3 = createCtx(blockStart = 500.0)
         voice.render(ctx3)
 
         // End of release: envelope = 0.0, cutoff returns to base
@@ -572,7 +572,7 @@ class FilterModulationTest : StringSpec({
         // voice lifetime" rule — once the envelope has finished, the cutoff is
         // simply held at base for the rest of the voice's life.
         spyFilter.reset()
-        val ctx4 = createCtx(blockStart = 700)
+        val ctx4 = createCtx(blockStart = 700.0)
         voice.render(ctx4)
         spyFilter.currentCutoff shouldBe (1000.0 plusOrMinus 1.0)
     }
@@ -602,9 +602,9 @@ class FilterModulationTest : StringSpec({
         // Voice has NO amp release: endFrame == gateEndFrame.
         val voice = createSynthVoice(
             cylinderId = 0,
-            startFrame = 0,
-            endFrame = 300,
-            gateEndFrame = 300,
+            startFrame = 0.0,
+            endFrame = 300.0,
+            gateEndFrame = 300.0,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
@@ -625,7 +625,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Render up to gateEndFrame — modulator is updated.
-        voice.render(createCtx(blockStart = 200))
+        voice.render(createCtx(blockStart = 200.0))
         spyFilter.cutoffHistory.size shouldBe 1
 
         // Render past endFrame — voice is inactive. The modulator should NOT
@@ -633,10 +633,10 @@ class FilterModulationTest : StringSpec({
         // a future change extends voice lifetime to cover modulator releases,
         // this test will fail and the contract above must be revisited.
         spyFilter.reset()
-        voice.render(createCtx(blockStart = 500))
+        voice.render(createCtx(blockStart = 500.0))
         spyFilter.cutoffHistory.size shouldBe 0
 
-        voice.render(createCtx(blockStart = 4500))
+        voice.render(createCtx(blockStart = 4500.0))
         spyFilter.cutoffHistory.size shouldBe 0
     }
 })

@@ -1199,9 +1199,9 @@ class ExcitersTest : StringSpec({
             freqModBuffer = DoubleArray(defaultBlockFrames),
             scratchBuffers = ScratchBuffers(defaultBlockFrames),
             sampleRate = sampleRate,
-            startFrame = 0,
-            endFrame = defaultBlockFrames,
-            gateEndFrame = defaultBlockFrames,
+            startFrame = 0.0,
+            endFrame = defaultBlockFrames.toDouble(),
+            gateEndFrame = defaultBlockFrames.toDouble(),
             freqHz = 440.0,
             signal = signal,
             signalCtx = IgniteContext(
@@ -1216,13 +1216,13 @@ class ExcitersTest : StringSpec({
                 blockFrames = defaultBlockFrames, sampleRate = sampleRate,
             ),
         ).apply {
-            offset = 0; length = defaultBlockFrames; blockStart = 0
+            offset = 0; length = defaultBlockFrames; blockStart = 0.0
         }
         val renderer = io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer(
             signal = signal,
             signalCtx = ctx.signalCtx,
             freqHz = 440.0,
-            startFrame = 0,
+            startFrame = 0.0,
         )
         renderer.render(ctx)
         ctx.audioBuffer.peakAmplitude() shouldBeLessThan 1.05

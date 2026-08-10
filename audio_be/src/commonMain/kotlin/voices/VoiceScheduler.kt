@@ -65,7 +65,8 @@ class VoiceScheduler(
     private class SoloSourceTracker(val rampDurationSec: Double, val sampleRate: Int) {
         private data class SourceState(
             val sourceId: String,
-            val cleanupFrame: Int?,
+            // Absolute backend frame — Double, see RenderClock.cursorFrame.
+            val cleanupFrame: Double?,
         )
 
         private val sources = mutableMapOf<String, SourceState>()
@@ -74,12 +75,12 @@ class VoiceScheduler(
         // Entries are (sourceId, newState) pairs to apply after the read-only iteration.
         private val pendingUpdates = mutableListOf<Pair<String, SourceState>>()
 
-        fun update(activeSoloSourceIds: Set<String>, currentFrame: Int): Set<String> {
+        fun update(activeSoloSourceIds: Set<String>, currentFrame: Double): Set<String> {
             // Pass 1: find sources that need a cleanup frame — collect updates without mutating
             pendingUpdates.clear()
             for ((sourceId, state) in sources) {
                 if (sourceId !in activeSoloSourceIds && state.cleanupFrame == null) {
-                    val cleanupFrame = currentFrame + (rampDurationSec * sampleRate).toInt()
+                    val cleanupFrame = currentFrame + rampDurationSec * sampleRate
                     pendingUpdates.add(sourceId to state.copy(cleanupFrame = cleanupFrame))
                 }
             }
@@ -250,7 +251,10 @@ class VoiceScheduler(
         promoteScheduled(cursor, cursor + context.blockFrames)
     }
 
-    fun process(cursorFrame: Int) {
+    // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
+    // grows for the life of the backend and overflows Int after ~12.4 h. Exact below 2^53
+    // (~5,950 years at 48 kHz). See RenderClock.cursorFrame. Per-sample offsets stay Int.
+    fun process(cursorFrame: Double) {
         val blockEnd = cursorFrame + context.blockFrames
 
         // 1. Promote scheduled to active
@@ -330,7 +334,7 @@ class VoiceScheduler(
         }
     }
 
-    private fun promoteScheduled(nowFrame: Int, blockEnd: Int) {
+    private fun promoteScheduled(nowFrame: Double, blockEnd: Double) {
         val clock = context.clock
         val blockEndSec = clock.secAt(blockEnd)
         val nowSec = clock.secAt(nowFrame)

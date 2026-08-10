@@ -43,9 +43,9 @@ class EnvelopeDeclickSpec : StringSpec({
         // Window (412 frames post-gate) is long enough that the fade converges for any
         // reasonable declick time constant (~up to 3ms), so this stays tau-agnostic.
         val voice = VoiceTestHelpers.createSynthVoice(
-            startFrame = 0,
-            endFrame = 512,
-            gateEndFrame = 100,
+            startFrame = 0.0,
+            endFrame = 512.0,
+            gateEndFrame = 100.0,
             blockFrames = 512,
             signal = TestIgnitors.constant,
             envelope = Voice.Envelope(
@@ -59,7 +59,7 @@ class EnvelopeDeclickSpec : StringSpec({
             ),
         )
 
-        val ctx = VoiceTestHelpers.createContext(blockStart = 0, blockFrames = 512)
+        val ctx = VoiceTestHelpers.createContext(blockStart = 0.0, blockFrames = 512)
         voice.render(ctx)
 
         // Sustain at full level before the gate, then a de-clicked fade (not a step).
@@ -72,9 +72,9 @@ class EnvelopeDeclickSpec : StringSpec({
     "de-click also bounds the slew across an exp attack→decay→release voice" {
         // The default-ish curves with the steepest joins; still no single-sample jump.
         val voice = VoiceTestHelpers.createSynthVoice(
-            startFrame = 0,
-            endFrame = 600,
-            gateEndFrame = 400,
+            startFrame = 0.0,
+            endFrame = 600.0,
+            gateEndFrame = 400.0,
             blockFrames = 600,
             signal = TestIgnitors.constant,
             envelope = Voice.Envelope(
@@ -88,7 +88,7 @@ class EnvelopeDeclickSpec : StringSpec({
             ),
         )
 
-        val ctx = VoiceTestHelpers.createContext(blockStart = 0, blockFrames = 600)
+        val ctx = VoiceTestHelpers.createContext(blockStart = 0.0, blockFrames = 600)
         voice.render(ctx)
 
         (maxSlew(ctx.voiceBuffer, 600) < 0.1) shouldBe true

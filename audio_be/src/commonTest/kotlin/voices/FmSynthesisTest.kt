@@ -160,15 +160,15 @@ class FmSynthesisTest : StringSpec({
         )
 
         // Render early block (FM envelope near 0)
-        val ctxEarly = createContext(blockStart = 0, blockFrames = bfLocal)
-        val ctxCleanEarly = createContext(blockStart = 0, blockFrames = bfLocal)
+        val ctxEarly = createContext(blockStart = 0.0, blockFrames = bfLocal)
+        val ctxCleanEarly = createContext(blockStart = 0.0, blockFrames = bfLocal)
         voiceFmEnv.render(ctxEarly)
         voiceClean.render(ctxCleanEarly)
         val diffEarly = diffRms(ctxEarly.voiceBuffer, ctxCleanEarly.voiceBuffer)
 
         // Render late block (FM envelope near 1.0)
-        val ctxLate = createContext(blockStart = 256, blockFrames = bfLocal)
-        val ctxCleanLate = createContext(blockStart = 256, blockFrames = bfLocal)
+        val ctxLate = createContext(blockStart = 256.0, blockFrames = bfLocal)
+        val ctxCleanLate = createContext(blockStart = 256.0, blockFrames = bfLocal)
         voiceFmEnv.render(ctxLate)
         voiceClean.render(ctxCleanLate)
         val diffLate = diffRms(ctxLate.voiceBuffer, ctxCleanLate.voiceBuffer)
@@ -196,8 +196,8 @@ class FmSynthesisTest : StringSpec({
         )
 
         // At decay phase (frame 150), envelope should be between 1.0 and 0.5
-        val ctxFm = createContext(blockStart = 150, blockFrames = bfLocal)
-        val ctxClean = createContext(blockStart = 150, blockFrames = bfLocal)
+        val ctxFm = createContext(blockStart = 150.0, blockFrames = bfLocal)
+        val ctxClean = createContext(blockStart = 150.0, blockFrames = bfLocal)
         voiceFm.render(ctxFm)
         voiceClean.render(ctxClean)
 
@@ -357,9 +357,9 @@ class FmSynthesisTest : StringSpec({
         )
 
         // All at sustain phase (frame 200, well past attack+decay)
-        val ctxSustain = createContext(blockStart = 200, blockFrames = bfLocal)
-        val ctxFull = createContext(blockStart = 200, blockFrames = bfLocal)
-        val ctxClean = createContext(blockStart = 200, blockFrames = bfLocal)
+        val ctxSustain = createContext(blockStart = 200.0, blockFrames = bfLocal)
+        val ctxFull = createContext(blockStart = 200.0, blockFrames = bfLocal)
+        val ctxClean = createContext(blockStart = 200.0, blockFrames = bfLocal)
         voiceSustain.render(ctxSustain)
         voiceFull.render(ctxFull)
         voiceClean.render(ctxClean)
@@ -376,7 +376,7 @@ class FmSynthesisTest : StringSpec({
         val ampEnv = Voice.Envelope(0.0, 0.0, 1.0, 200.0, level = 1.0)
 
         val voiceRelease = createSynthVoice(
-            startFrame = 0, endFrame = 300, gateEndFrame = 100,
+            startFrame = 0.0, endFrame = 300.0, gateEndFrame = 100.0,
             blockFrames = bfLocal,
             freqHz = 440.0,
             signal = Ignitors.sine(),
@@ -387,7 +387,7 @@ class FmSynthesisTest : StringSpec({
             )
         )
         val voiceClean = createSynthVoice(
-            startFrame = 0, endFrame = 300, gateEndFrame = 100,
+            startFrame = 0.0, endFrame = 300.0, gateEndFrame = 100.0,
             blockFrames = bfLocal,
             freqHz = 440.0,
             signal = Ignitors.sine(),
@@ -396,8 +396,8 @@ class FmSynthesisTest : StringSpec({
         )
 
         // During release phase (frame 150 — midway through release)
-        val ctxRelease = createContext(blockStart = 150, blockFrames = bfLocal)
-        val ctxClean = createContext(blockStart = 150, blockFrames = bfLocal)
+        val ctxRelease = createContext(blockStart = 150.0, blockFrames = bfLocal)
+        val ctxClean = createContext(blockStart = 150.0, blockFrames = bfLocal)
         voiceRelease.render(ctxRelease)
         voiceClean.render(ctxClean)
 

@@ -26,13 +26,14 @@ class IgniteRenderer(
     private val signal: Ignitor,
     private val signalCtx: IgniteContext,
     private val freqHz: Double,
-    private val startFrame: Int,
+        // Absolute backend frame — Double, see RenderClock.cursorFrame.
+    private val startFrame: Double,
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
         signalCtx.offset = ctx.offset
         signalCtx.length = ctx.length
-        signalCtx.voiceElapsedFrames = ctx.blockStart - startFrame
+        signalCtx.voiceElapsedFrames = (ctx.blockStart - startFrame).toInt()
         signalCtx.phaseMod = if (ctx.freqModBufferWritten) ctx.freqModBuffer else null
 
         signal.generate(ctx.audioBuffer, freqHz, signalCtx)

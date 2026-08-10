@@ -45,12 +45,14 @@ class BlockContext(
 
     /** Audio sample rate in Hz */
     val sampleRate: Int,
+    // These three are ABSOLUTE backend frames, so Double — see RenderClock.cursorFrame.
+    // (Contrast IgniteContext.gateEndFrame, which is voice-RELATIVE and stays Int.)
     /** Voice start frame (absolute) */
-    val startFrame: Int,
+    val startFrame: Double,
     /** Voice end frame including release (absolute) */
-    val endFrame: Int,
+    val endFrame: Double,
     /** Frame when gate ends / release begins (absolute) */
-    val gateEndFrame: Int,
+    val gateEndFrame: Double,
     /** Base frequency in Hz */
     val freqHz: Double,
 
@@ -81,7 +83,8 @@ class BlockContext(
     var length: Int = 0
 
     /** Current block start frame (absolute) */
-    var blockStart: Int = 0
+    // Absolute backend frame — Double, see RenderClock.cursorFrame. Per-sample offsets stay Int.
+    var blockStart: Double = 0.0
 
     /** Voice render context — set per block by Voice, read by SendRenderer for cylinder routing */
     lateinit var renderContext: Voice.RenderContext

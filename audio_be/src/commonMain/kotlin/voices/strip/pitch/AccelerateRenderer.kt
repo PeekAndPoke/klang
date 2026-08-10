@@ -20,8 +20,9 @@ import kotlin.math.pow
  */
 class AccelerateRenderer(
     private val accelerate: Voice.Accelerate,
-    private val startFrame: Int,
-    private val endFrame: Int,
+    // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
+    private val startFrame: Double,
+    private val endFrame: Double,
 ) : BlockRenderer {
 
     private val totalFrames = (endFrame - startFrame).toDouble()

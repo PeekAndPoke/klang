@@ -28,9 +28,9 @@ fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100) {
         freqModBuffer = DoubleArray(buffer.size),
         scratchBuffers = ScratchBuffers(buffer.size),
         sampleRate = sampleRate,
-        startFrame = 0,
-        endFrame = buffer.size,
-        gateEndFrame = buffer.size,
+        startFrame = 0.0,
+        endFrame = buffer.size.toDouble(),
+        gateEndFrame = buffer.size.toDouble(),
         freqHz = 440.0,
         signal = NoOpSignalIgnitor,
         signalCtx = IgniteContext(
@@ -45,7 +45,7 @@ fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100) {
     )
     ctx.offset = 0
     ctx.length = buffer.size
-    ctx.blockStart = 0
+    ctx.blockStart = 0.0
 
     render(ctx)
 }

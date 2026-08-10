@@ -43,8 +43,8 @@ class PipelineRegistrySpec : StringSpec({
         val pipeline = buildFilterPipeline(
             pipeline = custom,
             modulators = emptyList(),
-            startFrame = 0,
-            gateEndFrame = 1000,
+            startFrame = 0.0,
+            gateEndFrame = 1000.0,
             crush = Voice.Crush(amount = 4.0),                 // active...
             coarse = Voice.Coarse(amount = 0.0),
             mainFilter = NoOpAudioFilter,

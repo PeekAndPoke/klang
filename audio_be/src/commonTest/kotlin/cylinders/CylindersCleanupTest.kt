@@ -25,8 +25,8 @@ class OrbitsCleanupTest : StringSpec({
 
     fun createTestVoice(cylinderId: Int): Voice {
         return VoiceTestHelpers.createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
             cylinderId = cylinderId
         )
     }
@@ -37,14 +37,14 @@ class OrbitsCleanupTest : StringSpec({
 
         // Create cylinder 0 and make it inactive
         val voice0 = createTestVoice(cylinderId = 0)
-        val orbit0 = cylinders.getOrInit(0, voice0, blockStart = 0)
+        val orbit0 = cylinders.getOrInit(0, voice0, blockStart = 0.0)
         orbit0.mixBuffer.clear()
         orbit0.tryDeactivate()
         orbit0.isActive shouldBe false
 
         // Create cylinder 1 with signal
         val voice1 = createTestVoice(cylinderId = 1)
-        val orbit1 = cylinders.getOrInit(1, voice1, blockStart = 0)
+        val orbit1 = cylinders.getOrInit(1, voice1, blockStart = 0.0)
         orbit1.mixBuffer.left[0] = 0.5
         orbit1.mixBuffer.right[0] = 0.5
 
@@ -64,9 +64,9 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 3 cylinders, all active but silent
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0)
-        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0)
-        val orbit2 = cylinders.getOrInit(2, createTestVoice(2), blockStart = 0)
+        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
+        val orbit2 = cylinders.getOrInit(2, createTestVoice(2), blockStart = 0.0)
 
         orbit0.mixBuffer.clear()
         orbit1.mixBuffer.clear()
@@ -104,8 +104,8 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 2 cylinders
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0)
-        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0)
+        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
 
         orbit0.mixBuffer.clear()
         orbit1.mixBuffer.clear()
@@ -121,8 +121,8 @@ class OrbitsCleanupTest : StringSpec({
             orbit1.isActive shouldBe false
 
             // Reactivate both
-            cylinders.getOrInit(0, createTestVoice(0), blockStart = 0)
-            cylinders.getOrInit(1, createTestVoice(1), blockStart = 0)
+            cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
+            cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
             orbit0.mixBuffer.clear()
             orbit1.mixBuffer.clear()
 
@@ -151,7 +151,7 @@ class OrbitsCleanupTest : StringSpec({
 
         // Create cylinder and deactivate it
         val voice = createTestVoice(cylinderId = 0)
-        val cylinder = cylinders.getOrInit(0, voice, blockStart = 0)
+        val cylinder = cylinders.getOrInit(0, voice, blockStart = 0.0)
         cylinder.mixBuffer.clear()
         cylinder.tryDeactivate()
 
@@ -175,7 +175,7 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create only cylinder 0 (sparse map)
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0)
+        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
         orbit0.mixBuffer.clear()
 
         // Process 8 times (full round-robin cycle)
@@ -193,9 +193,9 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 3 active cylinders with different signals
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0)
-        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0)
-        val orbit2 = cylinders.getOrInit(2, createTestVoice(2), blockStart = 0)
+        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
+        val orbit2 = cylinders.getOrInit(2, createTestVoice(2), blockStart = 0.0)
 
         orbit0.mixBuffer.left[0] = 0.1
         orbit1.mixBuffer.left[0] = 0.2
@@ -220,7 +220,7 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create silent cylinder
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0)
+        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
         orbit0.mixBuffer.clear()
 
         // First block: cleanup deactivates cylinder 0

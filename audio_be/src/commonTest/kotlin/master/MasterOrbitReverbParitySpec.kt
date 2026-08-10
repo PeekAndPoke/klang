@@ -67,7 +67,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
                 gateEndTime = 1.0,
                 playbackStartTime = 0.0,
             ),
-            nowFrame = 0,
+            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry),
             getSample = { null },
@@ -77,7 +77,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
         // `voice.reverb.roomSize` here would stop one step short and miss a second /10 introduced
         // in `Cylinder` — exactly the class of bug this spec exists to catch.
         val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         return cylinder.reverb.reverb.roomSize
     }
@@ -168,7 +168,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
                     blockFrames = blockFrames,
                     reverb = Voice.Reverb(room = 0.6, roomSize = roomSize, roomFade = roomFade),
                 ),
-                blockStart = 0,
+                blockStart = 0.0,
             )
 
             // Feed the send and look for wet output. Freeverb's shortest comb is 1116 samples, so

@@ -84,7 +84,7 @@ class EnvelopeShapeTest : StringSpec({
     // ── Release via calculateControlRateEnvelope ──────────────────────────────
 
     "release midpoint via calculateControlRateEnvelope — Square = 0.25 of startLevel" {
-        // gateEnd = 0; at blockStart = 50, p = 50/100 = 0.5; Square gives 0.25.
+        // gateEnd = 0; at blockStart = 50.0, p = 50/100 = 0.5; Square gives 0.25.
         val e = env(
             attackFrames = 0.0,
             decayFrames = 0.0,
@@ -92,7 +92,7 @@ class EnvelopeShapeTest : StringSpec({
             releaseFrames = 100.0,
             releaseCurve = AdsrCurve.Square,
         )
-        calculateControlRateEnvelope(e, blockStart = 50, startFrame = 0, gateEndFrame = 0) shouldBe
+        calculateControlRateEnvelope(e, blockStart = 50.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
                 (0.25 plusOrMinus 0.001)
     }
 
@@ -105,7 +105,7 @@ class EnvelopeShapeTest : StringSpec({
                 releaseFrames = 100.0,
                 releaseCurve = curve,
             )
-            calculateControlRateEnvelope(e, blockStart = 100, startFrame = 0, gateEndFrame = 0) shouldBe
+            calculateControlRateEnvelope(e, blockStart = 100.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
                     (0.0 plusOrMinus 0.001)
         }
     }

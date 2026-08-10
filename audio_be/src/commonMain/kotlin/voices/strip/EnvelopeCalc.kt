@@ -21,13 +21,15 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  */
 fun calculateControlRateEnvelope(
     env: Voice.Envelope,
-    blockStart: Int,
-    startFrame: Int,
-    gateEndFrame: Int,
+    // Absolute backend frames are Double (see RenderClock.cursorFrame); the relative positions
+    // derived from them below are Int, and everything downstream of that stays Int.
+    blockStart: Double,
+    startFrame: Double,
+    gateEndFrame: Double,
 ): Double {
     val currentFrame = maxOf(blockStart, startFrame)
-    val absPos = currentFrame - startFrame
-    val gateEndPos = gateEndFrame - startFrame
+    val absPos = (currentFrame - startFrame).toInt()
+    val gateEndPos = (gateEndFrame - startFrame).toInt()
 
     val envValue = if (absPos >= gateEndPos) {
         val levelAtGateEnd = envelopeLevelAtPosition(env, gateEndPos)

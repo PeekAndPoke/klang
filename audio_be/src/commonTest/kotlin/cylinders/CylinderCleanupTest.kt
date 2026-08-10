@@ -25,10 +25,10 @@ class OrbitCleanupTest : StringSpec({
     fun makeOrbitActive(cylinder: Cylinder) {
         // Create a minimal voice just to activate the cylinder
         val voice = VoiceTestHelpers.createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000
+            startFrame = 0.0,
+            endFrame = 1000.0
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
     }
 
     "tryDeactivate() deactivates a completely silent cylinder" {

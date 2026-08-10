@@ -63,7 +63,7 @@ class VoiceFactoryFilterOrderSpec : StringSpec({
 
         val voice = factory.makeVoice(
             scheduled = scheduled,
-            nowFrame = 0,
+            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry),
             getSample = { null },
