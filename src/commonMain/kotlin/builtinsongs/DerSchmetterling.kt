@@ -67,7 +67,7 @@ stack(
     .sound(supersawHp).unison(11).spread(0.12).gain(0.5).postgain(0.15).distort("1:tube:4").distort(0.80)
     .clip("<0.93!31 0.85 0.93!31 0.83 0.93!30 0.85 0.80>".fast(2)).adsr("0.009:3.0:0.0:0.035").lpadsr("0.009:1.2:0.0:0.025")    
     .hpf(80).lpf(2600).lpe(1.0).lpq(1.4)
-    .coarse(2).coarseos(4).pan(0.3).superimpose(
+    .coarse(3).coarseos(4).pan(0.3).superimpose(
       x => x.pan(0.7),
       x => x.postgain(0.14).hpf(140).lpf(2600).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
@@ -86,7 +86,7 @@ stack(
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
     .pan(0.525).late(0.0030).orbit(5).gain(0.23).hpf(1000).lpf("8500".add(perlin.mul(300).fast(4))).adsr("0.005:0.5:0.8:0.2"), // . mute()
   sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(6).gain(0.10).mute("<0!128 1!32>"),
-  sound("pink!8").orbit(7).gain(0.04).hpf(8000).lpf(13500).lpq(0.5)
+  sound("pink!8").orbit(7).gain(0.04).hpf(8000).lpf(12500).lpq(0.5)
     .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05")  // .solo()
   // Master
   ,master(Master.of(MasterFx.reverb().wet(0.05).damp(0.6).roomSize(8), MasterFx.gain(1.70)))
@@ -103,6 +103,7 @@ stack(
 // Written by: peekandpoke
 
 // Epilepsy Warning: Do not click the oscilloscope!
+
 
 
 
