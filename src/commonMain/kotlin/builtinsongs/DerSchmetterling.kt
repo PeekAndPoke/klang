@@ -86,7 +86,7 @@ stack(
     .pan(0.5).late(0.0015).orbit(5).pan(0.475).gain(0.20).hpf(180).lpf(11500).adsr("0.002:0.05:0.8:0.2")
     .superimpose(x => x.bandf("205".add(berlin.mul(10).fast(4))).bandq(4).vel(0.80).hpf(180).lpf(450)),
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-    .pan(0.525).late(0.0030).orbit(5).gain(0.22).hpf(1000).lpf("11500".add(perlin.mul(300).fast(4))).adsr("0.005:0.05:0.9:0.2"), // . mute()
+    .pan(0.525).late(0.0030).orbit(5).gain(0.21).hpf(1000).lpf("11500".add(perlin.mul(300).fast(4))).adsr("0.005:0.05:0.9:0.2"), // . mute()
   sound("<~!79 [~ ~ cp cp  cp ~ cp ~] ~!47 [~ ~ cp cp  cp ~ cp ~]>").orbit(6).gain(0.10).mute("<0!128 1!32>"),
   sound("pink!8").orbit(7).gain(0.03).hpf(8000).lpf(15000).lpq(0.5)
     .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05"),  // .solo()
