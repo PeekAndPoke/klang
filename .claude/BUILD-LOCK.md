@@ -1,7 +1,7 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-10**
+**SINCE: 2026-08-11**
 **STATE: FREE — take the lock before building.**
 
 > Last action (2026-08-10, klang-ai session): offline render of Der Schmetterling only — no source

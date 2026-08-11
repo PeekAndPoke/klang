@@ -44,6 +44,36 @@ on `audio_be`. If so, the defect is the *absence of a sync guard plus misleading
 
 ---
 
+### Agreed resolution (user, 2026-08-11): move the wire defaults into `audio_bridge`
+
+The duplication exists because `audio_bridge` is the wire module and cannot depend on `audio_be`. But the dependency
+runs the *other* way — `audio_be` has `api(project(":audio_bridge"))`, and
+`audio_bridge` depends only on `:common` and `:tones`. So the constants can live in `audio_bridge`
+and be read from both sides, with **one** home and no sync spec needed.
+
+**The rule for what moves:** a constant belongs in `audio_bridge` **iff it is a wire default** — it appears as a default
+in a `@WireFormat` class *and* the engine needs the same number. Everything else stays where it is used.
+
+| moves                                                                             | stays                                                      |
+|-----------------------------------------------------------------------------------|------------------------------------------------------------|
+| `cutoffOffsetPerAnalog`, `drivePerAnalog`, `driftRelToOsc` (`PipelineDsl.Filter`) | `OscillatorTuning.kt` (36) — engine-internal, no wire twin |
+| `expK`, `declickSeconds` (`PipelineDsl.Vca`)                                      | `AnalogDriftCoeffs.kt` (9) — ditto                         |
+| the `MasterStageDsl.Limiter` / `MasterStage.LIMITER_*` pairs                      | `FilterHumanizationCoeffs`' non-duplicated members         |
+
+⚠️ **Do not move engine-internal tuning into the wire module.** It would leak implementation detail into the module that
+defines the protocol, and the wire module would start carrying numbers no message ever transmits.
+
+**What this retires:** `MasterDefaultsSyncSpec` exists only because two copies had to be kept equal. Where a constant
+becomes single-homed, the sync assertion becomes meaningless and should go — but **keep the parts that encode a
+deliberate ASYMMETRY** (house limiter 5 ms lookahead vs authored 0), because those are real facts about intent, not
+duplication artefacts.
+
+**Suggested home:** a `constants/` package under `audio_bridge/src/commonMain/kotlin/`, so there is one obvious place to
+reach for. Name the file after the concept, not the module — e.g.
+`FilterHumanization.kt`, `EnvelopeShaping.kt`, `MasterLimiter.kt`.
+
+---
+
 ## F2 — `AnalogDriftSpec`'s budget guard cannot see the values the engine uses 🔴
 
 **HIGH.** `AnalogDriftSpec.kt:85-103`, *"analog cents budget stays tamed at analog=3 (Der Schmetterling)"*. Its own

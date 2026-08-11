@@ -3,6 +3,46 @@
 > **Stub — not started (2026-07-04).** Priority: **MUST** (see `_priorities.md`). This is the
 > authoring surface for the Katalyst layer; the effects themselves already shipped.
 
+## Why it matters for CPU — the motivation, with numbers (added 2026-08-11)
+
+A per-voice filter is paid **once per simultaneous voice**; the same filter on the orbit bus is paid **once**. Most
+orbits run 2+ voices, and `superimpose` multiplies that — which is exactly how
+`body` became the CPU sink that moved it to orbit level in July.
+
+Measured filter costs (JVM / Node, `docs/benchmarks/2026-08-11_103957_*`):
+
+| filter                          | JVM                 | Node                |
+|---------------------------------|---------------------|---------------------|
+| SvfBPF / SvfLPF / SvfHPF, plain | ~0.000167           | ~0.000279           |
+| SvfHPF **with `analog=3`**      | 0.000701 (**4.2×**) | 0.000807 (**2.9×**) |
+
+⚠️ **But "per-voice vs per-orbit" is not the right criterion.** Three cases, and only the first is a free win:
+
+1. **Static cutoff + LINEAR filter → moves losslessly.** A linear filter obeys superposition, so
+   `filter(a) + filter(b) == filter(a + b)`. Identical output, `N×` cheaper. `SvfBPF` has no `analog`
+   parameter at all, so every bandpass is in this class.
+2. **Pitch-tracking cutoff → CANNOT move.** `.highpass(Osc.freq().mul(k), ...)` tracks the note. The orbit bus carries
+   several pitches at once, so there is no single correct cutoff. These have to stay per-voice, and no DSL can fix that.
+3. **Nonlinear (`analog > 0`) → moves, but is NOT the same sound.** State-dependent damping breaks superposition:
+   filtering the sum ≠ summing the filtered parts. Offering it at orbit level is legitimate, but it is a different
+   effect, not an optimisation — and it must be documented as such or people will "move it for CPU" and wonder why the
+   tone changed.
+
+**Worked example** (a user's SuperSaw ignitor, 2026-08-11):
+
+```kotlin
+signal.add(signal.bandpass(800, 0.5)).add(signal.bandpass(1500, 0.5))   // case 1 — CAN move
+  ...
+  .highpass(Osc.freq().mul(pHpTrack), pHpQ, pAnalog)                     // cases 2+3 — CANNOT
+```
+
+The two bandpasses are static and linear, so at 2 voices/orbit moving them halves their cost for bit-identical output.
+The highpass both tracks pitch *and* uses `analog`, so it is stuck per-voice on two independent grounds — and it is the
+expensive one (4.2× a plain filter).
+
+**Design consequence for this DSL:** the authoring surface should make the distinction visible, not leave it as
+folklore. A user reaching for the orbit chain to save CPU needs to know which of their filters can follow them there.
+
 ## Context — what exists
 
 The **Katalyst** layer is the per-orbit (Cylinder-level) effect chain — the bus counterpart to the
