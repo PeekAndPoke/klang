@@ -12,9 +12,20 @@ Status: 🔴 open (untriaged) · 🟢 accepted-as-is · 🔧 to fix · ✅ FIXED
 
 ---
 
-## F1 — Three tuning constants are documented as "the knob" but read by nothing 🔴
+## F1 — Three tuning constants are documented as "the knob" but read by nothing ✅ FIXED
 
-**HIGH.** `audio_be` declares tuning constants with KDoc that presents them as the by-ear tuning point ("Tunable by ear,
+> **FIXED 2026-08-11** — `docs/tasks/audio-bridge-constants.md`. All three (plus `ADSR_EXP_K`, plus the shared master
+> limiter defaults) now have exactly ONE declaration, in `audio_bridge/src/commonMain/kotlin/constants/`, which both
+> the DSL default and the engine read. The `audio_be` twins are deleted, so there is no longer a constant that
+> documents itself as the knob while production reads a different literal. The rule going forward: **a constant
+> belongs in `audio_bridge/constants/` iff it is a wire default** — engine-internal tuning (`OscillatorTuning.kt`,
+> `AnalogDriftCoeffs.kt`, `FILTER_SMOOTH_SAMPLES`) deliberately stays in `audio_be`.
+>
+> The line references in the table below are to the pre-fix files and no longer resolve; kept as the record of what
+> the defect was.
+
+**HIGH (at time of finding).** `audio_be` declares tuning constants with KDoc that presents them as the by-ear tuning
+point ("Tunable by ear,
 like `ADSR_EXP_K`"). The engine does not read them. The live values are duplicated literals in
 `audio_bridge/PipelineDsl.kt`, each carrying a comment that names the twin it duplicates:
 
@@ -74,9 +85,17 @@ reach for. Name the file after the concept, not the module — e.g.
 
 ---
 
-## F2 — `AnalogDriftSpec`'s budget guard cannot see the values the engine uses 🔴
+## F2 — `AnalogDriftSpec`'s budget guard cannot see the values the engine uses ✅ FIXED
 
-**HIGH.** `AnalogDriftSpec.kt:85-103`, *"analog cents budget stays tamed at analog=3 (Der Schmetterling)"*. Its own
+> **FIXED 2026-08-11** — same change as [F1](#f1). The spec now imports the same declaration the DSL default reads, so
+> its ceilings track the engine by construction. The bounds were also retightened (`filterOffsetPeak` 6.0 → 2.0,
+> `filterDriftPeak` 9.0 → 1.5) — they had been left behind when the values were lowered, leaving 6x and 12x of slack.
+> Mutation-checked after the fix: offset 0.0002 → 0.0005 and drift 0.25 → 0.6 each turn it RED, with clean
+> no-mutation sanity runs on both sides. **Mutation M2 below is no longer reproducible as written** — the file it
+> mutated no longer declares the constant.
+
+**HIGH (at time of finding).** `AnalogDriftSpec.kt:85-103`, *"analog cents budget stays tamed at analog=3 (Der
+Schmetterling)"*. Its own
 comment states the intent: *"Post-tuning ceilings — if a constant gets cranked back up, this fails loudly."* For two of
 its three ceilings that is false.
 

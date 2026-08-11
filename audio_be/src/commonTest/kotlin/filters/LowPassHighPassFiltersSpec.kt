@@ -644,8 +644,16 @@ class LowPassHighPassFiltersSpec : StringSpec({
         // frequency should make `kEff` grow → resonance peak gets smaller than the
         // linear case. With Q=5 + analog=5 the saturated filter must produce a
         // meaningfully lower steady-state peak than the linear filter.
-        val linear = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
-        val saturated = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
+        // drivePerAnalog is pinned here rather than riding FILTER_DRIVE_PER_ANALOG: this test guards
+        // the filter TOPOLOGY (that state-dependent damping reaches this tap), not the shipped tuning.
+        // At the default 0.25 the measured ratio is 0.842 against the 0.9 bound, so a legitimate
+        // by-ear retune below ~0.125 would turn it red for a reason unrelated to what it checks.
+        val linear = LowPassHighPassFilters.SvfLPF(
+            800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0, drivePerAnalog = 0.5,
+        )
+        val saturated = LowPassHighPassFilters.SvfLPF(
+            800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0, drivePerAnalog = 0.5,
+        )
 
         val linBuf = sine(freq = 800.0, length = blockFrames, amplitude = 1.0)
         val satBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
@@ -755,8 +763,16 @@ class LowPassHighPassFiltersSpec : StringSpec({
 
     "SvfHPF analog>0 - resonance peak is compressed under hot drive" {
         // Same as SvfLPF version — verify the analog-style damping mechanism reaches the HP tap.
-        val linear = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
-        val saturated = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
+        // drivePerAnalog is pinned here rather than riding FILTER_DRIVE_PER_ANALOG: this test guards
+        // the filter TOPOLOGY (that state-dependent damping reaches this tap), not the shipped tuning.
+        // At the default 0.25 the measured ratio is 0.842 against the 0.9 bound, so a legitimate
+        // by-ear retune below ~0.125 would turn it red for a reason unrelated to what it checks.
+        val linear = LowPassHighPassFilters.SvfHPF(
+            800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0, drivePerAnalog = 0.5,
+        )
+        val saturated = LowPassHighPassFilters.SvfHPF(
+            800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0, drivePerAnalog = 0.5,
+        )
 
         val linBuf = sine(freq = 800.0, length = blockFrames, amplitude = 1.0)
         val satBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }

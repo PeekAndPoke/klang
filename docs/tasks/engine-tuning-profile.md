@@ -11,7 +11,7 @@
 > PipelineDsl), Phase 2
 > oscillator *sources* (super-* unison family + single-shape oscs + static supertype inferrer + `WaveIgnitor.shapeMax`),
 > and the noise-generator calibration knobs. Full design + history live in the archived
-`docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md` (§2.1, §3);
+> `docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md` (§2.1, §3);
 > this doc is the focused punch-list of what's left.
 >
 > ⚠ The design in `engine-dsl.md` predates two renames — use the **current** names here: super-osc spread param is
@@ -34,8 +34,9 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
 `@KlangScript.TypeExtensions` chained methods → dual-language + render-effect + sync-guard specs. Each field
 **defaults to today's `OscillatorTuning` const** (behavior-identical).
 
-1. ✅ **DONE (2026-07-04) — `IgnitorDsl.Adsr` gained `declickSeconds` + `expK`.** Both landed as
-   **`IgnitorDsl.Slots` Params** (`Slots.declickSeconds` = 0.0/off; `Slots.expK` = 3.0 mirroring `ADSR_EXP_K`)
+1. ✅ **DONE (2026-07-04) — `IgnitorDsl.Adsr` gained `declickSeconds` + `expK`.** Both landed as **`IgnitorDsl.Slots`
+   Params** (`Slots.declickSeconds` = 0.0/off; `Slots.expK` = `ADSR_EXP_K`, one declaration in
+   `audio_bridge/constants/`)
    — i.e. **nodes/slots, not plain `Double`** → oscParam-addressable / patternable / in `collectParams()`,
    read per-block in `AdsrIgnitor`. `AdsrIgnitor` got the opt-in declick one-pole (`envDeclickCoeff`, primed
    to first level) + parameterized `adsrExpShape(x, k, norm)`. KlangScript `.declickSeconds(x)` / `.expK(x)`

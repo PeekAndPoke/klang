@@ -104,11 +104,18 @@ clipping**; it now exits at **−0.37 dBFS, zero samples clipped**.
 
 **Two things to know if you touch this:**
 
-1. **`MasterStage` no longer has one limiter character — it has two.** `LIMITER_*` is the house limiter (global,
-   post-sum, 5 ms lookahead, smoothing = the whole window).
-   `AUTHORED_LIMITER_*` is the opt-in `MasterFx.limiter()` (per-playback, **lookahead 0**, 1 ms one-pole attack). They
-   differ **on purpose** — an authored limiter with latency would delay its playback against every other one.
-   `MasterDefaultsSyncSpec` asserts both sides, so the asymmetry is data, not a comment. Do not "re-sync" them.
+1. **`MasterStage` no longer has one limiter character — it has two.** Naming rule (set 2026-08-11, when the shared
+   constants moved to `audio_bridge/constants/MasterLimiterDefaults.kt`):
+    - **no prefix** — `LIMITER_THRESHOLD_DB` / `RATIO` / `KNEE_DB` / `RELEASE_SECONDS`: **shared** by both limiters, one
+      declaration in `audio_bridge`. Both sides read it, so they cannot drift; there is nothing to "re-sync".
+    - **`HOUSE_LIMITER_*`** — the house limiter's own timing (global, post-sum, 5 ms lookahead, smoothing = the whole
+      window). Stays in `MasterStage`: no DSL field carries it, because the house limiter is not authorable.
+    - **`AUTHORED_LIMITER_*`** — the opt-in `MasterFx.limiter()` (per-playback, **lookahead 0**, 1 ms one-pole attack),
+      in `audio_bridge` because it *is* a wire default.
+
+   The house/authored timing differs **on purpose** — an authored limiter with latency would delay its playback against
+   every other one. `MasterDefaultsSyncSpec` asserts that divergence (and pins the authored values on the wire model
+   itself). Do not "unify" the two timings.
 2. **`lookaheadSeconds` is a constructor `val`, unlike every other param.** The rings are sized once from it. Making it
    a `var` would resize a buffer on the audio thread.
 

@@ -14,7 +14,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
  * Golden-value tests for the per-stage envelope shape curves
- * (Linear / Square / Cube) at the midpoint of each stage.
+ * (Linear / Square / Cube / Exponential) at the midpoint of each stage.
  *
  * Math:
  * - Attack:  level = shape(p)
@@ -25,6 +25,8 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  * - Linear: p
  * - Square: p * p
  * - Cube:   p * p * p
+ * - Exponential: (e^(K·p) − 1) / (e^K − 1), K = ADSR_EXP_K — the one curve whose shape
+ *   depends on a tunable constant, which is why its midpoint is pinned here.
  */
 class EnvelopeShapeTest : StringSpec({
 
@@ -51,6 +53,19 @@ class EnvelopeShapeTest : StringSpec({
     }
     "attack midpoint — Cube = 0.125" {
         envelopeLevelAtPosition(env(attackCurve = AdsrCurve.Cube), 50) shouldBe (0.125 plusOrMinus 0.001)
+    }
+    "attack midpoint — Exponential = 0.1824, pinning ADSR_EXP_K = 3.0" {
+        // g(0.5) = (e^(K·0.5) − 1) / (e^K − 1) at K = ADSR_EXP_K.
+        //
+        // Added 2026-08-11 (review): this is the ONLY value coverage ADSR_EXP_K has anywhere in the
+        // repo. Every other envelope test is either symmetric in K (AdsrIgnitorKnobsSpec compares
+        // bare adsr() against expK = ADSR_EXP_K — green for any value) or checks stage endpoints,
+        // which are K-invariant by construction: g(0)=0, g(1)=1. So K could be changed to anything
+        // and the whole suite stayed green, while every Exponential segment in the amp VCA, the
+        // filter/FM envelopes and the ignitor envelopes reshaped on every shipped song.
+        //
+        // The midpoint is where K actually lives: 3.0 → 0.1824, 2.0 → 0.2689, 6.0 → 0.0474.
+        envelopeLevelAtPosition(env(attackCurve = AdsrCurve.Exponential), 50) shouldBe (0.1824 plusOrMinus 0.001)
     }
 
     // ── Decay midpoint with sustain = 0 isolates the curve shape ──────────────

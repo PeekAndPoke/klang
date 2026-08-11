@@ -1,6 +1,23 @@
 # Engine tuning constants → `audio_bridge` (a single place to reach for)
 
-**Status:** planned · **Branch:** `master-dsl` · **Opened:** 2026-08-11
+**Status:** ✅ DONE 2026-08-11 · **Branch:** `master-dsl` · **Opened:** 2026-08-11
+
+**Three deviations from the plan as written, all decided during implementation:**
+
+1. **Only 6 of the 8 master limiter constants moved.** §3 listed all eight, but applying §2's own rule strictly excludes
+   two: `LIMITER_LOOKAHEAD_SECONDS` and `LIMITER_ATTACK_SECONDS` are **house-only**
+   — no DSL field carries them, because the house limiter is not authorable — so they are not wire defaults and stay in
+   `audio_be`.
+2. **One rename, against §5's "no renames".** With the split in place, `MasterStage.LIMITER_ATTACK_SECONDS`
+   no longer said anything about being house-only while its bridge counterpart shouted
+   `AUTHORED_`. Renamed the two house constants to `HOUSE_LIMITER_*`, giving a rule instead of an accident: **no
+   prefix = shared, `HOUSE_` = safety limiter on the summed mix, `AUTHORED_` = the opt-in per-playback stage.** (Raised
+   by the user: *"Why has this constant AUTHORED_LIMITER_ATTACK_SECONDS the prefix AUTHORED … seems strange compared to
+   the rest."*)
+3. **`AnalogDriftSpec`'s ceilings were retightened.** Not in the plan, but the values had been lowered (0.001→0.0002,
+   2.5→0.25) without the bounds following, leaving 6× and 12× of slack — the guard could no longer fail. Now `< 2.0` /
+   `< 1.5` against actual 1.04 / 0.75, and mutation-checked:
+   drift 0.25→0.6 and offset 0.0002→0.0005 each turn it RED, with a clean no-mutation sanity run on both sides.
 
 **Goal (user, 2026-08-11):**
 
@@ -88,9 +105,10 @@ field.
 The DSL side wins: **`0.0002` / `0.25` / `0.25`**. Those are the values deliberately set while listening on 2026-08-11;
 the `audio_be` values are simply stale.
 
-**Accepted consequence:** ignitor-level filter drive changes `0.5 → 0.25`. This is audible on any patch using an ignitor
-`lpf`/`hpf` with `analog > 0`. It is the correct direction (it makes the two paths agree, at the value chosen by ear),
-but it must be listed as a sound change, not slipped in as a refactor.
+**Accepted consequence:** ignitor-level filter drive changes `0.5 → 0.25`. It is the correct direction (it makes the two
+paths agree, at the value chosen by ear), but it is a sound change and must be listed as one, not slipped in as a
+refactor. ⚠️ **The size of it was measured after the fact and is far smaller than this section originally claimed — ≤
+0.06 dB on every shipped builtin. See §6.2.**
 
 ---
 
@@ -102,10 +120,13 @@ audio_bridge/src/commonMain/kotlin/constants/
                                   FILTER_DRIFT_RELATIVE_TO_OSC
   EnvelopeDefaults.kt             ADSR_EXP_K, ENV_DECLICK_SECONDS
   MasterLimiterDefaults.kt        LIMITER_THRESHOLD_DB, LIMITER_RATIO, LIMITER_KNEE_DB,
-                                  LIMITER_RELEASE_SECONDS, LIMITER_ATTACK_SECONDS,
-                                  LIMITER_LOOKAHEAD_SECONDS, AUTHORED_LIMITER_ATTACK_SECONDS,
+                                  LIMITER_RELEASE_SECONDS, AUTHORED_LIMITER_ATTACK_SECONDS,
                                   AUTHORED_LIMITER_LOOKAHEAD_SECONDS
 ```
+
+⚠️ **Amended during implementation** — this originally also listed `LIMITER_ATTACK_SECONDS` and
+`LIMITER_LOOKAHEAD_SECONDS`. They are house-only (no DSL field carries them), so §2's rule excludes them; they stay in
+`MasterStage`, renamed `HOUSE_LIMITER_*`. See deviation 1 at the top.
 
 Package `io.peekandpoke.klang.audio_bridge.constants`. A subdirectory, not the module root — matching the module's
 existing `analyzer/` and `infra/`, and satisfying "a dedicated constants folder … so we always know where to reach".
@@ -194,7 +215,7 @@ The hypothesis to test is that the pitch/filter drift ratio is inverted. Current
 | osc pitch, slow             | 0.8 cents         | `ANALOG_SLOW_PEAK_CENTS`                | ❌ no DSL field                    |
 | filter cutoff drift         | × 0.25 of osc     | `StageDsl.Filter.driftRelToOsc`         | ✅ after this task                 |
 | filter cutoff frozen offset | 0.0002            | `StageDsl.Filter.cutoffOffsetPerAnalog` | ✅ after this task                 |
-| filter drive                | 0.25              | `StageDsl.Filter.drivePerAnalog`        | ✅ after this task                 |
+| filter drive                | 0.25              | `StageDsl.Filter.drivePerAnalog`        | ⚠️ pipeline path only — see 6.1    |
 
 So pitch currently runs at **1.0 cent per unit `analog`** against a filter drift of **0.25** — a 4:1 lead for pitch. The
 hypothesis is that real hardware is the other way round (VCO pitch is fairly stable; VCF cutoff wanders much more with
@@ -213,6 +234,72 @@ ratio can only be explored from one end. Closing that needs a decision:
 
 Tracked here so the precursor is not mistaken for the whole job.
 
+### 6.1 ⚠️ Filter-drive parity is restored at the DEFAULT only
+
+Raised independently by both reviewers, 2026-08-11. `IgnitorFilters.kt:119` reads the bare constant:
+
+```kotlin
+val driveScale = analogVal * FILTER_DRIVE_PER_ANALOG
+```
+
+while the pipeline path threads `stage.drivePerAnalog`, which **is** authorable — `Stage.filter().drive(x)` exists in
+KlangScript today. So the moment anyone sets it, the two paths diverge again by exactly the §1.2 defect:
+`Pipeline.of(Stage.filter().drive(1.0))` on a patch that also uses an ignitor-level `lowpass(analog = 3)` gives the
+sprudel filter a driveScale of 3.0 and the ignitor filter 0.75 — a 4:1 split.
+
+The move fixed the *stale duplicate*; it cannot fix this, because the ignitor filter has no pipeline stage to carry the
+value. Closing it needs either an ignitor-side drive param or a way to thread the active pipeline's `StageDsl.Filter`
+into `IgnitorFilters`. Same shape of question as the osc-drift-depth fork above, and probably wants the same answer.
+
+### 6.2 The 0.5 → 0.25 drive change is far smaller than §2 claims
+
+Measured by the audio reviewer against the real `SvfLPF`/`SvfHPF` loop, not estimated:
+
+| patch                              | level change at the resonance peak |
+|------------------------------------|------------------------------------|
+| Q=5, analog=5                      | +0.72 dB                           |
+| Q=10, analog=5                     | +1.25 dB                           |
+| shipped builtins at unit amplitude | **≤ 0.06 dB**                      |
+
+Two builtins use the ignitor filter path with `analog > 0`: `Sakura.kt:27,33,34,57` (q 0.707–2.0 at analog=8) and
+`ATruthWorthLyingFor.kt:48-49` (q 1.8 / 0.7, running at **analog=10** — its `Osc.param("analog", 3.50)` is overridden by
+the stack-level `.analog(10)`). Measured: −0.06 … +0.06 dB across all six taps. At those Q values the change is
+inaudible, so §2's "audible on any patch using an ignitor `lpf`/`hpf` with `analog > 0`" **overstates it** — audibility
+needs Q ≳ 5.
+
+⚠️ **The ≤ 0.06 dB bound is amplitude-conditional, not absolute.** `tCfb` is driven by `ic1eq`, so the delta grows with
+level: the same Sakura q=2 tap measures +0.06 dB at amplitude 1.0, **+0.32 dB at 2.0, +0.69 dB at 4.0**. Shipped content
+stays in the safe region, but **not by any single mechanism** — every shipped tap happens to be fed either by explicitly
+weighted `.mul()` sums ≤ 1 or by a hard-bounded waveshaper:
+
+- `Sakura.kt:27` (koto) — `Osc.pluck()` + `sine.mul(0.1)`, no super-osc in the chain at all.
+- `Sakura.kt:33,34` (shaku) — hand-written weights `0.6 + 0.25 + 0.05 + 0.10` summing to exactly 1.0.
+- `Sakura.kt:57` (pad) — the one tap the super-osc gain renormalisation (`Ignitors.kt:742`, Σ|gain| = 1) actually
+  bounds.
+- `ATruthWorthLyingFor.kt:48,49` — bounded by `.distort(≈3.6–4.0, "tube", 8)` sitting immediately upstream of the
+  filter; `ClippingFuncs.tube` ≤ 1.0 plus the `softCap` at `IgnitorEffects.kt:109` (guarded by
+  `ClippingFuncsBoundsSpec.kt:148`). Voice-gain renormalisation is a waveshaper away and contributes nothing here.
+
+⚠️ **Nothing in the engine enforces any of this.** An added `.mul(3)` or `.drive()` ahead of an ignitor lowpass walks
+straight into the +0.3…+0.7 dB region while leaving every sentence above still true. An earlier draft credited the
+super-osc renormalisation alone, which reads as a guarantee and is not one.
+
+⚠️ **The first survey of this missed `ATruthWorthLyingFor` entirely** (its `Osc.freq()` nests a paren, defeating a regex
+sweep) — and that is the song sitting at the top of the analog range. The conclusion survived, but a sound change was
+justified on a one-song survey. Grep for `.lowpass(`/`.highpass(` with a third positional argument, not for a literal
+`analog =`.
+
+Stability also moves the *safe* way. The diode-pair polynomial dips negative (`tCfb = -0.0034` at `ic1eq ≈ -1.55`), so
+the **instantaneous** `kEff` can go negative once `k < 2·driveScale·0.0034`. Halving the drive **doubles** the Q at
+which that is reachable: at `analog=10` the threshold moves from `Q > 29.4` to `Q > 58.9`. The criterion is monotone in
+`driveScale`, so the old 0.5 was strictly the riskier value and no patch class relied on drive compression to stay tame.
+
+**This is not self-oscillation, and an earlier draft of this section wrongly called it that.** The polynomial is
+asymmetric — `tCfb ≥ 0` for `ic1eq ≥ 0`, and grows ~8× faster there — so net per-cycle damping stays positive even when
+individual samples go negative. Measured at q=200 / analog=10 / drive 0.25: 9722 of 144k samples have `kEff < 0`, and
+the tail still decays to 2.3e-11 within 2 s. Nothing self-oscillates at any reachable Q (the SVF clamps Q at 200). Read
+the thresholds as "where the nonlinearity starts fighting the damping", not as a ringing hazard.
+
 ---
 
 ## 7. Prior findings that constrain this
@@ -229,6 +316,43 @@ Tracked here so the precursor is not mistaken for the whole job.
   between superimposed copies**, not a smaller depth.
 
 ---
+
+## 7b. Review record (`/review-loop`, 2026-08-11)
+
+Five rounds, fresh coding + audio reviewers each round. **Terminated on the safety valve, not on a clean round** — round
+5 still returned 4 findings, all comment/doc accuracy. Findings by round: 11 / 9 / 11 / 8 / 4.
+
+⚠️ **Round 5's fixes are themselves unreviewed** — no round 6 was run. They were: the inverted ratio KDoc (below), one
+redundant assertion dropped, and two comment-accuracy corrections.
+
+**Zero defects were found in engine behaviour.** Every finding was in a test, a comment, or a doc. Both reviewers
+independently re-derived the DSP numerics from source each round and confirmed the audio is identical to pre-change
+except the intended `FILTER_DRIVE_PER_ANALOG` 0.5 → 0.25 on the ignitor path.
+
+What the loop actually caught, worth keeping:
+
+1. **Two constants had no value coverage at all.** `ADSR_EXP_K` could be changed to anything with the whole suite
+   green — every envelope test is either symmetric in K or checks endpoints, which are K-invariant by construction. Now
+   pinned by an attack-midpoint golden. And `FILTER_DRIVE_PER_ANALOG` had no *upper*
+   bound: `IgnitorCombinatorsSpec`'s compression guard is one-sided, so raising the drive made it greener.
+2. **A fix aimed at the wrong path.** The first drive pin read `StageDsl.Filter().drivePerAnalog` — the pipeline path —
+   while the path this change alters is `IgnitorFilters.kt:119`, which reads the constant directly. It passed only
+   transitively. Both are pinned now; the two-file mutation (DSL literal + retuned constant, silently reinstating the
+   §1.2 split) is verified RED.
+3. **`AnalogDriftSpec` was reopening audit F2 on itself** — it still read the bare constants, so replacing a DSL default
+   with a literal was invisible to it. It reads the wire model now.
+4. **The canonical KDoc for `FILTER_DRIFT_RELATIVE_TO_OSC` named the ratio backwards** ("pitch-to-filter"),
+   contradicting the two other descriptions this same change added. Survived four rounds. This is the constant §6's
+   entire open question is about, so a reader taking it at face value would have retuned in the wrong direction.
+5. **Three of §6.2's own claims were wrong**: the builtin survey missed `ATruthWorthLyingFor` (a regex sweep defeated by
+   a nested paren, on the song that sits highest in the analog range); the ≤ 0.06 dB bound is amplitude-conditional; and
+   "self-oscillation" was the wrong label for negative instantaneous `kEff`.
+6. **A cited test harness does not exist.** `AdsrPlopAnalysisTest` is referenced as the provenance of the de-click
+   calibration and is nowhere in the repo — a dangling reference that got copied verbatim into the new constants file
+   before being caught.
+
+Every test added or changed was mutation-checked with a no-mutation sanity run on both sides and a verified clean
+restore.
 
 ## 8. Links
 

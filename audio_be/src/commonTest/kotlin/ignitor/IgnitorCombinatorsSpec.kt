@@ -239,6 +239,20 @@ class ExciterCombinatorsSpec : StringSpec({
         // Analog-style state-dependent damping makes `kEff` grow with state; under hot drive at the
         // resonance frequency the saturated path must produce a meaningfully smaller peak
         // than the linear path.
+        //
+        // ⚠️ Unlike the SvfLPF/SvfHPF twins in LowPassHighPassFiltersSpec, this one CANNOT pin the
+        // drive: IgnitorFilters.kt:119 reads FILTER_DRIVE_PER_ANALOG directly — the ignitor filter
+        // path has no pipeline stage to carry the value (docs/tasks/audio-bridge-constants.md
+        // §6.1). So this test rides the shipped default.
+        //
+        // It is a ONE-SIDED guard: `satMax < linMax * 0.9` fails only when the drive is LOWERED
+        // (below ≈ 0.125 — margin at the shipped 0.25 is ratio 0.842 against the 0.9 bound).
+        // Raising the drive makes this test greener, so it cannot catch an upward crank. The upper
+        // side is pinned in AnalogDriftSpec instead, on BOTH paths — `FILTER_DRIVE_PER_ANALOG`
+        // (what this test's path reads) and `StageDsl.Filter().drivePerAnalog` (the pipeline's).
+        //
+        // If a by-ear retune goes below ≈ 0.125, that is NOT a topology regression — widen the
+        // bound and note the new value here.
         val cutoff = 800.0
         val linBuf = generate(Ignitors.sine().lowpass(cutoff, 5.0, analog = 0.0), freqHz = cutoff)
         val satBuf = generate(Ignitors.sine().lowpass(cutoff, 5.0, analog = 5.0), freqHz = cutoff)

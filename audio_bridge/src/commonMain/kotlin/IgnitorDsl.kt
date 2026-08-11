@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+
 
 /**
  * Process-local counter used to stamp each noise-source DSL instance with a unique
@@ -108,8 +110,7 @@ sealed interface IgnitorDsl {
         val depth: IgnitorDsl = Param(name = "depth", default = 0.02)
         val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
 
-        // expK default mirrors audio_be ADSR_EXP_K (audio_be consts aren't visible from audio_bridge).
-        val expK: IgnitorDsl = Param(name = "expK", default = 3.0)
+        val expK: IgnitorDsl = Param(name = "expK", default = ADSR_EXP_K)
         val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
         val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
         val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.5)
@@ -950,7 +951,7 @@ sealed interface IgnitorDsl {
          */
         val declickSeconds: IgnitorDsl = Slots.declickSeconds,
         /**
-         * Curvature of [AdsrCurve.Exponential] segments (`Slots.expK`, default mirrors `ADSR_EXP_K` = 3.0).
+         * Curvature of [AdsrCurve.Exponential] segments (`Slots.expK`, defaults to [ADSR_EXP_K]).
          * Larger = steeper initial change (faster decay drop / sharper attack finish). `oscParam`-addressable.
          */
         val expK: IgnitorDsl = Slots.expK,

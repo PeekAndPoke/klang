@@ -5,8 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
-import io.peekandpoke.klang.audio_be.ADSR_EXP_K
-import io.peekandpoke.klang.audio_be.ENV_DECLICK_SECONDS
 import io.peekandpoke.klang.audio_be.adsrExpNorm
 import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
@@ -14,6 +12,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 
 /**
  * ADSR amplitude envelope (VCA stage).

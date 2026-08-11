@@ -5,6 +5,13 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_LOOKAHEAD_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
+
 /**
  * Declarative, data-driven **master bus** chain — the per-playback loudness and colour stage.
  *
@@ -88,11 +95,11 @@ sealed interface MasterStageDsl {
      */
     @WireName("limiter")
     data class Limiter(
-        val thresholdDb: Double = -1.0,     // MasterStage limiter: thresholdDb
-        val ratio: Double = 20.0,           // MasterStage limiter: ratio
-        val kneeDb: Double = 2.0,           // MasterStage limiter: kneeDb
-        val attackSeconds: Double = 0.001,  // MasterStage: AUTHORED_LIMITER_ATTACK_SECONDS
-        val releaseSeconds: Double = 0.1,   // MasterStage limiter: releaseSeconds
+        val thresholdDb: Double = LIMITER_THRESHOLD_DB,
+        val ratio: Double = LIMITER_RATIO,
+        val kneeDb: Double = LIMITER_KNEE_DB,
+        val attackSeconds: Double = AUTHORED_LIMITER_ATTACK_SECONDS,
+        val releaseSeconds: Double = LIMITER_RELEASE_SECONDS,
         /**
          * Lookahead in seconds — how far ahead the limiter sees, and how much it delays this
          * playback. **Defaults to 0: no lookahead, no added latency.**
@@ -110,7 +117,7 @@ sealed interface MasterStageDsl {
          * value live briefly sums the signal with a delayed copy of itself (a comb). Audible as a
          * short phasey sweep on the edit; harmless, and only reachable if you set this at all.
          */
-        val lookaheadSeconds: Double = 0.0, // MasterStage: AUTHORED_LIMITER_LOOKAHEAD_SECONDS
+        val lookaheadSeconds: Double = AUTHORED_LIMITER_LOOKAHEAD_SECONDS,
     ) : MasterStageDsl
 
     /**

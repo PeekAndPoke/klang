@@ -6,51 +6,17 @@
 package io.peekandpoke.klang.audio_be.filters
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared "filter feel" constants — analog-character tuning parameters used
-// across the filter pipeline. Co-located so a single edit retunes the engine.
+// Engine-internal filter coefficients.
 //
-// Sibling of [io.peekandpoke.klang.audio_be.ignitor.AnalogDriftCoeffs] which
-// houses the oscillator drift constants.
+// The analog-character constants that used to live here — FILTER_CUTOFF_OFFSET_PER_ANALOG,
+// FILTER_DRIVE_PER_ANALOG, FILTER_DRIFT_RELATIVE_TO_OSC — moved to
+// `audio_bridge/constants/FilterHumanizationDefaults.kt`, because each is the default
+// of a `StageDsl.Filter` field and the two copies had already drifted apart. What stays
+// here is the coefficient smoothing, which has no DSL field and is not tunable from a song.
 //
-// All scaled by the `analog` parameter:
-//   - `analog = 0` → no humanization, bit-identical to the textbook filter
-//   - `analog = 1` → mild (Diva-default territory)
-//   - `analog = 3` → noticeable (Memorymoog warm-up — "Der Schmetterling")
-//   - `analog = 10` → extreme (broken VCO)
+// Sibling of [io.peekandpoke.klang.audio_be.ignitor.AnalogDriftCoeffs], which houses the
+// oscillator drift constants — also engine-internal, also not (yet) authorable.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Per-voice cutoff offset scale, per unit `analog`. Each filter instance gets a
- * uniform random multiplier in `1 ± FILTER_CUTOFF_OFFSET_PER_ANALOG × analog`
- * applied at construction and at every runtime `setCutoff` call.
- *
- * At `analog=1` ≈ ±1.7 cents per voice; at `analog=3` ≈ ±5 cents; at `analog=10`
- * ≈ ±17 cents. Tuned by ear — larger values smear the filter's character
- * noticeably across unison voices, especially with long filter chains where
- * each filter draws independently (e.g. `notch + lpf + hpf`). This offset is
- * *frozen per note*, so on fast melodic lines through a high-Q filter it becomes
- * a per-note re-pitch of the resonant peak — keep it small.
- *
- * Consumer: `VoiceFactory.perVoiceCutoffOffsetMul`.
- * Keep in sync with `PipelineDsl.Filter.cutoffOffsetPerAnalog` default.
- */
-internal const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.001
-
-/**
- * Humanization-amount scale for the analog-style state-dependent damping in
- * `SvfLPF` / `SvfHPF`. `driveScale = analog × FILTER_DRIVE_PER_ANALOG` multiplies
- * the `tCfb` term in `kEff = k + 2·driveScale·tCfb`, where `tCfb` is the
- * diode-pair polynomial ([diodePairResistanceApprox]) evaluated at the BP
- * integrator state. Higher values → stronger resonance compression at hot
- * drive, more "OB-X bite".
- *
- * At `analog = 0` the saturated branch is skipped — linear filter, no cost.
- * At `analog = 1` → driveScale = 0.5 (subtle). At `analog = 3` → 1.0
- * (noticeable). At `analog = 10` → 5.0 (crushed resonance, lots of bite).
- *
- * Consumers: `SvfLPF`, `SvfHPF` (and future `SvfBPF` / `SvfNotch` if extended).
- */
-internal const val FILTER_DRIVE_PER_ANALOG: Double = 0.5
 
 /**
  * Coefficient ramp length in samples after each `setCutoff` call. The `BaseSvf`
@@ -71,19 +37,3 @@ internal const val FILTER_SMOOTH_SAMPLES: Int = 32
 
 /** `1 / FILTER_SMOOTH_SAMPLES` — pre-divided so the per-sample loop does muls. */
 internal const val FILTER_INV_SMOOTH_SAMPLES: Double = 1.0 / FILTER_SMOOTH_SAMPLES
-
-/**
- * Filter cutoff drift magnitude, expressed as a multiplier on the oscillator
- * drift scale. Filters get their own `AnalogDrift` instance (constructed with
- * `analog × FILTER_DRIFT_RELATIVE_TO_OSC` so the two-layer OU produces a
- * proportionally bigger drift trajectory than oscillator pitch drift).
- *
- * Tuned by ear: filter cutoff is less perceptually sensitive than pitch, so
- * drift can be a few times wider before sounding "out of tune". At `analog=1`
- * with this constant = `2.5`, the slow layer wanders ±2 cents over ~10 s and
- * the fast layer adds ±0.5 cent of micro-wobble — Diva-default territory.
- *
- * Consumer: `VoiceFactory.toModulator` (creates the per-filter drift).
- * Keep in sync with `PipelineDsl.Filter.driftRelToOsc` default.
- */
-internal const val FILTER_DRIFT_RELATIVE_TO_OSC: Double = 2.5

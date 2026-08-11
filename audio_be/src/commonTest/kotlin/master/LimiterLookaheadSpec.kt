@@ -9,6 +9,10 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.MasterStage
 import io.peekandpoke.klang.audio_be.effects.Compressor
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
@@ -62,12 +66,12 @@ class LimiterLookaheadSpec : StringSpec({
     /** The house safety limiter, exactly as [MasterStage] configures it. */
     fun houseLimiter() = Compressor(
         sampleRate = sampleRate,
-        thresholdDb = MasterStage.LIMITER_THRESHOLD_DB,
-        ratio = MasterStage.LIMITER_RATIO,
-        kneeDb = MasterStage.LIMITER_KNEE_DB,
-        attackSeconds = MasterStage.LIMITER_ATTACK_SECONDS,
-        releaseSeconds = MasterStage.LIMITER_RELEASE_SECONDS,
-        lookaheadSeconds = MasterStage.LIMITER_LOOKAHEAD_SECONDS,
+        thresholdDb = LIMITER_THRESHOLD_DB,
+        ratio = LIMITER_RATIO,
+        kneeDb = LIMITER_KNEE_DB,
+        attackSeconds = MasterStage.HOUSE_LIMITER_ATTACK_SECONDS,
+        releaseSeconds = LIMITER_RELEASE_SECONDS,
+        lookaheadSeconds = MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS,
     )
 
     /**
@@ -133,7 +137,7 @@ class LimiterLookaheadSpec : StringSpec({
         // Added after mutation-checking: shrinking the min-hold window from D+1 to D sailed through
         // every peak-level assertion above, because a slow release still catches the tail and the
         // peak number stays defensible. Only the TIMING of the gain minimum exposes it.
-        val delayFrames = (MasterStage.LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
+        val delayFrames = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
         val frames = 4000
         val impulseAt = 500
 
@@ -196,12 +200,12 @@ class LimiterLookaheadSpec : StringSpec({
         val peaks = listOf(0.0005, 0.001, 0.0025, 0.005).map { attack ->
             val limiter = Compressor(
                 sampleRate = sampleRate,
-                thresholdDb = MasterStage.LIMITER_THRESHOLD_DB,
-                ratio = MasterStage.LIMITER_RATIO,
-                kneeDb = MasterStage.LIMITER_KNEE_DB,
+                thresholdDb = LIMITER_THRESHOLD_DB,
+                ratio = LIMITER_RATIO,
+                kneeDb = LIMITER_KNEE_DB,
                 attackSeconds = attack,
-                releaseSeconds = MasterStage.LIMITER_RELEASE_SECONDS,
-                lookaheadSeconds = MasterStage.LIMITER_LOOKAHEAD_SECONDS,
+                releaseSeconds = LIMITER_RELEASE_SECONDS,
+                lookaheadSeconds = MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS,
             )
             val frames = sampleRate / 4
             val signal = kick(frames, peak = exp(12.0 / 20.0 * 2.302585092994046))
@@ -306,7 +310,7 @@ class LimiterLookaheadSpec : StringSpec({
         val right = signal.copyOf()
         houseLimiter().process(left, right, frames)
 
-        val delayFrames = (MasterStage.LIMITER_LOOKAHEAD_SECONDS * sampleRateLocal).toInt()
+        val delayFrames = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRateLocal).toInt()
         val probe = sampleRateLocal + period * 3 / 4           // settled, mid-gap
         val recovered = left[probe] / signal[probe - delayFrames]
 

@@ -239,7 +239,7 @@ class Voice(
          * Per-voice slow cutoff drift (OU process). When non-null, `FilterModRenderer`
          * advances the drift once per block and multiplies its output into the
          * envelope-derived cutoff. Set when the patch has `analog > 0`. See
-         * [io.peekandpoke.klang.audio_be.filters.FILTER_DRIFT_RELATIVE_TO_OSC].
+         * [io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIFT_RELATIVE_TO_OSC].
          */
         val drift: AnalogDrift? = null,
     )

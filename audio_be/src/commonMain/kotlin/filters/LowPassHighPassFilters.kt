@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.filters
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.PI
 import kotlin.math.tan
 
@@ -237,6 +238,15 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        // Convenience default for tests/benchmarks only — production ALWAYS passes
+        // stage.drivePerAnalog (VoiceFactory.kt:373,380), so mutating this default
+        // changes no shipped sound. It is NOT a tuning knob; retune the constant.
+        //
+        // Specs DO ride it (LowPassHighPassFiltersSpec:682,718,753,800-801), but only ONE
+        // reacts and only upward: :718's DC-purity bound, crossing at drive ≈ 1.5 — 6x the
+        // shipped value. Measured, every spec stays green at 0.5 (the old value), at 0.1,
+        // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
+        // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ): AudioFilter = when (q) {
         null -> OnePoleLPF(cutoffHz, sampleRate, cutoffOffsetMul)
@@ -249,6 +259,15 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        // Convenience default for tests/benchmarks only — production ALWAYS passes
+        // stage.drivePerAnalog (VoiceFactory.kt:373,380), so mutating this default
+        // changes no shipped sound. It is NOT a tuning knob; retune the constant.
+        //
+        // Specs DO ride it (LowPassHighPassFiltersSpec:682,718,753,800-801), but only ONE
+        // reacts and only upward: :718's DC-purity bound, crossing at drive ≈ 1.5 — 6x the
+        // shipped value. Measured, every spec stays green at 0.5 (the old value), at 0.1,
+        // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
+        // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ): AudioFilter = when (q) {
         null -> OnePoleHPF(cutoffHz, sampleRate, cutoffOffsetMul)
@@ -563,6 +582,15 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        // Convenience default for tests/benchmarks only — production ALWAYS passes
+        // stage.drivePerAnalog (VoiceFactory.kt:373,380), so mutating this default
+        // changes no shipped sound. It is NOT a tuning knob; retune the constant.
+        //
+        // Specs DO ride it (LowPassHighPassFiltersSpec:682,718,753,800-801), but only ONE
+        // reacts and only upward: :718's DC-purity bound, crossing at drive ≈ 1.5 — 6x the
+        // shipped value. Measured, every spec stays green at 0.5 (the old value), at 0.1,
+        // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
+        // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
@@ -633,6 +661,15 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
+        // Convenience default for tests/benchmarks only — production ALWAYS passes
+        // stage.drivePerAnalog (VoiceFactory.kt:373,380), so mutating this default
+        // changes no shipped sound. It is NOT a tuning knob; retune the constant.
+        //
+        // Specs DO ride it (LowPassHighPassFiltersSpec:682,718,753,800-801), but only ONE
+        // reacts and only upward: :718's DC-purity bound, crossing at drive ≈ 1.5 — 6x the
+        // shipped value. Measured, every spec stays green at 0.5 (the old value), at 0.1,
+        // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
+        // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0

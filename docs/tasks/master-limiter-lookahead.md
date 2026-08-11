@@ -265,10 +265,10 @@ asymmetry — another reason it is not worth it.)
 
 ### 2.5 Defaults
 
-|                                    | Value                                                                                    | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|------------------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **`LIMITER_LOOKAHEAD_SECONDS`**    | **0.005 (5 ms)** — *defensive default: sound good out of the box, let the user optimise* | With the §2.3 construction the smoothing spans the whole window, so LF quality tracks window length directly. Measured on 55 Hz at +12 dB over: 1.5 ms → −42.6 dB THD-ish, 3 ms → −48.0, **5 ms → −57.4**, with peak essentially unchanged (−0.40 → −0.37). On a path whose hardware latency is already 10–30 ms, 5 ms costs nothing musically and buys ~15 dB of LF cleanliness. The complaint is a **55 Hz** knock — one cycle is 18 ms, so 1.5 ms is only 8% of a cycle. |
-| **house smoothing `M` (`attack`)** | **0.005 (5 ms) = the full window**                                                       | §2.3: peak is *invariant* to `M`, while LF cleanliness tracks it directly — so at fixed latency more smoothing is strictly better. The partition model's "half and half" was an artefact of the wrong arithmetic. ⚠️ **Confirm by ear in Phase 4** — maximum smoothing is optimal for LF, but may soften transients more than we want.                                                                                                                                      |
+|                                       | Value                                                                                    | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+|---------------------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **`HOUSE_LIMITER_LOOKAHEAD_SECONDS`** | **0.005 (5 ms)** — *defensive default: sound good out of the box, let the user optimise* | With the §2.3 construction the smoothing spans the whole window, so LF quality tracks window length directly. Measured on 55 Hz at +12 dB over: 1.5 ms → −42.6 dB THD-ish, 3 ms → −48.0, **5 ms → −57.4**, with peak essentially unchanged (−0.40 → −0.37). On a path whose hardware latency is already 10–30 ms, 5 ms costs nothing musically and buys ~15 dB of LF cleanliness. The complaint is a **55 Hz** knock — one cycle is 18 ms, so 1.5 ms is only 8% of a cycle. |
+| **house smoothing `M` (`attack`)**    | **0.005 (5 ms) = the full window**                                                       | §2.3: peak is *invariant* to `M`, while LF cleanliness tracks it directly — so at fixed latency more smoothing is strictly better. The partition model's "half and half" was an artefact of the wrong arithmetic. ⚠️ **Confirm by ear in Phase 4** — maximum smoothing is optimal for LF, but may soften transients more than we want.                                                                                                                                      |
 
 **Why 5 ms and not 2 ms (user, 2026-08-04): a defensive default.** Measured LF quality on 55 Hz at +12 dB over the
 ceiling: 1.5 ms → −42.6 dB THD-ish, 3 ms → −48.0, **5 ms → −57.4**, with peak essentially unchanged. The complaint is a
@@ -276,7 +276,7 @@ ceiling: 1.5 ms → −42.6 dB THD-ish, 3 ms → −48.0, **5 ms → −57.4**, 
 already 10–30 ms, 5 ms costs nothing musically and buys ~15 dB. Default to the good-sounding end; the knobs are there
 for anyone who wants the latency back.
 
-⚠️ **Consequence: `LIMITER_ATTACK_SECONDS` now diverges from the authored default too.** The house limiter needs
+⚠️ **Consequence: `HOUSE_LIMITER_ATTACK_SECONDS` now diverges from the authored default too.** The house limiter needs
 `B = 2.5 ms` to deliver the 5 ms window's benefit, but the *authored* `MasterFx.limiter()`
 has `lookahead = 0`, so its `attackSeconds` is still the **one-pole attack** and must stay at **0.001** — raising it to
 2.5 ms would make every authored limiter grab transients far more slowly. So `MasterDefaultsSyncSpec` now documents a
@@ -419,7 +419,7 @@ in use, and the split is principled rather than accidental:
 `LIMITER_*` constants. That companion's KDoc already declares itself "the house limiter character… also the defaults of
 the opt-in `MasterStageDsl.Limiter` stage — kept in sync by `MasterDefaultsSyncSpec`", and that spec really does assert
 all five against the wire defaults. Adding to them follows a precedent that already works — but note this is **not
-purely additive**: `LIMITER_ATTACK_SECONDS` also changes meaning (§Phase 3).
+purely additive**: `HOUSE_LIMITER_ATTACK_SECONDS` also changes meaning (§Phase 3).
 
 **Do NOT unify the tuning files.** Subsystem grouping is the useful axis — you tune analog drift by opening
 `AnalogDriftCoeffs.kt`. A single 60-constant file would be worse.
@@ -437,9 +437,9 @@ that identified the shape of the fix.
 ### Units — RESOLVED: seconds
 
 **Decision (user, 2026-08-04): stay uniform, use seconds.** `lookaheadSeconds`, and
-`LIMITER_LOOKAHEAD_SECONDS = 0.005`.
+`HOUSE_LIMITER_LOOKAHEAD_SECONDS = 0.005`.
 
-The engine is uniformly seconds — `LIMITER_ATTACK_SECONDS`, `LIMITER_RELEASE_SECONDS`,
+The engine is uniformly seconds — `HOUSE_LIMITER_ATTACK_SECONDS`, `LIMITER_RELEASE_SECONDS`,
 `ENV_DECLICK_SECONDS`, `MIN_DELAY_SECONDS`, `ANALOG_FAST_TAU_SEC`, `ANALOG_SLOW_TAU_SEC` — and there is no
 millisecond-valued constant anywhere in `audio_be`. `lookaheadMs` would have been the only one, sitting directly beside
 `attackSeconds` and `releaseSeconds` in the same data class. Consistency wins over the (real) mastering-tool convention
@@ -557,8 +557,9 @@ the parameter and turns it green.
 ⚠️ **This is where shipped-song sound changes** — every song, because `MasterStage` is on the summed mix. The claim "no
 phase changes shipped-song sound until Phase 4" was wrong; only Phase 0/1 are sound-neutral.
 
-- `MasterStage` gains `LIMITER_LOOKAHEAD_SECONDS = 0.005` (§4b) and passes it to its `Compressor`. The house smoothing
-  follows §2.5. Note `LIMITER_ATTACK_SECONDS` now means the **one-pole attack for the `lookahead = 0` path** and the
+- `MasterStage` gains `HOUSE_LIMITER_LOOKAHEAD_SECONDS = 0.005` (§4b) and passes it to its `Compressor`. The house
+  smoothing follows §2.5. Note `HOUSE_LIMITER_ATTACK_SECONDS` now means the **one-pole attack for the `lookahead = 0`
+  path** and the
   **smoothing length** when lookahead > 0 — Phase 3 records why the house and authored values deliberately differ.
 - Reorder to **DC blockers → limiter → clip**, and rewrite the now-stale comment at
   `MasterStage.kt:57-60`.
@@ -585,7 +586,7 @@ for orbits, one level up and shipped by default. **Parity by availability, not b
 | Builder            | `MasterChain.kt:191-198`                                                                              | pass through **via `finite(stage.lookaheadSeconds, 0.0)`** and bound it — see below                                                                                                                            |
 | Visibility         | `MasterChain.kt:48`                                                                                   | `private val limiters` → **`internal val`**, matching `reverbs`/`delays` at `:46-47`, which are internal *specifically* so specs can assert what reached the DSP. Without this the wire→DSP hop is untestable. |
 | KlangScript        | `KlangScriptMasterFxExtensions.kt:25-54`                                                              | add `fun lookahead(self, seconds)` beside the existing 5                                                                                                                                                       |
-| House constants    | `MasterStage.kt:27-46`                                                                                | add `LIMITER_LOOKAHEAD_SECONDS = 0.005`; `LIMITER_ATTACK_SECONDS` changes meaning — see below                                                                                                                  |
+| House constants    | `MasterStage.kt:27-46`                                                                                | add `HOUSE_LIMITER_LOOKAHEAD_SECONDS = 0.005`; `HOUSE_LIMITER_ATTACK_SECONDS` changes meaning — see below                                                                                                      |
 | Authored constants | `MasterStage.kt:27-46`                                                                                | **add `AUTHORED_LIMITER_LOOKAHEAD_SECONDS = 0.0` and `AUTHORED_LIMITER_ATTACK_SECONDS = 0.001`** — see below                                                                                                   |
 | Sync spec          | `MasterDefaultsSyncSpec.kt:34-38`                                                                     | rewrite per below                                                                                                                                                                                              |
 | Wire round-trip    | `audio_bridge/src/jsTest/.../WireCodecRoundTripSpec.kt:61-64`                                         | sets every `Limiter` field explicitly by design; add a **non-default** `lookaheadSeconds` or a codec defect round-trips vacuously                                                                              |
@@ -596,7 +597,8 @@ for orbits, one level up and shipped by default. **Parity by availability, not b
 
 Two of the five limiter defaults now legitimately differ between the house limiter (global, post-sum, lookahead on) and
 the authored one (per-playback, lookahead off). `MasterDefaultsSyncSpec.kt:37`
-currently asserts `Limiter().attackSeconds shouldBe MasterStage.LIMITER_ATTACK_SECONDS`, which would simply break — and
+currently asserts `Limiter().attackSeconds shouldBe MasterStage.HOUSE_LIMITER_ATTACK_SECONDS`, which would simply
+break — and
 "document the asymmetry" is prose, while `shouldNotBe` is exactly the toothless guard
 class [F1](../audio-audit/FINDINGS.md#f1) exists to eliminate.
 
@@ -605,15 +607,16 @@ assertable:
 
 ```kotlin
 // MasterStage companion
-const val LIMITER_LOOKAHEAD_SECONDS = 0.005          // house: global, post-sum
-const val LIMITER_ATTACK_SECONDS = 0.005          // house: smoothing length (= window, §2.5)
+const val HOUSE_LIMITER_LOOKAHEAD_SECONDS = 0.005          // house: global, post-sum
+const val HOUSE_LIMITER_ATTACK_SECONDS = 0.005          // house: smoothing length (= window, §2.5)
 const val AUTHORED_LIMITER_LOOKAHEAD_SECONDS = 0.0   // authored: per-playback, no added latency
 const val AUTHORED_LIMITER_ATTACK_SECONDS = 0.001 // authored: one-pole attack, unchanged
 ```
 
 `MasterDefaultsSyncSpec` then asserts the authored constants against `MasterStageDsl.Limiter()` (the three shared params
 keep their existing equality assertions), **plus a relation assertion** that encodes the intent — e.g.
-`LIMITER_ATTACK_SECONDS shouldBe LIMITER_LOOKAHEAD_SECONDS` for the maximum-smoothing house default. The asymmetry
+`HOUSE_LIMITER_ATTACK_SECONDS shouldBe HOUSE_LIMITER_LOOKAHEAD_SECONDS` for the maximum-smoothing house default. The
+asymmetry
 becomes a fact the suite checks, not a comment.
 
 #### Three KDoc surfaces become false and must change in this phase
@@ -958,6 +961,20 @@ reconstruction, and today's hard clip is a far worse inter-sample-peak generator
 things to record so they are not re-derived: (a) the fix *reduces* ISP relative to today; (b) the remaining margin after
 the fix is only ~0.35 dB, which is **below** typical ISP overshoot on limited material (0.5–1.5 dB) — so if true peak
 ever becomes a requirement, the answer is to **lower the ceiling, not change the algorithm**.
+
+## 8b. Naming amendment (2026-08-11)
+
+The constants this doc describes were split when the shared limiter defaults moved to
+`audio_bridge/constants/MasterLimiterDefaults.kt` (`docs/tasks/audio-bridge-constants.md`). The rule is now:
+
+- **no prefix** — `LIMITER_THRESHOLD_DB` / `RATIO` / `KNEE_DB` / `RELEASE_SECONDS`: shared by both limiters, declared
+  once in `audio_bridge`.
+- **`HOUSE_LIMITER_*`** — the house limiter's own lookahead + attack. Stays in `MasterStage`: no DSL field carries it.
+- **`AUTHORED_LIMITER_*`** — the opt-in `MasterFx.limiter()` defaults, in `audio_bridge` (they *are* wire defaults).
+
+References above were renamed accordingly. ⚠️ Under this rule an unprefixed `LIMITER_*` means **shared** — the opposite
+of what it meant when this doc was written, so treat any surviving unprefixed mention in quoted historical output as the
+house constant.
 
 ## 9. Links
 

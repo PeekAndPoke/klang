@@ -164,7 +164,7 @@ class MasterChainSpec : StringSpec({
     "an authored limiter defaults to NO lookahead — the cross-playback desync guard" {
         // A master chain is per playback. Any default latency here would delay one playback against
         // every other one; the house safety limiter can afford 5 ms only because it runs once, on
-        // the summed mix. See MasterStage.AUTHORED_LIMITER_LOOKAHEAD_SECONDS.
+        // the summed mix. See AUTHORED_LIMITER_LOOKAHEAD_SECONDS in audio_bridge/constants.
         build(MasterStageDsl.Limiter()).limiters[0].lookaheadSeconds shouldBe 0.0
     }
 
