@@ -21,6 +21,8 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
  * knobs (`spreadPower`/`sideAtten`/`gainJitter`/`centerJitterScale`) can't be isolated this way — the engine
  * draws per-voice random gains/phases — so their audible effect is guarded on the shared `DetunedStackIgnitor`
  * by `AnalogSawSpec`, and their DSL binding by the `KlangScriptSuper*Spec` dual-language specs.
+ * The phase-pool knobs (`phasePool`/`drawTries`/`kMin`/`kMax`) DO get an end-to-end DSL→engine
+ * guard — statistically — in `PhasePoolDslSeamSpec`.
  */
 class OscShapeEffectSpec : StringSpec({
 

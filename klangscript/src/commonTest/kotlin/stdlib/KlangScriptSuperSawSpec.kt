@@ -82,11 +82,28 @@ class KlangScriptSuperSawSpec : StringSpec({
         ks("Osc.supersaw().centerJitter(1.0)") shouldBe superSaw().copy(centerJitterScale = 1.0)
     }
 
+    "phasePool(1)" {
+        ks("Osc.supersaw().phasePool(1)") shouldBe superSaw().copy(phasePool = 1.0)
+    }
+
+    "drawTries(8)" {
+        ks("Osc.supersaw().drawTries(8)") shouldBe superSaw().copy(drawTries = 8.0)
+    }
+
+    "kMin(0.2)" {
+        ks("Osc.supersaw().kMin(0.2)") shouldBe superSaw().copy(kMin = 0.2)
+    }
+
+    "kMax(0.7)" {
+        ks("Osc.supersaw().kMax(0.7)") shouldBe superSaw().copy(kMax = 0.7)
+    }
+
     // ── full chain ───────────────────────────────────────────────────────────────
 
     "every typed config method in one chain" {
         val code = "Osc.supersaw().freq(110).voices(11).spread(0.12).analog(4.0)" +
-                ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)"
+                ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
+                ".phasePool(1).drawTries(8).kMin(0.2).kMax(0.7)"
 
         ks(code) shouldBe superSaw().copy(
             freq = IgnitorDsl.Constant(110.0),
@@ -97,6 +114,10 @@ class KlangScriptSuperSawSpec : StringSpec({
             sideAtten = 0.2,
             gainJitter = 0.1,
             centerJitterScale = 0.6,
+            phasePool = 1.0,
+            drawTries = 8.0,
+            kMin = 0.2,
+            kMax = 0.7,
         )
     }
 

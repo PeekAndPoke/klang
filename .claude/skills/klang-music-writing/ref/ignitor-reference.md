@@ -98,7 +98,12 @@ Multiple detuned copies for thick, lush sounds.
 | `spread` | 0.2     | Frequency spread between voices |
 
 **Chained character knobs** (return the same super-osc subtype): `.analog(x)` (per-voice pitch drift),
-`.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`.
+`.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`, `.phasePool(x)` (1 = banded
+start-phase selection — consistent low-note fundamentals, off by default), `.drawTries(x)`,
+`.kMin(x)`/`.kMax(x)` (the accepted coherence band — also a timbre control; low band = hollow pad).
+⚠️ Enabling `.phasePool(1)` lifts the low-note fundamental (+2 dB measured on average — more on the
+notes the old random draw was cancelling) — on a finished song, retrim the low end once after
+switching it on.
 
 ```javascript
 // Named args (recommended) — override only what you want:

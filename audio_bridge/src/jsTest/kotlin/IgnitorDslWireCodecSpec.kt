@@ -48,11 +48,49 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "RawPulze" { check(IgnitorDsl.RawPulze()) }
 
     // --- super oscillators ----------------------------------------------------------------------------------
-    "SuperSaw" { check(IgnitorDsl.SuperSaw(freq = IgnitorDsl.Constant(5.0))) }
-    "SuperSine" { check(IgnitorDsl.SuperSine()) }
-    "SuperSquare" { check(IgnitorDsl.SuperSquare()) }
-    "SuperTri" { check(IgnitorDsl.SuperTri()) }
-    "SuperRamp" { check(IgnitorDsl.SuperRamp()) }
+    // The SuperSaw case sets every scalar character field to a NON-default value — a codec that
+    // silently drops a field would otherwise still round-trip to an equal object.
+    "SuperSaw" {
+        check(
+            IgnitorDsl.SuperSaw(
+                freq = IgnitorDsl.Constant(5.0),
+                spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
+                phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
+            )
+        )
+    }
+    "SuperSine" {
+        check(
+            IgnitorDsl.SuperSine(
+                spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
+                phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
+            )
+        )
+    }
+    "SuperSquare" {
+        check(
+            IgnitorDsl.SuperSquare(
+                spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
+                phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
+            )
+        )
+    }
+    "SuperTri" {
+        check(
+            IgnitorDsl.SuperTri(
+                spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
+                phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
+            )
+        )
+    }
+    "SuperRamp" {
+        check(
+            IgnitorDsl.SuperRamp(
+                spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
+                phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
+            )
+        )
+    }
 
     // --- noise sources --------------------------------------------------------------------------------------
     "WhiteNoise" { check(IgnitorDsl.WhiteNoise()) }

@@ -62,4 +62,24 @@ object KlangScriptSuperSawExtensions {
     @KlangScript.Method
     fun centerJitter(self: IgnitorDsl.SuperSaw, centerJitter: Double): IgnitorDsl.SuperSaw =
         self.copy(centerJitterScale = centerJitter)
+
+    /** Banded start-phase selection (phase pool): 0 = off — bit-identical legacy random — 1 = on (default 0). */
+    @KlangScript.Method
+    fun phasePool(self: IgnitorDsl.SuperSaw, phasePool: Double): IgnitorDsl.SuperSaw =
+        self.copy(phasePool = phasePool)
+
+    /** Candidate phase sets scored per note when the phase pool is on (default 5; engine caps at 64). */
+    @KlangScript.Method
+    fun drawTries(self: IgnitorDsl.SuperSaw, drawTries: Double): IgnitorDsl.SuperSaw =
+        self.copy(drawTries = drawTries)
+
+    /** Accepted fundamental-coherence band, lower edge: 0 = cancelled, 1 = phase-aligned (default 0.3). */
+    @KlangScript.Method
+    fun kMin(self: IgnitorDsl.SuperSaw, kMin: Double): IgnitorDsl.SuperSaw =
+        self.copy(kMin = kMin)
+
+    /** Accepted fundamental-coherence band, upper edge (default 0.55). */
+    @KlangScript.Method
+    fun kMax(self: IgnitorDsl.SuperSaw, kMax: Double): IgnitorDsl.SuperSaw =
+        self.copy(kMax = kMax)
 }

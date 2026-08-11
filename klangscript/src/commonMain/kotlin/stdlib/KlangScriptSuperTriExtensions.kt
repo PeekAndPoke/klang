@@ -62,4 +62,24 @@ object KlangScriptSuperTriExtensions {
     @KlangScript.Method
     fun centerJitter(self: IgnitorDsl.SuperTri, centerJitter: Double): IgnitorDsl.SuperTri =
         self.copy(centerJitterScale = centerJitter)
+
+    /** Banded start-phase selection (phase pool): 0 = off — bit-identical legacy random — 1 = on (default 0). */
+    @KlangScript.Method
+    fun phasePool(self: IgnitorDsl.SuperTri, phasePool: Double): IgnitorDsl.SuperTri =
+        self.copy(phasePool = phasePool)
+
+    /** Candidate phase sets scored per note when the phase pool is on (default 16; engine caps at 64). */
+    @KlangScript.Method
+    fun drawTries(self: IgnitorDsl.SuperTri, drawTries: Double): IgnitorDsl.SuperTri =
+        self.copy(drawTries = drawTries)
+
+    /** Accepted fundamental-coherence band, lower edge: 0 = cancelled, 1 = phase-aligned (default 0.4). */
+    @KlangScript.Method
+    fun kMin(self: IgnitorDsl.SuperTri, kMin: Double): IgnitorDsl.SuperTri =
+        self.copy(kMin = kMin)
+
+    /** Accepted fundamental-coherence band, upper edge (default 0.65). */
+    @KlangScript.Method
+    fun kMax(self: IgnitorDsl.SuperTri, kMax: Double): IgnitorDsl.SuperTri =
+        self.copy(kMax = kMax)
 }

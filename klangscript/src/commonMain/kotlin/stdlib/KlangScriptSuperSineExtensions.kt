@@ -62,4 +62,25 @@ object KlangScriptSuperSineExtensions {
     @KlangScript.Method
     fun centerJitter(self: IgnitorDsl.SuperSine, centerJitter: Double): IgnitorDsl.SuperSine =
         self.copy(centerJitterScale = centerJitter)
+
+    /** Banded start-phase selection (phase pool): 0 = off — bit-identical legacy random — 1 = on (default 0). */
+    @KlangScript.Method
+    fun phasePool(self: IgnitorDsl.SuperSine, phasePool: Double): IgnitorDsl.SuperSine =
+        self.copy(phasePool = phasePool)
+
+    /** Candidate phase sets scored per note when the phase pool is on (default 40 — deep search for the
+     *  supersine's rare high band; engine caps at 64). */
+    @KlangScript.Method
+    fun drawTries(self: IgnitorDsl.SuperSine, drawTries: Double): IgnitorDsl.SuperSine =
+        self.copy(drawTries = drawTries)
+
+    /** Accepted fundamental-coherence band, lower edge: 0 = cancelled, 1 = phase-aligned (default 0.5 — K IS the note). */
+    @KlangScript.Method
+    fun kMin(self: IgnitorDsl.SuperSine, kMin: Double): IgnitorDsl.SuperSine =
+        self.copy(kMin = kMin)
+
+    /** Accepted fundamental-coherence band, upper edge (default 0.8). */
+    @KlangScript.Method
+    fun kMax(self: IgnitorDsl.SuperSine, kMax: Double): IgnitorDsl.SuperSine =
+        self.copy(kMax = kMax)
 }

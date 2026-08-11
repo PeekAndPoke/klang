@@ -24,6 +24,10 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.sideAtten shouldBe SUPERSAW_SIDE_ATTEN
         d.gainJitter shouldBe SUPERSAW_GAIN_JITTER
         d.centerJitterScale shouldBe SUPERSAW_CENTER_JITTER_SCALE
+        d.phasePool shouldBe SUPERSAW_PHASE_POOL
+        d.drawTries shouldBe SUPERSAW_DRAW_TRIES
+        d.kMin shouldBe SUPERSAW_K_MIN
+        d.kMax shouldBe SUPERSAW_K_MAX
     }
 
     "IgnitorDsl.SuperRamp character defaults match the SUPERRAMP_* engine constants" {
@@ -32,6 +36,10 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.sideAtten shouldBe SUPERRAMP_SIDE_ATTEN
         d.gainJitter shouldBe SUPERRAMP_GAIN_JITTER
         d.centerJitterScale shouldBe SUPERRAMP_CENTER_JITTER_SCALE
+        d.phasePool shouldBe SUPERRAMP_PHASE_POOL
+        d.drawTries shouldBe SUPERRAMP_DRAW_TRIES
+        d.kMin shouldBe SUPERRAMP_K_MIN
+        d.kMax shouldBe SUPERRAMP_K_MAX
     }
 
     "IgnitorDsl.SuperSine character defaults match the SUPERSINE_* engine constants" {
@@ -40,6 +48,10 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.sideAtten shouldBe SUPERSINE_SIDE_ATTEN
         d.gainJitter shouldBe SUPERSINE_GAIN_JITTER
         d.centerJitterScale shouldBe SUPERSINE_CENTER_JITTER_SCALE
+        d.phasePool shouldBe SUPERSINE_PHASE_POOL
+        d.drawTries shouldBe SUPERSINE_DRAW_TRIES
+        d.kMin shouldBe SUPERSINE_K_MIN
+        d.kMax shouldBe SUPERSINE_K_MAX
     }
 
     "IgnitorDsl.SuperSquare character defaults match the SUPERSQUARE_* engine constants" {
@@ -48,6 +60,10 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.sideAtten shouldBe SUPERSQUARE_SIDE_ATTEN
         d.gainJitter shouldBe SUPERSQUARE_GAIN_JITTER
         d.centerJitterScale shouldBe SUPERSQUARE_CENTER_JITTER_SCALE
+        d.phasePool shouldBe SUPERSQUARE_PHASE_POOL
+        d.drawTries shouldBe SUPERSQUARE_DRAW_TRIES
+        d.kMin shouldBe SUPERSQUARE_K_MIN
+        d.kMax shouldBe SUPERSQUARE_K_MAX
     }
 
     "IgnitorDsl.SuperTri character defaults match the SUPERTRI_* engine constants" {
@@ -56,5 +72,9 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.sideAtten shouldBe SUPERTRI_SIDE_ATTEN
         d.gainJitter shouldBe SUPERTRI_GAIN_JITTER
         d.centerJitterScale shouldBe SUPERTRI_CENTER_JITTER_SCALE
+        d.phasePool shouldBe SUPERTRI_PHASE_POOL
+        d.drawTries shouldBe SUPERTRI_DRAW_TRIES
+        d.kMin shouldBe SUPERTRI_K_MIN
+        d.kMax shouldBe SUPERTRI_K_MAX
     }
 })

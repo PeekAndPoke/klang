@@ -63,9 +63,26 @@ class KlangScriptSuperTriSpec : StringSpec({
         ks("Osc.supertri().centerJitter(1.0)") shouldBe superTri().copy(centerJitterScale = 1.0)
     }
 
+    "phasePool(1)" {
+        ks("Osc.supertri().phasePool(1)") shouldBe superTri().copy(phasePool = 1.0)
+    }
+
+    "drawTries(8)" {
+        ks("Osc.supertri().drawTries(8)") shouldBe superTri().copy(drawTries = 8.0)
+    }
+
+    "kMin(0.2)" {
+        ks("Osc.supertri().kMin(0.2)") shouldBe superTri().copy(kMin = 0.2)
+    }
+
+    "kMax(0.7)" {
+        ks("Osc.supertri().kMax(0.7)") shouldBe superTri().copy(kMax = 0.7)
+    }
+
     "every typed config method in one chain" {
         val code = "Osc.supertri().freq(110).voices(11).spread(0.12).analog(4.0)" +
-                ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)"
+                ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
+                ".phasePool(1).drawTries(8).kMin(0.2).kMax(0.7)"
 
         ks(code) shouldBe superTri().copy(
             freq = IgnitorDsl.Constant(110.0),
@@ -76,6 +93,10 @@ class KlangScriptSuperTriSpec : StringSpec({
             sideAtten = 0.2,
             gainJitter = 0.1,
             centerJitterScale = 0.6,
+            phasePool = 1.0,
+            drawTries = 8.0,
+            kMin = 0.2,
+            kMax = 0.7,
         )
     }
 

@@ -62,4 +62,24 @@ object KlangScriptSuperRampExtensions {
     @KlangScript.Method
     fun centerJitter(self: IgnitorDsl.SuperRamp, centerJitter: Double): IgnitorDsl.SuperRamp =
         self.copy(centerJitterScale = centerJitter)
+
+    /** Banded start-phase selection (phase pool): 0 = off — bit-identical legacy random — 1 = on (default 0). */
+    @KlangScript.Method
+    fun phasePool(self: IgnitorDsl.SuperRamp, phasePool: Double): IgnitorDsl.SuperRamp =
+        self.copy(phasePool = phasePool)
+
+    /** Candidate phase sets scored per note when the phase pool is on (default 5; engine caps at 64). */
+    @KlangScript.Method
+    fun drawTries(self: IgnitorDsl.SuperRamp, drawTries: Double): IgnitorDsl.SuperRamp =
+        self.copy(drawTries = drawTries)
+
+    /** Accepted fundamental-coherence band, lower edge: 0 = cancelled, 1 = phase-aligned (default 0.3). */
+    @KlangScript.Method
+    fun kMin(self: IgnitorDsl.SuperRamp, kMin: Double): IgnitorDsl.SuperRamp =
+        self.copy(kMin = kMin)
+
+    /** Accepted fundamental-coherence band, upper edge (default 0.55). */
+    @KlangScript.Method
+    fun kMax(self: IgnitorDsl.SuperRamp, kMax: Double): IgnitorDsl.SuperRamp =
+        self.copy(kMax = kMax)
 }

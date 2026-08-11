@@ -245,7 +245,8 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSaw] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, `.phasePool(x)`, `.drawTries(x)`, `.kMin(x)`, `.kMax(x)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -273,7 +274,8 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSine] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, `.phasePool(x)`, `.drawTries(x)`, `.kMin(x)`, `.kMax(x)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -301,7 +303,8 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSquare] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, `.phasePool(x)`, `.drawTries(x)`, `.kMin(x)`, `.kMax(x)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -329,7 +332,8 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperTri] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, `.phasePool(x)`, `.drawTries(x)`, `.kMin(x)`, `.kMax(x)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -357,7 +361,8 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperRamp] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, `.phasePool(x)`, `.drawTries(x)`, `.kMin(x)`, `.kMax(x)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.

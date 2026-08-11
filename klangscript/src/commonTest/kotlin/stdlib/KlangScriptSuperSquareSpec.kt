@@ -63,9 +63,26 @@ class KlangScriptSuperSquareSpec : StringSpec({
         ks("Osc.supersquare().centerJitter(1.0)") shouldBe superSquare().copy(centerJitterScale = 1.0)
     }
 
+    "phasePool(1)" {
+        ks("Osc.supersquare().phasePool(1)") shouldBe superSquare().copy(phasePool = 1.0)
+    }
+
+    "drawTries(8)" {
+        ks("Osc.supersquare().drawTries(8)") shouldBe superSquare().copy(drawTries = 8.0)
+    }
+
+    "kMin(0.2)" {
+        ks("Osc.supersquare().kMin(0.2)") shouldBe superSquare().copy(kMin = 0.2)
+    }
+
+    "kMax(0.7)" {
+        ks("Osc.supersquare().kMax(0.7)") shouldBe superSquare().copy(kMax = 0.7)
+    }
+
     "every typed config method in one chain" {
         val code = "Osc.supersquare().freq(110).voices(11).spread(0.12).analog(4.0)" +
-                ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)"
+                ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
+                ".phasePool(1).drawTries(8).kMin(0.2).kMax(0.7)"
 
         ks(code) shouldBe superSquare().copy(
             freq = IgnitorDsl.Constant(110.0),
@@ -76,6 +93,10 @@ class KlangScriptSuperSquareSpec : StringSpec({
             sideAtten = 0.2,
             gainJitter = 0.1,
             centerJitterScale = 0.6,
+            phasePool = 1.0,
+            drawTries = 8.0,
+            kMin = 0.2,
+            kMax = 0.7,
         )
     }
 

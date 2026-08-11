@@ -1,7 +1,8 @@
 # Unison phase pool ("wave-pool") — fixing the fundamental lottery in the super-oscillators
 
-> **Status: 🔴 proposed 2026-08-11 (design co-developed with the user, same day), not started. Not
-> slotted in [`_priorities.md`](_priorities.md).** Priority proposal: **SHOULD** — it is a *sound*
+> **Status: 🟡 IN PROGRESS — open decisions settled with the user 2026-08-11 (see §9); work runs in
+> a self-restarting loop, one phase per iteration, committing directly to `master-dsl` with a
+> review-loop round per phase.** Priority proposal: **SHOULD** — it is a *sound*
 > fix ("sound first") for a defect measured across weeks of sessions, and it defaults to full
 > bypass, so shipping it risks nothing.
 >
@@ -83,7 +84,10 @@ random — this is selection, not alignment; the steady texture is untouched.
 
 ### 3.3 The pool — born warm
 
-A bounded store of accepted configurations, keyed **per (orbit, unisonCount)**:
+A bounded store of accepted configurations, keyed **per (orbit, unisonCount, base gain profile)** —
+`sideAtten` enters the key because stored scores are only valid for the gain profile they were
+scored under (two sounds in one orbit with the same unison but different `sideAtten` must not share
+scores):
 
 - **Size ~1000** (config = N phases ≈ 44 bytes → ~44 KB per pool; a song touches ~5–10 pools).
 - **Born warm:** because scoring is analytic, the pool is filled at instrument load — ~3000 draws, well under a
@@ -106,14 +110,17 @@ knob; 0 = frozen (and reproducible).
 
 ### 3.5 Selection policy (per sound)
 
-- `random` — every note a different vocabulary entry (default)
-- `roundRobin` — cycle
-- `sticky` — hold one entry per phrase/cycle, switch at the boundary: machine-gun repeats strike identically within a
-  phrase ("persistent strings"-lite; likely the guitar-2 feel)
-- **Contextual selection (optional refinement):** evaluate a few candidates' A₁ (t) at the actual note's f₀ and gate
-  length (the trajectory is analytic) and prefer the one that *holds*. ⚠️ Pitch-dependent scoring happens at **selection
-  time only** — stored scores are K (0), which is frequency-invariant; baking pitch into storage would break pool
-  sharing across the scale.
+- `roundRobin` — cycle through the pool array in order, 1 → 2 → 3 → … → wrap (**default; user
+  decision 2026-08-11**): every note a different entry, no immediate repeats, evenly spread
+  vocabulary use, zero extra state beyond an index.
+- `random` — every note an independent draw from the pool.
+- `sticky` — **PARKED** (settled §9.2): holding one entry per phrase needs a phrase boundary, and
+  the backend must stay cycle-free (see the constraint in §6). If ever revived, the boundary must
+  derive from the note stream itself (leading candidate: silence-gap detection — source-agnostic).
+- **Contextual selection — PARKED** (settled §9.5): evaluate a few candidates' A₁ (t) at the actual note's f₀ and gate
+  length (the trajectory is analytic) and prefer the one that *holds*. ⚠️ If revived: pitch-dependent scoring happens at
+  **selection time only** — stored scores are K (0), which is frequency-invariant; baking pitch into storage would
+  break pool sharing across the scale.
 
 ## 4. Applicability across the family
 
@@ -122,7 +129,7 @@ One implementation in the shared unison init covers everyone; per-waveform *defa
 | Oscillator               | How much it matters                                      | Default band note       |
 |--------------------------|----------------------------------------------------------|-------------------------|
 | supersine                | **Critical** — K is the entire note (no other harmonics) | high band, ≈ [0.5, 0.8] |
-| supertri                 | Near-critical (1/k² harmonics)                           | high-ish                |
+| supertri                 | Near-critical (1/k² harmonics)                           | ≈ [0.40, 0.65]          |
 | supersaw / superramp     | The measured case                                        | ≈ [0.30, 0.55]          |
 | supersquare / superpulse | Same statistics, odd harmonics                           | ≈ [0.30, 0.55]          |
 | superpluck               | **Excluded** — excitation-based onset                    | —                       |
@@ -133,49 +140,103 @@ All per-sound (engine-default layer in `OscillatorTuning.kt`, overridable via th
 
 | Knob            | Default                             | Meaning                                               |
 |-----------------|-------------------------------------|-------------------------------------------------------|
-| `phasePool`     | **off**                             | **Full bypass. Off = today's engine, bit-identical.** |
-| `drawTries` (M) | 5                                   | Candidates per draw; 1 + pool off = legacy random     |
+| `phasePool`     | **off**                             | **Full bypass. Off = today's engine (identical rng stream).** |
+| `drawTries` (M) | 5 / 16 supertri / 40 supersine      | Candidates per draw (engine caps at 64); higher bands are rarer per draw, so their search is deeper — a missed band degrades to closest-candidate = K-maximization |
 | `kMin` / `kMax` | per waveform                        | Accepted quality band; doubles as a timbre control    |
 | `poolSize`      | 1000                                | Vocabulary size per (orbit, unison)                   |
 | `refreshEvery`  | 10                                  | Notes between fresh draws; 0 = frozen pool            |
-| `selection`     | `random`                            | `random` / `roundRobin` / `sticky`                    |
+| `selection`     | `roundRobin`                        | `roundRobin` / `random` (`sticky` parked)             |
 | RNG source      | clock (live) / fixed seed (offline) | takes vary live; offline renders reproducible         |
 
 ## 6. Constraints & known side effects
 
+- **The backend stays cycle-free (user ruling 2026-08-11):** the audio backend must never learn
+  about cycles. Sprudel is a *special case* — note events can come from other sources (MIDI,
+  sequencer) that don't operate on cycles. Only seconds cross the FE→BE wire (`ScheduledVoice`),
+  and that stays so. Any future phrase-aware logic derives from the note stream itself.
+- **Bypass = RNG-stream discipline:** with `phasePool off` the engine must consume the RNG stream
+  *exactly* as today — no speculative candidate draws on the off path, and no trailing draws
+  either (all super-oscs share `Random.Default` live, so one extra draw reorders every later
+  note). Guarded by `PhasePoolBypassGoldenSpec`: sample goldens at 1e-9 relative tolerance
+  (libm trig is 1-ulp-specified, not bit-reproducible across platforms — the *engine* is
+  rng-stream-identical, the *guard* is tolerance-based) plus an exact stream-position case.
+- **gainJitter ordering (settled §9.3):** each note draws its jittered gains FIRST; the M phase
+  candidates are then scored against those actual gains. Exact K, jitter stays per-note, pool
+  entries stay phases-only.
+- **Mid-note voice-count changes:** the pool governs note-on only. Voices added mid-note (lazy
+  `voices` param change) get plain random phases, exactly as today.
 - **Audio thread:** pools preallocated at load; insert/evict via fixed-size heap ops; zero allocation at note-on.
-  Scoring cost per note-on: ≤ a few hundred sin/cos — negligible even on JS.
+  Scoring cost per note-on: ≤ ~900 sin/cos at the deepest default (supersine, 40 tries × 11
+  voices) — negligible even on JS. (P0 allocates two small arrays at note-on, consistent with
+  what note-on already allocates; true zero-alloc arrives with the P1 pool.)
 - **Mix impact:** conditioning raises the *average* fundamental ~4–5 dB on affected low voices — a fixed, predictable
   shift (unlike the lottery). Songs will want a one-time low-end retrim after enabling. Document prominently.
 - **Reproducibility:** offline renderer fills and refreshes pools from a fixed seed → identical renders. Live uses the
   clock, consistent with the house "takes vary" philosophy.
 
-## 7. Validation (harness exists)
+## 7. Validation (harness must be REBUILT)
 
-The 120-repeat single-note harness (klang-ai `superdist.py` / `dist.py`) verifies per variant:
+> ⚠️ **2026-08-11:** the `superdist.py` / `dist.py` scripts are no longer anywhere in `klang-ai` —
+> only the session *renders* (`dist-*.sprudel` / `.wav`) survive. Rebuilding the 120-repeat harness
+> is part of P0, and this time the scripts live durably in `klang-ai/scripts/` (session dirs hold
+> only renders + results: `klang-ai/sessions/20260811-unison-phase-pool/`).
+
+The 120-repeat single-note harness verifies per variant:
 
 1. Hole rate (steady fundamental > 6 dB under median): from 11–21 % → **< 1 %** expected.
 2. Steady fundamental sd: ~4.9 dB → ~2 dB expected.
 3. Steady-state texture unchanged: long-term spectrum and band levels within ±0.5 dB of bypass (selection must not
    brighten/thin the sustain).
-4. `phasePool off` renders **bit-identical** to pre-change engine (the bypass guarantee).
+4. `phasePool off` renders with an **identical rng stream** to the pre-change engine (the bypass
+   guarantee; guarded at 1e-9 relative tolerance + an exact stream-position golden — see §6).
 
-## 8. Suggested phasing
+### P0 measured results (2026-08-11, session `klang-ai/sessions/20260811-unison-phase-pool/`)
 
-- **P0 — stateless banded best-of-5** behind the bypass flag + harness verification of §7. Smallest shippable win; no
-  state, no persistence questions.
-- **P1 — the pool:** born-warm fill, (orbit, unison) registry, random-eviction refresh.
-- **P2 — selection policies** (`sticky` esp.) + contextual selection.
-- **P3 — per-waveform tuning defaults** (supersine band!) + docs (`ignitor-reference.md` recipes).
+**All four criteria pass, with one honest reframing.** The onset window (0.05–0.35 s) is where
+selection's guarantee lives: guitar-2 patch holes 15.8 % → **0.8 %**, sd 4.69 → **1.38 dB**;
+clean patch holes 16.7 % → **1.7 %**, sd 5.17 → **2.00 dB**. "Never rings" (hollow in both
+onset and steady windows): 6/120 → **0/120**. Texture (§7.3, clean patch): all bands ≥160 Hz
+within **±0.21 dB**; fundamental region +2 dB average. §7.4 holds as a JVM golden-fixture spec
+(`PhasePoolBypassGoldenSpec`, seeded rng, analog 0 — WAV-level determinism is impossible while
+`AnalogDrift` seeds from `Random.Default`).
 
-## 9. Open decisions
+**Reframing:** the *steady* window (0.4–1.4 s) improves less (sd 5.0 → 3.6 dB, holes 13 % → 10 %)
+because at spread 0.07 st the edge voices rotate ~60° within the note — the scored t=0
+configuration partially re-randomizes. §1's "born hollow stays hollow (r = 0.82)" overstated
+persistence: the rebuilt harness measures r ≈ 0.3 on the original Aug-08 render as well (the
+0.82 definition was lost with the old scripts). Steady fundamental at guitar-2 spread is
+drift-dominated; remaining steady dips are motion on notes that arrived full, not dead notes.
+If that tail ever needs tightening, the parked contextual selection (§3.5) is the lever.
 
-1. Exact per-waveform default bands (supersine's especially — needs ears).
-2. `sticky` boundary definition (per cycle? per phrase-detection? per N notes?).
-3. Whether gainJitter draws join the pooled configuration or stay per-note (leaning: per-note — they are level texture,
-   not phase structure; keeps entries smaller and reuse less audible).
-4. Pool persistence across sessions (localStorage/file) — nice, not needed; born-warm makes cold starts painless anyway.
-5. Whether the contextual-selection refinement is worth its complexity in P2 or parks until a measured need appears.
+## 8. Phasing (updated after §9 settlement)
+
+- **P0 — harness rebuild + stateless banded best-of-5** behind the bypass flag, verified per §7
+  (baseline first: re-measure the defect on the current engine, then the fix). Smallest shippable
+  win; no state, no persistence questions.
+- **P1 — the pool:** born-warm fill, (orbit, unison, gain-profile) registry, random-eviction
+  refresh, `roundRobin` (default) + `random` selection.
+- **P2 — per-waveform tuning defaults** (supersine band! — by ear, with the user) + docs
+  (`ignitor-reference.md` recipes). Includes the bands' voice-count sensitivity: shipped values
+  are calibrated for unison ≈ 7–11 (in-band probability collapses at v ≥ ~16, e.g. supersine
+  ~48 % at v=16) — decide between voices-aware bands or documenting the calibrated range.
+
+(The former P2 "selection policies" phase collapsed: `roundRobin`/`random` are trivial and land
+with P1; `sticky` and contextual selection are parked — see §9.)
+
+## 9. Decisions — SETTLED 2026-08-11 (with the user)
+
+1. **Per-waveform default bands:** ship the provisional §4 values now; tune by ear in P2 with the
+   user listening. Talk can't settle this one.
+2. **`sticky` boundary:** dissolved — default selection is `roundRobin` (cycle the pool array);
+   `sticky` is PARKED and with it the boundary question. Hard constraint recorded in §6: the
+   backend never learns about cycles.
+3. **gainJitter:** stays per-note; phase candidates are scored against the note's actual jittered
+   gains (draw gains first, then score). Exact K, small entries, reuse inaudible.
+4. **Pool persistence:** PARKED — born-warm fill makes cold starts painless; revisit only if an
+   evolved-character use case materializes.
+5. **Contextual selection:** PARKED until a measured need appears.
+6. **Pool key** includes the base gain profile (`sideAtten`), not just (orbit, unisonCount) — §3.3.
+7. **Git flow:** phases land directly on `master-dsl`, one review-loop round per phase.
 
 ## 10. Explicitly out of scope
 

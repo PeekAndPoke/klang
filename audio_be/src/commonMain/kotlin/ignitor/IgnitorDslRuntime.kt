@@ -222,6 +222,7 @@ private fun IgnitorDsl.buildRaw(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
+                phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
             ),
             accumulatedMod
         )
@@ -231,6 +232,7 @@ private fun IgnitorDsl.buildRaw(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
+                phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
             ),
             accumulatedMod
         )
@@ -240,6 +242,7 @@ private fun IgnitorDsl.buildRaw(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
+                phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
             ),
             accumulatedMod
         )
@@ -249,6 +252,7 @@ private fun IgnitorDsl.buildRaw(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
+                phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
             ),
             accumulatedMod
         )
@@ -258,6 +262,7 @@ private fun IgnitorDsl.buildRaw(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
+                phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
             ),
             accumulatedMod
         )
