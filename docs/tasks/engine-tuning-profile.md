@@ -65,6 +65,13 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
    Part B `EngineTuning` object — same shape, same home, so it is a down payment rather than a detour. The τ params stay
    out: 06-17 established the slow layer's audibility is depth, not timescale.
 
+   ⚠️ **Before flipping any default in Part B, read `docs/tasks/pipeline-dsl-coefficient-exposure.md` S5.**
+   The Phase 2 osc knobs already on `IgnitorDsl` carry **duplicated literals**, not references to their
+   `OscillatorTuning` constants (`spreadPower = 1.2` next to `SUPERSAW_SPREAD_POWER = 1.2`, ~30 of them;
+   `Slots.expK` is the only one wired to its constant). Part B's cascade is *instance → engine profile → field default*,
+   so a stale literal at the bottom of that cascade fails silently. S5 is a pure move — no new fields, no sound change —
+   and it is the cheapest possible insurance for this phase.
+
 > Sine/impulse/zaw/zamp/noise have no tunable character → intentionally untouched. `pluck`/`superpluck`
 > character is already ctor fields → chained-method consistency is optional.
 
