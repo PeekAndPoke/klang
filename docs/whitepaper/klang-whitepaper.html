@@ -747,7 +747,7 @@
                 <span>Pre-Alpha</span>
                 <span>Kotlin Multiplatform</span>
                 <span>AGPL-3.0</span>
-                <span>August 2026</span>
+                <span>Aug 11th 2026</span>
             </p>
 
             <h1>Klang Audio Mot<span class="ou">ö</span>r</h1>
@@ -817,18 +817,19 @@
         <div class="body">
             <ol>
                 <li><span class="n">01</span><a href="#s1">The shape of the thing</a></li>
-                <li><span class="n">02</span><a href="#s2">KlangScript — the language you type</a></li>
-                <li><span class="n">03</span><a href="#s3">Sprudel — patterns as functions of time</a></li>
-                <li><span class="n">04</span><a href="#s4">The Motör — the audio engine</a></li>
-                <li><span class="n">05</span><a href="#s5">Oscillators, filters, effects</a></li>
-                <li><span class="n">06</span><a href="#s6">Three DSLs above the engine, and one to come</a></li>
-                <li><span class="n">07</span><a href="#s7">A real song, in full</a></li>
-                <li><span class="n">08</span><a href="#s8">Surfaces around the engine</a></li>
-                <li><span class="n">09</span><a href="#s9">Engineering notes</a></li>
-                <li><span class="n">10</span><a href="#s10">Import / export</a></li>
-                <li><span class="n">11</span><a href="#s11">Open source, and the node idea</a></li>
-                <li><span class="n">12</span><a href="#s12">What's rough</a></li>
-                <li><span class="n">13</span><a href="#s13">An invitation</a></li>
+                <li><span class="n">02</span><a href="#s2">The company we keep</a></li>
+                <li><span class="n">03</span><a href="#s3">KlangScript — the language you type</a></li>
+                <li><span class="n">04</span><a href="#s4">Sprudel — patterns as functions of time</a></li>
+                <li><span class="n">05</span><a href="#s5">The Motör — the audio engine</a></li>
+                <li><span class="n">06</span><a href="#s6">Oscillators, filters, effects</a></li>
+                <li><span class="n">07</span><a href="#s7">Three DSLs above the engine, and one to come</a></li>
+                <li><span class="n">08</span><a href="#s8">A real song, in full</a></li>
+                <li><span class="n">09</span><a href="#s9">Surfaces around the engine</a></li>
+                <li><span class="n">10</span><a href="#s10">Engineering notes</a></li>
+                <li><span class="n">11</span><a href="#s11">Import / export</a></li>
+                <li><span class="n">12</span><a href="#s12">Open source, and the node idea</a></li>
+                <li><span class="n">13</span><a href="#s13">What's rough</a></li>
+                <li><span class="n">14</span><a href="#s14">An invitation</a></li>
                 <li><span class="n">A</span><a href="#appA">Appendix — the codebase by the numbers</a></li>
                 <li><span class="n">B</span><a href="#appB">Appendix — credits and lineage</a></li>
             </ol>
@@ -922,7 +923,57 @@
 
     <!-- ---------------------------- §2 ---------------------------- -->
     <section id="s2">
-        <div class="rail"><span class="num">02</span><span class="tag lang">Language</span></div>
+        <div class="rail"><span class="num">02</span><span class="tag">Scene</span></div>
+        <div class="body">
+            <h3>The company we keep</h3>
+
+            <p>
+                A fair question before going deeper: does anyone actually make music this way? They do —
+                including some of the most respected names in electronic music.
+                <a href="https://musictech.com/news/gear/benn-jordan-aphex-twin-software/">Aphex Twin</a> has
+                described building many of his sounds in SuperCollider patches. Jonny Greenwood runs
+                <a href="https://thekingofgear.com/post/25443456600/maxmsp">Max patches on stage with
+                    Radiohead</a> — the stutter effect on "Go to Sleep", a generative patch driving the piano in
+                live performances of "True Love Waits". Autechre built <em>Confield</em> on generative Max
+                processes — in 2001. And <a
+                    href="https://www.musicradar.com/news/guitars/how-65daysofstatic-built-the-soundtrack-to-no-mans-skys-infinite-universe-641184">65daysofstatic
+                used TidalCycles</a> in building the generative soundtrack of <em>No Man's Sky</em> — and
+                opened its live premiere with a live-coded piece.
+            </p>
+
+            <p>
+                The live-coding scene itself has grown from an in-joke into a movement.
+                <a href="https://algorave.com/">Algoraves</a> — club nights where the music is written as
+                code, projected in front of the crowd — have run in
+                <a href="https://mixmag.net/feature/algorave-live-coding-musical-movement-10-years-interview">more
+                    than eighty cities worldwide</a> since 2012, covered by the Guardian, Wired and Mixmag. And
+                its artists are crossing into ordinary music careers:
+                <a href="https://musichackspace.org/thinkific_instructor/jack-armitage/">Lil Data</a>
+                live-codes TidalCycles on the PC&nbsp;Music label, from SXSW to Berghain;
+                <a href="https://www.interviewmagazine.com/music/live-coder-dj-dave-is-logged-in-to-the-algorave-afters">DJ_Dave</a>
+                builds her sets in Sonic Pi and has toured with JPEGMAFIA and Danny Brown; Alex McLean has
+                played Tidal at Glastonbury and Sónar.
+            </p>
+
+            <p>
+                The tools have numbers to match. <a href="https://sonic-pi.net/">Sonic Pi</a> counts its
+                downloads in the millions and sits in school computing curricula worldwide. Max — the
+                patch-as-instrument grandfather of all of this — was
+                <a href="https://ra.co/news/39187">acquired by Ableton</a> and ships inside the world's
+                dominant electronic-music DAW. Strudel, the browser-based Tidal this project descends from,
+                is lively enough to make the
+                <a href="https://news.ycombinator.com/item?id=45571822">front page of Hacker News</a>.
+                Music-as-code is not a hypothesis — it is a working scene with audiences, labels, classrooms
+                and festivals, and it keeps growing. Klang is not here to replace any of it: the lineage runs
+                Tidal → Strudel → Sprudel, and Appendix B says thank you properly. It is here to develop the
+                idea further — the same pattern-language joy, on a deeper, hand-built synthesis engine.
+            </p>
+        </div>
+    </section>
+
+    <!-- ---------------------------- §3 ---------------------------- -->
+    <section id="s3">
+        <div class="rail"><span class="num">03</span><span class="tag lang">Language</span></div>
         <div class="body">
             <h3>KlangScript — the language you type</h3>
 
@@ -971,7 +1022,7 @@
 <span class="kw">export</span> { bass, feel }</pre>
                 </div>
                 <figcaption>Every song starts with the two wildcard imports. The exported <code>bass</code> is exactly
-                    what §10's cross-server import will want to fetch.
+                    what §11's cross-server import will want to fetch.
                 </figcaption>
             </figure>
 
@@ -982,9 +1033,9 @@
         </div>
     </section>
 
-    <!-- ---------------------------- §3 ---------------------------- -->
-    <section id="s3">
-        <div class="rail"><span class="num">03</span><span class="tag lang">Patterns</span></div>
+    <!-- ---------------------------- §4 ---------------------------- -->
+    <section id="s4">
+        <div class="rail"><span class="num">04</span><span class="tag lang">Patterns</span></div>
         <div class="body">
             <h3>Sprudel — patterns as functions of time</h3>
 
@@ -999,7 +1050,7 @@
                 The time in that sentence is measured in <b>cycles</b>. A cycle is the unit of musical
                 repetition — this world's bar — and a pattern repeats every cycle unless told otherwise.
                 Tempo is cycles per second (<code>cps</code>), and arrangement is written in cycle numbers:
-                "the shakuhachi enters at cycle 28" is a line of code you'll meet in §7.
+                "the shakuhachi enters at cycle 28" is a line of code you'll meet in §8.
             </p>
 
             <p>
@@ -1132,16 +1183,16 @@
         </div>
     </section>
 
-    <!-- ---------------------------- §4 ---------------------------- -->
-    <section id="s4">
-        <div class="rail"><span class="num">04</span><span class="tag engine">Engine</span></div>
+    <!-- ---------------------------- §5 ---------------------------- -->
+    <section id="s5">
+        <div class="rail"><span class="num">05</span><span class="tag engine">Engine</span></div>
         <div class="body">
             <h3>The Motör — the audio engine</h3>
 
             <p>
                 First, vocabulary. Every sounding note is a <b>voice</b> — one running instance of an
                 instrument. The engine has a metaphor and uses it consistently, in the code and in the DSL:
-                a voice is lit by an <b>Ignitor</b>, the instrument's signal graph (§6 builds them). Each
+                a voice is lit by an <b>Ignitor</b>, the instrument's signal graph (§7 builds them). Each
                 voice is routed to a numbered effect bus called an <b>orbit</b> — that's what
                 <code>.orbit(1)</code> in a pattern picks — and the bus itself is a <b>Cylinder</b>.
                 Cylinders can carry a <b>Katalyst</b>, an orbit-level resonator or effect shared by every
@@ -1270,7 +1321,7 @@
                     boundary, crossed only through the lock-free ring buffer — no locks anywhere on the right.
                     The per-block render path is allocation-free by house rule; setup still allocates (a new
                     engine, its delay rings), and the warmed resource pool that removes that is designed but
-                    not yet built — see §12.
+                    not yet built — see §13.
                 </figcaption>
             </figure>
 
@@ -1312,9 +1363,9 @@
         </div>
     </section>
 
-    <!-- ---------------------------- §5 ---------------------------- -->
-    <section id="s5">
-        <div class="rail"><span class="num">05</span><span class="tag engine">Sources</span></div>
+    <!-- ---------------------------- §6 ---------------------------- -->
+    <section id="s6">
+        <div class="rail"><span class="num">06</span><span class="tag engine">Sources</span></div>
         <div class="body">
             <h3>Oscillators, filters, effects</h3>
 
@@ -1400,9 +1451,9 @@
         </div>
     </section>
 
-    <!-- ---------------------------- §6 ---------------------------- -->
-    <section id="s6">
-        <div class="rail"><span class="num">06</span><span class="tag engine">DSLs</span></div>
+    <!-- ---------------------------- §7 ---------------------------- -->
+    <section id="s7">
+        <div class="rail"><span class="num">07</span><span class="tag engine">DSLs</span></div>
         <div class="body">
             <h3>Three DSLs above the engine — and one to come</h3>
 
@@ -1541,9 +1592,9 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
         </div>
     </section>
 
-    <!-- ---------------------------- §7 ---------------------------- -->
-    <section id="s7">
-        <div class="rail"><span class="num">07</span><span class="tag">Real code</span></div>
+    <!-- ---------------------------- §8 ---------------------------- -->
+    <section id="s8">
+        <div class="rail"><span class="num">08</span><span class="tag">Real code</span></div>
         <div class="body">
             <h3>A real song, in full</h3>
 
@@ -1637,9 +1688,9 @@ stack(
         </div>
     </section>
 
-    <!-- ---------------------------- §8 ---------------------------- -->
-    <section id="s8">
-        <div class="rail"><span class="num">08</span><span class="tag">Surfaces</span></div>
+    <!-- ---------------------------- §9 ---------------------------- -->
+    <section id="s9">
+        <div class="rail"><span class="num">09</span><span class="tag">Surfaces</span></div>
         <div class="body">
             <h3>Surfaces around the engine</h3>
 
@@ -1696,9 +1747,9 @@ stack(
         </div>
     </section>
 
-    <!-- ---------------------------- §9 ---------------------------- -->
-    <section id="s9">
-        <div class="rail"><span class="num">09</span><span class="tag">Internals</span></div>
+    <!-- ---------------------------- §10 ---------------------------- -->
+    <section id="s10">
+        <div class="rail"><span class="num">10</span><span class="tag">Internals</span></div>
         <div class="body">
             <h3>Engineering notes</h3>
 
@@ -1767,9 +1818,9 @@ stack(
         </p>
     </div>
 
-    <!-- ---------------------------- §10 ---------------------------- -->
-    <section id="s10">
-        <div class="rail"><span class="num">10</span><span class="tag lang">Sharing</span></div>
+    <!-- ---------------------------- §11 ---------------------------- -->
+    <section id="s11">
+        <div class="rail"><span class="num">11</span><span class="tag lang">Sharing</span></div>
         <div class="body">
             <h3>Import / export <span class="pill sketch">Idea set, mechanism open</span></h3>
 
@@ -1968,9 +2019,9 @@ stack(
         </div>
     </section>
 
-    <!-- ---------------------------- §11 ---------------------------- -->
-    <section id="s11">
-        <div class="rail"><span class="num">11</span><span class="tag">Licence</span></div>
+    <!-- ---------------------------- §12 ---------------------------- -->
+    <section id="s12">
+        <div class="rail"><span class="num">12</span><span class="tag">Licence</span></div>
         <div class="body">
             <h3>Open source, and the node idea</h3>
 
@@ -2042,9 +2093,9 @@ stack(
         </div>
     </section>
 
-    <!-- ---------------------------- §12 ---------------------------- -->
-    <section id="s12">
-        <div class="rail"><span class="num">12</span><span class="tag">Honest</span></div>
+    <!-- ---------------------------- §13 ---------------------------- -->
+    <section id="s13">
+        <div class="rail"><span class="num">13</span><span class="tag">Honest</span></div>
         <div class="body">
             <h3>What's rough</h3>
 
@@ -2103,9 +2154,9 @@ stack(
         </div>
     </section>
 
-    <!-- ---------------------------- §13 ---------------------------- -->
-    <section id="s13">
-        <div class="rail"><span class="num">13</span><span class="tag">Join in</span></div>
+    <!-- ---------------------------- §14 ---------------------------- -->
+    <section id="s14">
+        <div class="rail"><span class="num">14</span><span class="tag">Join in</span></div>
         <div class="body">
             <h3>An invitation</h3>
 
@@ -2122,17 +2173,28 @@ stack(
                     the system fought you. Second most useful: what surprised you by working.
                 </li>
                 <li>
-                    <b>Write a short song.</b> The built-in corpus is 14 songs; §10 dreams of a canon. Every
+                    <b>Write a short song.</b> The built-in corpus is 14 songs; §11 dreams of a canon. Every
                     good thirty-cycle piece extends the initial corpus — and stress-tests the DSL surface in
                     ways no test suite can.
                 </li>
                 <li>
-                    <b>Author an instrument.</b> The Ignitor DSL (§6) makes an instrument a signal graph.
+                    <b>Write tutorials.</b> 38 live tutorials exist (§9), every example playable in the
+                    page — but they were written by the people who built the thing, and it shows. If you can
+                    explain without assuming, and make a beginner want the next lesson, that is a
+                    contribution no amount of engine work replaces.
+                </li>
+                <li>
+                    <b>Author an instrument.</b> The Ignitor DSL (§7) makes an instrument a signal graph.
                     Pick something the roster lacks — a harmonica, a broken church organ, rain on a tin roof —
                     and chase its two-to-four acoustic tells.
                 </li>
                 <li>
-                    <b>Calibrate by ear.</b> The body and vowel resonators (§12) need exactly the
+                    <b>Mix and master the built-in songs.</b> They were balanced by ear at the workbench,
+                    and the Master DSL (§7) has more to give than we ask of it. Take a song, balance its
+                    orbits, stage its master chain — and leave it sounding like a record.
+                </li>
+                <li>
+                    <b>Calibrate by ear.</b> The body and vowel resonators (§13) need exactly the
                     contribution code review cannot give: someone with ears playing real material through
                     them and saying "the mahogany gets boxy above c5". Bring taste, not patches.
                 </li>
@@ -2142,13 +2204,13 @@ stack(
                     catalogue.
                 </li>
                 <li>
-                    <b>Argue with §10.</b> The federation API intends to freeze v1 the way Go froze
+                    <b>Argue with §11.</b> The federation API intends to freeze v1 the way Go froze
                     Go 1 — every exposed field a forever-promise. The cheapest moment to find the design
                     mistake is before that, which is now. Tell us whether it is a good idea or a
                     beautifully-designed mistake.
                 </li>
                 <li>
-                    <b>Hardcore: plan the Zig backend.</b> §12's ~10× gap has a deliberately parked answer —
+                    <b>Hardcore: plan the Zig backend.</b> §13's ~10× gap has a deliberately parked answer —
                     a native backend fed control events, or Zig compiled to Wasm inside the worklet. The code
                     is for later; the planning can start with PeekAndPoke now. If systems programming at
                     audio rates is your idea of fun, this is the one.
@@ -2358,7 +2420,7 @@ stack(
             <h3>What this stands on</h3>
 
             <p>
-                §10 proposes credits as protocol — an attribution graph generated from imports, honest by
+                §11 proposes credits as protocol — an attribution graph generated from imports, honest by
                 construction. This project already keeps the habit by hand. What follows is
                 <code>CREDITS.MD</code>, condensed; every layer of Klang has an ancestry, and it is a
                 pleasure to name it.
@@ -2529,7 +2591,7 @@ stack(
                     </tr>
                     <tr>
                         <td><a href="https://claude.ai">Claude</a> — Anthropic</td>
-                        <td>A significant amount of Klang's code was written together with Claude. In §10's vocabulary
+                        <td>A significant amount of Klang's code was written together with Claude. In §11's vocabulary
                             this codebase is proudly <em>co-created</em> — declared here in exactly the spirit the
                             manifest field intends
                         </td>

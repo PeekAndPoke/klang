@@ -74,7 +74,25 @@ Recorded here only because the underlying tension stays: the FE cannot distingui
 `master(...)`" from "this query chunk happens to contain none", and a sectioned song legitimately has cycles without a
 master event. Revisit only if it bites in practice.
 
-## 5. Small documentation / convention debts
+## 5. `MasterFx.eq()` — a gentle master-bus EQ (new, 2026-08-11)
+
+Wanted by [`auto-mix-advisor.md`](auto-mix-advisor.md) §3 (closed-loop master correction), and independently useful as
+an authored mastering tool. Scope: **2–3 bands — low shelf, high shelf, optionally one mid bell** — deliberately not a
+full parametric EQ.
+
+- **Chain position (decided by mechanism, not taste):** before gain and both limiters — reverb → **eq** → gain →
+  authored limiter → house limiter. The limiter's detector must see the corrected spectrum; that is what converts a
+  low-shelf cut into loudness headroom (measured 2026-08-11 in the klang-ai sessions: −2 dB of low trim bought +1.3 dB
+  RMS *and* reduced beat-rate pumping ~10 % at higher drive).
+- **Parity (§1 applies):** shelf/bell EQ has no per-voice counterpart in sprudel today (`lpf`/`hpf`/`bandf` are filters,
+  not gain shelves). If a per-orbit or per-voice shelf ever appears, names and units must match from day one — propose
+  `eqLowDb/eqLowHz`, `eqHighDb/eqHighHz`, `eqMidDb/eqMidHz/eqMidQ` (dB gain + Hz corner, the industry-standard meaning)
+  and record them in the parity table before shipping.
+- **Implementation:** stereo biquad shelves from the existing SVF/biquad infra; plain `var` params (no buffer sizing —
+  unlike `lookaheadSeconds` there is no constructor-val constraint); wire model + KSP codec + `MasterDefaultsSyncSpec`
+  -style assertion for defaults (all gains 0 dB = bit-transparent, so existing songs are untouched).
+
+## 6. Small documentation / convention debts
 
 - The `delaycap` KDoc example `delayfeedback(1.0).delaycap(2.0) // endless echo, held at 2.0` is misleading: at exactly
   1.0 the cap never engages (the echo holds at the *input* level); the cap only sets the level once feedback > 1.
@@ -92,3 +110,4 @@ master event. Revisit only if it bites in practice.
 - Next in the same family: [`katalyst-dsl.md`](katalyst-dsl.md) — follows this application-path and effect-reuse
   precedent
 - [`resource-warehouse-pool.md`](resource-warehouse-pool.md) — owns item 3
+- [`auto-mix-advisor.md`](auto-mix-advisor.md) — wants item 5 (`MasterFx.eq`) for its closed-loop phase

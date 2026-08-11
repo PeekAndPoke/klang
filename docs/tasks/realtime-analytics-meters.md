@@ -78,6 +78,11 @@ beats (breathing) or stay depressed (the measured 1.25 dB @ 100 ms pump — see
 [`master-limiter-lookahead.md`](master-limiter-lookahead.md) §Phase 4, still-open decision) · did a `MasterFx.gain`
 change move GR from "occasional −2 dB" to "pinned −6 dB".
 
+It is also the trust indicator for meter 2.1: a program-dependent limiter ducks the low-heavy moments hardest, so under
+deep GR the post-master spectrum stops being an honest picture of the *mix*. Measured 2026-08-11: at gain 1.50 the
+limiter's spectral fingerprint on Der Schmetterling was ≤ 0.2 dB per band (negligible); at 1.85 drive, a −2.1 dB bass
+trim measured back as only −1.7 dB. GR depth tells you which regime you're in.
+
 Needs the telemetry channel. Hot-path cost: one min () per sample already effectively computed; one scalar write per
 block.
 
@@ -103,7 +108,49 @@ Needs the telemetry channel. Cost: one multiply-accumulate triple per sample on 
 Short-term loudness + crest factor over a rolling ~10 s. Partially redundant once 2.2 exists (GR history tells most of
 the story); build last, or fold into 2.2's strip as a second trace.
 
-## 3. Suggested phasing
+### 2.6 Pre/post-master dual view — NICE, but uniquely cheap here
+
+Offline, separating "the mix" from "the master" costs a second render with the limiter idled. In the engine it costs a
+second analyzer tap: feed meter 2.1 from BOTH the pre-`MasterStage` sum and the post-master output and show the two
+tables (or their diff) side by side. The diff *is* the master chain's live spectral fingerprint — the thing the
+2026-08-11 session needed a whole render cycle to obtain. Realtime and nearly free; bundle with Phase 2 since both touch
+`MasterStage`.
+
+## 3. Deep analyses — on-demand, too heavy for realtime
+
+The 2026-08-11/12 sessions ran a second kind of tool: analyses over *minutes* of audio that answer structural questions
+no realtime meter can. These belong in the UI as **on-demand analyses** — triggered by a user gesture, computed off the
+audio and UI threads, results shown as a report panel. Reference implementations exist as Python scripts in the klang-ai
+repo (`specbalance.py`, `specdist.py`, `pumping.py`); treat them as the spec.
+
+Downstream consumer: [`auto-mix-advisor.md`](auto-mix-advisor.md) builds attribution ("which orbit owns which band")
+and a rule-based suggestion engine on top of these analyses — its P2 phase consumes this doc's capture ring, worker, and
+windowed distribution directly.
+
+| Analysis                                 | Question it answers                                                                                                                                                                            | Input                                                    | Cost                                         |
+|------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------|----------------------------------------------|
+| **Windowed balance distribution**        | how does the balance move across sections — best/worst windows, dark/bright arc, break contrast (measured: 14 of 16 windows within ±1 dB; the break inverts the spectrum by 40+ dB in the sub) | N-cycle windows over the full song (or last few minutes) | dozens of Welch batches — seconds of compute |
+| **A/B snapshot diff**                    | did that knob change do what I meant — the "lowtrim experiment" as a UI gesture: freeze a reference table (a take, a section, pre-change state), diff live or captured audio against it        | two captures (or capture + live slow-EMA)                | one extra table + a diff                     |
+| **Envelope-modulation / pumping report** | is the limiter breathing with the beat — modulation depth at beat-rate fractions of the cycle rate                                                                                             | ≥ 30 s of post-master audio + the RPM                    | envelope extraction + one FFT                |
+| **Loudness/crest/ceiling report**        | release-readiness numbers: RMS, peak, crest factor, % samples near ceiling                                                                                                                     | full capture                                             | trivial, batch                               |
+
+Two automation notes from the sessions: (a) every analysis needs the **RPM/cycle length** to window musically — plumb
+the current playback tempo into the analysis request; (b) reports should always print the *silence-gated* variants, or
+quiet sections corrupt the averages.
+
+### 3.1 Architecture: capture ring + worker
+
+- **Capture ring on the master bus** (and optionally the pre-master tap): last 60–120 s of Float32 stereo (48 kHz × 120
+  s × 2 ch ≈ 46 MB — acceptable on desktop; make the length configurable). Plus an explicit
+  "record this session" mode for full-song reports.
+- **Compute placement:** JS → a **WebWorker**, fed via transferable `Float32Array` chunks (zero-copy); the audio worklet
+  and UI thread are never blocked. JVM → background coroutine. The analyses are pure functions over arrays — ideal
+  worker material, and the same `commonMain` implementation can serve both platforms.
+- **Parity requirement:** the Kotlin implementations must match the Python reference scripts on the same WAV to ±0.1 dB
+  per band (Welch 16384/Hann/50% overlap, 1/3-octave energy sums, 250–500 Hz anchor, 1e-4 silence gate). Write that spec
+  down once — `docs/audio-audit/` style — so the two toolchains stay cross-checkable.
+
+## 4. Suggested phasing
 
 - **Phase 0 — balance meter, UI-only** (`SpectrumBinning` variant + new component; decide FFT size). Independently
   shippable; no engine change if 2048 proves adequate for a first cut.
@@ -111,11 +158,15 @@ the story); build last, or fold into 2.2's strip as a second trace.
   `AudioAnalyzer.waveform`. Design once, review once — every later meter is a consumer. ⚠️ JS is the binding constraint
   (`audio/ref/performance.md`): scalar writes per block only, no allocation per block, UI pulls at frame rate rather
   than engine pushing per block.
-- **Phase 2 — GR meter** (house limiter first, authored limiters second, orbit compressors later).
+- **Phase 2 — GR meter** (house limiter first, authored limiters second, orbit compressors later) **+ the pre/post dual
+  tap (§2.6)** — same files.
 - **Phase 3 — orbit ladder.**
 - **Phase 4 — correlation, dynamics strip** — opportunistic.
+- **Phase 5 — capture ring + worker harness** (§3.1): the infrastructure for on-demand analyses, plus the loudness/crest
+  report as its hello-world.
+- **Phase 6 — windowed distribution + A/B snapshot diff**: the two analyses that did the most work in the sessions.
 
-## 4. Open decisions
+## 5. Open decisions
 
 1. FFT size for the low bands (raise global vs. second decimated tap) — §2.1.
 2. Anchor convention: adopt 250–500 Hz band-mean everywhere (this doc's proposal) or move offline scripts to the
@@ -123,10 +174,16 @@ the story); build last, or fold into 2.2's strip as a second trace.
 3. Telemetry channel shape: reuse the `Stream` pattern of `AudioAnalyzer` vs. a pull-model snapshot struct the UI reads
    per frame. (Pull avoids per-block allocations on JS; leaning pull.)
 4. Where the meters live in the UI (always-on strip vs. a dedicated analytics panel) — author's call.
+5. Capture-ring length and memory budget (60 s vs 120 s vs configurable) — §3.1.
+6. Worker implementation: Kotlin/JS-compiled worker sharing `commonMain` analysis code (preferred for parity) vs a
+   hand-written JS worker.
+7. Where the analysis-algorithm parity spec lives (so Python reference scripts and Kotlin ports stay in lockstep).
 
-## 5. Explicitly out of scope
+## 6. Explicitly out of scope
 
 - Harshness/fizz meter (no measurable correlate — see header decision 1).
 - Onset-stability metrics (offline statistical tooling; lives in klang-ai analysis scripts).
 - Any per-voice (as opposed to per-orbit) metering — voice counts are dynamic and the ladder would be unreadable;
   revisit only with a concrete use case.
+- Automated parameter-sweep re-rendering ("what would gain X sound like" batch experiments) — that is offline render
+  tooling, not UI analytics; the A/B snapshot diff (§3) covers the measurement half once the author makes the change.
