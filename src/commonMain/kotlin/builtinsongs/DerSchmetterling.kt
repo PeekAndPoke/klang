@@ -33,7 +33,7 @@ let supersawHp = (() => {
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
     // character knobs first — plain scalars, SuperSaw-typed, must precede the filter
-    .analog(pAnalog).spreadPower(2.0).sideAtten(0.7).gainJitter(0.85).centerJitter(0.05)
+    .analog(pAnalog).spreadPower(2.0).sideAtten(0.8).gainJitter(0.85).centerJitter(0.05)
     .add(Osc.supersaw(freq = Osc.freq().mul(2), voices = pVoices, spread = pSpread).mul(0.2))
     .highpass(Osc.freq().mul(pHpTrack), pHpQ, pAnalog)
    
@@ -86,11 +86,11 @@ stack(
     .pan(0.5).late(0.0015).orbit(5).pan(0.475).gain(0.20).hpf(180).lpf(11500).adsr("0.002:0.05:0.8:0.2")
     .superimpose(x => x.bandf("205".add(berlin.mul(10).fast(4))).bandq(4).vel(0.80).hpf(180).lpf(450)),
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-    .pan(0.525).late(0.0030).orbit(5).gain(0.21).hpf(1000).lpf("11500".add(perlin.mul(300).fast(4))).adsr("0.005:0.05:0.9:0.2"), // . mute()
+    .pan(0.525).late(0.0030).orbit(5).gain(0.21).hpf(1000).lpf("11500".add(perlin.mul(500).fast(4))).adsr("0.005:0.05:0.9:0.2"), // . mute()
   sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(6).gain(0.09).mute("<0!128 1!32>"),
   sound("pink!8").orbit(7).gain(0.03).hpf(8000).lpf(15000).lpq(0.5)
     .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05"),  // .solo()
-  sound("white!3").orbit(7).gain(0.001).hpf(8000).lpf(15000).lpq(0.5)
+  sound("white".slow(2)).orbit(7).gain(0.002).hpf(8000).lpf(15000).lpq(0.5)
   // Master
   ,master(Master.of(MasterFx.reverb().wet(0.04).damp(0.7).roomSize(7), MasterFx.gain(1.30)))
 ).analog(feel).seed(timeOfDay.mul(10*60*60*24)).shuffle("<1!128 1!32 2!32>")
