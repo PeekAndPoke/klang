@@ -232,6 +232,11 @@ ratio can only be explored from one end. Closing that needs a decision:
   vs. lazy wander), and the 06-17 findings note the slow layer's audibility is *depth, not timescale* — which argues for
   exposing depth per layer rather than one combined scalar.
 
+➡️ **Now owned by `docs/tasks/analog-drift-ratio-tuning.md`** (opened 2026-08-11), which also records the measurements
+that already constrain the answer. The design fork above is **resolved** there: the depths belong on an engine-level
+tuning object, not on `IgnitorDsl` per-instance — `engine-tuning-profile.md` Part A.3 had already made that call and it
+should not be re-litigated.
+
 Tracked here so the precursor is not mistaken for the whole job.
 
 ### 6.1 ⚠️ Filter-drive parity is restored at the DEFAULT only

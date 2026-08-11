@@ -49,8 +49,8 @@ stack(
   // Lead                                                                                                              
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3 [1 -1]|1|1|1|1]>*2`)                  
     .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound(supersawHp).unison(15).spread(0.08)    
-    .hpf(1600).lpf(5000).lpe(perlin.range(0.5, 0.6).fast(2)).lpq(1.5).lpadsr("0.010:0.5:0.3:0.03")                      
-    .gain(0.50).distort("0.520:tube:4").postgain("<0.200!48 0.110!16 0.200!48 0.280!16>")  // . solo()                  
+    .hpf(1600).lpf(4000).lpe(perlin.range(0.5, 0.6).fast(2)).lpq(1.5).lpadsr("0.010:0.5:0.3:0.03")                      
+    .gain(0.50).distort("0.500:tube:4").postgain("<0.200!48 0.110!16 0.200!48 0.280!16>")  // . solo()                  
     .adsr("0.010:4.0:0.3:0.03").clip(0.95).release("<0.08!16 0.15!16>") // . mute()            
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                            
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.25).pan(0.1).superimpose(pan(0.9)))
@@ -62,7 +62,7 @@ stack(
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)) //  . solo()
     .sound(supersawHp).unison(13).spread(0.07).gain(0.5).postgain(0.14).distort("1:tube:4").distort(0.80)    
-    .clip("<0.93!31 0.85 0.93!31 0.83 0.93!30 0.85 0.80>".fast(2)).adsr("0.005:3.0:0.0:0.040").lpadsr("0.003:0.8:0.0:0.025")    
+    .clip("<0.93!31 0.85 0.93!31 0.83 0.93!30 0.85 0.80>".fast(2)).adsr("0.005:3.0:0.0:0.040").lpadsr("0.003:0.5:0.0:0.025")    
     .hpf("<600>").lpf(5000).lpe(0.5).lpq(0.707)
     .pan(0.2).superimpose(pan(0.8)).body("spruce").bodyMix(0.4)
   , // Guitar 2
@@ -70,7 +70,7 @@ stack(
     .orbit(2).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2) // . mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
     .sound(supersawHp).unison(9).spread(0.08).gain(0.5).postgain(0.13).distort("1:tube:4").distort(0.80)
-    .clip("<0.93!31 0.85 0.93!31 0.83 0.93!30 0.85 0.80>".fast(2)).adsr("0.006:3.0:0.0:0.040").lpadsr("0.003:0.8:0.0:0.025")    
+    .clip("<0.93!31 0.85 0.93!31 0.83 0.93!30 0.85 0.80>".fast(2)).adsr("0.006:3.0:0.0:0.040").lpadsr("0.003:0.5:0.0:0.025")    
     .hpf(90).lpf(4500).lpe(0.5).lpq(0.707)
     .coarse(2).coarseos(2).pan(0.65).superimpose(
       x => x.pan(0.35),

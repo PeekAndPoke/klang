@@ -58,6 +58,13 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
    exactly the per-engine drift character an `EngineTuning` profile would set (`driftFastTauSec`/`driftSlowTauSec`/…)
    → fold into Phase 3 rather than adding standalone per-osc fields, unless per-instance drift tuning is wanted.
 
+   ⚠️ **A by-ear question is now blocked on this** — see `docs/tasks/analog-drift-ratio-tuning.md`. Klang's pitch drift
+   leads filter drift 4:1 and the hypothesis is that real hardware is the inverse; the filter side became authorable on
+   2026-08-11, the oscillator side did not, so the ratio can only be pushed from one end. That task proposes shipping
+   the **two depth fields only** (`ANALOG_FAST_PEAK_CENTS` / `ANALOG_SLOW_PEAK_CENTS`) as the first real slice of the
+   Part B `EngineTuning` object — same shape, same home, so it is a down payment rather than a detour. The τ params stay
+   out: 06-17 established the slow layer's audibility is depth, not timescale.
+
 > Sine/impulse/zaw/zamp/noise have no tunable character → intentionally untouched. `pluck`/`superpluck`
 > character is already ctor fields → chained-method consistency is optional.
 
