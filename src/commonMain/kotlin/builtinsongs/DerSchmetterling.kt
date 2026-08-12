@@ -28,21 +28,23 @@ let supersawHp = (() => {
   let pAnalog  = OscSlot.analog
 
   // --- pitch-tracking highpass -------------------------------------------
-  let pHpTrack = Osc.param("hptrack", 1.05,  "Highpass cutoff as a multiple of the note frequency")
+  let pHpTrack = Osc.param("hptrack", 1.0,   "Highpass cutoff as a multiple of the note frequency")
   let pHpQ     = Osc.param("hpq",     0.707, "Highpass resonance")
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
-    // character knobs first — plain scalars, SuperSaw-typed, must precede the filter
-    .analog(pAnalog).spreadPower(2.0).sideAtten(0.5).gainJitter(0.25).centerJitter(0.05).mul(4/4)
+    // Important: enable the phase-pool for consistent onsets and fundamentals
+    .phasePool(on = 1)
+    // character knobs — plain scalars, SuperSaw-typed, must precede the filter
+    .analog(pAnalog).spreadPower(1.5).sideAtten(0.2).gainJitter(0.10).centerJitter(0.10).mul(4/4)
     // Add overtones 1 octave up
-    .add(Osc.supersaw(freq = Osc.freq().mul(2), voices = pVoices.div(2), spread = pSpread).centerJitter(0.05).mul(1/4))  
+    .add(Osc.supersaw(freq = Osc.freq().mul(2), voices = pVoices.div(2), spread = pSpread).centerJitter(0.05).phasePool(1).mul(1/4))  
     // Follow the frequency to avoid low mud
     .highpass(Osc.freq().mul(pHpTrack), pHpQ)
    
   return signal
     .add(signal.bandpass(800, 0.500).mul(1.5))  // mids
     .add(signal.bandpass(1500, 0.500).mul(3.0)) // presence
-    .lowpass(6000)
+    .lowpass(5900)
 })()
                                                                                                                        
 stack(                                                                                                                  
@@ -50,7 +52,7 @@ stack(
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3 [1 -1]|1|1|1|1]>*2`)                  
     .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound(supersawHp).unison(15).spread(0.08)    
     .hpf(1600).lpf(4000).lpe(perlin.range(0.5, 0.6).fast(2)).lpq(1.5).lpadsr("0.010:0.5:0.3:0.03")                      
-    .gain(0.50).distort("0.500:tube:4").postgain("<0.220!48 0.100!16 0.220!48 0.270!16>")  // . solo()                  
+    .gain(0.50).distort("0.500:tube:4").postgain("<0.210!48 0.090!16 0.210!48 0.260!16>")  // . solo()                  
     .adsr("0.010:4.0:0.3:0.03").clip(0.95).release("<0.08!16 0.15!16>") // . mute()            
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                            
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.25).pan(0.1).superimpose(pan(0.9)))
@@ -71,10 +73,10 @@ stack(
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
     .sound(supersawHp).unison(9).spread(0.08).gain(0.5).postgain(0.13).distort("1:tube:4").distort(0.80)
     .clip("<0.93!31 0.85 0.93!31 0.83 0.93!30 0.85 0.80>".fast(2)).adsr("0.006:3.0:0.0:0.040").lpadsr("0.003:0.5:0.0:0.025")    
-    .hpf(90).lpf(4500).lpe(0.5).lpq(0.707)
+    .hpf(80).lpf(4500).lpe(0.5).lpq(0.707)
     .coarse(2).coarseos(2).pan(0.65).superimpose(
       x => x.pan(0.35),
-      x => x.postgain(0.12).hpf(200).lpf(4500).transpose(12).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [0 -3] -3!7 [-5 [-4 -3@3]]!1 -3!7 [-3 [2 4@3]]>")
+      x => x.postgain(0.125).hpf(200).lpf(4500).transpose(12).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [0 -3] -3!7 [-5 [-4 -3@3]]!1 -3!7 [-3 [2 4@3]]>")
            .pan(0.3).superimpose(pan(0.7))
     ).mute("<0!128 1!16 0!16>").body("mahogany").bodyMix(0.4)
   , // Bass
@@ -92,10 +94,10 @@ stack(
   sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
     .pan(0.525).late(0.0030).orbit(5).gain(0.21).hpf(1000).lpf("13500".add(perlin.mul(500).fast(4))).adsr("0.005:0.05:0.9:0.5"), // . mute()
   sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(6).gain(0.09).mute("<0!128 1!32>"),
-  sound("pink!16").orbit(7).gain(0.03).hpf(3000).lpf(perlin.range(16000, 18000)).lpq(0.5)
-    .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05")  // .solo()
+  sound("<pink ~ pink pink>*16").orbit(7).gain(0.04).hpf(4000).lpf(perlin.range(15000, 16000)).lpq(0.5)
+    .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.005:0.15:0.0:0.05") //  .solo()
   // Master
-  ,master(Master.of(MasterFx.reverb().wet(0.04).damp(0.7).roomSize(7), MasterFx.gain(1.6)))
+  ,master(Master.of(MasterFx.reverb().wet(0.04).damp(0.7).roomSize(7), MasterFx.gain(1.65)))
 ).analog(feel).seed(timeOfDay.mul(10*60*60*24)).shuffle("<1!80 2!48 1!128 2!32>").swingBy(0.01, 4)
 
 
