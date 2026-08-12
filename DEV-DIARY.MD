@@ -4,6 +4,59 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-08-12) Unison phase pool ... v0.2.0
+
+- the super-osc "fundamental lottery" is dead ... banded start-phase selection + per-orbit pools
+- onset holes 16% -> 0, never-ring notes 6/120 -> 0, sustain texture untouched
+- off by default (pooled onsets lift the low end ~2 dB) ... per-song opt-in via ONE combined .phasePool (...) call
+- per-family k-bands, round-robin serving, amortized warm-up ... no audio-thread stalls
+- wrote it up as a blog post (docs/blog/2026-08-12-the-fundamental-lottery)
+
+### (2026-08-11) Master limiter lookahead
+
+- the master limiter sees peaks coming now ... clean catches instead of cracked transients
+- widened the voice timeline to Double along the way
+- songs + by-ear engine tuning all week
+
+### (2026-08-09) White paper
+
+- the klang white paper ... the whole idea in one html (docs/whitepaper/)
+- songs, songs, songs
+
+### (2026-08-08) Sample onsets + block-size parity
+
+- sample voices could start up to a block late ... onset quantization fixed
+- block size pinned to 128 everywhere ... block size is a SOUND parameter, not a speed knob (offline = live now)
+
+### (2026-08-03) Master-in-pattern + parameter parity
+
+- the master stage rides the pattern now ... master (Master.of (MasterFx.gain (2.5), MasterFx.limiter ()))
+- crossfades on swap, works offline, Master.default () switches it back off
+- reverb/delay parameter parity ... same word = same meaning on orbit and master buses (the roomSize 10x bug)
+- audio-backend audit planned ... the green audio_be suite is an unmeasured net (no mutation checks yet)
+
+### (2026-08-01) Breadcrumbs
+
+- a quiet summer week ... breadcrumbs in docs/tasks/_pick-up-here.md, priorities refreshed
+- federated song sharing captured for post-launch ... klang.art:user/song@v1.0
+
+### (2026-07-25) Songs
+
+- songs, credits ... then a summer breather
+
+### (2026-07-10) Releases + merges
+
+- v0.1.3 / v0.1.4 ... songs + strategy notes
+- ignitor DSL surface merged (PR #64)
+
+### (2026-07-04) Benchmarks + pipeline perf ... v0.1.2
+
+- pipeline optimizations merged (PR #63) ... benchmark-driven
+- runSongBenchmark harness ... real songs, per-block timing
+- adsr declick + expK knobs as oscParam slots
+- live-update double-voice fix ... grace window + full-identity dedup
+- "croon" body material
+
 ### (2026-06-30) Noise generators get knobs
 
 - white noise spectral tilt (color) ... darken toward pink/brown, brighten toward blue/violet

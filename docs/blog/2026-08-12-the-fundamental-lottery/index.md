@@ -57,7 +57,7 @@ note to note like a faulty neon sign, while the upper harmonics stay steady. Bot
 
 A supersaw is N slightly-detuned sawtooth voices — eleven, in our patch. Each voice starts at a random phase; that
 randomness is deliberate and old (Roland's JP-8000 established the recipe, and Szabó's classic analysis
-[[szabo2010]](#references) documents the architecture). Random phases are what make the ensemble *lush* instead of a
+[[1]](#szabo2010) documents the architecture). Random phases are what make the ensemble *lush* instead of a
 single fat saw.
 
 But the fundamental of the summed ensemble is the **vector sum of eleven unit phasors** — eleven arrows, each pointing
@@ -98,14 +98,14 @@ pads.
 randomization" amount, and at 100% you get exactly the lottery described above. The industry ships the dice.
 
 **Designed phase tables.** Outside synthesis, Schroeder derived phase sets that minimize the peak factor of a multitone
-signal [[schroeder1970]](#references)
+signal [[2]](#schroeder1970)
 — deterministic, flat, used in measurement signals to this day. But one fixed table means every note is *identical*, and
 low crest factor was never a musical objective. Nobody tuned these for how a note *feels*.
 
 **And then there's telecommunications.** An OFDM radio signal is a sum of many carriers with data-dependent phases —
 mathematically the *same object* as our unison ensemble — and radio engineers suffer the same Rayleigh statistics as a
 peak-to-average-power problem. Their standard fix, **Selected Mapping**
-[[baeuml1996]](#references), is disarmingly simple: generate several candidate phase mappings, evaluate each, transmit
+[[3]](#baeuml1996), is disarmingly simple: generate several candidate phase mappings, evaluate each, transmit
 the best one. It has been in production since 1996. Two industries away, the solution to our problem had been running
 for thirty years — nobody had told the synthesizers.
 
@@ -208,7 +208,7 @@ cheaply enough that the audition is invisible. The dice still roll; the engine j
 
 ---
 
-## References {#references}
+## References
 
 1. <a id="szabo2010"></a>Szabó, A. (2010). *How to Emulate the Super Saw.*
    B.Sc. thesis. [PDF](https://www.adamszabo.com/internet/adam_szabo_how_to_emulate_the_super_saw.pdf)

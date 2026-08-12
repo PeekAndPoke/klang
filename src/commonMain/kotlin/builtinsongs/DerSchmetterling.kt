@@ -73,10 +73,10 @@ stack(
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
     .sound(supersawHp).unison(9).spread(0.08).gain(0.5).postgain(0.13).distort("1:tube:4").distort(0.80)
     .clip("<0.93!31 0.85 0.93!31 0.83 0.93!30 0.85 0.80>".fast(2)).adsr("0.006:3.0:0.0:0.040").lpadsr("0.003:0.5:0.0:0.025")    
-    .hpf(80).lpf(4500).lpe(0.5).lpq(0.707)
+    .hpf(90).lpf(4500).lpe(0.5).lpq(0.707)
     .coarse(2).coarseos(2).pan(0.65).superimpose(
       x => x.pan(0.35),
-      x => x.postgain(0.125).hpf(200).lpf(4500).transpose(12).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [0 -3] -3!7 [-5 [-4 -3@3]]!1 -3!7 [-3 [2 4@3]]>")
+      x => x.postgain(0.125).hpf(160).lpf(4500).transpose(12).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [0 -3] -3!7 [-5 [-4 -3@3]]!1 -3!7 [-3 [2 4@3]]>")
            .pan(0.3).superimpose(pan(0.7))
     ).mute("<0!128 1!16 0!16>").body("mahogany").bodyMix(0.4)
   , // Bass
