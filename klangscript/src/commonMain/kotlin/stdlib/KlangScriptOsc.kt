@@ -256,7 +256,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.supersaw(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersaw().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method
@@ -287,7 +287,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.supersine(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersine().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method
@@ -318,7 +318,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.supersquare(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersquare().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method
@@ -349,7 +349,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.supertri(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supertri().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method
@@ -380,7 +380,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.superramp(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.superramp().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method

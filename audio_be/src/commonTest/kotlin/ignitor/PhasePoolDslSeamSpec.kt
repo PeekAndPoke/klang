@@ -65,42 +65,42 @@ class PhasePoolDslSeamSpec : StringSpec({
     val spread = IgnitorDsl.Constant(0.0)
     val analog = IgnitorDsl.Constant(0.0)
 
-    // (phasePool, kMin, kMax, drawTries, poolSize, refreshEvery) -> node. gainJitter is pinned
+    // (phasePool, kMin, kMax, drawTries, poolSize, refreshEvery, warmup) -> node. gainJitter is pinned
     // to 0 so a re-served pool entry renders an IDENTICAL fundamental (the repeat signature).
-    val nodes = listOf<Pair<String, (Double, Double, Double, Double, Double, Double) -> IgnitorDsl>>(
-        "SuperSaw" to { pool, lo, hi, tries, poolSize, refreshEvery ->
+    val nodes = listOf<Pair<String, (Double, Double, Double, Double, Double, Double, Double) -> IgnitorDsl>>(
+        "SuperSaw" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
             IgnitorDsl.SuperSaw(
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
-                poolSize = poolSize, refreshEvery = refreshEvery,
+                poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
             )
         },
-        "SuperRamp" to { pool, lo, hi, tries, poolSize, refreshEvery ->
+        "SuperRamp" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
             IgnitorDsl.SuperRamp(
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
-                poolSize = poolSize, refreshEvery = refreshEvery,
+                poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
             )
         },
-        "SuperSquare" to { pool, lo, hi, tries, poolSize, refreshEvery ->
+        "SuperSquare" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
             IgnitorDsl.SuperSquare(
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
-                poolSize = poolSize, refreshEvery = refreshEvery,
+                poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
             )
         },
-        "SuperTri" to { pool, lo, hi, tries, poolSize, refreshEvery ->
+        "SuperTri" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
             IgnitorDsl.SuperTri(
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
-                poolSize = poolSize, refreshEvery = refreshEvery,
+                poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
             )
         },
-        "SuperSine" to { pool, lo, hi, tries, poolSize, refreshEvery ->
+        "SuperSine" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
             IgnitorDsl.SuperSine(
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
-                poolSize = poolSize, refreshEvery = refreshEvery,
+                poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
             )
         },
     )
@@ -108,7 +108,7 @@ class PhasePoolDslSeamSpec : StringSpec({
     for ((name, make) in nodes) {
         "$name - phasePool/drawTries/kMin/kMax reach the engine through the DSL runtime" {
             fun mean(pool: Double, lo: Double, hi: Double, tries: Double): Double =
-                (1..notes).sumOf { fundamentalAmp(make(pool, lo, hi, tries, 1000.0, 10.0)) } / notes
+                (1..notes).sumOf { fundamentalAmp(make(pool, lo, hi, tries, 1000.0, 10.0, 16.0)) } / notes
 
             val deep = mean(1.0, 0.85, 0.95, 64.0)
             val off = mean(0.0, 0.85, 0.95, 64.0)
@@ -126,7 +126,7 @@ class PhasePoolDslSeamSpec : StringSpec({
             // `orbit = cache.orbit` collapses the registry to one pool (size stays 1).
             val pools = PhasePools(Random(3))
             fun note(orbit: Int): Double =
-                fundamentalAmp(make(1.0, 0.30, 0.55, 5.0, 2.0, 0.0), pools, orbit)
+                fundamentalAmp(make(1.0, 0.30, 0.55, 5.0, 2.0, 0.0, 4.0), pools, orbit)
             val a = note(2)
             val b = note(2)
             note(2) shouldBe a
@@ -134,6 +134,15 @@ class PhasePoolDslSeamSpec : StringSpec({
             pools.size shouldBe 1
             note(3)
             pools.size shouldBe 2
+            // warmup is a Key component: probing the registry with the SAME coerced settings must
+            // resolve the pool the runtime created — a dropped `warmup = warmup` forwarding
+            // anywhere in the chain would have keyed the family default 16 and the probe would
+            // mint an extra pool. (poolSize 32 on purpose: at the tiny 2-entry pool above, warmup
+            // 4 and 16 BOTH coerce to 2 and the probe would be blind.)
+            fundamentalAmp(make(1.0, 0.30, 0.55, 5.0, 32.0, 0.0, 4.0), pools, 5)
+            pools.size shouldBe 3
+            pools.pool(5, 11, 0.1, 0.30, 0.55, 5.0, 32.0, 0.0, warmup = 4.0)
+            pools.size shouldBe 3
         }
     }
 })

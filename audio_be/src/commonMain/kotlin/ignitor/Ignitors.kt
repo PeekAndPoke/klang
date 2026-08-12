@@ -824,7 +824,7 @@ object Ignitors {
          */
         private fun selectBandedPhases() {
             // Ceiling 64 is a compute bound on the note-on search loop (an unbounded count would
-            // let a typo'd `.drawTries(1e9)` stall the render callback), not a sound clamp —
+            // let a typo'd `.phasePool(drawTries = 1e9)` stall the render callback), not a sound clamp —
             // banded targeting saturates far below it.
             val tries = drawTries.toInt().coerceIn(1, 64)
             val lo = kMin.coerceIn(0.0, 1.0)

@@ -100,7 +100,7 @@ knob racing on note-arrival order would be the parameter-parity bug class (§3.6
   and a by-ear knob sweep recycles slots instead of leaking.
 - **Born warm — the original plan** was an eager fill at instrument load. As built (§3.6):
   measured 3.8–292 ms of render-callback stall, so the fill is AMORTIZED — a work-budgeted prefix
-  at first use, a few µs of top-ups per served note, vocabulary closed after ~256 notes. The K
+  at first use, a few µs of top-ups per served note, vocabulary closed after ~240 notes. The K
   distribution is complete from entry one; only repetition-rarity grows.
 - **Per-orbit on purpose (user decision):** guitar 1 and guitar 2 develop different characters over time. Divergence is
   bounded by construction — every pool lives in the same band, so orbits differ in *which* configurations they favor,
@@ -143,7 +143,7 @@ Integration points, verified in code:
 - **`PhasePools` lives on the per-playback context** next to `ignitorRegistry` (pools are
   per-playback by design — per-orbit characters, superimpose copies share their orbit's pool).
 - **Key:** data class over (orbit, voices, sideAtten, kMin, kMax, drawTries, poolSize,
-  refreshEvery) — the band because stored scores are only valid for the profile+band they were
+  refreshEvery, warmup — work-capped before keying) — the band because stored scores are only valid for the profile+band they were
   accepted under, the maintenance knobs because a knob whose effect depends on note-arrival
   order (two sounds racing for one key) is the parameter-parity bug class. `selection` stays
   out: it is a per-call serving policy, not pool state. (No `Double.toRawBits` — Long is banned
@@ -151,9 +151,9 @@ Integration points, verified in code:
 - **Born-warm collapses to AMORTIZED first-use warm:** `voices` is a pattern-level param unknown
   at registration time, AND an eager full fill measurably blows the render budget (measured on
   V8: 3.8–20 ms cold at shipped defaults vs the 2.67 ms block — up to 292 ms at the caps). So a
-  pool seeds a WORK-budgeted prefix at construction (up to 32 entries, fewer for deep-tries ×
-  many-voices configs) and tops up a few work-capped entries per served note (µs each) until full
-  — the default 256-entry vocabulary closes after ~224 notes. The K distribution is complete from
+  pool seeds a WORK-budgeted `warmup` prefix at construction (default 16 entries, fewer for
+  deep-tries × many-voices configs) and tops up a few work-capped entries per served note (µs each) until full
+  — the default 256-entry vocabulary closes after ~240 notes. The K distribution is complete from
   entry one — vocabulary size governs repetition audibility, not quality. Fill scores against the BASE gain profile
   (`superSawVoiceGains(v, sideAtten)`, no jitter exists at fill); the per-note jittered gains
   perturb the effective K second-order (documented deviation from the stateless path's

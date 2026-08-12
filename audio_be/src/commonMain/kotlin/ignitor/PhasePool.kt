@@ -38,7 +38,7 @@ import kotlin.random.Random
 class PhasePools(private val rng: Random) {
 
     companion object {
-        /** Pools retained per playback. Live-edit sweeps of any key component (a by-ear `.kMin()`
+        /** Pools retained per playback. Live-edit sweeps of any key component (a by-ear `.phasePool(kMin = …)`
          *  session) mint a pool per value; at the cap the LEAST-RECENTLY-SERVED pool is evicted,
          *  so the key being auditioned NOW is always the pooled one (a hard refusal would make
          *  the user A/B pooled-vs-stateless at the cap boundary instead of knob-vs-knob).
@@ -78,8 +78,8 @@ class PhasePools(private val rng: Random) {
      * but differing in e.g. [drawTries] must not race for one pool on note-arrival order (a knob
      * whose effect depends on which note lands first is the parameter-parity bug class). Sounds
      * with identical settings — the common case, and every superimpose copy — still share. Keys
-     * are built from COERCED knob values, so settings beyond the clamps (e.g. `.drawTries(80)`
-     * vs `.drawTries(200)`) share one pool instead of burning cap slots on identical configs.
+     * are built from COERCED knob values, so settings beyond the clamps (e.g. `.phasePool(drawTries = 80)`
+     * vs `= 200`) share one pool instead of burning cap slots on identical configs.
      */
     fun pool(
         orbit: Int,
@@ -90,15 +90,16 @@ class PhasePools(private val rng: Random) {
         drawTries: Double,
         poolSize: Double,
         refreshEvery: Double,
-        // Default is a spec convenience only — the engine always passes the DSL value explicitly.
-        warmup: Double = 16.0,
+        warmup: Double,
     ): PhasePool {
         val lo = kMin.coerceIn(0.0, 1.0)
         val hi = kMax.coerceIn(lo, 1.0)
         val tries = drawTries.toInt().coerceIn(1, 64)
         val size = poolSize.toInt().coerceIn(1, PhasePool.MAX_POOL_SIZE)
         val refresh = refreshEvery.toInt().coerceAtLeast(0)
-        val seed = warmup.toInt().coerceIn(0, size)
+        // Work-cap BEFORE the key: every warmup above the cap behaves identically, so it must
+        // share one pool (the coerced-keys invariant) instead of burning cap slots per value.
+        val seed = warmup.toInt().coerceIn(0, minOf(size, PhasePool.PREFIX_WORK_BUDGET / (tries * voices)))
         val key = Key(
             orbit = orbit,
             voices = voices,
@@ -180,7 +181,7 @@ class PhasePool(
         const val PREFIX_WORK_BUDGET = 2048
 
         /** Growth divisor: top up ~poolSize/[TOP_UP_DIVISOR] entries per served note (min 1, and
-         *  work-capped like the prefix): the default 256-entry pool closes in ~224 notes, the
+         *  work-capped like the prefix): the default 256-entry pool closes in ~240 notes, the
          *  1024 cap in ~250 (without this, a large pool at one-per-note never leaves the growing
          *  phase inside a real song). */
         const val TOP_UP_DIVISOR = 256
