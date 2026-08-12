@@ -87,6 +87,9 @@ internal const val SUPERSAW_REFRESH_EVERY: Double = 10.0
 /** Pool entry selection: 0 = roundRobin (cycle the array — the settled default), 1 = random. */
 internal const val SUPERSAW_SELECTION: Double = 0.0
 
+/** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+internal const val SUPERSAW_WARMUP: Double = 16.0
+
 // ── Super-ramp (unison) ──────────────────────────────────────────────────────────────────────────
 // The super-ramp is a negated super-saw; these are its OWN unison knobs, seeded to the super-saw
 // values for now. Change these literals to give the unison ramp its own character.
@@ -111,6 +114,7 @@ internal const val SUPERRAMP_K_MAX: Double = SUPERSAW_K_MAX
 internal const val SUPERRAMP_POOL_SIZE: Double = SUPERSAW_POOL_SIZE
 internal const val SUPERRAMP_REFRESH_EVERY: Double = SUPERSAW_REFRESH_EVERY
 internal const val SUPERRAMP_SELECTION: Double = SUPERSAW_SELECTION
+internal const val SUPERRAMP_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Super-square (unison) ────────────────────────────────────────────────────────────────────────
 // The super-square stacks the pulse shape (duty 0.5) on the shared super-saw unison engine; these are
@@ -136,6 +140,7 @@ internal const val SUPERSQUARE_K_MAX: Double = SUPERSAW_K_MAX
 internal const val SUPERSQUARE_POOL_SIZE: Double = SUPERSAW_POOL_SIZE
 internal const val SUPERSQUARE_REFRESH_EVERY: Double = SUPERSAW_REFRESH_EVERY
 internal const val SUPERSQUARE_SELECTION: Double = SUPERSAW_SELECTION
+internal const val SUPERSQUARE_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Super-triangle (unison) ──────────────────────────────────────────────────────────────────────
 // The super-triangle stacks the pulse shape with fully-open flanks (1.0/1.0); its own unison knobs,
@@ -164,6 +169,7 @@ internal const val SUPERTRI_K_MAX: Double = 0.65
 internal const val SUPERTRI_POOL_SIZE: Double = SUPERSAW_POOL_SIZE
 internal const val SUPERTRI_REFRESH_EVERY: Double = SUPERSAW_REFRESH_EVERY
 internal const val SUPERTRI_SELECTION: Double = SUPERSAW_SELECTION
+internal const val SUPERTRI_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Super-sine (unison) ──────────────────────────────────────────────────────────────────────────
 // The super-sine stacks pure sines on the shared super-saw unison engine; its own knobs, seeded to
@@ -194,6 +200,7 @@ internal const val SUPERSINE_K_MAX: Double = 0.80
 internal const val SUPERSINE_POOL_SIZE: Double = SUPERSAW_POOL_SIZE
 internal const val SUPERSINE_REFRESH_EVERY: Double = SUPERSAW_REFRESH_EVERY
 internal const val SUPERSINE_SELECTION: Double = SUPERSAW_SELECTION
+internal const val SUPERSINE_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Pulse family (square / pulse / pulze / triangle share one shape) ──────────────────────────────
 // square / pulse / pulze are one pulse oscillator (duty osc-param; 0.5 = square). Each edge is a

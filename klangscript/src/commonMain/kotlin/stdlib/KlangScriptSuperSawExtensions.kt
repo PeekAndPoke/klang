@@ -76,6 +76,7 @@ object KlangScriptSuperSawExtensions {
      * @param poolSize vocabulary size per pool key (engine caps at 1024).
      * @param refreshEvery notes between fresh pool draws; 0 = frozen pool.
      * @param selection 0 = roundRobin (default), 1 = random.
+     * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
      */
     @KlangScript.Method
     fun phasePool(
@@ -87,8 +88,9 @@ object KlangScriptSuperSawExtensions {
         poolSize: Double = 256.0,
         refreshEvery: Double = 10.0,
         selection: Double = 0.0,
+        warmup: Double = 16.0,
     ): IgnitorDsl.SuperSaw = self.copy(
         phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
     )
 }

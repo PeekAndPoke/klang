@@ -78,7 +78,7 @@ class KlangScriptSuperSquareSpec : StringSpec({
     "every typed config method in one chain" {
         val code = "Osc.supersquare().freq(110).voices(11).spread(0.12).analog(4.0)" +
                 ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
-                ".phasePool(1, 0.2, 0.7, 8, 64, 5, 1)"
+                ".phasePool(1, 0.2, 0.7, 8, 64, 5, 1, 8)"
 
         ks(code) shouldBe superSquare().copy(
             freq = IgnitorDsl.Constant(110.0),
@@ -96,6 +96,7 @@ class KlangScriptSuperSquareSpec : StringSpec({
             poolSize = 64.0,
             refreshEvery = 5.0,
             selection = 1.0,
+            warmup = 8.0,
         )
     }
 

@@ -31,6 +31,7 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.poolSize shouldBe SUPERSAW_POOL_SIZE
         d.refreshEvery shouldBe SUPERSAW_REFRESH_EVERY
         d.selection shouldBe SUPERSAW_SELECTION
+        d.warmup shouldBe SUPERSAW_WARMUP
     }
 
     "IgnitorDsl.SuperRamp character defaults match the SUPERRAMP_* engine constants" {
@@ -46,6 +47,7 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.poolSize shouldBe SUPERRAMP_POOL_SIZE
         d.refreshEvery shouldBe SUPERRAMP_REFRESH_EVERY
         d.selection shouldBe SUPERRAMP_SELECTION
+        d.warmup shouldBe SUPERRAMP_WARMUP
     }
 
     "IgnitorDsl.SuperSine character defaults match the SUPERSINE_* engine constants" {
@@ -61,6 +63,7 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.poolSize shouldBe SUPERSINE_POOL_SIZE
         d.refreshEvery shouldBe SUPERSINE_REFRESH_EVERY
         d.selection shouldBe SUPERSINE_SELECTION
+        d.warmup shouldBe SUPERSINE_WARMUP
     }
 
     "IgnitorDsl.SuperSquare character defaults match the SUPERSQUARE_* engine constants" {
@@ -76,6 +79,7 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.poolSize shouldBe SUPERSQUARE_POOL_SIZE
         d.refreshEvery shouldBe SUPERSQUARE_REFRESH_EVERY
         d.selection shouldBe SUPERSQUARE_SELECTION
+        d.warmup shouldBe SUPERSQUARE_WARMUP
     }
 
     "IgnitorDsl.SuperTri character defaults match the SUPERTRI_* engine constants" {
@@ -91,5 +95,6 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.poolSize shouldBe SUPERTRI_POOL_SIZE
         d.refreshEvery shouldBe SUPERTRI_REFRESH_EVERY
         d.selection shouldBe SUPERTRI_SELECTION
+        d.warmup shouldBe SUPERTRI_WARMUP
     }
 })

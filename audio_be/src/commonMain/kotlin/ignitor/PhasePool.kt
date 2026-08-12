@@ -44,8 +44,8 @@ class PhasePools(private val rng: Random) {
          *  the user A/B pooled-vs-stateless at the cap boundary instead of knob-vs-knob).
          *  Trade-off: eviction is the EXPENSIVE branch — with more than [MAX_POOLS] keys
          *  simultaneously live (not swept), every note-on reconstructs a prefix (~7× a stateless
-         *  note at the deepest default, up to ~35× at the shipped saw defaults — work-budget-bound
-         *  vs [SEED_PREFIX]-bound) plus a fresh poolSize-slot backing array, and no vocabulary
+         *  note at the deepest default, up to ~35× at a warmup-32 config — work-budget-bound
+         *  vs warmup-bound) plus a fresh poolSize-slot backing array, and no vocabulary
          *  ever accumulates. Bounded (≤ ~4k trig-loop iterations per note), pathological, and
          *  preferable to punishing the common sweep case. */
         const val MAX_POOLS = 64
@@ -60,6 +60,7 @@ class PhasePools(private val rng: Random) {
         val drawTries: Int,
         val poolSize: Int,
         val refreshEvery: Int,
+        val warmup: Int,
     )
 
     private class Slot(val pool: PhasePool, var tick: Int)
@@ -89,18 +90,34 @@ class PhasePools(private val rng: Random) {
         drawTries: Double,
         poolSize: Double,
         refreshEvery: Double,
+        // Default is a spec convenience only — the engine always passes the DSL value explicitly.
+        warmup: Double = 16.0,
     ): PhasePool {
         val lo = kMin.coerceIn(0.0, 1.0)
         val hi = kMax.coerceIn(lo, 1.0)
         val tries = drawTries.toInt().coerceIn(1, 64)
         val size = poolSize.toInt().coerceIn(1, PhasePool.MAX_POOL_SIZE)
         val refresh = refreshEvery.toInt().coerceAtLeast(0)
-        val key = Key(orbit, voices, sideAtten, lo, hi, tries, size, refresh)
+        val seed = warmup.toInt().coerceIn(0, size)
+        val key = Key(
+            orbit = orbit,
+            voices = voices,
+            sideAtten = sideAtten,
+            kMin = lo,
+            kMax = hi,
+            drawTries = tries,
+            poolSize = size,
+            refreshEvery = refresh,
+            warmup = seed
+        )
+
         useTick++
+
         pools[key]?.let { slot ->
             slot.tick = useTick
             return slot.pool
         }
+
         if (pools.size >= MAX_POOLS) {
             var oldestKey: Key? = null
             var oldestTick = Int.MAX_VALUE
@@ -110,8 +127,10 @@ class PhasePools(private val rng: Random) {
                     oldestKey = k
                 }
             }
+
             pools.remove(oldestKey)
         }
+
         return PhasePool(
             voices = voices,
             sideAtten = sideAtten,
@@ -120,8 +139,9 @@ class PhasePools(private val rng: Random) {
             drawTries = tries.toDouble(),
             poolSize = size.toDouble(),
             refreshEvery = refresh.toDouble(),
+            warmup = seed.toDouble(),
             rng = rng,
-        ).also { pools[key] = Slot(it, useTick) }
+        ).also { pools[key] = Slot(pool = it, tick = useTick) }
     }
 }
 
@@ -146,6 +166,7 @@ class PhasePool(
     drawTries: Double,
     poolSize: Double,
     refreshEvery: Double,
+    warmup: Double,
     private val rng: Random,
 ) {
     companion object {
@@ -153,13 +174,9 @@ class PhasePool(
          *  entries allocate lazily, one `DoubleArray(voices)` per top-up), not a sound cap. */
         const val MAX_POOL_SIZE = 1024
 
-        /** Cap on entries drawn eagerly at construction. The actual prefix is WORK-budgeted
-         *  ([PREFIX_WORK_BUDGET]) so heavy configs (deep tries × many voices) seed fewer entries
-         *  instead of stalling the first note. Full vocabulary quality from entry one. */
-        const val SEED_PREFIX = 32
-
         /** Constructor work budget in tries×voices units (≈ trig-loop iterations): bounds the
-         *  eager prefix to well under a block even at the knob caps. */
+         *  eager warmup prefix to well under a block even at the knob caps — a user `warmup`
+         *  beyond it is silently work-capped (a compute bound, not a sound clamp). */
         const val PREFIX_WORK_BUDGET = 2048
 
         /** Growth divisor: top up ~poolSize/[TOP_UP_DIVISOR] entries per served note (min 1, and
@@ -202,11 +219,11 @@ class PhasePool(
         private set
 
     init {
-        // Amortized warm-up: seed a WORK-budgeted prefix now, top up per note (see class KDoc —
-        // an eager full fill measurably drops render blocks, and prefix cost scales with
-        // tries × voices, so heavy configs seed fewer entries).
-        val prefix = (PREFIX_WORK_BUDGET / (tries * voices))
-            .coerceIn(1, SEED_PREFIX)
+        // Amortized warm-up: seed `warmup` entries now (user knob, default 16), WORK-capped so a
+        // deep tries × many-voices config cannot stall the first note (an eager full fill
+        // measurably drops render blocks). `warmup 0` = fully lazy: the first served note tops up.
+        val prefix = warmup.toInt()
+            .coerceIn(0, PREFIX_WORK_BUDGET / (tries * voices))
             .coerceAtMost(entries.size)
         repeat(prefix) {
             topUpOne()
@@ -239,14 +256,18 @@ class PhasePool(
                 drawBandedInto(entries[rng.nextInt(filled)]!!) // random eviction, never worst
             }
         }
+
         if (selection > 0.5) {
             return entries[rng.nextInt(filled)]!!
         }
+
         if (rr >= filled) {
             rr = 0
         }
+
         val e = entries[rr]!!
         rr++
+
         return e
     }
 
@@ -260,9 +281,11 @@ class PhasePool(
      */
     private fun drawBandedInto(target: DoubleArray) {
         var bestDist = Double.MAX_VALUE
+
         for (t in 0 until tries) {
             var re = 0.0
             var im = 0.0
+
             for (n in 0 until voices) {
                 val p = rng.nextDouble()
                 target[n] = p
@@ -270,16 +293,20 @@ class PhasePool(
                 re += gains[n] * cos(a)
                 im += gains[n] * sin(a)
             }
+
             val k = if (gsum != 0.0) sqrt(re * re + im * im) / abs(gsum) else 1.0
             val dist = if (k < lo) lo - k else if (k > hi) k - hi else 0.0
+
             if (dist == 0.0) {
                 return // target already holds the accepted candidate; scratch not needed
             }
+
             if (dist < bestDist) {
                 bestDist = dist
                 target.copyInto(scratch)
             }
         }
+
         scratch.copyInto(target)
     }
 }

@@ -405,6 +405,8 @@ sealed interface IgnitorDsl {
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
         val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -443,6 +445,8 @@ sealed interface IgnitorDsl {
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
         val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -479,6 +483,8 @@ sealed interface IgnitorDsl {
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
         val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -516,6 +522,8 @@ sealed interface IgnitorDsl {
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
         val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -552,6 +560,8 @@ sealed interface IgnitorDsl {
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
         val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)

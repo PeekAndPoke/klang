@@ -190,6 +190,7 @@ All per-sound (engine-default layer in `OscillatorTuning.kt`, overridable via th
 | `poolSize`      | 256                                 | Vocabulary size per pool key (§3.3; engine caps 1024) |
 | `refreshEvery`  | 10                                  | Notes between fresh draws; 0 = frozen pool            |
 | `selection`     | `roundRobin`                        | `roundRobin` / `random` (`sticky` parked)             |
+| `warmup`        | 16                                  | Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy) |
 | RNG source      | clock (live) / fixed seed (offline) | takes vary live; offline renders reproducible         |
 
 ## 6. Constraints & known side effects

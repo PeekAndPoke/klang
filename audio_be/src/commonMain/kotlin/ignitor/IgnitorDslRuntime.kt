@@ -233,7 +233,7 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
@@ -245,7 +245,7 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
@@ -257,7 +257,7 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
@@ -269,7 +269,7 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
@@ -281,7 +281,7 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod

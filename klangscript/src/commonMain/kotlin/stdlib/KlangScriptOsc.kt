@@ -246,7 +246,7 @@ object KlangScriptOsc {
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSaw] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
      * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection)` — all optional
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
      * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
      * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
@@ -277,7 +277,7 @@ object KlangScriptOsc {
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSine] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
      * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection)` — all optional
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
      * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
      * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
@@ -308,7 +308,7 @@ object KlangScriptOsc {
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSquare] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
      * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection)` — all optional
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
      * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
      * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
@@ -339,7 +339,7 @@ object KlangScriptOsc {
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperTri] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
      * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection)` — all optional
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
      * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
      * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
@@ -370,7 +370,7 @@ object KlangScriptOsc {
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperRamp] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
      * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection)` — all optional
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
      * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
      * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.

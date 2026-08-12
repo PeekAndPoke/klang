@@ -56,7 +56,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
                 freq = IgnitorDsl.Constant(5.0),
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
             )
         )
     }
@@ -65,7 +65,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.SuperSine(
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
             )
         )
     }
@@ -74,7 +74,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.SuperSquare(
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
             )
         )
     }
@@ -83,7 +83,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.SuperTri(
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
             )
         )
     }
@@ -92,7 +92,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.SuperRamp(
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
             )
         )
     }

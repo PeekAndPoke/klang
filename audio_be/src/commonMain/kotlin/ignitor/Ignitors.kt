@@ -620,6 +620,7 @@ object Ignitors {
         poolSize: Double = SUPERSAW_POOL_SIZE,
         refreshEvery: Double = SUPERSAW_REFRESH_EVERY,
         selection: Double = SUPERSAW_SELECTION,
+        warmup: Double = SUPERSAW_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = SawStackIgnitor(
@@ -627,7 +628,7 @@ object Ignitors {
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
         resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX,
     )
@@ -650,13 +651,14 @@ object Ignitors {
         poolSize: Double = SUPERSAW_POOL_SIZE,
         refreshEvery: Double = SUPERSAW_REFRESH_EVERY,
         selection: Double = SUPERSAW_SELECTION,
+        warmup: Double = SUPERSAW_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = superSawRaw(
         freq, voices, detune, analog, rng,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
     )
 
@@ -689,6 +691,7 @@ object Ignitors {
         private val poolSize: Double,
         private val refreshEvery: Double,
         private val selection: Double,
+        private val warmup: Double,
         private val phasePools: PhasePools?,
         private val orbit: Int,
     ) : Ignitor {
@@ -748,6 +751,7 @@ object Ignitors {
                         orbit = orbit, voices = v, sideAtten = sideAtten,
                         kMin = kMin, kMax = kMax,
                         drawTries = drawTries, poolSize = poolSize, refreshEvery = refreshEvery,
+                        warmup = warmup,
                     )
                     if (pool != null) {
                         val entry = pool.next(selection)
@@ -890,14 +894,14 @@ object Ignitors {
         freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: Double,
+        poolSize: Double, refreshEvery: Double, selection: Double, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
     ) : DetunedStackIgnitor(
         freq, voices, detune, analog, rng,
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
     ) {
         final override fun renderVoice(
@@ -932,7 +936,7 @@ object Ignitors {
         freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: Double,
+        poolSize: Double, refreshEvery: Double, selection: Double, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
         private val resetSamples: Double, private val shapeMax: Double,
     ) : TrapezoidStackIgnitor(
@@ -940,7 +944,7 @@ object Ignitors {
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
     ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) {
@@ -953,7 +957,7 @@ object Ignitors {
         freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: Double,
+        poolSize: Double, refreshEvery: Double, selection: Double, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
         private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
         private val flankSamples: Double,
@@ -962,7 +966,7 @@ object Ignitors {
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
     ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) {
@@ -975,14 +979,14 @@ object Ignitors {
         freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
         sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: Double,
+        poolSize: Double, refreshEvery: Double, selection: Double, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
     ) : DetunedStackIgnitor(
         freq, voices, detune, analog, rng,
         polarity = 1.0, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
     ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) { /* sine carries no shape */
@@ -1031,6 +1035,7 @@ object Ignitors {
         poolSize: Double = SUPERSINE_POOL_SIZE,
         refreshEvery: Double = SUPERSINE_REFRESH_EVERY,
         selection: Double = SUPERSINE_SELECTION,
+        warmup: Double = SUPERSINE_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = SineStackIgnitor(
@@ -1038,7 +1043,7 @@ object Ignitors {
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
     )
 
@@ -1066,6 +1071,7 @@ object Ignitors {
         poolSize: Double = SUPERSQUARE_POOL_SIZE,
         refreshEvery: Double = SUPERSQUARE_REFRESH_EVERY,
         selection: Double = SUPERSQUARE_SELECTION,
+        warmup: Double = SUPERSQUARE_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = PulseStackIgnitor(
@@ -1074,7 +1080,7 @@ object Ignitors {
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
         duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
@@ -1102,6 +1108,7 @@ object Ignitors {
         poolSize: Double = SUPERTRI_POOL_SIZE,
         refreshEvery: Double = SUPERTRI_REFRESH_EVERY,
         selection: Double = SUPERTRI_SELECTION,
+        warmup: Double = SUPERTRI_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = PulseStackIgnitor(
@@ -1110,7 +1117,7 @@ object Ignitors {
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
         duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
@@ -1138,6 +1145,7 @@ object Ignitors {
         poolSize: Double = SUPERRAMP_POOL_SIZE,
         refreshEvery: Double = SUPERRAMP_REFRESH_EVERY,
         selection: Double = SUPERRAMP_SELECTION,
+        warmup: Double = SUPERRAMP_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = SawStackIgnitor(
@@ -1146,7 +1154,7 @@ object Ignitors {
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, orbit = orbit,
         resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
     )

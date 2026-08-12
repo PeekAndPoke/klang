@@ -49,9 +49,10 @@ class PhasePoolStateSpec : StringSpec({
         rng: Random = Random(7),
         size: Double = 32.0,
         refreshEvery: Double = 0.0,
+        warmup: Double = 32.0, // legacy-prefix arithmetic for the growth cases below
     ) = PhasePool(
         voices = v, sideAtten = 0.1, kMin = lo, kMax = hi,
-        drawTries = 5.0, poolSize = size, refreshEvery = refreshEvery, rng = rng,
+        drawTries = 5.0, poolSize = size, refreshEvery = refreshEvery, warmup = warmup, rng = rng,
     )
 
     "amortized warm - every served entry is overwhelmingly in-band, from note one" {
@@ -102,7 +103,7 @@ class PhasePoolStateSpec : StringSpec({
     }
 
     "growing phase - work-budgeted prefix, per-note top-up, roundRobin never outruns filled" {
-        // tries 5 × v 11 → prefix caps at SEED_PREFIX (32); size 64 → topUpPerNote = 1.
+        // tries 5 × v 11 → helper warmup 32 fits the work budget; size 64 → topUpPerNote = 1.
         val p = pool(size = 64.0)
         p.filled shouldBe 32
         val servedRefs = ArrayList<DoubleArray>()
@@ -134,12 +135,21 @@ class PhasePoolStateSpec : StringSpec({
     }
 
     "growing phase - prefix is WORK-budgeted, not a flat entry count" {
-        // tries 64 × v 11 = 704 work units → prefix = 2048/704 = 2 (not SEED_PREFIX 32).
+        // tries 64 × v 11 = 704 work units → prefix = 2048/704 = 2 (not the requested warmup 32).
         val p = PhasePool(
             voices = v, sideAtten = 0.1, kMin = lo, kMax = hi,
-            drawTries = 64.0, poolSize = 32.0, refreshEvery = 0.0, rng = Random(8),
+            drawTries = 64.0, poolSize = 32.0, refreshEvery = 0.0, warmup = 32.0, rng = Random(8),
         )
         p.filled shouldBe 2
+    }
+
+    "warmup knob - seeds exactly warmup entries; 0 = fully lazy, first note still serves" {
+        pool(size = 64.0, warmup = 16.0).filled shouldBe 16
+        val cold = pool(size = 64.0, warmup = 0.0)
+        cold.filled shouldBe 0
+        // First serve tops up before serving — no unfilled slot is ever reachable.
+        cold.next(0.0)
+        cold.filled shouldBe 1
     }
 
     "seeded registry - identical seeds produce identical vocabularies (offline reproducibility)" {

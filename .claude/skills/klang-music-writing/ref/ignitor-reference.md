@@ -99,13 +99,13 @@ Multiple detuned copies for thick, lush sounds.
 
 **Chained character knobs** (return the same super-osc subtype): `.analog(x)` (per-voice pitch drift),
 `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`, and the combined phase-pool
-call `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection)` — banded start-phase
+call `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — banded start-phase
 selection for consistent low-note fundamentals, off by default. Every param is an optional literal,
 so named-arg subsets work: `.phasePool()` = on with family defaults,
 `.phasePool(kMin = 0.05, kMax = 0.25)` = the hollow-pad band (the band is a timbre control),
 `.phasePool(refreshEvery = 0)` = frozen vocabulary. All-named or all-positional — KlangScript
 forbids mixing. Defaults: band 0.30–0.55 (saw family) / 0.40–0.65 (supertri) / 0.50–0.80
-(supersine), drawTries 5/16/40, poolSize 256 (cap 1024), refreshEvery 10, selection 0 = roundRobin.
+(supersine), drawTries 5/16/40, poolSize 256 (cap 1024), refreshEvery 10, selection 0 = roundRobin, warmup 16 (eagerly seeded entries; 0 = fully lazy).
 ⚠️ Enabling the pool lifts the low-note fundamental (+2 dB measured on average — more on the
 notes the old random draw was cancelling) — on a finished song, retrim the low end once after
 switching it on.
