@@ -78,8 +78,8 @@ internal const val SUPERSAW_K_MIN: Double = 0.30
 /** Accepted fundamental-coherence band, upper edge. */
 internal const val SUPERSAW_K_MAX: Double = 0.55
 
-/** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 4096). */
-internal const val SUPERSAW_POOL_SIZE: Double = 1000.0
+/** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+internal const val SUPERSAW_POOL_SIZE: Double = 256.0
 
 /** Notes between fresh pool draws (random eviction); 0 = frozen pool (reproducible vocabulary). */
 internal const val SUPERSAW_REFRESH_EVERY: Double = 10.0

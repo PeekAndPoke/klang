@@ -399,8 +399,8 @@ sealed interface IgnitorDsl {
         val kMin: Double = 0.30,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = 0.55,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 4096). */
-        val poolSize: Double = 1000.0,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
@@ -437,8 +437,8 @@ sealed interface IgnitorDsl {
         val kMin: Double = 0.50,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = 0.80,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 4096). */
-        val poolSize: Double = 1000.0,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
@@ -473,8 +473,8 @@ sealed interface IgnitorDsl {
         val kMin: Double = 0.30,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = 0.55,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 4096). */
-        val poolSize: Double = 1000.0,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
@@ -510,8 +510,8 @@ sealed interface IgnitorDsl {
         val kMin: Double = 0.40,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = 0.65,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 4096). */
-        val poolSize: Double = 1000.0,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
@@ -546,8 +546,8 @@ sealed interface IgnitorDsl {
         val kMin: Double = 0.30,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = 0.55,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 4096). */
-        val poolSize: Double = 1000.0,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /** Pool entry selection: 0 = roundRobin (default), 1 = random. */

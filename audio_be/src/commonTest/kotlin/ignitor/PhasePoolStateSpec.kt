@@ -121,16 +121,16 @@ class PhasePoolStateSpec : StringSpec({
     }
 
     "growing phase - large pools top up several entries per note and clamp at the boundary" {
-        // size 1030 → topUpPerNote = 1030/256 = 4 (well under the work cap 2048/(5×11) = 37),
-        // and (1030 − 32) is NOT divisible by 4, so the final batch must clamp mid-stride.
-        val p = pool(size = 1030.0)
+        // size 1000 → topUpPerNote = 1000/256 = 3 (well under the work cap 2048/(5×11) = 37),
+        // and (1000 − 32) is NOT divisible by 3, so the final batch must clamp mid-stride.
+        val p = pool(size = 1000.0)
         p.filled shouldBe 32
         repeat(10) { n ->
             p.next(0.0)
-            p.filled shouldBe 32 + 4 * (n + 1)
+            p.filled shouldBe 32 + 3 * (n + 1)
         }
-        repeat(240) { p.next(0.0) }
-        p.filled shouldBe 1030 // clamped exactly at poolSize — no overshoot past the last slot
+        repeat(320) { p.next(0.0) }
+        p.filled shouldBe 1000 // clamped exactly at poolSize — no overshoot past the last slot
     }
 
     "growing phase - prefix is WORK-budgeted, not a flat entry count" {

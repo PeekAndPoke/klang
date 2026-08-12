@@ -151,7 +151,7 @@ class PhasePool(
     companion object {
         /** Upper bound on entries per pool: memory guard (scales with the note's unison count —
          *  entries allocate lazily, one `DoubleArray(voices)` per top-up), not a sound cap. */
-        const val MAX_POOL_SIZE = 4096
+        const val MAX_POOL_SIZE = 1024
 
         /** Cap on entries drawn eagerly at construction. The actual prefix is WORK-budgeted
          *  ([PREFIX_WORK_BUDGET]) so heavy configs (deep tries × many voices) seed fewer entries
@@ -163,9 +163,9 @@ class PhasePool(
         const val PREFIX_WORK_BUDGET = 2048
 
         /** Growth divisor: top up ~poolSize/[TOP_UP_DIVISOR] entries per served note (min 1, and
-         *  work-capped like the prefix), closing the vocabulary in ~256–500 notes (3 entries ≈ a
-         *  handful of µs at the shipped defaults — without this, poolSize 1000 at one-per-note
-         *  never leaves the growing phase inside a real song). */
+         *  work-capped like the prefix): the default 256-entry pool closes in ~224 notes, the
+         *  1024 cap in ~250 (without this, a large pool at one-per-note never leaves the growing
+         *  phase inside a real song). */
         const val TOP_UP_DIVISOR = 256
     }
 

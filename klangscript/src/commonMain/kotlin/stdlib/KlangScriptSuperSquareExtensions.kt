@@ -62,38 +62,33 @@ object KlangScriptSuperSquareExtensions {
     @KlangScript.Method
     fun centerJitter(self: IgnitorDsl.SuperSquare, centerJitter: Double): IgnitorDsl.SuperSquare =
         self.copy(centerJitterScale = centerJitter)
-
-    /** Banded start-phase selection (phase pool): 0 = off — bit-identical legacy random — 1 = on (default 0). */
+    /**
+     * Configure the banded start-phase pool in ONE call — every param is an optional plain
+     * literal, so named-arg subsets work: `.phasePool()` (on, family defaults),
+     * `.phasePool(kMin = 0.2)`, `.phasePool(refreshEvery = 0)` (all-named
+     * or all-positional — KlangScript forbids mixing). Defaults mirror the
+     * `SUPERSQUARE`-family engine constants (guarded by the dual-language spec).
+     *
+     * @param on 1 = banded start-phase selection on, 0 = off (the engine default).
+     * @param kMin accepted coherence band, lower edge (0 = cancelled, 1 = phase-aligned).
+     * @param kMax accepted coherence band, upper edge. The band is also a timbre control.
+     * @param drawTries candidate phase sets scored per draw (engine caps at 64).
+     * @param poolSize vocabulary size per pool key (engine caps at 1024).
+     * @param refreshEvery notes between fresh pool draws; 0 = frozen pool.
+     * @param selection 0 = roundRobin (default), 1 = random.
+     */
     @KlangScript.Method
-    fun phasePool(self: IgnitorDsl.SuperSquare, phasePool: Double): IgnitorDsl.SuperSquare =
-        self.copy(phasePool = phasePool)
-
-    /** Candidate phase sets scored per note when the phase pool is on (default 5; engine caps at 64). */
-    @KlangScript.Method
-    fun drawTries(self: IgnitorDsl.SuperSquare, drawTries: Double): IgnitorDsl.SuperSquare =
-        self.copy(drawTries = drawTries)
-
-    /** Accepted fundamental-coherence band, lower edge: 0 = cancelled, 1 = phase-aligned (default 0.3). */
-    @KlangScript.Method
-    fun kMin(self: IgnitorDsl.SuperSquare, kMin: Double): IgnitorDsl.SuperSquare =
-        self.copy(kMin = kMin)
-
-    /** Accepted fundamental-coherence band, upper edge (default 0.55). */
-    @KlangScript.Method
-    fun kMax(self: IgnitorDsl.SuperSquare, kMax: Double): IgnitorDsl.SuperSquare =
-        self.copy(kMax = kMax)
-    /** Pool vocabulary size per (orbit, unison, profile, band) key; engine caps at 4096 (default 1000). */
-    @KlangScript.Method
-    fun poolSize(self: IgnitorDsl.SuperSquare, poolSize: Double): IgnitorDsl.SuperSquare =
-        self.copy(poolSize = poolSize)
-
-    /** Notes between fresh pool draws (random eviction); 0 = frozen pool (default 10). */
-    @KlangScript.Method
-    fun refreshEvery(self: IgnitorDsl.SuperSquare, refreshEvery: Double): IgnitorDsl.SuperSquare =
-        self.copy(refreshEvery = refreshEvery)
-
-    /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-    @KlangScript.Method
-    fun selection(self: IgnitorDsl.SuperSquare, selection: Double): IgnitorDsl.SuperSquare =
-        self.copy(selection = selection)
+    fun phasePool(
+        self: IgnitorDsl.SuperSquare,
+        on: Double = 1.0,
+        kMin: Double = 0.30,
+        kMax: Double = 0.55,
+        drawTries: Double = 5.0,
+        poolSize: Double = 256.0,
+        refreshEvery: Double = 10.0,
+        selection: Double = 0.0,
+    ): IgnitorDsl.SuperSquare = self.copy(
+        phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+    )
 }

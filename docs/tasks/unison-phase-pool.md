@@ -89,10 +89,12 @@ band, maintenance knobs)** — `sideAtten` and the band enter the key because st
 valid for the (profile, band) they were accepted under; the maintenance knobs enter it because a
 knob racing on note-arrival order would be the parameter-parity bug class (§3.6):
 
-- **Size ~1000** (config = N phases as `DoubleArray` ≈ 88 bytes payload at unison 11, ~190 KB per
-  full pool on JS with array overhead; a song touches ~5–10 pools; the registry caps at 64 pools
+- **Size 256 default, 1024 cap** (user decision 2026-08-12 — big vocabularies bought little:
+  size governs repetition rarity only, and `refreshEvery` keeps any size evolving). One config =
+  N phases as `DoubleArray` ≈ 88 bytes payload at unison 11 → ~22 KB per full default pool
+  (~48 KB on JS with array overhead); a song touches ~5–10 pools; the registry caps at 64 pools
   per playback with least-recently-served eviction — the key being played NOW is always pooled,
-  and a by-ear knob sweep recycles slots instead of leaking).
+  and a by-ear knob sweep recycles slots instead of leaking.
 - **Born warm — the original plan** was an eager fill at instrument load. As built (§3.6):
   measured 3.8–292 ms of render-callback stall, so the fill is AMORTIZED — a work-budgeted prefix
   at first use, a few µs of top-ups per served note, vocabulary closed after ~256 notes. The K
@@ -148,8 +150,8 @@ Integration points, verified in code:
   V8: 3.8–20 ms cold at shipped defaults vs the 2.67 ms block — up to 292 ms at the caps). So a
   pool seeds a WORK-budgeted prefix at construction (up to 32 entries, fewer for deep-tries ×
   many-voices configs) and tops up a few work-capped entries per served note (µs each) until full
-  — vocabulary closed after ~256–500 notes. The K distribution is complete from entry one —
-  vocabulary size governs repetition audibility, not quality. Fill scores against the BASE gain profile
+  — the default 256-entry vocabulary closes after ~224 notes. The K distribution is complete from
+  entry one — vocabulary size governs repetition audibility, not quality. Fill scores against the BASE gain profile
   (`superSawVoiceGains(v, sideAtten)`, no jitter exists at fill); the per-note jittered gains
   perturb the effective K second-order (documented deviation from the stateless path's
   exact-gain scoring).
@@ -185,7 +187,7 @@ All per-sound (engine-default layer in `OscillatorTuning.kt`, overridable via th
 | `phasePool`     | **off**                             | **Full bypass. Off = today's engine (identical rng stream).** |
 | `drawTries` (M) | 5 / 16 supertri / 40 supersine      | Candidates per draw (engine caps at 64); higher bands are rarer per draw, so their search is deeper — a missed band degrades to closest-candidate = K-maximization |
 | `kMin` / `kMax` | per waveform                        | Accepted quality band; doubles as a timbre control    |
-| `poolSize`      | 1000                                | Vocabulary size per pool key (§3.3; engine caps 4096) |
+| `poolSize`      | 256                                 | Vocabulary size per pool key (§3.3; engine caps 1024) |
 | `refreshEvery`  | 10                                  | Notes between fresh draws; 0 = frozen pool            |
 | `selection`     | `roundRobin`                        | `roundRobin` / `random` (`sticky` parked)             |
 | RNG source      | clock (live) / fixed seed (offline) | takes vary live; offline renders reproducible         |
