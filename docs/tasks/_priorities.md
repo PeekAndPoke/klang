@@ -56,11 +56,12 @@ The release-defining set, regardless of when they're sequenced:
    fix+guard, per subsystem, by hand (automation rejected with evidence: the DSP hot path is fully inlined). **Pilot
    `voices/` first, then re-decide.**
    Ledger in `docs/audio-audit/`. Multi-session; designed to survive interruption.
-6. **SHOULD** · **Unison phase pool** — [`unison-phase-pool.md`](unison-phase-pool.md) 🟡 *(started 2026-08-11,
-   self-restarting loop)* Banded best-of-M start-phase selection kills the super-oscillator "fundamental lottery"
-   (11–21 % of low notes born with a cancelled fundamental). P0 (stateless banded selection —
-   best-of-5/16/40 per waveform — behind an rng-stream-identical `phasePool off` bypass) measured:
-   onset holes 16 % → under 2 %, never-rings 6/120 → 0. Next: P1 pool, P2 by-ear bands.
+6. ✅ **DONE 2026-08-12** · **Unison phase pool** — banded start-phase selection + per-orbit pools kill the
+   super-oscillator "fundamental lottery" (onset holes 16 % → 0, never-rings 6/120 → 0, texture untouched).
+   OFF by default; per-song opt-in via one combined `.phasePool(...)` call (per-family band defaults kept by
+   user by-ear decision). 7 commits (`6c95de65`…`9a0cdb37`), 10+ review rounds, ~65 findings fixed, every new
+   test mutation-checked. Archived: [`20260812-unison-phase-pool.md`](../tasks-archive/2026-08/20260812-unison-phase-pool.md).
+   Future (parked): voices-aware bands, sticky/contextual selection, persistence.
 
 ## Act 2 — The quarter of tutorials
 
