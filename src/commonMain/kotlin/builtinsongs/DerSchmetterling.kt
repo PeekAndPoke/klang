@@ -33,7 +33,7 @@ let supersawHp = (() => {
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
     // Important: enable the phase-pool for consistent onsets and fundamentals
-    .phasePool(on = 1)
+    .phasePool(on = 1, kMin = 0.4, kMax = 0.6)
     // character knobs — plain scalars, SuperSaw-typed, must precede the filter
     .analog(pAnalog).spreadPower(1.5).sideAtten(0.2).gainJitter(0.10).centerJitter(0.10).mul(4/4)
     // Add overtones 1 octave up
