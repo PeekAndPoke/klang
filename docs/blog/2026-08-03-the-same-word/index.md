@@ -25,8 +25,7 @@ reverb landed on both buses. Same effect, same parameter name, same value:
 
 ```javascript
 // per-orbit:
-.
-room("0.5:8:0.1")                    // roomSize = 8
+pattern.room("0.5:8:0.1")            // roomSize = 8
 
 // master bus:
 master(Master.of(MasterFx.reverb().roomSize(8)))
