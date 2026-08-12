@@ -1,10 +1,13 @@
 # Unison phase pool ("wave-pool") — fixing the fundamental lottery in the super-oscillators
 
-> **Status: 🟡 IN PROGRESS — open decisions settled with the user 2026-08-11 (see §9); work runs in
-> a self-restarting loop, one phase per iteration, committing directly to `master-dsl` with a
-> review-loop round per phase.** Priority proposal: **SHOULD** — it is a *sound*
-> fix ("sound first") for a defect measured across weeks of sessions, and it defaults to full
-> bypass, so shipping it risks nothing.
+> **Status: 🟢 DONE 2026-08-12 (P0 `6c95de65` → P1 `77ff0e9d` → tuning `5315b1ae`/`16888d94`).**
+> By-ear verdicts (user): supersaw onsets AND tone consistent with the pool on; per-family bands
+> KEPT as built (saw family 0.30–0.55@5, supertri 0.40–0.65@16, supersine 0.50–0.80@40 — the
+> "unify defaults" idea was withdrawn after the K walkthrough); poolSize 256 (cap 1024), warmup
+> knob default 16, one combined `.phasePool(...)` DSL call per family. Feature stays OFF by
+> default (enabling lifts low-end ~2 dB → per-song opt-in + retrim). Remaining future work:
+> voices-aware bands (calibrated for unison 7–11), sticky/contextual selection + persistence
+> (parked, §9).
 >
 > **Grounded in:** the klang-ai onset/consistency sessions
 > (`sessions/20260808-guitar2-onset/`, `sessions/20260809-superimpose-onset/`,
