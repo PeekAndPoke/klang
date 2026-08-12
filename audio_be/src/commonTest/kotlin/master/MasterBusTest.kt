@@ -75,7 +75,7 @@ class MasterBusTest : StringSpec({
         var peak = 0.0
 
         for (b in 0 until blocks) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             for (s in out) {
                 val v = abs(s.toDouble() / Short.MAX_VALUE)
                 if (v > peak) {
@@ -153,11 +153,11 @@ class MasterBusTest : StringSpec({
         val out = ShortArray(blockFrames * 2)
         // Skip past the crossfade window (60 ms ≈ 21 blocks at 128/44100), then measure.
         for (b in 0 until 40) {
-            muted.renderBlock(cursorFrame = b * blockFrames, out = out)
+            muted.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
         var tailPeak = 0.0
         for (b in 40 until 60) {
-            muted.renderBlock(cursorFrame = b * blockFrames, out = out)
+            muted.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             for (s in out) {
                 val v = abs(s.toDouble() / Short.MAX_VALUE)
                 if (v > tailPeak) {
@@ -180,7 +180,7 @@ class MasterBusTest : StringSpec({
         val out = ShortArray(blockFrames * 2)
 
         return (0 until blocks).map { b ->
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             var peak = 0.0
             for (i in out.indices step 2) {
                 val v = abs(out[i].toDouble() / Short.MAX_VALUE)
@@ -319,7 +319,7 @@ class MasterBusTest : StringSpec({
         val out = ShortArray(blockFrames * 2)
         var after = 0.0
         for (b in 200 until 600) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             for (i in out.indices step 2) {
                 val v = abs(out[i].toDouble() / Short.MAX_VALUE)
                 if (v > after) {
@@ -366,7 +366,7 @@ class MasterBusTest : StringSpec({
 
         val out = ShortArray(blockFrames * 2)
         for (b in 0 until 344) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
         var beforePeak = 0.0
         for (i in out.indices step 2) {
@@ -388,7 +388,7 @@ class MasterBusTest : StringSpec({
 
         var afterPeak = 0.0
         for (b in 344 until 700) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             for (i in out.indices step 2) {
                 val v = abs(out[i].toDouble() / Short.MAX_VALUE)
                 if (v > afterPeak) {
@@ -426,7 +426,7 @@ class MasterBusTest : StringSpec({
 
         val out = ShortArray(blockFrames * 2)
         for (b in 0 until 200) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
         // The voice is long gone, but the engine must not be considered idle while the master
@@ -460,7 +460,7 @@ class MasterBusTest : StringSpec({
 
         val out = ShortArray(blockFrames * 2)
         for (b in 0 until 3000) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
         // The counterpart to the tail-holds-the-engine test: once the small, heavily damped room
@@ -497,7 +497,7 @@ class MasterBusTest : StringSpec({
         // OUTPUT is silent — but the delay ring is full. Watching the output would call this
         // finished and cut every remaining echo.
         for (b in 0 until 120) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
         d.engine("song")?.scheduler?.getActiveVoiceCount() shouldBe 0
@@ -540,12 +540,12 @@ class MasterBusTest : StringSpec({
 
         val out = ShortArray(blockFrames * 2)
         for (b in 0 until 1030) {   // up to ~2.99 s — the bus is silent well before this
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
         var afterReturn = 0.0
         for (b in 1030 until 1400) {   // across and past the swap back to "hall"
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             for (i in out.indices step 2) {
                 val v = abs(out[i].toDouble() / Short.MAX_VALUE)
                 if (v > afterReturn) {
@@ -581,7 +581,7 @@ class MasterBusTest : StringSpec({
 
         val out = ShortArray(blockFrames * 2)
         for (b in 0 until 40) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
         // Every stage was dropped at build time: nothing to ring, nothing to keep alive.
@@ -603,7 +603,7 @@ class MasterBusTest : StringSpec({
         )
         val out = ShortArray(blockFrames * 2)
         for (b in 0 until 100) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
         // A live-coding burst: every edit mints a new content-derived name, so without a bound the
@@ -624,7 +624,7 @@ class MasterBusTest : StringSpec({
         // ...and the master that was playing survived the burst: level is still boosted.
         var peak = 0.0
         for (b in 100 until 200) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             for (i in out.indices step 2) {
                 val v = abs(out[i].toDouble() / Short.MAX_VALUE)
                 if (v > peak) {
@@ -662,13 +662,13 @@ class MasterBusTest : StringSpec({
 
         val out = ShortArray(blockFrames * 2)
         for (b in 0 until 500) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
         // Still echoing at full level — correctly held open.
         d.engine("song")?.isIdle() shouldBe false
 
         for (b in 500 until 8000) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
         // Past the hold bound the engine is released rather than rendering forever.
         d.engine("song")?.isIdle() shouldBe true
@@ -701,7 +701,7 @@ class MasterBusTest : StringSpec({
         val out = ShortArray(blockFrames * 2)
         // Render past the note (25.2 s ≈ block 8680) and a little beyond.
         for (b in 0 until 8800) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
         // The reverb is decaying right now. A bound counted from engine start (rather than from the
@@ -741,7 +741,7 @@ class MasterBusTest : StringSpec({
 
         val out = ShortArray(blockFrames * 2)
         for (b in 0 until 2000) {
-            d.renderBlock(cursorFrame = b * blockFrames, out = out)
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
         // Once the master is inaudible there is nothing left that can ring. A cached "still ringing"

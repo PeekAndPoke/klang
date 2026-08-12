@@ -41,15 +41,29 @@ class IgnitorRegistry(
     /**
      * Creates a fresh [Ignitor] for the given oscillator name.
      *
+     * [phasePools] is the playback's unison start-phase pool registry (null → the phase-pool
+     * feature falls back to stateless banded selection); the orbit key comes from
+     * [VoiceData.cylinder].
+     *
      * Returns null if the name is unknown.
      */
-    fun createExciter(name: String?, data: VoiceData, freqHz: Double): Ignitor? {
+    fun createExciter(
+        name: String?,
+        data: VoiceData,
+        freqHz: Double,
+        phasePools: PhasePools? = null,
+    ): Ignitor? {
         val key = (name ?: DEFAULT_SOUND).lowercase()
         val oscParams = data.oscParams
 
         val dsl = get(key) ?: return null
 
-        val raw = dsl.toExciter(oscParams, soundIndex = data.soundIndex ?: 0)
+        val raw = dsl.toExciter(
+            oscParams,
+            soundIndex = data.soundIndex ?: 0,
+            phasePools = phasePools,
+            orbit = data.cylinder ?: 0,
+        )
         val warmth = oscParams?.get("warmth") ?: 0.0
         return if (warmth > 0.0) raw.withWarmth(warmth) else raw
     }

@@ -98,16 +98,29 @@ Multiple detuned copies for thick, lush sounds.
 | `spread` | 0.2     | Frequency spread between voices |
 
 **Chained character knobs** (return the same super-osc subtype): `.analog(x)` (per-voice pitch drift),
-`.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`.
+`.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`, and the combined phase-pool
+call `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — banded start-phase
+selection for consistent low-note fundamentals, off by default. Every param is an optional literal,
+so named-arg subsets work: `.phasePool()` = on with family defaults,
+`.phasePool(kMin = 0.05, kMax = 0.25)` = the hollow-pad band (the band is a timbre control),
+`.phasePool(refreshEvery = 0)` = frozen vocabulary. All-named or all-positional — KlangScript
+forbids mixing. Defaults: band 0.30–0.55 (saw family) / 0.40–0.65 (supertri) / 0.50–0.80
+(supersine), drawTries 5/16/40, poolSize 256 (cap 1024), refreshEvery 10, selection 0 = roundRobin, warmup 16 (eagerly seeded entries; 0 = fully lazy).
+⚠️ Enabling the pool lifts the low-note fundamental (+2 dB measured on average — more on the
+notes the old random draw was cancelling) — on a finished song, retrim the low end once after
+switching it on.
 
 ```javascript
-// Named args (recommended) — override only what you want:
+// Chained knobs — override only what you want:
 
 // Thin 3-voice supersaw
-Osc.supersaw(voices = 3, spread = 0.1)
+Osc.supersaw().voices(3).spread(0.1)
 
-// Wide 12-voice pad with analog drift (analog is a chained knob, not a constructor arg)
-Osc.supersaw(voices = 12, spread = 0.3).analog(0.2)
+// Wide 12-voice pad with analog drift
+Osc.supersaw().voices(12).spread(0.3).analog(0.2)
+
+// ⚠ Osc.supersaw(voices = 3) FAILS at runtime: the leading `freq` param has a complex default
+// the named-arg binder can't skip. Chain the knobs (above) or pass freq positionally first.
 ```
 
 ### Noise Sources

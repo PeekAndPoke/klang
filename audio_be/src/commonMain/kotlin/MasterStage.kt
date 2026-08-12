@@ -7,6 +7,10 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
 
 /**
  * The final master / output stage: a brick-wall safety limiter, master-out DC blockers, and the
@@ -21,28 +25,18 @@ class MasterStage(
     private val blockFrames: Int,
 ) {
     /**
-     * The house limiter character: what runs on the summed mix, always.
+     * The house limiter's own TIMING: what runs on the summed mix, always.
      *
-     * `MasterStageDsl.Limiter` (the *opt-in*, per-playback stage) shares threshold, ratio, knee and
-     * release, but has its own `AUTHORED_*` constants for attack and lookahead — see those below for
-     * why they must differ. `MasterDefaultsSyncSpec` asserts both the shared values and the
-     * divergence, so neither drifts by accident.
+     * The *character* it shares with `MasterStageDsl.Limiter` — threshold, ratio, knee, release —
+     * lives in `audio_bridge/constants/MasterLimiterDefaults.kt`, because those four are also that
+     * stage's wire defaults and must have exactly one declaration.
+     *
+     * The two constants below are **house-only**: no DSL field carries them, because the house
+     * limiter is not authorable. The opt-in stage has its own `AUTHORED_*` timing (also in the
+     * bridge) which deliberately differs — see `MasterDefaultsSyncSpec` for why, and for the
+     * assertions that keep the divergence intentional rather than accidental.
      */
     companion object {
-        /** Ceiling at -1 dB. */
-        const val LIMITER_THRESHOLD_DB: Double = -1.0
-
-        /** Brickwall ratio. */
-        const val LIMITER_RATIO: Double = 20.0
-
-        /**
-         * 2 dB soft knee — 2026-04-30 fix for britzeling on heavily-distorted content.
-         * With kneeDb=0 the gain curve had a C¹ kink at the threshold corner; every
-         * envelope crossing of -1 dBFS injected high-order harmonics at audio rate.
-         * The 2 dB knee makes the corner smooth without changing the brickwall character.
-         */
-        const val LIMITER_KNEE_DB: Double = 2.0
-
         /**
          * Lookahead: the limiter delays the mix by this much so it can start closing the gain
          * *before* a transient arrives. Without it the limiter contributes ~0 dB during a transient
@@ -54,7 +48,7 @@ class MasterStage(
          *
          * See `docs/tasks/master-limiter-lookahead.md`.
          */
-        const val LIMITER_LOOKAHEAD_SECONDS: Double = 0.005
+        const val HOUSE_LIMITER_LOOKAHEAD_SECONDS: Double = 0.005
 
         /**
          * The gain-smoothing length — how fast the gain closes inside the lookahead window.
@@ -64,26 +58,7 @@ class MasterStage(
          * more smoothing is strictly better. It also collapses the "flat bottom" of the gain dip,
          * which is the pre-duck people hear as the mix flinching ahead of a kick.
          */
-        const val LIMITER_ATTACK_SECONDS: Double = 0.005
-
-        const val LIMITER_RELEASE_SECONDS: Double = 0.1
-
-        // ── Authored-limiter defaults (the opt-in `MasterFx.limiter()` stage) ────────────────
-        // These deliberately DIFFER from the house constants above, and the difference is the
-        // point: that stage is per-playback, upstream of the summed mix.
-
-        /**
-         * **0, on purpose.** An authored master limiter lives on one playback's `MasterBus`, so any
-         * lookahead there would delay that playback against every other one — the same desync that
-         * keeps lookahead off per-orbit compressors. Latency is opt-in per author, never a default.
-         */
-        const val AUTHORED_LIMITER_LOOKAHEAD_SECONDS: Double = 0.0
-
-        /**
-         * **The one-pole attack**, not a smoothing length: with no lookahead the authored limiter
-         * takes the classic path, where 1 ms is what lets transients keep their punch.
-         */
-        const val AUTHORED_LIMITER_ATTACK_SECONDS: Double = 0.001
+        const val HOUSE_LIMITER_ATTACK_SECONDS: Double = 0.005
     }
 
     /**
@@ -104,9 +79,9 @@ class MasterStage(
         thresholdDb = LIMITER_THRESHOLD_DB,
         ratio = LIMITER_RATIO,
         kneeDb = LIMITER_KNEE_DB,
-        attackSeconds = LIMITER_ATTACK_SECONDS,
+        attackSeconds = HOUSE_LIMITER_ATTACK_SECONDS,
         releaseSeconds = LIMITER_RELEASE_SECONDS,
-        lookaheadSeconds = LIMITER_LOOKAHEAD_SECONDS,
+        lookaheadSeconds = HOUSE_LIMITER_LOOKAHEAD_SECONDS,
     )
 
     // Master-out DC blockers. ~7 Hz cutoff (coefficient = 0.999 at 44.1k / ~7.6 Hz at 48k).
@@ -142,7 +117,7 @@ class MasterStage(
         dcBlockerR.process(mix.right, 0, blockFrames)
 
         // Apply dynamic limiter — handles the bulk of loudness management musically. With lookahead
-        // it also delays the mix by LIMITER_LOOKAHEAD_SECONDS; uniform, so nothing desyncs.
+        // it also delays the mix by HOUSE_LIMITER_LOOKAHEAD_SECONDS; uniform, so nothing desyncs.
         limiter.process(mix.left, mix.right, blockFrames)
 
         // Transparent clip + interleave. Most samples are within [-1, 1]; we skip all math for

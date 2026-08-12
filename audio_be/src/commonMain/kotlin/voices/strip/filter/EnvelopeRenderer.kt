@@ -5,8 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
-import io.peekandpoke.klang.audio_be.ADSR_EXP_K
-import io.peekandpoke.klang.audio_be.ENV_DECLICK_SECONDS
 import io.peekandpoke.klang.audio_be.adsrExpNorm
 import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
@@ -14,6 +12,8 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 
 /**
  * ADSR amplitude envelope (VCA stage).
@@ -28,8 +28,9 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  */
 class EnvelopeRenderer(
     private val envelope: Voice.Envelope,
-    private val startFrame: Int,
-    private val gateEndFrame: Int,
+    // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
+    private val startFrame: Double,
+    private val gateEndFrame: Double,
     // Per-engine VCA character (the PipelineDsl Vca stage). Defaults == the globals,
     // so the built-in engines render byte-for-byte as before.
     private val expK: Double = ADSR_EXP_K,
@@ -37,7 +38,7 @@ class EnvelopeRenderer(
 ) : BlockRenderer {
 
     // Voice-relative gate end position (Int, avoids Long in per-sample loop)
-    private val gateEndPos: Int = gateEndFrame - startFrame
+    private val gateEndPos: Int = (gateEndFrame - startFrame).toInt()
 
     // Exp-curve normalisation for this engine's curvature (precomputed once per voice).
     private val expNorm: Double = adsrExpNorm(expK)
@@ -63,7 +64,7 @@ class EnvelopeRenderer(
         val declick = envDeclickCoeff(declickSeconds, ctx.sampleRateD)
 
         // Compute voice-relative position as Int (once per block, not per sample)
-        var absPos = (ctx.blockStart + ctx.offset) - startFrame
+        var absPos = (ctx.blockStart + ctx.offset - startFrame).toInt()
         var currentEnv = env.level
         var smoothed = env.smoothedLevel
 

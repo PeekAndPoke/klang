@@ -5,8 +5,11 @@
 
 package io.peekandpoke.klang.audio_bridge
 
-import io.peekandpoke.klang.audio_bridge.PipelineDsl.Companion.modern
-import io.peekandpoke.klang.audio_bridge.PipelineDsl.Companion.pedal
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_CUTOFF_OFFSET_PER_ANALOG
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIFT_RELATIVE_TO_OSC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 
 /**
  * Declarative, data-driven voice engine (the "Motör" filter/VCA pipeline).
@@ -14,7 +17,8 @@ import io.peekandpoke.klang.audio_bridge.PipelineDsl.Companion.pedal
  * An engine is an ordered list of [StageDsl] slots — the topology — where each
  * stage also carries its own character constants (envelope curve, declick,
  * filter humanization). Built-ins [modern] / [pedal] reproduce the historical
- * hardcoded pipelines; users author arbitrary pipelines and may omit stages.
+ * hardcoded pipelines' TOPOLOGY; their character constants have since been retuned
+ * (see [StageDsl]). Users author arbitrary pipelines and may omit stages.
  *
  * Mirrors [IgnitorDsl]: a `@WireFormat` root, registered by name, referenced from `VoiceData.pipeline`. The
  * backend maps each [StageDsl] to a `BlockRenderer`. Marked `@WireFormat` so the codec is generated now (the
@@ -61,9 +65,14 @@ data class PipelineDsl(val stages: List<StageDsl>) {
  * One stage slot in an [PipelineDsl] pipeline.
  *
  * Marker stages carry no config; [Filter] and [Vca] carry their tune-by-ear
- * character constants. All defaults equal the historical compile-time values,
- * so the built-in engines are byte-for-byte identical to the old hardcoded
- * pipelines.
+ * character constants, whose defaults live in `constants/` — one declaration that
+ * both this DSL and the engine read.
+ *
+ * These defaults began as the historical compile-time values, but no longer track them
+ * blindly: [Filter]'s three were retuned by ear on 2026-08-11, and `drivePerAnalog` in
+ * particular is half the value the engine used before that. So the built-in engines are
+ * NOT byte-for-byte identical to the old hardcoded pipelines — see
+ * `docs/tasks/audio-bridge-constants.md` §2.
  */
 @WireFormat
 sealed interface StageDsl {
@@ -95,15 +104,15 @@ sealed interface StageDsl {
     /** Main filter (LP/HP/BP/Notch chain) + its per-voice humanization feel. */
     @WireName("filter")
     data class Filter(
-        val cutoffOffsetPerAnalog: Double = 0.001, // FILTER_CUTOFF_OFFSET_PER_ANALOG
-        val drivePerAnalog: Double = 0.5,          // FILTER_DRIVE_PER_ANALOG
-        val driftRelToOsc: Double = 2.5,           // FILTER_DRIFT_RELATIVE_TO_OSC
+        val cutoffOffsetPerAnalog: Double = FILTER_CUTOFF_OFFSET_PER_ANALOG,
+        val drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
+        val driftRelToOsc: Double = FILTER_DRIFT_RELATIVE_TO_OSC,
     ) : StageDsl
 
     /** Amplitude VCA (ADSR) + its envelope character. */
     @WireName("vca")
     data class Vca(
-        val expK: Double = 3.0,             // ADSR_EXP_K
-        val declickSeconds: Double = 0.001, // ENV_DECLICK_SECONDS
+        val expK: Double = ADSR_EXP_K,
+        val declickSeconds: Double = ENV_DECLICK_SECONDS,
     ) : StageDsl
 }

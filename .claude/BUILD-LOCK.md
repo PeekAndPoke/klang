@@ -1,8 +1,12 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-04**
+**SINCE: 2026-08-12**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-10, klang-ai session): offline render of Der Schmetterling only — no source
+> changes, no test runs. The cursorFrame Int→Double benchmark call sites were fixed by another
+> session before this; the root build compiles again.
 
 Convention adopted from the sibling `ultra` project. Two layers, because they catch different failures:
 
@@ -64,7 +68,28 @@ content may be stale but the lock itself never is. Only the printed holder recor
 
 ---
 
-## What the last holder changed — master limiter lookahead, 2026-08-04
+## What the last holder changed — cursorFrame Int→Double, 2026-08-10
+
+**The backend timeline no longer dies after 12.4 hours.** `cursorFrame` and every other ABSOLUTE
+frame is now `Double`; per-sample offsets stay `Int`. Not committed.
+
+The old `Int` cursor overflowed after ~12.4 h at 48 kHz (13.5 h at 44.1) and audio **silently
+stopped** — no crash, no error, nothing in the console. A tab left open overnight was enough.
+Confirmed by test before the fix: 0/60 blocks produced audio near the boundary, versus 55/60 at
+frame 0. The degradation also starts *before* the wrap, because scheduling round-trips through
+seconds and that conversion loses its integers first.
+
+**`Double`, not `Long`** — it needs no exception to the "no `Long` in audio paths" rule, it is a
+native JS number where `Long` is emulated and allocates, and it is exact for integers to 2^53
+(~5,950 years at 48 kHz, verified bit-exact over 10 M accumulations).
+
+**The rule to keep in your head:** absolute timeline = `Double`, relative position = `Int`, converted
+once per block per voice. ⚠️ `IgniteContext.gateEndFrame` is voice-RELATIVE and stays `Int` despite
+sharing its name with `BlockContext.gateEndFrame`, which is absolute and `Double`.
+
+Guarded by `LongRunningTimelineSpec`, mutation-checked. All modules green (JVM + JS).
+
+## What an earlier holder changed — master limiter lookahead, 2026-08-04
 
 **Phases 0–2 of `docs/tasks/master-limiter-lookahead.md` are IN. `audio_be:jvmTest` is green (946).**
 Not committed — the tree is yours to review.
@@ -79,11 +104,18 @@ clipping**; it now exits at **−0.37 dBFS, zero samples clipped**.
 
 **Two things to know if you touch this:**
 
-1. **`MasterStage` no longer has one limiter character — it has two.** `LIMITER_*` is the house limiter (global,
-   post-sum, 5 ms lookahead, smoothing = the whole window).
-   `AUTHORED_LIMITER_*` is the opt-in `MasterFx.limiter()` (per-playback, **lookahead 0**, 1 ms one-pole attack). They
-   differ **on purpose** — an authored limiter with latency would delay its playback against every other one.
-   `MasterDefaultsSyncSpec` asserts both sides, so the asymmetry is data, not a comment. Do not "re-sync" them.
+1. **`MasterStage` no longer has one limiter character — it has two.** Naming rule (set 2026-08-11, when the shared
+   constants moved to `audio_bridge/constants/MasterLimiterDefaults.kt`):
+    - **no prefix** — `LIMITER_THRESHOLD_DB` / `RATIO` / `KNEE_DB` / `RELEASE_SECONDS`: **shared** by both limiters, one
+      declaration in `audio_bridge`. Both sides read it, so they cannot drift; there is nothing to "re-sync".
+    - **`HOUSE_LIMITER_*`** — the house limiter's own timing (global, post-sum, 5 ms lookahead, smoothing = the whole
+      window). Stays in `MasterStage`: no DSL field carries it, because the house limiter is not authorable.
+    - **`AUTHORED_LIMITER_*`** — the opt-in `MasterFx.limiter()` (per-playback, **lookahead 0**, 1 ms one-pole attack),
+      in `audio_bridge` because it *is* a wire default.
+
+   The house/authored timing differs **on purpose** — an authored limiter with latency would delay its playback against
+   every other one. `MasterDefaultsSyncSpec` asserts that divergence (and pins the authored values on the wire model
+   itself). Do not "unify" the two timings.
 2. **`lookaheadSeconds` is a constructor `val`, unlike every other param.** The rings are sized once from it. Making it
    a `var` would resize a buffer on the audio thread.
 

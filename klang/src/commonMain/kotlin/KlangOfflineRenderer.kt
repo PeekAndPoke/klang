@@ -69,6 +69,8 @@ class KlangOfflineRenderer(
             blockFrames = blockFrames,
             commLink = commLink.backend,
             performanceTimeMs = { klangTime.internalMsNow() },
+            // Fixed seed: offline unison phase pools reproduce across renders (doc §5 rng row).
+            phasePoolSeed = 1,
         )
         val ignitorRegistry = renderer.ignitorRegistry
         val pipelineRegistry = renderer.pipelineRegistry
@@ -179,7 +181,9 @@ class KlangOfflineRenderer(
 
         // 6. Render loop
         val outShorts = ShortArray(blockFrames * 2)
-        var currentFrame = 0
+        // Absolute backend frame — Double, see RenderClock.cursorFrame. An offline render is short
+        // enough that Int would do, but the type has to match the live path.
+        var currentFrame = 0.0
 
         while (currentFrame < totalFrames) {
             renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)

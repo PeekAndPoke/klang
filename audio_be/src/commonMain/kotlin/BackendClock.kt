@@ -20,11 +20,29 @@ interface RenderClock {
     /** Backend epoch — wall-relative seconds at frame 0 (set once at startup). */
     val startTimeSec: Double
 
-    /** The current render cursor (advanced by the main loop each block). */
-    val cursorFrame: Int
+    /**
+     * The current render cursor (advanced by the main loop each block).
+     *
+     * **`Double`, not `Int`, and deliberately so.** This counter grows for the whole life of the
+     * backend — it advances every block whether or not anything is playing. As an `Int` it overflows
+     * after **12.4 h at 48 kHz** (13.5 h at 44.1), and the failure is silent: audio simply stops,
+     * with no crash and no error. Confirmed by test — see `docs/tasks/audio-backend-audit.md`.
+     *
+     * `Double` holds integers **exactly** up to 2^53, i.e. **~5,950 years** at 48 kHz, with zero
+     * drift: we only ever add, subtract and compare, and those are exact below 2^53 (verified
+     * bit-exact over 10 M accumulations). `Long` would also work but is emulated and allocates on
+     * Kotlin/JS, which is why the house rule bans it in audio paths — and on Kotlin/JS an `Int` is
+     * *already* a JS number carrying a truncation on every operation, so `Double` is if anything
+     * cheaper than what it replaces.
+     *
+     * ⚠️ **Absolute frames are `Double`; per-sample offsets stay `Int`.** The conversion happens once
+     * per block per voice (e.g. `EnvelopeRenderer`: `(ctx.blockStart + ctx.offset) - startFrame`),
+     * and everything inside the sample loop is `Int`. Do not widen the loop variables.
+     */
+    val cursorFrame: Double
 
     /** Seconds at an absolute [frame]. */
-    fun secAt(frame: Int): Double = startTimeSec + frame.toDouble() / sampleRate
+    fun secAt(frame: Double): Double = startTimeSec + frame / sampleRate
 
     /** Seconds at the current cursor — i.e. "now". */
     fun nowSec(): Double = secAt(cursorFrame)
@@ -37,5 +55,5 @@ interface RenderClock {
  */
 class BackendClock(override val sampleRate: Int) : RenderClock {
     override var startTimeSec: Double = 0.0
-    override var cursorFrame: Int = 0
+    override var cursorFrame: Double = 0.0
 }

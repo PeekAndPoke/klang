@@ -22,8 +22,9 @@ class FmRenderer(
     private val fm: Voice.Fm,
     private val freqHz: Double,
     private val sampleRate: Int,
-    private val startFrame: Int,
-    private val gateEndFrame: Int,
+        // Absolute backend frame — Double, see RenderClock.cursorFrame.
+    private val startFrame: Double,
+    private val gateEndFrame: Double,
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {

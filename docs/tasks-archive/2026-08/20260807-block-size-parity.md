@@ -62,7 +62,8 @@ specs can still size their own buffers (`CrushRendererSpec`, `DelayLineSpec`,
 ## Test fallout — worth knowing
 
 Two `KlangOfflineRendererTest` cases compared `blocks.first()` between two renders to prove the audio differed. At 512
-frames the first block reached past the master limiter's 5 ms (`LIMITER_LOOKAHEAD_SECONDS`, 240 frames @ 48 k) lookahead
+frames the first block reached past the master limiter's 5 ms
+(`LIMITER_LOOKAHEAD_SECONDS (renamed HOUSE_LIMITER_LOOKAHEAD_SECONDS on 2026-08-11)`, 240 frames @ 48 k) lookahead
 delay; at 128 frames it does not, so block 0 is silence in **both** renders and the comparison failed.
 
 Fixed by comparing the whole render instead of the first block — strictly stronger, and no longer coupled to how block

@@ -124,7 +124,7 @@ class JsAudioBackend(
                     // the clock — `AudioContext.outputLatency` cannot see it. Without adding it here
                     // every visual that aligns to audio (code highlight, block highlight) fires
                     // early by exactly that much.
-                    val masterLat = MasterStage.LIMITER_LOOKAHEAD_SECONDS * 1000.0
+                    val masterLat = MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * 1000.0
                     decoded.copy(
                         baseLatencyMs = baseLat,
                         outputDeviceLatencyMs = deviceLat,

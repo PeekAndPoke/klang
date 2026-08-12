@@ -138,7 +138,8 @@ class Cylinders(
      *
      * When a new cylinder is created, it will be initialized with the given voice.
      */
-    fun getOrInit(id: Int, voice: Voice, blockStart: Int): Cylinder {
+    // blockStart is an ABSOLUTE backend frame — Double, see RenderClock.cursorFrame.
+    fun getOrInit(id: Int, voice: Voice, blockStart: Double): Cylinder {
         val safeId = id % maxCylinders
 
         return id2cylinder.getOrPut(safeId) {

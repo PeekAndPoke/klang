@@ -27,9 +27,10 @@ fun buildPitchPipeline(
     fm: Voice.Fm?,
     freqHz: Double,
     sampleRate: Int,
-    startFrame: Int,
-    endFrame: Int,
-    gateEndFrame: Int,
+    // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
+    startFrame: Double,
+    endFrame: Double,
+    gateEndFrame: Double,
 ): List<BlockRenderer> = buildList {
     if (vibrato.depth > 0.0) {
         add(VibratoRenderer(vibrato, sampleRate))

@@ -88,8 +88,8 @@ class PipelinePresetSpec : StringSpec({
 private fun minimalPipeline(preset: PipelinePreset) = buildFilterPipeline(
     pipeline = preset.dsl,
     modulators = emptyList(),
-    startFrame = 0,
-    gateEndFrame = 1000,
+    startFrame = 0.0,
+    gateEndFrame = 1000.0,
     crush = Voice.Crush(amount = 0.0),
     coarse = Voice.Coarse(amount = 0.0),
     mainFilter = NoOpAudioFilter,
@@ -112,8 +112,8 @@ private fun minimalPipeline(preset: PipelinePreset) = buildFilterPipeline(
 private fun activePipeline(preset: PipelinePreset) = buildFilterPipeline(
     pipeline = preset.dsl,
     modulators = emptyList(),
-    startFrame = 0,
-    gateEndFrame = 1000,
+    startFrame = 0.0,
+    gateEndFrame = 1000.0,
     crush = Voice.Crush(amount = 4.0),
     coarse = Voice.Coarse(amount = 0.0),
     mainFilter = NoOpAudioFilter,

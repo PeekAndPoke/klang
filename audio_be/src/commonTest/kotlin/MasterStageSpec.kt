@@ -32,7 +32,7 @@ class MasterStageSpec : StringSpec({
 
     "output is interleaved L/R and routes channels independently" {
         // The master limiter has lookahead, so a left-only impulse emerges
-        // LIMITER_LOOKAHEAD_SECONDS later — past the end of a single 64-frame block. Render enough
+        // HOUSE_LIMITER_LOOKAHEAD_SECONDS later — past the end of a single 64-frame block. Render enough
         // blocks to carry it through, then look for it wherever it lands.
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val out = ShortArray(blockFrames * 2)
@@ -104,7 +104,7 @@ class MasterStageSpec : StringSpec({
         // from the real delay, visuals misalign and offline renders truncate — silently, in both
         // cases, because nothing throws.
         val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
-        val expected = (MasterStage.LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
+        val expected = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
 
         master.latencyFrames shouldBe expected
         master.latencyMs shouldBe (expected * 1000.0 / sampleRate)

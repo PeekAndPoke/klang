@@ -245,7 +245,10 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSaw] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, and the combined
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
+     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -253,7 +256,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.supersaw(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersaw().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method
@@ -273,7 +276,10 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSine] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, and the combined
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
+     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -281,7 +287,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.supersine(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersine().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method
@@ -301,7 +307,10 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperSquare] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, and the combined
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
+     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -309,7 +318,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.supersquare(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersquare().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method
@@ -329,7 +338,10 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperTri] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, and the combined
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
+     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -337,7 +349,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.supertri(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supertri().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method
@@ -357,7 +369,10 @@ object KlangScriptOsc {
      *
      * The common settings are optional params; the rest are chained config methods on the returned
      * [IgnitorDsl.SuperRamp] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)` (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
+     * `.centerJitter(x)`, and the combined
+     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
+     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
+     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
      * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
      *
      * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
@@ -365,7 +380,7 @@ object KlangScriptOsc {
      * @param spread unison frequency spread between voices (default 0.2).
      *
      * ```KlangScript
-     * Osc.superramp(voices = 9, spread = 0.1).spreadPower(1.5).analog(5.0)
+     * Osc.superramp().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
      * ```
      */
     @KlangScript.Method

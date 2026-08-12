@@ -62,4 +62,35 @@ object KlangScriptSuperRampExtensions {
     @KlangScript.Method
     fun centerJitter(self: IgnitorDsl.SuperRamp, centerJitter: Double): IgnitorDsl.SuperRamp =
         self.copy(centerJitterScale = centerJitter)
+    /**
+     * Configure the banded start-phase pool in ONE call — every param is an optional plain
+     * literal, so named-arg subsets work: `.phasePool()` (on, family defaults),
+     * `.phasePool(kMin = 0.2)`, `.phasePool(refreshEvery = 0)` (all-named
+     * or all-positional — KlangScript forbids mixing). Defaults mirror the
+     * `SUPERRAMP`-family engine constants (guarded by the dual-language spec).
+     *
+     * @param on 1 = banded start-phase selection on, 0 = off (the engine default).
+     * @param kMin accepted coherence band, lower edge (0 = cancelled, 1 = phase-aligned).
+     * @param kMax accepted coherence band, upper edge. The band is also a timbre control.
+     * @param drawTries candidate phase sets scored per draw (engine caps at 64).
+     * @param poolSize vocabulary size per pool key (engine caps at 1024).
+     * @param refreshEvery notes between fresh pool draws; 0 = frozen pool.
+     * @param selection 0 = roundRobin (default), 1 = random.
+     * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
+     */
+    @KlangScript.Method
+    fun phasePool(
+        self: IgnitorDsl.SuperRamp,
+        on: Double = 1.0,
+        kMin: Double = 0.30,
+        kMax: Double = 0.55,
+        drawTries: Double = 5.0,
+        poolSize: Double = 256.0,
+        refreshEvery: Double = 10.0,
+        selection: Double = 0.0,
+        warmup: Double = 16.0,
+    ): IgnitorDsl.SuperRamp = self.copy(
+        phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,
+        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
+    )
 }

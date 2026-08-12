@@ -141,7 +141,7 @@ class IgnitorBenchmark(
         }
 
         // Warmup — prime JIT, allocate lazy buffers
-        var frame = 0
+        var frame = 0.0
         repeat(warmupBlocks) {
             scheduler.process(frame)
             renderer.renderBlock(frame, outBuffer)

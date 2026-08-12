@@ -72,7 +72,7 @@ class VoiceFactory(
      */
     fun makeVoice(
         scheduled: ScheduledVoice,
-        nowFrame: Int,
+        nowFrame: Double,
         backendStartTimeSec: Double,
         playbackCtx: PlaybackCtx,
         getSample: (SampleRequest) -> SampleStore.SampleEntry.Complete?,
@@ -83,12 +83,15 @@ class VoiceFactory(
         val relativeStartTime = scheduled.startTime - backendStartTimeSec
         val relativeGateEndTime = scheduled.gateEndTime - backendStartTimeSec
 
-        val startFrame = (relativeStartTime * sampleRate).toInt()
-        val gateEndFrameFromTime = (relativeGateEndTime * sampleRate).toInt()
+        // Absolute backend frames — Double (see RenderClock.cursorFrame). `.toInt()` here would
+        // overflow after ~12.4 h of backend uptime, silently placing every new voice at a nonsense
+        // frame. Durations derived below are relative and stay Int.
+        val startFrame = kotlin.math.floor(relativeStartTime * sampleRate)
+        val gateEndFrameFromTime = kotlin.math.floor(relativeGateEndTime * sampleRate)
 
         // Handle legato (clip) logic
         val clip = data.legato
-        val originalGateDuration = gateEndFrameFromTime - startFrame
+        val originalGateDuration = (gateEndFrameFromTime - startFrame).toInt()
         val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toInt() else originalGateDuration
         val gateEndFrame = startFrame + effectiveGateDuration
 
@@ -248,9 +251,11 @@ class VoiceFactory(
                     resolvedAdsr
                 }
 
-                val voiceDurationFrames = gateEndFrame - startFrame
-                val signal = playbackCtx.ignitorRegistry.createExciter(sound, data, freqHz ?: 0.0)
-                    ?: return null
+                val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
+                val signal = playbackCtx.ignitorRegistry.createExciter(
+                    sound, data, freqHz ?: 0.0,
+                    phasePools = playbackCtx.phasePools,
+                ) ?: return null
 
                 buildVoice(
                     data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
@@ -329,7 +334,7 @@ class VoiceFactory(
                 // against the block just rendered and first sounds in the next one. Strictly better
                 // than the old code, which hit that worst case on every voice — but not a guarantee.
                 val sampleStartFrame = maxOf(startFrame, nowFrame)
-                val voiceDurationFrames = gateEndFrame - sampleStartFrame
+                val voiceDurationFrames = (gateEndFrame - sampleStartFrame).toInt()
 
                 val signal = SampleIgnitor(
                     pcm = sample.pcm,
@@ -390,8 +395,8 @@ class VoiceFactory(
     /**
      * Computes a per-voice cutoff offset multiplier. At `analog=0` returns `1.0`
      * (bit-identical to no offset). At `analog>0` returns `1 + uniform(-1,1) × analog ×
-     * CUTOFF_OFFSET_PER_ANALOG`. So at `analog=1` ≈ ±0.3% (≈ ±5 cents); at `analog=3`
-     * (Schmetterling) ≈ ±0.9% (≈ ±15 cents); at `analog=10` ≈ ±3% (≈ ±50 cents).
+     * cutoffOffsetPerAnalog`. At the shipped default (0.0002) that is ≈ ±0.02% at `analog=1`
+     * (≈ ±0.35 cents); ≈ ±0.06% at `analog=3` (≈ ±1 cent); ≈ ±0.2% at `analog=10` (≈ ±3.5 cents).
      */
     private fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Double): Double {
         if (analog <= 0.0) return 1.0
@@ -419,8 +424,10 @@ class VoiceFactory(
         // Per-voice slow cutoff drift. Constructed with the block-rate effective
         // sample rate so calling `nextMultiplier()` once per block in
         // `FilterModRenderer` produces drift trajectories with the correct
-        // time constants. `analog * FILTER_DRIFT_RELATIVE_TO_OSC` makes the
-        // filter drift proportionally bigger than oscillator pitch drift.
+        // time constants. `analog * driftRelToOsc` scales it against oscillator pitch
+        // drift (1.0 cent per unit analog), so the stage field IS the filter-to-pitch
+        // ratio. At the shipped default of 0.25 the filter wanders 4x LESS than pitch —
+        // whether that is the right way round is open, see docs/tasks/audio-bridge-constants.md §6.
         val drift = if (analog > 0.0) {
             AnalogDrift(analog * stage.driftRelToOsc, driftUpdateRate)
         } else {
@@ -470,8 +477,10 @@ class VoiceFactory(
     private fun buildVoice(
         data: VoiceData,
         resolvedAdsr: AdsrDef.Resolved,
-        startFrame: Int,
-        gateEndFrame: Int,
+        // Absolute backend frames are Double (RenderClock.cursorFrame); the DURATION is relative
+        // to the voice and stays Int.
+        startFrame: Double,
+        gateEndFrame: Double,
         voiceDurationFrames: Int,
         cylinder: Int,
         gain: Double,
@@ -498,7 +507,7 @@ class VoiceFactory(
         vowel: FilterDef.Formant? = null,
     ): Voice {
         val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
-        val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toInt()
+        val endFrame = gateEndFrame + resolvedAdsr.release * sampleRate
         val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
         val voiceEndFrame = voiceDurationFrames + releaseFrames
 

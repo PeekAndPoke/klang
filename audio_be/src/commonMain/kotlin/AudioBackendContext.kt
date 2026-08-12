@@ -37,6 +37,12 @@ class AudioBackendContext(
     val clock: RenderClock,
     /** Wall clock in ms — for render-headroom measurement + FE drift reporting. */
     val performanceTimeMs: () -> Double,
+    /**
+     * Fixed seed for the per-playback unison phase pools (`ignitor.PhasePools`); null = live —
+     * each playback gets a fresh stream ("takes vary"). The offline renderer passes a fixed Int
+     * so pool vocabularies reproduce.
+     */
+    val phasePoolSeed: Int? = null,
 ) {
     val sampleRateDouble: Double = sampleRate.toDouble()
 
@@ -72,12 +78,14 @@ class AudioBackendContext(
             commLink: KlangCommLink.BackendEndpoint,
             clock: RenderClock,
             performanceTimeMs: () -> Double = { 0.0 },
+            phasePoolSeed: Int? = null,
         ): AudioBackendContext = AudioBackendContext(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             commLink = commLink,
             sampleStore = SampleStore(commLink),
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
+            phasePoolSeed = phasePoolSeed,
             pipelineRegistry = PipelineRegistry(),
             masterRegistry = MasterRegistry(),
             clock = clock,

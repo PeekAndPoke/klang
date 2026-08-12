@@ -12,9 +12,20 @@ Status: 🔴 open (untriaged) · 🟢 accepted-as-is · 🔧 to fix · ✅ FIXED
 
 ---
 
-## F1 — Three tuning constants are documented as "the knob" but read by nothing 🔴
+## F1 — Three tuning constants are documented as "the knob" but read by nothing ✅ FIXED
 
-**HIGH.** `audio_be` declares tuning constants with KDoc that presents them as the by-ear tuning point ("Tunable by ear,
+> **FIXED 2026-08-11** — `docs/tasks/audio-bridge-constants.md`. All three (plus `ADSR_EXP_K`, plus the shared master
+> limiter defaults) now have exactly ONE declaration, in `audio_bridge/src/commonMain/kotlin/constants/`, which both
+> the DSL default and the engine read. The `audio_be` twins are deleted, so there is no longer a constant that
+> documents itself as the knob while production reads a different literal. The rule going forward: **a constant
+> belongs in `audio_bridge/constants/` iff it is a wire default** — engine-internal tuning (`OscillatorTuning.kt`,
+> `AnalogDriftCoeffs.kt`, `FILTER_SMOOTH_SAMPLES`) deliberately stays in `audio_be`.
+>
+> The line references in the table below are to the pre-fix files and no longer resolve; kept as the record of what
+> the defect was.
+
+**HIGH (at time of finding).** `audio_be` declares tuning constants with KDoc that presents them as the by-ear tuning
+point ("Tunable by ear,
 like `ADSR_EXP_K`"). The engine does not read them. The live values are duplicated literals in
 `audio_bridge/PipelineDsl.kt`, each carrying a comment that names the twin it duplicates:
 
@@ -44,9 +55,47 @@ on `audio_be`. If so, the defect is the *absence of a sync guard plus misleading
 
 ---
 
-## F2 — `AnalogDriftSpec`'s budget guard cannot see the values the engine uses 🔴
+### Agreed resolution (user, 2026-08-11): move the wire defaults into `audio_bridge`
 
-**HIGH.** `AnalogDriftSpec.kt:85-103`, *"analog cents budget stays tamed at analog=3 (Der Schmetterling)"*. Its own
+The duplication exists because `audio_bridge` is the wire module and cannot depend on `audio_be`. But the dependency
+runs the *other* way — `audio_be` has `api(project(":audio_bridge"))`, and
+`audio_bridge` depends only on `:common` and `:tones`. So the constants can live in `audio_bridge`
+and be read from both sides, with **one** home and no sync spec needed.
+
+**The rule for what moves:** a constant belongs in `audio_bridge` **iff it is a wire default** — it appears as a default
+in a `@WireFormat` class *and* the engine needs the same number. Everything else stays where it is used.
+
+| moves                                                                             | stays                                                      |
+|-----------------------------------------------------------------------------------|------------------------------------------------------------|
+| `cutoffOffsetPerAnalog`, `drivePerAnalog`, `driftRelToOsc` (`PipelineDsl.Filter`) | `OscillatorTuning.kt` (36) — engine-internal, no wire twin |
+| `expK`, `declickSeconds` (`PipelineDsl.Vca`)                                      | `AnalogDriftCoeffs.kt` (9) — ditto                         |
+| the `MasterStageDsl.Limiter` / `MasterStage.LIMITER_*` pairs                      | `FilterHumanizationCoeffs`' non-duplicated members         |
+
+⚠️ **Do not move engine-internal tuning into the wire module.** It would leak implementation detail into the module that
+defines the protocol, and the wire module would start carrying numbers no message ever transmits.
+
+**What this retires:** `MasterDefaultsSyncSpec` exists only because two copies had to be kept equal. Where a constant
+becomes single-homed, the sync assertion becomes meaningless and should go — but **keep the parts that encode a
+deliberate ASYMMETRY** (house limiter 5 ms lookahead vs authored 0), because those are real facts about intent, not
+duplication artefacts.
+
+**Suggested home:** a `constants/` package under `audio_bridge/src/commonMain/kotlin/`, so there is one obvious place to
+reach for. Name the file after the concept, not the module — e.g.
+`FilterHumanization.kt`, `EnvelopeShaping.kt`, `MasterLimiter.kt`.
+
+---
+
+## F2 — `AnalogDriftSpec`'s budget guard cannot see the values the engine uses ✅ FIXED
+
+> **FIXED 2026-08-11** — same change as [F1](#f1). The spec now imports the same declaration the DSL default reads, so
+> its ceilings track the engine by construction. The bounds were also retightened (`filterOffsetPeak` 6.0 → 2.0,
+> `filterDriftPeak` 9.0 → 1.5) — they had been left behind when the values were lowered, leaving 6x and 12x of slack.
+> Mutation-checked after the fix: offset 0.0002 → 0.0005 and drift 0.25 → 0.6 each turn it RED, with clean
+> no-mutation sanity runs on both sides. **Mutation M2 below is no longer reproducible as written** — the file it
+> mutated no longer declares the constant.
+
+**HIGH (at time of finding).** `AnalogDriftSpec.kt:85-103`, *"analog cents budget stays tamed at analog=3 (Der
+Schmetterling)"*. Its own
 comment states the intent: *"Post-tuning ceilings — if a constant gets cranked back up, this fails loudly."* For two of
 its three ceilings that is false.
 

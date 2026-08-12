@@ -31,7 +31,8 @@ class VoiceLease {
 
     private var owned: Boolean = false
     private var ownerId: Int = 0
-    private var lastSeenFrame: Int = 0
+    // Absolute backend frame — Double, see RenderClock.cursorFrame.
+    private var lastSeenFrame: Double = 0.0
 
     val hasOwner: Boolean get() = owned
 
@@ -43,7 +44,7 @@ class VoiceLease {
      * (missed more than one block) and it took over — in which case the caller should apply this voice's
      * settings to the effect. Returns `false` if a different, still-live owner holds it (skip this voice).
      */
-    fun claim(voiceId: Int, blockStart: Int, blockFrames: Int): Boolean {
+    fun claim(voiceId: Int, blockStart: Double, blockFrames: Int): Boolean {
         val ownerAlive = owned && (blockStart - lastSeenFrame) <= blockFrames
         if (!ownerAlive || voiceId == ownerId) {
             owned = true
@@ -58,6 +59,6 @@ class VoiceLease {
     fun reset() {
         owned = false
         ownerId = 0
-        lastSeenFrame = 0
+        lastSeenFrame = 0.0
     }
 }

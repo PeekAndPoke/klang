@@ -27,8 +27,9 @@ import io.peekandpoke.klang.audio_bridge.StageDsl
 fun buildFilterPipeline(
     pipeline: PipelineDsl,
     modulators: List<Voice.FilterModulator>,
-    startFrame: Int,
-    gateEndFrame: Int,
+    // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
+    startFrame: Double,
+    gateEndFrame: Double,
     crush: Voice.Crush,
     coarse: Voice.Coarse,
     mainFilter: AudioFilter,

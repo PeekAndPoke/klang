@@ -19,11 +19,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice does not render before startFrame" {
         val voice = createSynthVoice(
-            startFrame = 100,
-            endFrame = 200
+            startFrame = 100.0,
+            endFrame = 200.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true // Voice continues (will start in future)
@@ -34,11 +34,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice does not render after endFrame" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 100
+            startFrame = 0.0,
+            endFrame = 100.0
         )
 
-        val ctx = createContext(blockStart = 100, blockFrames = 100)
+        val ctx = createContext(blockStart = 100.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe false // Voice is done
@@ -49,11 +49,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice starting at block boundary renders full block" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 100
+            startFrame = 0.0,
+            endFrame = 100.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
@@ -64,11 +64,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice ending at block boundary renders full block" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 100
+            startFrame = 0.0,
+            endFrame = 100.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
@@ -79,11 +79,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice starting mid-block renders partial buffer" {
         val voice = createSynthVoice(
-            startFrame = 50,
-            endFrame = 150
+            startFrame = 50.0,
+            endFrame = 150.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
@@ -97,11 +97,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice ending mid-block renders partial buffer" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 50
+            startFrame = 0.0,
+            endFrame = 50.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
@@ -115,37 +115,37 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice spanning multiple blocks renders correctly" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 300
+            startFrame = 0.0,
+            endFrame = 300.0
         )
 
         // Block 1: frames 0-100
-        val ctx1 = createContext(blockStart = 0, blockFrames = 100)
+        val ctx1 = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx1) shouldBe true
         ctx1.voiceBuffer.all { it == 1.0 } shouldBe true
 
         // Block 2: frames 100-200
-        val ctx2 = createContext(blockStart = 100, blockFrames = 100)
+        val ctx2 = createContext(blockStart = 100.0, blockFrames = 100)
         voice.render(ctx2) shouldBe true
         ctx2.voiceBuffer.all { it == 1.0 } shouldBe true
 
         // Block 3: frames 200-300
-        val ctx3 = createContext(blockStart = 200, blockFrames = 100)
+        val ctx3 = createContext(blockStart = 200.0, blockFrames = 100)
         voice.render(ctx3) shouldBe true
         ctx3.voiceBuffer.all { it == 1.0 } shouldBe true
 
         // Block 4: frames 300-400 (voice has ended)
-        val ctx4 = createContext(blockStart = 300, blockFrames = 100)
+        val ctx4 = createContext(blockStart = 300.0, blockFrames = 100)
         voice.render(ctx4) shouldBe false
     }
 
     "voice with single-frame duration works" {
         val voice = createSynthVoice(
-            startFrame = 50,
-            endFrame = 51
+            startFrame = 50.0,
+            endFrame = 51.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
@@ -158,11 +158,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice with zero-duration (startFrame == endFrame) does not render" {
         val voice = createSynthVoice(
-            startFrame = 50,
-            endFrame = 50
+            startFrame = 50.0,
+            endFrame = 50.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         // Voice continues but doesn't render anything
@@ -172,9 +172,9 @@ class VoiceLifecycleTest : StringSpec({
 
     "gateEndFrame triggers release phase" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 200,
-            gateEndFrame = 100, // Gate ends at 100
+            startFrame = 0.0,
+            endFrame = 200.0,
+            gateEndFrame = 100.0, // Gate ends at 100
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
                 decayFrames = 0.0,
@@ -184,17 +184,17 @@ class VoiceLifecycleTest : StringSpec({
         )
 
         // Before gate ends (frame 50)
-        val ctx1 = createContext(blockStart = 50, blockFrames = 1)
+        val ctx1 = createContext(blockStart = 50.0, blockFrames = 1)
         voice.render(ctx1)
         val beforeGate = ctx1.voiceBuffer[0]
 
         // At gate end (frame 100)
-        val ctx2 = createContext(blockStart = 100, blockFrames = 1)
+        val ctx2 = createContext(blockStart = 100.0, blockFrames = 1)
         voice.render(ctx2)
         val atGateEnd = ctx2.voiceBuffer[0]
 
         // After gate ends (frame 150, mid-release)
-        val ctx3 = createContext(blockStart = 150, blockFrames = 1)
+        val ctx3 = createContext(blockStart = 150.0, blockFrames = 1)
         voice.render(ctx3)
         val midRelease = ctx3.voiceBuffer[0]
 
@@ -211,11 +211,11 @@ class VoiceLifecycleTest : StringSpec({
     "voice with startFrame > endFrame handles edge case" {
         // Edge case: invalid voice configuration (shouldn't happen in practice)
         val voice = createSynthVoice(
-            startFrame = 100,
-            endFrame = 50 // Invalid: endFrame before startFrame
+            startFrame = 100.0,
+            endFrame = 50.0 // Invalid: endFrame before startFrame
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 200)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 200)
         val result = voice.render(ctx)
 
         // With invalid config (endFrame < startFrame), length calculation will be negative
@@ -226,11 +226,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice queried far before start returns true" {
         val voice = createSynthVoice(
-            startFrame = 10000,
-            endFrame = 10100
+            startFrame = 10000.0,
+            endFrame = 10100.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true // Voice will start in the future
@@ -238,11 +238,11 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice queried far after end returns false" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 100
+            startFrame = 0.0,
+            endFrame = 100.0
         )
 
-        val ctx = createContext(blockStart = 10000, blockFrames = 100)
+        val ctx = createContext(blockStart = 10000.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe false // Voice is long done
@@ -253,11 +253,11 @@ class VoiceLifecycleTest : StringSpec({
 
         val voice = createSampleVoice(
             sample = sample,
-            startFrame = 50,
-            endFrame = 150
+            startFrame = 50.0,
+            endFrame = 150.0
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         val result = voice.render(ctx)
 
         result shouldBe true
@@ -272,55 +272,55 @@ class VoiceLifecycleTest : StringSpec({
 
     "voice at exact block boundaries handles edge cases" {
         val voice = createSynthVoice(
-            startFrame = 100,
-            endFrame = 200
+            startFrame = 100.0,
+            endFrame = 200.0
         )
 
         // Query block that ends exactly at startFrame
-        val ctx1 = createContext(blockStart = 0, blockFrames = 100)
+        val ctx1 = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx1) shouldBe true
         ctx1.voiceBuffer.all { it == 0.0 } shouldBe true
 
         // Query block that starts exactly at startFrame
-        val ctx2 = createContext(blockStart = 100, blockFrames = 100)
+        val ctx2 = createContext(blockStart = 100.0, blockFrames = 100)
         voice.render(ctx2) shouldBe true
         ctx2.voiceBuffer.all { it == 1.0 } shouldBe true
 
         // Query block that ends exactly at endFrame
-        val ctx3 = createContext(blockStart = 100, blockFrames = 100)
+        val ctx3 = createContext(blockStart = 100.0, blockFrames = 100)
         voice.render(ctx3) shouldBe true
         ctx3.voiceBuffer.all { it == 1.0 } shouldBe true
 
         // Query block that starts exactly at endFrame
-        val ctx4 = createContext(blockStart = 200, blockFrames = 100)
+        val ctx4 = createContext(blockStart = 200.0, blockFrames = 100)
         voice.render(ctx4) shouldBe false
     }
 
     "voice with very long duration works" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1_000_000
+            startFrame = 0.0,
+            endFrame = 1_000_000.0
         )
 
         // Should render successfully at various points
-        val ctx1 = createContext(blockStart = 0, blockFrames = 100)
+        val ctx1 = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx1) shouldBe true
 
-        val ctx2 = createContext(blockStart = 500_000, blockFrames = 100)
+        val ctx2 = createContext(blockStart = 500_000.0, blockFrames = 100)
         voice.render(ctx2) shouldBe true
 
-        val ctx3 = createContext(blockStart = 999_900, blockFrames = 100)
+        val ctx3 = createContext(blockStart = 999_900.0, blockFrames = 100)
         voice.render(ctx3) shouldBe true
 
-        val ctx4 = createContext(blockStart = 1_000_000, blockFrames = 100)
+        val ctx4 = createContext(blockStart = 1_000_000.0, blockFrames = 100)
         voice.render(ctx4) shouldBe false
     }
 
     "gateEndFrame can equal startFrame (immediate release)" {
         val voice = createSynthVoice(
-            startFrame = 100,
-            endFrame = 200,
-            gateEndFrame = 100, // Gate ends immediately
+            startFrame = 100.0,
+            endFrame = 200.0,
+            gateEndFrame = 100.0, // Gate ends immediately
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
                 decayFrames = 0.0,
@@ -329,7 +329,7 @@ class VoiceLifecycleTest : StringSpec({
             )
         )
 
-        val ctx = createContext(blockStart = 100, blockFrames = 100)
+        val ctx = createContext(blockStart = 100.0, blockFrames = 100)
         voice.render(ctx) shouldBe true
 
         // Should start in release phase immediately
@@ -338,9 +338,9 @@ class VoiceLifecycleTest : StringSpec({
 
     "gateEndFrame after endFrame is handled correctly" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 100,
-            gateEndFrame = 200, // Gate ends after voice ends (shouldn't happen in practice)
+            startFrame = 0.0,
+            endFrame = 100.0,
+            gateEndFrame = 200.0, // Gate ends after voice ends (shouldn't happen in practice)
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
                 decayFrames = 0.0,
@@ -350,10 +350,10 @@ class VoiceLifecycleTest : StringSpec({
         )
 
         // Voice should still end at endFrame
-        val ctx1 = createContext(blockStart = 0, blockFrames = 100)
+        val ctx1 = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx1) shouldBe true
 
-        val ctx2 = createContext(blockStart = 100, blockFrames = 100)
+        val ctx2 = createContext(blockStart = 100.0, blockFrames = 100)
         voice.render(ctx2) shouldBe false
     }
 })

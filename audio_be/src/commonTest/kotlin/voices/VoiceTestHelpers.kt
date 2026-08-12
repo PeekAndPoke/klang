@@ -36,7 +36,7 @@ object VoiceTestHelpers {
      * All parameters have sensible defaults for most test cases.
      */
     fun createContext(
-        blockStart: Int = 0,
+        blockStart: Double = 0.0,
         blockFrames: Int = 100,
         sampleRate: Int = 44100,
     ): Voice.RenderContext {
@@ -57,9 +57,9 @@ object VoiceTestHelpers {
      * Only specify the parameters you want to test.
      */
     fun createVoice(
-        startFrame: Int = 0,
-        endFrame: Int = 1000,
-        gateEndFrame: Int = 1000,
+        startFrame: Double = 0.0,
+        endFrame: Double = 1000.0,
+        gateEndFrame: Double = 1000.0,
         cylinderId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,
@@ -102,8 +102,9 @@ object VoiceTestHelpers {
         body: FilterDef.Body? = null,
         vowel: FilterDef.Formant? = null,
     ): Voice {
-        val voiceDurationFrames = gateEndFrame - startFrame
-        val releaseFrames = endFrame - gateEndFrame
+        // Voice-RELATIVE duration — Int, mirrors VoiceFactory. (Absolute frames are Double.)
+        val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
+        val releaseFrames = (endFrame - gateEndFrame).toInt()
 
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
@@ -182,9 +183,9 @@ object VoiceTestHelpers {
 
     /** Backward-compatible alias */
     fun createSynthVoice(
-        startFrame: Int = 0,
-        endFrame: Int = 1000,
-        gateEndFrame: Int = 1000,
+        startFrame: Double = 0.0,
+        endFrame: Double = 1000.0,
+        gateEndFrame: Double = 1000.0,
         cylinderId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,
@@ -225,9 +226,9 @@ object VoiceTestHelpers {
     /** Create a voice with SampleIgnitor for sample playback tests. */
     fun createSampleVoice(
         sample: MonoSamplePcm,
-        startFrame: Int = 0,
-        endFrame: Int = 1000,
-        gateEndFrame: Int = 1000,
+        startFrame: Double = 0.0,
+        endFrame: Double = 1000.0,
+        gateEndFrame: Double = 1000.0,
         cylinderId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,

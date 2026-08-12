@@ -76,7 +76,7 @@ class SampleVoiceOnsetSpec : StringSpec({
             )
         }
 
-        fun schedule(startFrame: Int, data: VoiceData = VoiceData.empty.copy(sound = soundName)) {
+        fun schedule(startFrame: Double, data: VoiceData = VoiceData.empty.copy(sound = soundName)) {
             val startSec = startFrame.toDouble() / sampleRate
             engine.scheduler.scheduleVoice(
                 ScheduledVoice(
@@ -99,7 +99,7 @@ class SampleVoiceOnsetSpec : StringSpec({
          * is built.
          */
         fun establishEpochAtZero() {
-            schedule(startFrame = 0, data = VoiceData.empty.copy(control = true))
+            schedule(startFrame = 0.0, data = VoiceData.empty.copy(control = true))
         }
 
         /** Renders [blocks] blocks from the current cursor, returning per-frame peak magnitude. */
@@ -140,7 +140,7 @@ class SampleVoiceOnsetSpec : StringSpec({
 
         "sample voice scheduled at frame $startFrame starts there, not at its block boundary" {
             val rig = Rig()
-            rig.schedule(startFrame)
+            rig.schedule(startFrame.toDouble())
             val frames = rig.render(blocks = 8)
 
             // Guards against a vacuous pass: the render must actually contain the voice.
@@ -161,8 +161,8 @@ class SampleVoiceOnsetSpec : StringSpec({
     "two sample voices one frame apart stay one frame apart" {
         // The jitter case stated directly: under block-quantised onsets these two collapse onto
         // the SAME frame whenever they share a block.
-        val a = Rig().also { it.schedule(blockFrames + 10) }.render(blocks = 8)
-        val b = Rig().also { it.schedule(blockFrames + 11) }.render(blocks = 8)
+        val a = Rig().also { it.schedule((blockFrames + 10).toDouble()) }.render(blocks = 8)
+        val b = Rig().also { it.schedule((blockFrames + 11).toDouble()) }.render(blocks = 8)
 
         (firstAudibleFrame(b) - firstAudibleFrame(a)) shouldBe 1
     }

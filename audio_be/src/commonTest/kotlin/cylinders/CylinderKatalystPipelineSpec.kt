@@ -58,11 +58,11 @@ class OrbitBusPipelineSpec : StringSpec({
         val bf = blockFrames
 
         // Voice A (has body) claims the orbit body at block 0.
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(body = woodBody), blockStart = 0)
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(body = woodBody), blockStart = 0.0)
         bodyActiveOn(cylinder) shouldBe true
 
         // A stops checking in; voice B (no body) claims after the 1-block grace → body turns OFF.
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 2 * bf)
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 2.0 * bf)
         bodyActiveOn(cylinder) shouldBe false
     }
 
@@ -70,8 +70,8 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         val bf = blockFrames
 
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(body = woodBody), blockStart = 0) // A owns
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = bf)               // B within grace → denied
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(body = woodBody), blockStart = 0.0) // A owns
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = bf.toDouble())               // B within grace → denied
         bodyActiveOn(cylinder) shouldBe true // still A's body
     }
 
@@ -82,7 +82,7 @@ class OrbitBusPipelineSpec : StringSpec({
                 reverb = Voice.Reverb(room = 0.5, roomSize = 0.7),
                 delay = Voice.Delay(amount = 0.5, time = 0.3, feedback = 0.4),
             ),
-            blockStart = 0,
+            blockStart = 0.0,
         )
         cylinder.reverb.reverb.roomSize shouldBe 0.7
         cylinder.delay.delayLine.delayTimeSeconds shouldBe 0.3
@@ -93,7 +93,7 @@ class OrbitBusPipelineSpec : StringSpec({
                 reverb = Voice.Reverb(room = 0.5, roomSize = 0.2),
                 delay = Voice.Delay(amount = 0.5, time = 0.9, feedback = 0.1),
             ),
-            blockStart = 0,
+            blockStart = 0.0,
         )
         cylinder.reverb.reverb.roomSize shouldBe 0.7
         cylinder.delay.delayLine.delayTimeSeconds shouldBe 0.3
@@ -103,12 +103,12 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         val bf = blockFrames
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.5, roomSize = 0.7)), blockStart = 0,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.5, roomSize = 0.7)), blockStart = 0.0,
         )
         cylinder.reverb.reverb.roomSize shouldBe 0.7
 
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.5, roomSize = 0.2)), blockStart = 2 * bf,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.5, roomSize = 0.2)), blockStart = 2.0 * bf,
         )
         cylinder.reverb.reverb.roomSize shouldBe 0.2 // new owner's
     }
@@ -119,7 +119,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Owner A: reverb on — build up a comb-filter tail.
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.8, roomSize = 0.8)), blockStart = 0,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.8, roomSize = 0.8)), blockStart = 0.0,
         )
         repeat(20) {
             cylinder.reverbSendBuffer.left.fill(0.5)
@@ -131,7 +131,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Owner A ends; a no-reverb voice takes over → roomSize 0 (but the comb buffers are still full).
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.0, roomSize = 0.0)), blockStart = 2 * bf,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.0, roomSize = 0.0)), blockStart = 2.0 * bf,
         )
         cylinder.reverb.reverb.roomSize shouldBe 0.0
         cylinder.reverb.reverb.hasTail() shouldBe true // params don't clear the buffers
@@ -156,11 +156,11 @@ class OrbitBusPipelineSpec : StringSpec({
     "processEffects runs full pipeline when active" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
             reverb = Voice.Reverb(room = 0.5, roomSize = 0.5),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         // Reverb comb filters need time to build up signal
         repeat(20) {
@@ -190,11 +190,11 @@ class OrbitBusPipelineSpec : StringSpec({
     "processDucking applies sidechain ducking" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
             ducking = Voice.Ducking(cylinderId = 1, attackSeconds = 0.001, depth = 1.0),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         cylinder.mixBuffer.left.fill(0.5)
         cylinder.mixBuffer.right.fill(0.5)
@@ -214,11 +214,11 @@ class OrbitBusPipelineSpec : StringSpec({
     "processDucking does nothing with null sidechain" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
             ducking = Voice.Ducking(cylinderId = 1, attackSeconds = 0.001, depth = 1.0),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         cylinder.mixBuffer.left.fill(0.5)
 
@@ -233,7 +233,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             delay = Voice.Delay(time = 0.5, feedback = 0.3, amount = 0.5),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         cylinder.delay.delayLine.delayTimeSeconds shouldBe 0.5
         cylinder.delay.delayLine.feedback shouldBe 0.3
@@ -244,7 +244,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             reverb = Voice.Reverb(room = 0.5, roomSize = 0.7, roomFade = 0.3, roomLp = 5000.0, roomDim = 0.2),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         cylinder.reverb.reverb.roomSize shouldBe 0.7
         cylinder.reverb.reverb.roomFade shouldBe 0.3
@@ -257,7 +257,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             phaser = Voice.Phaser(rate = 2.0, depth = 0.5, center = 800.0, sweep = 600.0),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         cylinder.phaser.phaser.rate shouldBe 2.0
         cylinder.phaser.phaser.depth shouldBe 0.5
@@ -270,7 +270,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             ducking = Voice.Ducking(cylinderId = 2, attackSeconds = 0.05, depth = 0.8),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         cylinder.ducking.duckCylinderId shouldBe 2
         cylinder.ducking.ducking shouldNotBe null
@@ -288,7 +288,7 @@ class OrbitBusPipelineSpec : StringSpec({
                 releaseSeconds = 0.2,
             ),
         )
-        cylinder.updateFromVoice(voice, blockStart = 0)
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
 
         val c = cylinder.compressor.compressor!!
         c.thresholdDb shouldBe -15.0
@@ -297,7 +297,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
     "clear resets all buffers" {
         val cylinder = createOrbit()
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0)
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
 
         cylinder.mixBuffer.left.fill(0.5)
         cylinder.delaySendBuffer.left.fill(0.3)

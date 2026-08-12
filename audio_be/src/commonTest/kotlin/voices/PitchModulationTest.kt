@@ -161,34 +161,34 @@ class PitchModulationTest : StringSpec({
     "accelerate with positive amount increases pitch over time" {
         val blockSize = 256
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1024,
+            startFrame = 0.0,
+            endFrame = 1024.0,
             blockFrames = blockSize,
             signal = Ignitors.sine(),
             accelerate = Voice.Accelerate(amount = 2.0)
         )
         val voiceRef = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1024,
+            startFrame = 0.0,
+            endFrame = 1024.0,
             blockFrames = blockSize,
             signal = Ignitors.sine(),
             accelerate = Voice.Accelerate(amount = 0.0)
         )
 
         // Render first half
-        val ctxFirst = createContext(blockStart = 0, blockFrames = blockSize)
+        val ctxFirst = createContext(blockStart = 0.0, blockFrames = blockSize)
         voice.render(ctxFirst)
         val firstHalf = ctxFirst.voiceBuffer.copyOf()
 
         // Render second half
-        val ctxSecond = createContext(blockStart = 512, blockFrames = blockSize)
+        val ctxSecond = createContext(blockStart = 512.0, blockFrames = blockSize)
         voice.render(ctxSecond)
         val secondHalf = ctxSecond.voiceBuffer.copyOf()
 
         // Render reference (no accelerate) at both positions
-        val ctxRefFirst = createContext(blockStart = 0, blockFrames = blockSize)
+        val ctxRefFirst = createContext(blockStart = 0.0, blockFrames = blockSize)
         voiceRef.render(ctxRefFirst)
-        val ctxRefSecond = createContext(blockStart = 512, blockFrames = blockSize)
+        val ctxRefSecond = createContext(blockStart = 512.0, blockFrames = blockSize)
         voiceRef.render(ctxRefSecond)
 
         // First half should differ from second half (pitch is changing)
@@ -202,15 +202,15 @@ class PitchModulationTest : StringSpec({
 
     "accelerate with negative rate decreases pitch over time" {
         val voiceNeg = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
             blockFrames = bf,
             signal = Ignitors.sine(),
             accelerate = Voice.Accelerate(amount = -0.5)
         )
         val voiceNone = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
             blockFrames = bf,
             signal = Ignitors.sine(),
         )
@@ -265,8 +265,8 @@ class PitchModulationTest : StringSpec({
             signal = Ignitors.sine(),
         )
 
-        val ctxWith = createContext(blockStart = 0, blockFrames = bfLocal)
-        val ctxWithout = createContext(blockStart = 0, blockFrames = bfLocal)
+        val ctxWith = createContext(blockStart = 0.0, blockFrames = bfLocal)
+        val ctxWithout = createContext(blockStart = 0.0, blockFrames = bfLocal)
         voiceWith.render(ctxWith)
         voiceWithout.render(ctxWithout)
 
@@ -295,8 +295,8 @@ class PitchModulationTest : StringSpec({
         )
 
         // Render during decay phase
-        val ctxWith = createContext(blockStart = 0, blockFrames = bfLocal)
-        val ctxWithout = createContext(blockStart = 0, blockFrames = bfLocal)
+        val ctxWith = createContext(blockStart = 0.0, blockFrames = bfLocal)
+        val ctxWithout = createContext(blockStart = 0.0, blockFrames = bfLocal)
         voiceWith.render(ctxWith)
         voiceWithout.render(ctxWithout)
 
@@ -324,8 +324,8 @@ class PitchModulationTest : StringSpec({
             signal = Ignitors.sine(),
         )
 
-        val ctxWith = createContext(blockStart = 0, blockFrames = bfLocal)
-        val ctxWithout = createContext(blockStart = 0, blockFrames = bfLocal)
+        val ctxWith = createContext(blockStart = 0.0, blockFrames = bfLocal)
+        val ctxWithout = createContext(blockStart = 0.0, blockFrames = bfLocal)
         voiceWith.render(ctxWith)
         voiceWithout.render(ctxWithout)
 

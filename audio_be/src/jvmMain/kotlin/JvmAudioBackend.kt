@@ -49,8 +49,11 @@ class JvmAudioBackend(
         warmup.start()
 
         // Int instead of Long: keeps JVM backend consistent with JS (where Long is boxed).
-        // At 48kHz, Int overflows after ~12.4 hours — sufficient for any session.
-        var currentFrame = 0
+        // Double, not Int: this is an ABSOLUTE frame on the backend timeline and grows for the
+        // life of the backend. As an Int it overflows after ~12.4 h at 48 kHz and audio silently
+        // stops. Double is exact to 2^53 (~5,950 years) with zero drift — only +, - and compare are
+        // ever applied. See RenderClock.cursorFrame.
+        var currentFrame = 0.0
 
         // Stereo
         val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)

@@ -35,17 +35,26 @@ object KlangScriptVcaStageExtensions {
 @KlangScript.TypeExtensions(StageDsl.Filter::class)
 object KlangScriptFilterStageExtensions {
 
-    /** Per-voice cutoff-offset scale per unit analog (default 0.003 ≈ ±5 cents at analog=1). */
+    // Defaults quoted below are FILTER_* in audio_bridge/constants/FilterHumanizationDefaults.kt —
+    // the single declaration StageDsl.Filter reads. Re-check these strings when retuning: they are
+    // harvested into the live-editor tooltips, and they were stale before 2026-08-11 —
+    // cutoffOffset by 15x (0.003 vs 0.0002), drift by 20x (5.0 vs 0.25), drive by 2x.
+
+    /** Per-voice cutoff-offset scale per unit analog (default 0.0002 ≈ ±0.35 cents at analog=1). */
     @KlangScript.Method
     fun cutoffOffset(self: StageDsl.Filter, perAnalog: Double): StageDsl.Filter =
         self.copy(cutoffOffsetPerAnalog = perAnalog)
 
-    /** SVF drive / saturation scale per unit analog (default 0.5; more = more OB-X "bite"). */
+    /** SVF drive / saturation scale per unit analog (default 0.25; more = more OB-X "bite"). */
     @KlangScript.Method
     fun drive(self: StageDsl.Filter, perAnalog: Double): StageDsl.Filter =
         self.copy(drivePerAnalog = perAnalog)
 
-    /** Filter cutoff drift magnitude relative to oscillator drift (default 5.0). */
+    /**
+     * Filter cutoff drift magnitude relative to oscillator pitch drift (default 0.25 — the filter
+     * currently wanders 4x LESS than pitch). Oscillator drift is 1.0 cent per unit analog, so this
+     * is directly the filter-to-pitch drift ratio: 1.0 would make them equal.
+     */
     @KlangScript.Method
     fun drift(self: StageDsl.Filter, relToOsc: Double): StageDsl.Filter =
         self.copy(driftRelToOsc = relToOsc)

@@ -251,7 +251,7 @@ are those that grow without bound:
 | `voices/Voice.kt:263`                                                           | `idCounter`                                         | 2³¹ voices ≈ months at realistic densities. Low risk, still unbounded.                                                                                                                                                                                                            |
 | `filters/LowPassHighPassFilters.kt:484`                                         | `transitionSamples`                                 | Confirm it is bounded by the transition.                                                                                                                                                                                                                                          |
 
-### `cursorFrame` — CONFIRMED BY TEST 2026-08-07, and worse than the existing comment claims
+### `cursorFrame` — ✅ FIXED 2026-08-10 (`Double`). Confirmed by test 2026-08-07; was worse than the code comment claimed
 
 `audio_jsworklet/.../KlangAudioWorklet.kt:60-65` already documents this overflow, calls 12.4 h *"sufficient for any
 continuous session"*, and states the symptom as *"silent audio stop (no crash)"*. Both the premise and the scope are
@@ -276,7 +276,7 @@ Two things that changes:
 
 **Same exposure on the JVM path** — `JvmAudioBackend.kt:53` has the identical `var currentFrame = 0`.
 
-**Fix options — (d) CHOSEN (user, 2026-08-07):**
+**Fix options — (c) `Double` SHIPPED (user, 2026-08-10):**
 
 - **(a) Rebase periodically** — past a threshold, subtract it from the cursor *and* from every stored frame on
   scheduled/active voices. Keeps `Int`, bounded work, runs about twice a day. The classic solution; the risk is missing
@@ -286,31 +286,34 @@ Two things that changes:
 - **(c) `Double` instead of `Int`** — exact integers to 2^53 ≈ 5900 years at 48 kHz. On Kotlin/JS
   `Int` is *already* a JS number with truncation on every operation, so this may even be faster there; but it touches ~
   126 sites and changes hot-loop arithmetic on the JVM too.
-- **(d) `Long`, as a documented exception — CHOSEN (user, 2026-08-07).** See the rule below.
+- **(d) `Long`, as a documented exception** — considered and rejected in favour of (c): it would
+  have needed an exception clause *plus* a comment at every site *plus* a reviewer who knows when it
+  applies. Three things to maintain instead of zero.
 
-### The rule: `Long` is allowed for absolute counters OUTSIDE hot loops, with a comment saying why
+### The rule that came out of this: absolute vs relative, not `Int` vs `Long`
 
-The house rule "no `Long`/boxed types in audio paths" exists because `Long` is emulated on Kotlin/JS and allocates on
-every operation. That reasoning applies to **per-sample** arithmetic. It does not apply to a value touched **once per
-block**.
+The house rule "no `Long`/boxed types in audio paths" **stays absolute and unqualified** — no
+exception was needed. What this work established instead is a distinction the code already relied on
+but never named:
 
-`cursorFrame` is the case that shows the distinction, and the split already exists in the code —
-`EnvelopeRenderer`'s KDoc states it outright: *"All per-sample arithmetic uses Int to avoid Long boxing on Kotlin/JS.
-Voice-relative offsets are computed once at the block boundary."*
+| | type | frequency | examples |
+|---|---|---|---|
+| **absolute** backend timeline | **`Double`** | once per block | `cursorFrame`, `blockStart`, `startFrame`, `endFrame`, `gateEndFrame`, `lastSeenFrame`, `cleanupFrame` |
+| **relative** position | **`Int`** | per sample | `absPos`, `offset`, `length`, `gateEndPos`, `voiceDurationFrames`, ring indices |
 
-|                                                                                               | type       | frequency      |
-|-----------------------------------------------------------------------------------------------|------------|----------------|
-| **absolute** timeline (`cursorFrame`, `blockStart`, `startFrame`, `endFrame`, `gateEndFrame`) | **`Long`** | once per block |
-| **relative** position (`absPos`, `offset`, `length`, ring indices)                            | **`Int`**  | per sample     |
+`EnvelopeRenderer`'s KDoc already stated it — *"All per-sample arithmetic uses Int… Voice-relative
+offsets are computed once at the block boundary"* — the types just did not enforce it. Now they do,
+and the conversion is one explicit `.toInt()` per renderer.
 
-The conversion happens at one line per renderer, e.g. `EnvelopeRenderer.kt:66`
-`var absPos = (ctx.blockStart + ctx.offset) - startFrame` — a single `Long` subtraction per block per voice, feeding 128
-`Int` operations. Scoped: **43 fields become `Long`, 13 conversion points gain an explicit `.toInt()`, and 56 per-sample
-sites are untouched.**
+⚠️ **The trap to watch for: `IgniteContext.gateEndFrame` is voice-RELATIVE and stays `Int`**, despite
+sharing a name with `BlockContext.gateEndFrame`, which is absolute and is `Double`. `BlockContext`'s
+KDoc said "absolute" for all three of its frame fields and was correct; `IgniteContext` is fed
+`voiceDurationFrames`. Anything reading `ctx.gateEndFrame` must know which context it holds.
 
-**Every such `Long` must carry a comment stating (a) that it is not in a hot loop and (b) why the width is needed** —
-otherwise the next person applying the house rule mechanically will "fix" it back to `Int` and silently reintroduce a
-12-hour time bomb.
+**Guarded by `LongRunningTimelineSpec`** — it places the cursor past the old `Int` limit and at a
+hundred years of uptime, and asserts audio still sounds and the clock stays exact. Mutation-checked:
+truncating the cursor to `Int` precision turns it red. This class is invisible to every other test,
+because nobody runs a suite for twelve hours.
 
 **How to verify each**: this class is invisible to normal tests — nobody runs a spec for 12 h. Test it by seeding the
 counter near `Int.MAX_VALUE` and stepping across the boundary, which needs the field to be settable or the arithmetic

@@ -11,7 +11,7 @@
 > PipelineDsl), Phase 2
 > oscillator *sources* (super-* unison family + single-shape oscs + static supertype inferrer + `WaveIgnitor.shapeMax`),
 > and the noise-generator calibration knobs. Full design + history live in the archived
-`docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md` (§2.1, §3);
+> `docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md` (§2.1, §3);
 > this doc is the focused punch-list of what's left.
 >
 > ⚠ The design in `engine-dsl.md` predates two renames — use the **current** names here: super-osc spread param is
@@ -34,8 +34,9 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
 `@KlangScript.TypeExtensions` chained methods → dual-language + render-effect + sync-guard specs. Each field
 **defaults to today's `OscillatorTuning` const** (behavior-identical).
 
-1. ✅ **DONE (2026-07-04) — `IgnitorDsl.Adsr` gained `declickSeconds` + `expK`.** Both landed as
-   **`IgnitorDsl.Slots` Params** (`Slots.declickSeconds` = 0.0/off; `Slots.expK` = 3.0 mirroring `ADSR_EXP_K`)
+1. ✅ **DONE (2026-07-04) — `IgnitorDsl.Adsr` gained `declickSeconds` + `expK`.** Both landed as **`IgnitorDsl.Slots`
+   Params** (`Slots.declickSeconds` = 0.0/off; `Slots.expK` = `ADSR_EXP_K`, one declaration in
+   `audio_bridge/constants/`)
    — i.e. **nodes/slots, not plain `Double`** → oscParam-addressable / patternable / in `collectParams()`,
    read per-block in `AdsrIgnitor`. `AdsrIgnitor` got the opt-in declick one-pole (`envDeclickCoeff`, primed
    to first level) + parameterized `adsrExpShape(x, k, norm)`. KlangScript `.declickSeconds(x)` / `.expK(x)`
@@ -56,6 +57,20 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
    OPEN — not exposed on any DSL surface today (only the `analog` *amount* is). **Overlaps Part B:** these are
    exactly the per-engine drift character an `EngineTuning` profile would set (`driftFastTauSec`/`driftSlowTauSec`/…)
    → fold into Phase 3 rather than adding standalone per-osc fields, unless per-instance drift tuning is wanted.
+
+   ⚠️ **A by-ear question is now blocked on this** — see `docs/tasks/analog-drift-ratio-tuning.md`. Klang's pitch drift
+   leads filter drift 4:1 and the hypothesis is that real hardware is the inverse; the filter side became authorable on
+   2026-08-11, the oscillator side did not, so the ratio can only be pushed from one end. That task proposes shipping
+   the **two depth fields only** (`ANALOG_FAST_PEAK_CENTS` / `ANALOG_SLOW_PEAK_CENTS`) as the first real slice of the
+   Part B `EngineTuning` object — same shape, same home, so it is a down payment rather than a detour. The τ params stay
+   out: 06-17 established the slow layer's audibility is depth, not timescale.
+
+   ⚠️ **Before flipping any default in Part B, read `docs/tasks/pipeline-dsl-coefficient-exposure.md` S5.**
+   The Phase 2 osc knobs already on `IgnitorDsl` carry **duplicated literals**, not references to their
+   `OscillatorTuning` constants (`spreadPower = 1.2` next to `SUPERSAW_SPREAD_POWER = 1.2`, ~30 of them;
+   `Slots.expK` is the only one wired to its constant). Part B's cascade is *instance → engine profile → field default*,
+   so a stale literal at the bottom of that cascade fails silently. S5 is a pure move — no new fields, no sound change —
+   and it is the cheapest possible insurance for this phase.
 
 > Sine/impulse/zaw/zamp/noise have no tunable character → intentionally untouched. `pluck`/`superpluck`
 > character is already ctor fields → chained-method consistency is optional.

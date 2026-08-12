@@ -63,9 +63,22 @@ class KlangScriptSuperSineSpec : StringSpec({
         ks("Osc.supersine().centerJitter(1.0)") shouldBe superSine().copy(centerJitterScale = 1.0)
     }
 
+    "phasePool() - on with family defaults (sync guard: method defaults == node defaults)" {
+        ks("Osc.supersine().phasePool()") shouldBe superSine().copy(phasePool = 1.0)
+    }
+
+    "phasePool(on = 0, kMin = 0.2) - all-named subset (mixing positional+named is a language error)" {
+        ks("Osc.supersine().phasePool(on = 0, kMin = 0.2)") shouldBe superSine().copy(phasePool = 0.0, kMin = 0.2)
+    }
+
+    "phasePool(refreshEvery = 0) - named arg skips the LEADING literal default" {
+        ks("Osc.supersine().phasePool(refreshEvery = 0)") shouldBe superSine().copy(phasePool = 1.0, refreshEvery = 0.0)
+    }
+
     "every typed config method in one chain" {
         val code = "Osc.supersine().freq(110).voices(11).spread(0.12).analog(4.0)" +
-                ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)"
+                ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
+                ".phasePool(1, 0.2, 0.7, 8, 64, 5, 1, 8)"
 
         ks(code) shouldBe superSine().copy(
             freq = IgnitorDsl.Constant(110.0),
@@ -76,6 +89,14 @@ class KlangScriptSuperSineSpec : StringSpec({
             sideAtten = 0.2,
             gainJitter = 0.1,
             centerJitterScale = 0.6,
+            phasePool = 1.0,
+            drawTries = 8.0,
+            kMin = 0.2,
+            kMax = 0.7,
+            poolSize = 64.0,
+            refreshEvery = 5.0,
+            selection = 1.0,
+            warmup = 8.0,
         )
     }
 

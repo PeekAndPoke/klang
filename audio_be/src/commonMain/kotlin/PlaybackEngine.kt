@@ -52,7 +52,10 @@ class PlaybackEngine(
     fun registerMaster(name: String, dsl: MasterDsl) = masterBus.register(name, dsl)
 
     /** Render this engine's voices through its own cylinders, accumulating into [target]. */
-    fun renderInto(target: StereoBuffer, cursorFrame: Int) {
+    // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
+    // grows for the life of the backend and overflows Int after ~12.4 h. Exact below 2^53
+    // (~5,950 years at 48 kHz). See RenderClock.cursorFrame. Per-sample offsets stay Int.
+    fun renderInto(target: StereoBuffer, cursorFrame: Double) {
         cylinders.clearAll()
         scheduler.process(cursorFrame)
 

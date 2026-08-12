@@ -44,8 +44,8 @@ class EnvelopeTest : StringSpec({
 
     "attack phase increases linearly from 0 to 1" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
                 decayFrames = 0.0,
@@ -57,7 +57,7 @@ class EnvelopeTest : StringSpec({
             )
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx)
 
         // Attack rises monotonically from ~0 (de-click lags the exact ramp; shape
@@ -70,8 +70,8 @@ class EnvelopeTest : StringSpec({
 
     "decay phase decreases from 1 to sustain level" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
                 decayFrames = 100.0,
@@ -86,7 +86,7 @@ class EnvelopeTest : StringSpec({
         // Render decay + a long sustain tail so the gain settles regardless of the declick
         // time constant (tau-agnostic: direction + settled plateau, not an after-N-frames
         // magnitude — exact shape lives in EnvelopeShapeTest).
-        val ctx = createContext(blockStart = 100, blockFrames = 600)
+        val ctx = createContext(blockStart = 100.0, blockFrames = 600)
         voice.render(ctx)
 
         ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.03)          // decay start ~1.0
@@ -97,9 +97,9 @@ class EnvelopeTest : StringSpec({
 
     "sustain phase holds at sustain level" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 1000,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 1000.0,
             envelope = Voice.Envelope(
                 attackFrames = 50.0,
                 decayFrames = 50.0,
@@ -112,7 +112,7 @@ class EnvelopeTest : StringSpec({
         )
 
         // Render at sustain phase (frame 200-300, after attack+decay)
-        val ctx = createContext(blockStart = 200, blockFrames = 100)
+        val ctx = createContext(blockStart = 200.0, blockFrames = 100)
         voice.render(ctx)
 
         // All samples should be at sustain level
@@ -123,9 +123,9 @@ class EnvelopeTest : StringSpec({
 
     "release phase decays from sustain to zero" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 800,
-            gateEndFrame = 100, // Gate ends at 100, release starts
+            startFrame = 0.0,
+            endFrame = 800.0,
+            gateEndFrame = 100.0, // Gate ends at 100, release starts
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
                 decayFrames = 0.0,
@@ -138,11 +138,11 @@ class EnvelopeTest : StringSpec({
         )
 
         // Render sustain phase first to establish envelope state
-        voice.render(createContext(blockStart = 0, blockFrames = 100))
+        voice.render(createContext(blockStart = 0.0, blockFrames = 100))
 
         // Release + a long tail so the gain settles regardless of declick tau (tau-agnostic:
         // direction + settled silence, not an after-N-frames magnitude).
-        val ctx = createContext(blockStart = 100, blockFrames = 600)
+        val ctx = createContext(blockStart = 100.0, blockFrames = 600)
         voice.render(ctx)
 
         ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.03)          // release start ~1.0
@@ -153,8 +153,8 @@ class EnvelopeTest : StringSpec({
 
     "zero attack time produces immediate full amplitude" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 100,
+            startFrame = 0.0,
+            endFrame = 100.0,
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
                 decayFrames = 0.0,
@@ -166,7 +166,7 @@ class EnvelopeTest : StringSpec({
             )
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 100)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx)
 
         // First sample should already be at full amplitude
@@ -176,8 +176,8 @@ class EnvelopeTest : StringSpec({
 
     "zero decay time transitions immediately to sustain" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 200,
+            startFrame = 0.0,
+            endFrame = 200.0,
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
                 decayFrames = 0.0,
@@ -190,7 +190,7 @@ class EnvelopeTest : StringSpec({
         )
 
         // Render at frame 100 (end of attack, start of decay)
-        val ctx = createContext(blockStart = 100, blockFrames = 100)
+        val ctx = createContext(blockStart = 100.0, blockFrames = 100)
         voice.render(ctx)
 
         // Should immediately be at sustain level
@@ -199,9 +199,9 @@ class EnvelopeTest : StringSpec({
 
     "zero release time produces very fast decay" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 700,
-            gateEndFrame = 100,
+            startFrame = 0.0,
+            endFrame = 700.0,
+            gateEndFrame = 100.0,
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
                 decayFrames = 0.0,
@@ -214,10 +214,10 @@ class EnvelopeTest : StringSpec({
         )
 
         // Render sustain phase first to establish envelope state
-        voice.render(createContext(blockStart = 0, blockFrames = 100))
+        voice.render(createContext(blockStart = 0.0, blockFrames = 100))
 
         // Render the cutoff + a long tail so the fade settles regardless of declick tau.
-        val ctx = createContext(blockStart = 100, blockFrames = 600)
+        val ctx = createContext(blockStart = 100.0, blockFrames = 600)
         voice.render(ctx)
 
         // releaseFrames=0 is de-clicked: instead of a 1-sample cutoff (a click) the gain
@@ -230,9 +230,9 @@ class EnvelopeTest : StringSpec({
 
     "full ADSR cycle works correctly" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 1000,
-            gateEndFrame = 800,
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 800.0,
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
                 decayFrames = 100.0,
@@ -247,7 +247,7 @@ class EnvelopeTest : StringSpec({
         // One contiguous block (attack 0-100, decay 100-200, sustain 200-800, release
         // 800-900). The long sustain lets the gain settle, so the plateau check is
         // tau-agnostic; the rest is direction (exact shape is in EnvelopeShapeTest).
-        val ctx = createContext(blockStart = 0, blockFrames = 1000)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 1000)
         voice.render(ctx)
 
         (ctx.voiceBuffer[80] > ctx.voiceBuffer[20]) shouldBe true    // attack rising
@@ -259,8 +259,8 @@ class EnvelopeTest : StringSpec({
 
     "envelope state is preserved across multiple renders" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 500,
+            startFrame = 0.0,
+            endFrame = 500.0,
             envelope = Voice.Envelope(
                 attackFrames = 200.0,
                 decayFrames = 0.0,
@@ -273,12 +273,12 @@ class EnvelopeTest : StringSpec({
         )
 
         // Render first half of attack
-        val ctx1 = createContext(blockStart = 0, blockFrames = 100)
+        val ctx1 = createContext(blockStart = 0.0, blockFrames = 100)
         voice.render(ctx1)
         val firstHalfValue = ctx1.voiceBuffer[99]
 
         // Render second half of attack
-        val ctx2 = createContext(blockStart = 100, blockFrames = 100)
+        val ctx2 = createContext(blockStart = 100.0, blockFrames = 100)
         voice.render(ctx2)
         val secondHalfStart = ctx2.voiceBuffer[0]
 
@@ -288,9 +288,9 @@ class EnvelopeTest : StringSpec({
 
     "envelope clamps negative values to zero" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 300,
-            gateEndFrame = 100,
+            startFrame = 0.0,
+            endFrame = 300.0,
+            gateEndFrame = 100.0,
             envelope = Voice.Envelope(
                 attackFrames = 0.0,
                 decayFrames = 0.0,
@@ -303,7 +303,7 @@ class EnvelopeTest : StringSpec({
         )
 
         // Render well past release end (frame 200, release ends at 150)
-        val ctx = createContext(blockStart = 200, blockFrames = 100)
+        val ctx = createContext(blockStart = 200.0, blockFrames = 100)
         voice.render(ctx)
 
         // Should be clamped at 0, not negative
@@ -313,8 +313,8 @@ class EnvelopeTest : StringSpec({
 
     "envelope with very small attack works correctly" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 100,
+            startFrame = 0.0,
+            endFrame = 100.0,
             envelope = Voice.Envelope(
                 attackFrames = 1.0, // Very short attack
                 decayFrames = 0.0,
@@ -323,7 +323,7 @@ class EnvelopeTest : StringSpec({
             )
         )
 
-        val ctx = createContext(blockStart = 0, blockFrames = 10)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 10)
         voice.render(ctx)
 
         // attack=1 frame is de-clicked: the gain rises smoothly over ~ENV_DECLICK_SECONDS
@@ -335,8 +335,8 @@ class EnvelopeTest : StringSpec({
 
     "envelope with sustain level of 0 produces silence after decay" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 300,
+            startFrame = 0.0,
+            endFrame = 300.0,
             envelope = Voice.Envelope(
                 attackFrames = 50.0,
                 decayFrames = 50.0,
@@ -349,7 +349,7 @@ class EnvelopeTest : StringSpec({
         )
 
         // Render at sustain phase (after attack+decay)
-        val ctx = createContext(blockStart = 150, blockFrames = 100)
+        val ctx = createContext(blockStart = 150.0, blockFrames = 100)
         voice.render(ctx)
 
         // Should be silent
@@ -359,9 +359,9 @@ class EnvelopeTest : StringSpec({
 
     "envelope respects gate end frame for release timing" {
         val voice = createSynthVoice(
-            startFrame = 0,
-            endFrame = 900,
-            gateEndFrame = 700, // Gate ends at 700
+            startFrame = 0.0,
+            endFrame = 900.0,
+            gateEndFrame = 700.0, // Gate ends at 700
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
                 decayFrames = 0.0,
@@ -375,7 +375,7 @@ class EnvelopeTest : StringSpec({
 
         // One contiguous block (attack 0-100, sustain 100-700, release 700-800). The long
         // sustain lets the gain settle, so the "holds until the gate" check is tau-agnostic.
-        val ctx = createContext(blockStart = 0, blockFrames = 800)
+        val ctx = createContext(blockStart = 0.0, blockFrames = 800)
         voice.render(ctx)
 
         // Sustain holds at 1.0 right up to the gate end at frame 700.

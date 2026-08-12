@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+
 
 /**
  * Process-local counter used to stamp each noise-source DSL instance with a unique
@@ -108,8 +110,7 @@ sealed interface IgnitorDsl {
         val depth: IgnitorDsl = Param(name = "depth", default = 0.02)
         val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
 
-        // expK default mirrors audio_be ADSR_EXP_K (audio_be consts aren't visible from audio_bridge).
-        val expK: IgnitorDsl = Param(name = "expK", default = 3.0)
+        val expK: IgnitorDsl = Param(name = "expK", default = ADSR_EXP_K)
         val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
         val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
         val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.5)
@@ -390,6 +391,22 @@ sealed interface IgnitorDsl {
         val gainJitter: Double = 0.15,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
         val centerJitterScale: Double = 0.4,
+        /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
+        val phasePool: Double = 0.0,
+        /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
+        val drawTries: Double = 5.0,
+        /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
+        val kMin: Double = 0.30,
+        /** Accepted fundamental-coherence band K, upper edge. */
+        val kMax: Double = 0.55,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
+        /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
+        val refreshEvery: Double = 10.0,
+        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
+        val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -412,6 +429,24 @@ sealed interface IgnitorDsl {
         val gainJitter: Double = 0.15,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
         val centerJitterScale: Double = 0.4,
+        /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
+        val phasePool: Double = 0.0,
+        /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64).
+         *  Deeper than the saw's 5: the high band is rare per draw, and a missed band degrades to
+         *  closest-candidate (= coherence maximization). */
+        val drawTries: Double = 40.0,
+        /** Band lower edge — the supersine's K IS the note (no other harmonics), so it sits high. */
+        val kMin: Double = 0.50,
+        /** Accepted fundamental-coherence band K, upper edge. */
+        val kMax: Double = 0.80,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
+        /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
+        val refreshEvery: Double = 10.0,
+        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
+        val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -434,6 +469,22 @@ sealed interface IgnitorDsl {
         val gainJitter: Double = 0.15,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
         val centerJitterScale: Double = 0.4,
+        /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
+        val phasePool: Double = 0.0,
+        /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
+        val drawTries: Double = 5.0,
+        /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
+        val kMin: Double = 0.30,
+        /** Accepted fundamental-coherence band K, upper edge. */
+        val kMax: Double = 0.55,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
+        /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
+        val refreshEvery: Double = 10.0,
+        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
+        val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -456,6 +507,23 @@ sealed interface IgnitorDsl {
         val gainJitter: Double = 0.15,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
         val centerJitterScale: Double = 0.4,
+        /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
+        val phasePool: Double = 0.0,
+        /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64).
+         *  Deeper than the saw's 5 — the higher band is rarer per draw. */
+        val drawTries: Double = 16.0,
+        /** Band lower edge — 1/k² harmonics put most of the note in the fundamental, so it sits high-ish. */
+        val kMin: Double = 0.40,
+        /** Accepted fundamental-coherence band K, upper edge. */
+        val kMax: Double = 0.65,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
+        /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
+        val refreshEvery: Double = 10.0,
+        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
+        val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -478,6 +546,22 @@ sealed interface IgnitorDsl {
         val gainJitter: Double = 0.15,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
         val centerJitterScale: Double = 0.4,
+        /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
+        val phasePool: Double = 0.0,
+        /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
+        val drawTries: Double = 5.0,
+        /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
+        val kMin: Double = 0.30,
+        /** Accepted fundamental-coherence band K, upper edge. */
+        val kMax: Double = 0.55,
+        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        val poolSize: Double = 256.0,
+        /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
+        val refreshEvery: Double = 10.0,
+        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
+        val selection: Double = 0.0,
+        /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
+        val warmup: Double = 16.0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -950,7 +1034,7 @@ sealed interface IgnitorDsl {
          */
         val declickSeconds: IgnitorDsl = Slots.declickSeconds,
         /**
-         * Curvature of [AdsrCurve.Exponential] segments (`Slots.expK`, default mirrors `ADSR_EXP_K` = 3.0).
+         * Curvature of [AdsrCurve.Exponential] segments (`Slots.expK`, defaults to [ADSR_EXP_K]).
          * Larger = steeper initial change (faster decay drop / sharper attack finish). `oscParam`-addressable.
          */
         val expK: IgnitorDsl = Slots.expK,

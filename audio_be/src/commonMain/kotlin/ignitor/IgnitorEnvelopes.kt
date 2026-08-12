@@ -5,12 +5,12 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.ADSR_EXP_K
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.adsrExpNorm
 import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 
 /**
  * ADSR amplitude envelope combinator.

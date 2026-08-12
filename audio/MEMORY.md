@@ -60,9 +60,11 @@ is a fixed-size event; on a **low note** the slow carrier can't mask it, so it
 reads as a "plop" (2nd-difference corner/floor ratio ~525x at 40Hz vs ~4x at
 880Hz). `exp` curves are worst (steepest joins).
 
-- Constant `ENV_DECLICK_SECONDS = 0.0005` (0.5ms) + `envDeclickCoeff(sampleRate)`
-  in `AdsrCurveMath.kt`. Tunable by ear like `ADSR_EXP_K`. 0.5ms ≈ 25x corner
-  reduction at 40Hz, 0-residual tail, only softens sub-5ms attacks.
+- Constant `ENV_DECLICK_SECONDS = 0.001` (1ms) in
+  `audio_bridge/constants/EnvelopeDefaults.kt` (moved there 2026-08-11 — it is a
+  `StageDsl.Vca` wire default). The MATH stayed in `AdsrCurveMath.kt`:
+  `envDeclickCoeff(declickSeconds, sampleRate)`, `adsrExpNorm`, `ADSR_EXP_NORM` and both `adsrExpShape` overloads.
+  Tunable by ear like `ADSR_EXP_K`. The 25x-corner- reduction-at-40Hz / 0-residual-tail measurement was taken at 0.5ms.
 - `Voice.Envelope` gained `smoothedLevel` + `smoothPrimed` state. Primed to the
   **first rendered gain** (not env.level) so always-on voices and mid-phase block
   starts don't fade in; only segment-join corners get rounded.
@@ -85,7 +87,7 @@ reads as a "plop" (2nd-difference corner/floor ratio ~525x at 40Hz vs ~4x at
 - `declickSeconds` (`Slots.declickSeconds`, default `0.0` = off — this surface is intentionally
   NOT de-clicked; see the VCA entry above). >0 runs the same one-pole (`envDeclickCoeff`) on the
   output gain, primed to the first rendered level (no fade-in on always-on / mid-phase starts).
-- `expK` (`Slots.expK`, default `3.0` = mirrors `ADSR_EXP_K`, duplicated in `audio_bridge`). Feeds
+- `expK` (`Slots.expK`, default = `ADSR_EXP_K`, the single declaration in `audio_bridge/constants/`). Feeds
   the parameterized `adsrExpShape(x, k, norm)` the amp VCA already used.
 
 Both are `IgnitorDsl` fields read per-block via `readParam` in `AdsrIgnitor` (declick coeff + `expNorm`

@@ -5,20 +5,19 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.exp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shape math for AdsrCurve.Exponential — shared by every envelope evaluator
 // (EnvelopeRenderer, EnvelopeCalc, IgnitorEnvelopes) so the curve is identical
 // across the amp VCA, the filter/FM envelopes, and the ignitor envelopes.
+//
+// The tunable values themselves (ADSR_EXP_K, ENV_DECLICK_SECONDS) live in
+// `audio_bridge/constants/EnvelopeDefaults.kt` — they are the defaults of
+// `StageDsl.Vca` fields, so both sides must read one declaration. Only the math
+// lives here.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Curvature of [io.peekandpoke.klang.audio_bridge.AdsrCurve.Exponential].
- * Larger = steeper initial change (faster decay drop / sharper attack finish).
- * Tunable by ear; `3.0` ≈ a moderate analog decay, steeper-tailed than `Square`.
- */
-internal const val ADSR_EXP_K: Double = 3.0
 
 /** Normalisation factor for [adsrExpShape] at curvature [k] — makes `g(0)=0`, `g(1)=1`. */
 @Suppress("NOTHING_TO_INLINE")
@@ -57,13 +56,11 @@ internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (
 // event that radiates a broadband click; on a low note the slow carrier can't
 // mask it, so it reads as a "plop", while a high note's fast carrier hides it.
 // A short one-pole low-pass on the gain rounds the corner without altering the
-// envelope's character. See AdsrPlopAnalysisTest for the corner/floor metric:
-// ~0.5ms gives ≈25x corner reduction at 40Hz with a 0-residual tail and only
-// softens sub-5ms attacks. Tunable by ear, like ADSR_EXP_K.
+// envelope's character.
+//
+// The time constant itself is ENV_DECLICK_SECONDS, in audio_bridge/constants — see its
+// KDoc for the corner/floor measurement rather than repeating it here.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** Time constant (seconds) of the VCA-gain de-click one-pole. */
-internal const val ENV_DECLICK_SECONDS: Double = 0.001
 
 /** Per-sample one-pole coefficient for a [declickSeconds] time constant at [sampleRate] Hz. */
 @Suppress("NOTHING_TO_INLINE")
