@@ -33,7 +33,7 @@ let supersawHp = (() => {
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
     // Important: enable the phase-pool for consistent onsets and fundamentals
-    .phasePool(on = 1, kMin = 0.4, kMax = 0.6)
+    .phasePool(on = 1, kMin = 0.35, kMax = 0.65)
     // character knobs — plain scalars, SuperSaw-typed, must precede the filter
     .analog(pAnalog).spreadPower(1.5).sideAtten(0.2).gainJitter(0.10).centerJitter(0.10).mul(4/4)
     // Add overtones 1 octave up
@@ -76,7 +76,7 @@ stack(
     .hpf(90).lpf(4500).lpe(0.5).lpq(0.707)
     .coarse(2).coarseos(2).pan(0.65).superimpose(
       x => x.pan(0.35),
-      x => x.postgain(0.125).hpf(160).lpf(4500).transpose(12).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [0 -3] -3!7 [-5 [-4 -3@3]]!1 -3!7 [-3 [2 4@3]]>")
+      x => x.postgain(0.12).hpf(200).lpf(4500).transpose(12).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [0 -3] -3!7 [-5 [-4 -3@3]]!1 -3!7 [-3 [2 4@3]]>")
            .pan(0.3).superimpose(pan(0.7))
     ).mute("<0!128 1!16 0!16>").body("mahogany").bodyMix(0.4)
   , // Bass
