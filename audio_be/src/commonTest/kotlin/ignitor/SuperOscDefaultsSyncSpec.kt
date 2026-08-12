@@ -28,6 +28,9 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.drawTries shouldBe SUPERSAW_DRAW_TRIES
         d.kMin shouldBe SUPERSAW_K_MIN
         d.kMax shouldBe SUPERSAW_K_MAX
+        d.poolSize shouldBe SUPERSAW_POOL_SIZE
+        d.refreshEvery shouldBe SUPERSAW_REFRESH_EVERY
+        d.selection shouldBe SUPERSAW_SELECTION
     }
 
     "IgnitorDsl.SuperRamp character defaults match the SUPERRAMP_* engine constants" {
@@ -40,6 +43,9 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.drawTries shouldBe SUPERRAMP_DRAW_TRIES
         d.kMin shouldBe SUPERRAMP_K_MIN
         d.kMax shouldBe SUPERRAMP_K_MAX
+        d.poolSize shouldBe SUPERRAMP_POOL_SIZE
+        d.refreshEvery shouldBe SUPERRAMP_REFRESH_EVERY
+        d.selection shouldBe SUPERRAMP_SELECTION
     }
 
     "IgnitorDsl.SuperSine character defaults match the SUPERSINE_* engine constants" {
@@ -52,6 +58,9 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.drawTries shouldBe SUPERSINE_DRAW_TRIES
         d.kMin shouldBe SUPERSINE_K_MIN
         d.kMax shouldBe SUPERSINE_K_MAX
+        d.poolSize shouldBe SUPERSINE_POOL_SIZE
+        d.refreshEvery shouldBe SUPERSINE_REFRESH_EVERY
+        d.selection shouldBe SUPERSINE_SELECTION
     }
 
     "IgnitorDsl.SuperSquare character defaults match the SUPERSQUARE_* engine constants" {
@@ -64,6 +73,9 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.drawTries shouldBe SUPERSQUARE_DRAW_TRIES
         d.kMin shouldBe SUPERSQUARE_K_MIN
         d.kMax shouldBe SUPERSQUARE_K_MAX
+        d.poolSize shouldBe SUPERSQUARE_POOL_SIZE
+        d.refreshEvery shouldBe SUPERSQUARE_REFRESH_EVERY
+        d.selection shouldBe SUPERSQUARE_SELECTION
     }
 
     "IgnitorDsl.SuperTri character defaults match the SUPERTRI_* engine constants" {
@@ -76,5 +88,8 @@ class SuperOscDefaultsSyncSpec : StringSpec({
         d.drawTries shouldBe SUPERTRI_DRAW_TRIES
         d.kMin shouldBe SUPERTRI_K_MIN
         d.kMax shouldBe SUPERTRI_K_MAX
+        d.poolSize shouldBe SUPERTRI_POOL_SIZE
+        d.refreshEvery shouldBe SUPERTRI_REFRESH_EVERY
+        d.selection shouldBe SUPERTRI_SELECTION
     }
 })

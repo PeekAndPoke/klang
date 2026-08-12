@@ -83,10 +83,23 @@ class KlangScriptSuperRampSpec : StringSpec({
         ks("Osc.superramp().kMax(0.7)") shouldBe superRamp().copy(kMax = 0.7)
     }
 
+    "poolSize(64)" {
+        ks("Osc.superramp().poolSize(64)") shouldBe superRamp().copy(poolSize = 64.0)
+    }
+
+    "refreshEvery(5)" {
+        ks("Osc.superramp().refreshEvery(5)") shouldBe superRamp().copy(refreshEvery = 5.0)
+    }
+
+    "selection(1)" {
+        ks("Osc.superramp().selection(1)") shouldBe superRamp().copy(selection = 1.0)
+    }
+
     "every typed config method in one chain" {
         val code = "Osc.superramp().freq(110).voices(11).spread(0.12).analog(4.0)" +
                 ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
-                ".phasePool(1).drawTries(8).kMin(0.2).kMax(0.7)"
+                ".phasePool(1).drawTries(8).kMin(0.2).kMax(0.7)" +
+                ".poolSize(64).refreshEvery(5).selection(1)"
 
         ks(code) shouldBe superRamp().copy(
             freq = IgnitorDsl.Constant(110.0),
@@ -101,6 +114,9 @@ class KlangScriptSuperRampSpec : StringSpec({
             drawTries = 8.0,
             kMin = 0.2,
             kMax = 0.7,
+            poolSize = 64.0,
+            refreshEvery = 5.0,
+            selection = 1.0,
         )
     }
 

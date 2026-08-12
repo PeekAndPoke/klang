@@ -82,16 +82,21 @@ closest to the band. Predicted effect at N_eff 10.5, M = 5:
 The catastrophic tail disappears; residual ±3 dB variation is musician-level, not lottery-level. Notes remain genuinely
 random — this is selection, not alignment; the steady texture is untouched.
 
-### 3.3 The pool — born warm
+### 3.3 The pool — born warm *(as-built: amortized first-use warm, see §3.6)*
 
-A bounded store of accepted configurations, keyed **per (orbit, unisonCount, base gain profile)** —
-`sideAtten` enters the key because stored scores are only valid for the gain profile they were
-scored under (two sounds in one orbit with the same unison but different `sideAtten` must not share
-scores):
+A bounded store of accepted configurations, keyed **per (orbit, unisonCount, base gain profile,
+band, maintenance knobs)** — `sideAtten` and the band enter the key because stored scores are only
+valid for the (profile, band) they were accepted under; the maintenance knobs enter it because a
+knob racing on note-arrival order would be the parameter-parity bug class (§3.6):
 
-- **Size ~1000** (config = N phases ≈ 44 bytes → ~44 KB per pool; a song touches ~5–10 pools).
-- **Born warm:** because scoring is analytic, the pool is filled at instrument load — ~3000 draws, well under a
-  millisecond. "Warming over time" collapses into initialization; there is no cold period.
+- **Size ~1000** (config = N phases as `DoubleArray` ≈ 88 bytes payload at unison 11, ~190 KB per
+  full pool on JS with array overhead; a song touches ~5–10 pools; the registry caps at 64 pools
+  per playback with least-recently-served eviction — the key being played NOW is always pooled,
+  and a by-ear knob sweep recycles slots instead of leaking).
+- **Born warm — the original plan** was an eager fill at instrument load. As built (§3.6):
+  measured 3.8–292 ms of render-callback stall, so the fill is AMORTIZED — a work-budgeted prefix
+  at first use, a few µs of top-ups per served note, vocabulary closed after ~256 notes. The K
+  distribution is complete from entry one; only repetition-rarity grows.
 - **Per-orbit on purpose (user decision):** guitar 1 and guitar 2 develop different characters over time. Divergence is
   bounded by construction — every pool lives in the same band, so orbits differ in *which* configurations they favor,
   never in quality. "Slight" is guaranteed by the guardrail.
@@ -122,6 +127,43 @@ knob; 0 = frozen (and reproducible).
   **selection time only** — stored scores are K (0), which is frequency-invariant; baking pitch into storage would
   break pool sharing across the scale.
 
+### 3.6 P1 implementation design (recon 2026-08-12)
+
+Integration points, verified in code:
+
+- **Orbit = `VoiceData.cylinder`** (`?: 0`), already available in `IgnitorRegistry.createExciter` —
+  no VoiceFactory threading needed.
+- **The pool handle rides `IgnitorBuildCache`** (the per-call carrier that already exists for
+  `soundIndex` — same precedent, no signature ripple through the recursive build).
+- **`PhasePools` lives on the per-playback context** next to `ignitorRegistry` (pools are
+  per-playback by design — per-orbit characters, superimpose copies share their orbit's pool).
+- **Key:** data class over (orbit, voices, sideAtten, kMin, kMax, drawTries, poolSize,
+  refreshEvery) — the band because stored scores are only valid for the profile+band they were
+  accepted under, the maintenance knobs because a knob whose effect depends on note-arrival
+  order (two sounds racing for one key) is the parameter-parity bug class. `selection` stays
+  out: it is a per-call serving policy, not pool state. (No `Double.toRawBits` — Long is banned
+  on the JS audio path.)
+- **Born-warm collapses to AMORTIZED first-use warm:** `voices` is a pattern-level param unknown
+  at registration time, AND an eager full fill measurably blows the render budget (measured on
+  V8: 3.8–20 ms cold at shipped defaults vs the 2.67 ms block — up to 292 ms at the caps). So a
+  pool seeds a WORK-budgeted prefix at construction (up to 32 entries, fewer for deep-tries ×
+  many-voices configs) and tops up a few work-capped entries per served note (µs each) until full
+  — vocabulary closed after ~256–500 notes. The K distribution is complete from entry one —
+  vocabulary size governs repetition audibility, not quality. Fill scores against the BASE gain profile
+  (`superSawVoiceGains(v, sideAtten)`, no jitter exists at fill); the per-note jittered gains
+  perturb the effective K second-order (documented deviation from the stateless path's
+  exact-gain scoring).
+- **Note-on:** near-zero allocation — `pool.next()` returns a stored `DoubleArray` reference,
+  the engine copies values into the voice states; refresh draws use a preallocated scratch
+  entry. (One small Key object per note-on lookup remains — noise next to the per-note ignitor
+  graph. The pool store is a flat array with random eviction, not a heap — §6's original
+  "fixed-size heap ops" plan was over-engineered for random-not-worst eviction.)
+- **Selection knob:** `0 = roundRobin` (default, settled §9.2), `1 = random`.
+- **One user knob stays `phasePool`:** `1` = pooled when a `PhasePools` registry is reachable,
+  stateless banded best-of-M as the fallback (direct factory calls, tests). No second flag.
+- **Seed:** `AudioBackendContext.create(..., phasePoolSeed: Int? = null)` — offline renderer
+  passes a fixed Int seed → reproducible pools; live leaves it null (clock).
+
 ## 4. Applicability across the family
 
 One implementation in the shared unison init covers everyone; per-waveform *defaults* differ:
@@ -143,7 +185,7 @@ All per-sound (engine-default layer in `OscillatorTuning.kt`, overridable via th
 | `phasePool`     | **off**                             | **Full bypass. Off = today's engine (identical rng stream).** |
 | `drawTries` (M) | 5 / 16 supertri / 40 supersine      | Candidates per draw (engine caps at 64); higher bands are rarer per draw, so their search is deeper — a missed band degrades to closest-candidate = K-maximization |
 | `kMin` / `kMax` | per waveform                        | Accepted quality band; doubles as a timbre control    |
-| `poolSize`      | 1000                                | Vocabulary size per (orbit, unison)                   |
+| `poolSize`      | 1000                                | Vocabulary size per pool key (§3.3; engine caps 4096) |
 | `refreshEvery`  | 10                                  | Notes between fresh draws; 0 = frozen pool            |
 | `selection`     | `roundRobin`                        | `roundRobin` / `random` (`sticky` parked)             |
 | RNG source      | clock (live) / fixed seed (offline) | takes vary live; offline renders reproducible         |
@@ -165,10 +207,16 @@ All per-sound (engine-default layer in `OscillatorTuning.kt`, overridable via th
   entries stay phases-only.
 - **Mid-note voice-count changes:** the pool governs note-on only. Voices added mid-note (lazy
   `voices` param change) get plain random phases, exactly as today.
-- **Audio thread:** pools preallocated at load; insert/evict via fixed-size heap ops; zero allocation at note-on.
-  Scoring cost per note-on: ≤ ~900 sin/cos at the deepest default (supersine, 40 tries × 11
-  voices) — negligible even on JS. (P0 allocates two small arrays at note-on, consistent with
-  what note-on already allocates; true zero-alloc arrives with the P1 pool.)
+- **Audio thread:** amortized first-use warm (see §3.6 — an eager fill was measured to drop
+  blocks and was rejected); entries allocate LAZILY, a few per served note during the growth
+  phase (µs-scale, work-budgeted), then the full pool is alloc-free — refresh redraws in place
+  (flat array + random eviction, no heap needed). Stateless-path scoring cost per note-on:
+  ≤ ~900 sin/cos at the deepest default (supersine, 40 tries × 11 voices); pooled note-on cost:
+  one entry copy + a few work-capped top-up draws while growing.
+- **`refreshEvery` counts SERVED ENTRIES, not musical notes:** a 3-note chord with a
+  `.superimpose()` copy churns its shared pool 6× per musical event — §3.4's "~20 min" horizon
+  is proportionally shorter on dense polyphony. Deliberate (the pool serves voices, not events);
+  documented so the knob reads honestly.
 - **Mix impact:** conditioning raises the *average* fundamental ~4–5 dB on affected low voices — a fixed, predictable
   shift (unlike the lottery). Songs will want a one-time low-end retrim after enabling. Document prominently.
 - **Reproducibility:** offline renderer fills and refreshes pools from a fixed seed → identical renders. Live uses the

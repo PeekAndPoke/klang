@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -19,6 +20,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangMinHeap
 import io.peekandpoke.klang.common.math.ValueRamp
 import io.peekandpoke.ultra.maths.Ease
+import kotlin.random.Random
 
 class VoiceScheduler(
     val options: Options,
@@ -323,6 +325,19 @@ class VoiceScheduler(
             playbackContexts[pid] = PlaybackCtx(
                 playbackId = pid,
                 ignitorRegistry = ignitorFork,
+                // The pool gets its OWN rng stream, and creating it must not TOUCH Random.Default
+                // (which every per-voice super-osc draws from — one extra draw here would reorder
+                // every later note's phases even with the feature off). Live seeds from the clock
+                // ("takes vary"); offline passes a fixed seed so pool vocabularies reproduce.
+                // ⚠️ nowSec is UNIX-EPOCH-scale live (~1.8e9): a naive `* 1e6 → toInt()` SATURATES
+                // to Int.MAX_VALUE — a constant seed for every playback. Fold to sub-Int range and
+                // mix in the playback id (two playbacks can share a render block's nowSec).
+                phasePools = PhasePools(
+                    Random(
+                        context.phasePoolSeed
+                            ?: (((nowSec % 4096.0) * 1e5).toInt() xor pid.hashCode()),
+                    ),
+                ),
                 epoch = voice.playbackStartTime + latency,
             )
         }

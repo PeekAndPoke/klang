@@ -100,7 +100,9 @@ Multiple detuned copies for thick, lush sounds.
 **Chained character knobs** (return the same super-osc subtype): `.analog(x)` (per-voice pitch drift),
 `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`, `.phasePool(x)` (1 = banded
 start-phase selection — consistent low-note fundamentals, off by default), `.drawTries(x)`,
-`.kMin(x)`/`.kMax(x)` (the accepted coherence band — also a timbre control; low band = hollow pad).
+`.kMin(x)`/`.kMax(x)` (the accepted coherence band — also a timbre control; low band = hollow pad),
+`.poolSize(x)` (phase-pool vocabulary size, default 1000), `.refreshEvery(x)` (notes between fresh
+pool draws, 0 = frozen), `.selection(x)` (0 = roundRobin, 1 = random).
 ⚠️ Enabling `.phasePool(1)` lifts the low-note fundamental (+2 dB measured on average — more on the
 notes the old random draw was cancelling) — on a finished song, retrim the low end once after
 switching it on.

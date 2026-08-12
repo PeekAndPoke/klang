@@ -252,8 +252,10 @@ class VoiceFactory(
                 }
 
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-                val signal = playbackCtx.ignitorRegistry.createExciter(sound, data, freqHz ?: 0.0)
-                    ?: return null
+                val signal = playbackCtx.ignitorRegistry.createExciter(
+                    sound, data, freqHz ?: 0.0,
+                    phasePools = playbackCtx.phasePools,
+                ) ?: return null
 
                 buildVoice(
                     data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,

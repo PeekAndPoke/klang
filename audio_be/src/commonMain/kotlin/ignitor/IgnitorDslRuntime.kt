@@ -34,8 +34,10 @@ import kotlin.random.Random
 fun IgnitorDsl.toExciter(
     oscParams: Map<String, Double>? = null,
     soundIndex: Int = 0,
+    phasePools: PhasePools? = null,
+    orbit: Int = 0,
 ): Ignitor {
-    val cache = IgnitorBuildCache(soundIndex)
+    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit)
     return buildIgnitor(oscParams, cache)
 }
 
@@ -48,7 +50,15 @@ fun IgnitorDsl.toExciter(
  * Also carries the per-call [soundIndex] so `IgnitorDsl.Variants` nodes can dispatch
  * without threading the value through every recursive call.
  */
-internal class IgnitorBuildCache(val soundIndex: Int = 0) {
+internal class IgnitorBuildCache(
+    val soundIndex: Int = 0,
+    /** Per-playback unison phase pools; null → stateless banded fallback. Carried here (like
+     *  [soundIndex]) so the value reaches the super-oscillator branches without threading a
+     *  parameter through every recursive call. */
+    val phasePools: PhasePools? = null,
+    /** The voice's orbit ([VoiceData.cylinder]) — half of the pool key. */
+    val orbit: Int = 0,
+) {
     private val dslKeys = ArrayList<IgnitorDsl>()
     private val modKeys = ArrayList<Ignitor?>()
     private val values = ArrayList<Ignitor>()
@@ -223,6 +233,8 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
         )
@@ -233,6 +245,8 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
         )
@@ -243,6 +257,8 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
         )
@@ -253,6 +269,8 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
         )
@@ -263,6 +281,8 @@ private fun IgnitorDsl.buildRaw(
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
+                poolSize = poolSize, refreshEvery = refreshEvery, selection = selection,
+                phasePools = cache.phasePools, orbit = cache.orbit,
             ),
             accumulatedMod
         )

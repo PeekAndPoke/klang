@@ -14,12 +14,14 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.ChainAudioFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import kotlin.random.Random
 
 /**
  * Guards the contract that [VoiceFactory] bakes the filter chain in the EXACT order it
@@ -65,7 +67,7 @@ class VoiceFactoryFilterOrderSpec : StringSpec({
             scheduled = scheduled,
             nowFrame = 0.0,
             backendStartTimeSec = 0.0,
-            playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry),
+            playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },
         ) ?: error("makeVoice returned null")
 

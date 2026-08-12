@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
@@ -22,6 +23,7 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import kotlin.random.Random
 
 /**
  * **The guard for the bug this whole change exists to fix.**
@@ -69,7 +71,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
             ),
             nowFrame = 0.0,
             backendStartTimeSec = 0.0,
-            playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry),
+            playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },
         ) ?: error("makeVoice returned null")
 

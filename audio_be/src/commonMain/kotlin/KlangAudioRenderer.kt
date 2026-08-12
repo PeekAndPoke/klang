@@ -71,6 +71,7 @@ class KlangAudioRenderer private constructor(
             blockFrames: Int,
             commLink: KlangCommLink.BackendEndpoint,
             performanceTimeMs: () -> Double = { 0.0 },
+            phasePoolSeed: Int? = null,
         ): KlangAudioRenderer {
             val clock = BackendClock(sampleRate)
             val context = AudioBackendContext.create(
@@ -79,6 +80,7 @@ class KlangAudioRenderer private constructor(
                 commLink = commLink,
                 clock = clock,
                 performanceTimeMs = performanceTimeMs,
+                phasePoolSeed = phasePoolSeed,
             )
             return KlangAudioRenderer(context = context, clock = clock)
         }

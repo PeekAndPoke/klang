@@ -7,12 +7,14 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
  * End-to-end seam guard for the phase-pool knobs: DSL node → `IgnitorDslRuntime.buildRaw`
@@ -38,7 +40,7 @@ class PhasePoolDslSeamSpec : StringSpec({
     val freqHz = 375.0
     val notes = 60
 
-    fun fundamentalAmp(dsl: IgnitorDsl): Double {
+    fun fundamentalAmp(dsl: IgnitorDsl, pools: PhasePools? = null, orbit: Int = 0): Double {
         val buffer = AudioBuffer(n)
         val ctx = IgniteContext(
             sampleRate = sampleRate,
@@ -48,7 +50,7 @@ class PhasePoolDslSeamSpec : StringSpec({
             voiceEndFrame = sampleRate + n,
             scratchBuffers = ScratchBuffers(n),
         ).apply { offset = 0; length = n; voiceElapsedFrames = 0 }
-        dsl.toExciter().generate(buffer, freqHz, ctx)
+        dsl.toExciter(phasePools = pools, orbit = orbit).generate(buffer, freqHz, ctx)
         var re = 0.0
         var im = 0.0
         val w = TWO_PI * freqHz / sampleRate
@@ -63,36 +65,42 @@ class PhasePoolDslSeamSpec : StringSpec({
     val spread = IgnitorDsl.Constant(0.0)
     val analog = IgnitorDsl.Constant(0.0)
 
-    // (phasePool, kMin, kMax, drawTries) -> node, per super type.
-    val nodes = listOf<Pair<String, (Double, Double, Double, Double) -> IgnitorDsl>>(
-        "SuperSaw" to { pool, lo, hi, tries ->
+    // (phasePool, kMin, kMax, drawTries, poolSize, refreshEvery) -> node. gainJitter is pinned
+    // to 0 so a re-served pool entry renders an IDENTICAL fundamental (the repeat signature).
+    val nodes = listOf<Pair<String, (Double, Double, Double, Double, Double, Double) -> IgnitorDsl>>(
+        "SuperSaw" to { pool, lo, hi, tries, poolSize, refreshEvery ->
             IgnitorDsl.SuperSaw(
-                voices = voices, spread = spread, analog = analog,
+                voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
+                poolSize = poolSize, refreshEvery = refreshEvery,
             )
         },
-        "SuperRamp" to { pool, lo, hi, tries ->
+        "SuperRamp" to { pool, lo, hi, tries, poolSize, refreshEvery ->
             IgnitorDsl.SuperRamp(
-                voices = voices, spread = spread, analog = analog,
+                voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
+                poolSize = poolSize, refreshEvery = refreshEvery,
             )
         },
-        "SuperSquare" to { pool, lo, hi, tries ->
+        "SuperSquare" to { pool, lo, hi, tries, poolSize, refreshEvery ->
             IgnitorDsl.SuperSquare(
-                voices = voices, spread = spread, analog = analog,
+                voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
+                poolSize = poolSize, refreshEvery = refreshEvery,
             )
         },
-        "SuperTri" to { pool, lo, hi, tries ->
+        "SuperTri" to { pool, lo, hi, tries, poolSize, refreshEvery ->
             IgnitorDsl.SuperTri(
-                voices = voices, spread = spread, analog = analog,
+                voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
+                poolSize = poolSize, refreshEvery = refreshEvery,
             )
         },
-        "SuperSine" to { pool, lo, hi, tries ->
+        "SuperSine" to { pool, lo, hi, tries, poolSize, refreshEvery ->
             IgnitorDsl.SuperSine(
-                voices = voices, spread = spread, analog = analog,
+                voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
+                poolSize = poolSize, refreshEvery = refreshEvery,
             )
         },
     )
@@ -100,7 +108,7 @@ class PhasePoolDslSeamSpec : StringSpec({
     for ((name, make) in nodes) {
         "$name - phasePool/drawTries/kMin/kMax reach the engine through the DSL runtime" {
             fun mean(pool: Double, lo: Double, hi: Double, tries: Double): Double =
-                (1..notes).sumOf { fundamentalAmp(make(pool, lo, hi, tries)) } / notes
+                (1..notes).sumOf { fundamentalAmp(make(pool, lo, hi, tries, 1000.0, 10.0)) } / notes
 
             val deep = mean(1.0, 0.85, 0.95, 64.0)
             val off = mean(0.0, 0.85, 0.95, 64.0)
@@ -109,6 +117,23 @@ class PhasePoolDslSeamSpec : StringSpec({
             deep shouldBeGreaterThan off * 1.5      // dropped phasePool → ratio ~1
             deep shouldBeGreaterThan shallow * 1.5  // dropped drawTries → both sides = family default
             deep shouldBeGreaterThan lowBand * 3.0  // dropped kMin/kMax → both sides = default band
+        }
+
+        "$name - pooled serving + orbit key reach the engine through the DSL runtime" {
+            // Frozen 2-entry pool, roundRobin, jitter off: notes 1/3 and 2/4 re-serve the same
+            // entries → IDENTICAL fundamentals. A dropped `phasePools = cache.phasePools`
+            // forwarding falls back to stateless per-note draws (never repeats); a dropped
+            // `orbit = cache.orbit` collapses the registry to one pool (size stays 1).
+            val pools = PhasePools(Random(3))
+            fun note(orbit: Int): Double =
+                fundamentalAmp(make(1.0, 0.30, 0.55, 5.0, 2.0, 0.0), pools, orbit)
+            val a = note(2)
+            val b = note(2)
+            note(2) shouldBe a
+            note(2) shouldBe b
+            pools.size shouldBe 1
+            note(3)
+            pools.size shouldBe 2
         }
     }
 })

@@ -82,4 +82,18 @@ object KlangScriptSuperSquareExtensions {
     @KlangScript.Method
     fun kMax(self: IgnitorDsl.SuperSquare, kMax: Double): IgnitorDsl.SuperSquare =
         self.copy(kMax = kMax)
+    /** Pool vocabulary size per (orbit, unison, profile, band) key; engine caps at 4096 (default 1000). */
+    @KlangScript.Method
+    fun poolSize(self: IgnitorDsl.SuperSquare, poolSize: Double): IgnitorDsl.SuperSquare =
+        self.copy(poolSize = poolSize)
+
+    /** Notes between fresh pool draws (random eviction); 0 = frozen pool (default 10). */
+    @KlangScript.Method
+    fun refreshEvery(self: IgnitorDsl.SuperSquare, refreshEvery: Double): IgnitorDsl.SuperSquare =
+        self.copy(refreshEvery = refreshEvery)
+
+    /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
+    @KlangScript.Method
+    fun selection(self: IgnitorDsl.SuperSquare, selection: Double): IgnitorDsl.SuperSquare =
+        self.copy(selection = selection)
 }

@@ -69,6 +69,8 @@ class KlangOfflineRenderer(
             blockFrames = blockFrames,
             commLink = commLink.backend,
             performanceTimeMs = { klangTime.internalMsNow() },
+            // Fixed seed: offline unison phase pools reproduce across renders (doc §5 rng row).
+            phasePoolSeed = 1,
         )
         val ignitorRegistry = renderer.ignitorRegistry
         val pipelineRegistry = renderer.pipelineRegistry

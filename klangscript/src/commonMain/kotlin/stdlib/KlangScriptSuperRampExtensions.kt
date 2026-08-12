@@ -82,4 +82,18 @@ object KlangScriptSuperRampExtensions {
     @KlangScript.Method
     fun kMax(self: IgnitorDsl.SuperRamp, kMax: Double): IgnitorDsl.SuperRamp =
         self.copy(kMax = kMax)
+    /** Pool vocabulary size per (orbit, unison, profile, band) key; engine caps at 4096 (default 1000). */
+    @KlangScript.Method
+    fun poolSize(self: IgnitorDsl.SuperRamp, poolSize: Double): IgnitorDsl.SuperRamp =
+        self.copy(poolSize = poolSize)
+
+    /** Notes between fresh pool draws (random eviction); 0 = frozen pool (default 10). */
+    @KlangScript.Method
+    fun refreshEvery(self: IgnitorDsl.SuperRamp, refreshEvery: Double): IgnitorDsl.SuperRamp =
+        self.copy(refreshEvery = refreshEvery)
+
+    /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
+    @KlangScript.Method
+    fun selection(self: IgnitorDsl.SuperRamp, selection: Double): IgnitorDsl.SuperRamp =
+        self.copy(selection = selection)
 }
