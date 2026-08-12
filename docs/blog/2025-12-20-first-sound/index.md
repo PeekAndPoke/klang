@@ -32,9 +32,9 @@ its ~2.7 ms block deadlines and a garbage collector waiting to ruin them.
 ## 2. The borrowed brain
 
 A synthesizer needs something to play. Rather than design a pattern language first, klang borrowed the best one
-available: **Strudel**, the JavaScript descendant of TidalCycles. Trick: run `@strudel/core` *unmodified* on the JVM
-through GraalVM's polyglot JS engine, let it do what it does best — turn pattern code into a stream of timed events (
-"haps") — and feed those events into our own voice generation and audio backend.
+available: **Strudel**, the JavaScript descendant of TidalCycles. The trick: run `@strudel/core` *unmodified* on the JVM
+through GraalVM's polyglot JS engine, let it do what it does best — turn pattern code into a stream of timed "haps" —
+and feed those events into our own voice generation and audio backend.
 
 ![Architecture, December 2025](architecture.png)
 

@@ -1,6 +1,6 @@
 ---
 title: "Killing the Plastic Pipe"
-subtitle: "A quarter spent hunting warmth: drift, a supersaw rebuilt, and a body that never adds energy"
+subtitle: "A quarter spent hunting warmth: drift, a supersaw rebuilt, and a body that never rings on its own"
 date: 2026-06-30
 slug: killing-the-plastic-pipe
 tags: [ engine, dsp, sound-design, analog-drift, supersaw, body, klang ]
@@ -22,7 +22,7 @@ references:
 
 # Killing the Plastic Pipe
 
-*A quarter spent hunting warmth: drift, a supersaw rebuilt, and a body that never adds energy.*
+*A quarter spent hunting warmth: drift, a supersaw rebuilt, and a body that never rings on its own.*
 
 ## 1. The problem: perfection is the tell
 
@@ -49,8 +49,8 @@ lesson below.)
 
 **Perlin-style noise modulation** — better, and widely used. But Perlin is a *lattice* construction: smooth by design
 between grid points, with statistical regularities the ear can find on long notes. The physical quantity being
-imitated — component noise integrated by an oscillator — has a different, well-known character: it is *filtered white
-noise*, and there is a standard process for that.
+imitated — component noise integrated by an oscillator — has a different, well-known character: it is well approximated
+by *filtered white noise*, and there is a standard process for that.
 
 ## 3. The drift: two timescales of Ornstein–Uhlenbeck
 
@@ -59,8 +59,8 @@ instability has (at least) two distinct characters, so the generator layers two 
 
 - a **fast jitter** — ~50 ms time constant, ±0.2 cents per unit `analog`:
   the constant micro-wobble of a live oscillator;
-- a **slow drift** — an Ornstein–Uhlenbeck process with a ~10 s time constant and mild mean reversion, ±0.8 cents per
-  unit: the lazy, breathing wander that makes a sustained note feel alive.
+- a **slow drift** — an Ornstein–Uhlenbeck layer with a correlation time of several seconds, ±0.8 cents per unit: the
+  lazy, breathing wander that makes a sustained note feel alive.
 
 Both are white noise pushed through one-pole dynamics — closer to the physics of component noise than any lattice field.
 The hot loop, verbatim:
@@ -87,7 +87,8 @@ fun nextMultiplier(): Double {
 Three details worth the ink:
 
 **The RNG is inlined on purpose.** That xorshift32 is three shifts and three xors — no `Random.nextDouble()` dispatch,
-no allocation, no permutation tables. Total per-sample cost: 3 xorshift ops, 4 multiplies, 4 adds. This runs per voice
+no allocation, no permutation tables. Total per-sample cost: those six bit ops plus six multiplies and seven adds — ~20
+ops, zero calls. This runs per voice
 per sample on the browser's audio thread; anything fancier would be paying rent it doesn't need to.
 
 **One noise source feeds both layers.** The same uniform draw drives the fast one-pole and the slow OU update — two
@@ -97,7 +98,7 @@ filters, two personalities, one stream.
 ms, so starting it "warm"
 is harmless and the micro-shimmer is present from the first sample. The slow layer is seeded **at center,
 deliberately**. The first version seeded it at steady state too, and that was the static-detune failure all over again:
-a short note never lives long enough for a 10-second process to move, so each note simply *stuck* at its randomly-seeded
+a short note never lives long enough for a process that slow to move, so each note simply *stuck* at its randomly-seeded
 offset — per-note random detune, reading as wandering intonation on every melodic line. Seeding at center means **every
 note attacks in tune, and the drift is something that happens to notes that live long enough to earn it.** The
 imperfection has to respect the music's clock.
@@ -131,23 +132,23 @@ on. Pulling that thread properly, two months later, led to
 the [fundamental lottery](../2026-08-12-the-fundamental-lottery/index.md)
 and the phase pool. Q2 treated the symptom; Q3 found the disease.
 
-## 5. The body: a resonator that never adds energy
+## 5. The body: a resonator that never rings on its own
 
 The third front was resonance. Synth notes stop at the oscillator; acoustic notes pass through a *body* — wood, air, a
-cavity — that boosts some bands, swallows others, and rings nothing that wasn't played into it. Klang's
-`body()` models exactly that: a parallel bank of band-pass "modes" over a floor, with one deliberate constraint — **it
-is passive.** It can only redistribute and remove energy, never add it.
+cavity — that boosts some bands and swallows others. Klang's
+`body()` models exactly that: a parallel bank of band-pass "modes" over a floor, with one constraint chosen on purpose —
+**it is passive in the way that matters:** it rings nothing that wasn't played into it and never self-oscillates; its
+modal peaks stay within ~3 dB while the valleys and rolloff carve away far more than the peaks add.
 
 ![Measured body response](body-response.png)
 
 *Fig. 2 — measured from the engine: white noise through `body("spruce")`
 versus dry, spectrum ratio. Eight modal peaks between 100 Hz and 2.2 kHz — none more than ~3 dB above unity — valleys
-carved between them, and a high-frequency rolloff. A passive body: peaks near zero, everything else below it.*
+carved between them, and a high-frequency rolloff. Peaks modest, valleys deep — far more carved than added.*
 
 The passivity constraint is audible as *trustworthiness*: a passive body can be pushed hard without blooming or ringing
 on its own, and materials (`spruce`, `maple`, `mahogany`, …) become characters rather than effects.
-`vowel()` was reworked on the same chassis the same quarter. (It also aged well: when a later experiment needed a
-guitar-amp *cabinet* — which is physically an IR of a passive box — the body infrastructure was the natural home.)
+`vowel()` was reworked on the same chassis the same quarter.
 
 ## 6. What the quarter taught
 
@@ -158,7 +159,7 @@ fully records. But the transferable lessons are three:
    filtered-white from lattice noise, periodic from aperiodic, moving from stuck. Choose the process to match the
    physics being imitated, not just the smoothness.
 2. **Imperfection must respect the music's clock.** The seeding lesson:
-   a 10-second process seeded at steady state turns short notes into random detune. When a note starts, it starts in
+   a slow process seeded at steady state turns short notes into random detune. When a note starts, it starts in
    tune; life accrues with duration.
 3. **Precision and chaos are not opposites; they are assigned seats.**
    Centroid-anchored tuning under jittered gains; a stable center voice inside a randomized ensemble; a passive body

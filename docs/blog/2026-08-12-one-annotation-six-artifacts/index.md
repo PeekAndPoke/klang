@@ -7,8 +7,8 @@ tags: [ klangscript, ksp, codegen, developer-experience, klang ]
 summary: >
   Every function a KlangScript song can call is explicitly registered from
   Kotlin — and the registration, the type signatures, the autocomplete, the
-  hover docs, the playable documentation examples, and the visual editor
-  bindings are all generated from one annotated function and its KDoc. A
+  hover docs, the visual editor bindings, and the playable documentation
+  examples are all generated from one annotated function and its KDoc. A
   deep dive into the compile-time pipeline the white paper only waves at.
 authors: [ peekandpoke, claude ]
 hero: pipeline.png
@@ -27,7 +27,7 @@ The [white paper](../../whitepaper/klang-whitepaper.html) tells the general Klan
 syntax, Kotlin-shaped standard library, a hand-written interpreter with no `eval` and no host-interop hole
 [[1]](#whitepaper). This post is the deep dive into one sentence of it:
 
-> *"You annotate a Kotlin function with `@Function` / `@Method` /
+> *"You annotate a Kotlin function or object with `@Function` / `@Method` /
 > `@Object`, and the processor generates the stdlib registration, the type
 > signatures, the completion data, and the hover documentation — all from
 > one source of truth."*
@@ -109,18 +109,18 @@ comes out:
    literals.
 2. **Type signatures.** Fed to the expression type inferrer, which is what makes *chained* completion work: after
    `Osc.supersaw(...)` the analyzer knows it holds a `SuperSaw`, offers `.spreadPower()` and `.phasePool()`, and still
-   resolves base methods like `.lowpass()` through a static supertype walk. (The type map has one deliberate hole —
+   resolves base methods like `.lowpass()` through a static supertype walk. (The type map has one intentional hole —
    `Long` is excluded, because it boxes on Kotlin/JS. Even the codegen bows to the audio thread.)
 3. **Completion data.** Names, parameters, defaults, `@category` for grouping, `@tags` for search, `@alias` for
    alternative names.
 4. **Hover documentation** in the editor — the KDoc description and per-param docs, at the call site.
-5. **Documentation pages with playable examples.** Fenced blocks tagged `KlangScript(Playable)` in the KDoc are
+5. **Visual editor bindings.** `@param-tool material
+   SprudelBodySequenceEditor` binds that parameter to a specific visual editing tool in the studio UI — the doc comment
+   wires the GUI.
+6. **Documentation pages with playable examples.** Fenced blocks tagged `KlangScript(Playable)` in the KDoc are
    extracted as typed samples and rendered in the docs UI with **play/stop controls** — and blocks tagged
    `KlangScript(Executable)` get a run button and an output panel. The examples in the manual are not screenshots of
    music; they are music.
-6. **Visual editor bindings.** `@param-tool material
-   SprudelBodySequenceEditor` binds that parameter to a specific visual editing tool in the studio UI — the doc comment
-   wires the GUI.
 
 ## 4. Why compile time is the point
 

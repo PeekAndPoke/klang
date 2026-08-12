@@ -38,11 +38,11 @@ apologetic. The pattern was random. Blind listening reviews kept flagging it wit
 *"weak, hollow, phasey onsets"*, *"some notes have bass, some don't."* Played loud, it felt like the house was shaking —
 not in the good way. In the unpredictable way.
 
-We measured it before theorizing. Render the *same E2 note 120 times* in isolation, then track the level of the
-fundamental (82 Hz) in each note's steady state:
+We measured it before theorizing. Render the *same E2 note 120 times* in isolation, then track the fundamental-band
+level (82 Hz) over each note's first 400 ms — the strike, where the ear decides whether a note happened:
 
 - spread across identical notes: **σ = 6.0 dB**, full range **30 dB**
-- **18% of notes stuck more than 6 dB below the median** — for their entire duration
+- **18% of notes landing more than 6 dB below the median**
 - and a note born hollow stayed hollow: early-vs-steady correlation r ≈ 0.6
 
 The rest of the spectrum was fine — broadband onset level varied by barely 1 dB. Only the fundamental gambled. Here is
@@ -55,12 +55,14 @@ note to note like a faulty neon sign, while the upper harmonics stay steady. Bot
 
 ## 2. Why it happens: eleven arrows, summed nose-to-tail
 
-A supersaw is N slightly-detuned sawtooth voices — eleven, in our patch. Each voice starts at a random phase; that
+A supersaw is N slightly-detuned sawtooth voices — eleven at the time of the hunt; the shipped patch later settled on
+nine, which barely moves the statistics. Each voice starts at a random phase; that
 randomness is deliberate and old (Roland's JP-8000 established the recipe, and Szabó's classic analysis
 [[1]](#szabo2010) documents the architecture). Random phases are what make the ensemble *lush* instead of a
 single fat saw.
 
-But the fundamental of the summed ensemble is the **vector sum of eleven unit phasors** — eleven arrows, each pointing
+But the fundamental of the summed ensemble is the **vector sum of eleven gain-weighted phasors** — eleven arrows, each
+pointing
 in a random direction, chained nose-to-tail. Sometimes the chain marches outward: loud, full fundamental. Sometimes it
 curls into a circle and lands back at the origin: the fundamental *cancels itself*, and the note plays without its
 lowest harmonic.
@@ -71,7 +73,7 @@ lowest harmonic.
 
 And the cruel detail that turns a curiosity into a defect: **at low pitch the arrows barely rotate.** The voices'
 detunes are fractions of a semitone, so at E2 the phasor configuration takes 8–60 seconds to reshuffle — against a 130
-ms note. Each note is born with a face and dies wearing it. High notes escape (the same detunes are 4× faster per
+ms note. Each note is born with a face and dies wearing it. High notes escape (the same detunes beat 2× faster per
 octave); the low riff takes the lottery at full odds, note after note after note.
 
 The statistics are textbook: the magnitude of a random phasor sum follows a Rayleigh law,
@@ -81,7 +83,8 @@ P(K < k) = 1 − exp(−k² · N_eff)        N_eff = (Σg)² / Σg²
 ```
 
 where K is the fundamental's coherence (0 = cancelled, 1 = perfectly aligned)
-and N_eff counts the effectively contributing voices. For our gain profile, N_eff ≈ 10.5 — which predicts 16–21% of
+and N_eff counts the effectively contributing voices. For the patch's center-weighted gain profile (`sideAtten 0.5`),
+N_eff ≈ 10.5 — which predicts 16–21% of
 notes below the audible-hole threshold. We had measured 18%. When a one-line formula reproduces your bug rate, you can
 start trusting its predictions.
 
@@ -105,8 +108,8 @@ low crest factor was never a musical objective. Nobody tuned these for how a not
 **And then there's telecommunications.** An OFDM radio signal is a sum of many carriers with data-dependent phases —
 mathematically the *same object* as our unison ensemble — and radio engineers suffer the same Rayleigh statistics as a
 peak-to-average-power problem. Their standard fix, **Selected Mapping**
-[[3]](#baeuml1996), is disarmingly simple: generate several candidate phase mappings, evaluate each, transmit
-the best one. It has been in production since 1996. Two industries away, the solution to our problem had been running
+[[3]](#baeuml1996), is disarmingly simple: generate several candidate phase mappings, evaluate each, transmit the best
+one. It has been in the literature since 1996. Two industries away, the solution to our problem had been running
 for thirty years — nobody had told the synthesizers.
 
 ## 4. The bridge: scoring a note before it exists
@@ -131,8 +134,8 @@ deliberately hollow pad that breathes into existence.)
 
 ![Rayleigh model vs measurement](rayleigh-model.png)
 
-*Fig. 3 — the Rayleigh law for a single draw (red) and for best-of-five selection (green), with the measured hole rates
-from Section 5.*
+*Fig. 3 — the Rayleigh law for a single draw (red) and for best-of-5 selection (green), with the measured hole rates
+from the results below (§6). The best-of-5 curve is tail-equivalent to the banded selection actually shipped.*
 
 ## 5. The wave-pool
 
@@ -146,12 +149,13 @@ The full mechanism, as shipped:
    the piece, holding separate pools, slowly develop separate characters.
 3. **Evolution without decay.** Every ~10th note, a fresh banded draw replaces a **random** pool entry — not the worst
    one. Evicting the worst would homogenize the pool toward the band center; random eviction keeps it a fair rolling
-   sample forever. The vocabulary fully renews every ~20 minutes of playing: the instrument drifts, the quality floor
-   doesn't.
+   sample forever. The vocabulary fully renews every ~5 minutes at the shipped defaults (256 entries, a fresh draw
+   every ~10th note, ~8 notes/s).
 4. **Warm from the first note.** Because scoring is analytic, the pool doesn't need play-time to fill — a work-capped
    warmup seeds it at creation, and top-ups cost microseconds. (An early "eagerly fill everything at load"
    design measured up to 292 ms of render-callback stall and was replaced by the amortized fill.)
-5. **Off by default.** `phasePool` ships disabled; the engine without it is bit-identical to before.
+5. **Off by default.** `phasePool` ships disabled; the engine without it consumes the RNG stream identically to before,
+   pinned by a golden spec.
 
 The DSL surface is one call:
 
@@ -168,7 +172,8 @@ coherence K isn't the low end of the note, it's the entire note.
 
 ## 6. Results
 
-The validation harness renders the same E2 120 times and measures each note's steady fundamental. Pool off vs on, same
+The validation harness renders the same E2 120 times and measures each note's fundamental during the strike. Pool off vs
+on, same
 patch, same engine, same day:
 
 | metric                      | pool off | pool on     |
@@ -179,21 +184,25 @@ patch, same engine, same day:
 | holes (> 6 dB below median) | 18%      | **3%**      |
 | hollow notes persist (r)    | 0.60     | 0.37        |
 
+(The steady tail improves less than the strike does — the pool's guarantee lives at note-on.)
+
 ![Distribution of the fundamental, before and after](fundamental-distribution.png)
 
 *Fig. 4 — 120 identical notes each. The left tail — the hollow notes — is where the lottery lived.*
 
 ![Onset waveforms](onset-waveforms.png)
 
-*Fig. 5 — the extremes of each condition. Grey: the full waveform — nearly identical in every panel, which is exactly
+*Fig. 5 — the extremes of each condition. Gray: the full waveform — nearly identical in every panel, which is exactly
 why the defect resisted every level-based diagnosis. Color: the 82 Hz fundamental extracted from it. Before:
 present in one note, absent in its identical twin. After: the weakest and strongest notes are siblings.*
 
 And the part no measurement can certify but ears can: the low guitar finally *punches*, every time. The high melody —
 fifteen unison voices, dense fast lines, essentially all onsets — cleaned up too, which the theory had undersold:
 coherence time scales with pitch, but the *attack moment* is governed by the draw at every pitch, and a melody is made
-of attack moments. Full-mix spectra with the pool on and off differ by less than 0.3 dB in every band: the consistency
-costs nothing in balance, and the steady-state texture — the lushness the randomness exists to provide — is untouched.
+of attack moments. On the full song (Der Schmetterling, pool on vs off, same day) the measured spectral difference
+stayed under 0.3 dB in every 1/3-octave band — the voice chains' distortion and tracking highpass absorb the documented
+single-voice low-end lift of ~2 dB — that lift is why the engine still ships the feature off by default with a retrim
+advisory. And the steady-state texture — the lushness the randomness exists to provide — is untouched.
 
 ## 7. What's still open
 

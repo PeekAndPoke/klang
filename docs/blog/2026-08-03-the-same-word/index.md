@@ -1,12 +1,12 @@
 ---
 title: "The Same Word Must Mean the Same Thing"
-subtitle: "A 10× bug, and the DSL design principle it bought us"
+subtitle: "An order-of-magnitude bug, and the DSL design principle it bought us"
 date: 2026-08-03
 slug: the-same-word
 tags: [ dsl, design, parameter-parity, klang ]
 summary: >
   The same roomSize value produced a one-second reverb tail on an orbit and a
-  twelve-second tail on the master bus. The fix took an afternoon; the
+  twelve-and-a-half-second tail on the master bus. The fix took an afternoon; the
   principle it crystallized now audits every parameter in the engine — and it
   includes a rule for the exceptions.
 authors: [ peekandpoke, claude ]
@@ -16,7 +16,7 @@ status: draft
 
 # The Same Word Must Mean the Same Thing
 
-*A 10× bug, and the DSL design principle it bought us.*
+*An order-of-magnitude bug, and the DSL design principle it bought us.*
 
 ## 1. The bug
 
@@ -25,7 +25,7 @@ reverb landed on both buses. Same effect, same parameter name, same value:
 
 ```javascript
 // per-orbit:
-pattern.room("0.5:8:0.1")            // roomSize = 8
+pattern.room("0.5:8")                 // roomSize = 8
 
 // master bus:
 master(Master.of(MasterFx.reverb().roomSize(8)))
@@ -72,7 +72,7 @@ The part that keeps the principle honest: some asymmetries are **correct**, and 
 just converts them into perpetual "fix" attempts.
 
 The canonical one: the master bus's house limiter runs 5 ms of lookahead; the authored `MasterFx.limiter()` runs
-**zero** — deliberately. A lookahead limiter delays the signal it protects. On the summed master that delay is uniform
+**zero** — by design. A lookahead limiter delays the signal it protects. On the summed master that delay is uniform
 and harmless; on a per-playback limiter it would shift that playback late against every other one, a silent timing bug
 that reads as "my drums feel loose." Same word, *justifiably* different behavior.
 
@@ -90,5 +90,5 @@ limiter's ceiling:
 - divergences either get fixed **before anything ships on top of them**, or get documented and **asserted by a test**;
 - and when a parameter can't keep a promise on some surface, it shouldn't exist there at all.
 
-An afternoon of fixing, a permanent line item in every review since. Cheap at ten times the price — which, fittingly, is
-what the bug cost.
+An afternoon of fixing, a permanent line item in every review since. Cheap at ten times the price — and this bug,
+fittingly, charged twelve and a half.

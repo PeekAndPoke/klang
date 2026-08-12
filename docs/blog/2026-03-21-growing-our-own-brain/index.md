@@ -80,7 +80,8 @@ across `struct`, masks, and cycle boundaries is where a reimplementation quietly
 a red diff, case by case, until the semantics matched.
 
 Meanwhile the language itself grew underneath: **KlangScript**, a JavaScript-ish interpreter written in Kotlin (parser
-on `better-parse`), with a Kotlin-interop registration layer that a KSP processor eventually made nearly
+then on `better-parse`; since replaced by a hand-rolled recursive-descent one for Kotlin/JS production builds), with a
+Kotlin-interop registration layer that a KSP processor eventually made nearly
 boilerplate-free. The pattern engine became a library *inside*
 that language rather than a runtime beside it.
 
@@ -96,7 +97,7 @@ pattern semantics change. Independence didn't mean burning the bridge; it meant 
 
 ## 5. What it bought, in hindsight
 
-Every quarter since has cashed cheques this one wrote. The IDE features, intellisense, and named parameters of Q2 exist
+Every quarter since has cashed checks this one wrote. The IDE features, intellisense, and named parameters of Q2 exist
 because the interpreter is ours. Sound definitions, oscillators, and eventually whole engine pipelines became *language
 objects* because the language could be extended freely. The browser dropped its last dependency on Strudel-JS. And the
 verification habit — never trust a reimplementation without an executable oracle, grade the diff, make time exact —

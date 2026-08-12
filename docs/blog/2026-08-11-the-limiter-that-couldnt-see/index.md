@@ -6,8 +6,7 @@ slug: the-limiter-that-couldnt-see
 tags: [ engine, dsp, limiter, mastering, klang ]
 summary: >
   Every loud kick left the master stage as a hard-clipped burst — the limiter
-  enforced its ceiling with a clip, not with gain. Adding lookahead alone made
-  it worse-informed rather than faster. The fix is a construction borrowed
+   enforced its ceiling with a clip, not with gain. Adding lookahead alone warned it earlier without making its gain any faster. The fix is a construction borrowed
   from a 2022 Signalsmith article: moving-minimum, release, two box filters,
   and a delay — plus a dual release we kept for an unexpected reason.
 authors: [ peekandpoke, claude ]
@@ -31,14 +30,15 @@ stage had a limiter, and the limiter had a ceiling, and the ceiling was being en
 Klang's compressor was feed-forward with **zero lookahead**: the detector saw each sample at the same instant the gain
 stage did. Against a fast transient that is simply too late — measured on the real `Compressor` with the master stage's
 own constants, a 55 Hz kick at +18 dB over the ceiling passed through with the gain *still at exactly 0.00 dB one
-millisecond in*. The ceiling was enforced by the hard clip that sits after the limiter as a last resort:
+millisecond in* — the detector's smoothed envelope had not yet crossed threshold. The ceiling was enforced by the hard
+clip that sits after the limiter as a last resort:
 
-| kick peak in | peak out        | hard-clipped for |
-|--------------|-----------------|------------------|
-| 0 dBFS       | −0.33 dBFS      | 0 ms             |
-| +6 dBFS      | **+5.67 dBFS**  | **3.99 ms**      |
-| +12 dBFS     | **+11.67 dBFS** | **5.22 ms**      |
-| +18 dBFS     | **+17.67 dBFS** | **5.90 ms**      |
+| kick peak in | peak out (pre-clip) | hard-clipped for |
+|--------------|---------------------|------------------|
+| 0 dBFS       | −0.33 dBFS          | 0 ms             |
+| +6 dBFS      | **+5.67 dBFS**      | **3.99 ms**      |
+| +12 dBFS     | **+11.67 dBFS**     | **5.22 ms**      |
+| +18 dBFS     | **+17.67 dBFS**     | **5.90 ms**      |
 
 Every loud transient was a 2–6 ms square-edged burst — and the window *grew*
 with the amount of limiting, which is exactly what "it knocks when it has to limit a lot" had been telling us.
@@ -50,7 +50,7 @@ doing the limiter's job.*
 
 ## 2. The obvious fix doesn't work
 
-"Add lookahead" sounds like one parameter. It is not. Delaying the signal so the detector sees the future does nothing
+"Add lookahead" sounds like one parameter. It is not. Delaying the signal so the detector sees the future is not enough
 by itself — the gain still moves through the same too-slow attack. Measured, +12 dB kick, 1 ms one-pole attack:
 
 | lookahead | delay only  | + running-max detector |
@@ -59,6 +59,8 @@ by itself — the gain still moves through the same too-slow attack. Measured, +
 | 1.5 ms    | +11.67      | +10.16 — still clips   |
 | 3.0 ms    | +4.86       | +1.57 — still clips    |
 | 5.0 ms    | +3.64       | 0.00 — still clips     |
+
+(The ceiling sits at −0.35 dBFS, so a 0.00 dBFS peak is still a clip.)
 
 A one-pole with τ = 1 ms needs several τ to settle; it cannot reach full reduction inside any sane window regardless of
 how early it is warned. Three things must change *together*: a delay line, a detector that looks across the whole
@@ -101,7 +103,8 @@ box(held) ≤ required`.
 With 5 ms of lookahead and the construction above, the +12 dB kick exits at **−0.37 dBFS with zero samples clipped**
 (the old path: +11.67 dBFS, 5.22 ms of clipping). The knock is gone — confirmed by ear the same day. One honest
 boundary: at ratio 20:1 the residual above threshold is `overshoot/ratio`, so around +20 dB over ceiling the "brickwall"
-admits fractions of a dB and the hard clip quietly returns as the true last resort. That bound is arithmetic, not a bug,
+admits up to a full decibel and the hard clip quietly returns as the true last resort. That bound is arithmetic, not a
+bug,
 and it is documented rather than hidden.
 
 Then the by-ear pass found the *next* problem: with clean catches came a **pump** — the bed stayed ducked between kicks,
@@ -118,7 +121,7 @@ that handles the residual — instant down, quick up.
 ![Release recovery, simulated](dual-release.png)
 
 *Fig. 3 — why the bed never came back between kicks: a single exponential release crawls in its last dB. The dual
-release snaps back and sits at zero.*
+release snaps back and sits at zero. (simulation).*
 
 And here is the honest punchline: when we A/B'd it level-matched on material built to be maximally unkind, the audible
 pump difference was *"really subtle."* **The dual release shipped anyway — for the loudness.** At an identical output
@@ -133,8 +136,9 @@ non-fundamental energy on a sustained low sine (catches release misbehavior the 
 itself as a signal**
 (max |Δgain| per sample — the C⁰ corner is instantly visible there and invisible everywhere else), and a ramp-length
 invariance sweep (a correct construction must produce the *same* peak at any smoothing length; any difference is a shape
-bug). All three are now in the test suite, and the suite is mutation-checked — collapsing the dual release back to a
-single branch turns it red.
+bug). The invariance sweep now guards the suite alongside the dual-release test ("the bed recovers between kicks"), both
+mutation-checked — collapsing the dual release back to a single branch turns the suite red. The other two remain
+development-harness measurements for now, with the gain-trajectory probe first on the wishlist.
 
 One asymmetry is deliberate and spec-pinned: **only the house limiter has lookahead by default.** An authored,
 per-playback limiter with latency would delay its playback against every other one — so the authored
@@ -142,6 +146,8 @@ per-playback limiter with latency would delay its playback against every other o
 default, not a wall: the knobs are there — `MasterFx.limiter().lookahead(seconds).attack(seconds)` — for anyone who
 wants the clean catches on an authored chain and accepts the latency that comes with them (capped at 50 ms, since
 lookahead is the one parameter that sizes a buffer on the audio thread).
+
+The limiter can see now. What it watches over is the same song — just one decibel more of it.
 
 ---
 
