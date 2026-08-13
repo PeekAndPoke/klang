@@ -14,5 +14,9 @@
   archive-not-delete, 6-drop roadmap, HN at drop #3, saved 2026-04-15
 - [Brand architecture: Klang vs Motör](project_brand_architecture_klang_motor.md) — Motör=engine/behind-glass,
   Klang=consumer; "Klang" crowded/weak in audio; klang.art registered; filing guidance, 2026-07-09
+- [Engine renamed to Klangmotör](project_klangmotor_naming_decision.md) — DECIDED 2026-08-13: "Klang Audio Motör" →
+  **Klangmotör** (ASCII `klangmotor`); why the ö stays; ruled-out variants; open clearance
 - [Motörhead trademark risk](project_motorhead_trademark_risk.md) — Verified: Kilmister Trust holds MOTÖRHEAD; why
   "Motör Hits"→"Klang Hits"; app-store takedown is the acute risk, 2026-07-09
+- [Contributor prospects](reference_contributor_prospects.md) — LIVING list of music-software makers to approach
+  (klangmeister/ctford, Strudel, Sonic Pi, ktmidi…); no outreach until launch gate, started 2026-08-13

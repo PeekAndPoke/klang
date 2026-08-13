@@ -44,11 +44,21 @@ The release-defining set, regardless of when they're sequenced:
    Author per-orbit effect chains from KlangScript — the counterpart to the Ignitor/Pipeline DSLs.
    ⚠️ Q3 lists Katalyzers in the *lower* track; you've flagged it must-have. Reads as an Act-1
    engine-authoring item. → wants its own task doc.
-4. **SHOULD** · **Resource warehouse pool** — [`resource-warehouse-pool.md`](resource-warehouse-pool.md) 🔴
+4. **SHOULD** · **Resonator swing** — [`resonator-swing.md`](resonator-swing.md) 🔴 *(designed 2026-08-12)* — *cheap
+   win, sound first*
+   `body()` / `vowel()` are fully static — fixed freq/Q per band, a purely linear `SvfBPF`, and even
+   `ParallelMixFilter.dryGain` precomputed. A fixed EQ curve, identical for every note and every dynamic; the user's
+   words are *"these combs feel hard, they need some movement."* Fix: each band's centre frequency swings off-centre as
+   energy accumulates in it (measured from the band output already computed in the loop) and relaxes back. **Needs zero
+   filter changes** — `BaseSvf.setCutoff` already recomputes and 32-sample-ramps every coefficient, exactly as
+   `FilterModRenderer` drives the voice filter each block. One `tan()` per band per block, **once per orbit**. Strength
+   in cents via `ANALOG_CENT_PER_MUL`; `swing = 0` is a bit-identical opt-out. Sits directly under item 3 — body/vowel
+   are Katalyst effects, so the authoring surface lands there.
+5. **SHOULD** · **Resource warehouse pool** — [`resource-warehouse-pool.md`](resource-warehouse-pool.md) 🔴
    Self-balancing pool for expensive per-engine resources (~7.68 MB delay rings, cylinders); kills the
    audible first-note alloc spike (the "Der Schmetterling" stutter). Q3 schedules it **last**. (Audible
    quality — arguably a MUST; parked-last by Q3.)
-5. **SHOULD** (→ MUST before launch) · **Audio backend audit** — [
+6. **SHOULD** (→ MUST before launch) · **Audio backend audit** — [
    `audio-backend-audit.md`](audio-backend-audit.md) 🔴 *(planned 2026-08-04, not started)*
    Every `audio_be` test was written **without a mutation check** and every file was built with a **single review
    round** — the Master DSL then needed 5 rounds, each finding defects in the previous round's fixes, and turned up 3
@@ -56,7 +66,7 @@ The release-defining set, regardless of when they're sequenced:
    fix+guard, per subsystem, by hand (automation rejected with evidence: the DSP hot path is fully inlined). **Pilot
    `voices/` first, then re-decide.**
    Ledger in `docs/audio-audit/`. Multi-session; designed to survive interruption.
-6. ✅ **DONE 2026-08-12** · **Unison phase pool** — banded start-phase selection + per-orbit pools kill the
+7. ✅ **DONE 2026-08-12** · **Unison phase pool** — banded start-phase selection + per-orbit pools kill the
    super-oscillator "fundamental lottery" (onset holes 16 % → 0, never-rings 6/120 → 0, texture untouched).
    OFF by default; per-song opt-in via one combined `.phasePool(...)` call (per-family band defaults kept by
    user by-ear decision). 7 commits (`6c95de65`…`9a0cdb37`), 10+ review rounds, ~65 findings fixed, every new
@@ -67,54 +77,54 @@ The release-defining set, regardless of when they're sequenced:
 
 > Q3 mandate: **fix the current set first → build a stringent through-line → then expand.**
 
-7. **MUST** · **Fix the current tutorial set + through-line** — [
+8. **MUST** · **Fix the current tutorial set + through-line** — [
    `tutorial-fix-and-through-line.md`](tutorial-fix-and-through-line.md) 🔴
    The 38 shipped tutorials have ugly-sounding examples and miss the *core* of what they teach; the
    basics → crafted-sound path isn't coherent. Lean on the music-writing/recording skills + tutorial
    factory (sound first). → wants its own task doc.
-8. **SHOULD** · **Mini-notation attribute-blocks tutorial (+ Phase 2 series)** — [
+9. **SHOULD** · **Mini-notation attribute-blocks tutorial (+ Phase 2 series)** — [
    `mini-notation-extensions.md`](mini-notation-extensions.md) 🟡
    Phase 1 (`{key=value}` engine feature) shipped, so this tutorial is a clean, high-value fit. Phase 3
    (MIDI → mini-notation recording) stays future/NICE.
-9. **NICE** · **Tutorial expansion backlog** — [`tutorial-master-plan.md`](tutorial-master-plan.md) 🟡
+10. **NICE** · **Tutorial expansion backlog** — [`tutorial-master-plan.md`](tutorial-master-plan.md) 🟡
    The recast "expand" backlog (euclid, struct/mask, swing, sometimes-family, orbits, pattern-math,
    off/echo/stut, FM/super-osc masterclasses, "Make a…" showcases). Rises to **SHOULD** after the
    fix-first pass lands.
 
 ## Supporting / enabling (pull in as they unblock the acts above)
 
-10. **SHOULD** · **Intellisense: wire the linter stub** — [`klangscript-intellisense.md`](klangscript-intellisense.md)
+11. **SHOULD** · **Intellisense: wire the linter stub** — [`klangscript-intellisense.md`](klangscript-intellisense.md)
    🟡 — *cheap win*
    The CodeMirror `linterSource` is a `[]` stub; wiring it to `AnalyzedAst.diagnostics` immediately
    surfaces the already-built named-arg checker. Low effort, improves tutorial-authoring UX. (Full
    analyzer tiers + web worker are NICE.)
-11. **SHOULD** · **`snd*` sound-function surface redesign** — [
+12. **SHOULD** · **`snd*` sound-function surface redesign** — [
    `sprudel-sound-function-surface.md`](sprudel-sound-function-surface.md) 🔴
    Real DSL debt (per-param patternable sound selection); unblocked now that named args exist.
-12. **NICE** · **Sprudel editor tools backlog** — [`sprudel-ui-tools.md`](sprudel-ui-tools.md) 🟡
+13. **NICE** · **Sprudel editor tools backlog** — [`sprudel-ui-tools.md`](sprudel-ui-tools.md) 🟡
     ~16 param editors still unwired; aids the tutorial quarter.
-13. **NICE** · **Named-args docs polish** — [
+14. **NICE** · **Named-args docs polish** — [
     `klangscript-named-args-docs-polish.md`](klangscript-named-args-docs-polish.md) 🔴
     Usage-styles panel, KDoc conventions + `@sample` sweep. Small remainder of a done feature.
 
 ## Lower / opportunistic (Q3 "likely, lower priority")
 
-14. **SHOULD** · **Soundfont looping bug** — [`soundfont-looping-investigation.md`](soundfont-looping-investigation.md)
+15. **SHOULD** · **Soundfont looping bug** — [`soundfont-looping-investigation.md`](soundfont-looping-investigation.md)
     🔴
     Sustained soundfont instruments loop incorrectly (correctness bug); matters if they feature in tutorials.
-15. **SHOULD** · **Code-quality H3** (block-editor loop drop) — [`code-quality-review.md`](code-quality-review.md) 🟡
+16. **SHOULD** · **Code-quality H3** (block-editor loop drop) — [`code-quality-review.md`](code-quality-review.md) 🟡
     The only user-visible item on that list; blocks round-trip drops loop/break/continue.
-16. **NICE** · **Filter-envelope curve config** (`lpadsrCurves`) — [
+17. **NICE** · **Filter-envelope curve config** (`lpadsrCurves`) — [
     `filter-envelope-configuration.md`](filter-envelope-configuration.md) 🔴
     Engine / by-ear feature; well-scoped, not started.
-17. **NICE** · **Constant-control fast-path** — [`constant-control-fast-path.md`](constant-control-fast-path.md) 🔴
+18. **NICE** · **Constant-control fast-path** — [`constant-control-fast-path.md`](constant-control-fast-path.md) 🔴
     Optional sprudel perf; modest (~7% of query frame) after the VoiceData grouping. Measure-first.
-18. **NICE** · **JS bundle §1 (KSP-registration de-bloat)** — [`reduce-js-bundle-size.md`](reduce-js-bundle-size.md) 🔴
+19. **NICE** · **JS bundle §1 (KSP-registration de-bloat)** — [`reduce-js-bundle-size.md`](reduce-js-bundle-size.md) 🔴
     ~1.2–1.6 MB win, no UX tradeoff; but "hard performance" is deliberately parked late-game.
-19. **NICE** · **Sprudel test-coverage sweep** — [
+20. **NICE** · **Sprudel test-coverage sweep** — [
     `sprudel-test-coverage-and-review.md`](sprudel-test-coverage-and-review.md) 🟡 — *ongoing, user-paced*
     Form-(d) chained-mapper cases; done opportunistically as files are touched.
-20. **NICE** · **Voice culling** — [`voice-culling.md`](voice-culling.md) 🔴
+21. **NICE** · **Voice culling** — [`voice-culling.md`](voice-culling.md) 🔴
     Sound-preserving, all-platform CPU win: terminate voices whose *real output* has decayed below −80 dB
     (ignitor-agnostic — no ADSR inference; gated by a per-voice `cullAfter` life-fraction). Reclaims wasted
     silent-tail rendering on dense `sustain=0` sections (Der Schmetterling). Complements the orbit-body move;

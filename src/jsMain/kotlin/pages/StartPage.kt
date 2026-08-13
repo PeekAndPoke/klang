@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -382,7 +382,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        JoinedPageTitle { listOf("KLANG", "AUDIO", "MOTÖR") }
+        JoinedPageTitle { listOf("KLANGMOTÖR") }
 
         div {
             key = "start-page"
@@ -569,7 +569,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 marginBottom = 32.px
             }
 
-            // Title "KLANG AUDIO MOTÖR" is engraved into the MotorBackground plate
+            // Title "KLANGMOTÖR" is engraved into the MotorBackground plate
             // itself — rendered via the normal map, not as DOM text.
 
             // Pre-alpha sub-headline

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -624,7 +624,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "The whole audio engine — everything that turns patterns into sound.",
-        detail = "The Klang Audio Motör is the runtime that processes your music. " +
+        detail = "The Klangmotör is the runtime that processes your music. " +
                 "It contains Cylinders, each running their own signal chain. " +
                 "The engine metaphor runs deep: Fuel is Injected, Ignitors spark the sound, " +
                 "Katalysts refine it, and Fusion produces the final output. " +

@@ -38,7 +38,7 @@ Files changed:
 - `src/jsMain/kotlin/utils/VersionController.kt` — `Stream<AppVersion>` global (injected-global → fetch fallback).
 - `src/jsMain/kotlin/index.kt` — `val version = VersionController()`.
 - `src/jsMain/kotlin/pages/StartPage.kt` — bottom-left corner stamp (`subscribingTo(version)`).
-- `src/jsMain/kotlin/comp/Motoer.kt` — native `title` tooltip on "KLANG AUDIO MOTÖR" (`subscribingTo(version)`).
+- `src/jsMain/kotlin/comp/Motoer.kt` — native `title` tooltip on "KLANGMOTÖR" (`subscribingTo(version)`).
 
 **Divergences from the plan below (all deliberate):**
 
@@ -304,7 +304,7 @@ or `gitRev`. Render nothing while `!info.isAvailable`.
 
 ### 5. Display surface B — `Motoer` hover
 
-In `comp/Motoer.kt`, the `"KLANG AUDIO MOTÖR"` title (`Motoer.kt:115-147`) should reveal the **full**
+In `comp/Motoer.kt`, the `"KLANGMOTÖR"` title (`Motoer.kt:115-147`) should reveal the **full**
 build info on hover. Two ways, pick one:
 
 - **Lightweight (matches FullscreenController-style state):** add `onMouseEnter`/`onMouseLeave` on the
@@ -327,7 +327,7 @@ subscribes, so it redraws when the data loads.
 - [x] `VersionController : Stream<AppVersion>` loads the data **independent of origin** (injected global →
   fetch fallback) and is instantiated once in `index.kt` next to `fs`.
 - [x] StartPage shows a subtle version stamp in the bottom-left corner (renders nothing until loaded).
-- [x] Hovering "KLANG AUDIO MOTÖR" in `Motoer` reveals the full build info (native `title` tooltip).
+- [x] Hovering "KLANGMOTÖR" in `Motoer` reveals the full build info (native `title` tooltip).
 - [x] Both surfaces consume the data via `subscribingTo(version)` and redraw when it arrives.
 - [x] Non-git / fresh-checkout builds degrade gracefully (`"n/a"` fields, no build failure).
 - [ ] **By-eye check in browser** still pending (corner stamp position/opacity, tooltip contents).

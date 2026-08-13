@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -468,7 +468,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Renders "KLANG AUDIO MOTÖR" with a tilt-back projection so it sits on the
+     * Renders "KLANGMOTÖR" with a tilt-back projection so it sits on the
      * same plane as the brushed-metal scratches (which radiate from a focal point
      * above). The text is drawn into an off-screen buffer at full size, then
      * blitted back row-by-row with a horizontal taper (top narrower) and a
@@ -494,7 +494,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val bctx = buf.getContext("2d") as CanvasRenderingContext2D
         bctx.fillStyle = fillStyle
         applyTitleTextStyle(bctx, height)
-        bctx.fillText("KLANG AUDIO MOTÖR", width / 2.0, bufH / 2.0)
+        bctx.fillText("KLANGMOTÖR", width / 2.0, bufH / 2.0)
 
         // Tilt-back: top tapers (further away) and overall height compresses;
         // pivot at the bottom edge so the baseline stays put. Tuned to match
@@ -555,7 +555,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Pre-renders "KLANG AUDIO MOTÖR" into a soft-edged alpha mask the size of the
+     * Pre-renders "KLANGMOTÖR" into a soft-edged alpha mask the size of the
      * normal map. Returns a DoubleArray where 1.0 = deep inside text, 0.0 = plain metal.
      * The gradient of this field is used to carve engraving bevels into the plate.
      */
@@ -598,7 +598,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
      * so lighting reveals long horizontal scratches), combined with per-pixel grain
      * and a slow lateral wobble so the brush isn't perfectly straight.
      *
-     * The "KLANG AUDIO MOTÖR" text engraving still lives in this same normal map —
+     * The "KLANGMOTÖR" text engraving still lives in this same normal map —
      * its alpha mask's gradient perturbs normals at the letter edges, and inside the
      * letter body the brushed pattern is replaced by a stepped hammered-grain noise.
      */
@@ -665,7 +665,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 var ny = perpY * brushTilt + grainY
                 var nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
 
-                // Engrave "KLANG AUDIO MOTÖR" into the plate using the text alpha gradient.
+                // Engrave "KLANGMOTÖR" into the plate using the text alpha gradient.
                 // Inside the text body, keep a small fraction of the mosaic micro-variation
                 // so light still plays across the letters; at the edge apron (blurred
                 // transition band) push normals INTO the letter so the edges read as a
