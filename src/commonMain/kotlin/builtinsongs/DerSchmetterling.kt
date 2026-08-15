@@ -30,7 +30,7 @@ let supersawHp = (() => {
   // --- pitch-tracking highpass -------------------------------------------
   let pPresenceHz = Osc.param("presenceHz", 2500.0,   "Presence frequency")
   let pPresence   = Osc.param("presence",      4.2,   "Presence amount")
-  let pHpTrack    = Osc.param("hptrack",       1.5,   "Highpass cutoff as a multiple of the note frequency")
+  let pHpTrack    = Osc.param("hptrack",       1.4,   "Highpass cutoff as a multiple of the note frequency")
   let pHpQ        = Osc.param("hpq",           0.507, "Highpass resonance")
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
@@ -40,7 +40,7 @@ let supersawHp = (() => {
     .analog(pAnalog).spreadPower(1.2).sideAtten(0.2).gainJitter(0.20).centerJitter(0.20)
     // Simulate plucked string, add noise burst
     .pitchEnvelope(0.2, 0.001, 0.03)
-    .plus(Osc.whitenoise().highpass(2000).adsr(0.001, 0.03, 0.0, 0.005).mul(0.13))
+    .plus(Osc.whitenoise().highpass(2000).adsr(0.001, 0.03, 0.0, 0.005).mul(0.14))
     // Distort
     .distort(0.3, "hard", 4)
    
@@ -71,7 +71,7 @@ stack(
       .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
       .gain(0.5).postgain(0.145).velocity("0.98 0.95!7 0.97 0.95!7".fast(2))  // . solo()
       .sound(supersawHp).unison(15).spread(0.07).oscp("presenceHz", 2700)  
-      .clip("<0.95!31 0.85 0.95!31 0.87 0.95!30 0.85 0.89>".fast(2)).adsr("0.007:4.5:0.0:0.020")    
+      .clip("<0.95!31 0.85 0.95!31 0.87 0.95!30 0.85 0.89>".fast(2)).adsr("0.007:4.5:0.0:0.021")    
       //.hpf(800).lpf(5500).lpe(0.5).lpq(0.707)
       .pan(0.15).superimpose(pan(0.85)).body("violin").bodyMix(0.5).compressor("-15:2:6:0.01:0.2")
     , // Guitar 2
@@ -90,7 +90,7 @@ stack(
       .orbit(2).scale("<e2:minor>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // . mute()
       .gain(0.5).postgain(0.135).velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
       .sound(supersawHp).unison(11).spread(0.10).oscp("presenceHz", 2300)
-      .clip("<0.95!31 0.85 0.95!31 0.93 0.95!30 0.85 0.89>".fast(2)).adsr("0.003:4.5:0.0:0.020")    
+      .clip("<0.95!31 0.85 0.95!31 0.93 0.95!30 0.85 0.89>".fast(2)).adsr("0.003:4.5:0.0:0.019")    
       // .hpf(100).lpf(5000).lpe(0.5).lpq(0.707)
       .pan(0.70).superimpose(pan(0.30)).compressor("-15:2:6:0.01:0.2")
       .mute("<0!128 1!16 0!16>")
