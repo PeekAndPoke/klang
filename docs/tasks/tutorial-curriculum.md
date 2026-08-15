@@ -101,6 +101,26 @@ The published Prev/Next path interleaves them; each lesson lists main / touches 
 | C9 | Live technique & remixing | mute/solo, live edits, `.oscp()` tweaks, `export`/`import` | — | Remix lesson: import Tetris' `leadPattern` like TetrisRemix does. |
 | C10 | Capstone: a song from zero | everything | — | Build a Sandsturm-lite start to finish — the "worked song". |
 
+### Obligations register (promises earlier lessons made — the named lesson must keep them)
+
+- **A1 (waveforms):** B3 calls sine "the plainest voice" and promises the siblings (saw/square/triangle)
+  "their own lesson soon". A1 must keep that promise and formalize **"voice"** as the standing term for
+  oscillator timbre (B3 introduced it informally).
+- **A2 (ADSR):** B3's finale states each note "holds for its whole step and then stops" and promises
+  shaping attack/fade as "its own lesson in the Sound track". A2 opens from that fact (default sustain
+  is organ-like).
+- **B4 (subdivision):** B1/B2 established counts-vs-steps on the 8-step grid and used "off-beats" for
+  the between-count positions. B4 inherits those terms; don't redefine.
+- **B6 (Layers):** B1 promises "balancing lines with gain() is most of what mixing is" once several lines
+  run; B3's finale says its tune "was written to sit on top of the groove you shaped last lesson". B6
+  should literally combine the B2 groove and the B3 tune as its running example.
+- **B8 (Scales):** B3 introduces sharps/flats (`cs3`/`eb3`, played in "The notes between") and defers
+  "which notes belong together" to the scales lesson; B8 also owes the major/minor mood A/B
+  (`c4 e4 g4` vs `c4 eb4 g4`) descoped from B3.
+- **A6 (unison/thickness):** the word "voice" is taken — B3 established it as the term for oscillator
+  timbre. A6 must disambiguate explicitly: the `unison`/`voices` parameter counts internal copies —
+  call them "unison layers" in prose, never bare "voices".
+
 ### Extras shelf (not on the path)
 
 One-off technique pages, written fresh later as a browsable "fun corner": `morse()`, `swingBy`, `shuffle`,
@@ -128,6 +148,10 @@ sound ok" into something partly checkable. Two tiers:
   ~1 dB of each other. Louder reads as "better" to every human ear; unmatched levels would quietly sabotage
   exactly the ear training we're building.
 - Consistent target loudness across all finales, so browsing the ladder doesn't whiplash.
+- **Authoring loudness targets (set by ear 2026-08-15, after First Notes pierced at the default
+  gain 1.0):** every code block sets an explicit gain — never rely on the default. Bare synth voices
+  (sine etc.) sit at ≈0.5, never above 0.6; drum samples at ≈0.8. Perceived loudness must be level
+  across all tutorials — the render-QA loudness check enforces this parity once it runs.
 - **Audibility check on A/B pairs:** the two renders of a listen-for pair must actually differ (spectral
   distance above a threshold). If the text claims "listen for the buzz" and the renders are near-identical,
   the lesson is teaching an inaudible difference — hard flag.

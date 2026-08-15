@@ -37,8 +37,9 @@ class CodeMirrorTheme {
     /**
      * Selection background — brighter than [KlangTheme.Hex.accent] because the global
      * `::selection` rule turns selected text black, which needs a bright field under it.
+     * Desaturated toward greyish blue to sit in the app's muted palette.
      */
-    val selectionBg = "#7aa6ff"
+    val selectionBg = "#7a95cd"
     val tooltipBackground get() = KlangTheme.Hex.overlayBackground
     val selection get() = KlangTheme.Hex.gold
     val cursor get() = KlangTheme.Hex.accent

@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val derSchmetterlingSong = Song(
     id = "${BuiltInSongs.PREFIX}-der-schmetterling",
     title = "Der Schmetterling",
-    rpm = 36.0,
+    rpm = 34.5,
     icon = "bug",
     code = """import * from "stdlib"
 import * from "sprudel"
@@ -94,23 +94,23 @@ stack(
     , // Bass
     n(`<[0 0 2 4 0 0 -2 -1]!4
         [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 2 4 0  0 -2 -1]!1>/8`).struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.94 0.96 0.94".fast(2))  // . mute()
-      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).distort("0.10:gentle:2").postgain(0.045).clip(0.80)
+      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).distort("0.10:gentle:2").postgain(0.050).clip(0.80)
       .adsr("0.003:4.0:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(25).hpq(0.6).lpf(500).lpe(16).lpq(0.707)  //  .solo()
       .pan(0.35).superimpose(pan(0.75)).mute("<0!128 1!32>").compressor("-15:2:6:0.01:0.2")
   ).transpose(-2)
   , // Drums
   stack(  
     sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").mute("<0!128 1!32>")  // . solo()
-      .pan(0.5).orbit(5).gain(0.18).hpf(25).lpf(13000).adsr("0.000:0.05:0.95:0.2").distort(0.1),
+      .velocity("0.98 0.94 0.96 0.94").pan(0.5).orbit(5).gain(0.18).hpf(25).lpf(13000).adsr("0.000:0.05:0.95:0.2").distort(0.1),
     sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>").mute("<0!128 1!32>") // . solo()
-      .pan(0.5).late(0.0015).orbit(5).pan(0.45).gain(0.17).hpf(80).lpf(15000).lpq(0.5).adsr("0.000:0.05:0.95:0.2")
-      .superimpose(x => x.bandf("225".add(berlin.mul(25).fast(4))).bandq(0.5).vel(1.50)),
+      .pan(0.5).late(0.0015).orbit(5).pan(0.45).gain(0.165).hpf(80).lpf(15000).lpq(0.5).adsr("0.000:0.05:0.95:0.2")
+      .superimpose(x => x.bandf("225".add(berlin.mul(15).fast(4))).bandq(0.5).vel(1.50)),
     sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-      .pan(0.55).late(0.0030).orbit(5).gain(0.22).hpf(800).lpf("14500".add(perlin.mul(500).fast(4))).lpq(0.5).adsr("0.004:0.05:0.95:0.5"), // . mute()
+      .pan(0.55).late(0.0030).orbit(5).gain(0.21).hpf(800).lpf("14500".add(perlin.mul(500).fast(4))).lpq(0.5).adsr("0.004:0.05:0.95:0.5"), // . mute()
     sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(5).gain(0.085).mute("<0!128 1!32>"),
-    sound("<pink ~ pink pink>*16").orbit(5).gain(0.05).hpf(5000).lpf(perlin.range(15000, 16000)).lpq(0.9)
+    sound("<pink ~ pink pink>*16").orbit(5).gain(0.05).hpf(5000).lpf(perlin.range(15000, 16000)).lpq(0.8)
       .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.002:0.12:0.0:0.01") //  .solo()
-  ).room(0.20).rsize(3).rlp(3500).compressor("-15:2:6:0.01:0.2")
+  ).room(0.33).rsize(2).rlp(3500).compressor("-15:2:6:0.01:0.2")
   // Master
   ,master(Master.of(MasterFx.reverb().wet(0.03).damp(0.7).roomSize(7), MasterFx.gain(2.2)))
 ).analog(feel).seed(timeOfDay.mul(10*60*60*24)).shuffle("<1!80 2!48 1!128 2!32>").early(0)

@@ -135,7 +135,12 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                     }
 
                     if (section.text.isNotBlank()) {
-                        p { +section.text }
+                        // Section text uses \n\n as paragraph breaks — render each as its own <p>
+                        section.text.split("\n\n").forEach { paragraph ->
+                            if (paragraph.isNotBlank()) {
+                                p { +paragraph }
+                            }
+                        }
                     }
 
                     if (section.code != null) {

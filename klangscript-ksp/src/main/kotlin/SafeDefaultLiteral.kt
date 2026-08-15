@@ -20,7 +20,8 @@ package io.peekandpoke.klang.script.ksp
  *  - `null`, `true`, `false`
  *  - Number literals (signed, optional decimal, optional exponent, optional
  *    Kotlin suffix `f`/`F`/`l`/`L`/`d`/`D`)
- *  - String literals — `"..."` and `"""..."""` — with no embedded splice/concat
+ *  - String literals — `"..."` and `"""..."""` — with no embedded splice
+ *    (unescaped `$` template marker) and no concat (inner unescaped `"`)
  *  - Char literals — `'.'` or `'\.'`
  *
  * Anything else (qualified references, function calls, expressions) returns
@@ -50,20 +51,25 @@ object SafeDefaultLiteral {
 
         if (NUMBER_LITERAL.matches(trimmed)) return true
 
-        // Triple-quoted raw string — no nested """ inside (would be two adjacent strings).
+        // Triple-quoted raw string — no nested """ inside (would be two adjacent
+        // strings) and no `$` (a template splice would reference enclosing-scope
+        // symbols in the generated file; raw strings cannot escape `$`).
         if (trimmed.startsWith("\"\"\"") && trimmed.endsWith("\"\"\"") && trimmed.length >= 6) {
             val inner = trimmed.substring(3, trimmed.length - 3)
-            if (!inner.contains("\"\"\"")) return true
+            if (!inner.contains("\"\"\"") && !inner.contains('$')) return true
         }
 
-        // Regular string literal — closing quote must be the trailing char and
-        // no other unescaped " can appear inside (which would mean concatenation).
+        // Regular string literal — closing quote must be the trailing char, no
+        // other unescaped " inside (concatenation), and no unescaped `$`
+        // (template splice — would resolve against the WRONG scope, or not at
+        // all, when pasted into the generated registration).
         if (trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 2) {
             var i = 1
             while (i < trimmed.length - 1) {
                 when (trimmed[i]) {
                     '\\' -> i += 2
                     '"' -> return false
+                    '$' -> return false
                     else -> i++
                 }
             }

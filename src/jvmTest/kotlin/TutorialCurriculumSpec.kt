@@ -1,0 +1,146 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang
+
+import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.pages.docs.tutorials.Tutorial
+import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
+import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
+
+/**
+ * Guards the tutorial curriculum rules from docs/tasks/tutorial-curriculum.md:
+ *
+ * 1. Every code block must compile — a tutorial example that errors destroys learner trust.
+ * 2. Vocabulary: a lesson may only use functions and mini-notation symbols that an EARLIER
+ *    lesson (or the lesson itself) lists in `teaches`, or that it declares in `previews`.
+ *    The registry order in TutorialRegistry.kt IS the curriculum order.
+ * 3. Declared previews must actually be used — stale preview entries rot.
+ * 4. Every lesson needs at least one directed-listening moment ("Listen for ...").
+ *
+ * Mini-notation symbols use these canonical names in `teaches`/`previews`:
+ * "~" rest, "[]" group, "<>" alternation, "*" fast, "!" replicate, "@" weight,
+ * "," stack, "|" choice, "?" degrade, "(n,k)" euclid.
+ */
+class TutorialCurriculumSpec : StringSpec({
+
+    fun engine() = klangScript {
+        registerLibrary(stdlibLib)
+        registerLibrary(sprudelLib)
+    }
+
+    // The playable example component auto-imports both libraries; mirror that here.
+    fun compileBlock(code: String): SprudelPattern? = SprudelPattern.compile(
+        engine(),
+        "import * from \"stdlib\"\nimport * from \"sprudel\"\n" + code,
+    )
+
+    "every tutorial code block compiles to a SprudelPattern" {
+        for (tutorial in allTutorials) {
+            for ((index, section) in tutorial.sections.withIndex()) {
+                val code = section.code ?: continue
+                withClue("${tutorial.slug} section #$index (${section.heading}):\n$code") {
+                    compileBlock(code).shouldNotBeNull()
+                }
+            }
+        }
+    }
+
+    "vocabulary: no lesson uses functions or notation before they are taught" {
+        val violations = mutableListOf<String>()
+        val taught = mutableSetOf<String>()
+
+        for (tutorial in allTutorials) {
+            taught.addAll(tutorial.teaches)
+            val allowed = taught + tutorial.previews + STRUCTURAL_KEYWORDS
+
+            for ((index, section) in tutorial.sections.withIndex()) {
+                val code = section.code ?: continue
+                for (word in usedVocabulary(code)) {
+                    if (word !in allowed) {
+                        violations.add(
+                            "${tutorial.slug} section #$index (${section.heading}) uses '$word' " +
+                                "before it is taught — teach it earlier, or declare it in previews " +
+                                "and call it out as a preview in the text"
+                        )
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
+    "every declared preview is actually used in that lesson's code" {
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            val used = tutorial.sections.mapNotNull { it.code }.flatMap { usedVocabulary(it) }.toSet()
+            for (preview in tutorial.previews) {
+                if (preview !in used) {
+                    violations.add("${tutorial.slug} declares unused preview '$preview'")
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
+    "every lesson has at least one 'Listen for' moment" {
+        for (tutorial in allTutorials) {
+            withClue("${tutorial.slug} has no directed-listening moment ('Listen for ...') in any section") {
+                tutorial.sections.any { it.text.contains("listen for", ignoreCase = true) } shouldBe true
+            }
+        }
+    }
+
+    "tutorial slugs are unique" {
+        val slugs = allTutorials.map(Tutorial::slug)
+        slugs.toSet().size shouldBe slugs.size
+    }
+})
+
+/** Keywords the call-scan matches that are not vocabulary. */
+private val STRUCTURAL_KEYWORDS = setOf("if", "while", "for")
+
+private val CALL_REGEX = Regex("""([a-zA-Z_][A-Za-z0-9_]*)\s*\(""")
+private val STRING_REGEX = Regex(""""([^"\\]|\\.)*"""")
+
+/** Canonical vocabulary names for mini-notation symbols found inside pattern strings. */
+private val NOTATION_SYMBOLS = mapOf(
+    '~' to "~",
+    '[' to "[]",
+    '<' to "<>",
+    '*' to "*",
+    '!' to "!",
+    '@' to "@",
+    ',' to ",",
+    '|' to "|",
+    '?' to "?",
+    '(' to "(n,k)",
+)
+
+/**
+ * Extracts the vocabulary a code block uses: called function names (scanned outside string
+ * literals, so `"bd(3,8)"` is not mistaken for a call) plus mini-notation symbols (scanned
+ * inside string literals only). Commented-out code is scanned too, deliberately — A/B blocks
+ * ask the learner to uncomment those lines.
+ */
+private fun usedVocabulary(code: String): Set<String> {
+    val strings = STRING_REGEX.findAll(code).map { it.value }.toList()
+    val codeOnly = STRING_REGEX.replace(code, "\"\"")
+
+    val calls = CALL_REGEX.findAll(codeOnly).map { it.groupValues[1] }
+    val symbols = strings.asSequence().flatMap { it.asSequence() }.mapNotNull { NOTATION_SYMBOLS[it] }
+
+    return (calls + symbols).toSet()
+}

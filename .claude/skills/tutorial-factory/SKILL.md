@@ -1,7 +1,13 @@
 ---
 name: tutorial-factory
-description: "Autonomous tutorial generator — brainstorms a tutorial idea, implements it, self-reviews, and links it into the registry. Designed for /loop."
+description: "RETIRED 2026-08-15 — do not run. Autonomous tutorial generation produced the slop corpus that was wiped. Tutorials are now authored per docs/tasks/tutorial-curriculum.md."
 ---
+
+> **⛔ RETIRED 2026-08-15.** Do NOT invoke this skill, not even via /loop. The 38 tutorials it generated
+> were deleted (commit `92f6d54f`) after a quality audit — template skeletons, mandated metaphors, zero
+> ear-training, no curriculum ordering, and no coverage of Ignitor/Master/Pipeline. The replacement process
+> (curriculum ladder, named slots, review loop, render QA) is defined in `docs/tasks/tutorial-curriculum.md`.
+> This file is kept only as a record of what not to do.
 
 ## What This Skill Does
 

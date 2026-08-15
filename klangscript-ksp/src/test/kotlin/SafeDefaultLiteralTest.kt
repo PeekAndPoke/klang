@@ -39,6 +39,15 @@ class SafeDefaultLiteralTest : StringSpec({
     "char literal" { SafeDefaultLiteral.isSafe("'a'") shouldBe true }
     "char escape" { SafeDefaultLiteral.isSafe("'\\n'") shouldBe true }
 
+    "string with escaped dollar stays safe" { SafeDefaultLiteral.isSafe("\"costs \\$5\"") shouldBe true }
+
+    // ── Rejected: template splices — they reference enclosing-scope symbols ──
+
+    "string with template splice" { SafeDefaultLiteral.isSafe("\"[\$TAG]\"") shouldBe false }
+    "string with braced template splice" { SafeDefaultLiteral.isSafe("\"a\${x}b\"") shouldBe false }
+    "raw string with template splice" { SafeDefaultLiteral.isSafe("\"\"\"v=\$version\"\"\"") shouldBe false }
+    "misparse fragment from a template string" { SafeDefaultLiteral.isSafe("\"\${sep(\"") shouldBe false }
+
     // ── Whitespace tolerance ─────────────────────────────────────────────────
 
     "trims leading whitespace" { SafeDefaultLiteral.isSafe("  42") shouldBe true }

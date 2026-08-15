@@ -47,11 +47,14 @@ import kotlinx.css.fontSize
 import kotlinx.css.gap
 import kotlinx.css.margin
 import kotlinx.css.marginBottom
+import kotlinx.css.maxHeight
 import kotlinx.css.maxWidth
 import kotlinx.css.minWidth
 import kotlinx.css.overflowX
+import kotlinx.css.overflowY
 import kotlinx.css.padding
 import kotlinx.css.px
+import kotlinx.css.vh
 import kotlinx.css.vw
 import kotlinx.css.width
 import kotlinx.html.FlowContent
@@ -107,8 +110,14 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
         ui.segment.with(laf.styles.popup()).with(laf.styles.docsPopup()) {
             css {
                 width = LinearDimension.fitContent
-                minWidth = 20.vw
+                minWidth = 33.vw
                 maxWidth = 50.vw
+                // Cap at 45% viewport height; longer docs scroll INSIDE the card
+                maxHeight = 45.vh
+                overflowY = Overflow.auto
+                // !important because Fomantic's `.ui.segment` padding out-specifies
+                // the generated style class
+                put("padding-bottom", "10px !important")
             }
 
             onClick { event -> event.stopPropagation() }

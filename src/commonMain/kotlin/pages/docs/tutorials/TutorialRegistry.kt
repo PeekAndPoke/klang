@@ -11,4 +11,9 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *
  * Curriculum plan: docs/tasks/tutorial-curriculum.md
  */
-val allTutorials: List<Tutorial> = listOf()
+val allTutorials: List<Tutorial> = listOf(
+    // Stage 1 — Onramp (carrier kit)
+    yourFirstBeatTutorial, // B1
+    spaceAndRestsTutorial, // B2
+    firstNotesTutorial, // B3
+)

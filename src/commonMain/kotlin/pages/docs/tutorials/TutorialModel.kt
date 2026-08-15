@@ -33,6 +33,12 @@ enum class TutorialTag(val label: String) {
     GettingStarted("Getting Started"),
 }
 
+enum class TutorialTrack(val label: String) {
+    Sound("Sound"),
+    Pattern("Pattern"),
+    Motor("Motör"),
+}
+
 data class TutorialSection(
     val heading: String? = null,
     val text: String = "",
@@ -43,9 +49,23 @@ data class Tutorial(
     val slug: String,
     val title: String,
     val description: String,
+    val track: TutorialTrack,
     val difficulty: TutorialDifficulty,
     val scope: TutorialScope,
     val tags: List<TutorialTag>,
+    /**
+     * Vocabulary this lesson introduces: function names ("sound", "gain"),
+     * mini-notation symbols ("~", "[]"), and code-syntax tokens ("//"). The
+     * registry order defines what is already taught; the curriculum lint
+     * checks every code block against it.
+     */
+    val teaches: List<String>,
+    /**
+     * Vocabulary used here but taught in a LATER lesson. Every entry must be
+     * explicitly called out as a preview in the section text, with a pointer
+     * to the lesson that teaches it.
+     */
+    val previews: List<String> = emptyList(),
     val sections: List<TutorialSection>,
     val rpm: Double = 30.0,
 )

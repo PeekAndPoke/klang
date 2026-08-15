@@ -116,9 +116,102 @@ class DefaultValueExtractorTest : StringSpec({
         DefaultValueExtractor.extractFromWindow(src, "x") shouldBe null
     }
 
+    "glued generic before the `=` (`List<Int>= x`) — deliberately null, never misread" {
+        // Distinguishing a glued generic close from a real `>=` comparison on
+        // false-candidate scans proved unsafe (wrong runtime defaults via
+        // safeDefaultThunk), so glued `>=` fail-softs to null. Formatted
+        // source never glues these.
+        val src = "fun a(gain: List<Int>= listOf(1))"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe null
+    }
+
+    "glued nested generic (`>>=`) — deliberately null" {
+        val src = "fun a(gain: Map<String, List<Int>>= mapOf())"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe null
+    }
+
+    "real `>=` comparison in an earlier lambda default — stays compound, retry finds the real param" {
+        // The `=` of `gain >= 0.5` must NOT be taken as a default marker: this
+        // extraction would "succeed" with "0.5", which is literal-shaped and
+        // would ship as a WRONG RUNTIME DEFAULT via safeDefaultThunk.
+        val src = "fun f(pred: (Double) -> Boolean = { gain: Double -> gain >= 0.5 }, gain: Double = 1.0)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
+    }
+
+    "`<` comparison before the `>=` in an earlier lambda default — still safe" {
+        val src = "fun f(pred: (Double) -> Boolean = { gain: Double -> a < b && gain >= 0.5 }, gain: Double = 1.0)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
+    }
+
+    "assignment with literal RHS in an earlier lambda default — brace dead-end, retry wins" {
+        // Without the `}`-dead-end rule in findValueEnd this extracted "0.5" —
+        // literal-shaped, i.e. a WRONG RUNTIME DEFAULT via safeDefaultThunk.
+        val src = "fun f(cb: (Double) -> Unit = { gain: Double -> threshold = 0.5 }, gain: Double = 1.0)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
+    }
+
+    "assignment with identifier RHS in an earlier lambda default — retry wins" {
+        val src = "fun f(cb: (Int) -> Unit = { gain: Int -> acc = gain }, gain: Int = 2)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "2"
+    }
+
+    "typed `when (val …)` binding in an earlier default — pinned known residual" {
+        // A typed subject binding is structurally indistinguishable from a real
+        // parameter (its value legitimately ends at `)`), so this extracts the
+        // binding's initializer. Accepted: a `val`-lookbehind fix would regress
+        // constructor val-params, and the untyped common form `when (val gain = …)`
+        // is already rejected by the `:` rule. Pinned so a change is conscious.
+        val src = "fun f(x: Int = when (val gain: Int = 5) { else -> 0 }, gain: Int = 2)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "5"
+    }
+
     "generic type arg with comma does not confuse scanner" {
         val src = "fun foo(map: Map<String, Int> = mutableMapOf())"
         DefaultValueExtractor.extractFromWindow(src, "map") shouldBe "mutableMapOf()"
+    }
+
+    "param named like its function — must skip the function name (MasterFx.gain bug)" {
+        val src = "fun gain(gain: Double = 1.0): MasterStageDsl.Gain = MasterStageDsl.Gain(gain = gain)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
+    }
+
+    "same-name param must not swallow the expression body and following declarations" {
+        val src = """
+            fun gain(gain: Double = 1.0): Gain = Gain(gain = gain)
+
+            @KlangScript.Method
+            fun limiter(): Limiter = Limiter()
+        """.trimIndent()
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
+    }
+
+    "named argument with same name in earlier default — must not match" {
+        val src = "fun f(a: X = g(gain = 1), gain: Int = 2)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "2"
+    }
+
+    "method reference with same name in earlier default — must not match" {
+        val src = "fun f(x: T = gain::prop, gain: Int = 3)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "3"
+    }
+
+    "same name inside a function TYPE — dead-end candidate is retried" {
+        val src = "fun on(handler: (gain: Double) -> Unit = {}, gain: Double = 1.0)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
+    }
+
+    "empty param name — returns null instead of spinning" {
+        DefaultValueExtractor.extractFromWindow("fun f(x : Int)", "") shouldBe null
+    }
+
+    "dead-end candidate retries into a later declaration — pinned tradeoff" {
+        // Production is double-guarded against this (extract() requires hasDefault
+        // and the window starts at the param's own line), so realistically this
+        // drift fires only when KSP metadata disagrees with the source or the
+        // compound-`=` heuristic misreads an exotic corner. Pinned so a future
+        // refactor changes the behavior consciously, not by accident.
+        val src = "fun a(gain: Int)\nfun b(gain: Int = 7)"
+        DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "7"
     }
 
     "param name appears in earlier KDoc — must not match" {
