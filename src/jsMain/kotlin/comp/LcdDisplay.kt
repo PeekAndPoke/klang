@@ -42,7 +42,9 @@ fun Tag.LcdDisplay(
     value: Int,
     digits: Int = 4,
     color: Color = KlangTheme.good,
-    size: LinearDimension = 16.px,
+    // 20px keeps the 0.9em digit cells at exactly 18px — integer pixel grid,
+    // so the rolling strip never sits on half-pixels (which renders blurry).
+    size: LinearDimension = 20.px,
     backgroundColor: Color = Color("#111111"),
     dim: Boolean = false,
 ) = comp(
@@ -138,19 +140,25 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
 
         // Render
         val dimColor = Color("${props.color}22")
-        val compHeight = 32.px
+        // Matches the Fomantic default button height so the LCD fills the
+        // control row without a gap (border included via borderBox).
+        val compHeight = 36.px
 
         div {
             css {
-                display = Display.inlineFlex
+                // Block-level flex — inline-flex sat on the line-box baseline,
+                // which shifted the LCD down a few px next to the buttons.
+                display = Display.flex
                 alignItems = Align.center
                 backgroundColor = props.backgroundColor
-                borderRadius = 3.px
+                put("box-sizing", "border-box")
+                put("border", "2px solid var(--klang-gauge-ring)")
+                borderRadius = 5.px
                 height = compHeight
                 put("padding", "0 4px")
                 put("gap", "1px")
                 put("font-family", "'Courier New', 'Consolas', monospace")
-                fontWeight = FontWeight.bold
+                fontWeight = FontWeight.normal
                 fontSize = props.size
                 if (props.dim) {
                     put("filter", "brightness(0.7)")
@@ -179,6 +187,8 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                             alignItems = Align.center
                             justifyContent = JustifyContent.center
                             color = dimColor
+                            // Optical centering — Courier digits sit 1px high otherwise
+                            put("transform", "translateY(1px)")
                         }
                         +"8"
                     }
@@ -195,7 +205,8 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                             } else {
                                 put("transition", "none")
                             }
-                            put("transform", "translateY(-${(pos + 0.5) * ENTRY_EM}em)")
+                            // The +1px matches the ghost "8" optical-centering nudge
+                            put("transform", "translateY(calc(-${(pos + 0.5) * ENTRY_EM}em + 1px))")
                         }
 
                         for (d in 0 until STRIP_SIZE) {
@@ -206,7 +217,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                                     alignItems = Align.center
                                     justifyContent = JustifyContent.center
                                     color = props.color
-                                    put("text-shadow", "0 0 4px ${props.color}88, 0 0 8px ${props.color}44")
+                                    put("text-shadow", "0 0 3px ${props.color}66")
                                 }
                                 +"${d % 10}"
                             }

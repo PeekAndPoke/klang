@@ -28,10 +28,10 @@ let supersawHp = (() => {
   let pAnalog  = OscSlot.analog
 
   // --- pitch-tracking highpass -------------------------------------------
-  let pPresenceHz = Osc.param("presenceHz", 2500.0,   "Presence frequency")
-  let pPresence   = Osc.param("presence",      4.2,   "Presence amount")
-  let pHpTrack    = Osc.param("hptrack",       1.4,   "Highpass cutoff as a multiple of the note frequency")
-  let pHpQ        = Osc.param("hpq",           0.507, "Highpass resonance")
+  let pPresenceHz = Osc.param("presenceHz", 2500.000, "Presence frequency")
+  let pPresence   = Osc.param("presence",      4.300, "Presence amount")
+  let pHpTrack    = Osc.param("hptrack",       1.500, "Highpass cutoff as a multiple of the note frequency")
+  let pHpQ        = Osc.param("hpq",           0.550, "Highpass resonance")
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
@@ -70,18 +70,16 @@ stack(
         [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 3],[-2 -1]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [-8 -6] [-7] [-2 <-1 -4 2 1>]]>/4`)
       .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
       .gain(0.5).postgain(0.145).velocity("0.98 0.95!7 0.97 0.95!7".fast(2))  // . solo()
-      .sound(supersawHp).unison(15).spread(0.07).oscp("presenceHz", 2700)  
+      .sound(supersawHp).unison(15).spread(0.07).oscp("presenceHz", 2800)  
       .clip("<0.95!31 0.85 0.95!31 0.87 0.95!30 0.85 0.89>".fast(2)).adsr("0.007:4.5:0.0:0.018")    
-      //.hpf(800).lpf(5500).lpe(0.5).lpq(0.707)
       .pan(0.15).superimpose(pan(0.85)).body("violin").bodyMix(0.5).compressor("-15:2:6:0.01:0.2")
     , // Guitar 2
     n(`<[11 11 9 8  7 7 9 6] [11 11 [13 11] 8   7 7 5 6] [11 11 9 8  7 7 7 6] [11 11 [13 11] 8  7  4        2         3]
         [ 4  4 6 8  4 4 5 6] [ 4  4 6       8  11 7 9 8] [ 4  4 3 6  4 4 2 3] [ 7 11 9       8  [4 4 6 4]!2 [4 2 6 2] 3]>/4`)
       .orbit(2).scale("<e2:minor>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // . mute()
       .gain(0.5).postgain(0.13).velocity("0.98 0.95!7 0.97 0.95!7".fast(2)) // . solo()
-      .sound(supersawHp).unison(11).spread(0.09).oscp("presenceHz", 2450)
-      .clip("<0.95!31 0.85 0.95!31 0.90 0.95!30 0.85 0.89>".fast(2)).adsr("0.005:4.5:0.0:0.019")  
-      // .hpf(400).lpf(5200).lpe(0.5).lpq(0.707)
+      .sound(supersawHp).unison(11).spread(0.09).oscp("presenceHz", 2450).oscp("hptrack", 1.25)
+      .clip("<0.95!31 0.85 0.95!31 0.90 0.95!30 0.85 0.89>".fast(2)).adsr("0.005:4.5:0.0:0.019")
       .pan(0.25).superimpose(pan(0.75)).mute("<0!128 1!16 0!16>")
       .coarse(2).body("cedar").bodyMix(0.5)
     , // Guitar 3
@@ -89,32 +87,30 @@ stack(
         [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 2 4 0  0 -2 -1]!1>/4`)  //  . solo()
       .orbit(2).scale("<e2:minor>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // . mute()
       .gain(0.5).postgain(0.135).velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
-      .sound(supersawHp).unison(11).spread(0.10).oscp("presenceHz", 2300)
-      .clip("<0.95!31 0.85 0.95!31 0.93 0.95!30 0.85 0.89>".fast(2)).adsr("0.003:4.5:0.0:0.020")    
-      // .hpf(100).lpf(5000).lpe(0.5).lpq(0.707)
+      .sound(supersawHp).unison(11).spread(0.10).oscp("presenceHz", 2100).oscp("hptrack", 0.975)
+      .clip("<0.95!31 0.85 0.95!31 0.93 0.95!30 0.85 0.89>".fast(2)).adsr("0.003:4.5:0.0:0.020")
       .pan(0.70).superimpose(pan(0.30)).compressor("-15:2:6:0.01:0.2")
       .mute("<0!128 1!16 0!16>")
     , // Bass
     n(`<[0 0 2 4 0 0 -2 -1]!4
         [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 2 4 0  0 -2 -1]!1>/8`).struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.94 0.96 0.94".fast(2))  // . mute()
-      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).distort("0.10:gentle:2").postgain(0.055).clip(0.80)
-      .adsr("0.003:4.0:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(25).hpq(0.5).lpf(500).lpe(16).lpq(0.707)  //  .solo()
-      .superimpose(transpose(12).hpf(60).postgain(0.02))
+      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).distort("0.10:gentle:2").postgain(0.045).clip(0.80)
+      .adsr("0.003:4.0:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(25).hpq(0.6).lpf(500).lpe(16).lpq(0.707)  //  .solo()
       .pan(0.35).superimpose(pan(0.75)).mute("<0!128 1!32>").compressor("-15:2:6:0.01:0.2")
   ).transpose(-2)
   , // Drums
   stack(  
     sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").mute("<0!128 1!32>")  // . solo()
-      .pan(0.5).orbit(5).gain(0.19).hpf(25).lpf(13000).adsr("0.000:0.05:0.95:0.2").distort(0.1),
+      .pan(0.5).orbit(5).gain(0.18).hpf(25).lpf(13000).adsr("0.000:0.05:0.95:0.2").distort(0.1),
     sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>").mute("<0!128 1!32>") // . solo()
-      .pan(0.5).late(0.0015).orbit(5).pan(0.45).gain(0.155).hpf(80).lpf(15000).lpq(0.5).adsr("0.000:0.05:0.95:0.2")
-      .superimpose(x => x.bandf("205".add(berlin.mul(20).fast(4))).bandq(4).vel(0.70).hpf(180).lpf(450)),
+      .pan(0.5).late(0.0015).orbit(5).pan(0.45).gain(0.17).hpf(80).lpf(15000).lpq(0.5).adsr("0.000:0.05:0.95:0.2")
+      .superimpose(x => x.bandf("225".add(berlin.mul(25).fast(4))).bandq(0.5).vel(1.50)),
     sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-      .pan(0.55).late(0.0030).orbit(5).gain(0.21).hpf(800).lpf("14500".add(perlin.mul(500).fast(4))).lpq(0.5).adsr("0.004:0.05:0.95:0.5"), // . mute()
+      .pan(0.55).late(0.0030).orbit(5).gain(0.22).hpf(800).lpf("14500".add(perlin.mul(500).fast(4))).lpq(0.5).adsr("0.004:0.05:0.95:0.5"), // . mute()
     sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(5).gain(0.085).mute("<0!128 1!32>"),
     sound("<pink ~ pink pink>*16").orbit(5).gain(0.05).hpf(5000).lpf(perlin.range(15000, 16000)).lpq(0.9)
       .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.002:0.12:0.0:0.01") //  .solo()
-  ).compressor("-15:2:6:0.01:0.2")
+  ).room(0.20).rsize(3).rlp(3500).compressor("-15:2:6:0.01:0.2")
   // Master
   ,master(Master.of(MasterFx.reverb().wet(0.03).damp(0.7).roomSize(7), MasterFx.gain(2.2)))
 ).analog(feel).seed(timeOfDay.mul(10*60*60*24)).shuffle("<1!80 2!48 1!128 2!32>").early(0)

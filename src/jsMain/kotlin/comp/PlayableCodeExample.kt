@@ -187,7 +187,6 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         css {
                             alignSelf = Align.center
                             color = Color.grey
-                            height = 32.px
                         }
                         LcdDisplay(
                             value = state.currentCycle,

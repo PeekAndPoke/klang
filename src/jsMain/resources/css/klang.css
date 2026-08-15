@@ -17,6 +17,10 @@
     --klang-border-radius:  4px;
     --klang-transition:     200ms ease;
 
+    /* Ring border shared by round gauges, round buttons and the LCD counter —
+       text-secondary (#abb2bf) at 90% brightness */
+    --klang-gauge-ring:     #9aa0ac;
+
     --klang-excellent:      #56b6c2;
     --klang-good:           #98c379;
     --klang-moderate:       #e5c07b;
@@ -220,10 +224,9 @@ pre, code {
     padding-right: 0.5em !important;
 }
 
-/* Shared ring border for round gauges and round buttons — text-secondary
-   (#abb2bf) at 90% brightness */
+/* Shared ring border for round gauges and round buttons */
 .ui.basic.label.gauge-ring {
-    border-color: #9aa0ac !important;
+    border-color: var(--klang-gauge-ring) !important;
 }
 
 /* ── Textarea ─────────────────────────────────────────────────────────────── */

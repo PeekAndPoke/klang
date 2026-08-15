@@ -357,7 +357,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                         }
 
-                        noui.middle.aligned.item {
+                        noui.top.aligned.item {
                             LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
                         }
 
