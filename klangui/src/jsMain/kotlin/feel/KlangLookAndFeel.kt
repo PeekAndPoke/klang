@@ -25,7 +25,7 @@ data class KlangLookAndFeel(
     // ── Surfaces ──────────────────────────────────────────────────────────────
 
     val appBackground: String = "#191C22",
-    val menuBackground: String = "#151621",
+    val menuBackground: String = "#12131c",
     val panelBackground: String = "#21252b",
     val cardBackground: String = "#2c313a",
     val overlayBackground: String = "#353a42",

@@ -33,6 +33,12 @@ class CodeMirrorTheme {
 
     /** Editor surface — pure black for maximum contrast against the code (app bg is #191C22). */
     val background = "#000000"
+
+    /**
+     * Selection background — brighter than [KlangTheme.Hex.accent] because the global
+     * `::selection` rule turns selected text black, which needs a bright field under it.
+     */
+    val selectionBg = "#7aa6ff"
     val tooltipBackground get() = KlangTheme.Hex.overlayBackground
     val selection get() = KlangTheme.Hex.gold
     val cursor get() = KlangTheme.Hex.accent
@@ -55,18 +61,19 @@ class CodeMirrorTheme {
             // Selection background — focused editor
             this["&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground"] =
                 jsObject {
-                    backgroundColor = "${KlangTheme.Hex.accent}60"
+                    backgroundColor = "${selectionBg}b8"
                 }
             // Selection background — unfocused editor (dimmer)
             this[".cm-selectionBackground"] = jsObject {
-                backgroundColor = "${KlangTheme.Hex.accent}30"
+                backgroundColor = "${selectionBg}50"
             }
             // Native text selection
             this[".cm-content ::selection"] = jsObject {
-                backgroundColor = "${KlangTheme.Hex.accent}60"
+                backgroundColor = "${selectionBg}b8"
             }
+            // Editor panels (lint list, search) share the app chrome color
             this[".cm-panels"] = jsObject {
-                backgroundColor = darkBackground
+                backgroundColor = KlangTheme.Hex.menuBackground
                 color = ivory
             }
             this[".cm-panels.cm-panels-top"] = jsObject {
@@ -132,11 +139,17 @@ class CodeMirrorTheme {
             }
 
             // ── Lint / Diagnostics ──────────────────────────────────────
+            // Errors fill the range red with black text so they jump at the user.
             this[".cm-lintRange-error"] = jsObject {
                 backgroundImage = "none"
-                textDecoration = "underline wavy $coral"
-                textDecorationSkipInk = "none"
-                textUnderlineOffset = "3px"
+                backgroundColor = coral
+                textDecoration = "none"
+                borderRadius = "2px"
+            }
+            // Syntax-token spans can share the error span OR nest inside it —
+            // the `*` leg plus `!important` beats the token color in both cases.
+            this[".cm-lintRange-error, .cm-lintRange-error *"] = jsObject {
+                color = "#000000 !important"
             }
             this[".cm-lintRange-warning"] = jsObject {
                 backgroundImage = "none"
@@ -153,7 +166,7 @@ class CodeMirrorTheme {
                 color = whiskey
             }
             this[".cm-panel.cm-panel-lint"] = jsObject {
-                backgroundColor = darkBackground
+                backgroundColor = KlangTheme.Hex.menuBackground
                 borderTop = "1px solid ${KlangTheme.Hex.textTertiary}"
                 // Only highlight the selected item when the list actually has focus
                 this["& ul:focus li.cm-diagnostic[aria-selected=true], " +
