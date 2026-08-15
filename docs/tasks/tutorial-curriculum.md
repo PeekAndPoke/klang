@@ -107,15 +107,17 @@ The published Prev/Next path interleaves them; each lesson lists main / touches 
   "their own lesson soon". A1 must keep that promise and formalize **"voice"** as the standing term for
   oscillator timbre (B3 introduced it informally).
 - **A2 (ADSR):** B3's finale states each note "holds for its whole step and then stops" and promises
-  shaping attack/fade as "its own lesson in the Sound track". A2 opens from that fact (default sustain
-  is organ-like).
+  shaping attack/fade as "its own lesson, coming in the Sound track". A2 opens from that fact (default
+  sustain is organ-like).
 - **B4 (subdivision):** B1/B2 established counts-vs-steps on the 8-step grid and used "off-beats" for
   the between-count positions. B4 inherits those terms; don't redefine.
-- **B6 (Layers):** B1 promises "balancing lines with gain() is most of what mixing is" once several lines
-  run; B3's finale says its tune "was written to sit on top of the groove you shaped last lesson". B6
-  should literally combine the B2 groove and the B3 tune as its running example.
-- **B8 (Scales):** B3 introduces sharps/flats (`cs3`/`eb3`, played in "The notes between") and defers
-  "which notes belong together" to the scales lesson; B8 also owes the major/minor mood A/B
+- **B6 (Layers):** B1 promises "balancing them with gain() is most of what mixing is" once several lines
+  run; B3's finale says its melody was "also written to sit on top of the groove you shaped last lesson". B6
+  should literally combine the B2 groove and the B3 melody as its running example.
+- **B8 (Scales):** B3 introduces sharps/flats (`eb3` played in "The notes between", `cs3` via its
+  directed try-it) and defers
+  "which of these in-between notes belong together with which letters" to the scales lesson; B8 also
+  owes the major/minor mood A/B
   (`c4 e4 g4` vs `c4 eb4 g4`) descoped from B3.
 - **A6 (unison/thickness):** the word "voice" is taken — B3 established it as the term for oscillator
   timbre. A6 must disambiguate explicitly: the `unison`/`voices` parameter counts internal copies —
@@ -155,6 +157,12 @@ sound ok" into something partly checkable. Two tiers:
 - **Audibility check on A/B pairs:** the two renders of a listen-for pair must actually differ (spectral
   distance above a threshold). If the text claims "listen for the buzz" and the renders are near-identical,
   the lesson is teaching an inaudible difference — hard flag.
+- **Sanctioned parity exceptions:** an A/B whose level difference is inherent to the concept (B3
+  "Steps and leaps": a leap must change register) or explicitly narrated in the lesson (B2 finale's
+  "judge the groove, not the level") is exempt from the ±1 dB gate — the harness needs an allowlist so
+  nobody "fixes" these by mangling the music. First measurement item for the gate: B2 "Take the skeleton
+  away" lifts hats 0.8→1.0 (~+2 dB) against a sample-level gap that may be 10 dB+ — verify the
+  compensation actually lands, adjust by ear.
 
 Shape: a JVM-side harness in the style of `runSongBenchmark` that walks the registry, renders each block,
 hard-fails on tier-1 violations, and emits the tier-2 report for the polish pass.

@@ -1,8 +1,8 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
-**HOLDER: klang-ai measurement session (offline render of Der Schmetterling v26)**
+**HOLDER: none**
 **SINCE: 2026-08-15**
-**STATE: HELD**
+**STATE: FREE — take the lock before building.**
 
 > Note (2026-08-15): `:compileKotlinJs` hit the sprudel KSP cache corruption TWICE in this session.
 > ROOT CAUSE FOUND: the maintainer runs a frontend auto-compile watcher — a standing Gradle process

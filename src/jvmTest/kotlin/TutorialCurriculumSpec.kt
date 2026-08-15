@@ -103,6 +103,46 @@ class TutorialCurriculumSpec : StringSpec({
         }
     }
 
+    "callout labels open their own paragraph ('Try it:' / 'Listen for:' never mid-paragraph)" {
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                for (paragraph in section.text.split("\n\n")) {
+                    for (label in listOf("Try it:", "Listen for:")) {
+                        if (paragraph.indexOf(label) > 0) {
+                            violations.add(
+                                "${tutorial.slug} (${section.heading}): '$label' is buried " +
+                                    "mid-paragraph — give it its own \\n\\n paragraph: " +
+                                    paragraph.take(60)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
+    "every code block sets an explicit gain (loudness rule — never rely on the default)" {
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                val code = section.code ?: continue
+                if (!code.contains(".gain(")) {
+                    violations.add(
+                        "${tutorial.slug} (${section.heading}): code block has no explicit .gain(...) — " +
+                            "the default gain 1.0 breaks cross-tutorial loudness parity"
+                    )
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
     "tutorial slugs are unique" {
         val slugs = allTutorials.map(Tutorial::slug)
         slugs.toSet().size shouldBe slugs.size

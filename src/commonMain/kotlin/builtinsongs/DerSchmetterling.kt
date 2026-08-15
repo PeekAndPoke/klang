@@ -18,20 +18,21 @@ internal val derSchmetterlingSong = Song(
     code = """import * from "stdlib"
 import * from "sprudel"
 
-let feel = 15.0    // 0.0 .. guitar | 100.0 .. rave
+let feel          = 15.0   // 0.0 .. guitar | 100.0 .. rave
+let transposition = -2     // -2 .. D | 0 .. E | 2 .. F#
 
 let supersawHp = (() => {
 
-  // --- overridable slots -------------------------------------------------
+  // --- Overridable params ---------------------------------------------------------------------------------------
   let pVoices  = OscSlot.voices
   let pSpread  = OscSlot.spread
   let pAnalog  = OscSlot.analog
 
-  // --- pitch-tracking highpass -------------------------------------------
   let pPresenceHz = Osc.param("presenceHz", 2500.000, "Presence frequency")
   let pPresence   = Osc.param("presence",      4.300, "Presence amount")
   let pHpTrack    = Osc.param("hptrack",       1.500, "Highpass cutoff as a multiple of the note frequency")
   let pHpQ        = Osc.param("hpq",           0.550, "Highpass resonance")
+  // --------------------------------------------------------------------------------------------------------------
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
@@ -94,10 +95,10 @@ stack(
     , // Bass
     n(`<[0 0 2 4 0 0 -2 -1]!4
         [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 2 4 0  0 -2 -1]!1>/8`).struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.94 0.96 0.94".fast(2))  // . mute()
-      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).distort("0.10:gentle:2").postgain(0.050).clip(0.80)
-      .adsr("0.003:4.0:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(25).hpq(0.6).lpf(500).lpe(16).lpq(0.707)  //  .solo()
+      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).distort("0.10:gentle:2").postgain(0.055).clip(0.75)
+      .adsr("0.003:4.5:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(25).hpq(0.6).lpf(500).lpe(16).lpq(0.707)  //  .solo()
       .pan(0.35).superimpose(pan(0.75)).mute("<0!128 1!32>").compressor("-15:2:6:0.01:0.2")
-  ).transpose(-2)
+  ).transpose(transposition)
   , // Drums
   stack(  
     sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").mute("<0!128 1!32>")  // . solo()
@@ -108,7 +109,7 @@ stack(
     sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
       .pan(0.55).late(0.0030).orbit(5).gain(0.21).hpf(800).lpf("14500".add(perlin.mul(500).fast(4))).lpq(0.5).adsr("0.004:0.05:0.95:0.5"), // . mute()
     sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(5).gain(0.085).mute("<0!128 1!32>"),
-    sound("<pink ~ pink pink>*16").orbit(5).gain(0.05).hpf(5000).lpf(perlin.range(15000, 16000)).lpq(0.8)
+    sound("<pink ~ pink pink>*16").orbit(5).gain(0.05).hpf(5000)
       .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.002:0.12:0.0:0.01") //  .solo()
   ).room(0.33).rsize(2).rlp(3500).compressor("-15:2:6:0.01:0.2")
   // Master

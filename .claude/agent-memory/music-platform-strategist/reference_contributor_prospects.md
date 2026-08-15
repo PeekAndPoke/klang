@@ -1,6 +1,6 @@
 ---
 name: contributor-prospects
-description: Living list of music-software projects and their makers (live coding, browser audio, music theory/notation, Kotlin audio) as potential Klang contributors — with outreach angle, activity status, and contact route
+description: Living list of music-software projects and their makers (live coding, browser audio, music theory/notation, Kotlin audio) as potential Klang contributors, plus artists whose practice Klang already serves — with outreach angle, activity status, and contact route
 metadata:
   type: reference
 ---
@@ -13,11 +13,19 @@ its makers ... so we might be able to contact them and ask them to join").
 **This is a living list.** Extend it in future sessions. Every entry was link-verified at the date noted; handles and
 activity decay, so re-verify before any actual outreach.
 
+**Scope widened 2026-08-15** to include a Tier 5: *artists* whose practice is already what Klang enables. Tiers 1–4
+are people who might build it with us; Tier 5 is people who might play it — a word-of-mouth list, with a different
+ask and none of the AGPL/capacity caveats.
+
 ## Ground rules
 
 - **NO OUTREACH YET.** List-keeping only. Contact timing sits behind the launch-phase gate (see
   [[project_disco_strategy]] — engine work-streams → tutorial quarter → launch). Approaching people before there is
   something worth joining wastes the one first impression each person gives you.
+  **The gate, in the maintainer's words (2026-08-15): "We need a stable and presentable version first."** Both halves
+  are load-bearing — *stable* (it does not break in front of them) and *presentable* (it is worth their time when it
+  doesn't). This binds Tier 5 at least as hard as Tiers 1–4: an artist who is shown a rough demo forms a verdict on
+  the spot and does not come back for version two.
 - **Licensing is a talking point, not a footnote.** Klang is AGPL v3. Most people on this list are FOSS-native so this
   reads as a plus, but anyone commercial (Splice, Audiotonix) will read AGPL as a blocker for their day job. Know which
   is which before writing.
@@ -221,6 +229,43 @@ thinnest part of the roadmap.)*
 - **Status:** Long-running.
 
 ---
+
+---
+
+## Tier 5 — Artists & scene (word-of-mouth, not code)
+
+*(Scope extension, 2026-08-15. Everyone above is a **maker of music software**; this tier is **musicians whose
+practice already is what Klang makes possible**. The ask is different in kind: not "contribute," not even "review the
+design," but "here is an instrument that does the thing you do — want to look at it." An artist who adopts it is worth
+more reach than any committer, and none of the Tier 1–4 ground rules about AGPL or capacity apply.)*
+
+### Master Boot Record — Victor Love / Rome
+- **Project:** [mbrserver.com](https://mbrserver.com/) — self-described as *"a 486DX-33MHz-64MB processing
+  avant-garde chiptune, synthesized heavy metal & classical symphonic music. **100% Synthesized, 100% Dehumanized.**"*
+  Based in Rome. Genres it files itself under: black metal, darksynth, death metal, demoscene, industrial, synthwave.
+- **How it is made:** studio work is **entirely programmed and synthesized** — no recorded guitars, no live drums.
+  The debut live album *Realtime Execution* (April 2026, name-your-price) is the exception and the tell: it adds live
+  drums, rearranged guitars, and performances on **Commodore 64 and Amiga 500** on top of the synthesized originals.
+  Live lineup: Vittorio D'amore (guitar, computers), Edoardo Taddei (lead guitar), Giulio Galati (drums).
+- **Fit angle:** This is the single most on-the-nose artist match Klang has, and it was found *empirically*, not
+  guessed. Asked blind to place Der Schmetterling — a track whose guitars, bass and lead are all supersaw voices —
+  Gemini named Master Boot Record as the closest genre reference **in two independent sessions**
+  (`klang-ai/sessions/20260810-gemini-review/genre-v27-run{1,2}.json`, 2026-08-15). An outside listener put Klang's
+  output in his neighborhood without being prompted with his name.
+  The deeper alignment is philosophical: the recurring critique of Klang's synth-rock is that "the illusion breaks —
+  the rhythm guitars are too machine-perfect to be a band." MBR's entire aesthetic is *"100% Dehumanized"* — he took
+  that same property and made it the point. He is proof the genre does not need the illusion to hold, which is
+  strategically useful to Klang independent of any contact.
+  Practical angle: a live rig that already runs computers on stage, plus a retro-computing audience that would
+  understand a browser-based, code-driven instrument instantly.
+- **Status:** Very active — 65+ announced shows across Europe and North America; releases *Hardwarez* (Oct 2024),
+  *Personal Computer* (May 2022), *Realtime Execution* (Apr 2026).
+- **Contact route:** contact form at [mbrserver.com/contact.htm](https://mbrserver.com/contact.htm); **an actual IRC
+  server** at [mbrserver.com/chat](https://mbrserver.com/chat) (running IRC in 2026 says a lot about the audience);
+  [masterbootrecord.bandcamp.com](https://masterbootrecord.bandcamp.com);
+  YouTube [@masterbootrecord](https://www.youtube.com/@masterbootrecord).
+- **The ask, when the gate opens:** not recruitment. Show him a track and the code that produced it, in the browser,
+  and ask whether the instrument is interesting to someone who composes metal on machines. Verified 2026-08-15.
 
 ## To research and add in future sessions
 
