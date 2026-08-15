@@ -220,10 +220,10 @@ pre, code {
     padding-right: 0.5em !important;
 }
 
-/* Shared ring border for round gauges and round buttons — much brighter than
-   the generic basic-label border */
+/* Shared ring border for round gauges and round buttons — text-secondary
+   (#abb2bf) at 90% brightness */
 .ui.basic.label.gauge-ring {
-    border-color: var(--klang-text-secondary) !important;
+    border-color: #9aa0ac !important;
 }
 
 /* ── Textarea ─────────────────────────────────────────────────────────────── */
