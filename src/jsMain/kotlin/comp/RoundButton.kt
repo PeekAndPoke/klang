@@ -95,9 +95,10 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                 onMouseLeave { isHovered = false }
             }
 
-            ui.basic.inverted.white.circular.icon.label {
+            ui.basic.inverted.white.circular.icon.label.with("gauge-ring") {
                 css {
-                    borderWidth = 1.8.px
+                    // Same ring as the round gauges (width here, color via .gauge-ring)
+                    borderWidth = 2.5.px
                     width = props.size
                     height = props.size
                     props.backgroundColor?.let { bg ->

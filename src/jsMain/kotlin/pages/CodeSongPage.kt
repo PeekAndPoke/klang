@@ -292,7 +292,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     flex = Flex(1.0, 1.0, FlexBasis.auto)
                     overflow = Overflow.hidden
                 }
-                ui.basic.segment {
+                ui.basic.segment.with("chrome-bg") {
                     key = "dashboard-form-segment"
 
                     css {

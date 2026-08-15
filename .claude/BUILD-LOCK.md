@@ -1,8 +1,22 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-12**
+**SINCE: 2026-08-15**
 **STATE: FREE — take the lock before building.**
+
+> Note (2026-08-15): `:compileKotlinJs` hit the sprudel KSP cache corruption TWICE in this session.
+> ROOT CAUSE FOUND: the maintainer runs a frontend auto-compile watcher — a standing Gradle process
+> that `with-build-lock.sh` cannot serialize against (it never takes the flock). While the watcher
+> runs, do NOT invoke Gradle at all; the watcher compiles on save. Recover corruption with
+> `:sprudel:clean`.
+
+> Last action (2026-08-15, claude-code session): UI background swap — CodeMirror surface now black
+> (`CodeMirrorTheme.background` = #000000), `--klang-bg-menu` token tuned by eye to #151621
+> (sidebar + header use new `.chrome-bg` CSS class with noise), RoundGauge ring brightened via
+> `.round-gauge` class (#8891a0). `:compileKotlinJs` green. Not committed.
+
+> Last action (2026-08-15, klang-ai session): offline render of Der Schmetterling v22 only — no
+> source changes, no test runs.
 
 > Last action (2026-08-10, klang-ai session): offline render of Der Schmetterling only — no source
 > changes, no test runs. The cursorFrame Int→Double benchmark call sites were fixed by another

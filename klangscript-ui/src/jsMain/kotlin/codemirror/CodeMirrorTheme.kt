@@ -31,8 +31,8 @@ class CodeMirrorTheme {
     val darkBackground get() = KlangTheme.Hex.panelBackground
     val highlightBackground get() = KlangTheme.Hex.cardBackground
 
-    /** Editor surface — neutral grey, slightly darker than the app background (#191C22). */
-    val background = "#13151a"
+    /** Editor surface — pure black for maximum contrast against the code (app bg is #191C22). */
+    val background = "#000000"
     val tooltipBackground get() = KlangTheme.Hex.overlayBackground
     val selection get() = KlangTheme.Hex.gold
     val cursor get() = KlangTheme.Hex.accent

@@ -125,7 +125,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                     backgroundColor = Color.white
                     color = Color(laf.critical)
                 } else {
-                    backgroundColor = Color(laf.menuBackground)
+                    // Transparent so the chrome-bg noise grain of the sidebar shows through
+                    backgroundColor = Color.transparent
                     color = Color.white
                     borderRadius = 0.px
                 }
@@ -266,10 +267,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     //  RENDER  ////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        div {
+        div("chrome-bg") {
             key = "sidebar-menu"
             css {
-                backgroundColor = Color(laf.menuBackground)
                 color = Color.white
                 height = 100.pct
                 display = Display.flex

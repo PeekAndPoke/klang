@@ -1,7 +1,7 @@
 /* ── Klang Design Tokens ──────────────────────────────────────────────────── */
 :root {
     --klang-bg-app:         #191C22;
-    --klang-bg-menu:        #000000;
+    --klang-bg-menu:        #151621;
     --klang-bg-panel:       #21252b;
     --klang-bg-card:        #2c313a;
     --klang-bg-overlay:     #353a42;
@@ -70,7 +70,7 @@ textarea::selection,
 }
 .ui.menu .active.item {
     color: #ffffff !important;
-    background: var(--klang-bg-panel) !important;
+    background: var(--klang-bg-card) !important;
 }
 
 .ui.modal {
@@ -218,6 +218,12 @@ pre, code {
 
 .ui.label > .icon {
     padding-right: 0.5em !important;
+}
+
+/* Shared ring border for round gauges and round buttons — much brighter than
+   the generic basic-label border */
+.ui.basic.label.gauge-ring {
+    border-color: var(--klang-text-secondary) !important;
 }
 
 /* ── Textarea ─────────────────────────────────────────────────────────────── */
@@ -410,6 +416,22 @@ body {
        2. Opacity controls the strength of the black dust.
     */
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+}
+
+/* ── Surface noise ────────────────────────────────────────────────────────── */
+/* Editor surface: slight white grain over the black CodeMirror background.
+   RGB is forced to white here — the black dust of .noise-bg would be invisible on #000. */
+.code-mirror-container .cm-editor,
+.code-mirror-container .cm-gutters {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* App chrome (sidebar + header bar): menu grey with a stronger grain.
+   The .ui.basic.segment.chrome-bg selector out-specifies `.ui.basic.segment { background: transparent !important }`. */
+.chrome-bg,
+.ui.basic.segment.chrome-bg {
+    background-color: var(--klang-bg-menu) !important;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.06'/%3E%3C/svg%3E") !important;
 }
 
 #spa {

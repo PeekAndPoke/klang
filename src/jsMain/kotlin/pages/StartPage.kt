@@ -416,7 +416,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             css {
                 position = Position.absolute
                 bottom = 8.px
-                left = 12.px
+                left = 50.pct
+                put("transform", "translateX(-50%)")
                 zIndex = 5
                 pointerEvents = PointerEvents.none
                 whiteSpace = WhiteSpace.nowrap
@@ -429,7 +430,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             title = "${info.project} ${info.version} · ${info.gitBranch} · ${info.gitRev}" +
                     (info.date?.let { " · $it" } ?: "")
 
-            +"v${info.version} · ${info.gitRev}"
+            +"v${info.version} · ${info.gitRev} · pre-alpha | is glitchd glei"
         }
     }
 
@@ -571,17 +572,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
             // Title "KLANGMOTÖR" is engraved into the MotorBackground plate
             // itself — rendered via the normal map, not as DOM text.
-
-            // Pre-alpha sub-headline
-            div {
-                css {
-                    fontSize = 1.4.em
-                    color = Color.grey
-                    opacity = currentOpacity
-                    paddingTop = 8.px
-                }
-                +"pre-alpha | is glitchd glei"
-            }
+            // The pre-alpha tag moved into the version stamp (renderVersionStamp).
         }
     }
 
