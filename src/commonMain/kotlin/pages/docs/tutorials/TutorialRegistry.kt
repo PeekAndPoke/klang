@@ -5,43 +5,10 @@
 
 package io.peekandpoke.klang.pages.docs.tutorials
 
-val allTutorials: List<Tutorial> = listOf(
-    yourFirstBeatTutorial,
-    yourFirstMelodyTutorial,
-    shapeYourSoundTutorial,
-    patternsInMotionTutorial,
-    chordsAndHarmonyTutorial,
-    derSchmetterlingSoundDesignPlaygroundTutorial,
-    remixYourselfTutorial,
-    buildASongTutorial,
-    moodPaintingTutorial,
-    ambientOrbitsTutorial,
-    polyrhythmicWorkshopTutorial,
-    leftRightCenterTutorial,
-    rhythmicDelaysTutorial,
-    waveformExplorerTutorial,
-    miniNotationMasteryTutorial,
-    yourFirstTrackTutorial,
-    loFiBeatsTutorial,
-    spacesAndRestsTutorial,
-    groupAndAlternateTutorial,
-    nestedPatternsTutorial,
-    livePerformanceTutorial,
-    transposeItTutorial,
-    firstChordsTutorial,
-    chordsAndMelodyTutorial,
-    everyTrickTutorial,
-    technoInFourLinesTutorial,
-    arrangingATrackTutorial,
-    pickAndChooseTutorial,
-    filterPlaygroundTutorial,
-    speedUpSlowDownTutorial,
-    noiseAsInstrumentTutorial,
-    cinematicSoundscapesTutorial,
-    generativeMachineTutorial,
-    volumeAndDynamicsTutorial,
-    drumKitBuilderTutorial,
-    bassDesignTutorial,
-    oneLineWondersTutorial,
-    soundVariantsTutorial,
-)
+/**
+ * The tutorial learning path. The list order IS the curriculum order: it drives the
+ * Prev/Next navigation, and the vocabulary lint walks it front to back.
+ *
+ * Curriculum plan: docs/tasks/tutorial-curriculum.md
+ */
+val allTutorials: List<Tutorial> = listOf()
