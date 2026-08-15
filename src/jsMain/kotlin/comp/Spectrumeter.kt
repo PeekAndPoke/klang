@@ -174,17 +174,20 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // Ease-in on heat keeps early buildup subtle before the glow really lights up.
         val heatNorm = glowEnergy / heatCeiling
         val heatCurve = Ease.In.pow(1.15).invoke(heatNorm)
+        // Top-end boost — near full engagement the glow steps up a further ~20%;
+        // the cubic ease-in keeps mid-heat levels virtually unaffected.
+        val fullBoost = 1.0 + 0.2 * Ease.In.pow(2.0).invoke(heatNorm)
         val glow = ctx.createLinearGradient(0.0, height, 0.0, 0.0)
         val palette = props.colors
         val n = palette.size.coerceAtLeast(1)
         for (i in 0 until n) {
             val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
             // Ease-out falloff — 0.45 at bottom, reaches 0 by ~77% up (faster than full-height).
-            val aMax = 0.45 * Ease.Out.quad((1.0 - t * 1.3).coerceAtLeast(0.0))
+            val aMax = 0.6 * Ease.Out.quad((1.0 - t * 1.3).coerceAtLeast(0.0))
 
             // Sometimes parsing the color fails, so we need to round the alpha:
             // Failed to execute 'addColorStop' on 'CanvasGradient': The value provided ('rgba(209, 154, 102, 6e-320.0)') could not be parsed as a color.
-            val alpha = (aMax * heatCurve).roundWithPrecision(5)
+            val alpha = (aMax * heatCurve * fullBoost).coerceAtMost(1.0).roundWithPrecision(5)
 
             glow.addColorStop(t, palette[i].withAlpha(alpha).toString())
         }

@@ -71,7 +71,7 @@ stack(
       .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
       .gain(0.5).postgain(0.145).velocity("0.98 0.95!7 0.97 0.95!7".fast(2))  // . solo()
       .sound(supersawHp).unison(15).spread(0.07).oscp("presenceHz", 2700)  
-      .clip("<0.95!31 0.85 0.95!31 0.87 0.95!30 0.85 0.89>".fast(2)).adsr("0.007:4.5:0.0:0.021")    
+      .clip("<0.95!31 0.85 0.95!31 0.87 0.95!30 0.85 0.89>".fast(2)).adsr("0.007:4.5:0.0:0.018")    
       //.hpf(800).lpf(5500).lpe(0.5).lpq(0.707)
       .pan(0.15).superimpose(pan(0.85)).body("violin").bodyMix(0.5).compressor("-15:2:6:0.01:0.2")
     , // Guitar 2
@@ -80,7 +80,7 @@ stack(
       .orbit(2).scale("<e2:minor>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // . mute()
       .gain(0.5).postgain(0.13).velocity("0.98 0.95!7 0.97 0.95!7".fast(2)) // . solo()
       .sound(supersawHp).unison(11).spread(0.09).oscp("presenceHz", 2450)
-      .clip("<0.95!31 0.85 0.95!31 0.90 0.95!30 0.85 0.89>".fast(2)).adsr("0.005:4.5:0.0:0.020")  
+      .clip("<0.95!31 0.85 0.95!31 0.90 0.95!30 0.85 0.89>".fast(2)).adsr("0.005:4.5:0.0:0.019")  
       // .hpf(400).lpf(5200).lpe(0.5).lpq(0.707)
       .pan(0.25).superimpose(pan(0.75)).mute("<0!128 1!16 0!16>")
       .coarse(2).body("cedar").bodyMix(0.5)
@@ -90,7 +90,7 @@ stack(
       .orbit(2).scale("<e2:minor>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // . mute()
       .gain(0.5).postgain(0.135).velocity("0.98 0.95!7 0.97 0.95!7".fast(2))
       .sound(supersawHp).unison(11).spread(0.10).oscp("presenceHz", 2300)
-      .clip("<0.95!31 0.85 0.95!31 0.93 0.95!30 0.85 0.89>".fast(2)).adsr("0.003:4.5:0.0:0.019")    
+      .clip("<0.95!31 0.85 0.95!31 0.93 0.95!30 0.85 0.89>".fast(2)).adsr("0.003:4.5:0.0:0.020")    
       // .hpf(100).lpf(5000).lpe(0.5).lpq(0.707)
       .pan(0.70).superimpose(pan(0.30)).compressor("-15:2:6:0.01:0.2")
       .mute("<0!128 1!16 0!16>")
@@ -112,7 +112,7 @@ stack(
     sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
       .pan(0.55).late(0.0030).orbit(5).gain(0.21).hpf(800).lpf("14500".add(perlin.mul(500).fast(4))).lpq(0.5).adsr("0.004:0.05:0.95:0.5"), // . mute()
     sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(5).gain(0.085).mute("<0!128 1!32>"),
-    sound("<pink ~ pink pink>*16").orbit(5).gain(0.04).hpf(5000).lpf(perlin.range(15000, 16000)).lpq(1.2)
+    sound("<pink ~ pink pink>*16").orbit(5).gain(0.05).hpf(5000).lpf(perlin.range(15000, 16000)).lpq(0.9)
       .pan(sine.range(0.4, 0.6).slow(11)).adsr("0.002:0.12:0.0:0.01") //  .solo()
   ).compressor("-15:2:6:0.01:0.2")
   // Master

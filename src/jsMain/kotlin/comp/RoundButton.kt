@@ -47,6 +47,7 @@ fun Tag.RoundButton(
     disabled: Boolean = false,
     size: LinearDimension = 50.px,
     backgroundColor: Color? = null,
+    borderColor: Color? = null,
 ) = comp(
     RoundButton.Props(
         icon = icon,
@@ -56,6 +57,7 @@ fun Tag.RoundButton(
         disabled = disabled,
         size = size,
         backgroundColor = backgroundColor,
+        borderColor = borderColor,
     )
 ) {
     RoundButton(it)
@@ -71,6 +73,8 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
         val disabled: Boolean,
         val size: LinearDimension,
         val backgroundColor: Color?,
+        /** Ring color override — null keeps the shared `.gauge-ring` default */
+        val borderColor: Color?,
     )
 
     private var isHovered: Boolean by value(false)
@@ -99,6 +103,7 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                 css {
                     // Same ring as the round gauges (width here, color via .gauge-ring)
                     borderWidth = 2.px
+                    props.borderColor?.let { put("border-color", "$it !important") }
                     width = props.size
                     height = props.size
                     props.backgroundColor?.let { bg ->

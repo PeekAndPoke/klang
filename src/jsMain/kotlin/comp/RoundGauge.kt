@@ -61,6 +61,7 @@ fun Tag.RoundGauge(
     disabled: Boolean,
     size: LinearDimension = 50.px,
     smoothing: Double = 0.933, // Default: 14/15 = heavy smoothing (0.0 = instant, 1.0 = maximum)
+    borderColor: Color? = null,
 ) = comp(
     RoundGauge.Props(
         value = value,
@@ -72,6 +73,7 @@ fun Tag.RoundGauge(
         disabled = disabled,
         size = size,
         smoothing = smoothing,
+        borderColor = borderColor,
     )
 ) {
     RoundGauge(it)
@@ -95,6 +97,8 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val disabled: Boolean,
         val size: LinearDimension,
         val smoothing: Double, // 0.0 = instant, higher = more smoothing (e.g., 0.933 = heavy smoothing)
+        /** Ring color override — null keeps the shared `.gauge-ring` default */
+        val borderColor: Color?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -179,6 +183,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                 css {
                     boxSizing = BoxSizing.borderBox
                     borderWidth = 2.px
+                    props.borderColor?.let { put("border-color", "$it !important") }
                     width = props.size
                     height = props.size
                     position = Position.relative
