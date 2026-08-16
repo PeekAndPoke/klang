@@ -1,8 +1,8 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
-**HOLDER: klang-ai measurement session (offline render of Der Schmetterling v29)**
+**HOLDER: none**
 **SINCE: 2026-08-16**
-**STATE: HELD**
+**STATE: FREE — take the lock before building.**
 
 > Last action (2026-08-15, claude-code tutorial session): tutorial ladder now has SEVEN lessons
 > (B1-B3 shipped in 63617e2c; A1/A2 and B4/B5 authored, review-certified through multi-round
