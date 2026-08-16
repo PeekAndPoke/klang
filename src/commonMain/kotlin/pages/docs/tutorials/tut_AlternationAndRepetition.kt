@@ -8,7 +8,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 /** Curriculum slot B5 — see docs/tasks/tutorial-curriculum.md */
 val alternationAndRepetitionTutorial = Tutorial(
     slug = "alternation-and-repetition",
-    title = "Alternation and Repetition",
+    title = Tut.alternationAndRepetition,
     description = "Angle brackets give each cycle its own content — patterns that outgrow a single cycle.",
     track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
@@ -27,14 +27,14 @@ val alternationAndRepetitionTutorial = Tutorial(
                 "than the cycle now; that is new.",
             code = """
                 note("<a2 c3 g2 e2>")            // four entries, one per cycle — four cycles to rotate
-                  .sound("saw")                  // the bright voice from The Four Waveforms
-                  .adsr("0.001:0.3:0:0.1")       // the pluck shape from The Shape of a Note
+                  .sound("saw")                  // the bright voice from ${Tut.theFourWaveforms}
+                  .adsr("0.001:0.3:0:0.1")       // the pluck shape from ${Tut.shapeOfANote}
                   .gain(0.5)                     // synth voices sit around 0.5
             """.trimIndent(),
         ),
         TutorialSection(
             heading = "A bar per cycle",
-            text = "Your First Beat set the musician's word bar aside, so there was one name for " +
+            text = "${Tut.yourFirstBeat} set the musician's word bar aside, so there was one name for " +
                 "the window in time. It comes back now with a different job: the cycle is the " +
                 "container, and a bar is one cycle's worth of notes — with < >, a pattern can " +
                 "hold several bars and deal them out in turn. This is how real songs are written " +
@@ -50,7 +50,7 @@ val alternationAndRepetitionTutorial = Tutorial(
         TutorialSection(
             heading = "Say it again: !",
             text = "The exclamation mark clones a step in place: a2!3 means a2 a2 a2, as three " +
-                "real steps. It looks like the * from Subdivision but does the opposite job: " +
+                "real steps. It looks like the * from ${Tut.subdivision} but does the opposite job: " +
                 "! multiplies steps; * squeezes copies inside a single step and leaves the step " +
                 "count alone. That is why g2 moves in one line and not the other — a2!3 turns two " +
                 "steps into four, so g2 shrinks to a quarter of the cycle; a2*3 keeps two steps, " +
@@ -59,8 +59,8 @@ val alternationAndRepetitionTutorial = Tutorial(
                 "and hear the same three a2s land completely differently.\n\nListen for: the " +
                 "first line walks — four even steps, three of them a2. The second stumbles — " +
                 "three quick a2s in the first half, then g2 alone with the whole second half to " +
-                "itself. (The steps here are half a cycle wide, far bigger than Subdivision's hat " +
-                "slots — that is why the same *3 sounds unhurried.)",
+                "itself. (The steps here are half a cycle wide, far bigger than the hat slots in " +
+                "${Tut.subdivision} — that is why the same *3 sounds unhurried.)",
             code = """
                 note("a2!3 g2").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5)    // !3: three real steps — four steps total
                 // note("a2*3 g2").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5) // *3: three inside one step — two steps total
@@ -74,7 +74,7 @@ val alternationAndRepetitionTutorial = Tutorial(
                 "Listen for: when g2 arrives. In the first line a2 holds the floor for three " +
                 "quarters of the cycle and g2 slips in right at the end — a lean. In the second, " +
                 "the two notes share the cycle half and half. (The pluck itself does not ring any " +
-                "longer — sustain 0 sees to that, as you heard in The Shape of a Note. @ " +
+                "longer — sustain 0 sees to that, as you heard in ${Tut.shapeOfANote}. @ " +
                 "stretches the step, and everything after it moves.)",
             code = """
                 note("a2@3 g2").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5)  // @3: a2's step takes three shares of four — g2 waits

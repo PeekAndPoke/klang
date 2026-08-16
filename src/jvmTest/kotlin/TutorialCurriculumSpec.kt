@@ -143,6 +143,52 @@ class TutorialCurriculumSpec : StringSpec({
         violations.shouldBeEmpty()
     }
 
+    "no reading-order references — lessons are browsed freely, cross-references go by name" {
+        val forbidden = Regex("""\b(last|next|previous|earlier) +(\w+ +)?lessons?\b""", RegexOption.IGNORE_CASE)
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                for (content in listOfNotNull(section.text, section.code)) {
+                    forbidden.find(content)?.let { match ->
+                        violations.add(
+                            "${tutorial.slug} (${section.heading}): '${match.value}' assumes a reading " +
+                                "order — reference the lesson by name via the Tut constants instead"
+                        )
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
+    "long pattern strings split into halves with a double space (readability rule)" {
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                val code = section.code ?: continue
+                for (literal in STRING_REGEX.findAll(code).map { it.value.trim('"') }) {
+                    val tokens = topLevelTokens(literal)
+                    if (tokens.size > 4 && tokens.size % 2 == 0) {
+                        val halves = literal.split("  ")
+                        val ok = halves.size == 2 &&
+                            topLevelTokens(halves[0]).size == tokens.size / 2
+                        if (!ok) {
+                            violations.add(
+                                "${tutorial.slug} (${section.heading}): \"$literal\" has " +
+                                    "${tokens.size} events — split it into halves with a double space"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
     "tutorial slugs are unique" {
         val slugs = allTutorials.map(Tutorial::slug)
         slugs.toSet().size shouldBe slugs.size
@@ -168,6 +214,31 @@ private val NOTATION_SYMBOLS = mapOf(
     '?' to "?",
     '(' to "(n,k)",
 )
+
+/**
+ * Splits a mini-notation string into top-level tokens: whitespace separates tokens, but
+ * anything inside `[]`/`<>`/`{}`/`()` counts as part of one token.
+ */
+private fun topLevelTokens(s: String): List<String> {
+    val tokens = mutableListOf<String>()
+    val current = StringBuilder()
+    var depth = 0
+    for (ch in s) {
+        when {
+            ch in "[<{(" -> { depth++; current.append(ch) }
+            ch in "]>})" -> { depth--; current.append(ch) }
+            ch == ' ' && depth == 0 -> {
+                if (current.isNotEmpty()) {
+                    tokens.add(current.toString())
+                    current.clear()
+                }
+            }
+            else -> current.append(ch)
+        }
+    }
+    if (current.isNotEmpty()) tokens.add(current.toString())
+    return tokens
+}
 
 /**
  * Extracts the vocabulary a code block uses: called function names (scanned outside string

@@ -8,7 +8,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 /** Curriculum slot B2 — see docs/tasks/tutorial-curriculum.md */
 val spaceAndRestsTutorial = Tutorial(
     slug = "space-and-rests",
-    title = "Space and Rests",
+    title = Tut.spaceAndRests,
     description = "Rests are where the groove lives: take sounds away and the beat gets stronger, not weaker.",
     track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
@@ -18,7 +18,7 @@ val spaceAndRestsTutorial = Tutorial(
     sections = listOf(
         TutorialSection(
             heading = "The rest: ~",
-            text = "This lesson is about deleting. It starts from the beat you built last lesson — " +
+            text = "This lesson is about deleting. It starts from the beat built in ${Tut.yourFirstBeat} — " +
                 "eight steps, every step filled — and stays on that grid the whole way. (The code sits " +
                 "on one line here, so a single // can switch a whole version off.)\n\nThe tilde ~ is a " +
                 "rest: silence that still takes its step. The second line below is the first line with " +
@@ -26,11 +26,11 @@ val spaceAndRestsTutorial = Tutorial(
                 "Update.\n\nListen for: the kick and snare land in exactly the same places in both " +
                 "versions — only the hats vanished, and the steps they stood on stayed open instead of " +
                 "closing up. Watch the code, too: nothing lights up on the ~ steps. The step is there; " +
-                "it just doesn't sound. (~ works in any pattern string, not only drums — you will rest " +
-                "melodies the same way next lesson.)",
+                "it just doesn't sound. (~ works in any pattern string, not only drums — melodies rest " +
+                "the same way, as ${Tut.firstNotes} shows.)",
             code = """
-                sound("bd hh sd hh bd hh sd oh").gain(0.8)  // full: every step filled
-                // sound("bd ~ sd ~ bd ~ sd ~").gain(0.8)   // same grid, hats replaced by rests
+                sound("bd hh sd hh  bd hh sd oh").gain(0.8)  // full: every step filled
+                // sound("bd ~ sd ~  bd ~ sd ~").gain(0.8)   // same grid, hats replaced by rests
             """.trimIndent(),
         ),
         TutorialSection(
@@ -40,7 +40,7 @@ val spaceAndRestsTutorial = Tutorial(
                 "Snare-on-two-and-four is the backbeat — the skeleton under most rock and pop. It was " +
                 "inside the full beat all along; removing the hats is what makes it audible.",
             code = """
-                sound("bd ~ sd ~ bd ~ sd ~")  // kicks on one and three, snares on two and four
+                sound("bd ~ sd ~  bd ~ sd ~")  // kicks on one and three, snares on two and four
                   .gain(0.8)
             """.trimIndent(),
         ),
@@ -55,8 +55,8 @@ val spaceAndRestsTutorial = Tutorial(
                 "a while, even though the speaker no longer plays it. Silence in the right place " +
                 "creates pull; that is why rests matter more than extra sounds.",
             code = """
-                sound("bd ~ sd ~ bd ~ sd ~").gain(0.8)     // the skeleton — count along with this first
-                // sound("~ hh ~ hh ~ hh ~ oh").gain(1.0)  // hats alone, lifted to 1.0 — alone they need it
+                sound("bd ~ sd ~  bd ~ sd ~").gain(0.8)     // the skeleton — count along with this first
+                // sound("~ hh ~ hh  ~ hh ~ oh").gain(1.0)  // hats alone, lifted to 1.0 — alone they need it
             """.trimIndent(),
         ),
         TutorialSection(
@@ -72,8 +72,8 @@ val spaceAndRestsTutorial = Tutorial(
                 "after the first. Sounds and silences trading places on a fixed grid — that is " +
                 "beat-making.",
             code = """
-                sound("bd ~ hh ~ ~ hh sd ~")  // 8 steps: 4 sounds, 4 rests
-                  .gain(0.8)                  // one level for the whole line — accents come next
+                sound("bd ~ hh ~  ~ hh sd ~")  // 8 steps: 4 sounds, 4 rests
+                  .gain(0.8)                   // one level for the whole line — accents come next
             """.trimIndent(),
         ),
         TutorialSection(
@@ -87,8 +87,8 @@ val spaceAndRestsTutorial = Tutorial(
                 "against the flat version.\n\nListen for: only the hats moved — they sit back, while " +
                 "the kick and snare stand exactly where they were. Same sounds, different accents.",
             code = """
-                sound("bd ~ hh ~ ~ hh sd ~").gain("0.8 0.8 0.4 0.8 0.8 0.5 0.8 0.8")  // second hat a touch louder — it leads into the snare
-                // sound("bd ~ hh ~ ~ hh sd ~").gain(0.8)                             // flat: every hit equal
+                sound("bd ~ hh ~  ~ hh sd ~").gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8")  // second hat a touch louder — it leads into the snare
+                // sound("bd ~ hh ~  ~ hh sd ~").gain(0.8)                              // flat: every hit equal
             """.trimIndent(),
         ),
         TutorialSection(
@@ -101,8 +101,8 @@ val spaceAndRestsTutorial = Tutorial(
                 "the last step. The full version fills that moment for you; the shaped one leaves it " +
                 "to you, and that gap is the run-up you feel before the kick comes back around.",
             code = """
-                sound("bd ~ hh ~ ~ hh sd ~").gain("0.8 0.8 0.4 0.8 0.8 0.5 0.8 0.8")  // shaped and accented
-                // sound("bd hh sd hh bd hh sd oh").gain(0.8)                         // full: every step filled
+                sound("bd ~ hh ~  ~ hh sd ~").gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8")  // shaped and accented
+                // sound("bd hh sd hh  bd hh sd oh").gain(0.8)                          // full: every step filled
             """.trimIndent(),
         ),
     ),

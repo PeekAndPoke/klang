@@ -8,13 +8,14 @@ package io.peekandpoke.klang.pages.docs.tutorials
 /** Curriculum slot B3 — see docs/tasks/tutorial-curriculum.md */
 val firstNotesTutorial = Tutorial(
     slug = "first-notes",
-    title = "First Notes",
+    title = Tut.firstNotes,
     description = "From drums to melody: note names, octaves, and a first melody of your own.",
     track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Melody, TutorialTag.GettingStarted),
     teaches = listOf("note"),
+    previews = listOf("@"),
     sections = listOf(
         TutorialSection(
             heading = "From drums to pitch",
@@ -22,10 +23,10 @@ val firstNotesTutorial = Tutorial(
                 "steps, rests with ~ — but its names are pitches: \"c3\" is the note C in octave 3.\n\n" +
                 "The .sound(\"sine\") behind it is the same sound() you used on the drums, doing a new " +
                 "job. With a drum name it plays a recording; with \"sine\" there is no recording — Klang " +
-                "generates the tone itself, at whatever pitch note() asks for. (Same dot-chain rule as " +
-                "gain(): it attaches to the pattern above it — this time picking the voice instead of " +
-                "the volume.) Sine is the plainest voice Klang has, a pure tone with nothing added; " +
-                "its siblings — saw, square, triangle — get their own lesson soon.\n\nListen for: " +
+                "generates the tone itself, at whatever pitch note() asks for. " +
+                "Sine is the plainest voice Klang has, a pure tone with nothing added; " +
+                "its siblings — saw, square, triangle — get their own lesson: " +
+                "${Tut.theFourWaveforms}.\n\nListen for: " +
                 "four pitches climbing. The grid is the one you already know from the drums — the " +
                 "steps just have height now.",
             code = """
@@ -42,7 +43,7 @@ val firstNotesTutorial = Tutorial(
                 "floor up. That \"same but higher\" feeling is the octave, and it is why the letters " +
                 "repeat.",
             code = """
-                note("c3 d3 e3 f3 g3 a3 b3 c4")  // up the seven letters, back to c
+                note("c3 d3 e3 f3  g3 a3 b3 c4")  // up the seven letters, back to c
                   .sound("sine").gain(0.5)
             """.trimIndent(),
         ),
@@ -77,8 +78,8 @@ val firstNotesTutorial = Tutorial(
                 "same move pointing the other way. Which of these in-between notes belong together " +
                 "with which letters is what scales are about; that is a later lesson.",
             code = """
-                note("c3 d3 eb3 f3 g3 a3 b3 c4").sound("sine").gain(0.5)    // the ladder — e3 lowered to eb3
-                // note("c3 d3 e3 f3 g3 a3 b3 c4").sound("sine").gain(0.5)  // the original — swap to compare
+                note("c3 d3 eb3 f3  g3 a3 b3 c4").sound("sine").gain(0.5)    // the ladder — e3 lowered to eb3
+                // note("c3 d3 e3 f3  g3 a3 b3 c4").sound("sine").gain(0.5)  // the original — swap to compare
             """.trimIndent(),
         ),
         TutorialSection(
@@ -101,16 +102,31 @@ val firstNotesTutorial = Tutorial(
                 "the middle is the step line from the last section — c4, d4, e4 — turned around at " +
                 "its top, with a leap up from a3 in front and two ~ where the melody breathes. (Each " +
                 "note holds for its whole step and then stops; shaping how a note starts and fades is " +
-                "its own lesson, coming in the Sound track.)\n\nListen for: the shape. Leap up, walk " +
+                "its own lesson: ${Tut.shapeOfANote}.)\n\nListen for: the shape. Leap up, walk " +
                 "to the top, walk back down to where it can start again.\n\nTry it: move a note up or " +
                 "down one letter, or trade a rest for a note, and press Update. If a change sounds " +
                 "wrong, change it back — that back-and-forth is how melodies actually get written. " +
-                "This melody was also written to sit on top of the groove you shaped last lesson; " +
-                "playing two lines at once comes later in the Pattern track, in the Layers lesson.",
+                "This melody was also written to sit on top of the groove you shaped in " +
+                "${Tut.spaceAndRests}; playing two lines at once is its own Pattern-track lesson: " +
+                "Layers.",
             code = """
-                note("a3 c4 d4 ~ e4 d4 c4 ~")  // leap up, walk to the top, walk back down
-                  .sound("sine")               // the plain voice carries it
-                  .gain(0.5)                   // pure tones read loud — 0.5 is plenty
+                note("a3 c4 d4 ~  e4 d4 c4 ~")  // leap up, walk to the top, walk back down
+                  .sound("sine")                // the plain voice carries it
+                  .gain(0.5)                    // pure tones read loud — 0.5 is plenty
+            """.trimIndent(),
+        ),
+        TutorialSection(
+            heading = "Holding a note",
+            text = "One more version, for a question you may already be asking: how do you hold a " +
+                "note instead of resting after it? Put @2 behind it — that note then takes two " +
+                "steps' worth of time. Here the two rests are gone; d4 and c4 hold through the " +
+                "space instead. (@ is borrowed from a later lesson — ${Tut.alternationAndRepetition} " +
+                "tells its full story; here it is simply the answer to the question.)\n\nTry it: " +
+                "swap the // to compare holding against resting.\n\nListen for: the same melody, " +
+                "now unbroken — where the silence was, the long note carries through.",
+            code = """
+                note("a3 c4 d4@2  e4 d4 c4@2").sound("sine").gain(0.5)    // @2: the note holds two steps' worth
+                // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5) // the rest version — swap to compare
             """.trimIndent(),
         ),
     ),

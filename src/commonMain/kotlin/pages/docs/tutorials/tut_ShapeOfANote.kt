@@ -8,7 +8,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 /** Curriculum slot A2 — see docs/tasks/tutorial-curriculum.md */
 val shapeOfANoteTutorial = Tutorial(
     slug = "shape-of-a-note",
-    title = "The Shape of a Note",
+    title = Tut.shapeOfANote,
     description = "ADSR: four numbers that turn one voice into a pluck, an organ, or a pad.",
     track = TutorialTrack.Sound,
     difficulty = TutorialDifficulty.Beginner,
@@ -22,14 +22,14 @@ val shapeOfANoteTutorial = Tutorial(
                 "all along, just a hidden default. adsr() writes it out: four numbers separated by " +
                 "colons — attack (seconds to fade in), decay (seconds to settle), sustain (the level " +
                 "it holds while the note lasts, 0 to 1), release (seconds to fade out after the note " +
-                "ends).\n\nThe melody from the last lessons is too quick for shapes this size, so " +
+                "ends).\n\nThe melody from ${Tut.firstNotes} is too quick for shapes this size, so " +
                 "this lesson stretches its opening leap — a3 up to c4 — into two long notes with " +
                 "room around them.\n\nListen for: nothing new — this is exactly the organ-like shape " +
-                "every note has worn since your first note in First Notes, now visible in the code. " +
+                "every note has worn since your first note in ${Tut.firstNotes}, now visible in the code. " +
                 "The next three sections take it apart, one change at a time.",
             code = """
                 note("a3 ~ c4 ~")              // the melody's opening leap, stretched long
-                  .sound("saw")                // the bright voice from the last lesson
+                  .sound("saw")                // the bright voice from ${Tut.theFourWaveforms}
                   .adsr("0.01:0.1:1:0.05")     // the default shape, written out: on, hold, off
                   .gain(0.5)                   // kept modest — the stages are easier to hear
             """.trimIndent(),
@@ -86,7 +86,7 @@ val shapeOfANoteTutorial = Tutorial(
                 "the pad swells in and rings out. When you can hear a sound in your head and reach " +
                 "for the four numbers that make it, this lesson has done its job — start from one " +
                 "of these and bend it.\n\n(Loudness is only half of a note's life; the other half " +
-                "is colour over time, and that is the next Sound lesson: filters.)",
+                "is colour over time, and that is its own Sound-track lesson: filters.)",
             code = """
                 note("a3 ~ c4 ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5)      // pluck: struck, then gone
                 // note("a3 ~ c4 ~").sound("saw").adsr("0.01:0.1:1:0.05").gain(0.5)   // organ: on while held

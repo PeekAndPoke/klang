@@ -37,7 +37,16 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
 7. **Short path, fat reference.** The ladder stays lean; exhaustive parameter lists live in the Lexikon, cross-linked.
 8. **Every finale must sound at least ok, ideally good.** Render QA (below) enforces the floor;
    the by-ear polish pass owns the ceiling.
-9. **Mostly every code line carries a comment saying what that line does** — and, where relevant, what to
+9. **Cross-lesson references go by lesson NAME, never by reading order.** Readers browse lessons
+   freely — the registry order is a default path, not a promise. "Last lesson"/"next lesson" are
+   banned (lint-enforced); prose interpolates the shared `Tut` title constants (`TutorialModel.kt`)
+   so a rename updates every reference. Lessons that don't exist yet are referenced by topic
+   ("the Layers lesson", "the scales lesson").
+10. **Long pattern strings split into halves with a double space** — more than four events per
+    cycle reads better as two groups: `"bd hh sd hh  bd hh sd oh"`, `"a a a  b b b"`; four or
+    fewer stay single-spaced (`"a a a"`). Whitespace is semantically free in mini-notation;
+    lint-enforced.
+11. **Mostly every code line carries a comment saying what that line does** — and, where relevant, what to
    listen for on that line (`// saw.fast(4): a pump 4× per cycle — the sidechain feel`). Comments are
    narration, never decoration (no mood/metaphor comments — that rule produced the sculptor slop). Comment
    vocabulary follows the same taught-so-far rule as code. Familiar carrier boilerplate may go bare once
@@ -106,22 +115,23 @@ stages must not carry it.
 
 ### Obligations register (promises earlier lessons made — the named lesson must keep them)
 
-- **A1 (waveforms):** B3 calls sine "the plainest voice" and promises the siblings (saw/square/triangle)
-  "their own lesson soon". A1 must keep that promise and formalize **"voice"** as the standing term for
+- **A1 (waveforms):** B3 calls sine "the plainest voice" and points the siblings (saw/square/triangle)
+  to "their own lesson: The Four Waveforms". A1 must keep that promise and formalize **"voice"** as the standing term for
   oscillator timbre (B3 introduced it informally).
-- **A2 (ADSR):** B3's finale states each note "holds for its whole step and then stops" and promises
-  shaping attack/fade as "its own lesson, coming in the Sound track". A2 opens from that fact (default
+- **A2 (ADSR):** B3's finale states each note "holds for its whole step and then stops" and points
+  shaping attack/fade to "its own lesson: The Shape of a Note". A2 opens from that fact (default
   sustain is organ-like).
 - **C1 (caricature drums):** A1's noise section promises "building your own [hi-hat] from raw
   noise comes in the Motör track" and frames drum-machine hats as "a short burst of shaped noise" —
   C1 must deliver exactly that recipe (noise + shaping), and may echo A1's "the hh you have been
   playing is a recording of one".
 - **A3 (filters):** A2's finale promises "loudness is only half of a note's life; the other half is
-  colour over time, and that is the next Sound lesson: filters" — A3 must open from that framing.
+  colour over time, and that is its own Sound-track lesson: filters" — A3 must open from that framing.
 - **B4 (subdivision):** B1/B2 established counts-vs-steps on the 8-step grid and used "off-beats" for
   the between-count positions. B4 inherits those terms; don't redefine.
 - **B6 (Layers):** B1 promises "balancing them with gain() is most of what mixing is" once several lines
-  run; B3's finale says its melody was "also written to sit on top of the groove you shaped last lesson". B6
+  run; B3's finale says its melody was "also written to sit on top of the groove you shaped in
+  Space and Rests". B6
   should literally combine the B2 groove and the B3 melody as its running example.
 - **B5 re-licences "bar" (decided in review):** B1 retired the word; B5 brings it back with a
   split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth

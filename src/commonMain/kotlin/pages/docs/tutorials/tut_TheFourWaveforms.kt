@@ -22,7 +22,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  */
 val theFourWaveformsTutorial = Tutorial(
     slug = "the-four-waveforms",
-    title = "The Four Waveforms",
+    title = Tut.theFourWaveforms,
     description = "Meet sine, saw, square, and triangle — the four basic voices, and what to hear in each.",
     track = TutorialTrack.Sound,
     difficulty = TutorialDifficulty.Beginner,
@@ -32,7 +32,7 @@ val theFourWaveformsTutorial = Tutorial(
     sections = listOf(
         TutorialSection(
             heading = "The voice",
-            text = "The melody below is the one you ended First Notes with, sung by sine — the pure " +
+            text = "The melody below is the one you ended ${Tut.firstNotes} with, sung by sine — the pure " +
                 "tone with nothing added. This lesson keeps the melody fixed and changes only who " +
                 "sings it. That \"who\" is the voice: not a recording like the ones drum names fetch, but " +
                 "a sound Klang builds on the spot from a repeating wave shape — a waveform — at " +
@@ -44,9 +44,9 @@ val theFourWaveformsTutorial = Tutorial(
                 "all. Memorize it, because everything in the next three sections is sine plus " +
                 "something.",
             code = """
-                note("a3 c4 d4 ~ e4 d4 c4 ~")  // the melody from First Notes, unchanged all lesson
-                  .sound("sine")               // the reference voice: a pure tone
-                  .gain(0.5)                   // pure tones read loud — keep them around 0.5
+                note("a3 c4 d4 ~  e4 d4 c4 ~")  // the melody from ${Tut.firstNotes}, unchanged all lesson
+                  .sound("sine")                // the reference voice: a pure tone
+                  .gain(0.5)                    // pure tones read loud — keep them around 0.5
             """.trimIndent(),
         ),
         TutorialSection(
@@ -58,8 +58,8 @@ val theFourWaveformsTutorial = Tutorial(
                 "like the difference between humming and singing through your teeth. Saw is the " +
                 "workhorse for basses, leads, and anything that has to cut through.",
             code = """
-                note("a3 c4 d4 ~ e4 d4 c4 ~").sound("saw").gain(0.5)     // bright: the full overtone stack
-                // note("a3 c4 d4 ~ e4 d4 c4 ~").sound("sine").gain(0.5) // the pure reference — swap to compare
+                note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").gain(0.5)     // bright: the full overtone stack
+                // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5) // the pure reference — swap to compare
             """.trimIndent(),
         ),
         TutorialSection(
@@ -72,8 +72,8 @@ val theFourWaveformsTutorial = Tutorial(
                 "sounds emptied out — hollow and woody, like a clarinet, or the melodies in old " +
                 "video games, which were built almost entirely from square waves.",
             code = """
-                note("a3 c4 d4 ~ e4 d4 c4 ~").sound("square").gain(0.35) // hollow: every second overtone missing
-                // note("a3 c4 d4 ~ e4 d4 c4 ~").sound("saw").gain(0.5)  // the full stack — swap to compare
+                note("a3 c4 d4 ~  e4 d4 c4 ~").sound("square").gain(0.35) // hollow: every second overtone missing
+                // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").gain(0.5)  // the full stack — swap to compare
             """.trimIndent(),
         ),
         TutorialSection(
@@ -85,8 +85,8 @@ val theFourWaveformsTutorial = Tutorial(
                 "edge that sine does not have — much softer than square, far softer than saw. " +
                 "Triangle is the voice for melodies that should sit close and warm.",
             code = """
-                note("a3 c4 d4 ~ e4 d4 c4 ~").sound("triangle").gain(0.55) // almost pure: a faint trace of overtones
-                // note("a3 c4 d4 ~ e4 d4 c4 ~").sound("sine").gain(0.5)   // fully pure — swap to compare
+                note("a3 c4 d4 ~  e4 d4 c4 ~").sound("triangle").gain(0.55) // almost pure: a faint trace of overtones
+                // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5)   // fully pure — swap to compare
             """.trimIndent(),
         ),
         TutorialSection(
@@ -101,8 +101,8 @@ val theFourWaveformsTutorial = Tutorial(
                 "a short burst of shaped noise. The hh you have been playing is a recording of one; " +
                 "building your own from raw noise comes in the Motör track.",
             code = """
-                note("a3 c4 d4 ~ e4 d4 c4 ~").sound("white").gain(0.3)   // noise reads loud and rough — kept well down
-                // note("a3 c4 d4 ~ e4 d4 c4 ~").sound("sine").gain(0.5) // the melody — swap to bring it back
+                note("a3 c4 d4 ~  e4 d4 c4 ~").sound("white").gain(0.3)   // noise reads loud and rough — kept well down
+                // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5) // the melody — swap to bring it back
             """.trimIndent(),
         ),
         TutorialSection(
@@ -116,10 +116,10 @@ val theFourWaveformsTutorial = Tutorial(
                 "makes the melody insist, triangle makes it confide.\n\n(There is a whole shelf of " +
                 "further voices — supersaw, pluck and more; they turn up as the course goes on.)",
             code = """
-                note("a3 c4 d4 ~ e4 d4 c4 ~").sound("saw").gain(0.5)          // saw: the full overtone stack
-                // note("a3 c4 d4 ~ e4 d4 c4 ~").sound("sine").gain(0.5)      // sine: no overtones at all
-                // note("a3 c4 d4 ~ e4 d4 c4 ~").sound("square").gain(0.35)   // square: every second overtone
-                // note("a3 c4 d4 ~ e4 d4 c4 ~").sound("triangle").gain(0.55) // triangle: the same stack, far fainter
+                note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").gain(0.5)          // saw: the full overtone stack
+                // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5)      // sine: no overtones at all
+                // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("square").gain(0.35)   // square: every second overtone
+                // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("triangle").gain(0.55) // triangle: the same stack, far fainter
             """.trimIndent(),
         ),
     ),

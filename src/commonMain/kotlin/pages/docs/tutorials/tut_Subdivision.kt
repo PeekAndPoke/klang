@@ -17,7 +17,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  */
 val subdivisionTutorial = Tutorial(
     slug = "subdivision",
-    title = "Subdivision",
+    title = Tut.subdivision,
     description = "Split a single step with [ ] and *, and the eight-step grid explains itself.",
     track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
@@ -33,7 +33,7 @@ val subdivisionTutorial = Tutorial(
                 "two lines and press Update.\n\nListen for: the count. It is one-two-three-four in " +
                 "both versions — the kick and snare never move — but in the first, count two " +
                 "carries a double hat, its second half landing on the off-beat, the spot the hats " +
-                "sat in Space and Rests. The cycle did not gain a step; one step gained an inside.",
+                "sat in ${Tut.spaceAndRests}. The cycle did not gain a step; one step gained an inside.",
             code = """
                 sound("bd [hh hh] sd hh").gain(0.8)  // count two split in half — the grid unchanged
                 // sound("bd hh sd hh").gain(0.8)    // the plain four steps — swap to compare
@@ -80,17 +80,17 @@ val subdivisionTutorial = Tutorial(
         TutorialSection(
             heading = "The grid, explained",
             text = "Now a secret about everything you have played so far: the eight-step grid from " +
-                "Your First Beat and Space and Rests can be read as subdivision — four counts, " +
+                "${Tut.yourFirstBeat} and ${Tut.spaceAndRests} can be read as subdivision — four counts, " +
                 "each split in two. The live line below is the very first beat of this course, " +
                 "spelled the other way round.\n\nTry it: swap the // against its eight-name " +
                 "spelling — they sound identical.\n\nListen for: nothing moving. Swap while it " +
                 "plays and watch the counter — no stutter, no shift, not one hit landing early. " +
                 "Two spellings, one beat. From here on you can think in counts and split them " +
-                "exactly as deep as a groove needs. The next lesson turns the trick outward: " +
-                "whole cycles taking turns.",
+                "exactly as deep as a groove needs. ${Tut.alternationAndRepetition} turns the trick " +
+                "outward: whole cycles taking turns.",
             code = """
-                sound("[bd hh] [sd hh] [bd hh] [sd oh]").gain(0.8) // four counts, each split in two
-                // sound("bd hh sd hh bd hh sd oh").gain(0.8)      // the very first beat, as eight steps
+                sound("[bd hh] [sd hh] [bd hh] [sd oh]").gain(0.8)  // four counts, each split in two
+                // sound("bd hh sd hh  bd hh sd oh").gain(0.8)      // the very first beat, as eight steps
             """.trimIndent(),
         ),
     ),

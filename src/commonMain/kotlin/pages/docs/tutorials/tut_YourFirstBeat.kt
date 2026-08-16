@@ -8,7 +8,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 /** Curriculum slot B1 — see docs/tasks/tutorial-curriculum.md */
 val yourFirstBeatTutorial = Tutorial(
     slug = "your-first-beat",
-    title = "Your First Beat",
+    title = Tut.yourFirstBeat,
     description = "Play your first sounds and meet the cycle — the repeating window every pattern lives in.",
     track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
@@ -27,8 +27,8 @@ val yourFirstBeatTutorial = Tutorial(
                 "lines on and off. (The EVT field tunes how much of the code lights up while " +
                 "playing — you can ignore it.)",
             code = """
-                sound("bd hh sd hh bd hh sd oh")  // eight drum names in one pattern
-                  .gain(0.8)                      // volume of this line
+                sound("bd hh sd hh  bd hh sd oh")  // eight drum names in one pattern
+                  .gain(0.8)                       // volume of this line
             """.trimIndent(),
         ),
         TutorialSection(
@@ -82,7 +82,7 @@ val yourFirstBeatTutorial = Tutorial(
                 "four filled. (The counter confirms it: same pace either way.) The cycle is a fixed " +
                 "container — you never changed it, only how many pieces it is cut into.",
             code = """
-                sound("bd hh sd").gain(0.8)        // three names: the cycle splits in thirds
+                sound("bd hh sd").gain(0.8)                                 // three names: the cycle splits in thirds
                 // sound("bd hh sd hh").gain(0.8)  // four again — swap the // to compare
             """.trimIndent(),
         ),
@@ -95,7 +95,7 @@ val yourFirstBeatTutorial = Tutorial(
                 "right up to the seam — where the closed hats are gone after a blink — and that late " +
                 "lift is how a cycle covers its own restart.",
             code = """
-                sound("bd hh sd hh bd hh sd oh").gain(0.8)  // eight names: each gets an eighth of the cycle
+                sound("bd hh sd hh  bd hh sd oh").gain(0.8)  // eight names: each gets an eighth of the cycle
             """.trimIndent(),
         ),
         TutorialSection(
@@ -112,8 +112,8 @@ val yourFirstBeatTutorial = Tutorial(
                 "run at the same time (that is the Layers lesson), balancing them with gain() is most " +
                 "of what mixing is.\n\nThis is exactly the code you heard at the top of the page.",
             code = """
-                sound("bd hh sd hh bd hh sd oh")  // the beat from the top of the page
-                  .gain(0.8)                      // volume: try 0.3, then 2.5
+                sound("bd hh sd hh  bd hh sd oh")  // the beat from the top of the page
+                  .gain(0.8)                       // volume: try 0.3, then 2.5
             """.trimIndent(),
         ),
     ),

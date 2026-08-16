@@ -33,6 +33,23 @@ enum class TutorialTag(val label: String) {
     GettingStarted("Getting Started"),
 }
 
+/**
+ * Single source of truth for lesson titles. Prose in one lesson refers to another
+ * lesson by interpolating these constants — never by reading order ("last lesson",
+ * "next lesson" are banned and lint-enforced): readers browse lessons in any order,
+ * so every cross-reference must carry the lesson's name. Renaming a lesson here
+ * renames every reference to it.
+ */
+object Tut {
+    const val yourFirstBeat = "Your First Beat"
+    const val spaceAndRests = "Space and Rests"
+    const val firstNotes = "First Notes"
+    const val theFourWaveforms = "The Four Waveforms"
+    const val shapeOfANote = "The Shape of a Note"
+    const val subdivision = "Subdivision"
+    const val alternationAndRepetition = "Alternation and Repetition"
+}
+
 enum class TutorialTrack(val label: String) {
     Sound("Sound"),
     Pattern("Pattern"),
