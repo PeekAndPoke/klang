@@ -1,8 +1,14 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-15**
+**SINCE: 2026-08-16**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-15, claude-code tutorial session): tutorial ladder now has SEVEN lessons
+> (B1-B3 shipped in 63617e2c; A1/A2 and B4/B5 authored, review-certified through multi-round
+> panels, TutorialCurriculumSpec green on every run — 7 checks incl. compile-all-blocks). The four
+> new lesson files + registry + plan-doc updates are UNCOMMITTED, awaiting the maintainer's by-ear
+> pass. Note: the correct test invocation is `:jvmTest` (root module), NOT bare `jvmTest`.
 
 > Note (2026-08-15): `:compileKotlinJs` hit the sprudel KSP cache corruption TWICE in this session.
 > ROOT CAUSE FOUND: the maintainer runs a frontend auto-compile watcher — a standing Gradle process

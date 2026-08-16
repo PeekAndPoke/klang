@@ -16,4 +16,9 @@ val allTutorials: List<Tutorial> = listOf(
     yourFirstBeatTutorial, // B1
     spaceAndRestsTutorial, // B2
     firstNotesTutorial, // B3
+    // Stage 2 — Core sound + core notation
+    theFourWaveformsTutorial, // A1
+    shapeOfANoteTutorial, // A2
+    subdivisionTutorial, // B4
+    alternationAndRepetitionTutorial, // B5
 )

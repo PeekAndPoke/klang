@@ -591,7 +591,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         ctx.stroke()
 
         // Gold highlight
-        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.25).toString()
+        ctx.strokeStyle = KlangTheme.bronze.withAlpha(0.25).toString()
         ctx.lineWidth = strokeWidth + 3
         ctx.stroke()
 

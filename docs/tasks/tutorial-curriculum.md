@@ -54,6 +54,9 @@ The published Prev/Next path interleaves them; each lesson lists main / touches 
 
 ### Stage 1 — Onramp (carrier kit)
 
+The `GettingStarted` tag marks Stage-1 lessons only — it feeds a live filter view, so later
+stages must not carry it.
+
 | # | Lesson | Main | Touches | Running example / Listen for |
 |---|--------|------|---------|------------------------------|
 | B1 | Your first beat | `sound()`, sequences, the cycle | `gain` | Kick–snare loop built up step by step. *Listen for: the loop seam — where the cycle restarts.* (The old `tut_YourFirstBeat` had the right shape — steal its structure from git history, write fresh.) |
@@ -64,8 +67,8 @@ The published Prev/Next path interleaves them; each lesson lists main / touches 
 
 | # | Lesson | Main | Touches | Running example / Listen for |
 |---|--------|------|---------|------------------------------|
-| A1 | The four waveforms | oscillator timbre: sine, tri, saw, square (+ noise) | carrier only | ONE fixed phrase, swap `.sound()` per section. *Listen for: the buzz the saw adds over the sine; the hollow middle of the square.* |
-| A2 | ADSR — a note's shape in time | `adsr` (amp envelope), dedicated lesson (currently missing) | — | Same phrase morphs pluck → organ → pad by moving one letter at a time. *Listen for: attack click vs. fade-in.* |
+| A1 | The four waveforms | oscillator timbre: sine, tri, saw, square (+ noise) | carrier only | ONE fixed phrase, swap `.sound()` per section. *Listen for: the buzz the saw adds over the sine; the hollowness of the square.* |
+| A2 | ADSR — a note's shape in time | `adsr` (amp envelope), dedicated lesson (currently missing) | — | Same phrase morphs pluck → organ → pad by moving one letter at a time. *Listen for: attack snap vs. fade-in.* |
 | B4 | Subdivision | `[]`, `*` | — | Hi-hat line densifies. *Listen for: how `[hh hh]` fits the same time slot.* |
 | B5 | Alternation & repetition | `<>`, `!`, `@` | — | Bassline that changes per cycle (Sandsturm's `<bar1 bar2 bar3 bar4>` idiom). *Listen for: the 4-bar rotation.* |
 | A3 | Filters — LPF & HPF | `lpf`, `hpf`, `lpq` | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |
@@ -109,19 +112,35 @@ The published Prev/Next path interleaves them; each lesson lists main / touches 
 - **A2 (ADSR):** B3's finale states each note "holds for its whole step and then stops" and promises
   shaping attack/fade as "its own lesson, coming in the Sound track". A2 opens from that fact (default
   sustain is organ-like).
+- **C1 (caricature drums):** A1's noise section promises "building your own [hi-hat] from raw
+  noise comes in the Motör track" and frames drum-machine hats as "a short burst of shaped noise" —
+  C1 must deliver exactly that recipe (noise + shaping), and may echo A1's "the hh you have been
+  playing is a recording of one".
+- **A3 (filters):** A2's finale promises "loudness is only half of a note's life; the other half is
+  colour over time, and that is the next Sound lesson: filters" — A3 must open from that framing.
 - **B4 (subdivision):** B1/B2 established counts-vs-steps on the 8-step grid and used "off-beats" for
   the between-count positions. B4 inherits those terms; don't redefine.
 - **B6 (Layers):** B1 promises "balancing them with gain() is most of what mixing is" once several lines
   run; B3's finale says its melody was "also written to sit on top of the groove you shaped last lesson". B6
   should literally combine the B2 groove and the B3 melody as its running example.
+- **B5 re-licences "bar" (decided in review):** B1 retired the word; B5 brings it back with a
+  split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth
+  of notes (content). Later lessons must hold that split and never drift back to bar-as-time.
+  C8's `arrange([bars, section])` counts bars and depends on it.
+- **B9 (transform toolkit):** must connect `.fast(n)` back to B4's `*n` — the same operation at
+  pattern level vs. inside one step; introducing it as unrelated would confuse learners who own `*`.
 - **B8 (Scales):** B3 introduces sharps/flats (`eb3` played in "The notes between", `cs3` via its
   directed try-it) and defers
   "which of these in-between notes belong together with which letters" to the scales lesson; B8 also
   owes the major/minor mood A/B
   (`c4 e4 g4` vs `c4 eb4 g4`) descoped from B3.
-- **A6 (unison/thickness):** the word "voice" is taken — B3 established it as the term for oscillator
-  timbre. A6 must disambiguate explicitly: the `unison`/`voices` parameter counts internal copies —
-  call them "unison layers" in prose, never bare "voices".
+- **A6 (unison/thickness):** the word "voice" is taken — B3 introduced and A1 formalized it as the
+  term for oscillator timbre ("not a recording ... a sound Klang builds on the spot"). A6 must
+  disambiguate explicitly: the `unison`/`voices` parameter counts internal copies — call them
+  "unison layers" in prose, never bare "voices". ⚠️ The Lexikon separately uses "voice" in the
+  ENGINE sense ("Voices are routed to a Cylinder by their Orbit") — resolve that collision once,
+  in one place, when a lesson first touches engine voices. A1 also names `supersaw` among the
+  "further voices" promised for later lessons; A6 owns delivering it.
 
 ### Extras shelf (not on the path)
 
@@ -160,9 +179,15 @@ sound ok" into something partly checkable. Two tiers:
 - **Sanctioned parity exceptions:** an A/B whose level difference is inherent to the concept (B3
   "Steps and leaps": a leap must change register) or explicitly narrated in the lesson (B2 finale's
   "judge the groove, not the level") is exempt from the ±1 dB gate — the harness needs an allowlist so
-  nobody "fixes" these by mangling the music. First measurement item for the gate: B2 "Take the skeleton
+  nobody "fixes" these by mangling the music. Measurement items for the gate: B2 "Take the skeleton
   away" lifts hats 0.8→1.0 (~+2 dB) against a sample-level gap that may be 10 dB+ — verify the
-  compensation actually lands, adjust by ear.
+  compensation actually lands, adjust by ear. A1's per-voice trims (square 0.35, triangle 0.55 vs
+  0.5, and white 0.3 — the last a PERCEPTUAL trim, −6.2 dB RMS vs sine, deliberate) are narrated
+  in the lesson ("judge the colour, not the level") — verify by ear/render and tune — measure the
+  square-vs-saw pair (A1 §3) first. B4's finale pair is IDENTICAL BY DESIGN (two spellings, one
+  beat — the audibility gate must allowlist it, not flag it), and B4's §1/§2/§4 pairs differ in hit
+  count because density is the concept (§3 differs in placement only and passes parity unaided). B5's bar-4 `e2` (~82 Hz) is a by-ear item: confirm it
+  reads on laptop speakers.
 
 Shape: a JVM-side harness in the style of `runSongBenchmark` that walks the registry, renders each block,
 hard-fails on tier-1 violations, and emits the tier-2 report for the polish pass.
