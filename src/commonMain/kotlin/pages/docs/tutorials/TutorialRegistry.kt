@@ -48,6 +48,8 @@ val theKlangPathTrack = TutorialTrackDef(
         // Stage 3 — Where the tracks meet
         signalsMoveTheKnobsTutorial, // A5
         scalesAndMelodiesTutorial, // B8
+        theTransformToolkitTutorial, // B9
+        gatesTutorial, // B10
     ),
 )
 
@@ -81,6 +83,8 @@ val patternLanguageTrack = TutorialTrackDef(
         layersTutorial, // B6
         chordsInOneStepTutorial, // B7
         scalesAndMelodiesTutorial, // B8
+        theTransformToolkitTutorial, // B9
+        gatesTutorial, // B10
     ),
     // B5's bass rides A2's pluck (adsr), so this track assumes the main path too.
     buildsOn = listOf(theKlangPathTrack),

@@ -109,7 +109,7 @@ stages must not carry it.
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
 | A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: 1 voice → 9 voices → spread out → drift. *Listen for: mono vs. wide on headphones.* |
-| A7 | Space & dirt | `room`/`rsize`, `delay` family, `distort`, `warmth`, `postgain` | — | Effect ORDER matters (distort→filter vs. filter→distort). *Listen for: same settings, swapped order.* |
+| A7 | Space & dirt | `room`/`rsize`, `delay` family, `distort`, `warmth`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/warmth), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
 | A8 | Body | `body()`, `bodyMix` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
 
@@ -171,10 +171,17 @@ stages must not carry it.
   split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth
   of notes (content). Later lessons must hold that split and never drift back to bar-as-time.
   C8's `arrange([bars, section])` counts bars and depends on it.
-- **B9 (transform toolkit):** must connect `.fast(n)` back to B4's `*n` — the same operation at
-  pattern level vs. inside one step; introducing it as unrelated would confuse learners who own `*`.
-  ADDED BY A5: A5 previews fast()/slow() on signals ("their full story is a Pattern-track lesson
-  still to come") — B9 owes that story and should connect back to A5's signal use.
+- **B9 (transform toolkit) — DELIVERED (certified 2026-08-17):** connects `.fast(n)` to B4's `*n`
+  (literally true: mini-notation `*n` compiles to `.fast(n)`) and redeems A5's fast/slow preview by
+  name. `clip` licensed as legato's true alias (songs use BOTH spellings). ⚠️ Engine truth from its
+  review: superimpose copies of a bare voice are bit-identical (phase 0) and equal-power pans are
+  symmetric — pan-only superimpose gives a dead-centre image, NOT width; width needs the copies to
+  differ in content (e.g. `.pan(0.3).superimpose(transpose(12).pan(0.7))`). Never teach the songs'
+  pan-mirror idiom on a plain voice.
+- **B10 (gates) — DELIVERED (certified 2026-08-17):** struct via the what/when split; B7's stab
+  riff revealed as the tresillo (steps 1/4/7 = gaps 3-3-2). §1's A/B identical by design —
+  sanctioned render-QA audibility exception (KDoc). Licensed terms: "gate", "section" (band sense),
+  "tresillo". The planned `chord` preview was dropped — the B7 comma-chord carries the lesson.
 - **B8 (Scales) — DELIVERED (certified 2026-08-17):** §2 answers B3's deferred in-between-notes
   question and lands the major/minor mood A/B (0 2 4 on c4 = c4 e4 g4 vs c4 eb4 g4). Continuity
   locked in: the course melody IS `n("0 2 3 ~  4 3 2 ~").scale("a3:minor")` and the B6 bass IS

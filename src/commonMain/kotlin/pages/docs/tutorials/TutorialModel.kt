@@ -54,6 +54,8 @@ object Tut {
     const val chordsInOneStep = "Chords in One Step"
     const val signalsMoveTheKnobs = "Signals Move the Knobs"
     const val scalesAndMelodies = "Scales and Melodies"
+    const val theTransformToolkit = "The Transform Toolkit"
+    const val gates = "Gates"
 }
 
 /**

@@ -4,6 +4,11 @@
 **SINCE: 2026-08-17**
 **STATE: FREE — take the lock before building.**
 
+> Last action (2026-08-17, claude-code tutorial session): ladder at 15 certified lessons —
+> B6/B7, A5/B8, B9/B10 all authored + certified + committed this session (block layout +
+> AdsrVisual too). Spec 12/12 green on every run. ⚠️ jsMain compiled by the maintainer's
+> watcher only. Correct test invocation: `:jvmTest` (root module), NEVER bare `jvmTest`.
+
 > Last action (2026-08-17, claude-code tutorial session): tutorial sections refactored to the
 > block layout — TutorialSection(heading, blocks) with Block = Text | Code(lang, code) |
 > Visual.Adsr(value, label); new AdsrVisual SVG comp in jsMain; 5 envelope visuals retrofitted
