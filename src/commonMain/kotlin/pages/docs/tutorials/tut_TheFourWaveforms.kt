@@ -24,7 +24,6 @@ val theFourWaveformsTutorial = Tutorial(
     slug = "the-four-waveforms",
     title = Tut.theFourWaveforms,
     description = "Meet sine, saw, square, and triangle — the four basic voices, and what to hear in each.",
-    track = TutorialTrack.Sound,
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Synthesis),

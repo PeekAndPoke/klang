@@ -19,7 +19,6 @@ val subdivisionTutorial = Tutorial(
     slug = "subdivision",
     title = Tut.subdivision,
     description = "Split a single step with [ ] and *, and the eight-step grid explains itself.",
-    track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Rhythm, TutorialTag.Patterns),

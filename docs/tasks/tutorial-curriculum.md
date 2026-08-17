@@ -46,7 +46,22 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
     cycle reads better as two groups: `"bd hh sd hh  bd hh sd oh"`, `"a a a  b b b"`; four or
     fewer stay single-spaced (`"a a a"`). Whitespace is semantically free in mini-notation;
     lint-enforced.
-11. **Mostly every code line carries a comment saying what that line does** — and, where relevant, what to
+11. **Useful simplification beats technical precision in early lessons** (user ruling 2026-08-17,
+    from the lpf/hpf case). A first mental model may be "roughly" true — lpf(800)/hpf(800)
+    "split the sound into two halves" is exactly right for building understanding, even though
+    filter slopes and corner bias make it technically fuzzy. Mark approximations lightly
+    ("roughly") rather than explaining them; precision arrives in the lesson that needs it.
+    Reviewers must not flag calibrated simplifications as factual errors — the bar is "builds a
+    correct-enough model", not "survives a DSP audit". **Corollary (user ruling, same day): the
+    filters and effects are still in flux — prose must NEVER warrant tunable engine internals**
+    (slopes, corner positions, combination arithmetic, curve constants, internal defaults of
+    effect stages). Describe the knob's intent and what to hear; exact numbers live only in code
+    examples, where retuning is cheap and the render/by-ear pass owns them. Review mandate:
+    verify prose against the CODE EXAMPLE and the stable intent, not against DSP source that may
+    change under it. The real "hardcore" technical tier comes at the very end of the ladder,
+    in the future, once the engine is considered stable — no lesson before then goes deeper
+    than intent + ear.
+12. **Mostly every code line carries a comment saying what that line does** — and, where relevant, what to
    listen for on that line (`// saw.fast(4): a pump 4× per cycle — the sidechain feel`). Comments are
    narration, never decoration (no mood/metaphor comments — that rule produced the sculptor slop). Comment
    vocabulary follows the same taught-so-far rule as code. Familiar carrier boilerplate may go bare once
@@ -126,13 +141,21 @@ stages must not carry it.
   C1 must deliver exactly that recipe (noise + shaping), and may echo A1's "the hh you have been
   playing is a recording of one".
 - **A3 (filters):** A2's finale promises "loudness is only half of a note's life; the other half is
-  colour over time, and that is its own Sound-track lesson: filters" — A3 must open from that framing.
+  colour over time, and that is its own Sound-track lesson: filters" — A3 opens from that framing.
+  DELIVERED IN TWO INSTALMENTS by design: A3 = static colour + per-cycle stepping, A4 = colour
+  moving within a note. Both lessons cross-link; do not "fix" A3 by pulling A4's material forward.
+- **A5 (signals):** A4's finale promises: cutoff "stepped ... cycle by cycle" in A3, "moved ...
+  inside single notes" in A4 — "sliding it smoothly across a whole pattern is the signals lesson,
+  further along the Sound track". A5 must open from that stepped/inside/smooth progression.
 - **B4 (subdivision):** B1/B2 established counts-vs-steps on the 8-step grid and used "off-beats" for
   the between-count positions. B4 inherits those terms; don't redefine.
 - **B6 (Layers):** B1 promises "balancing them with gain() is most of what mixing is" once several lines
   run; B3's finale says its melody was "also written to sit on top of the groove you shaped in
   Space and Rests". B6
   should literally combine the B2 groove and the B3 melody as its running example.
+- **A8 (body resonator):** A3 spends **"body"** as the standing term for the low half of the
+  spectrum ("body below, sparkle above"). A8 teaches `body()`/`bodyMix` — the cabinet resonator —
+  and must disambiguate the collision explicitly at first use, the way A6 must for "voice".
 - **B5 re-licences "bar" (decided in review):** B1 retired the word; B5 brings it back with a
   split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth
   of notes (content). Later lessons must hold that split and never drift back to bar-as-time.
@@ -164,6 +187,49 @@ vowel/notch/crush, a sound-design playground deep-dive.
 - Optional `previews: List<String>` per section or lesson to make rule 3 lintable.
 - A small lint (test) that walks the registry order and flags identifiers used before taught and undeclared.
 - Fix `tut_EveryTrick.kt` prose (`slow`, not reverse) immediately, independent of the rework.
+
+## Tracks (BUILT 2026-08-17 — data model, per-track lint, and UI)
+
+Two levels only: named, ordered **tracks** of lessons; a lesson can be in multiple tracks. The
+"course" layer proved one level too much — because membership is many-to-many, the braided main
+path is itself simply a track, sitting beside thematic ones like "Sound Design Basics". Nothing a
+course could express is lost.
+
+**Data model:**
+
+- `TutorialTrackDef(slug, title, description, lessons: List<Tutorial>, buildsOn: List<TutorialTrackDef>)`
+- `allTracks` is the registry; the flat `allTutorials` is derived (distinct lessons, main-track
+  order first) so the existing list page and lint survive the migration.
+- `buildsOn` makes prerequisites honest: a thematic track like "Sound Design Basics" assumes the
+  carrier kit (note/sound/gain) taught in the onramp — it declares that instead of hiding it. The
+  per-track vocabulary lint then checks: every lesson's vocabulary ∈ (teaches of buildsOn tracks)
+  ∪ (taught earlier in this track) ∪ (declared previews). The main track builds on nothing and
+  stays the strictest check (today's global lint, unchanged).
+- The `TutorialTrack` enum (Sound/Pattern/Motör) dissolves — membership defines flavour. The
+  `GettingStarted` tag rule likewise retires; the tag was a proxy for track membership.
+
+**UI/state model (user-specified):**
+
+1. The tutorial page knows: which tutorial + which track the reader is on — track is **nullable**.
+   Track context travels as a route/query param (`?track=<slug>`), keeping one canonical URL per
+   tutorial.
+2. Prev/Next derive from the track. With track = null (arrived via All Tutorials or a direct
+   link): no Prev/Next at all — instead show "part of:" chips for every track containing this
+   lesson; clicking a chip adopts that track context. The chips are the discovery mechanism, and
+   no-context navigation stays impossible (the old corpus's scrambled Prev/Next must never return).
+3. Alongside the existing "All tutorials" button, a "Track" button appears when track ≠ null —
+   it opens the track overview: the track's lessons in order, current highlighted, completion
+   checkmarks from TutorialStorage (per-track progress n/m comes free).
+
+**Initial track assignment (draft, from current + planned lessons):**
+
+- *The Klang Path* (main, braided — IS today's registry order): B1 B2 B3 A1 A2 B4 B5 A3 A4 → the
+  full ladder as it grows.
+- *Sound Design Basics*: A1 A2 A3 A4 (later + A5–A8); buildsOn: The Klang Path onramp.
+- *The Pattern Language*: B1–B3 B4 B5 (later + B6–B11).
+- *The Klangmotör*: C1–C10 when written; buildsOn: The Klang Path.
+
+## Render QA gate
 
 ## Render QA gate
 

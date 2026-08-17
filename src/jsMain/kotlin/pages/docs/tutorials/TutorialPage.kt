@@ -49,6 +49,10 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    companion object {
+        const val PARAM_TRACK = "track"
+    }
+
     private val laf by subscribingTo(KlangTheme)
     private val currentRoute by subscribingTo(router.current)
 
@@ -58,11 +62,20 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun currentTutorial(): Tutorial? = allTutorials.find { it.slug == currentSlug() }
 
+    /** The track context the reader is on — null when browsing without one. */
+    private fun currentTrack(): TutorialTrackDef? {
+        val trackSlug = currentRoute.matchedRoute.queryParams[PARAM_TRACK] ?: return null
+        return allTracks.find { it.slug == trackSlug }
+    }
+
+    /** Prev/Next exist only within a track context. */
     private fun adjacentTutorials(): Pair<Tutorial?, Tutorial?> {
+        val track = currentTrack() ?: return null to null
         val tutorial = currentTutorial() ?: return null to null
-        val idx = allTutorials.indexOf(tutorial)
-        val prev = if (idx > 0) allTutorials[idx - 1] else null
-        val next = if (idx < allTutorials.size - 1) allTutorials[idx + 1] else null
+        val idx = track.lessons.indexOf(tutorial)
+        if (idx < 0) return null to null
+        val prev = if (idx > 0) track.lessons[idx - 1] else null
+        val next = if (idx < track.lessons.size - 1) track.lessons[idx + 1] else null
         return prev to next
     }
 
@@ -175,7 +188,9 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun FlowContent.renderNav() {
-        // Navigation
+        // Navigation — Prev/Next only exist within a track context
+        val track = currentTrack()
+        val tutorial = currentTutorial()
         val (prev, next) = adjacentTutorials()
 
         ui.segment {
@@ -185,26 +200,52 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                 alignItems = Align.center
             }
 
-            ui.black.button {
-                onClick { router.navToUri(Nav.tutorials()) }
-                icon.th_list()
-                +"All Tutorials"
-            }
-
             div {
-                if (prev != null) {
-                    ui.black.button {
-                        onClick { router.navToUri(Nav.tutorial(prev.slug)) }
-                        icon.arrow_left()
-                        +prev.title
-                    }
+                ui.black.button {
+                    onClick { router.navToUri(Nav.tutorials()) }
+                    icon.th_list()
+                    +"All Tutorials"
                 }
 
-                if (next != null) {
+                if (track != null) {
                     ui.black.button {
-                        onClick { router.navToUri(Nav.tutorial(next.slug)) }
-                        +next.title
-                        icon.arrow_right()
+                        onClick { router.navToUri(Nav.tutorialTrack(track.slug)) }
+                        icon.map_signs()
+                        +track.title
+                    }
+                }
+            }
+
+            if (track != null) {
+                div {
+                    if (prev != null) {
+                        ui.black.button {
+                            onClick { router.navToUri(Nav.tutorialInTrack(prev.slug, track.slug)) }
+                            icon.arrow_left()
+                            +prev.title
+                        }
+                    }
+
+                    if (next != null) {
+                        ui.black.button {
+                            onClick { router.navToUri(Nav.tutorialInTrack(next.slug, track.slug)) }
+                            +next.title
+                            icon.arrow_right()
+                        }
+                    }
+                }
+            } else if (tutorial != null) {
+                // No track context: the tracks containing this lesson are the way in
+                div {
+                    val containing = allTracks.filter { tutorial in it.lessons }
+                    if (containing.isNotEmpty()) {
+                        span { +"Part of: " }
+                        containing.forEach { t ->
+                            ui.mini.basic.button {
+                                onClick { router.navToUri(Nav.tutorialInTrack(tutorial.slug, t.slug)) }
+                                +t.title
+                            }
+                        }
                     }
                 }
             }

@@ -10,7 +10,6 @@ val shapeOfANoteTutorial = Tutorial(
     slug = "shape-of-a-note",
     title = Tut.shapeOfANote,
     description = "ADSR: four numbers that turn one voice into a pluck, an organ, or a pad.",
-    track = TutorialTrack.Sound,
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Synthesis),

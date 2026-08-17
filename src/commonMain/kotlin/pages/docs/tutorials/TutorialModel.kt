@@ -48,13 +48,24 @@ object Tut {
     const val shapeOfANote = "The Shape of a Note"
     const val subdivision = "Subdivision"
     const val alternationAndRepetition = "Alternation and Repetition"
+    const val filters = "Filters"
+    const val theFilterEnvelope = "The Filter Envelope"
 }
 
-enum class TutorialTrack(val label: String) {
-    Sound("Sound"),
-    Pattern("Pattern"),
-    Motor("Motör"),
-}
+/**
+ * A named, ordered sequence of lessons. A lesson can appear in any number of
+ * tracks; the braided main path is itself just a track. [buildsOn] declares the
+ * tracks whose vocabulary this one assumes — the per-track curriculum lint
+ * allows a lesson to use anything taught by a buildsOn track, by an earlier
+ * lesson in this track, or declared in the lesson's own previews.
+ */
+data class TutorialTrackDef(
+    val slug: String,
+    val title: String,
+    val description: String,
+    val lessons: List<Tutorial>,
+    val buildsOn: List<TutorialTrackDef> = emptyList(),
+)
 
 data class TutorialSection(
     val heading: String? = null,
@@ -66,7 +77,6 @@ data class Tutorial(
     val slug: String,
     val title: String,
     val description: String,
-    val track: TutorialTrack,
     val difficulty: TutorialDifficulty,
     val scope: TutorialScope,
     val tags: List<TutorialTag>,

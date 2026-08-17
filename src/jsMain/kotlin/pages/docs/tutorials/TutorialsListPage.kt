@@ -39,6 +39,7 @@ import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.right
 import kotlinx.css.top
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
@@ -56,10 +57,16 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     enum class CompletionFilter { All, Completed, Open }
 
+    enum class ViewMode { Tracks, Lessons }
+
     companion object {
         const val PARAM_DIFFICULTY = "difficulty"
         const val PARAM_SCOPE = "scope"
         const val PARAM_COMPLETION = "completion"
+        const val PARAM_VIEW = "view"
+
+        fun viewFromParam(param: String?): ViewMode =
+            ViewMode.entries.find { it.name.equals(param, ignoreCase = true) } ?: ViewMode.Tracks
 
         fun difficultyFromParam(param: String?): TutorialDifficulty? =
             TutorialDifficulty.entries.find { it.name.equals(param, ignoreCase = true) }
@@ -96,32 +103,43 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     private var selectedTags: Set<TutorialTag> by value(emptySet())
 
+    private var viewParam: String by urlParam(name = PARAM_VIEW, default = "")
+    private var viewMode: ViewMode
+        get() = viewFromParam(viewParam)
+        set(value) {
+            viewParam = if (value == ViewMode.Tracks) "" else value.name
+        }
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun toggleTag(tag: TutorialTag) {
         selectedTags = selectedTags.toggle(tag)
     }
 
-    private fun filteredTutorials(): List<Tutorial> {
-        return allTutorials.filter { tutorial ->
-            val matchesSearch = searchText.isBlank() ||
-                    tutorial.title.contains(searchText, ignoreCase = true) ||
-                    tutorial.description.contains(searchText, ignoreCase = true) ||
-                    tutorial.tags.any { it.label.contains(searchText, ignoreCase = true) }
+    private fun matches(tutorial: Tutorial): Boolean {
+        val matchesSearch = searchText.isBlank() ||
+                tutorial.title.contains(searchText, ignoreCase = true) ||
+                tutorial.description.contains(searchText, ignoreCase = true) ||
+                tutorial.tags.any { it.label.contains(searchText, ignoreCase = true) }
 
-            val matchesDifficulty = selectedDifficulty == null || tutorial.difficulty == selectedDifficulty
-            val matchesScope = selectedScope == null || tutorial.scope == selectedScope
-            val matchesTags = selectedTags.isEmpty() || selectedTags.all { it in tutorial.tags }
+        val matchesDifficulty = selectedDifficulty == null || tutorial.difficulty == selectedDifficulty
+        val matchesScope = selectedScope == null || tutorial.scope == selectedScope
+        val matchesTags = selectedTags.isEmpty() || selectedTags.all { it in tutorial.tags }
 
-            val matchesCompletion = when (completionFilter) {
-                CompletionFilter.All -> true
-                CompletionFilter.Completed -> TutorialStorage.isCompleted(tutorial.slug)
-                CompletionFilter.Open -> !TutorialStorage.isCompleted(tutorial.slug)
-            }
-
-            matchesSearch && matchesDifficulty && matchesScope && matchesTags && matchesCompletion
+        val matchesCompletion = when (completionFilter) {
+            CompletionFilter.All -> true
+            CompletionFilter.Completed -> TutorialStorage.isCompleted(tutorial.slug)
+            CompletionFilter.Open -> !TutorialStorage.isCompleted(tutorial.slug)
         }
+
+        return matchesSearch && matchesDifficulty && matchesScope && matchesTags && matchesCompletion
     }
+
+    private fun filteredTutorials(): List<Tutorial> = allTutorials.filter { matches(it) }
+
+    private fun anyFilterActive(): Boolean =
+        searchText.isNotBlank() || selectedDifficulty != null || selectedScope != null ||
+                selectedTags.isNotEmpty() || completionFilter != CompletionFilter.All
 
     override fun VDom.render() {
         ui.fluid.container {
@@ -130,6 +148,19 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
             ui.segment {
                 ui.header { +"Tutorials" }
                 ui.sub.header { +"Learn Klang step by step — from first notes to advanced techniques" }
+
+                div {
+                    css { marginTop = 1.rem }
+                    ViewMode.entries.forEach { mode ->
+                        val isSelected = viewMode == mode
+                        ui.mini.givenNot(isSelected) { basic }
+                            .given(isSelected) { with(laf.styles.goldButton()) }.button {
+                                onClick { viewMode = mode }
+                                if (mode == ViewMode.Tracks) icon.map_signs() else icon.th_list()
+                                +mode.name
+                            }
+                    }
+                }
             }
 
             // Search and filters
@@ -217,6 +248,11 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
+            if (viewMode == ViewMode.Tracks) {
+                renderTracksView()
+                return@container
+            }
+
             // Tutorial cards
             val tutorials = filteredTutorials()
 
@@ -286,6 +322,75 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                                     ui.mini.basic.label { +tag.label }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.renderTracksView() {
+        val filtering = anyFilterActive()
+        val visible = allTracks.mapNotNull { track ->
+            val matching = track.lessons.filter { matches(it) }
+            if (matching.isEmpty()) null else track to matching
+        }
+
+        if (visible.isEmpty()) {
+            ui.placeholder.segment {
+                ui.icon.header {
+                    icon.search()
+                    +"No lessons match your filters"
+                }
+            }
+            return
+        }
+
+        visible.forEach { (track, matching) ->
+            val completed = track.lessons.count { TutorialStorage.isCompleted(it.slug) }
+
+            ui.segment {
+                ui.medium.header {
+                    css { cursor = Cursor.pointer }
+                    onClick { router.navToUri(Nav.tutorialTrack(track.slug)) }
+                    icon.map_signs()
+                    +track.title
+                }
+                span {
+                    css { color = Color(laf.textSecondary) }
+                    +track.description
+                }
+
+                div {
+                    css { marginTop = 0.75.rem }
+
+                    ui.mini.basic.label {
+                        icon.check_circle()
+                        +"$completed of ${track.lessons.size} completed"
+                    }
+                    if (filtering && matching.size < track.lessons.size) {
+                        ui.mini.basic.label {
+                            icon.search()
+                            +"${matching.size} of ${track.lessons.size} match"
+                        }
+                    }
+                }
+
+                div {
+                    css {
+                        marginTop = 0.75.rem
+                        display = Display.flex
+                        gap = 0.25.rem
+                    }
+
+                    matching.forEach { lesson ->
+                        val number = track.lessons.indexOf(lesson) + 1
+                        val isCompleted = TutorialStorage.isCompleted(lesson.slug)
+
+                        ui.mini.basic.button {
+                            onClick { router.navToUri(Nav.tutorialInTrack(lesson.slug, track.slug)) }
+                            if (isCompleted) icon.check_circle()
+                            +"$number. ${lesson.title}"
                         }
                     }
                 }

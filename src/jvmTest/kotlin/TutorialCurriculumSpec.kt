@@ -11,7 +11,9 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.pages.docs.tutorials.Tutorial
+import io.peekandpoke.klang.pages.docs.tutorials.allTracks
 import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
+import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -192,6 +194,48 @@ class TutorialCurriculumSpec : StringSpec({
     "tutorial slugs are unique" {
         val slugs = allTutorials.map(Tutorial::slug)
         slugs.toSet().size shouldBe slugs.size
+    }
+
+    "track slugs are unique and every lesson is on the main path" {
+        val trackSlugs = allTracks.map { it.slug }
+        trackSlugs.toSet().size shouldBe trackSlugs.size
+
+        val onMainPath = theKlangPathTrack.lessons.toSet()
+        val strays = allTracks.flatMap { it.lessons }.filter { it !in onMainPath }
+        withClue("every lesson must also be on The Klang Path (it derives the flat list and the global lint)") {
+            strays.map { it.slug }.shouldBeEmpty()
+        }
+    }
+
+    "per-track vocabulary: every track is self-consistent given what it builds on" {
+        val violations = mutableListOf<String>()
+
+        for (track in allTracks) {
+            val baseline = track.buildsOn
+                .flatMap { it.lessons }
+                .flatMap { it.teaches }
+                .toMutableSet()
+
+            for (lesson in track.lessons) {
+                baseline.addAll(lesson.teaches)
+                val allowed = baseline + lesson.previews + STRUCTURAL_KEYWORDS
+
+                for (section in lesson.sections) {
+                    val code = section.code ?: continue
+                    for (word in usedVocabulary(code)) {
+                        if (word !in allowed) {
+                            violations.add(
+                                "track '${track.slug}', lesson '${lesson.slug}' " +
+                                    "(${section.heading}) uses '$word' that neither this track nor " +
+                                    "its buildsOn tracks teach by that point"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
     }
 })
 

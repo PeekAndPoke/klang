@@ -10,7 +10,6 @@ val firstNotesTutorial = Tutorial(
     slug = "first-notes",
     title = Tut.firstNotes,
     description = "From drums to melody: note names, octaves, and a first melody of your own.",
-    track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Melody, TutorialTag.GettingStarted),

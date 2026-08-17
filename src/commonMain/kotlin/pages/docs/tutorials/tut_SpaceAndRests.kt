@@ -10,7 +10,6 @@ val spaceAndRestsTutorial = Tutorial(
     slug = "space-and-rests",
     title = Tut.spaceAndRests,
     description = "Rests are where the groove lives: take sounds away and the beat gets stronger, not weaker.",
-    track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Rhythm, TutorialTag.GettingStarted),

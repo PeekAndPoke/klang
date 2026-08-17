@@ -10,7 +10,6 @@ val alternationAndRepetitionTutorial = Tutorial(
     slug = "alternation-and-repetition",
     title = Tut.alternationAndRepetition,
     description = "Angle brackets give each cycle its own content — patterns that outgrow a single cycle.",
-    track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Patterns, TutorialTag.Melody),

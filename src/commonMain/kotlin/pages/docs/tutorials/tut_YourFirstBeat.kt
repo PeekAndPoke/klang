@@ -10,7 +10,6 @@ val yourFirstBeatTutorial = Tutorial(
     slug = "your-first-beat",
     title = Tut.yourFirstBeat,
     description = "Play your first sounds and meet the cycle — the repeating window every pattern lives in.",
-    track = TutorialTrack.Pattern,
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Rhythm, TutorialTag.GettingStarted),
