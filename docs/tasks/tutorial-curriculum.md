@@ -229,7 +229,48 @@ course could express is lost.
 - *The Pattern Language*: B1–B3 B4 B5 (later + B6–B11).
 - *The Klangmotör*: C1–C10 when written; buildsOn: The Klang Path.
 
-## Render QA gate
+## Section blocks + visuals (user design 2026-08-17 — IN PROGRESS, finish first!)
+
+A section is now a heading + ordered list of **blocks** (user-specified layout):
+
+```kotlin
+TutorialSection(
+    heading = "...",
+    blocks = listOf(
+        Block.Text("..."),                       // \n\n paragraphs, callout rules apply
+        Block.Visual.Adsr("0.3:0.1:1:0.05"),     // schematic SVG, drawn from the SAME
+                                                 // string the code uses (drift-linted)
+        Block.Code(lang = "KlangScript", code = "..."),
+    ),
+)
+```
+
+Visual design rules: schematic only (mental model, never engine internals — flux ruling);
+parameterized from the neighbouring code's values verbatim (lint: value must appear in the
+section's code); theme colors, no image assets; a visual earns its place only for a SHAPE the
+prose describes for the ear (envelope, waveform, step grid, filter curve). Three stages:
+(1) static parameterized SVG — NOW, Adsr pilot; Waveform/PatternGrid/FilterCurve variants later;
+(2) playback-synced playhead using PlayableCodeExample's existing per-event callbacks — renderer
+upgrade only, no model change; (3) interactive drag-the-handles — much later, playground tier.
+
+**Implementation status:**
+
+- [x] `Block` sealed interface (Text / Code(lang, code) / Visual.Adsr(value, label)) in
+      TutorialModel.kt; `TutorialSection(heading, blocks)`.
+- [x] All 9 lesson files migrated (51 sections) to the block layout.
+- [x] TutorialCurriculumSpec rewritten for blocks; new check: visuals parse + value-in-code
+      drift guard (12 tests).
+- [x] TutorialPage.kt render loop iterates blocks: Text → \n\n paragraphs; Code →
+      PlayableCodeExample (KlangScript; other langs render as plain pre); Visual.Adsr → AdsrVisual.
+- [x] AdsrVisual jsMain component: parses "a:d:s:r", schematic SVG via the SvgDsl helpers
+      (straight segments, proportional widths with 3-unit minimums, hold = fixed 30 % share since
+      it has no duration parameter, accent fill + stroke, A/D/S/R letters, rotated label).
+- [x] Retrofit visuals: A2 §§2–4 (attack/sustain/release live-line values), A4 §§2–3
+      (label = "cutoff"). Values verbatim from live lines so the drift lint passes.
+- [x] Spec run via build lock (12/12 green incl. the drift guard); committed as one commit.
+
+Stage-1 pilot DONE 2026-08-17. Next visual variants (Waveform / PatternGrid / FilterCurve) get
+added the same way when a lesson needs them; stages 2 (playhead) and 3 (interactive) stay future.
 
 ## Render QA gate
 

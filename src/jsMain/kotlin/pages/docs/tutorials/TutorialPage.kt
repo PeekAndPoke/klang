@@ -38,6 +38,7 @@ import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.p
+import kotlinx.html.pre
 import kotlinx.html.span
 
 @Suppress("FunctionName")
@@ -147,17 +148,24 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                         ui.medium.header { +section.heading }
                     }
 
-                    if (section.text.isNotBlank()) {
-                        // Section text uses \n\n as paragraph breaks — render each as its own <p>
-                        section.text.split("\n\n").forEach { paragraph ->
-                            if (paragraph.isNotBlank()) {
-                                p { +paragraph }
+                    section.blocks.forEach { block ->
+                        when (block) {
+                            is Block.Text -> {
+                                // Block text uses \n\n as paragraph breaks — render each as its own <p>
+                                block.text.split("\n\n").forEach { paragraph ->
+                                    if (paragraph.isNotBlank()) {
+                                        p { +paragraph }
+                                    }
+                                }
                             }
-                        }
-                    }
 
-                    if (section.code != null) {
-                        PlayableCodeExample(code = section.code, rpm = tutorial.rpm)
+                            is Block.Code -> when (block.lang) {
+                                "KlangScript" -> PlayableCodeExample(code = block.code, rpm = tutorial.rpm)
+                                else -> pre { +block.code }
+                            }
+
+                            is Block.Visual.Adsr -> AdsrVisual(value = block.value, label = block.label)
+                        }
                     }
                 }
             }

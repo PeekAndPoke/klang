@@ -67,10 +67,38 @@ data class TutorialTrackDef(
     val buildsOn: List<TutorialTrackDef> = emptyList(),
 )
 
+/**
+ * One content block inside a section. A section is an ordered list of blocks,
+ * so text, visuals, and code can interleave freely.
+ */
+sealed interface Block {
+    /** Prose. Paragraphs are separated by \n\n; callout labels open their own paragraph. */
+    data class Text(val text: String) : Block
+
+    /** A runnable (or, for other langs, displayed) code example. */
+    data class Code(
+        val lang: String = "KlangScript",
+        val code: String,
+    ) : Block
+
+    /**
+     * A schematic, parameterized diagram — rendered as SVG in jsMain from the
+     * SAME values the neighbouring code block uses, so picture and code cannot
+     * drift (lint-enforced). Schematic by design: it draws the mental model,
+     * never engine internals (flux ruling).
+     */
+    sealed interface Visual : Block {
+        /** Envelope shape from the same colon string the code uses. */
+        data class Adsr(
+            val value: String,
+            val label: String = "loudness",
+        ) : Visual
+    }
+}
+
 data class TutorialSection(
     val heading: String? = null,
-    val text: String = "",
-    val code: String? = null,
+    val blocks: List<Block>,
 )
 
 data class Tutorial(
