@@ -144,9 +144,13 @@ stages must not carry it.
   colour over time, and that is its own Sound-track lesson: filters" — A3 opens from that framing.
   DELIVERED IN TWO INSTALMENTS by design: A3 = static colour + per-cycle stepping, A4 = colour
   moving within a note. Both lessons cross-link; do not "fix" A3 by pulling A4's material forward.
-- **A5 (signals):** A4's finale promises: cutoff "stepped ... cycle by cycle" in A3, "moved ...
-  inside single notes" in A4 — "sliding it smoothly across a whole pattern is the signals lesson,
-  further along the Sound track". A5 must open from that stepped/inside/smooth progression.
+- **A5 (signals) — DELIVERED (certified 2026-08-17):** opens from the stepped/inside/smooth
+  progression; disambiguates sine-the-voice vs sine-the-signal in one code line. ⚠️ Engine truth
+  learned in its review (lesson KDoc + memory `project_signal_sampling_semantics.md`): a control
+  signal is read ONCE PER NOTE at onset — held notes freeze the curve; the pump therefore uses
+  `note("[a2,e3]*16")` and an ASCENDING range (saw resets to 0 on the count → duck on the drum).
+  Sandsturm's own bass "pump" line is inert (off-8th onsets all read 0.5) — never cite it as a
+  pump precedent; whether to fix the song is the maintainer's by-ear call.
 - **B4 (subdivision):** B1/B2 established counts-vs-steps on the 8-step grid and used "off-beats" for
   the between-count positions. B4 inherits those terms; don't redefine.
 - **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
@@ -169,11 +173,14 @@ stages must not carry it.
   C8's `arrange([bars, section])` counts bars and depends on it.
 - **B9 (transform toolkit):** must connect `.fast(n)` back to B4's `*n` — the same operation at
   pattern level vs. inside one step; introducing it as unrelated would confuse learners who own `*`.
-- **B8 (Scales):** B3 introduces sharps/flats (`eb3` played in "The notes between", `cs3` via its
-  directed try-it) and defers
-  "which of these in-between notes belong together with which letters" to the scales lesson; B8 also
-  owes the major/minor mood A/B
-  (`c4 e4 g4` vs `c4 eb4 g4`) descoped from B3.
+  ADDED BY A5: A5 previews fast()/slow() on signals ("their full story is a Pattern-track lesson
+  still to come") — B9 owes that story and should connect back to A5's signal use.
+- **B8 (Scales) — DELIVERED (certified 2026-08-17):** §2 answers B3's deferred in-between-notes
+  question and lands the major/minor mood A/B (0 2 4 on c4 = c4 e4 g4 vs c4 eb4 g4). Continuity
+  locked in: the course melody IS `n("0 2 3 ~  4 3 2 ~").scale("a3:minor")` and the B6 bass IS
+  `n("0 ~ ~ 0  ~ ~ -3 ~").scale("a2:minor")` — later lessons may lean on both. §1's numbers-vs-
+  note-names A/B is identical by design — sanctioned render-QA audibility exception (KDoc). B8
+  licenses "ladder/rung" for scale degrees and "semitone" (with the vs-walking-step caveat).
 - **A6 (unison/thickness):** the word "voice" is taken — B3 introduced and A1 formalized it as the
   term for oscillator timbre ("not a recording ... a sound Klang builds on the spot"). A6 must
   disambiguate explicitly: the `unison`/`voices` parameter counts internal copies — call them

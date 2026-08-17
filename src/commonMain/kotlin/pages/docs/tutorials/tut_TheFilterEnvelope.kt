@@ -129,7 +129,7 @@ val theFilterEnvelopeTutorial = Tutorial(
                     "work — the adsr says how long a note lives, the lpadsr what it looks like " +
                     "while alive. (You stepped the cutoff cycle by cycle in ${Tut.filters} and " +
                     "moved it inside single notes here; sliding it smoothly across a whole pattern " +
-                    "is the signals lesson, further along the Sound track.)",
+                    "is its own lesson further along the Sound track: ${Tut.signalsMoveTheKnobs}.)",
                 ),
                 Block.Code(
                     code = """

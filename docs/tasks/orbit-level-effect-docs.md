@@ -34,7 +34,9 @@ review (2026-08-17, verified in audio_be):
   (`KatalystReverbEffect.kt`), and `roomSize` defaults to 0.0. Every real song pairs `room`
   with `rsize`/`roomfade` or uses the colon form.
 - Orbit bus **settings** are first-writer-wins (`Cylinder.kt`: "ONE owner per orbit … route
-  to a different orbit if you want different bus settings").
+  to a different orbit if you want different bus settings"). The skill ref's scope box says
+  "last-writer-wins" — stale; Cylinder.kt explicitly replaced last-writer-wins with the lease.
+  Fix the ref when doing step 1.
 
 So the docs metadata likely needs three notions, not two: *per-voice control*, *per-voice
 send into a per-orbit effect*, and *per-orbit effect settings (first-writer-wins)*. Design

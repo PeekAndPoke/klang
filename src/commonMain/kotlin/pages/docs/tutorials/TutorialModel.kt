@@ -52,6 +52,8 @@ object Tut {
     const val theFilterEnvelope = "The Filter Envelope"
     const val layers = "Layers"
     const val chordsInOneStep = "Chords in One Step"
+    const val signalsMoveTheKnobs = "Signals Move the Knobs"
+    const val scalesAndMelodies = "Scales and Melodies"
 }
 
 /**

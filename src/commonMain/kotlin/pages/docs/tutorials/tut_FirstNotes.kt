@@ -95,7 +95,8 @@ val firstNotesTutorial = Tutorial(
                     "lands lower — into the crack between d3 and e3 — and the whole ladder suddenly " +
                     "sounds darker.\n\nTry it: raise the c3 to cs3 and press Update — the sharp is the " +
                     "same move pointing the other way. Which of these in-between notes belong together " +
-                    "with which letters is what scales are about; that is a later lesson.",
+                    "with which letters is what scales are about; ${Tut.scalesAndMelodies} takes " +
+                    "that up.",
                 ),
                 Block.Code(
                     code = """
