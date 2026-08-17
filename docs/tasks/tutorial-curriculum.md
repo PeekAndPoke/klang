@@ -97,7 +97,7 @@ stages must not carry it.
 | B5 | Alternation & repetition | `<>`, `!`, `@` | — | Bassline that changes per cycle (Sandsturm's `<bar1 bar2 bar3 bar4>` idiom). *Listen for: the 4-bar rotation.* |
 | A3 | Filters — LPF & HPF | `lpf`, `hpf`, `lpq` | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |
 | A4 | The filter envelope | `lpadsr`, `lpe` | `lpq` | The classic synth pluck: cutoff rides its own envelope. *Listen for: the "öw" the filter sweep adds to each note.* (Zero coverage today.) |
-| B6 | Layers — stack & orbit | `stack`, `orbit` | `room` on one orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
+| B6 | Layers — stack & orbit | `stack`, `orbit` | `room`+`rsize` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
 | B7 | Chords in one step | comma-chords `[0,7,12]`, random pick `\|` | — | Power-chord stabs; a step that gambles. *Listen for: which variant played this cycle.* |
 
 ### Stage 3 — Where the tracks meet
@@ -149,10 +149,17 @@ stages must not carry it.
   further along the Sound track". A5 must open from that stepped/inside/smooth progression.
 - **B4 (subdivision):** B1/B2 established counts-vs-steps on the 8-step grid and used "off-beats" for
   the between-count positions. B4 inherits those terms; don't redefine.
-- **B6 (Layers):** B1 promises "balancing them with gain() is most of what mixing is" once several lines
-  run; B3's finale says its melody was "also written to sit on top of the groove you shaped in
-  Space and Rests". B6
-  should literally combine the B2 groove and the B3 melody as its running example.
+- **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
+  literally; redeems B1's mixing promise by name in §2. ⚠️ Engine truth learned in its review
+  (recorded in the lesson's KDoc + docs/tasks/orbit-level-effect-docs.md): reverb processor is
+  per-orbit but `room` is a per-voice SEND; bare `room()` is SILENT (gate needs roomsize); orbit
+  bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
+  claims contested-channel behavior — keep it that way.
+- **A7 (space & dirt):** B6 previews `room` + `rsize` ("how much goes in" / "how big the room is")
+  and points to "a Sound-track lesson still to come" — A7 must deliver both under those intuitions.
+- **B11 (chords & voicing):** B7 defers harmony ("Which notes agree like this, and which clash …
+  a chords lesson still to come takes that up properly") and licenses only the power chord; B11
+  must pick that up. B7 also glossed "riff" ("a short figure that repeats") — reuse, don't re-gloss.
 - **A8 (body resonator):** A3 spends **"body"** as the standing term for the low half of the
   spectrum ("body below, sparkle above"). A8 teaches `body()`/`bodyMix` — the cabinet resonator —
   and must disambiguate the collision explicitly at first use, the way A6 must for "voice".

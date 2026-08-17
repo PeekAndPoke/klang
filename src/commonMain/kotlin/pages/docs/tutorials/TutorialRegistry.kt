@@ -43,6 +43,8 @@ val theKlangPathTrack = TutorialTrackDef(
         alternationAndRepetitionTutorial, // B5
         filtersTutorial, // A3
         theFilterEnvelopeTutorial, // A4
+        layersTutorial, // B6
+        chordsInOneStepTutorial, // B7
     ),
 )
 
@@ -72,6 +74,8 @@ val patternLanguageTrack = TutorialTrackDef(
         firstNotesTutorial, // B3
         subdivisionTutorial, // B4
         alternationAndRepetitionTutorial, // B5
+        layersTutorial, // B6
+        chordsInOneStepTutorial, // B7
     ),
     // B5's bass rides A2's pluck (adsr), so this track assumes the main path too.
     buildsOn = listOf(theKlangPathTrack),

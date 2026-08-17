@@ -139,7 +139,7 @@ val firstNotesTutorial = Tutorial(
                     "wrong, change it back — that back-and-forth is how melodies actually get written. " +
                     "This melody was also written to sit on top of the groove you shaped in " +
                     "${Tut.spaceAndRests}; playing two lines at once is its own Pattern-track lesson: " +
-                    "Layers.",
+                    "${Tut.layers}.",
                 ),
                 Block.Code(
                     code = """

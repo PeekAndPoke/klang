@@ -146,7 +146,7 @@ val yourFirstBeatTutorial = Tutorial(
                     "press Update, then try 2.5.\n\nListen for: at 0.3 the beat sits far away; at 2.5 it " +
                     "is louder, but the kick stops punching — that flattening is the limiter holding the " +
                     "peaks down, and sometimes that squash is exactly what you want. Once several lines " +
-                    "run at the same time (that is the Layers lesson), balancing them with gain() is most " +
+                    "run at the same time (that is the ${Tut.layers} lesson), balancing them with gain() is most " +
                     "of what mixing is.\n\nThis is exactly the code you heard at the top of the page.",
                 ),
                 Block.Code(
