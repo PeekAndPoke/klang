@@ -29,6 +29,7 @@ import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.gap
 import kotlinx.css.justifyContent
+import kotlinx.css.marginLeft
 import kotlinx.css.marginTop
 import kotlinx.css.padding
 import kotlinx.css.rem
@@ -94,13 +95,15 @@ class TutorialTrackPage(ctx: NoProps) : PureComponent(ctx) {
             val completed = track.lessons.count { TutorialStorage.isCompleted(it.slug) }
 
             ui.segment {
-                ui.large.header { +track.title }
-                p { +track.description }
-
-                ui.basic.label {
-                    icon.check_circle()
-                    +"$completed of ${track.lessons.size} completed"
+                ui.large.header {
+                    +track.title
+                    ui.basic.label {
+                        css { marginLeft = 1.rem }
+                        icon.check_circle()
+                        +"$completed of ${track.lessons.size} completed"
+                    }
                 }
+                p { +track.description }
 
                 if (track.buildsOn.isNotEmpty()) {
                     div {
@@ -142,7 +145,14 @@ class TutorialTrackPage(ctx: NoProps) : PureComponent(ctx) {
                     gap = 0.75.rem
                 }
 
-                ui.circular.basic.label { +"${index + 1}" }
+                if (isCompleted) {
+                    span {
+                        css { color = Color(laf.good) }
+                        icon.large.check_circle()
+                    }
+                } else {
+                    ui.circular.basic.label { +"${index + 1}" }
+                }
 
                 div {
                     ui.small.header {
@@ -164,13 +174,6 @@ class TutorialTrackPage(ctx: NoProps) : PureComponent(ctx) {
                 }
 
                 difficultyLabel(laf, lesson.difficulty)
-
-                if (isCompleted) {
-                    span {
-                        css { color = Color(laf.good) }
-                        icon.large.check_circle()
-                    }
-                }
             }
         }
     }

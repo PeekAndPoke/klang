@@ -32,6 +32,7 @@ import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.fontSize
 import kotlinx.css.gap
+import kotlinx.css.marginLeft
 import kotlinx.css.marginTop
 import kotlinx.css.padding
 import kotlinx.css.position
@@ -355,20 +356,21 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                     onClick { router.navToUri(Nav.tutorialTrack(track.slug)) }
                     icon.map_signs()
                     +track.title
+                    ui.mini.basic.label {
+                        css { marginLeft = 0.75.rem }
+                        icon.check_circle()
+                        +"$completed of ${track.lessons.size} completed"
+                    }
                 }
                 span {
                     css { color = Color(laf.textSecondary) }
                     +track.description
                 }
 
-                div {
-                    css { marginTop = 0.75.rem }
+                if (filtering && matching.size < track.lessons.size) {
+                    div {
+                        css { marginTop = 0.75.rem }
 
-                    ui.mini.basic.label {
-                        icon.check_circle()
-                        +"$completed of ${track.lessons.size} completed"
-                    }
-                    if (filtering && matching.size < track.lessons.size) {
                         ui.mini.basic.label {
                             icon.search()
                             +"${matching.size} of ${track.lessons.size} match"
