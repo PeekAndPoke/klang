@@ -78,8 +78,23 @@ data class TutorialTrackDef(
  * so text, visuals, and code can interleave freely.
  */
 sealed interface Block {
-    /** Prose. Paragraphs are separated by \n\n; callout labels open their own paragraph. */
+    /**
+     * Prose rendered as plain paragraphs (\n\n-separated); callout labels open
+     * their own paragraph. Being migrated to [Markdown] — prefer Markdown for
+     * new sections; existing Text blocks get converted in a deliberate pass
+     * (their prose contains literal `*`, `<>`, `[]` that markdown would mangle
+     * unescaped).
+     */
     data class Text(val text: String) : Block
+
+    /**
+     * Prose rendered as markdown (via MarkdownDisplay / marked). Paragraphs
+     * are \n\n-separated as in [Text]; bullets, **bold**, and `inline code`
+     * are available. Callout labels ("Try it:", "Listen for:") stay PLAIN at
+     * paragraph starts — the curriculum lint anchors on them. Escape or
+     * backtick literal mini-notation (`*`, `<>`, `[]`) so marked cannot eat it.
+     */
+    data class Markdown(val markdown: String) : Block
 
     /** A runnable (or, for other langs, displayed) code example. */
     data class Code(

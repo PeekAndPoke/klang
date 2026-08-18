@@ -7,6 +7,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.PlayableCodeExample
+import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -158,6 +159,8 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                                     }
                                 }
                             }
+
+                            is Block.Markdown -> MarkdownDisplay(markdown = block.markdown)
 
                             is Block.Code -> when (block.lang) {
                                 "KlangScript" -> PlayableCodeExample(code = block.code, rpm = tutorial.rpm)

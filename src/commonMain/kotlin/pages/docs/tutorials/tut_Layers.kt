@@ -33,16 +33,14 @@ val layersTutorial = Tutorial(
         TutorialSection(
             heading = "Two lines at once",
             blocks = listOf(
-                Block.Text(
-                    "Every lesson so far ended with one pattern playing. ${Tut.yourFirstBeat} even " +
-                    "made it a rule: with two live lines, only the lower one plays. stack() is the way " +
-                    "past it — hand it several patterns, separated by commas, and they all play " +
-                    "together, sharing the same cycle.\n\nThe two patterns below are old friends: the " +
-                    "groove shaped in ${Tut.spaceAndRests}, and the melody from ${Tut.firstNotes} — " +
-                    "which was written to sit on this groove.\n\nListen for: the meeting points. The " +
-                    "kick and the melody's first note strike together, and the snare lands with the " +
-                    "melody's final note. Two lines, written in separate lessons, locking into one " +
-                    "piece of music.",
+                Block.Markdown(
+                    markdown = """
+                    Every lesson so far ended with one pattern playing. ${Tut.yourFirstBeat} even made it a rule: with two live lines, only the lower one plays. `stack()` is the way past it — hand it several patterns, separated by commas, and they all play together, sharing the same cycle.
+
+                    The two patterns below are old friends: the groove shaped in ${Tut.spaceAndRests}, and the melody from ${Tut.firstNotes} — which was written to sit on this groove.
+
+                    **Listen for:** the meeting points. The kick and the melody's first note strike together, and the snare lands with the melody's final note. Two lines, written in separate lessons, locking into one piece of music.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -58,15 +56,14 @@ val layersTutorial = Tutorial(
         TutorialSection(
             heading = "Balance is the mix",
             blocks = listOf(
-                Block.Text(
-                    "${Tut.yourFirstBeat} promised that once several lines run at the same time, " +
-                    "balancing them with gain() is most of what mixing is. This is that moment. " +
-                    "Nothing below changes what plays or when — only how loud the melody sits next " +
-                    "to the drums.\n\nTry it: swap the // and press Update. Then find your own " +
-                    "balance: nudge the melody's gain a little at a time until it sits where you " +
-                    "want it.\n\nListen for: the same two lines trading jobs. At 0.5 the melody leads and " +
-                    "the drums back it; at 0.2 it turns into colour behind the beat. Neither is " +
-                    "wrong — in front and behind are both places a layer can live.",
+                Block.Markdown(
+                    markdown = """
+                    ${Tut.yourFirstBeat} promised that once several lines run at the same time, balancing them with `gain()` is most of what mixing is. This is that moment. Nothing below changes what plays or when — only how loud the melody sits next to the drums.
+
+                    **Try it:** swap the `//` and press Update. Then find your own balance: nudge the melody's gain a little at a time until it sits where you want it.
+
+                    **Listen for:** the same two lines trading jobs. At 0.5 the melody leads and the drums back it; at 0.2 it turns into colour behind the beat. Neither is wrong — in front and behind are both places a **layer** can live.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -79,16 +76,14 @@ val layersTutorial = Tutorial(
         TutorialSection(
             heading = "A room for the melody",
             blocks = listOf(
-                Block.Text(
-                    "Set the drums aside for a moment — just the melody. room() puts a sound in a " +
-                    "room: reverb, the wash of reflections a space adds. It comes as a pair with " +
-                    "rsize(), and both are borrowed from a Sound-track lesson still to come: room() " +
-                    "sets how much of the sound goes into the room, rsize() how big that room " +
-                    "is.\n\nTry it: swap the // and press Update. Then, with the first line live, " +
-                    "grow rsize to 8, and shrink it to 1.\n\nListen for: the tail. Dry, each note " +
-                    "stops and leaves silence; in the room, a wash hangs where the silence was, and " +
-                    "the melody sounds further away. That distance is what a room does to a " +
-                    "sound.",
+                Block.Markdown(
+                    markdown = """
+                    Set the drums aside for a moment — just the melody. `room()` puts a sound in a room: **reverb**, the wash of reflections a space adds. It comes as a pair with `rsize()`, and both are borrowed from a Sound-track lesson still to come: `room()` sets how much of the sound goes into the room, `rsize()` how big that room is.
+
+                    **Try it:** swap the `//` and press Update. Then, with the first line live, grow `rsize` to 8, and shrink it to 1.
+
+                    **Listen for:** the tail. Dry, each note stops and leaves silence; in the room, a wash hangs where the silence was, and the melody sounds further away. That distance is what a room does to a sound.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -101,20 +96,16 @@ val layersTutorial = Tutorial(
         TutorialSection(
             heading = "A channel of your own: orbit",
             blocks = listOf(
-                Block.Text(
-                    "Now put the drums back. Every line plays into a channel, and unless it says " +
-                    "otherwise it plays into channel 0 — so far, everything in this course has. The " +
-                    "room itself belongs to the channel, not to the line: a channel has one room, " +
-                    "with one size, shared by every layer that plays into that room. A layer that " +
-                    "wants a space of its own needs a channel of its own.\n\norbit() picks the " +
-                    "channel. Give the melody orbit(1) and its room settings go with it — channel " +
-                    "1's room, with only the melody playing into it. The drums keep channel 0 for " +
-                    "themselves, dry and untouched.\n\nTry it: swap the // to hear the " +
-                    "roomed mix against the dry one. Then move .orbit(1).room(0.4).rsize(4) over " +
-                    "to the drum line instead — a wet beat under a dry melody is a real sound too. " +
-                    "You choose who lives in the room.\n\nListen for: dry drums under a wet lead. " +
-                    "The kick and snare snap shut exactly as they did before the room existed, " +
-                    "while every melody note rings out into its own space.",
+                Block.Markdown(
+                    markdown = """
+                    Now put the drums back. Every line plays into a **channel**, and unless it says otherwise it plays into channel 0 — so far, everything in this course has. The room itself belongs to the channel, not to the line: a channel has one room, with one size, shared by every layer that plays into that room. A layer that wants a space of its own needs a channel of its own.
+
+                    `orbit()` picks the channel. Give the melody `orbit(1)` and its room settings go with it — channel 1's room, with only the melody playing into it. The drums keep channel 0 for themselves, dry and untouched.
+
+                    **Try it:** swap the `//` to hear the roomed mix against the dry one. Then move `.orbit(1).room(0.4).rsize(4)` over to the drum line instead — a wet beat under a dry melody is a real sound too. You choose who lives in the room.
+
+                    **Listen for:** dry drums under a wet lead. The kick and snare snap shut exactly as they did before the room existed, while every melody note rings out into its own space.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -127,20 +118,14 @@ val layersTutorial = Tutorial(
         TutorialSection(
             heading = "A tiny mix",
             blocks = listOf(
-                Block.Text(
-                    "Three layers now — one of them new. A bass joins on the low floors from " +
-                    "${Tut.firstNotes}: the same plain voice, an octave below the melody's opening " +
-                    "a3. Its first hit lands with the kick, its second falls into a gap both other " +
-                    "layers leave open, and its e2 sits under the snare, pulling the cycle back to " +
-                    "a2. It moves in with the drums on channel 0, dry; the lead keeps its own " +
-                    "channel and its room; the groove returns with its accents from " +
-                    "${Tut.spaceAndRests}. (The bass sits at 0.6 — low pure tones read quieter " +
-                    "than high ones.)\n\nTry it: put // in front of any one layer and press " +
-                    "Update — the other two keep playing. Listening to every pair like this is the " +
-                    "fastest way to hear what each layer contributes.\n\nListen for: three layers " +
-                    "doing three jobs — the groove keeps time, the bass gives it a floor, the lead " +
-                    "rings above both. Balancing the three gains is the mix, exactly as " +
-                    "${Tut.yourFirstBeat} promised.",
+                Block.Markdown(
+                    markdown = """
+                    Three layers now — one of them new. A bass joins on the low floors from ${Tut.firstNotes}: the same plain voice, an octave below the melody's opening `a3`. Its first hit lands with the kick, its second falls into a gap both other layers leave open, and its `e2` sits under the snare, pulling the cycle back to `a2`. It moves in with the drums on channel 0, dry; the lead keeps its own channel and its room; the groove returns with its accents from ${Tut.spaceAndRests}. (The bass sits at 0.6 — low pure tones read quieter than high ones.)
+
+                    **Try it:** put `//` in front of any one layer and press Update — the other two keep playing. Listening to every pair like this is the fastest way to hear what each layer contributes.
+
+                    **Listen for:** three layers doing three jobs — the groove keeps time, the bass gives it a floor, the lead rings above both. Balancing the three gains is the mix, exactly as ${Tut.yourFirstBeat} promised.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """

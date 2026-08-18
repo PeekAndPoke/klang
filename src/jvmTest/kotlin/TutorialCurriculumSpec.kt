@@ -159,7 +159,9 @@ class TutorialCurriculumSpec : StringSpec({
         for (tutorial in allTutorials) {
             for (section in tutorial.sections) {
                 for (text in section.textBlocks()) {
-                    for (paragraph in text.split("\n\n")) {
+                    for (rawParagraph in text.split("\n\n")) {
+                        // Markdown blocks may bold the labels — strip emphasis markers before anchoring
+                        val paragraph = rawParagraph.replace("**", "")
                         for (label in listOf("Try it:", "Listen for:")) {
                             if (paragraph.indexOf(label) > 0) {
                                 violations.add(
@@ -294,9 +296,15 @@ class TutorialCurriculumSpec : StringSpec({
     }
 })
 
-/** All prose blocks of a section. */
+/** All prose of a section: plain text blocks and markdown blocks alike. */
 private fun TutorialSection.textBlocks(): List<String> =
-    blocks.filterIsInstance<Block.Text>().map { it.text }
+    blocks.flatMap { block ->
+        when (block) {
+            is Block.Text -> listOf(block.text)
+            is Block.Markdown -> listOf(block.markdown)
+            else -> emptyList()
+        }
+    }
 
 /** All runnable KlangScript blocks of a section. */
 private fun TutorialSection.klangScriptBlocks(): List<String> =

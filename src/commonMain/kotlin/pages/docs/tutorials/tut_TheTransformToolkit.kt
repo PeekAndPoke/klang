@@ -29,19 +29,14 @@ val theTransformToolkitTutorial = Tutorial(
         TutorialSection(
             heading = "The whole line, retimed: fast and slow",
             blocks = listOf(
-                Block.Text(
-                    "In ${Tut.subdivision}, *2 doubled one step. fast() is the same " +
-                    "multiplication applied to the whole line: fast(2) plays the entire " +
-                    "pattern twice per cycle. slow(2) is its mirror — the pattern stretches " +
-                    "over two cycles, and every note gets twice the room. (You already pointed " +
-                    "fast() and slow() at signals in ${Tut.signalsMoveTheKnobs}; this is their " +
-                    "day job.) Below, the melody wears slow(2) first; fast(2) and the plain " +
-                    "line wait behind the //.\n\nTry it: swap the // between the three lines and press " +
-                    "Update each time. On the slow line, watch the player's counter — the " +
-                    "melody now needs two clicks to come around.\n\nListen for: the same " +
-                    "shape at three sizes. Half-time makes the melody calm and heavy; " +
-                    "double-time turns it into a run. Nothing about the melody changed — only " +
-                    "how much time it is given.",
+                Block.Markdown(
+                    markdown = """
+                    In ${Tut.subdivision}, `*2` doubled one step. `fast()` is the same multiplication applied to the whole line: `fast(2)` plays the entire pattern twice per cycle. `slow(2)` is its mirror — the pattern stretches over two cycles, and every note gets twice the room. (You already pointed `fast()` and `slow()` at signals in ${Tut.signalsMoveTheKnobs}; this is their day job.) Below, the melody wears `slow(2)` first; `fast(2)` and the plain line wait behind the `//`.
+
+                    **Try it:** swap the `//` between the three lines and press Update each time. On the slow line, watch the player's counter — the melody now needs two clicks to come around.
+
+                    **Listen for:** the same shape at three sizes. Half-time makes the melody calm and heavy; double-time turns it into a run. Nothing about the melody changed — only how much time it is given.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -55,18 +50,14 @@ val theTransformToolkitTutorial = Tutorial(
         TutorialSection(
             heading = "A copy with a twist: superimpose",
             blocks = listOf(
-                Block.Text(
-                    "superimpose() plays the line — and, on top of it, a copy, run through a " +
-                    "change. Below, the change is transpose(12) from ${Tut.scalesAndMelodies}: " +
-                    "the copy sings one floor up, in step with the original. (Two copies add " +
-                    "up — the practice from ${Tut.chordsInOneStep} — so the line, copy " +
-                    "included, sits at 0.4 instead of the usual 0.5.)\n\nTry it: swap the // " +
-                    "to hear the line alone, and press Update. Then make it transpose(-12) — " +
-                    "the copy moves underneath. Last, headphones on: make it " +
-                    ".pan(0.3).superimpose(transpose(12).pan(0.7)) — the original on the " +
-                    "left, its octave copy on the right.\n\nListen for: not a second melody but a " +
-                    "taller one. The copy hits every note together with the original — the " +
-                    "octave from ${Tut.firstNotes}, worn as a coat.",
+                Block.Markdown(
+                    markdown = """
+                    `superimpose()` plays the line — and, on top of it, a copy, run through a change. Below, the change is `transpose(12)` from ${Tut.scalesAndMelodies}: the copy sings one floor up, in step with the original. (Two copies add up — the practice from ${Tut.chordsInOneStep} — so the line, copy included, sits at 0.4 instead of the usual 0.5.)
+
+                    **Try it:** swap the `//` to hear the line alone, and press Update. Then make it `transpose(-12)` — the copy moves underneath. Last, headphones on: make it `.pan(0.3).superimpose(transpose(12).pan(0.7))` — the original on the left, its octave copy on the right.
+
+                    **Listen for:** not a second melody but a taller one. The copy hits every note together with the original — the octave from ${Tut.firstNotes}, worn as a coat.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -79,16 +70,14 @@ val theTransformToolkitTutorial = Tutorial(
         TutorialSection(
             heading = "How long a note holds: legato",
             blocks = listOf(
-                Block.Text(
-                    "Since ${Tut.firstNotes}, every note has held for its whole step — that " +
-                    "was legato(1), unwritten. legato() scales the held length: 0.5 cuts each " +
-                    "note to half its step and leaves silence behind it; 2 holds it into the " +
-                    "next step.\n\nTry it: swap the // and press Update, and swap back. Then " +
-                    "change legato(0.5) to legato(2) — the notes hold past their steps and begin to touch, " +
-                    "length doing what release did in ${Tut.shapeOfANote}.\n\nListen for: " +
-                    "the melody on tiptoe. Same notes, same places — but each one steps away " +
-                    "early, and the silences carry as much groove as the notes. Short is a " +
-                    "rhythm of its own.",
+                Block.Markdown(
+                    markdown = """
+                    Since ${Tut.firstNotes}, every note has held for its whole step — that was `legato(1)`, unwritten. `legato()` scales the held length: 0.5 cuts each note to half its step and leaves silence behind it; 2 holds it into the next step.
+
+                    **Try it:** swap the `//` and press Update, and swap back. Then change `legato(0.5)` to `legato(2)` — the notes hold past their steps and begin to touch, length doing what release did in ${Tut.shapeOfANote}.
+
+                    **Listen for:** the melody on tiptoe. Same notes, same places — but each one steps away early, and the silences carry as much groove as the notes. Short is a rhythm of its own.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -101,17 +90,14 @@ val theTransformToolkitTutorial = Tutorial(
         TutorialSection(
             heading = "One melody, three costumes",
             blocks = listOf(
-                Block.Text(
-                    "All three transforms on the one melody, over the groove from " +
-                    "${Tut.spaceAndRests}. One spelling change: the duration knob appears " +
-                    "under its other name — clip() is legato(), letter for letter, and the " +
-                    "songs spell it both ways.\n\nTry it: delete one transform " +
-                    "at a time — .slow(2), then .superimpose(transpose(12)), then .clip(0.5) — " +
-                    "pressing Update after each, and hear the melody step back toward " +
-                    "plain.\n\nListen for: how far three words carried it. The counter needs " +
-                    "two clicks per pass, the octave copy rides above, and every note is " +
-                    "clipped short — the same eight steps you have carried since ${Tut.firstNotes}, " +
-                    "wearing everything this lesson taught.",
+                Block.Markdown(
+                    markdown = """
+                    All three transforms on the one melody, over the groove from ${Tut.spaceAndRests}. One spelling change: the duration knob appears under its other name — `clip()` is `legato()`, letter for letter, and the songs spell it both ways.
+
+                    **Try it:** delete one transform at a time — `.slow(2)`, then `.superimpose(transpose(12))`, then `.clip(0.5)` — pressing Update after each, and hear the melody step back toward plain.
+
+                    **Listen for:** how far three words carried it. The counter needs two clicks per pass, the octave copy rides above, and every note is clipped short — the same eight steps you have carried since ${Tut.firstNotes}, wearing everything this lesson taught.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """

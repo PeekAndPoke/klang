@@ -27,19 +27,16 @@ val gatesTutorial = Tutorial(
         TutorialSection(
             heading = "The what and the when: struct",
             blocks = listOf(
-                Block.Text(
-                    "The stab riff from ${Tut.chordsInOneStep} wrote the chord out three " +
-                    "times, with rests between. struct() takes the same line apart: the " +
-                    "pattern says what plays — one power chord — and the gate string says " +
-                    "when, with x for a hit and ~ for a rest, splitting the cycle into steps " +
-                    "exactly like every string you have written.\n\n(The two lines below " +
-                    "sound identical on purpose: they are the same riff, spelled whole and " +
-                    "spelled apart.)\n\nTry it: swap the // and press Update to convince " +
-                    "your ear, and swap back. Then change [a2,e3,a3] to [g2,d3,g3] and press " +
-                    "Update — one edit moves all three hits.\n\nListen for: no difference — " +
-                    "and then look at the code again. The gate line names the chord once — " +
-                    "change the chord and every hit follows; change the gate and the chord " +
-                    "stays.",
+                Block.Markdown(
+                    markdown = """
+                    The stab riff from ${Tut.chordsInOneStep} wrote the chord out three times, with rests between. `struct()` takes the same line apart: the pattern says what plays — one power chord — and the **gate** string says when, with `x` for a hit and `~` for a rest, splitting the cycle into steps exactly like every string you have written.
+
+                    (The two lines below sound identical on purpose: they are the same riff, spelled whole and spelled apart.)
+
+                    **Try it:** swap the `//` and press Update to convince your ear, and swap back. Then change `[a2,e3,a3]` to `[g2,d3,g3]` and press Update — one edit moves all three hits.
+
+                    **Listen for:** no difference — and then look at the code again. The gate line names the chord once — change the chord and every hit follows; change the gate and the chord stays.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -52,16 +49,14 @@ val gatesTutorial = Tutorial(
         TutorialSection(
             heading = "Three, three, two",
             blocks = listOf(
-                Block.Text(
-                    "Look at the gate's spacing: hits on steps one, four, and seven — gaps " +
-                    "of three, three, and two. That spacing has a name, the tresillo, and it " +
-                    "is one of the most widespread rhythm shapes in the world — son, " +
-                    "reggaeton, and half of pop lean on it. You have been playing it since " +
-                    "${Tut.chordsInOneStep} without the name.\n\nTry it: swap the // to the " +
-                    "straightened gate — hits every other step — and press Update, then swap " +
-                    "back.\n\nListen for: the difference in pull. The even gate marches in " +
-                    "place; the tresillo leans forward, because its last gap is one step " +
-                    "short — the cycle comes back around one step before you expect it.",
+                Block.Markdown(
+                    markdown = """
+                    Look at the gate's spacing: hits on steps one, four, and seven — gaps of three, three, and two. That spacing has a name, the **tresillo**, and it is one of the most widespread rhythm shapes in the world — son, reggaeton, and half of pop lean on it. You have been playing it since ${Tut.chordsInOneStep} without the name.
+
+                    **Try it:** swap the `//` to the straightened gate — hits every other step — and press Update, then swap back.
+
+                    **Listen for:** the difference in pull. The even gate marches in place; the tresillo leans forward, because its last gap is one step short — the cycle comes back around one step before you expect it.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -74,16 +69,14 @@ val gatesTutorial = Tutorial(
         TutorialSection(
             heading = "Two whats, one when",
             blocks = listOf(
-                Block.Text(
-                    "A gate is a rhythm you can hand to more than one line. Below, a bass " +
-                    "note and the chord stabs carry the same gate string, character for " +
-                    "character — every hit of one lands exactly on a hit of the other, the " +
-                    "layering from ${Tut.layers} locked to a single when.\n\nTry it: change " +
-                    "one x to ~ in just one of the two gate strings and press Update — the " +
-                    "lines unlock, and you hear at once what the shared gate was doing. Put " +
-                    "it back.\n\nListen for: two instruments striking as one instrument. A " +
-                    "band playing the same rhythm together stops being lines and starts " +
-                    "being a section. The shared gate is how you write that.",
+                Block.Markdown(
+                    markdown = """
+                    A gate is a rhythm you can hand to more than one line. Below, a bass note and the chord stabs carry the same gate string, character for character — every hit of one lands exactly on a hit of the other, the layering from ${Tut.layers} locked to a single when.
+
+                    **Try it:** change one `x` to `~` in just one of the two gate strings and press Update — the lines unlock, and you hear at once what the shared gate was doing. Put it back.
+
+                    **Listen for:** two instruments striking as one instrument. A band playing the same rhythm together stops being lines and starts being a **section**. The shared gate is how you write that.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
@@ -98,16 +91,14 @@ val gatesTutorial = Tutorial(
         TutorialSection(
             heading = "The gated section",
             blocks = listOf(
-                Block.Text(
-                    "The groove from ${Tut.spaceAndRests} underneath, and the locked pair " +
-                    "above it. The drums and the gate agree where it matters: the first hit " +
-                    "shares its step with the kick, the last one with the snare, and the " +
-                    "middle one strikes where the drums leave room.\n\nTry it: put // in " +
-                    "front of one layer at a time to hear the others. Then move the middle x " +
-                    "one step later in both gate strings — same lock, new lean — and press " +
-                    "Update.\n\nListen for: the push and the frame at once — drums keeping " +
-                    "the cycle square while bass and stabs lean three-three-two across it. " +
-                    "Most grooves you love are exactly this argument.",
+                Block.Markdown(
+                    markdown = """
+                    The groove from ${Tut.spaceAndRests} underneath, and the locked pair above it. The drums and the gate agree where it matters: the first hit shares its step with the kick, the last one with the snare, and the middle one strikes where the drums leave room.
+
+                    **Try it:** put `//` in front of one layer at a time to hear the others. Then move the middle `x` one step later in both gate strings — same lock, new lean — and press Update.
+
+                    **Listen for:** the push and the frame at once — drums keeping the cycle square while bass and stabs lean three-three-two across it. Most grooves you love are exactly this argument.
+                    """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
