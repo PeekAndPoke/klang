@@ -152,7 +152,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                 alignItems = Align.center
                 backgroundColor = props.backgroundColor
                 put("box-sizing", "border-box")
-                put("border", "2px solid var(--klang-gauge-ring)")
+                put("border", "1px solid var(--klang-gauge-ring)")
                 borderRadius = 5.px
                 height = compHeight
                 put("padding", "0 4px")

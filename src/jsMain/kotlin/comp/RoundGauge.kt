@@ -182,7 +182,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
             ui.basic.inverted.white.circular.icon.label.with("gauge-ring") {
                 css {
                     boxSizing = BoxSizing.borderBox
-                    borderWidth = 2.px
+                    borderWidth = 1.px
                     props.borderColor?.let { put("border-color", "$it !important") }
                     width = props.size
                     height = props.size

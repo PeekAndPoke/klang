@@ -146,6 +146,138 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var currentIntensity = 0.0
     private var flickerTime = 0.0
 
+    ////  DEFERRED TEXTURE BUILD  /////////////////////////////////////////////////////////////////////////////////
+
+    private var sceneCtx: ThreeJsContext? = null
+    private var prepared = false
+    private var preparing = false
+    private var prepareRequested = false
+    private val onPrepared = mutableListOf<() -> Unit>()
+
+    /** Rows per macrotask for the chunked per-pixel texture loops. */
+    private val chunkRows = 128
+
+    /**
+     * Builds the plate + title textures and meshes. The heavy per-pixel loops
+     * run in row batches on macrotasks so the UI stays responsive — call this
+     * during the start page's loading sequence. [onReady] fires once the
+     * background is fully built; immediately if it already is, and also on a
+     * failed WebGL setup, so callers never wait forever.
+     */
+    fun prepare(onReady: () -> Unit = {}) {
+        if (prepared || failed) {
+            onReady()
+            return
+        }
+        onPrepared.add(onReady)
+        prepareRequested = true
+        // Watchdog: if the 3D pipeline never comes up (no WebGL, three.js
+        // failed to load), fail soft instead of leaving the boot screen stuck.
+        // Only fires when the build has not even STARTED — an in-progress
+        // chunked build has its own error guards.
+        window.setTimeout({
+            if (!prepared && !preparing && !failed) {
+                markFailed("3D background never became ready (WebGL unsupported?)")
+            }
+        }, 5000)
+        startPrepareIfPossible()
+    }
+
+    private fun startPrepareIfPossible() {
+        if (preparing || prepared) return
+        // Not mounted / addon not ready yet — setupScene calls again when it is.
+        val ctx = sceneCtx ?: return
+        val addon = threeAddon ?: return
+        preparing = true
+
+        try {
+            val texW = ceil(texHeight * aspect).toInt()
+            generateMotorNormalMap(addon, texW, texHeight) { normalMap ->
+                val plateMap = buildPlateBaseMap(addon, texW, texHeight)
+                buildTitleOverlayMaps(addon, texW, texHeight) { titleAlbedo, titleNormal ->
+                    buildMeshes(ctx, addon, normalMap, plateMap, titleAlbedo, titleNormal)
+                    prepared = true
+                    preparing = false
+                    onPrepared.forEach { it() }
+                    onPrepared.clear()
+                }
+            }
+        } catch (e: Throwable) {
+            markFailed(e)
+        }
+    }
+
+    private fun buildMeshes(
+        ctx: ThreeJsContext,
+        addon: ThreeJsAddon,
+        normalMap: CanvasTexture,
+        plateMap: CanvasTexture,
+        titleAlbedo: CanvasTexture,
+        titleNormal: CanvasTexture,
+    ) {
+        val geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
+        val mat = addon.createMeshStandardMaterial(jsObject {
+            color = 0xffffff            // let the map provide the base color
+            roughness = 0.28
+            metalness = 0.97
+            val d = this.asDynamic()
+            d.map = plateMap
+            d.normalMap = normalMap
+            d.normalScale = addon.createVector2(0.9, 0.9)
+            d.transparent = true
+            d.opacity = 0.0             // fades in with the main light (see animate)
+        })
+        baseMap = plateMap
+        val pl = addon.createMesh(geometry, mat)
+        ctx.scene.add(pl)
+
+        plane = pl
+        material = mat
+
+        // Title overlay — its own plane a hair in front of the plate, so the
+        // title can stay at full brightness while the plate is dimmed.
+        val titleMat = addon.createMeshStandardMaterial(jsObject {
+            color = 0xffffff
+            roughness = 0.28
+            metalness = 0.97
+            val d = this.asDynamic()
+            d.map = titleAlbedo
+            d.normalMap = titleNormal
+            d.normalScale = addon.createVector2(0.9, 0.9)
+            d.transparent = true
+            d.opacity = 0.0             // fades in with the main light (see animate)
+        })
+        val titlePl = addon.createMesh(addon.createPlaneGeometry(2.0 * aspect, 2.0), titleMat)
+        titlePl.asDynamic().position.z = 0.01
+        ctx.scene.add(titlePl)
+
+        titlePlane = titlePl
+        titleMaterial = titleMat
+    }
+
+    /**
+     * Runs [rows] rows of per-pixel work in [chunkRows]-row batches, yielding
+     * to the event loop between batches so the UI can breathe.
+     */
+    private fun runChunked(rows: Int, block: (from: Int, toExclusive: Int) -> Unit, onDone: () -> Unit) {
+        fun step(from: Int) {
+            // The steps run as detached macrotasks — an escaping exception would
+            // silently strand prepare() waiters, so every step fails soft.
+            try {
+                if (from >= rows) {
+                    onDone()
+                    return
+                }
+                val to = min(rows, from + chunkRows)
+                block(from, to)
+                window.setTimeout({ step(to) }, 0)
+            } catch (e: Throwable) {
+                markFailed(e)
+            }
+        }
+        step(0)
+    }
+
     ////  LISTENERS (for cleanup)  ////////////////////////////////////////////////////////////////////////////////
 
     private var resizeListener: ((Event) -> Unit)? = null
@@ -154,6 +286,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     ////  PUBLIC API (call via motorBackgroundRef)  ///////////////////////////////////////////////////////////////
 
     fun powerOn() {
+        // Self-heal for flows that never called prepare() — idempotent, and the
+        // plate simply fades in whenever the build finishes.
+        prepare()
         poweredOn = true
         targetIntensity = defaultIntensity
         targetFillIntensity = 0.12
@@ -184,14 +319,25 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     private var failed: Boolean by value(false)
 
+    /**
+     * Central fail-soft: ANY 3D-background error drops to the flat
+     * menu-colored fallback and — crucially — releases every [prepare]
+     * waiter, so an unsupported browser can never wedge the start flow.
+     */
+    private fun markFailed(e: Any?) {
+        if (failed) return
+        console.error("MotorBackground error — falling back to flat bg", e)
+        runCatching { teardown() }
+        failed = true
+        preparing = false
+        onPrepared.forEach { runCatching { it() } }
+        onPrepared.clear()
+    }
+
     init {
         lifecycle {
             onUnmount { teardown() }
-            onError { e ->
-                console.error("MotorBackground error — falling back to flat bg", e)
-                runCatching { teardown() }
-                failed = true
-            }
+            onError { e -> markFailed(e) }
         }
     }
 
@@ -232,7 +378,13 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     ////  SCENE SETUP  ////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun setupScene(ctx: ThreeJsContext) {
+    private fun setupScene(ctx: ThreeJsContext) = try {
+        setupSceneUnsafe(ctx)
+    } catch (e: Throwable) {
+        markFailed(e)
+    }
+
+    private fun setupSceneUnsafe(ctx: ThreeJsContext) {
         val addon = threeAddon ?: return
         renderer = ctx.renderer
         camera = ctx.camera
@@ -247,50 +399,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // No scene background — the canvas stays transparent (alpha = true) so the
         // menu-colored wrapper div shows through until the plate fades in.
 
-        // Normal map matching viewport aspect so panels stay square
-        val texW = ceil(texHeight * aspect).toInt()
-        val normalMap = generateMotorNormalMap(addon, texW, texHeight)
-        val plateMap = buildPlateBaseMap(addon, texW, texHeight)
-        val (titleAlbedo, titleNormal) = buildTitleOverlayMaps(addon, texW, texHeight)
-
-        val geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
-        val mat = addon.createMeshStandardMaterial(jsObject {
-            color = 0xffffff            // let the map provide the base color
-            roughness = 0.28
-            metalness = 0.97
-            val d = this.asDynamic()
-            d.map = plateMap
-            d.normalMap = normalMap
-            d.normalScale = addon.createVector2(0.9, 0.9)
-            d.transparent = true
-            d.opacity = 0.0             // fades in with the main light (see animate)
-        })
-        baseMap = plateMap
-        val pl = addon.createMesh(geometry, mat)
-        ctx.scene.add(pl)
-
-        plane = pl
-        material = mat
-
-        // Title overlay — its own plane a hair in front of the plate, so the
-        // title can stay at full brightness while the plate is dimmed.
-        val titleMat = addon.createMeshStandardMaterial(jsObject {
-            color = 0xffffff
-            roughness = 0.28
-            metalness = 0.97
-            val d = this.asDynamic()
-            d.map = titleAlbedo
-            d.normalMap = titleNormal
-            d.normalScale = addon.createVector2(0.9, 0.9)
-            d.transparent = true
-            d.opacity = 0.0             // fades in with the main light (see animate)
-        })
-        val titlePl = addon.createMesh(addon.createPlaneGeometry(2.0 * aspect, 2.0), titleMat)
-        titlePl.asDynamic().position.z = 0.01
-        ctx.scene.add(titlePl)
-
-        titlePlane = titlePl
-        titleMaterial = titleMat
+        // The plate + title textures are NOT built here — their per-pixel loops
+        // block the main thread for a noticeable moment, which froze the start
+        // page's power button right after mount. They are built by [prepare]
+        // (row-chunked, UI-friendly) during the start page's loading sequence.
+        sceneCtx = ctx
+        if (prepareRequested) {
+            startPrepareIfPossible()
+        }
 
         // ── Lighting ──
 
@@ -347,31 +463,37 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             }
             resizeTimer?.let { window.clearTimeout(it) }
             resizeTimer = window.setTimeout({
-                val newTexW = ceil(texHeight * aspect).toInt()
-                val newNormal = generateMotorNormalMap(addon, newTexW, texHeight)
-                val newBase = buildPlateBaseMap(addon, newTexW, texHeight)
-                val (newTitleAlbedo, newTitleNormal) = buildTitleOverlayMaps(addon, newTexW, texHeight)
-                material?.let { mat ->
-                    val mDyn = mat.asDynamic()
-                    val existingNormal = mDyn.normalMap
-                    if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
-                    mDyn.normalMap = newNormal
-                    val existingBase = mDyn.map
-                    if (existingBase != null && existingBase != undefined) existingBase.dispose()
-                    mDyn.map = newBase
-                    mDyn.needsUpdate = true
+                // Nothing to rebuild before prepare() has run — it will pick up
+                // the current aspect when it does.
+                if (prepared) {
+                    val newTexW = ceil(texHeight * aspect).toInt()
+                    generateMotorNormalMap(addon, newTexW, texHeight) { newNormal ->
+                        val newBase = buildPlateBaseMap(addon, newTexW, texHeight)
+                        buildTitleOverlayMaps(addon, newTexW, texHeight) { newTitleAlbedo, newTitleNormal ->
+                            material?.let { mat ->
+                                val mDyn = mat.asDynamic()
+                                val existingNormal = mDyn.normalMap
+                                if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                                mDyn.normalMap = newNormal
+                                val existingBase = mDyn.map
+                                if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                                mDyn.map = newBase
+                                mDyn.needsUpdate = true
+                            }
+                            titleMaterial?.let { mat ->
+                                val mDyn = mat.asDynamic()
+                                val existingNormal = mDyn.normalMap
+                                if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                                mDyn.normalMap = newTitleNormal
+                                val existingBase = mDyn.map
+                                if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                                mDyn.map = newTitleAlbedo
+                                mDyn.needsUpdate = true
+                            }
+                            baseMap = newBase
+                        }
+                    }
                 }
-                titleMaterial?.let { mat ->
-                    val mDyn = mat.asDynamic()
-                    val existingNormal = mDyn.normalMap
-                    if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
-                    mDyn.normalMap = newTitleNormal
-                    val existingBase = mDyn.map
-                    if (existingBase != null && existingBase != undefined) existingBase.dispose()
-                    mDyn.map = newTitleAlbedo
-                    mDyn.needsUpdate = true
-                }
-                baseMap = newBase
             }, 300)
         }
         window.addEventListener("resize", handler)
@@ -380,7 +502,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     ////  RENDER LOOP  ////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun animate(frame: ThreeJsFrame) {
+    private fun animate(frame: ThreeJsFrame) = try {
+        animateUnsafe(frame)
+    } catch (e: Throwable) {
+        markFailed(e)
+    }
+
+    private fun animateUnsafe(frame: ThreeJsFrame) {
+        if (failed) return
         val delta = min(frame.deltaMs, 100.0)
 
         // Cone breathing — scanning breathes deep and fast (the dyno-test
@@ -501,7 +630,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         addon: ThreeJsAddon,
         width: Int,
         height: Int,
-    ): Pair<CanvasTexture, CanvasTexture> {
+        onDone: (albedo: CanvasTexture, normal: CanvasTexture) -> Unit,
+    ) {
         // ── Albedo: text only, transparent elsewhere ──
         val cnv = document.createElement("canvas") as HTMLCanvasElement
         cnv.width = width
@@ -542,7 +672,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val engraveMask = buildEngraveMask(width, height)
         val engraveStrength = 2.5
 
-        for (py in 0 until height) {
+        runChunked(height, { pyFrom, pyTo ->
+        for (py in pyFrom until pyTo) {
             for (px in 0 until width) {
                 val idx = (py * width + px) * 4
                 val i1D = py * width + px
@@ -591,13 +722,15 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 d[idx + 3] = 255
             }
         }
-        g2d.putImageData(imageData, 0.0, 0.0)
+        }, onDone = {
+            g2d.putImageData(imageData, 0.0, 0.0)
 
-        val normalTex = addon.createCanvasTexture(ncnv)
-        normalTex.wrapS = TextureWrapping.ClampToEdgeWrapping
-        normalTex.wrapT = TextureWrapping.ClampToEdgeWrapping
+            val normalTex = addon.createCanvasTexture(ncnv)
+            normalTex.wrapS = TextureWrapping.ClampToEdgeWrapping
+            normalTex.wrapT = TextureWrapping.ClampToEdgeWrapping
 
-        return albedoTex to normalTex
+            onDone(albedoTex, normalTex)
+        })
     }
 
     /**
@@ -649,7 +782,12 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
      * The "KLANGMOTÖR" engraving lives on the separate title overlay plane —
      * see [buildTitleOverlayMaps].
      */
-    private fun generateMotorNormalMap(addon: ThreeJsAddon, width: Int, height: Int): CanvasTexture {
+    private fun generateMotorNormalMap(
+        addon: ThreeJsAddon,
+        width: Int,
+        height: Int,
+        onDone: (CanvasTexture) -> Unit,
+    ) {
         val cnv = document.createElement("canvas") as HTMLCanvasElement
         cnv.width = width
         cnv.height = height
@@ -667,7 +805,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val groovePitch = 24.0  // px between neighbouring grooves
         val grooveAmp = 0.35    // normal tilt at the groove walls
 
-        for (py in 0 until height) {
+        runChunked(height, { pyFrom, pyTo ->
+        for (py in pyFrom until pyTo) {
             for (px in 0 until width) {
                 val idx = (py * width + px) * 4
 
@@ -724,12 +863,13 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 d[idx + 3] = 255
             }
         }
+        }, onDone = {
+            g2d.putImageData(imageData, 0.0, 0.0)
 
-        g2d.putImageData(imageData, 0.0, 0.0)
-
-        val tex = addon.createCanvasTexture(cnv)
-        tex.wrapS = TextureWrapping.ClampToEdgeWrapping
-        tex.wrapT = TextureWrapping.ClampToEdgeWrapping
-        return tex
+            val tex = addon.createCanvasTexture(cnv)
+            tex.wrapS = TextureWrapping.ClampToEdgeWrapping
+            tex.wrapT = TextureWrapping.ClampToEdgeWrapping
+            onDone(tex)
+        })
     }
 }

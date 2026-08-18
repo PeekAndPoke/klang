@@ -102,7 +102,7 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
             ui.basic.inverted.white.circular.icon.label.with("gauge-ring") {
                 css {
                     // Same ring as the round gauges (width here, color via .gauge-ring)
-                    borderWidth = 2.px
+                    borderWidth = 1.px
                     props.borderColor?.let { put("border-color", "$it !important") }
                     width = props.size
                     height = props.size
@@ -126,11 +126,13 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                         color = iconColor
                         put("padding", "0px !important")
                         put("transition", "filter 220ms ease, text-shadow 220ms ease")
-                        // Idle state reads as a dimmed ember; hover lifts to full
-                        // brightness with a wider glow so the button "lights up".
+                        // Idle state reads as a dimmed ember with NO glow; hover
+                        // turns the light on — the glow's blur animates from 0 on
+                        // the same 220ms ease as the icon brightness, so both
+                        // fade in together.
                         if (!isDisabled) {
                             put("filter", if (hovered) "brightness(1.0)" else "brightness(0.65)")
-                            val glowBlur = props.size * if (hovered) 0.32 else 0.25
+                            val glowBlur = if (hovered) props.size * 0.32 else 0.px
                             put("text-shadow", "0 0 $glowBlur")
                         }
                     }
