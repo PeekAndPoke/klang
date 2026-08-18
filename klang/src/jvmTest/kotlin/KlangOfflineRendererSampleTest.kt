@@ -16,10 +16,18 @@ import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.common.SourceLocationChain
 import kotlinx.coroutines.runBlocking
+import java.nio.file.Path
 
 class KlangOfflineRendererSampleTest : StringSpec({
 
-    val samples = runBlocking { Samples.create(catalogue = SampleCatalogue.default) }
+    // Committed offline fixture (see its README.md): pre-cached manifests + samples keyed by
+    // url hash, so this test needs no network. Delete the dir and run once online to regenerate.
+    val samples = runBlocking {
+        Samples.create(
+            cacheDir = Path.of("src/jvmTest/fixtures/sample-cache"),
+            catalogue = SampleCatalogue.default,
+        )
+    }
 
     /**
      * Creates a pattern that plays one sample sound per cycle, cycling through the given sounds.

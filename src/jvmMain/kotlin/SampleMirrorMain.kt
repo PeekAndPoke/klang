@@ -49,6 +49,22 @@ class SampleMirror(
 ) {
     companion object {
         /**
+         * The upstream manifest of every mirrored set, keyed by [SampleCatalogue.MirrorSet.dir].
+         *
+         * This is the ONLY place the app codebase knows the upstream hosts — the runtime
+         * catalogue is mirror-only. Each manifest's "_base" tells where its sample files live.
+         * (Fast full rebuild without this tool: console/bootstrap-samples-from-git.sh)
+         */
+        val originManifests: Map<String, String> = mapOf(
+            "uzu-drumkit" to "https://raw.githubusercontent.com/tidalcycles/uzu-drumkit/main/strudel.json",
+            "tidal-drum-machines" to "https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json",
+            "dirt-samples" to "https://raw.githubusercontent.com/felixroos/dough-samples/main/Dirt-Samples.json",
+            "vcsl" to "https://raw.githubusercontent.com/felixroos/dough-samples/main/vcsl.json",
+            "mridangam" to "https://raw.githubusercontent.com/felixroos/dough-samples/main/mridangam.json",
+            "piano" to "https://raw.githubusercontent.com/felixroos/dough-samples/main/piano.json",
+        )
+
+        /**
          * Manifest keys excluded from the mirror, per set dir.
          *
          * uzu-drumkit "brk" is an Amen-break derivative — the only file in that otherwise
@@ -133,7 +149,7 @@ class SampleMirror(
             "YamahaTG33" to "TG33",
         )
 
-        const val maxAttempts = 5
+        const val MAX_ATTEMPTS = 5
     }
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -221,24 +237,30 @@ class SampleMirror(
         val report = SetReport(set.dir).also { reports += it }
         val setDir = targetDir.resolve(set.dir)
 
-        println("== ${set.dir} <- ${set.source.soundsUri}")
+        val originUri = originManifests[set.dir]
+        if (originUri == null) {
+            report.failed += "${set.dir} (no origin manifest configured — see SampleMirror.originManifests)"
+            return
+        }
+
+        println("== ${set.dir} <- $originUri")
 
         val manifestBytes = try {
-            fetch(set.source.soundsUri)
+            fetch(originUri)
         } catch (e: Exception) {
-            report.failed += "${set.source.soundsUri} (${e.message})"
+            report.failed += "$originUri (${e.message})"
             println("  FAILED to fetch manifest: ${e.message}")
             return
         }
 
         val obj = json.parseToJsonElement(manifestBytes.decodeToString()) as? JsonObject
         if (obj == null) {
-            report.failed += "${set.source.soundsUri} (manifest is not a JSON object)"
+            report.failed += "$originUri (manifest is not a JSON object)"
             return
         }
 
         val base = obj["_base"]?.jsonPrimitive?.contentOrNull?.trim()?.trimEnd('/')
-            ?: set.source.soundsUri.substringBeforeLast('/')
+            ?: originUri.substringBeforeLast('/')
 
         val excluded = excludedKeys[set.dir] ?: emptySet()
 
@@ -421,7 +443,7 @@ class SampleMirror(
                     status in 200..299 -> return response.body()
 
                     status == 429 || status >= 500 -> {
-                        if (attempt >= maxAttempts) error("HTTP $status after $attempt attempts")
+                        if (attempt >= MAX_ATTEMPTS) error("HTTP $status after $attempt attempts")
 
                         val retryAfter = response.headers().firstValue("Retry-After").orElse(null)?.toDoubleOrNull()
                         val sleep = maxOf(waitSeconds, retryAfter ?: 0.0)
@@ -433,7 +455,7 @@ class SampleMirror(
                     else -> error("HTTP $status")
                 }
             } catch (e: IOException) {
-                if (attempt >= maxAttempts) throw e
+                if (attempt >= MAX_ATTEMPTS) throw e
                 println("  ${e.message}, retrying in ${waitSeconds}s: $url")
                 Thread.sleep((waitSeconds * 1000).toLong())
                 waitSeconds *= 2

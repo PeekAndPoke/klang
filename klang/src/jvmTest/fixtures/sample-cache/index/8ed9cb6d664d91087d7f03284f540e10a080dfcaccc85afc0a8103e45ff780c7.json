@@ -1949,12 +1949,12 @@
       "file": "gm_electric_bass_finger/0330_JCLive_sf2_file.json"
     },
     {
-      "name": "FluidR3_GM_sf2_fible",
+      "name": "FluidR3_GM",
       "source": {
         "baseUrl": "https://felixroos.github.io/webaudiofontdata/sound/",
-        "file": "0330_FluidR3_GM_sf2_fible"
+        "file": "0330_FluidR3_GM_sf2_file"
       },
-      "file": "gm_electric_bass_finger/0330_FluidR3_GM_sf2_fible.json"
+      "file": "gm_electric_bass_finger/0330_FluidR3_GM_sf2_file.json"
     },
     {
       "name": "Aspirin",
@@ -2085,12 +2085,12 @@
       "file": "gm_slap_bass_2/0370_FluidR3_GM_sf2_file.json"
     },
     {
-      "name": "GeneralUserGS_sf2_fil e",
+      "name": "GeneralUserGS",
       "source": {
         "baseUrl": "https://felixroos.github.io/webaudiofontdata/sound/",
-        "file": "0370_GeneralUserGS_sf2_fil e"
+        "file": "0370_GeneralUserGS_sf2_file"
       },
-      "file": "gm_slap_bass_2/0370_GeneralUserGS_sf2_fil e.json"
+      "file": "gm_slap_bass_2/0370_GeneralUserGS_sf2_file.json"
     },
     {
       "name": "JCLive",
