@@ -250,7 +250,24 @@ course could express is lost.
 - *The Pattern Language*: B1–B3 B4 B5 (later + B6–B11).
 - *The Klangmotör*: C1–C10 when written; buildsOn: The Klang Path.
 
-## Section blocks + visuals (user design 2026-08-17 — IN PROGRESS, finish first!)
+## Section blocks + visuals (user design 2026-08-17 — BUILT; markdown since 2026-08-18)
+
+**Markdown migration (user request 2026-08-18, DONE):** prose is now `Block.Markdown` rendered
+via MarkdownDisplay (marked.js); `Block.Text` is retired from the lessons (type kept for
+compatibility). Authoring contract for ALL new/edited prose:
+
+- Triple-quoted `""" … """.trimIndent()` with REAL blank lines between paragraphs (no `\n\n`).
+- Backtick every code-ish token — function names, mini-notation (`~`, `*2`, `[hh hh]`, `<>`,
+  `|`, `x`, `//`), note/drum names, colon-strings, scale names. ⚠️ Unprotected `*` `<>` `[]`
+  `|` `_` get EATEN by marked — the migration verified zero bare occurrences; keep it that way.
+- Bold each lesson's new concept ONCE, at its coining sentence; never later mentions.
+- Callout labels are bold (`**Try it:**` / `**Listen for:**`) and still open their own
+  paragraph — the spec's callout lint strips `**` before anchoring.
+- `${'$'}{Tut.x}` interpolations stay plain.
+- B1 §1 carries the player-UI bullet tour (order matches the chrome) + the hover-help tip;
+  B1 §4 lists drum names as bullets. Bullet lists are for enumerations prose would bury.
+
+## Original design notes (2026-08-17)
 
 A section is now a heading + ordered list of **blocks** (user-specified layout):
 
