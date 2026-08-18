@@ -94,7 +94,7 @@ stack(
         .orbit(2).scale("<e2:minor>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // . mute()
         .gain(0.5).postgain(0.10).velocity(dynamics.fast(2)) // . solo()
         .sound(guitar).unison(13).spread(0.09)
-        .oscp("midsHz", 950).oscp("midsQ", 0.8).oscp("presence", 5.3).oscp("presenceHz", 2700).oscp("presenceQ", 0.8).oscp("hptrack", 1.10).oscp("hpq", 1.2)
+        .oscp("midsHz", 950).oscp("midsQ", 0.8).oscp("presence", 5.3).oscp("presenceHz", 2600).oscp("presenceQ", 0.8).oscp("hptrack", 1.10).oscp("hpq", 1.2)
         .clip("<0.96!31 0.93 0.96!31 0.92 0.96!30 0.88 0.90>".fast(2)).adsr("0.003:4.0:0.0:0.010")
         .pan(0.35).superimpose(pan(0.65)).mute("<0!128 1!16 0!16>")
         .body("cedar").bodyMix(0.3).late(berlin.range(0.0000, 0.0007))
@@ -104,7 +104,7 @@ stack(
         .orbit(2).scale("<e2:minor>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // . mute()
         .gain(0.5).postgain(0.10).velocity(dynamics.fast(2))
         .sound(guitar).unison(11).spread(0.10)
-        .oscp("midsHz", 750).oscp("midsQ", 0.8).oscp("presence", 5.3).oscp("presenceHz", 2300).oscp("presenceQ", 0.8).oscp("hptrack", 1.00).oscp("hpq", 1.5)
+        .oscp("midsHz", 750).oscp("midsQ", 0.8).oscp("presence", 5.3).oscp("presenceHz", 2200).oscp("presenceQ", 0.8).oscp("hptrack", 1.00).oscp("hpq", 1.5)
         .clip("<0.96!31 0.93 0.96!31 0.92 0.96!30 0.88 0.90>".fast(2)).adsr("0.003:4.0:0.0:0.010")
         .pan(0.40).superimpose(pan(0.60))
         .mute("<0!128 1!16 0!16>").late(berlin.range(0.0000, 0.0007))
@@ -114,7 +114,7 @@ stack(
         [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 0  0 0 [0 3 4 6] 2]!1>/8`) //  .solo()
       .struct("<[x!2]!16 [x [x x] x@2]!16 [[x x] x!3]!32>").fast(2)
       .velocity("0.98 0.96 0.97 0.96".fast(2))  // . mute()
-      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).postgain(0.065).clip(0.75)
+      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).postgain(0.075).clip(0.75)
       .adsr("0.007:4.0:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(35).hpq(0.6).lpf(500).lpe(12).lpq(0.707)  
       .pan(0.475).superimpose(pan(0.525)).mute("<0!128 1!32>")
       .superimpose(x => x.distort("0.5:tube:4").hpf(70).postgain(0.030)).notchf(snareHz).notchq(1.0)
@@ -124,13 +124,13 @@ stack(
   stack(  
     sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").n(0).mute("<0!128 1!32>")  // . solo()
       .velocity("0.98 0.96 0.97 0.96").pan(0.5).orbit(5).gain(0.16).hpf(30).hpq(1).lpf(8000).adsr("0.001:0.05:0.95:0.2").distort(0.1)
-      .superimpose(x => x.bandf("60").bandq(2.0).vel(0.80))
+      .superimpose(x => x.bandf("70").bandq(2.0).vel(0.80))
       .late(berlin.range(0.0000, 0.0007).fast(4).seg(4)),
     sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>").n(5).mute("<0!128 1!32>") // . solo()
       .pan(0.5).late(0.0020).orbit(5).pan(0.50).gain(0.22).hpf(80).lpf(14500).lpq(0.5).adsr("0.001:0.05:0.95:0.2")
       .superimpose(x => x.bandf(pure(snareHz).add(berlin.mul(5).fast(4))).bandq(2.0).vel(0.80)),
     sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-      .pan(0.50).late(0.0030).orbit(5).gain(0.23).hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.5).adsr("0.003:0.05:0.95:0.5"), // . mute()
+      .pan(0.50).late(0.0030).orbit(5).gain(0.235).hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.5).adsr("0.003:0.05:0.95:0.5"), // . mute()
     sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(5).gain(0.060).mute("<0!128 1!32>")
       .pan(0.3).superimpose(pan(0.7)),
     sound("<pink ~ pink pink>*16").orbit(5).gain(0.120).hpf(11500).hpq(0.5).lpf(17000).lpq(0.5).velocity("<1.0 0.90 0.95 0.90>*16")
@@ -139,7 +139,6 @@ stack(
   // Master
   ,master(Master.of(MasterFx.reverb().wet(0.05).damp(0.5).roomSize(7), MasterFx.gain(1.6)))
 ).seed(timeOfDay.mul(10*60*60*24)).shuffle("<1!80 2!48 1!128 2!32>").early(0).swingBy(0.005, 4)
-
 
 
 

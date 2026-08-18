@@ -155,6 +155,19 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         }
                     }
 
+                    // Cycle counter
+                    noui.middle.aligned.item {
+                        css {
+                            alignSelf = Align.center
+                            color = Color.grey
+                        }
+                        LcdDisplay(
+                            value = state.currentCycle,
+                            digits = 3,
+                            dim = !state.isPlaying,
+                        )
+                    }
+
                     // RPM field
                     noui.middle.aligned.item {
                         css { width = 150.px }
@@ -180,19 +193,6 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                                 }
                             }
                         }
-                    }
-
-                    // Cycle counter
-                    noui.middle.aligned.item {
-                        css {
-                            alignSelf = Align.center
-                            color = Color.grey
-                        }
-                        LcdDisplay(
-                            value = state.currentCycle,
-                            digits = 3,
-                            dim = !state.isPlaying,
-                        )
                     }
                 }
             }

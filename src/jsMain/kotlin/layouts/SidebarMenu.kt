@@ -103,7 +103,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     /**
      * Renders a single menu item with consistent styling.
-     * Selected items get white background, black text, and red icon.
+     * Selected items get accent-blue background with black icon and text.
      */
     private fun DIV.menuItem(
         isSelected: Boolean,
@@ -122,8 +122,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 cursor = Cursor.pointer
 
                 if (isSelected) {
-                    backgroundColor = Color.white
-                    color = Color(laf.critical)
+                    backgroundColor = Color(laf.accent)
+                    color = Color.black
                 } else {
                     // Transparent so the chrome-bg noise grain of the sidebar shows through
                     backgroundColor = Color.transparent
@@ -139,7 +139,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             if (iconFn != null) {
                 icon.iconFn().then {
                     if (isSelected) {
-                        css { put("color", "${laf.critical} !important") }
+                        css { put("color", "black !important") }
                     }
                 }
             }
@@ -161,7 +161,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         ui.vertical.relaxed.list {
             key = "menu-list"
             css {
-                paddingTop = 16.px
+                // Tuned by eye — sits just below the editor frame's rounded corner
+                paddingTop = 29.px
                 paddingLeft = 16.px
                 flexGrow = 1.0
                 overflowY = Overflow.auto
@@ -205,7 +206,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 display = Display.flex
                 justifyContent = JustifyContent.center
                 gap = 4.px
-                padding = Padding(12.px, 16.px, 0.px, 16.px)
+                // Aligned by eye with the header bar's control row
+                padding = Padding(15.px, 16.px, 0.px, 16.px)
             }
 
             for (entry in entries) {
@@ -243,7 +245,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                             margin = Margin(0.px)
                             fontSize = 18.px
                             if (isSelected) {
-                                put("color", "${laf.critical} !important")
+                                put("color", "${laf.accent} !important")
                             } else {
                                 put("color", "white !important")
                             }

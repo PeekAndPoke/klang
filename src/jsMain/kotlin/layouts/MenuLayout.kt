@@ -13,6 +13,9 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import kotlinx.css.Display
 import kotlinx.css.Overflow
+import kotlinx.css.Position
+import kotlinx.css.position
+import kotlinx.css.zIndex
 import kotlinx.css.display
 import kotlinx.css.flexGrow
 import kotlinx.css.flexShrink
@@ -59,6 +62,25 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
                 maxHeight = 100.vh
                 display = Display.flex
                 overflow = Overflow.hidden
+                position = Position.relative
+            }
+
+            // Ambient accent light shining in from the screen's top and left
+            // edges — same character as the editor's glow. Sits above the
+            // columns (which have opaque backgrounds), ignores the mouse.
+            div {
+                key = "edge-light"
+                css {
+                    position = Position.absolute
+                    put("inset", "0")
+                    put("pointer-events", "none")
+                    zIndex = 5
+                    put(
+                        "box-shadow",
+                        "inset 0 8px 30px color-mix(in srgb, var(--klang-accent) 5%, transparent)," +
+                                " inset 8px 0 30px color-mix(in srgb, var(--klang-accent) 5%, transparent)"
+                    )
+                }
             }
 
             div {
@@ -80,6 +102,18 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
                     flexGrow = 1.0
                     height = 100.pct
                     overflowY = Overflow.auto
+                    // Above the sidebar (which is position:relative via chrome-bg),
+                    // so the editor's outer glow can bleed over the menu
+                    position = Position.relative
+                    zIndex = 1
+                    // Clip-window trick: the negative margin + equal padding keep
+                    // the layout pixel-identical, but move this scroller's clip
+                    // edge 100px INTO the sidebar — page content (e.g. the
+                    // editor's glow) may paint over the menu within that window.
+                    put("margin-left", "-100px")
+                    put("padding-left", "100px")
+                    // No horizontal scrollbar from shadows poking the right edge
+                    put("overflow-x", "hidden")
                 }
                 props.inner(this)
             }

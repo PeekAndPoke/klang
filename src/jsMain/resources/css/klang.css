@@ -432,14 +432,50 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.05'/%3E%3C/svg%3E");
 }
 
-/* App chrome (sidebar + header bar): menu grey with a stronger grain.
-   The .ui.basic.segment.chrome-bg selector out-specifies `.ui.basic.segment { background: transparent !important }`. */
+/* Black surface with the editor's fine white grain — the code page header
+   uses it so header and editor read as one continuous surface.
+   The .ui.basic.segment leg out-specifies `.ui.basic.segment { background: transparent !important }`. */
+.black-noise-bg,
+.ui.basic.segment.black-noise-bg {
+    background-color: #000000 !important;
+    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.05'/%3E%3C/svg%3E") !important;
+}
+
+/* App chrome (sidebar + page/header): menu grey with a slowly LIVING grain.
+   Two static noise tiles (different turbulence seeds, fixed 200px tiles so the
+   grain scale is identical on every element) sit on ::before/::after and
+   cross-fade via compositor-friendly opacity keyframes — mirrored ease curves,
+   so the summed grain intensity stays constant while the pattern morphs.
+   `isolation: isolate` keeps the z-index:-1 layers above this element's own
+   background but below all content.
+   The .ui.basic.segment leg out-specifies `.ui.basic.segment { background: transparent !important }`. */
 .chrome-bg,
 .ui.basic.segment.chrome-bg {
     background-color: var(--klang-bg-menu) !important;
-    /* Fixed 200px tile (see editor noise above) — without it the tile
-       stretches per element and sidebar/header grain scale differently. */
-    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.09'/%3E%3C/svg%3E") !important;
+    position: relative;
+    isolation: isolate;
+}
+.chrome-bg::before,
+.chrome-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.09'/%3E%3C/svg%3E");
+    animation: chromeNoiseA 17s ease-in-out infinite;
+}
+.chrome-bg::after {
+    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.09'/%3E%3C/svg%3E");
+    animation: chromeNoiseB 17s ease-in-out infinite;
+}
+@keyframes chromeNoiseA {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
+}
+@keyframes chromeNoiseB {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 1; }
 }
 
 #spa {

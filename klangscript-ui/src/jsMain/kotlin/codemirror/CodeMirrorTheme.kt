@@ -54,6 +54,7 @@ class CodeMirrorTheme {
             }
             this[".cm-content"] = jsObject {
                 caretColor = cursor
+                paddingTop = "11px"
             }
             this[".cm-cursor, .cm-dropCursor"] = jsObject {
                 borderLeftColor = "#ffffff"

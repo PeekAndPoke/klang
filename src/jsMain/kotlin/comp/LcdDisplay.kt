@@ -155,7 +155,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                 put("border", "1px solid var(--klang-gauge-ring)")
                 borderRadius = 5.px
                 height = compHeight
-                put("padding", "0 4px")
+                put("padding", "0 6px")
                 put("gap", "1px")
                 put("font-family", "'Courier New', 'Consolas', monospace")
                 fontWeight = FontWeight.normal
@@ -187,8 +187,8 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                             alignItems = Align.center
                             justifyContent = JustifyContent.center
                             color = dimColor
-                            // Optical centering — Courier digits sit 1px high otherwise
-                            put("transform", "translateY(1px)")
+                            // Optical centering — Courier digits sit high otherwise (2px by eye)
+                            put("transform", "translateY(2px)")
                         }
                         +"8"
                     }
@@ -205,8 +205,8 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                             } else {
                                 put("transition", "none")
                             }
-                            // The +1px matches the ghost "8" optical-centering nudge
-                            put("transform", "translateY(calc(-${(pos + 0.5) * ENTRY_EM}em + 1px))")
+                            // The +2px matches the ghost "8" optical-centering nudge
+                            put("transform", "translateY(calc(-${(pos + 0.5) * ENTRY_EM}em + 2px))")
                         }
 
                         for (d in 0 until STRIP_SIZE) {
