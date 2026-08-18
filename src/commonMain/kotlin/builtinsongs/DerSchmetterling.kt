@@ -70,12 +70,12 @@ stack(
     n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3 [1 -1]|1|1|1|1]>*2`)
       .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>")
       .gain(0.30).postgain("<0.210!48 0.100!16 0.210!48 0.250!16>")  // . solo()                  
-      .sound(guitar).unison(17).spread(0.20).oscp("presenceHz", 3300).oscp("presenceQ", 0.9).oscp("presence", 4.7).oscp("hptrack", 2.0)    
+      .sound(guitar).unison(17).spread(0.20).oscp("presenceHz", 3300).oscp("presenceQ", 0.9).oscp("presence", 4.7).oscp("hptrack", 1.9)    
       .lpf(5000).lpe(perlin.range(0.5, 0.6).fast(2)).lpq(1.5).lpadsr("0.000:0.3:0.2:0.03")                      
       .adsr("0.007:3.0:0.1:0.125").clip(0.93) // . mute()            
       .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                            
       .superimpose(x => x.transpose(12).velocity("[0.5 0.4 0.45 0.4]*2").pan(0.2).superimpose(pan(0.8)))
-      .mute("<1!64 0!32 1!32 0!16>").room("0.3:5:0.1").body("steel").bodyMix(0.4)
+      .mute("<1!64 0!32 1!32 0!16>").room("0.3:5:0.1").body("steel").bodyMix(0.4).late(berlin.range(0.001, 0.002))
     , // Guitars       
     stack(
       // Guitar 1
