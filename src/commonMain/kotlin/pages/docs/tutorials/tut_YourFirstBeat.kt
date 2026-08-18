@@ -28,7 +28,7 @@ val yourFirstBeatTutorial = Tutorial(
                     - **Stop** halts playback.
                     - **Reset** stops and puts the original code back.
                     - The **counter** climbs while the music runs — what it counts is this page's first lesson.
-                    - **RPM** sets the music's speed; it gets its own section further down this page.
+                    - **RPM** — revolutions per minute — sets the music's speed; it gets its own section further down this page.
                     - The **EVT** field tunes how much of the code lights up while playing — you can ignore it.
 
                     Two things about the code itself. Anything after `//` is a comment — Klang ignores it. We use comments to narrate the code, and later on this page you will use `//` to switch whole lines on and off. And whenever you wonder what a word in the code does: hover it — a help popup opens right there, with what it does and how to use it.
@@ -64,7 +64,7 @@ val yourFirstBeatTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    How long is a cycle? That is a setting, not a law. The **RPM** field in the player means revolutions per minute — one revolution is one cycle, so RPM says how many cycles pass in sixty seconds. This lesson runs at 30 RPM: one cycle takes two seconds.
+                    How long is a cycle? That is a setting, not a law. **RPM** stands for revolutions per minute — one revolution is one cycle, so RPM says how many cycles pass in sixty seconds. This lesson runs at 30 RPM: one cycle takes two seconds.
 
                     **Try it:** set RPM to 60 — the clock changes at once, no **Update** needed. The pattern itself is unchanged — the same kick, once per cycle — but the cycle now comes around every second. Whenever this course says "two seconds", that's at 30 RPM.
                     """.trimIndent(),
