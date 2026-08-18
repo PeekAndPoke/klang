@@ -168,6 +168,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     // The code editor handles its own highlights via KlangCodeEditorComp.
     @Suppress("unused")
     private val blocksVoiceSub by subscribingTo(ctrl.signals) { signal ->
+        // Stop (the ctrl resets its stream to null) and live updates invalidate every
+        // highlight scheduled ahead for the old pattern
+        if (signal == null ||
+            signal is KlangPlaybackSignal.PlaybackStopped ||
+            signal is KlangPlaybackSignal.PatternUpdated
+        ) {
+            blocksHighlightBuffer.cancelAll()
+        }
         if (signal is KlangPlaybackSignal.VoicesScheduled && currentModals.isEmpty()) {
             signal.voices.forEach { voiceEvent ->
                 val chain = voiceEvent.sourceLocations ?: return@forEach

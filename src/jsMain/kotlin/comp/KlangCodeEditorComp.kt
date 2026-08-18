@@ -108,10 +108,20 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     @Suppress("unused")
     private val signalSub by subscribingTo(props.ctrl.signals) { signal ->
-        if (signal is KlangPlaybackSignal.VoicesScheduled && props.pauseHighlightsWhen?.invoke() != true) {
-            signal.voices.forEach { voiceEvent ->
-                highlightBuffer.scheduleHighlight(voiceEvent)
-                props.extraVoiceHandler?.invoke(voiceEvent)
+        when {
+            // Stop (the ctrl resets its stream to null) and live updates both invalidate
+            // every highlight scheduled ahead for the old pattern
+            signal == null ||
+                signal is KlangPlaybackSignal.PlaybackStopped ||
+                signal is KlangPlaybackSignal.PatternUpdated -> {
+                highlightBuffer.cancelAll()
+            }
+
+            signal is KlangPlaybackSignal.VoicesScheduled && props.pauseHighlightsWhen?.invoke() != true -> {
+                signal.voices.forEach { voiceEvent ->
+                    highlightBuffer.scheduleHighlight(voiceEvent)
+                    props.extraVoiceHandler?.invoke(voiceEvent)
+                }
             }
         }
     }

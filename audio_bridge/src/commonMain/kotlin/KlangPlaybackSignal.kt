@@ -49,6 +49,14 @@ sealed class KlangPlaybackSignal {
     data object PlaybackStopped : KlangPlaybackSignal()
 
     /**
+     * Emitted when a live update replaces the running pattern, BEFORE the new
+     * pattern's [VoicesScheduled] signals arrive. UI surfaces use it to cancel
+     * highlights already scheduled ahead for the old pattern — the engine drops
+     * those voices at the update cutoff, so their highlights must die with them.
+     */
+    data object PatternUpdated : KlangPlaybackSignal()
+
+    /**
      * Emitted when a full cycle has been completed.
      * Stall-safe: if multiple cycles are missed due to CPU stalls, all cycles are emitted in order.
      *

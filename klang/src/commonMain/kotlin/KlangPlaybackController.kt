@@ -124,6 +124,9 @@ internal class KlangPlaybackController(
      * Update the pattern being played
      */
     fun updatePattern(pattern: KlangPattern) {
+        // Old-pattern highlights are already scheduled ahead in the UI; tell it to
+        // cancel them BEFORE the new pattern's VoicesScheduled signals arrive
+        signals(KlangPlaybackSignal.PatternUpdated)
         // Update pattern
         this.pattern = pattern
         // Re-request current cycle to repopulate backend
