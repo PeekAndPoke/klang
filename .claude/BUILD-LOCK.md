@@ -1,7 +1,7 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-17**
+**SINCE: 2026-08-18**
 **STATE: FREE — take the lock before building.**
 
 > Last action (2026-08-17, claude-code tutorial session): ladder at 15 certified lessons —

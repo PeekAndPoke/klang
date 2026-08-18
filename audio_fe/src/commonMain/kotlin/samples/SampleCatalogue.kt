@@ -55,7 +55,17 @@ class SampleCatalogue(
             indexUrl = "https://peekandpoke.github.io/klang/felixroos/gm/index.json",
         )
 
-        val default = SampleCatalogue(
+        // MIRROR //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        /** Base url of the self-hosted sample mirror ... built by `./gradlew runSampleMirror`, uploaded via console/deploy-samples-finzo.sh */
+        const val mirrorBase = "https://klang-assets.finzo.de/samples"
+
+        /**
+         * The original upstream sources, hot-loaded from raw.githubusercontent.com.
+         *
+         * Kept as the source of truth for the mirror tool (SampleMirrorMain) and as a manual fallback.
+         */
+        val origin = SampleCatalogue(
             sources = listOf(
                 // drums
                 strudelDefaultDrums,
@@ -69,7 +79,49 @@ class SampleCatalogue(
                 gmSoundFont,
             ),
         )
+
+        /** One origin bundle and the directory it is mirrored to ... shared by [mirrored] and SampleMirrorMain */
+        val mirrorSets: List<MirrorSet> = listOf(
+            MirrorSet(source = strudelDefaultDrums, dir = "uzu-drumkit"),
+            MirrorSet(source = tidalDrumMachine, dir = "tidal-drum-machines"),
+            MirrorSet(source = doughSample, dir = "dirt-samples"),
+            MirrorSet(source = vcslSamples, dir = "vcsl"),
+            MirrorSet(source = mridangam, dir = "mridangam"),
+            MirrorSet(source = piano, dir = "piano"),
+        )
+
+        /**
+         * All sample sets served from one self-hosted [base] url.
+         *
+         * Mirrored manifests carry no "_base" — entries resolve relative to the manifest url
+         * (see SampleIndexLoader's fallback base). The GM soundfont index is relocatable the same way.
+         */
+        fun mirrored(base: String): SampleCatalogue {
+            val b = base.trimEnd('/')
+
+            return SampleCatalogue(
+                sources = mirrorSets.map { set ->
+                    set.source.copy(
+                        soundsUri = "$b/${set.dir}/index.json",
+                        aliasUris = when {
+                            set.source.aliasUris.isEmpty() -> emptyList()
+                            else -> listOf("$b/${set.dir}/alias.json")
+                        },
+                    )
+                } + gmSoundFont.copy(indexUrl = "$b/felixroos/gm/index.json"),
+            )
+        }
+
+        // TODO: flip to `mirrored(mirrorBase)` once the mirror is live at [mirrorBase].
+        //  Then regenerate the offline fixture: delete klang/cache and run KlangOfflineRendererSampleTest once with network.
+        val default = origin
     }
+
+    /** Maps an origin [source] bundle to the [dir] it is mirrored to on the sample mirror */
+    data class MirrorSet(
+        val source: Bundle,
+        val dir: String,
+    )
 
     sealed interface Source {
         /** Name of the bundle ... not used for anything just informal */

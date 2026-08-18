@@ -426,7 +426,10 @@ body {
    RGB is forced to white here — the black dust of .noise-bg would be invisible on #000. */
 .code-mirror-container .cm-editor,
 .code-mirror-container .cm-gutters {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.03'/%3E%3C/svg%3E");
+    /* Explicit width/height on the svg: without an intrinsic size the tile
+       stretches to the whole editor and magnifies the grain — fixed 200px
+       tiles repeat instead, keeping the grain fine at any editor size. */
+    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.05'/%3E%3C/svg%3E");
 }
 
 /* App chrome (sidebar + header bar): menu grey with a stronger grain.
@@ -434,7 +437,9 @@ body {
 .chrome-bg,
 .ui.basic.segment.chrome-bg {
     background-color: var(--klang-bg-menu) !important;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.1'/%3E%3C/svg%3E") !important;
+    /* Fixed 200px tile (see editor noise above) — without it the tile
+       stretches per element and sidebar/header grain scale differently. */
+    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.09'/%3E%3C/svg%3E") !important;
 }
 
 #spa {

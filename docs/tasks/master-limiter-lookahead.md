@@ -782,6 +782,41 @@ unkind (sustained saw pad under a hard four-on-the-floor at
 goes **−1.59 dB → −0.55 dB** — same ceiling, ~1 dB louder, because the mix spends less time ducked. That is about one of
 a staged gain chain's stages, for one divide per sample on a single instance.
 
+### ⚠️ REOPENED 2026-08-18 — the dual release IS audible at deep GR ("the surge")
+
+The "really subtle" verdict above holds only for *shallow* reduction. At **deep** reduction the fast branch's recovery
+is plainly audible: the maintainer reported long-standing "sudden boosts in volume of the entire mix" on Der
+Schmetterling, and measurement pins it on this limiter.
+
+**Method (reusable):** render the song twice, identical except `MasterFx.gain` (2.2 vs 0.55 = 12.04 dB less drive, so
+the limiter idles in the reference). The per-frame envelope ratio of the two renders, minus the drive delta, IS the
+limiter's gain trajectory. Per-note seed noise contributes only ~0.3 dB — events measured are 4–8 dB. Analysis in the
+klang-ai workspace, `sessions/20260810-gemini-review/` (v30 renders, 2026-08-18).
+
+**Measured on Der Schmetterling v30 at `MasterFx.gain(2.2)`, 256 cycles:**
+
+- Transparent almost everywhere: median gain +0.02 dB; only 2.5 % of 10 ms frames exceed 3 dB GR.
+- But **14 close→reopen events**: gain dives to **−4…−11.5 dB**, then recovers **+5…+8 dB within 250 ms**
+  (worst: t=345.6 s closed −4.4, reopened +8.2 dB). A +7 dB broadband rise in a quarter second on the summed mix —
+  unambiguously audible, and matching the maintainer's description exactly.
+- **By-ear dose-response (maintainer, same day): backing `MasterFx.gain` 2.2 → 1.5 (−3.3 dB drive) makes the effect
+  "almost vanish."** So the audibility threshold sits around closure depths of ~4 dB — shallow-and-fast is fine,
+  deep-and-fast is a surge.
+- Exonerated the same day, so they are not re-suspected: the per-orbit glue compressor (2:1 @ −15, driven by two
+  summed guitars: max GR −0.92 dB, zero events — comp/no-comp A/B division), double-summing (zero spectrally-flat
+  jumps in 41 923 frames), stateful-effect resets (only 4/8192 slot anomalies across 256 cycles, all on the
+  deliberate `[x!24]` fill), and render nondeterminism (two takes differ 0.284 dB per note).
+
+**What loads the gun:** closures of −5…−11 dB need momentary peaks well over ceiling — coinciding note onsets with
+loud overlapping tails (see `docs/tasks/voice-takeover.md`, "Practical note": tails at ~97 % amplitude at gate close).
+Takeover removes the deep closures at the source; the release character then rarely matters.
+
+**Retune direction for this phase:** keep the dual release's loudness win in the shallow regime, but make the fast
+branch **depth-aware** — e.g. blend fast-branch recovery toward the slow constant as GR depth exceeds ~3–4 dB, so a
+−10 dB closure recovers over ~100–200 ms instead of tens of ms. Measure with the A/B-division harness above: the
+before/after number is "reopen dB within 250 ms at closures deeper than 4 dB", target < 3 dB; the cost number is mean
+level at identical peak (the dual release's original justification).
+
 Rejected alternatives, measured, so they are not retried: a **dB-domain release** (crawls in the last dB just as badly —
 205 ms vs 187 to recover within 0.5 dB) and **simply shortening the release**
 (reduces the pump but gives back most of the lookahead's LF gain: −41.1 → −37.4 dB at 50 ms).

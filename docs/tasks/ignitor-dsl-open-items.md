@@ -283,3 +283,19 @@ Play white noise, cross-correlate input and output. Fast, lower quality.
 ## Minor Items
 
 - KSP: nested type alias resolution only one level deep (latent — no chained aliases exist today)
+
+## Filter dry/wet + a real cab filter (from Der Schmetterling mixing, 2026-08-18)
+
+Two gaps surfaced while voicing the supersaw guitars (maintainer request, parked for later):
+
+1. **Dry/wet (mix) knob on processing stages.** Emphasis EQ currently needs the
+   add-a-scaled-bandpass idiom — `signal.add(signal.bandpass(f, q).mul(amount))` — which costs an
+   extra graph branch per band and reads backwards (amount is a linear add, not a mix). A `mix`
+   param on filter stages (or a general `.blend(dry, wet, amount)` combinator) would collapse
+   these. Same need appears for shallow cuts: a depth-limited notch is currently
+   `signal.minus(signal.bandpass(f, q).mul(d))`.
+2. **Cabinet lowpass is CPU-heavy as two cascaded biquads.** The `.lowpass(5200).lowpass(5200)`
+   idiom (×4 guitars ×unison voices) is at the edge of a strong desktop CPU. Candidates: a single
+   4th-order lowpass primitive (one call, precomputed cascade), or a dedicated `cab()` stage
+   (fixed 12–24 dB/oct + the presence dip baked in) that guitars share. Benchmark before/after
+   with `runSongBenchmark`.

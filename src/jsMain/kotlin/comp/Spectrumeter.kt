@@ -155,8 +155,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         //   heat += instantEnergy * heatRate   (energy pumps heat in)
         //   heat *= cooling                    (radiative cooling)
         //   heat is clamped to [0, 1]          (saturates at peak glow)
-        // heatRate=0.006, cooling=0.995 → sustained-loud signal ramps to the 1.0
-        // ceiling in ~5 s at 60 fps; decay half-life ≈ 2.3 s when the music stops.
+        // heatRate=0.01, cooling=0.994 → same equilibrium glow as the original
+        // 0.005/0.997 tuning (equilibrium = energy·heatRate/(1−cooling)) but the
+        // dynamics run twice as fast: ramp ~3 s at 60 fps, decay half-life ≈ 1.9 s.
         var frameSum = 0.0
         for (v in bucketValues) frameSum += v
         val instantEnergy = (frameSum / bucketValues.size.coerceAtLeast(1)).coerceIn(0.0, 1.0)
@@ -164,8 +165,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // no heat, so the iron only glows under real audio energy.
         val heatThreshold = 0.12
         val effectiveEnergy = ((instantEnergy - heatThreshold) / (1.0 - heatThreshold)).coerceAtLeast(0.0)
-        val heatRate = 0.005
-        val cooling = 0.997
+        val heatRate = 0.01
+        val cooling = 0.994
         val heatCeiling = 1.8
         glowHeat = ((glowHeat + effectiveEnergy * heatRate) * cooling).coerceIn(0.0, heatCeiling)
         val glowEnergy = glowHeat
