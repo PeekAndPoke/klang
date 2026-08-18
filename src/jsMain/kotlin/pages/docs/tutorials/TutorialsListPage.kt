@@ -148,7 +148,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
             ui.segment {
                 ui.header { +"Tutorials" }
-                ui.sub.header { +"Learn Klang step by step — from first notes to advanced techniques" }
+                ui.sub.header { +"Learn Klang step by step, from first notes to advanced techniques" }
 
                 div {
                     css { marginTop = 1.rem }

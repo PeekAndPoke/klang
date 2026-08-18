@@ -66,6 +66,14 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
    narration, never decoration (no mood/metaphor comments — that rule produced the sculptor slop). Comment
    vocabulary follows the same taught-so-far rule as code. Familiar carrier boilerplate may go bare once
    it has been commented in earlier lessons.
+13. **Concepts before use — including WITHIN a lesson (user notice to content reviewers, 2026-08-18).**
+   A concept may only be used after it has been explained: earlier in the SAME lesson (section order
+   counts — the vocab lint only checks lesson order, so reviewers must check section order by hand),
+   or in a lesson that comes earlier on one of the paths. This covers PROSE concepts, not just
+   lintable function calls. It will not always work 100% — e.g. B1 plays `gain()` from its first
+   block and explains it in its last section; such carrier exceptions are acceptable when the code
+   comment carries a minimal gloss — but every reviewer panel must actively look for
+   used-before-explained concepts and flag them.
 
 Model resources: Ableton Learning Synths (topic order, one param at a time), Syntorial (match-by-ear),
 Strudel workshop (short path + separate reference, inline "try it" nudges), SoS Synth Secrets
@@ -266,6 +274,10 @@ compatibility). Authoring contract for ALL new/edited prose:
 - `${'$'}{Tut.x}` interpolations stay plain.
 - B1 §1 carries the player-UI bullet tour (order matches the chrome) + the hover-help tip;
   B1 §4 lists drum names as bullets. Bullet lists are for enumerations prose would bury.
+- **NO EM-DASHES (user ruling 2026-08-18): never "—" or "–" in any user-facing text** (prose,
+  descriptions, code comments). They read as an AI tell; rewrite with commas, colons,
+  semicolons, parentheses, or a new sentence. The A/B comment suffix is ", swap" /
+  ", swap to compare". List bullets use "`bd`: bass drum" colon form. Plain hyphens stay.
 
 ## Original design notes (2026-08-17)
 

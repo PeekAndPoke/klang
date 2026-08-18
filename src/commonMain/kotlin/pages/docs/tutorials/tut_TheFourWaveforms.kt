@@ -23,7 +23,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 val theFourWaveformsTutorial = Tutorial(
     slug = "the-four-waveforms",
     title = Tut.theFourWaveforms,
-    description = "Meet sine, saw, square, and triangle — the four basic voices, and what to hear in each.",
+    description = "Meet sine, saw, square, and triangle: the four basic voices, and what to hear in each.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Synthesis),
@@ -34,98 +34,98 @@ val theFourWaveformsTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    The melody below is the one you ended ${Tut.firstNotes} with, sung by **sine** — the pure tone with nothing added. This lesson keeps the melody fixed and changes only who sings it. That "who" is the **voice**: not a recording like the ones drum names fetch, but a sound Klang builds on the spot from a repeating wave shape — a waveform — at whatever pitch `note()` asks for. The extra colours a voice rings above its pitch are its overtones, and they are what your ear reads as character.
+                    The melody below is the one you ended ${Tut.firstNotes} with, sung by **sine**, the pure tone with nothing added. This lesson keeps the melody fixed and changes only who sings it. That "who" is the **voice**: not a recording like the ones drum names fetch, but a sound Klang builds on the spot from a repeating wave shape (a waveform) at whatever pitch `note()` asks for. The extra colours a voice rings above its pitch are its overtones, and they are what your ear reads as character.
 
                     One note for your ears before we start: the voices do not all read equally loud, so the gains in this lesson are trimmed to sit roughly level. Judge the colour, not the level.
 
-                    **Listen for:** the reference. Sine is round, smooth, textureless — no overtones at all. Memorize it, because everything in the next three sections is sine plus something.
+                    **Listen for:** the reference. Sine is round, smooth, textureless, with no overtones at all. Memorize it, because everything in the next three sections is sine plus something.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
                     note("a3 c4 d4 ~  e4 d4 c4 ~")  // the melody from ${Tut.firstNotes}, unchanged all lesson
                       .sound("sine")                // the reference voice: a pure tone
-                      .gain(0.5)                    // pure tones read loud — keep them around 0.5
+                      .gain(0.5)                    // pure tones read loud, keep them around 0.5
                     """.trimIndent(),
                 ),
             ),
         ),
         TutorialSection(
-            heading = "Saw — the bright one",
+            heading = "Saw: the bright one",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    A **saw** wave carries the full stack of overtones above every note — every extra colour there is, ringing over the pitch you asked for. Your ear reads that stack as brightness and buzz.
+                    A **saw** wave carries the full stack of overtones above every note: every extra colour there is, ringing over the pitch you asked for. Your ear reads that stack as brightness and buzz.
 
                     **Try it:** swap the `//` between the two lines and press **Update**.
 
-                    **Listen for:** the same six notes, but now with an edge riding on top — like the difference between humming and singing through your teeth. Saw is the workhorse for basses, leads, and anything that has to cut through.
+                    **Listen for:** the same six notes, but now with an edge riding on top, like the difference between humming and singing through your teeth. Saw is the workhorse for basses, leads, and anything that has to cut through.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").gain(0.5)     // bright: the full overtone stack
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5) // the pure reference — swap to compare
+                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5) // the pure reference, swap to compare
                     """.trimIndent(),
                 ),
             ),
         ),
         TutorialSection(
-            heading = "Square — the hollow one",
+            heading = "Square: the hollow one",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    A **square** wave also stacks overtones, but only every second one — half the stack is missing. Your ear reads that gap as hollowness. (This pair compares against saw, not sine: a gap only shows up against a full stack. And the square's gain sits lower — its wave carries more raw energy than the others.)
+                    A **square** wave also stacks overtones, but only every second one; half the stack is missing. Your ear reads that gap as hollowness. (This pair compares against saw, not sine: a gap only shows up against a full stack. And the square's gain sits lower: its wave carries more raw energy than the others.)
 
                     **Try it:** swap the `//` to compare square against saw.
 
-                    **Listen for:** both are bright, but the square sounds emptied out — hollow and woody, like a clarinet, or the melodies in old video games, which were built almost entirely from square waves.
+                    **Listen for:** both are bright, but the square sounds emptied out: hollow and woody, like a clarinet, or the melodies in old video games, which were built almost entirely from square waves.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("square").gain(0.35) // hollow: every second overtone missing
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").gain(0.5)  // the full stack — swap to compare
+                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").gain(0.5)  // the full stack, swap to compare
                     """.trimIndent(),
                 ),
             ),
         ),
         TutorialSection(
-            heading = "Triangle — the soft one",
+            heading = "Triangle: the soft one",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    A **triangle** wave carries the same every-second stack as the square — but far fainter, fading fast as it climbs. That leaves it almost a sine.
+                    A **triangle** wave carries the same every-second stack as the square, but far fainter, fading fast as it climbs. That leaves it almost a sine.
 
                     **Try it:** swap the `//` to compare triangle against sine. This is the subtlest pair on the page, so let each version loop a few times before you swap.
 
-                    **Listen for:** a gentle glow of edge that sine does not have — much softer than square, far softer than saw. Triangle is the voice for melodies that should sit close and warm.
+                    **Listen for:** a gentle glow of edge that sine does not have. Much softer than square, far softer than saw. Triangle is the voice for melodies that should sit close and warm.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("triangle").gain(0.55) // almost pure: a faint trace of overtones
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5)   // fully pure — swap to compare
+                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5)   // fully pure, swap to compare
                     """.trimIndent(),
                 ),
             ),
         ),
         TutorialSection(
-            heading = "Noise — no pitch at all",
+            heading = "Noise: no pitch at all",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    One more voice, to mark the edge of the map: white noise — every frequency at once, so there is no pitch left to sing. Hand it the melody and every note comes out sounding the same. More than that: with no pitch changing at the seams, neighbouring notes fuse — what remains of the melody is two long blocks of noise and the two rests.
+                    One more voice, to mark the edge of the map: white noise, every frequency at once, so there is no pitch left to sing. Hand it the melody and every note comes out sounding the same. More than that: with no pitch changing at the seams, neighbouring notes fuse, and what remains of the melody is two long blocks of noise and the two rests.
 
                     **Try it:** swap the `//` to hear the melody vanish, then bring it back.
 
-                    **Listen for:** how much the pitches were carrying. This is also why noise lives in the drum department: drum machines build their hi-hats from exactly this — a short burst of shaped noise. The `hh` you have been playing is a recording of one; building your own from raw noise comes in the Motör track.
+                    **Listen for:** how much the pitches were carrying. This is also why noise lives in the drum department: drum machines build their hi-hats from exactly this, a short burst of shaped noise. The `hh` you have been playing is a recording of one; building your own from raw noise comes in the Motör track.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("white").gain(0.3)   // noise reads loud and rough — kept well down
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5) // the melody — swap to bring it back
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("white").gain(0.3)   // noise reads loud and rough, kept well down
+                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5) // the melody, swap to bring it back
                     """.trimIndent(),
                 ),
             ),
@@ -137,11 +137,11 @@ val theFourWaveformsTutorial = Tutorial(
                     markdown = """
                     All four voices, one per line, and no correct answer: the notes carry the melody, the voice carries the mood. Choosing it is the first real sound-design decision you make on every line you write.
 
-                    **Try it:** move the `//` around and give each voice a few loops with the melody. As always, keep exactly one line live — with four lines it is easy to leave two on, and only the lowest one plays.
+                    **Try it:** move the `//` around and give each voice a few loops with the melody. As always, keep exactly one line live; with four lines it is easy to leave two on, and only the lowest one plays.
 
-                    **Listen for:** what each voice does to the same leap and the same walk — where saw makes the melody insist, triangle makes it confide.
+                    **Listen for:** what each voice does to the same leap and the same walk: where saw makes the melody insist, triangle makes it confide.
 
-                    (There is a whole shelf of further voices — `supersaw`, `pluck` and more; they turn up as the course goes on.)
+                    (There is a whole shelf of further voices: `supersaw`, `pluck` and more; they turn up as the course goes on.)
                     """.trimIndent(),
                 ),
                 Block.Code(

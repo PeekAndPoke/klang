@@ -18,7 +18,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 val firstStepsTrack = TutorialTrackDef(
     slug = "first-steps",
     title = "First Steps",
-    description = "From silence to your first beat, groove, and melody — the three lessons everything else builds on.",
+    description = "From silence to your first beat, groove, and melody: the three lessons everything else builds on.",
     lessons = listOf(
         yourFirstBeatTutorial, // B1
         spaceAndRestsTutorial, // B2
@@ -57,7 +57,7 @@ val theKlangPathTrack = TutorialTrackDef(
 val soundDesignBasicsTrack = TutorialTrackDef(
     slug = "sound-design-basics",
     title = "Sound Design Basics",
-    description = "Waveforms, envelopes, and filters — how a voice gets its character.",
+    description = "Waveforms, envelopes, and filters: how a voice gets its character.",
     lessons = listOf(
         theFourWaveformsTutorial, // A1
         shapeOfANoteTutorial, // A2
