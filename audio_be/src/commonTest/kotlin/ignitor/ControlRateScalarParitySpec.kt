@@ -19,9 +19,10 @@ import kotlin.math.ln
  * Bit-exact guards for the `controlRateValueOrNull` contract (unified-eq plan, D1a step 1):
  *
  * 1. Every pointwise combinator's scalar is `toRawBits()`-equal to the SCRATCH-path render of
- *    the same expression. For the FOLDING ops (plus/times) BOTH operands sit behind
- *    [OpaqueIgnitor] — opacifying only one leaves the other fold branch live and the oracle
- *    compares fold against fold, tautologically (round-2 finding).
+ *    the same expression. For every FOLDING op (as of D1b: ALL binary ops, plus the Clamp/
+ *    Range/Lerp constant slots) EVERY operand sits behind [OpaqueIgnitor] — one live foldable
+ *    operand makes the oracle a fold branch and the case tautological (a twice-found finding;
+ *    do NOT "simplify" the wrappers away).
  * 2. The safety guards on the scalar path actually ENGAGE at extreme values (safeOut clamps,
  *    safeDiv substitution, the log arms) — a scalar-vs-own-render comparison alone would stay
  *    green if a guard were deleted from both sides at once.
@@ -54,7 +55,7 @@ class ControlRateScalarParitySpec : StringSpec({
     /**
      * Asserts [sig]'s scalar is bit-equal to every sample of [reference]'s SCRATCH-path render.
      * The reference must opacify enough operands that the render cannot take ANY fold branch
-     * (for plus/times: both operands).
+     * (for the folding ops — all binary ops since D1b — that means every operand).
      */
     fun assertScalarBitEqualsScratchRender(sig: Ignitor, reference: Ignitor, freqHz: Double = 220.0) {
         val scalar = sig.controlRateValueOrNull(freqHz, ctx())
@@ -90,20 +91,21 @@ class ControlRateScalarParitySpec : StringSpec({
         assertScalarBitEqualsScratchRender(
             sig = ParamIgnitor("p", b).mul(a),
             reference = opq(b).mul(a),
+            // MulConst folds only via its (opacified) upstream — single wrap suffices.
         )
     }
 
     "div scalar is bit-equal to the scratch render" {
         assertScalarBitEqualsScratchRender(
             sig = ConstantIgnitor(a).div(ParamIgnitor("p", b)),
-            reference = ConstantIgnitor(a).div(opq(b)),
+            reference = opq(a).div(opq(b)),
         )
     }
 
     "minus scalar is bit-equal to the scratch render" {
         assertScalarBitEqualsScratchRender(
             sig = ConstantIgnitor(a).minus(ParamIgnitor("p", b)),
-            reference = ConstantIgnitor(a).minus(opq(b)),
+            reference = opq(a).minus(opq(b)),
         )
     }
 
@@ -124,28 +126,28 @@ class ControlRateScalarParitySpec : StringSpec({
     "pow scalar is bit-equal to the scratch render (negative base, signed-magnitude)" {
         assertScalarBitEqualsScratchRender(
             sig = ParamIgnitor("p", b).pow(ConstantIgnitor(a)),
-            reference = opq(b).pow(ConstantIgnitor(a)),
+            reference = opq(b).pow(opq(a)),
         )
     }
 
     "min scalar is bit-equal to the scratch render" {
         assertScalarBitEqualsScratchRender(
             sig = ConstantIgnitor(a).min(ParamIgnitor("p", b)),
-            reference = ConstantIgnitor(a).min(opq(b)),
+            reference = opq(a).min(opq(b)),
         )
     }
 
     "max scalar is bit-equal to the scratch render" {
         assertScalarBitEqualsScratchRender(
             sig = ConstantIgnitor(a).max(ParamIgnitor("p", b)),
-            reference = ConstantIgnitor(a).max(opq(b)),
+            reference = opq(a).max(opq(b)),
         )
     }
 
     "clamp scalar is bit-equal to the scratch render" {
         assertScalarBitEqualsScratchRender(
             sig = ParamIgnitor("p", b).clamp(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)),
-            reference = opq(b).clamp(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)),
+            reference = opq(b).clamp(opq(-1.0), opq(1.0)),
         )
     }
 
@@ -168,6 +170,50 @@ class ControlRateScalarParitySpec : StringSpec({
             sig = (FreqIgnitor * ConstantIgnitor(2.0)) + ConstantIgnitor(10.0),
             reference = (OpaqueIgnitor(FreqIgnitor) * opq(2.0)) + opq(10.0),
         )
+    }
+
+    "unary scalar overrides are bit-equal to the scratch render (batch)" {
+        // The 11 new unary overrides at NEGATIVE, ZERO and POSITIVE inputs (every branch arm of
+        // Sign/Sqrt/Frac evaluated on the scalar path) + mod/lerp/range/select, each vs a
+        // fully-opacified oracle.
+        val unaryValues = listOf(-2.6, 0.0, 0.37)
+        val unaryOps: List<Pair<String, (Ignitor) -> Ignitor>> = listOf(
+            "sqrt" to { x -> x.sqrt() },
+            "sign" to { x -> x.sign() },
+            "tanh" to { x -> x.tanh() },
+            "bipolar" to { x -> x.bipolar() },
+            "unipolar" to { x -> x.unipolar() },
+            "floor" to { x -> x.floor() },
+            "ceil" to { x -> x.ceil() },
+            "round" to { x -> x.round() },
+            "frac" to { x -> x.frac() },
+            "recip" to { x -> x.recip() },
+            "sq" to { x -> x.sq() },
+        )
+        for ((name, build) in unaryOps) {
+            for (v in unaryValues) {
+                withClue("$name($v)") {
+                    assertScalarBitEqualsScratchRender(
+                        sig = build(ParamIgnitor("p", v)),
+                        reference = build(opq(v)),
+                    )
+                }
+            }
+        }
+        val pairs: List<Pair<Ignitor, Ignitor>> = listOf(
+            ParamIgnitor("p", a).mod(ConstantIgnitor(b)) to opq(a).mod(opq(b)),
+            ConstantIgnitor(a).lerp(ParamIgnitor("p", b), ConstantIgnitor(0.3)) to
+                opq(a).lerp(opq(b), opq(0.3)),
+            ParamIgnitor("p", b).range(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)) to
+                opq(b).range(opq(-1.0), opq(1.0)),
+            ConstantIgnitor(1.0).select(ParamIgnitor("t", a), ParamIgnitor("f", b)) to
+                opq(1.0).select(opq(a), opq(b)),
+            ConstantIgnitor(-1.0).select(ParamIgnitor("t", a), ParamIgnitor("f", b)) to
+                opq(-1.0).select(opq(a), opq(b)),
+        )
+        for ((sig, reference) in pairs) {
+            assertScalarBitEqualsScratchRender(sig, reference)
+        }
     }
 
     // ── 2. guard ENGAGEMENT on the scalar path (absolute values, not just parity) ─
@@ -201,6 +247,26 @@ class ControlRateScalarParitySpec : StringSpec({
 
     "exp scalar clamps at SAFE_MAX" {
         ParamIgnitor("p", 50.0).exp().controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+    }
+
+    "recip scalar takes the safeDiv substitution" {
+        // NOTE: recip's safeOut can never engage — safeDiv floors the divisor at SAFE_MIN, so
+        // |1/safeDiv(x)| <= 1/SAFE_MIN ~= 9.9999...e14, just BELOW SAFE_MAX (the KDoc identity
+        // "1/SAFE_MIN = SAFE_MAX" is design intent, not an FP bit-fact). The observable guard is
+        // the substitution: without safeDiv, 1/1e-20 = 1e20.
+        ParamIgnitor("p", 1e-20).recip().controlRateValueOrNull(0.0, ctx()) shouldBe (1.0 / SAFE_MIN)
+    }
+
+    "sq scalar clamps at SAFE_MAX" {
+        ParamIgnitor("p", 1e10).sq().controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+    }
+
+    "mod scalar by NaN divisor takes the safeDiv substitution" {
+        // With safeDiv: x % SAFE_MIN, tiny but finite; without: x % NaN = NaN.
+        val v = ParamIgnitor("p", 0.37).mod(ConstantIgnitor(Double.NaN))
+            .controlRateValueOrNull(0.0, ctx())
+        v.shouldNotBeNull()
+        v.isNaN().shouldBeFalse()
     }
 
     "log scalar positive and zero arms" {
@@ -283,6 +349,32 @@ class ControlRateScalarParitySpec : StringSpec({
             "exp" to { x -> x.exp() },
             "log" to { x -> x.log() },
             "memoizing" to { x -> MemoizingIgnitor(x) },
+            // D1b overrides — every child slot per op:
+            "sqrt" to { x -> x.sqrt() },
+            "sign" to { x -> x.sign() },
+            "tanh" to { x -> x.tanh() },
+            "bipolar" to { x -> x.bipolar() },
+            "unipolar" to { x -> x.unipolar() },
+            "floor" to { x -> x.floor() },
+            "ceil" to { x -> x.ceil() },
+            "round" to { x -> x.round() },
+            "frac" to { x -> x.frac() },
+            "recip" to { x -> x.recip() },
+            "sq" to { x -> x.sq() },
+            "mod a" to { x -> x.mod(ConstantIgnitor(0.5)) },
+            "mod b" to { x -> ConstantIgnitor(0.5).mod(x) },
+            "lerp a" to { x -> x.lerp(ConstantIgnitor(0.5), ConstantIgnitor(0.3)) },
+            "lerp b" to { x -> ConstantIgnitor(0.5).lerp(x, ConstantIgnitor(0.3)) },
+            "lerp t" to { x -> ConstantIgnitor(0.5).lerp(ConstantIgnitor(1.0), x) },
+            "range upstream" to { x -> x.range(ConstantIgnitor(-1.0), ConstantIgnitor(1.0)) },
+            "range lo" to { x -> ConstantIgnitor(0.5).range(x, ConstantIgnitor(1.0)) },
+            "range hi" to { x -> ConstantIgnitor(0.5).range(ConstantIgnitor(-1.0), x) },
+            // select: no short-circuit on the condition — a stateful UNTAKEN branch must force
+            // null (its state advances in generate; a scalar that ignores it would desync).
+            "select cond" to { x -> x.select(ConstantIgnitor(1.0), ConstantIgnitor(2.0)) },
+            "select whenTrue" to { x -> ConstantIgnitor(1.0).select(x, ConstantIgnitor(2.0)) },
+            "select whenFalse (untaken, stateful must poison)" to
+                { x -> ConstantIgnitor(1.0).select(ConstantIgnitor(2.0), x) },
         )
         val c = ctx()
         for ((name, build) in cases) {

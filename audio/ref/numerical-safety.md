@@ -77,8 +77,10 @@ The constants live in `audio_be/src/commonMain/kotlin/ignitor/Ignitor.kt`.
 
 ### Round-trip guarantees
 
-- `1 / SAFE_MIN = SAFE_MAX` ✓ (reciprocal of the smallest allowed divisor lands
-  exactly at the largest allowed output — no further clamp needed).
+- `1 / SAFE_MIN = SAFE_MAX` ✓ as design intent — NOT an FP bit-fact: `1.0 / 1e-15`
+  evaluates to `9.999999999999999e14`, strictly BELOW `SAFE_MAX`. Consequence: a
+  reciprocal of a safeDiv'd value can never engage `safeOut` (no further clamp
+  needed, for the stronger reason that the clamp is unreachable there).
 - `SAFE_MAX² = 1e30` is still finite Float (`Float.MAX_VALUE ≈ 3.4e38`), so
   even an unclamped square between two max-safe values doesn't overflow.
 

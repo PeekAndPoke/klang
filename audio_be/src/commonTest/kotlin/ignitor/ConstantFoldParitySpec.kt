@@ -11,8 +11,9 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 
 /**
- * Bit-parity guards for the constant-fold in [PlusIgnitor]/[TimesIgnitor] `generate()`
- * (unified-eq plan, D1a step 2): a block-constant operand skips the scratch-buffer render and
+ * Bit-parity guards for the constant-fold in the binary combinators' `generate()` — Plus/Times
+ * (D1a) and Minus/Div/Mod/Min/Max/Pow plus the Clamp/Range/Lerp constant slots (D1b): a
+ * block-constant operand skips the scratch-buffer render and
  * folds as a scalar. The reference is the SAME expression with the foldable operand behind an
  * [OpaqueIgnitor] (the pre-fold scratch path). Fold and reference must agree
  * `toRawBits()`-exactly on every sample, across multiple blocks (stateful operands advance
@@ -164,8 +165,8 @@ class ConstantFoldParitySpec : StringSpec({
         )
         // The both-const FILL branch has its own window arithmetic (buffer.fill with explicit
         // offsets) — a fill(k, 0, length) typo passes every full-block case; production reaches
-        // this branch at offset != 0 through NON-folding parents (clamp/div/minus render their
-        // block-constant children via generate on mid-block onsets).
+        // this branch at offset != 0 through the remaining NON-folding parent slots (as of D1b:
+        // Clamp/Range upstream, Lerp a/b under a varying t, Select's children, the graph root).
         assertSubBlockParity(
             folded = ConstantIgnitor(0.37) * ParamIgnitor("g", -2.6),
             reference = OpaqueIgnitor(ConstantIgnitor(0.37)) * OpaqueIgnitor(ParamIgnitor("g", -2.6)),
@@ -243,6 +244,232 @@ class ConstantFoldParitySpec : StringSpec({
         )
     }
 
+    // ── D1b ops: fold parity (right/left/both) vs fully-opaque scratch oracles ────
+
+    "minus/div/mod/min/max/pow: fold parity in all three arms (batch)" {
+        // Each triple: (folded right-const, folded left-const, folded both-const) vs the same
+        // expression fully opacified. Values chosen so per-op guards see ordinary magnitudes;
+        // engagement extremes have their own cases below.
+        fun sine() = Ignitors.sine()
+        val cases: List<Pair<Ignitor, Ignitor>> = listOf(
+            sine().minus(ParamIgnitor("k", 0.4)) to sine().minus(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+            ParamIgnitor("k", 0.4).minus(sine()) to OpaqueIgnitor(ParamIgnitor("k", 0.4)).minus(sine()),
+            ConstantIgnitor(0.9).minus(ParamIgnitor("k", 0.4)) to
+                OpaqueIgnitor(ConstantIgnitor(0.9)).minus(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+
+            sine().div(ParamIgnitor("k", 0.4)) to sine().div(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+            ParamIgnitor("k", 0.4).div(sine()) to OpaqueIgnitor(ParamIgnitor("k", 0.4)).div(sine()),
+            ConstantIgnitor(0.9).div(ParamIgnitor("k", 0.4)) to
+                OpaqueIgnitor(ConstantIgnitor(0.9)).div(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+
+            sine().mod(ParamIgnitor("k", 0.4)) to sine().mod(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+            ParamIgnitor("k", 0.4).mod(sine()) to OpaqueIgnitor(ParamIgnitor("k", 0.4)).mod(sine()),
+            ConstantIgnitor(0.9).mod(ParamIgnitor("k", 0.4)) to
+                OpaqueIgnitor(ConstantIgnitor(0.9)).mod(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+
+            sine().min(ParamIgnitor("k", 0.4)) to sine().min(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+            ParamIgnitor("k", 0.4).min(sine()) to OpaqueIgnitor(ParamIgnitor("k", 0.4)).min(sine()),
+            ConstantIgnitor(0.9).min(ParamIgnitor("k", 0.4)) to
+                OpaqueIgnitor(ConstantIgnitor(0.9)).min(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+
+            sine().max(ParamIgnitor("k", 0.4)) to sine().max(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+            ParamIgnitor("k", 0.4).max(sine()) to OpaqueIgnitor(ParamIgnitor("k", 0.4)).max(sine()),
+            ConstantIgnitor(0.9).max(ParamIgnitor("k", 0.4)) to
+                OpaqueIgnitor(ConstantIgnitor(0.9)).max(OpaqueIgnitor(ParamIgnitor("k", 0.4))),
+
+            sine().pow(ParamIgnitor("k", 2.0)) to sine().pow(OpaqueIgnitor(ParamIgnitor("k", 2.0))),
+            ParamIgnitor("k", -0.7).pow(sine().abs()) to
+                OpaqueIgnitor(ParamIgnitor("k", -0.7)).pow(sine().abs()),
+            ConstantIgnitor(-0.7).pow(ParamIgnitor("k", 2.0)) to
+                OpaqueIgnitor(ConstantIgnitor(-0.7)).pow(OpaqueIgnitor(ParamIgnitor("k", 2.0))),
+        )
+        for ((folded, reference) in cases) {
+            assertBitParity(folded, reference)
+        }
+    }
+
+    "min/max: NaN and signed-zero ordering matches the scratch path in every arm" {
+        // The comment invariant made load-bearing: `a` stays the FIRST comparison operand.
+        // A hoist/reorder refactor flips results exactly when an operand is NaN or +-0.0 —
+        // values no other case feeds these ops.
+        val nan = Double.NaN
+        val cases: List<Pair<Ignitor, Ignitor>> = listOf(
+            Ignitors.sine().min(ParamIgnitor("k", nan)) to
+                Ignitors.sine().min(OpaqueIgnitor(ParamIgnitor("k", nan))),
+            ParamIgnitor("k", nan).min(Ignitors.sine()) to
+                OpaqueIgnitor(ParamIgnitor("k", nan)).min(Ignitors.sine()),
+            Ignitors.sine().max(ParamIgnitor("k", nan)) to
+                Ignitors.sine().max(OpaqueIgnitor(ParamIgnitor("k", nan))),
+            ParamIgnitor("k", nan).max(Ignitors.sine()) to
+                OpaqueIgnitor(ParamIgnitor("k", nan)).max(Ignitors.sine()),
+            ConstantIgnitor(0.0).min(ParamIgnitor("k", -0.0)) to
+                OpaqueIgnitor(ConstantIgnitor(0.0)).min(OpaqueIgnitor(ParamIgnitor("k", -0.0))),
+            ConstantIgnitor(-0.0).max(ParamIgnitor("k", 0.0)) to
+                OpaqueIgnitor(ConstantIgnitor(-0.0)).max(OpaqueIgnitor(ParamIgnitor("k", 0.0))),
+        )
+        for ((folded, reference) in cases) {
+            assertBitParity(folded, reference)
+        }
+    }
+
+    "all D1b fold arms window correctly on sub-block renders (batch)" {
+        // EVERY hand-written windowed loop (checklist item 4): each op's a-arm, b-arm and fill,
+        // plus the ternary fold loops — none share the D1a helpers, so each needs its own case.
+        fun sine() = Ignitors.sine()
+        fun k(v: Double) = ParamIgnitor("k", v)
+        fun ok(v: Double) = OpaqueIgnitor(ParamIgnitor("k", v))
+        val cases: List<Pair<Ignitor, Ignitor>> = listOf(
+            sine().minus(k(0.4)) to sine().minus(ok(0.4)),
+            k(0.4).minus(sine()) to ok(0.4).minus(sine()),
+            ConstantIgnitor(0.9).minus(k(0.4)) to OpaqueIgnitor(ConstantIgnitor(0.9)).minus(ok(0.4)),
+            sine().div(k(0.4)) to sine().div(ok(0.4)),
+            k(0.4).div(sine()) to ok(0.4).div(sine()),
+            ConstantIgnitor(0.9).div(k(0.4)) to OpaqueIgnitor(ConstantIgnitor(0.9)).div(ok(0.4)),
+            sine().mod(k(0.4)) to sine().mod(ok(0.4)),
+            k(0.4).mod(sine()) to ok(0.4).mod(sine()),
+            ConstantIgnitor(0.9).mod(k(0.4)) to OpaqueIgnitor(ConstantIgnitor(0.9)).mod(ok(0.4)),
+            sine().min(k(0.4)) to sine().min(ok(0.4)),
+            k(0.4).min(sine()) to ok(0.4).min(sine()),
+            ConstantIgnitor(0.9).min(k(0.4)) to OpaqueIgnitor(ConstantIgnitor(0.9)).min(ok(0.4)),
+            sine().max(k(0.4)) to sine().max(ok(0.4)),
+            k(0.4).max(sine()) to ok(0.4).max(sine()),
+            ConstantIgnitor(0.9).max(k(0.4)) to OpaqueIgnitor(ConstantIgnitor(0.9)).max(ok(0.4)),
+            sine().pow(k(2.0)) to sine().pow(ok(2.0)),
+            k(-0.7).pow(sine().abs()) to ok(-0.7).pow(sine().abs()),
+            ConstantIgnitor(-0.7).pow(k(2.0)) to OpaqueIgnitor(ConstantIgnitor(-0.7)).pow(ok(2.0)),
+            sine().range(ConstantIgnitor(200.0), ConstantIgnitor(4000.0)) to
+                sine().range(OpaqueIgnitor(ConstantIgnitor(200.0)), OpaqueIgnitor(ConstantIgnitor(4000.0))),
+            sine().lerp(sine(), ConstantIgnitor(0.3)) to
+                sine().lerp(sine(), OpaqueIgnitor(ConstantIgnitor(0.3))),
+        )
+        for ((folded, reference) in cases) {
+            assertSubBlockParity(folded, reference)
+        }
+    }
+
+    "div: guards engage on the folded arms exactly like the scratch path" {
+        // b-const arm: hoisted safeDiv(NaN) -> SAFE_MIN -> safeOut clamps (scratch path agrees).
+        assertBitParity(
+            folded = Ignitors.sine() .div(ParamIgnitor("k", Double.NaN)),
+            reference = Ignitors.sine().div(OpaqueIgnitor(ParamIgnitor("k", Double.NaN))),
+        )
+        // a-const arm: per-sample safeDiv over a signal crossing zero -> SAFE_MAX peaks; must
+        // be bit-equal AND actually clamp.
+        assertBitParity(
+            folded = ParamIgnitor("k", 1e10).div(Ignitors.sine()),
+            reference = OpaqueIgnitor(ParamIgnitor("k", 1e10)).div(Ignitors.sine()),
+        )
+        val buf = AudioBuffer(blockFrames)
+        (ParamIgnitor("k", 1e10).div(Ignitors.sine())).generate(buf, 220.0, ctx())
+        (0 until blockFrames).any { buf[it] == SAFE_MAX }.shouldBeTrue()
+    }
+
+    "guards engage on the D1b arms at discriminating values (batch)" {
+        // Checklist item 3: each guard needs a value where its removal is visible.
+        // Div b-const + both-const: products beyond SAFE_MAX must clamp.
+        assertBitParity(
+            folded = Ignitors.sine().mul(1e10).div(ParamIgnitor("k", 1e-10)),
+            reference = Ignitors.sine().mul(1e10).div(OpaqueIgnitor(ParamIgnitor("k", 1e-10))),
+        )
+        val divB = AudioBuffer(blockFrames)
+        (Ignitors.sine().mul(1e10).div(ParamIgnitor("k", 1e-10))).generate(divB, 220.0, ctx())
+        (0 until blockFrames).any { divB[it] == SAFE_MAX }.shouldBeTrue()
+
+        val divFill = AudioBuffer(blockFrames)
+        (ConstantIgnitor(1e10).div(ParamIgnitor("k", 1e-10))).generate(divFill, 220.0, ctx())
+        for (i in 0 until blockFrames) {
+            divFill[i] shouldBe SAFE_MAX
+        }
+
+        // Pow arms: overflow clamps.
+        val powE = AudioBuffer(blockFrames)
+        (Ignitors.sine().mul(1e8).pow(ParamIgnitor("k", 4.0))).generate(powE, 220.0, ctx())
+        (0 until blockFrames).any { powE[it] == SAFE_MAX }.shouldBeTrue()
+
+        val powB = AudioBuffer(blockFrames)
+        (ParamIgnitor("k", 1e8).pow(Ignitors.sine().abs().mul(4.0))).generate(powB, 220.0, ctx())
+        (0 until blockFrames).any { powB[it] == SAFE_MAX }.shouldBeTrue()
+
+        // Div fill + a-arm: safeDiv discriminators (safeOut masks safeDiv at big numerators —
+        // a NaN divisor separates them on the fill; a SMALL numerator separates them on the
+        // a-arm, where the zero-crossing sample gives 1/SAFE_MIN < SAFE_MAX with safeDiv but
+        // Inf -> SAFE_MAX without).
+        val divNaNFill = AudioBuffer(blockFrames)
+        (ConstantIgnitor(1e10).div(ParamIgnitor("k", Double.NaN))).generate(divNaNFill, 220.0, ctx())
+        for (i in 0 until blockFrames) {
+            divNaNFill[i] shouldBe SAFE_MAX
+        }
+        assertBitParity(
+            folded = ParamIgnitor("k", 1.0).div(Ignitors.sine()),
+            reference = OpaqueIgnitor(ParamIgnitor("k", 1.0)).div(Ignitors.sine()),
+        )
+        val divSmall = AudioBuffer(blockFrames)
+        (ParamIgnitor("k", 1.0).div(Ignitors.sine())).generate(divSmall, 220.0, ctx())
+        (0 until blockFrames).any { divSmall[it] == 1.0 / SAFE_MIN }.shouldBeTrue()
+
+        // Mod b-const: zero divisor takes the safeDiv substitution (finite, parity holds).
+        assertBitParity(
+            folded = Ignitors.sine().mod(ParamIgnitor("k", 0.0)),
+            reference = Ignitors.sine().mod(OpaqueIgnitor(ParamIgnitor("k", 0.0))),
+        )
+        val modB = AudioBuffer(blockFrames)
+        (Ignitors.sine().mod(ParamIgnitor("k", 0.0))).generate(modB, 220.0, ctx())
+        (0 until blockFrames).none { modB[it].isNaN() }.shouldBeTrue()
+
+        // Bare contracts stay bare above SAFE_MAX (a spurious clamp shows here):
+        val minusFill = AudioBuffer(blockFrames)
+        (ParamIgnitor("k", 1e15).minus(ConstantIgnitor(-1e15))).generate(minusFill, 220.0, ctx())
+        for (i in 0 until blockFrames) {
+            minusFill[i] shouldBe 2e15
+        }
+        val minFill = AudioBuffer(blockFrames)
+        (ConstantIgnitor(2e15).min(ParamIgnitor("k", 3e15))).generate(minFill, 220.0, ctx())
+        for (i in 0 until blockFrames) {
+            minFill[i] shouldBe 2e15
+        }
+        val maxFill = AudioBuffer(blockFrames)
+        (ConstantIgnitor(2e15).max(ParamIgnitor("k", 3e15))).generate(maxFill, 220.0, ctx())
+        for (i in 0 until blockFrames) {
+            maxFill[i] shouldBe 3e15
+        }
+    }
+
+    "clamp/range: constant bounds fold bit-identically and skip both scratch renders" {
+        assertBitParity(
+            folded = Ignitors.sine().clamp(ConstantIgnitor(-0.5), ConstantIgnitor(0.5)),
+            reference = Ignitors.sine().clamp(OpaqueIgnitor(ConstantIgnitor(-0.5)), OpaqueIgnitor(ConstantIgnitor(0.5))),
+        )
+        assertBitParity(
+            folded = Ignitors.sine().range(ConstantIgnitor(200.0), ConstantIgnitor(4000.0)),
+            reference = Ignitors.sine().range(OpaqueIgnitor(ConstantIgnitor(200.0)), OpaqueIgnitor(ConstantIgnitor(4000.0))),
+        )
+        assertSubBlockParity(
+            folded = Ignitors.sine().clamp(ConstantIgnitor(-0.5), ConstantIgnitor(0.5)),
+            reference = Ignitors.sine().clamp(OpaqueIgnitor(ConstantIgnitor(-0.5)), OpaqueIgnitor(ConstantIgnitor(0.5))),
+        )
+        val loProbe = RenderCountProbe(ConstantIgnitor(-0.5))
+        val hiProbe = RenderCountProbe(ConstantIgnitor(0.5))
+        Ignitors.sine().clamp(loProbe, hiProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
+        loProbe.generateCalls shouldBe 0
+        hiProbe.generateCalls shouldBe 0
+
+        val rLoProbe = RenderCountProbe(ConstantIgnitor(200.0))
+        val rHiProbe = RenderCountProbe(ConstantIgnitor(4000.0))
+        Ignitors.sine().range(rLoProbe, rHiProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
+        rLoProbe.generateCalls shouldBe 0
+        rHiProbe.generateCalls shouldBe 0
+    }
+
+    "lerp: constant t folds bit-identically and skips its scratch render" {
+        assertBitParity(
+            folded = Ignitors.sine().lerp(Ignitors.sine(), ConstantIgnitor(0.3)),
+            reference = Ignitors.sine().lerp(Ignitors.sine(), OpaqueIgnitor(ConstantIgnitor(0.3))),
+        )
+        val tProbe = RenderCountProbe(ConstantIgnitor(0.3))
+        Ignitors.sine().lerp(Ignitors.sine(), tProbe).generate(AudioBuffer(blockFrames), 220.0, ctx())
+        tProbe.generateCalls shouldBe 0
+    }
+
     // ── liveness: the fast paths must actually RUN, not merely agree ──────────────
 
     "fold liveness: block-constant operands are never rendered" {
@@ -258,6 +485,28 @@ class ConstantFoldParitySpec : StringSpec({
         val timesB = probe(); render(Ignitors.sine() * timesB); timesB.generateCalls shouldBe 0
         val timesA = probe(); render(timesA * Ignitors.sine()); timesA.generateCalls shouldBe 0
         val timesBoth = probe(); render(timesBoth * ConstantIgnitor(0.5)); timesBoth.generateCalls shouldBe 0
+
+        val minusB = probe(); render(Ignitors.sine().minus(minusB)); minusB.generateCalls shouldBe 0
+        val minusA = probe(); render(minusA.minus(Ignitors.sine())); minusA.generateCalls shouldBe 0
+        val minusBoth = probe(); render(minusBoth.minus(ConstantIgnitor(0.5))); minusBoth.generateCalls shouldBe 0
+        val divB = probe(); render(Ignitors.sine().div(divB)); divB.generateCalls shouldBe 0
+        val divA = probe(); render(divA.div(Ignitors.sine())); divA.generateCalls shouldBe 0
+        val modB = probe(); render(Ignitors.sine().mod(modB)); modB.generateCalls shouldBe 0
+        val modA = probe(); render(modA.mod(Ignitors.sine())); modA.generateCalls shouldBe 0
+        val minB = probe(); render(Ignitors.sine().min(minB)); minB.generateCalls shouldBe 0
+        val minA = probe(); render(minA.min(Ignitors.sine())); minA.generateCalls shouldBe 0
+        val maxB = probe(); render(Ignitors.sine().max(maxB)); maxB.generateCalls shouldBe 0
+        val maxA = probe(); render(maxA.max(Ignitors.sine())); maxA.generateCalls shouldBe 0
+        val powE = probe(); render(Ignitors.sine().pow(powE)); powE.generateCalls shouldBe 0
+        val powBase = probe(); render(powBase.pow(Ignitors.sine())); powBase.generateCalls shouldBe 0
+
+        // Both-const FILL arms (deleting one falls into a single-const arm with identical
+        // output — only the probe can tell):
+        val divBoth = probe(); render(divBoth.div(ConstantIgnitor(0.5))); divBoth.generateCalls shouldBe 0
+        val modBoth = probe(); render(modBoth.mod(ConstantIgnitor(0.5))); modBoth.generateCalls shouldBe 0
+        val minBoth = probe(); render(minBoth.min(ConstantIgnitor(0.5))); minBoth.generateCalls shouldBe 0
+        val maxBoth = probe(); render(maxBoth.max(ConstantIgnitor(0.5))); maxBoth.generateCalls shouldBe 0
+        val powBoth = probe(); render(powBoth.pow(ConstantIgnitor(2.0))); powBoth.generateCalls shouldBe 0
     }
 
     // ── nesting: a fold rendering into an ANCESTOR's scratch slot ─────────────────
