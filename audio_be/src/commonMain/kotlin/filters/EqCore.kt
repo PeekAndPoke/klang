@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.filters
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.safeOut
 
 /**
  * Freq-agnostic serial EQ core — N second-order TPT-SVF sections in one `process()` call.
@@ -38,10 +40,37 @@ import io.peekandpoke.klang.audio_be.flushDenormal
  * Section types are plain Ints ([LOWPASS]..[RAW_TAP]) — NO audio_bridge dependency (Zig-port
  * purity); a sync spec pins them to the wire enum's ordinals when the DSL node lands. The
  * order is APPEND-ONLY and reserved IN FULL here — note it differs from delivery order
- * ([RAW_TAP] ships before [BELL] but takes the higher ordinal). An UNKNOWN type value renders
+ * ([RAW_TAP] shipped before [BELL] and takes the higher ordinal). An UNKNOWN type value renders
  * as PASSTHROUGH (the only degradation that can neither invent gain nor gouge a spectral
- * hole — the house fall-through policy), so a section type added to one loop shape but not
- * the others fails loudly in the parity specs instead of silently notching.
+ * hole — the house fall-through policy); the spec's reserved-type rows fail loudly the moment
+ * a reserved ordinal starts rendering (proven live when [RAW_TAP] graduated).
+ *
+ * [RAW_TAP] — the parallel-boost section (the guitar chain's
+ * `signal.add(signal.bandpass(f, q).mul(g))`): a tap runs its bandpass on the Eq INPUT (never
+ * the running chain value) and ADDS `safeOut(v1 * gain)` onto the chain at its LIST
+ * POSITION — the position pin is the DEFINITION, making every wire-supplied section order
+ * well-defined. Bit-parity with the legacy graph `Plus(chainSoFar, Times(bandpass(input),
+ * gain))`: Plus is a bare add, Times applies safeOut to the per-sample PRODUCT. Tap gain 0 is
+ * NOT skipped — legacy adds `safeOut(v1 * 0)`, and `-0.0 + 0.0` flips to `+0.0`, so a skip
+ * would break bit-parity. The loop captures the input up front (in-place processing destroys
+ * it — see [captureInput]). THREE FUSION PRECONDITIONS (same structural-not-evaluated class
+ * as `analog` below): (1) the GAIN operand must be structurally block-constant
+ * (`Constant`/`Param`-backed — the optimizer's R2 rule), never by evaluated value — an
+ * expression-backed gain (e.g. an LFO) multiplies per SAMPLE in the legacy `Times` node, and
+ * snapping it per block is a different sound, not bit-identity; (2) the tap's bandpass SOURCE
+ * must be the very node that feeds the Eq's first section, matched by reference IDENTITY
+ * (`===`) on the DSL node — NEVER by data-class `==`: runtime sharing is keyed on
+ * `IgnitorBuildCache`'s (node identity, accumulated-mod identity) pair, so two structurally
+ * equal noise nodes (whiteNoise/dust/crackle draw from the shared global RNG) are two
+ * genuinely UNCORRELATED streams — a structural match would fuse them into ONE, turning an
+ * uncorrelated ~+3 dB sum into a coherent ~+6 dB resonant peak, and no parity spec can catch
+ * it (spec oracles only ever build graphs that already satisfy this rule); (3) taps fuse only from the LEFT-NESTED chain spine — `Plus(chain, tapSubtree)` per
+ * fold step: the section list sums `(x + t1) + t2`, while `x.add(t1.add(t2))` sums
+ * `x + (t1 + t2)`, and IEEE `+` is NOT associative (x=1.0, t1=t2=2^-53 differ in the last
+ * bit), so a spine-flattening matcher breaks bit-parity. Note for direct Kotlin-API users:
+ * the `Ignitor.mul(Double)` front door short-circuits at exactly 1.0 WITHOUT safeOut — a
+ * unity-gain [RAW_TAP] is bit-parity with the wire's `Times` node (safeOut always applied),
+ * not with that shortcut.
  *
  * Per-sample math is copied VERBATIM from `SvfIgnitor`'s linear branches (the bit-identity
  * contract of the graph optimizer: a fused chain must equal the chained nodes bit-for-bit —
@@ -59,38 +88,30 @@ import io.peekandpoke.klang.audio_be.flushDenormal
  * optimizer can never encounter one; the precondition binds direct Kotlin-API users of this
  * class. Sections run serially in list order; each section's `y[n]` depends only on its input
  * at `n` and its own state at `n-1`, so the chained-node oracle (each node renders the whole
- * block before the next node runs) and every fused traversal shape produce identical IEEE
- * operations on identical operands.
+ * block before the next node runs) and the fused traversal produce identical IEEE operations
+ * on identical operands.
  *
- * LOOP SHAPE — DECISION PENDING (closes at the tap slice; decision-grade numbers need BOTH
- * benchmark orders, per the turbo-decay artifact documented in the plan's D0 record):
- *  - [SHAPE_SAMPLE_MAJOR]: samples outermost, small-int `when` per section; the running sample
- *    rides in a register, and each section's two state words are snapshotted to locals per
- *    sample — they are STORED inside the loop, so array-resident reads would reload after
- *    every store (the aliasing fix at per-sample scope; a bake-off candidate must not be
- *    measured in a handicapped form). `k` is never written and stays an inline read in the
- *    two taps that use it.
- *  - [SHAPE_SECTION_MAJOR]: one specialized in-place loop per section, coefficients hoisted to
- *    locals, state STAYING in the arrays. Measured 2026-08-19 (JVM): loses badly — `buffer`,
- *    `ic1`, `ic2` are all DoubleArray, the JIT cannot disambiguate them, and every
- *    `buffer[i] =` store forces state reloads. Kept on the ballot so the bake-off record shows
- *    WHY, not just THAT.
- *  - [SHAPE_SECTION_MAJOR_LOCALS]: section-major with the two state words snapshotted into
- *    locals for the duration of ONE section loop and written back after it — bit-identical
- *    (same IEEE ops, same operands) and free of the aliasing reloads. NOT the pattern
- *    `performance.md` bans: that ban targets class-field snapshots across a whole `generate()`
- *    body (early-return / `return@use` write-back hazards); this scope is a straight-line
- *    private loop with a single write-back point.
- * The losers are DELETED when the decision closes, not shipped dormant.
+ * LOOP SHAPE — DECIDED 2026-08-19 (docs/benchmarks/2026-08-19_201841 + _202119, both case
+ * orders, JVM + Node): section-major with the two state words snapshotted into locals for the
+ * duration of ONE section loop and written back after it. On V8 — the deployment platform
+ * (browser worklet, the phone) — it beat sample-major at every measured N by 17–38%
+ * (array-state section-major, not measured at N=1, lost decisively at 4 and 6); sample-major
+ * led only on desktop JVM at N >= 4 (13–34% — offline renders, ample headroom).
+ * Deleted candidates, for the Zig port's record: SAMPLE-MAJOR (samples outermost, per-sample
+ * small-int type dispatch; the dispatch never amortizes on V8) and ARRAY-STATE SECTION-MAJOR
+ * (`buffer`/`ic1`/`ic2` are all DoubleArray, the JIT cannot disambiguate them, every
+ * `buffer[i] =` store forced state reloads). The locals snapshot is NOT the pattern
+ * `performance.md` bans: that ban targets class-field snapshots across a whole `generate()`
+ * body (early-return / `return@use` write-back hazards); this scope is a straight-line loop
+ * with a single write-back point.
  */
 class EqCore(
     val sectionCount: Int,
-    private val shape: Int,
 ) {
     companion object {
-        // Section types — APPEND-ONLY reserved order (see class KDoc; BELL/RAW_TAP arrive with
-        // their slices but their ordinals are fixed NOW). UNCONFIGURED is the construction
-        // default: negative, so an unconfigured section renders as PASSTHROUGH in every shape.
+        // Section types — APPEND-ONLY reserved order (see class KDoc; BELL arrives with its
+        // slice but its ordinal is fixed NOW). UNCONFIGURED is the construction default:
+        // negative, so an unconfigured section renders as PASSTHROUGH.
         const val UNCONFIGURED = -1
         const val LOWPASS = 0
         const val HIGHPASS = 1
@@ -98,47 +119,50 @@ class EqCore(
         const val NOTCH = 3
         const val BELL = 4
         const val RAW_TAP = 5
-
-        // Loop shapes (bake-off ballot; losers are removed when the decision closes).
-        const val SHAPE_SAMPLE_MAJOR = 0
-        const val SHAPE_SECTION_MAJOR = 1
-        const val SHAPE_SECTION_MAJOR_LOCALS = 2
     }
 
     // Parallel primitive arrays: one hidden class for the whole core; DoubleArray is a
     // Float64Array on JS (monomorphic access, no per-section object headers). All allocated at
-    // construction — nothing allocates in process().
+    // construction — nothing allocates in process() at steady state.
     private val type = IntArray(sectionCount) { UNCONFIGURED }
     private val a1 = DoubleArray(sectionCount)
     private val a2 = DoubleArray(sectionCount)
     private val a3 = DoubleArray(sectionCount)
     private val k = DoubleArray(sectionCount)
+    private val gain = DoubleArray(sectionCount)
     private val ic1 = DoubleArray(sectionCount)
     private val ic2 = DoubleArray(sectionCount)
+
+    // RAW_TAP support: the flag is RECOMPUTED by configureSection/disableSection over the type
+    // array (never latched at construction — types arrive per configure call); the input copy
+    // is grown on demand (see captureInput). `internal` so the spec can pin the flag's
+    // LIFECYCLE directly: a stuck-true flag is output-invisible (the copy is redundant, not
+    // wrong) but silently taxes every serial-only core — benchmark integrity, not parity.
+    internal var hasRawTap = false
+        private set
+
+    private var inputCopy = AudioBuffer(0)
+
+    // Capacity accessor for the spec: the quantum-grain round-up in captureInput is
+    // output-invisible (allocation count only — the exact class of thing the hasRawTap
+    // lifecycle row pins), so it is pinned directly too.
+    internal val inputCopyCapacity: Int get() = inputCopy.size
 
     // Out-param holder for the coefficient helpers (reused per configure call, never per sample).
     private val coefs = SvfCoeffs()
 
-    init {
-        // Internal invariant, checked at CONSTRUCTION (never the render path): the shapes are
-        // contractually bit-identical, so no parity spec can ever catch a wrong dispatch — a
-        // stale shape constant would silently poison the bake-off with a self-comparison.
-        require(shape in SHAPE_SAMPLE_MAJOR..SHAPE_SECTION_MAJOR_LOCALS) {
-            "unknown EqCore loop shape: $shape"
-        }
-    }
-
     /**
      * Sets section [index]'s type and coefficients from control-rate scalars. Takes effect
-     * immediately (snap — see the class KDoc's smoothing note). [db] and [gain] are reserved
-     * for the [BELL] and [RAW_TAP] section types; the four structural types ignore them.
-     * Freq/q travel through the same clamps as every SVF in the engine ([computeSvfCoeffs] /
-     * `bilinearK`) — the core must never add or remove a clamp here (parity contract).
+     * immediately (snap — see the class KDoc's smoothing note). [gain] is the [RAW_TAP] mix
+     * gain, stored RAW — safeOut is applied to the per-sample PRODUCT, matching the legacy
+     * Times node, never to the stored gain. [db] stays reserved for [BELL]. The four
+     * structural types ignore both. Freq/q travel through the same clamps as every SVF in
+     * the engine ([computeSvfCoeffs] / `bilinearK`) — the core must never add or remove a
+     * clamp here (parity contract).
      *
      * An out-of-range [index] is IGNORED (house fall-through): configure calls run at control
-     * rate ON the audio thread — never throw there (unlike the construction-time shape
-     * `require`, which runs off it) — and JS typed arrays silently drop OOB writes anyway;
-     * the guard makes JVM behave like JS instead of throwing.
+     * rate ON the audio thread — never throw there — and JS typed arrays silently drop OOB
+     * writes anyway; the guard makes JVM behave like JS instead of throwing.
      */
     fun configureSection(
         index: Int,
@@ -154,11 +178,13 @@ class EqCore(
         }
 
         this.type[index] = type
+        this.gain[index] = gain
         computeSvfCoeffs(freqHz, q, sampleRate, coefs)
         a1[index] = coefs.a1
         a2[index] = coefs.a2
         a3[index] = coefs.a3
         k[index] = coefs.k
+        recomputeTapFlag()
     }
 
     /**
@@ -178,6 +204,42 @@ class EqCore(
         type[index] = UNCONFIGURED
         ic1[index] = 0.0
         ic2[index] = 0.0
+        recomputeTapFlag()
+    }
+
+    private fun recomputeTapFlag() {
+        var found = false
+
+        for (i in 0 until sectionCount) {
+            if (type[i] == RAW_TAP) {
+                found = true
+                break
+            }
+        }
+
+        hasRawTap = found
+    }
+
+    /**
+     * Captures the raw Eq input: the loop processes in place, so by the time a [RAW_TAP]
+     * section runs, earlier sections have already overwritten `buffer` — the tap must read
+     * the ORIGINAL input. Taken ONLY when a tap is present (a serial-only core pays no copy).
+     * Reads go through RELATIVE indexing (`inputCopy[i - offset]`): the copy runs from
+     * index 0, so an absolute-indexed read on a mid-block voice start reads the WRONG samples
+     * (shifted by `offset`, zero-fill past `length`) — SILENTLY, on both platforms (the
+     * capacity round-up means no bounds error saves you); only value comparison catches it.
+     * Growth rounds capacity up to the next [AudioBackendContext.RENDER_QUANTUM_FRAMES]
+     * multiple: a mid-block voice onset (short window first, then full blocks — the NORMAL
+     * production sequence) then allocates ONCE, not twice (performance.md Rule 2
+     * grow-on-shape-change; never allocates at steady state).
+     */
+    private fun captureInput(buffer: AudioBuffer, offset: Int, length: Int) {
+        if (inputCopy.size < length) {
+            val grain = AudioBackendContext.RENDER_QUANTUM_FRAMES
+            inputCopy = AudioBuffer(((length + grain - 1) / grain) * grain)
+        }
+
+        buffer.copyInto(inputCopy, 0, offset, offset + length)
     }
 
     /**
@@ -189,135 +251,30 @@ class EqCore(
         ic2.fill(0.0)
     }
 
-    /** Runs all sections serially, in place, over `[offset, offset+length)`. */
+    /**
+     * Runs all sections serially, in place, over `[offset, offset+length)`. One specialized
+     * loop per section with coefficients AND the two state words in locals, written back once
+     * after the section loop (the decided shape — see the class KDoc's LOOP SHAPE record).
+     *
+     * An INSANE window (negative offset, non-positive length, or reaching past the buffer)
+     * is IGNORED —
+     * the same house fall-through as the index guards: on a broken surface, the serial loops
+     * would throw on JVM and NaN silently on JS, and [captureInput]'s `copyInto` would throw
+     * on BOTH platforms — on the JS worklet an escaped exception kills the whole processor,
+     * not one voice. One branch per block buys the never-throw property back.
+     */
     fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-        when (shape) {
-            SHAPE_SAMPLE_MAJOR -> processSampleMajor(buffer, offset, length)
-            SHAPE_SECTION_MAJOR -> processSectionMajor(buffer, offset, length)
-            SHAPE_SECTION_MAJOR_LOCALS -> processSectionMajorLocals(buffer, offset, length)
-            else -> Unit // unreachable: shape validated at construction
+        // Overflow-proof form: with offset >= 0 established, `length > size - offset` cannot
+        // wrap, while `offset + length` would for astronomical offsets (e.g. an absolute
+        // frame cursor passed by mistake) — and would then throw inside captureInput.
+        if (offset < 0 || length <= 0 || length > buffer.size - offset) {
+            return // insane window: ignore (KDoc)
         }
-    }
 
-    /** Shape: samples outermost, small-int type dispatch per section per sample. */
-    private fun processSampleMajor(buffer: AudioBuffer, offset: Int, length: Int) {
-        val n = sectionCount
-        val end = offset + length
-        for (i in offset until end) {
-            var acc = buffer[i]
-            for (s in 0 until n) {
-                // Shared TPT-SVF recurrence (operand-identical to SvfIgnitor's linear
-                // branches — state snapshotted to locals, see class KDoc); only the
-                // output tap differs per type.
-                val t = type[s]
-
-                if (t < LOWPASS || t > NOTCH) {
-                    // Unknown/unconfigured/not-yet-implemented type: PASSTHROUGH, state
-                    // untouched (class KDoc). The range test assumes the IMPLEMENTED types
-                    // stay contiguous — true today (LOWPASS..NOTCH); when RAW_TAP ships
-                    // before BELL it must become an enumeration, and the spec's reserved-type
-                    // passthrough rows go red if this guard lags behind.
-                    continue
-                }
-
-                val i1 = ic1[s]
-                val i2 = ic2[s]
-                val v0 = acc
-                val v3 = v0 - i2
-                val v1 = a1[s] * i1 + a2[s] * v3
-                val v2 = i2 + a2[s] * i1 + a3[s] * v3
-                ic1[s] = (2.0 * v1 - i1).flushDenormal()
-                ic2[s] = (2.0 * v2 - i2).flushDenormal()
-
-                // k is never written in process(), so the taps read it inline: one load in
-                // exactly the arms that use it — hoisting it above would add a dead load for
-                // every LOWPASS/BANDPASS section-sample.
-                acc = when (t) {
-                    LOWPASS -> v2
-                    HIGHPASS -> v0 - k[s] * v1 - v2
-                    BANDPASS -> v1
-                    NOTCH -> v0 - k[s] * v1
-                    else -> acc // unreachable under the guard; passthrough, NEVER a tap
-                }
-            }
-            buffer[i] = acc
+        if (hasRawTap) {
+            captureInput(buffer, offset, length)
         }
-    }
 
-    /**
-     * Shape: one specialized in-place loop per section, coefficients hoisted to locals,
-     * state STAYING in the arrays (see the class KDoc's aliasing note — kept on the ballot
-     * for the record).
-     */
-    private fun processSectionMajor(buffer: AudioBuffer, offset: Int, length: Int) {
-        val n = sectionCount
-        val end = offset + length
-        for (s in 0 until n) {
-            val ca1 = a1[s]
-            val ca2 = a2[s]
-            val ca3 = a3[s]
-            val ck = k[s]
-            when (type[s]) {
-                LOWPASS -> {
-                    for (i in offset until end) {
-                        val v0 = buffer[i]
-                        val v3 = v0 - ic2[s]
-                        val v1 = ca1 * ic1[s] + ca2 * v3
-                        val v2 = ic2[s] + ca2 * ic1[s] + ca3 * v3
-                        ic1[s] = (2.0 * v1 - ic1[s]).flushDenormal()
-                        ic2[s] = (2.0 * v2 - ic2[s]).flushDenormal()
-                        buffer[i] = v2
-                    }
-                }
-
-                HIGHPASS -> {
-                    for (i in offset until end) {
-                        val v0 = buffer[i]
-                        val v3 = v0 - ic2[s]
-                        val v1 = ca1 * ic1[s] + ca2 * v3
-                        val v2 = ic2[s] + ca2 * ic1[s] + ca3 * v3
-                        ic1[s] = (2.0 * v1 - ic1[s]).flushDenormal()
-                        ic2[s] = (2.0 * v2 - ic2[s]).flushDenormal()
-                        buffer[i] = v0 - ck * v1 - v2
-                    }
-                }
-
-                BANDPASS -> {
-                    for (i in offset until end) {
-                        val v0 = buffer[i]
-                        val v3 = v0 - ic2[s]
-                        val v1 = ca1 * ic1[s] + ca2 * v3
-                        val v2 = ic2[s] + ca2 * ic1[s] + ca3 * v3
-                        ic1[s] = (2.0 * v1 - ic1[s]).flushDenormal()
-                        ic2[s] = (2.0 * v2 - ic2[s]).flushDenormal()
-                        buffer[i] = v1
-                    }
-                }
-
-                NOTCH -> {
-                    for (i in offset until end) {
-                        val v0 = buffer[i]
-                        val v3 = v0 - ic2[s]
-                        val v1 = ca1 * ic1[s] + ca2 * v3
-                        val v2 = ic2[s] + ca2 * ic1[s] + ca3 * v3
-                        ic1[s] = (2.0 * v1 - ic1[s]).flushDenormal()
-                        ic2[s] = (2.0 * v2 - ic2[s]).flushDenormal()
-                        buffer[i] = v0 - ck * v1
-                    }
-                }
-
-                else -> {
-                    // unknown/not-yet-implemented type: PASSTHROUGH (class KDoc)
-                }
-            }
-        }
-    }
-
-    /**
-     * Shape: section-major with state snapshotted into locals per section loop (bit-identical;
-     * dodges the DoubleArray aliasing reloads — see the class KDoc's shape notes).
-     */
-    private fun processSectionMajorLocals(buffer: AudioBuffer, offset: Int, length: Int) {
         val n = sectionCount
         val end = offset + length
         for (s in 0 until n) {
@@ -376,8 +333,29 @@ class EqCore(
                     }
                 }
 
+                RAW_TAP -> {
+                    // A tap filters the Eq INPUT (inputCopy — earlier sections already
+                    // overwrote buffer in place) and ADDS its band onto the chain at this
+                    // list position; bare add + safeOut on the product = legacy Plus/Times
+                    // per-sample math. Relative indexing — see captureInput. The copy rides
+                    // in a local like everything else this loop touches per sample (the
+                    // field-load discipline the shape was measured with).
+                    val cg = gain[s]
+                    val src = inputCopy
+                    for (i in offset until end) {
+                        val v0 = src[i - offset]
+                        val v3 = v0 - s2
+                        val v1 = ca1 * s1 + ca2 * v3
+                        val v2 = s2 + ca2 * s1 + ca3 * v3
+                        s1 = (2.0 * v1 - s1).flushDenormal()
+                        s2 = (2.0 * v2 - s2).flushDenormal()
+                        buffer[i] += safeOut(v1 * cg)
+                    }
+                }
+
                 else -> {
-                    // unknown/not-yet-implemented type: PASSTHROUGH (class KDoc)
+                    // BELL (reserved) + unknown/unconfigured types: PASSTHROUGH, state
+                    // untouched (class KDoc; the write-back below stores the unread snapshot).
                 }
             }
             ic1[s] = s1
