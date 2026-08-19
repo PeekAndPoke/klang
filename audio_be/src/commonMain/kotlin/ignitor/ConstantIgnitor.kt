@@ -25,6 +25,8 @@ class ConstantIgnitor(val value: Double) : Ignitor {
 
     private val valueF = value
 
+    override val isBlockConstant: Boolean get() = true
+
     override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double = valueF
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {

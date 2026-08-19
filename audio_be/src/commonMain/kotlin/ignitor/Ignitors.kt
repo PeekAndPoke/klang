@@ -167,8 +167,11 @@ object Ignitors {
                 return
             }
 
-            // PULSE — constant duty: bake once + hoist; audio-rate duty (PWM): rebake per sample.
-            val dutyConst = duty.controlRateValueOrNull(actualFreq, ctx)
+            // PULSE — block-constant duty: bake once + hoist; audio-rate duty (PWM): rebake per
+            // sample. Gated on the structural flag first so the PWM path pays one boolean read
+            // instead of a boxed Double? query per block; a null scalar despite a true flag
+            // (contract breach) falls through to PWM — the always-correct branch.
+            val dutyConst = if (duty.isBlockConstant) duty.controlRateValueOrNull(actualFreq, ctx) else null
             if (dutyConst != null) {
                 val d = dutyConst
                 if (d != lastDuty || dt != lastDt) {

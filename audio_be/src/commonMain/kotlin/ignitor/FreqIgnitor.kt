@@ -9,6 +9,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 
 /** Runtime ignitor that fills buffer with the voice frequency. Runtime representation of [io.peekandpoke.klang.audio_bridge.IgnitorDsl.Freq]. */
 object FreqIgnitor : Ignitor {
+    override val isBlockConstant: Boolean get() = true
+
     override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double = freqHz
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
