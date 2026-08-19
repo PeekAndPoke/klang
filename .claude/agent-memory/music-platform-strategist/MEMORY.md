@@ -18,5 +18,7 @@
   **Klangmotör** (ASCII `klangmotor`); why the ö stays; ruled-out variants; open clearance
 - [Motörhead trademark risk](project_motorhead_trademark_risk.md) — Verified: Kilmister Trust holds MOTÖRHEAD; why
   "Motör Hits"→"Klang Hits"; app-store takedown is the acute risk, 2026-07-09
+- [Audience sizing: metal x devs](project_audience_sizing_metal_devs.md) — ~15% of devs are metal-affine (~7M) but
+  only ~1-2% of metal fans code; audience size is NOT the constraint, the "I could make this" moment is, 2026-08-19
 - [Contributor prospects](reference_contributor_prospects.md) — LIVING list of music-software makers to approach
   (klangmeister/ctford, Strudel, Sonic Pi, ktmidi…); no outreach until launch gate, started 2026-08-13

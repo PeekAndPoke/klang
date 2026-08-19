@@ -20,7 +20,7 @@ import * from "sprudel"
 
 // Song Status: Garage Band ...
 
-let feel          = 20.0   // 0.0 .. guitar | 100.0 .. rave
+let feel          = 13.0   // 0.0 .. guitar | 100.0 .. rave
 let transposition = -2     // -2 .. D | 0 .. E | 2 .. F#
 let snareHz       = 210    // Where does the snare cut through?
 
@@ -114,11 +114,11 @@ stack(
         [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 0  0 0 [0 3 4 6] 2]!1>/8`) //  .solo()
       .struct("<[x!2]!16 [x [x x] x@2]!16 [[x x] x!3]!32>").fast(2)
       .velocity("0.98 0.96 0.97 0.96".fast(2))  // . mute()
-      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).postgain(0.075).clip(0.75)
-      .adsr("0.007:4.0:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(35).hpq(0.6).lpf(500).lpe(12).lpq(0.707)  
-      .pan(0.475).superimpose(pan(0.525)).mute("<0!128 1!32>")
-      .superimpose(x => x.distort("0.5:tube:4").hpf(70).postgain(0.030)).notchf(snareHz).notchq(1.0)
-      .late(berlin.range(0.0000, 0.0005))
+      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).postgain(0.075).clip(0.85)
+      .adsr("0.007:4.0:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(25).lpf(500).lpe(12).lpq(0.707)  
+      .superimpose(x => x.distort("0.5:tube:4").hpf(70).postgain(0.0275).pan(0.45).superimpose(pan(0.55)))
+      .notchf(snareHz).notchq(1.0)
+      .mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005))
   ).analog(feel).transpose(transposition)
   , // Drums
   stack(  
@@ -130,7 +130,7 @@ stack(
       .pan(0.5).late(0.0020).orbit(5).pan(0.50).gain(0.22).hpf(80).lpf(14500).lpq(0.5).adsr("0.001:0.05:0.95:0.2")
       .superimpose(x => x.bandf(pure(snareHz).add(berlin.mul(5).fast(4))).bandq(2.0).vel(0.80)),
     sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-      .pan(0.50).late(0.0030).orbit(5).gain(0.235).hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.5).adsr("0.003:0.05:0.95:0.5"), // . mute()
+      .pan(0.50).late(0.0030).orbit(5).gain(0.2375).hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.5).adsr("0.003:0.05:0.95:0.5"), // . mute()
     sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(5).gain(0.060).mute("<0!128 1!32>")
       .pan(0.3).superimpose(pan(0.7)),
     sound("<pink ~ pink pink>*16").orbit(5).gain(0.120).hpf(11500).hpq(0.5).lpf(17000).lpq(0.5).velocity("<1.0 0.90 0.95 0.90>*16")
