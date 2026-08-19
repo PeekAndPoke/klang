@@ -36,7 +36,44 @@ if (condition) {
 }
 ```
 
-### 2. File Naming Conventions
+### 2. Blank Lines Around `if` Blocks
+
+Leave a blank line before and after an `if` statement (and other block statements like `for`/
+`when`) when it is not the first or last statement in its enclosing block. Especially in
+early-return ladders (e.g. fast-path branches falling through to a general case), the blank
+lines make each branch read as its own step.
+
+**Wrong:**
+
+```kotlin
+if (bConst) {
+    // ...
+    return
+}
+if (aConst) {
+    // ...
+    return
+}
+a.generate(buffer, freqHz, ctx)
+```
+
+**Correct:**
+
+```kotlin
+if (bConst) {
+    // ...
+    return
+}
+
+if (aConst) {
+    // ...
+    return
+}
+
+a.generate(buffer, freqHz, ctx)
+```
+
+### 3. File Naming Conventions
 
 - **Files containing a class/object/interface:** PascalCase matching the primary declaration.
 - **Files containing only utility/helper/extension functions:** `lower_case.kt`.

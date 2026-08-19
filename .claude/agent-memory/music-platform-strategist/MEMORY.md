@@ -1,5 +1,8 @@
 # Music Platform Strategist Memory Index
 
+- [Open threads — READ FIRST on cold open](project_open_threads.md) — Where the last session ended (2026-08-19) and
+  what is still open: Track C, the two-sided launch gate, persona copy, blog timing
+
 - [Behind Glass design principle](project_behind_glass_principle.md) — Engine metaphor visible but not required; glass
   thins with curiosity, decided 2026-04-08
 - [Tutorial gap analysis completed](project_tutorial_gap_analysis.md) — Full concept-vs-tutorial matrix, 36 proposed new
@@ -18,6 +21,8 @@
   **Klangmotör** (ASCII `klangmotor`); why the ö stays; ruled-out variants; open clearance
 - [Motörhead trademark risk](project_motorhead_trademark_risk.md) — Verified: Kilmister Trust holds MOTÖRHEAD; why
   "Motör Hits"→"Klang Hits"; app-store takedown is the acute risk, 2026-07-09
+- [Phase pool as differentiator](project_phase_pool_as_differentiator.md) — Prior-art verdict: novel combination,
+  banded target is the genuinely inventive bit; de-risks the metal flagship; the live A/B is unmatchable, 2026-08-19
 - [Audience sizing: metal x devs](project_audience_sizing_metal_devs.md) — ~15% of devs are metal-affine (~7M) but
   only ~1-2% of metal fans code; audience size is NOT the constraint, the "I could make this" moment is, 2026-08-19
 - [Contributor prospects](reference_contributor_prospects.md) — LIVING list of music-software makers to approach

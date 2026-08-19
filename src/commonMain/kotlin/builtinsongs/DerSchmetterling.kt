@@ -50,7 +50,7 @@ let guitar = (() => {
     .analog(pAnalog).spreadPower(1.0).sideAtten(0.1).gainJitter(0.20).centerJitter(0.20)
     // Simulate plucked string, add noise burst
     .pitchEnvelope(0.3, 0.001, 0.02)
-    .plus(Osc.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.14))
+    .plus(Osc.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.145))
     // Distort
     .distort(0.35, "hard", 4)
    
@@ -69,13 +69,12 @@ stack(
     // Lead - Inspired by: Editors - Papillon                                                                                                             
     n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3 [1 -1]|1|1|1|1]>*2`)
       .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>")
-      .gain(0.30).postgain("<0.210!48 0.100!16 0.210!48 0.250!16>")  // . solo()                  
-      .sound(guitar).unison(17).spread(0.20).oscp("presenceHz", 3300).oscp("presenceQ", 0.9).oscp("presence", 4.7).oscp("hptrack", 2.0)    
-      .lpf(5000).lpe(perlin.range(0.5, 0.6).fast(2)).lpq(1.5).lpadsr("0.000:0.3:0.2:0.03")                      
-      .adsr("0.007:3.0:0.1:0.125").clip(0.90) // . mute()            
+      .gain(0.30).postgain("<0.200!48 0.100!16 0.200!48 0.250!16>")  // . solo()                  
+      .sound(guitar).unison(17).spread(0.20).oscp("presenceHz", 3300).oscp("presenceQ", 0.9).oscp("presence", 4.5).oscp("hptrack", 2.0)    
+      .adsr("0.007:3.0:0.1:0.125").clip(0.90).lpf(5000).lpe(perlin.range(0.5, 0.6).fast(2)).lpq(1.5).lpadsr("0.000:0.3:0.2:0.03") // . mute()            
       .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                            
       .superimpose(x => x.transpose(12).velocity("[0.5 0.4 0.45 0.4]*2").pan(0.2).superimpose(pan(0.8)))
-      .mute("<1!64 0!32 1!32 0!16>").room("0.3:5:0.1").body("steel").bodyMix(0.4)
+      .mute("<1!64 0!32 1!32 0!16>").room("0.3:5:0.1").body("steel").bodyMix(0.4).late(berlin.range(0.0010, 0.0020))
     , // Guitars       
     stack(
       // Guitar 1
@@ -114,23 +113,22 @@ stack(
         [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 0  0 0 [0 3 4 6] 2]!1>/8`) //  .solo()
       .struct("<[x!2]!16 [x [x x] x@2]!16 [[x x] x!3]!32>").fast(2)
       .velocity("0.98 0.96 0.97 0.96".fast(2))  // . mute()
-      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).postgain(0.075).clip(0.85)
+      .orbit(3).scale("e1:minor").sound("sine").gain(1.0).postgain(0.075).clip(0.825)
       .adsr("0.007:4.0:0.5:0.010").lpadsr("0.000:0.03:0.0:0.01").hpf(25).lpf(500).lpe(12).lpq(0.707)  
-      .superimpose(x => x.distort("0.5:tube:4").hpf(70).postgain(0.0275).pan(0.45).superimpose(pan(0.55)))
-      .notchf(snareHz).notchq(1.0)
-      .mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005))
+      .superimpose(x => x.distort("0.5:tube:4").hpf(70).postgain(0.025).pan(0.45).superimpose(pan(0.55)))
+      .notchf(snareHz).notchq(1.0).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005))
   ).analog(feel).transpose(transposition)
   , // Drums
   stack(  
     sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").n(0).mute("<0!128 1!32>")  // . solo()
-      .velocity("0.98 0.96 0.97 0.96").pan(0.5).orbit(5).gain(0.16).hpf(30).hpq(1).lpf(8000).adsr("0.001:0.05:0.95:0.2").distort(0.1)
+      .velocity("0.98 0.96 0.97 0.96").pan(0.5).orbit(5).gain(0.165).hpf(30).hpq(1).lpf(8000).adsr("0.001:0.05:0.95:0.2").distort(0.1)
       .superimpose(x => x.bandf("70").bandq(2.0).vel(0.80))
       .late(berlin.range(0.0000, 0.0007).fast(4).seg(4)),
     sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>").n(5).mute("<0!128 1!32>") // . solo()
       .pan(0.5).late(0.0020).orbit(5).pan(0.50).gain(0.22).hpf(80).lpf(14500).lpq(0.5).adsr("0.001:0.05:0.95:0.2")
       .superimpose(x => x.bandf(pure(snareHz).add(berlin.mul(5).fast(4))).bandq(2.0).vel(0.80)),
     sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-      .pan(0.50).late(0.0030).orbit(5).gain(0.2375).hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.5).adsr("0.003:0.05:0.95:0.5"), // . mute()
+      .pan(0.50).late(0.0030).orbit(5).gain(0.24).hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.5).adsr("0.003:0.05:0.95:0.5"), // . mute()
     sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(5).gain(0.060).mute("<0!128 1!32>")
       .pan(0.3).superimpose(pan(0.7)),
     sound("<pink ~ pink pink>*16").orbit(5).gain(0.120).hpf(11500).hpq(0.5).lpf(17000).lpq(0.5).velocity("<1.0 0.90 0.95 0.90>*16")
