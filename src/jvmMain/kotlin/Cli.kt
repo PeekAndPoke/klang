@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -45,7 +45,13 @@ private fun compilePattern(code: String): RenderWavCommand.CompileResult? {
 }
 
 fun main(args: Array<String>) {
-    val samples = runBlocking { Samples.create(catalogue = SampleCatalogue.default) }
+    // Override the sample host, e.g. KLANG_SAMPLE_BASE=http://localhost:8000 to render against a local mirror
+    val catalogue = System.getenv("KLANG_SAMPLE_BASE")
+        ?.takeIf { it.isNotBlank() }
+        ?.let { SampleCatalogue.mirrored(it) }
+        ?: SampleCatalogue.default
+
+    val samples = runBlocking { Samples.create(catalogue = catalogue) }
 
     KlangCli()
         .subcommands(

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -22,7 +22,7 @@ import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 /**
  * Routes events to a specific audio output cylinder (alias for [orbit]).
  *
- * In the Klang Audio Motör, a Cylinder is an independent parallel audio channel
+ * In the Klangmotör, a Cylinder is an independent parallel audio channel
  * (called "orbit" in Strudel/Tidal Cycles). Each cylinder has its own effect pipeline (Katalyst).
  *
  * ```KlangScript(Playable)

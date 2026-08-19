@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -111,7 +111,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
                     height = spectHeight.px
                     width = 100.pct
 
-                    opacity = 0.7
+                    opacity = 0.75
                 }
 
                 Spectrumeter(numBoxesInStack = 35) { Player.get() }
@@ -154,7 +154,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
                             display = Display.inlineBlock
                             fontWeight = FontWeight.bold
                         }
-                        +"KLANG AUDIO MOTÖR"
+                        +"KLANGMOTÖR"
                     }
 
                     icon.music { css { transform { scaleX(-1.0) }; marginLeft = 10.px } }

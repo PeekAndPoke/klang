@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -10,8 +10,9 @@ import com.google.devtools.ksp.symbol.KSValueParameter
 import java.io.File
 
 /**
- * Extracts the source text of a Kotlin parameter's default value, for display
- * in KlangScript documentation only.
+ * Extracts the source text of a Kotlin parameter's default value, for
+ * KlangScript documentation and — when the text is literal-shaped — for
+ * runtime default thunks.
  *
  * KSP1 does not expose the default expression of a function parameter as an
  * AST node — only `hasDefault: Boolean`. We scan the raw source file
@@ -20,8 +21,13 @@ import java.io.File
  *
  * The extractor is intentionally **fail-soft**: any unexpected token, missing
  * source location, unbalanced bracket, or runaway scan returns `null` and the
- * caller emits `defaultDoc = null`. Bridge generation never uses this value —
- * it's purely for human-readable documentation.
+ * caller emits `defaultDoc = null`.
+ *
+ * ⚠️ NOT docs-only: extractions that look like plain literals (numbers,
+ * strings, booleans — see `SafeDefaultLiteral.isSafe`) are pasted into the
+ * generated registration as RUNTIME default thunks by `safeDefaultThunk`.
+ * A plausible-but-wrong literal is therefore a behavioral bug, not a cosmetic
+ * one — when in doubt, return null.
  */
 object DefaultValueExtractor {
 
@@ -59,23 +65,70 @@ object DefaultValueExtractor {
     /**
      * Pure scanning entry point — useful for tests. The [window] should start
      * at or near the parameter declaration; the scan finds [paramName] within
-     * it as a standalone identifier and returns whatever text follows the
-     * subsequent `=` up to the next top-level `,` or `)`.
+     * it as a standalone parameter declaration (identifier followed by `:`)
+     * and returns whatever text follows the subsequent `=` up to the next
+     * top-level `,` or `)`.
+     *
+     * A candidate that dead-ends (e.g. a same-named parameter inside a
+     * function TYPE, whose `=`-scan runs out of the type's parens) is skipped
+     * and the scan resumes after it — fail-soft null only when no candidate
+     * is left. The retry is deliberately NOT bounded to the first declaration:
+     * production callers are double-guarded (hasDefault + window starting at
+     * the param's own line), and every structural bound breaks the "at or
+     * near" window contract this function documents (see the pinned
+     * later-declaration test).
+     *
+     * A `}`/`]` at value depth 0 is a dead-end rather than a value end (see
+     * [findValueEnd]) — that rule retires the residual where a same-named,
+     * typed lambda parameter in an EARLIER param's default
+     * (`{ gain: Int -> acc = gain }`, or worse `{ gain: Double -> x = 0.5 }`
+     * whose literal fragment would ship as a wrong RUNTIME default) could be
+     * extracted: such candidates now dead-end and retry to the real parameter.
+     *
+     * Known residuals (accepted, pinned in tests where practical):
+     *  - a `when (val gain: Int = 5)` subject binding in an earlier default is
+     *    indistinguishable from a real parameter (its value legitimately ends
+     *    at a `)`); a `val`-lookbehind would regress constructor val-params,
+     *    so this stays. Requires an explicitly TYPED binding — the common
+     *    untyped `when (val gain = …)` is already rejected by the `:` rule.
+     *  - a default containing a `,` inside explicit generic call args
+     *    (`mapOf<String, Int>()`) truncates at that comma — never
+     *    literal-shaped, so docs-only; rejecting unbalanced `<` would also
+     *    kill legitimate comparison defaults (`x < y`).
      */
     fun extractFromWindow(window: String, paramName: String): String? {
-        val nameStart = findIdentifier(window, paramName, 0) ?: return null
-        val afterName = nameStart + paramName.length
-        val eq = findEqualsAtTopLevel(window, afterName) ?: return null
-        val valueStart = eq + 1
-        val valueEnd = findValueEnd(window, valueStart) ?: return null
-        return window.substring(valueStart, valueEnd).trim().ifEmpty { null }
+        // An empty name would match zero-length identifiers without ever
+        // advancing `from` — guard instead of spinning.
+        if (paramName.isEmpty()) {
+            return null
+        }
+        var from = 0
+        while (true) {
+            val nameStart = findIdentifier(window, paramName, from) ?: return null
+            val afterName = nameStart + paramName.length
+            val eq = findEqualsAtTopLevel(window, afterName)
+            if (eq != null) {
+                val valueStart = eq + 1
+                val valueEnd = findValueEnd(window, valueStart)
+                if (valueEnd != null) {
+                    val text = window.substring(valueStart, valueEnd).trim()
+                    if (text.isNotEmpty()) {
+                        return text
+                    }
+                }
+            }
+            from = afterName
+        }
     }
 
     // ------------------------------------------------------------------------
     //  Internal — bracket/string/comment-aware scanners
     // ------------------------------------------------------------------------
 
-    /** Match [name] as a standalone Kotlin identifier (word boundaries). */
+    /**
+     * Match [name] as a standalone Kotlin identifier (word boundaries) that is a
+     * PARAMETER DECLARATION — i.e. followed by its `:` type annotation.
+     */
     private fun findIdentifier(s: String, name: String, from: Int): Int? {
         var i = from
         while (i <= s.length - name.length) {
@@ -88,7 +141,8 @@ object DefaultValueExtractor {
                 val before = if (i == 0) ' ' else s[i - 1]
                 val after = if (i + name.length >= s.length) ' ' else s[i + name.length]
                 if (!before.isLetterOrDigit() && before != '_' &&
-                    !after.isLetterOrDigit() && after != '_'
+                    !after.isLetterOrDigit() && after != '_' &&
+                    isParamDeclaration(s, i + name.length)
                 ) {
                     return i
                 }
@@ -96,6 +150,34 @@ object DefaultValueExtractor {
             i++
         }
         return null
+    }
+
+    /**
+     * True when the identifier ending right before [from] is a parameter
+     * declaration: the next meaningful char is a single `:` (the type
+     * annotation). Rejects the enclosing FUNCTION name (followed by `(`),
+     * named arguments (`name = value`) and method references (`name::…`).
+     *
+     * Without this check, `fun gain(gain: Double = 1.0): Gain = Gain(gain = gain)`
+     * matches the function name first; the `=` scan then skips the whole param
+     * list (depth 1) and locks onto the expression-body `=`, swallowing
+     * everything up to the enclosing object's `}` — the MasterFx.gain bug.
+     */
+    private fun isParamDeclaration(s: String, from: Int): Boolean {
+        var i = from
+        while (i < s.length) {
+            val skipped = skipNoise(s, i) ?: return false
+            if (skipped != i) {
+                i = skipped
+                continue
+            }
+            if (s[i].isWhitespace()) {
+                i++
+                continue
+            }
+            return s[i] == ':' && (i + 1 >= s.length || s[i + 1] != ':')
+        }
+        return false
     }
 
     /**
@@ -176,6 +258,12 @@ object DefaultValueExtractor {
                     if (depth == 0) {
                         val prev = if (i == 0) ' ' else s[i - 1]
                         val next = if (i + 1 >= s.length) ' ' else s[i + 1]
+                        // `>` before `=` stays compound even though a glued generic
+                        // (`List<Int>= x`) is thereby missed (fail-soft null):
+                        // distinguishing that from a real `>=` comparison on
+                        // false-candidate scans through lambda bodies proved
+                        // unsafe — a misread ships a WRONG RUNTIME DEFAULT via
+                        // safeDefaultThunk. A docs miss beats wrong behavior.
                         val isCompound = prev == '=' || prev == '<' || prev == '>' || prev == '!' ||
                                 next == '=' || next == '>'
                         if (!isCompound) return i
@@ -194,6 +282,12 @@ object DefaultValueExtractor {
     /**
      * Find the end of the default expression: a `,` or `)` at depth 0.
      * Returns the index of that delimiter (exclusive end of the value).
+     *
+     * A `}` or `]` at depth 0 is a DEAD-END, not an end: a genuine parameter
+     * default can only terminate at `,` or `)`, so a closing brace/bracket
+     * proves the candidate sits inside a brace construct (e.g. a lambda body
+     * containing `x = literal`) — return null so the retry loop advances
+     * instead of shipping the fragment as a wrong runtime default.
      */
     private fun findValueEnd(s: String, from: Int): Int? {
         var i = from
@@ -206,8 +300,17 @@ object DefaultValueExtractor {
             }
             when (s[i]) {
                 '(', '[', '{' -> depth++
-                ')', ']', '}' -> {
-                    if (depth == 0) return i  // closing of the enclosing param list
+                ')' -> {
+                    // For a genuine candidate this is the param list closing; a
+                    // paren false candidate (e.g. a `when (val …)` subject
+                    // binding) is indistinguishable here — see the known
+                    // residuals in [extractFromWindow].
+                    if (depth == 0) return i
+                    depth--
+                }
+
+                ']', '}' -> {
+                    if (depth == 0) return null  // inside a brace/bracket construct
                     depth--
                 }
 

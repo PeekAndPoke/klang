@@ -1,50 +1,182 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.pages.docs.tutorials
 
+/** Curriculum slot B1 — see docs/tasks/tutorial-curriculum.md */
 val yourFirstBeatTutorial = Tutorial(
     slug = "your-first-beat",
-    title = "Your First Beat",
-    description = "Go from silence to a layered drum groove in under three minutes.",
+    title = Tut.yourFirstBeat,
+    description = "Play your first sounds and meet the cycle: the repeating window every pattern lives in.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Rhythm, TutorialTag.GettingStarted),
+    teaches = listOf("sound", "s", "gain", "//"),
     sections = listOf(
         TutorialSection(
-            heading = "Hear the Destination",
-            text = "Hit play. This is what you will build by the end of this tutorial.",
-            code = """stack(
-  sound("bd sd bd sd"),
-  sound("hh hh oh hh").gain(0.6),
-  sound("~ ~ cp ~").gain(0.8)
-)""",
+            heading = "Press play",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    This is the beat this page takes apart, piece by piece. Press play. The first time, give it a moment while the drum sounds load. Then keep it running while you read.
+
+                    A quick tour of the player, left to right:
+
+                    - **Play** starts the code below. Once it runs, the button turns into **Update**: the code is yours to edit, so change something and press it to hear your version.
+                    - **Stop** halts playback.
+                    - **Reset** stops and puts the original code back.
+                    - The **counter** climbs while the music runs, and what it counts is this page's first lesson.
+                    - **RPM** (revolutions per minute) sets the music's speed; it gets its own section further down this page.
+                    - The **EVT** field tunes how much of the code lights up while playing; you can ignore it.
+
+                    Two things about the code itself. Anything after `//` is a comment: Klang ignores it. We use comments to narrate the code, and later on this page you will use `//` to switch whole lines on and off. And whenever you wonder what a word in the code does: hover it, and a help popup opens right there, with what it does and how to use it.
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd hh sd hh  bd hh sd oh")  // eight drum names in one pattern
+                      .gain(0.8)                       // volume of this line
+                    """.trimIndent(),
+                ),
+            ),
         ),
         TutorialSection(
-            heading = "Start with a Kick",
-            text = "Everything begins with a single sound. The sound() function plays a sample — \"bd\" is a bass drum. Hit play and you will hear it repeat every cycle.",
-            code = """sound("bd")""",
+            heading = "One sound, one cycle",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    `sound()` plays a sound by name: `"bd"` is a bass drum kick. (In the built-in songs you will often see it written `s(...)`; same function, shorter.) Press play and watch the counter in the player: it ticks up by one with every kick. That repeating window is called the **cycle**, and everything in Klang happens inside it. Patterns don't play once, they come around.
+
+                    A musician would call one cycle a bar. This course sticks to one word: cycle.
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd").gain(0.8)  // one name = one hit per cycle, also written s("bd")
+                    """.trimIndent(),
+                ),
+            ),
         ),
         TutorialSection(
-            heading = "Build a Pattern",
-            text = "Put multiple sounds inside the quotes, separated by spaces. Each one gets an equal slice of the cycle. Try changing the pattern — swap \"sd\" for \"cp\" (clap) or \"rim\" (rimshot).",
-            code = """sound("bd sd bd sd")""",
+            heading = "The clock: RPM",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    How long is a cycle? That is a setting, not a law. **RPM** stands for revolutions per minute: one revolution is one cycle, so RPM says how many cycles pass in sixty seconds. This lesson runs at 30 RPM: one cycle takes two seconds.
+
+                    If you already think in **BPM** (beats per minute, the number musicians and DJs trade in): a cycle normally carries four beats, so RPM is simply BPM divided by four. 30 RPM equals 120 BPM, a classic dance tempo.
+
+                    **Try it:** set RPM to 60. The clock changes at once, no **Update** needed. The pattern itself is unchanged, the same kick once per cycle, but the cycle now comes around every second. Whenever this course says "two seconds", that's at 30 RPM.
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd").gain(0.8)  // unchanged, only the clock above it moves
+                    """.trimIndent(),
+                ),
+            ),
         ),
         TutorialSection(
-            heading = "Add a Second Layer",
-            text = "Now let's add hi-hats on their own line. The gain() function controls volume — 0.6 means 60%. Try replacing \"oh\" (open hi-hat) with \"ch\" (closed hi-hat) to hear the difference.",
-            code = """sound("hh hh oh hh").gain(0.6)""",
+            heading = "Share the cycle",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    Write several names inside the quotes, separated by spaces, and they split the cycle into equal steps: four names, four equal steps. Count along (one, two, three, four) and the pattern meets your count exactly. Those four counts are the **pulse** the cycle carries: this course counts every cycle in four, whatever the number of steps.
+
+                    **Listen for:** four hits, evenly spaced, no step longer than another. Watch the code while it plays, too: each name lights up as it sounds, and that flash is the step you are hearing.
+
+                    Your starter drum names:
+
+                    - `bd`: bass drum
+                    - `sd`: snare drum
+                    - `hh`: closed hi-hat
+                    - `oh`: open hi-hat
+                    - `cp`: clap
+                    - `rim`: rimshot
+                    - `ht`: high tom
+                    - `mt`: mid tom
+                    - `lt`: low tom
+
+                    **Try it:** press play on each of the three players in turn. Then pick one, build your own four from the nine names, and press **Update**.
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd hh sd hh").gain(0.8)  // four names: four equal steps
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd oh cp rim").gain(0.8)  // same steps, new drums
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd ht mt lt").gain(0.8)  // the toms, high to low
+                    """.trimIndent(),
+                ),
+            ),
         ),
         TutorialSection(
-            heading = "Stack It Up",
-            text = "The stack() function plays multiple patterns at the same time. This is where it clicks — you are layering sounds like a producer. The \"~\" symbol means silence, so the clap only hits on beat 3.",
-            code = """stack(
-  sound("bd sd bd sd"),
-  sound("hh hh oh hh").gain(0.6),
-  sound("~ ~ cp ~").gain(0.8)
-)""",
+            heading = "Any number of steps",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    The rule is not "four": any number of names splits the cycle equally. Three names make three equal steps.
+
+                    **Try it:** this is your first `//` swap. Put `//` in front of the first line and remove it from the second, then press **Update**. Keep exactly one line live; if both are, only the lower one plays.
+
+                    **Listen for:** the kick comes back around at exactly the same moment in both versions, with three hits spread out to fill the time four filled. (The counter confirms it: same pace either way.) The cycle is a fixed container: you never changed it, only how many pieces it is cut into.
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd hh sd").gain(0.8)        // three names: the cycle splits in thirds
+                    // sound("bd hh sd hh").gain(0.8)  // four again, swap the // to compare
+                    """.trimIndent(),
+                ),
+            ),
+        ),
+        TutorialSection(
+            heading = "Eight steps",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    Eight names, eight steps. The cycle does not get longer, the steps get shorter: each one is now an eighth of the cycle, half as long as in the four-step version. Keep counting one-two-three-four while it plays; two steps now fit inside each count.
+
+                    **Listen for:** the open hi-hat (`oh`) on the very last step. It rings through its whole step, right up to the seam (where the closed hats are gone after a blink), and that late lift is how a cycle covers its own restart.
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd hh sd hh  bd hh sd oh").gain(0.8)  // eight names: each gets an eighth of the cycle
+                    """.trimIndent(),
+                ),
+            ),
+        ),
+        TutorialSection(
+            heading = "Set the volume",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    `gain()` sets how loud this line plays: 0 is silence, 1 is full level, and you can push past 1 when a line needs to stand out. Klang keeps a **limiter** on the output at all times, so a hard push never turns into crackle; past a point the peaks simply stop rising and the line squashes instead. The dot at the start of the second line attaches the setting to the pattern above it, and you will stack settings onto patterns this way for the rest of the course.
+
+                    **Try it:** change `gain(0.8)` to `gain(0.3)` and press **Update**, then try 2.5.
+
+                    **Listen for:** at 0.3 the beat sits far away; at 2.5 it is louder, but the kick stops punching. That flattening is the limiter holding the peaks down, and sometimes that squash is exactly what you want. Once several lines run at the same time (that is the ${Tut.layers} lesson), balancing them with `gain()` is most of what mixing is.
+
+                    This is exactly the code you heard at the top of the page.
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd hh sd hh  bd hh sd oh")  // the beat from the top of the page
+                      .gain(0.8)                       // volume: try 0.3, then 2.5
+                    """.trimIndent(),
+                ),
+            ),
         ),
     ),
 )

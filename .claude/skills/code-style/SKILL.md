@@ -252,7 +252,7 @@ Every `.kt` source file must begin with the project license header as its very f
 
 ```kotlin
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 ```
@@ -270,7 +270,7 @@ Every `.kt` source file must begin with the project license header as its very f
 
   ```kotlin
   /*
-   * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+   * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
    * Portions derived from tonal.js — Copyright (c) 2015 danigb.
    * SPDX-License-Identifier: MIT
    * Full license: tones/LICENSE

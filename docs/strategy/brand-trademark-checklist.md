@@ -19,7 +19,8 @@
 - **Brand architecture:**
     - **`Klang.art`** = the **consumer-facing / product / company** name (incl. `Klang.art GmbH`).
     - **`Motör`** = the **engine soul, behind glass, dev-facing** (Cylinder, Ignitor, Katalyst). Stays **unregistered**.
-    - Engine reads as **"Klang Audio Motör — made by Klang.art"** (Motör is the *trailing, non-dominant* element).
+    - Engine reads as **"Klangmotör by Klang.art"** (renamed from "Klang Audio Motör" 2026-08-13; Motör survives
+      as the *trailing, non-dominant* morpheme of the compound; ASCII identifier form `klangmotor` is sanctioned).
     - Consumer app series = **"Klang Hits #1, #2, #3…"** (NOT "Motör Hits" — see §1).
 - **File the trademark as stylized `Klang.art`** (Class 9 + 41), **not** bare "Klang" (crowded/weak).
 - **File the EUTM before any big public announcement** (EU is first-to-file → announcing invites squatters).

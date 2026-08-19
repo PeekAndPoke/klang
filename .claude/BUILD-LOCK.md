@@ -1,8 +1,34 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-12**
+**SINCE: 2026-08-18**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-17, claude-code tutorial session): ladder at 15 certified lessons —
+> B6/B7, A5/B8, B9/B10 all authored + certified + committed this session (block layout +
+> AdsrVisual too). Spec 12/12 green on every run. ⚠️ jsMain compiled by the maintainer's
+> watcher only. Correct test invocation: `:jvmTest` (root module), NEVER bare `jvmTest`.
+
+> Last action (2026-08-17, claude-code tutorial session): tutorial sections refactored to the
+> block layout — TutorialSection(heading, blocks) with Block = Text | Code(lang, code) |
+> Visual.Adsr(value, label); new AdsrVisual SVG comp in jsMain; 5 envelope visuals retrofitted
+> into A2/A4. TutorialCurriculumSpec rewritten for blocks (12 tests, green — incl. the new
+> visual-value-in-code drift guard). ⚠️ jsMain NOT compiled here (maintainer's watcher owns it).
+> Note: the correct test invocation is `:jvmTest` (root module), NOT bare `jvmTest`.
+
+> Note (2026-08-15): `:compileKotlinJs` hit the sprudel KSP cache corruption TWICE in this session.
+> ROOT CAUSE FOUND: the maintainer runs a frontend auto-compile watcher — a standing Gradle process
+> that `with-build-lock.sh` cannot serialize against (it never takes the flock). While the watcher
+> runs, do NOT invoke Gradle at all; the watcher compiles on save. Recover corruption with
+> `:sprudel:clean`.
+
+> Last action (2026-08-15, claude-code session): UI background swap — CodeMirror surface now black
+> (`CodeMirrorTheme.background` = #000000), `--klang-bg-menu` token tuned by eye to #151621
+> (sidebar + header use new `.chrome-bg` CSS class with noise), RoundGauge ring brightened via
+> `.round-gauge` class (#8891a0). `:compileKotlinJs` green. Not committed.
+
+> Last action (2026-08-15, klang-ai session): offline render of Der Schmetterling v22 only — no
+> source changes, no test runs.
 
 > Last action (2026-08-10, klang-ai session): offline render of Der Schmetterling only — no source
 > changes, no test runs. The cursorFrame Int→Double benchmark call sites were fixed by another

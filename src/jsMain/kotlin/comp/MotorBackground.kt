@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -38,14 +38,12 @@ import kotlinx.html.style
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
-import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
-import kotlin.random.Random
 
 /**
  * Shared ref to the mounted [MotorBackground] so sibling components
@@ -63,7 +61,9 @@ fun Tag.MotorBackground(
 }
 
 /**
- * Industrial metallic grid background with autonomous wandering spotlight.
+ * Machined panel-grid background in the code page's surface language, with a
+ * wandering spotlight whose cone width breathes and whose filament subtly
+ * flickers.
  *
  * Pure Kotlin port of the former `motor-background.js` built on the kraft-threejs
  * addon. Exposes [powerOn], [startScan], [stopScan] as a lighting state machine.
@@ -101,6 +101,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var camera: Camera? = null
     private var plane: Mesh? = null
     private var material: MeshStandardMaterial? = null
+    private var titlePlane: Mesh? = null
+    private var titleMaterial: MeshStandardMaterial? = null
     private var baseMap: CanvasTexture? = null
     private var mainLight: PointLight? = null
     private var fillLight: DirectionalLight? = null
@@ -112,23 +114,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     private var poweredOn = false
     private var scanning = false
-    private var returning = false
-    private var hoverWandering = false
-    private var hoverEnvelope = 0.0
-
-    // Lissajous phase that only advances while hovering, so re-entering hover
-    // resumes the pattern instead of jumping based on absolute elapsed time.
-    private var wanderTime = 0.0
-
-    // Position the lissajous rides on top of. Non-zero only when hover
-    // interrupts a scan-return — lets the wander continue from wherever the
-    // light is at that moment, then decays toward 0 so we recenter naturally.
-    private var wanderOriginX = 0.0
-    private var wanderOriginY = 0.0
 
     private val defaultIntensity = 1.62
     private val hoverIntensity = 3.0
     private var targetIntensity = 0.0
+
+    // Ceiling for the plate's blend over the menu-colored backdrop — keeps the
+    // background graphic dim enough to not compete with the page content.
+    private val maxPlateOpacity = 0.55
 
     // Light "radius" — pulling the light further from the plate widens the
     // illuminated area, so hover reads as the light growing bigger.
@@ -137,16 +130,153 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var targetLightZ = defaultLightZ
     private var targetFillIntensity = 0.0
 
-    ////  WANDER PHYSICS  /////////////////////////////////////////////////////////////////////////////////////////
+    ////  LIGHT MOTION  ///////////////////////////////////////////////////////////////////////////////////////////
 
-    private var targetX = 0.0
-    private var targetY = 0.0
-    private var mouseX = 0.0
-    private var mouseY = 0.0
-    private var velX = 0.0
-    private var velY = 0.0
-    private var attractX = 0.0
-    private var attractY = 0.0
+    // Fixed cone size: Z only eases toward the hover/default target.
+    private var lightZ = defaultLightZ
+
+    // Slow autonomous Lissajous wander — the light roams the panel grid.
+    private var wanderTime = 0.0
+
+    // Eased intensity lives here (not on the light) so the flicker riding on
+    // top never pollutes the easing state.
+    private var currentIntensity = 0.0
+    private var flickerTime = 0.0
+
+    ////  DEFERRED TEXTURE BUILD  /////////////////////////////////////////////////////////////////////////////////
+
+    private var sceneCtx: ThreeJsContext? = null
+    private var prepared = false
+    private var preparing = false
+    private var prepareRequested = false
+    private val onPrepared = mutableListOf<() -> Unit>()
+
+    /** Rows per macrotask for the chunked per-pixel texture loops. */
+    private val chunkRows = 128
+
+    /** Panel-grid cell size in texture px — shared by normal map and albedo seams. */
+    private val panelCell = 220.0
+
+    /**
+     * Builds the plate + title textures and meshes. The heavy per-pixel loops
+     * run in row batches on macrotasks so the UI stays responsive — call this
+     * during the start page's loading sequence. [onReady] fires once the
+     * background is fully built; immediately if it already is, and also on a
+     * failed WebGL setup, so callers never wait forever.
+     */
+    fun prepare(onReady: () -> Unit = {}) {
+        if (prepared || failed) {
+            onReady()
+            return
+        }
+        onPrepared.add(onReady)
+        prepareRequested = true
+        // Watchdog: if the 3D pipeline never comes up (no WebGL, three.js
+        // failed to load), fail soft instead of leaving the boot screen stuck.
+        // Only fires when the build has not even STARTED — an in-progress
+        // chunked build has its own error guards.
+        window.setTimeout({
+            if (!prepared && !preparing && !failed) {
+                markFailed("3D background never became ready (WebGL unsupported?)")
+            }
+        }, 5000)
+        startPrepareIfPossible()
+    }
+
+    private fun startPrepareIfPossible() {
+        if (preparing || prepared) return
+        // Not mounted / addon not ready yet — setupScene calls again when it is.
+        val ctx = sceneCtx ?: return
+        val addon = threeAddon ?: return
+        preparing = true
+
+        try {
+            val texW = ceil(texHeight * aspect).toInt()
+            generateMotorNormalMap(addon, texW, texHeight) { normalMap ->
+                val plateMap = buildPlateBaseMap(addon, texW, texHeight)
+                buildTitleOverlayMaps(addon, texW, texHeight) { titleAlbedo, titleNormal ->
+                    buildMeshes(ctx, addon, normalMap, plateMap, titleAlbedo, titleNormal)
+                    prepared = true
+                    preparing = false
+                    onPrepared.forEach { it() }
+                    onPrepared.clear()
+                }
+            }
+        } catch (e: Throwable) {
+            markFailed(e)
+        }
+    }
+
+    private fun buildMeshes(
+        ctx: ThreeJsContext,
+        addon: ThreeJsAddon,
+        normalMap: CanvasTexture,
+        plateMap: CanvasTexture,
+        titleAlbedo: CanvasTexture,
+        titleNormal: CanvasTexture,
+    ) {
+        val geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
+        val mat = addon.createMeshStandardMaterial(jsObject {
+            color = 0xffffff            // let the map provide the base color
+            roughness = 0.28
+            metalness = 0.97
+            val d = this.asDynamic()
+            d.map = plateMap
+            d.normalMap = normalMap
+            d.normalScale = addon.createVector2(0.9, 0.9)
+            d.transparent = true
+            d.opacity = 0.0             // fades in with the main light (see animate)
+        })
+        baseMap = plateMap
+        val pl = addon.createMesh(geometry, mat)
+        ctx.scene.add(pl)
+
+        plane = pl
+        material = mat
+
+        // Title overlay — its own plane a hair in front of the plate, so the
+        // title can stay at full brightness while the plate is dimmed.
+        val titleMat = addon.createMeshStandardMaterial(jsObject {
+            color = 0xffffff
+            roughness = 0.28
+            metalness = 0.97
+            val d = this.asDynamic()
+            d.map = titleAlbedo
+            d.normalMap = titleNormal
+            d.normalScale = addon.createVector2(0.9, 0.9)
+            d.transparent = true
+            d.opacity = 0.0             // fades in with the main light (see animate)
+        })
+        val titlePl = addon.createMesh(addon.createPlaneGeometry(2.0 * aspect, 2.0), titleMat)
+        titlePl.asDynamic().position.z = 0.01
+        ctx.scene.add(titlePl)
+
+        titlePlane = titlePl
+        titleMaterial = titleMat
+    }
+
+    /**
+     * Runs [rows] rows of per-pixel work in [chunkRows]-row batches, yielding
+     * to the event loop between batches so the UI can breathe.
+     */
+    private fun runChunked(rows: Int, block: (from: Int, toExclusive: Int) -> Unit, onDone: () -> Unit) {
+        fun step(from: Int) {
+            // The steps run as detached macrotasks — an escaping exception would
+            // silently strand prepare() waiters, so every step fails soft.
+            try {
+                if (from >= rows) {
+                    onDone()
+                    return
+                }
+                val to = min(rows, from + chunkRows)
+                block(from, to)
+                window.setTimeout({ step(to) }, 0)
+            } catch (e: Throwable) {
+                markFailed(e)
+            }
+        }
+        step(0)
+    }
 
     ////  LISTENERS (for cleanup)  ////////////////////////////////////////////////////////////////////////////////
 
@@ -156,6 +286,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     ////  PUBLIC API (call via motorBackgroundRef)  ///////////////////////////////////////////////////////////////
 
     fun powerOn() {
+        // Self-heal for flows that never called prepare() — idempotent, and the
+        // plate simply fades in whenever the build finishes.
+        prepare()
         poweredOn = true
         targetIntensity = defaultIntensity
         targetFillIntensity = 0.12
@@ -166,48 +299,45 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     fun stopScan() {
-        returning = true
-        attractX = 0.0
-        attractY = 0.0
+        scanning = false
     }
 
-    /** Pulls the light up and starts a slow wander. Call from an element's mouse-enter. */
+    /** Boosts the light and widens the cone. Call from an element's mouse-enter. */
     fun hoverStart() {
         targetIntensity = hoverIntensity
         targetLightZ = hoverLightZ
-        hoverWandering = true
-        // If a scan-return is in progress, abort it and pick up the wander
-        // from the current light position with full envelope — otherwise the
-        // light first crawls to centre and visibly stalls before the lissajous
-        // ramps up from zero.
-        if (scanning) {
-            scanning = false
-            returning = false
-            wanderOriginX = mouseX
-            wanderOriginY = mouseY
-            hoverEnvelope = 1.0
-        }
+        scanning = false
     }
 
     /** Reverts the hover effect. Call from the element's mouse-leave. */
     fun hoverEnd() {
         targetIntensity = if (poweredOn) defaultIntensity else 0.0
         targetLightZ = defaultLightZ
-        hoverWandering = false
     }
 
     ////  LIFECYCLE  //////////////////////////////////////////////////////////////////////////////////////////////
 
     private var failed: Boolean by value(false)
 
+    /**
+     * Central fail-soft: ANY 3D-background error drops to the flat
+     * menu-colored fallback and — crucially — releases every [prepare]
+     * waiter, so an unsupported browser can never wedge the start flow.
+     */
+    private fun markFailed(e: Any?) {
+        if (failed) return
+        console.error("MotorBackground error — falling back to flat bg", e)
+        runCatching { teardown() }
+        failed = true
+        preparing = false
+        onPrepared.forEach { runCatching { it() } }
+        onPrepared.clear()
+    }
+
     init {
         lifecycle {
             onUnmount { teardown() }
-            onError { e ->
-                console.error("MotorBackground error — falling back to flat bg", e)
-                runCatching { teardown() }
-                failed = true
-            }
+            onError { e -> markFailed(e) }
         }
     }
 
@@ -215,14 +345,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         div {
             key = "motor-bg"
             style = "position:fixed;top:0;left:0;width:100%;height:100%;" +
-                    "z-index:-1;pointer-events:none;background-color:#000;"
+                    "z-index:-1;pointer-events:none;background-color:${laf.menuBackground};"
 
             if (!failed) {
                 ThreeJs(
                     onReady = { ctx -> setupScene(ctx) },
                     onFrame = { f -> animate(f) },
                     createCamera = { a -> buildCamera(a) },
-                    alpha = false,
+                    alpha = true,
                     antialias = false,
                 )
             }
@@ -248,7 +378,13 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     ////  SCENE SETUP  ////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun setupScene(ctx: ThreeJsContext) {
+    private fun setupScene(ctx: ThreeJsContext) = try {
+        setupSceneUnsafe(ctx)
+    } catch (e: Throwable) {
+        markFailed(e)
+    }
+
+    private fun setupSceneUnsafe(ctx: ThreeJsContext) {
         val addon = threeAddon ?: return
         renderer = ctx.renderer
         camera = ctx.camera
@@ -260,29 +396,17 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         renderer?.setPixelRatio(min(window.devicePixelRatio, 2.0))
         renderer?.setSize(w, h)
 
-        ctx.scene.asDynamic().background = createColor(addon, 0x000000)
+        // No scene background — the canvas stays transparent (alpha = true) so the
+        // menu-colored wrapper div shows through until the plate fades in.
 
-        // Normal map matching viewport aspect so panels stay square
-        val texW = ceil(texHeight * aspect).toInt()
-        val normalMap = generateMotorNormalMap(addon, texW, texHeight)
-        val titleMap = buildTitleBaseMap(addon, texW, texHeight)
-
-        val geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
-        val mat = addon.createMeshStandardMaterial(jsObject {
-            color = 0xffffff            // let the map provide the base color
-            roughness = 0.28
-            metalness = 0.97
-            val d = this.asDynamic()
-            d.map = titleMap
-            d.normalMap = normalMap
-            d.normalScale = addon.createVector2(0.9, 0.9)
-        })
-        baseMap = titleMap
-        val pl = addon.createMesh(geometry, mat)
-        ctx.scene.add(pl)
-
-        plane = pl
-        material = mat
+        // The plate + title textures are NOT built here — their per-pixel loops
+        // block the main thread for a noticeable moment, which froze the start
+        // page's power button right after mount. They are built by [prepare]
+        // (row-chunked, UI-friendly) during the start page's loading sequence.
+        sceneCtx = ctx
+        if (prepareRequested) {
+            startPrepareIfPossible()
+        }
 
         // ── Lighting ──
 
@@ -333,22 +457,43 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 pl.geometry.dispose()
                 pl.geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
             }
+            titlePlane?.let { pl ->
+                pl.geometry.dispose()
+                pl.geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
+            }
             resizeTimer?.let { window.clearTimeout(it) }
             resizeTimer = window.setTimeout({
-                val newTexW = ceil(texHeight * aspect).toInt()
-                val newNormal = generateMotorNormalMap(addon, newTexW, texHeight)
-                val newBase = buildTitleBaseMap(addon, newTexW, texHeight)
-                material?.let { mat ->
-                    val mDyn = mat.asDynamic()
-                    val existingNormal = mDyn.normalMap
-                    if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
-                    mDyn.normalMap = newNormal
-                    val existingBase = mDyn.map
-                    if (existingBase != null && existingBase != undefined) existingBase.dispose()
-                    mDyn.map = newBase
-                    mDyn.needsUpdate = true
+                // Nothing to rebuild before prepare() has run — it will pick up
+                // the current aspect when it does.
+                if (prepared) {
+                    val newTexW = ceil(texHeight * aspect).toInt()
+                    generateMotorNormalMap(addon, newTexW, texHeight) { newNormal ->
+                        val newBase = buildPlateBaseMap(addon, newTexW, texHeight)
+                        buildTitleOverlayMaps(addon, newTexW, texHeight) { newTitleAlbedo, newTitleNormal ->
+                            material?.let { mat ->
+                                val mDyn = mat.asDynamic()
+                                val existingNormal = mDyn.normalMap
+                                if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                                mDyn.normalMap = newNormal
+                                val existingBase = mDyn.map
+                                if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                                mDyn.map = newBase
+                                mDyn.needsUpdate = true
+                            }
+                            titleMaterial?.let { mat ->
+                                val mDyn = mat.asDynamic()
+                                val existingNormal = mDyn.normalMap
+                                if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                                mDyn.normalMap = newTitleNormal
+                                val existingBase = mDyn.map
+                                if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                                mDyn.map = newTitleAlbedo
+                                mDyn.needsUpdate = true
+                            }
+                            baseMap = newBase
+                        }
+                    }
                 }
-                baseMap = newBase
             }, 300)
         }
         window.addEventListener("resize", handler)
@@ -357,84 +502,47 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     ////  RENDER LOOP  ////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val gravity = 0.25
-    private val maxSpeed = 0.35
-    private val damping = 0.98
-    private val nearThreshold = 0.2
-
-    private fun pickAttractor() {
-        attractX = if (attractX <= 0.0) {
-            0.4 + Random.nextDouble() * 0.35
-        } else {
-            -(0.4 + Random.nextDouble() * 0.35)
-        }
-        attractY = 0.0
+    private fun animate(frame: ThreeJsFrame) = try {
+        animateUnsafe(frame)
+    } catch (e: Throwable) {
+        markFailed(e)
     }
 
-    private fun animate(frame: ThreeJsFrame) {
+    private fun animateUnsafe(frame: ThreeJsFrame) {
+        if (failed) return
         val delta = min(frame.deltaMs, 100.0)
 
-        if (scanning) {
-            if (!returning && attractX == 0.0 && attractY == 0.0) pickAttractor()
-            val dt = delta / 1000.0
-            val dx = attractX - targetX
-            val dy = attractY - targetY
-            val dist = max(0.001, sqrt(dx * dx + dy * dy))
-            velX += dx * gravity * dt
-            velY += dy * gravity * dt
-            velX *= damping
-            velY *= damping
-            val speed = sqrt(velX * velX + velY * velY)
-            if (speed > maxSpeed) {
-                velX = (velX / speed) * maxSpeed
-                velY = (velY / speed) * maxSpeed
-            }
-            targetX += velX * dt
-            targetY += velY * dt
-            if (returning) {
-                if (dist < 0.02 && speed < 0.01) {
-                    scanning = false
-                    returning = false
-                    targetX = 0.0
-                    targetY = 0.0
-                }
-            } else {
-                if (dist < nearThreshold) pickAttractor()
-            }
-        } else {
-            // Slow lissajous-like wander while any button is hovered.
-            // Envelope ramps up while hovering, decays while not — driving
-            // targetX/Y from the same formula in both phases keeps state
-            // continuous, so a re-hover during decay resumes wandering smoothly
-            // instead of stalling near the current position.
-            if (hoverWandering) {
-                hoverEnvelope += (1.0 - hoverEnvelope) * 0.015
-                wanderTime += delta * 0.001
-            } else {
-                hoverEnvelope *= 0.97
-            }
-            // Origin offset (set by hoverStart when interrupting a scan-return)
-            // decays so the wander recenters smoothly.
-            wanderOriginX *= 0.97
-            wanderOriginY *= 0.97
-            targetX = wanderOriginX + sin(wanderTime * 0.4) * 0.35 * hoverEnvelope
-            targetY = wanderOriginY + cos(wanderTime * 0.33) * 0.15 * hoverEnvelope
-        }
-
-        // Smooth position follow
-        mouseX += (targetX - mouseX) * 0.18
-        mouseY += (targetY - mouseY) * 0.18
-        mainLight?.position?.x = mouseX * aspect
-        mainLight?.position?.y = mouseY
-        // Lerp the light's Z toward the current target — pulling it farther on
-        // hover widens the illuminated area, so hover reads as a bigger light.
+        // The light wanders in a slow Lissajous over the panel grid — the seam
+        // bevels and per-panel tilts catch it as it passes. The cone size stays
+        // FIXED: Z only eases toward the hover/default target, no breathing.
+        wanderTime += delta * 0.001
         mainLight?.position?.let { pos ->
-            pos.z += (targetLightZ - pos.z) * 0.04
+            pos.x = sin(wanderTime * 0.4) * 0.35 * aspect
+            pos.y = cos(wanderTime * 0.33) * 0.15
+            lightZ += (targetLightZ - lightZ) * 0.04
+            pos.z = lightZ
         }
 
         // Smooth intensity transitions
-        mainLight?.let { it.intensity += (targetIntensity - it.intensity) * 0.01 }
+        currentIntensity += (targetIntensity - currentIntensity) * 0.01
         fillLight?.let { it.intensity += (targetFillIntensity - it.intensity) * 0.02 }
+
+        // Subtle lamp flicker — a slow drift plus a faster shimmer, both smooth
+        // noise. Stays within a few percent so it reads as a living filament,
+        // not a faulty one.
+        flickerTime += delta
+        val flicker = 1.0 +
+                grainNoise.noise(flickerTime * 0.0035, 7.7) * 0.05 +
+                grainNoise.noise(flickerTime * 0.021, 3.3) * 0.025
+        mainLight?.let { it.intensity = currentIntensity * flicker }
+
+        // The plate fades in with the main light — while the light is off the
+        // canvas is transparent and the menu-colored backdrop shows through.
+        // The title overlay is exempt from the dimming cap and stays bright.
+        // Driven by the unflickered intensity so the fade itself stays steady.
+        val lit = min(1.0, currentIntensity / defaultIntensity)
+        material?.asDynamic()?.opacity = maxPlateOpacity * lit
+        titleMaterial?.asDynamic()?.opacity = lit
     }
 
     ////  TEARDOWN  ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -468,70 +576,84 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Renders "KLANG AUDIO MOTÖR" with a tilt-back projection so it sits on the
-     * same plane as the brushed-metal scratches (which radiate from a focal point
-     * above). The text is drawn into an off-screen buffer at full size, then
-     * blitted back row-by-row with a horizontal taper (top narrower) and a
-     * vertical compression — the bottom edge stays where the natural baseline
-     * would be, the top tilts away from the viewer.
+     * Renders "KLANGMOTÖR" flat (no perspective) at the title position.
      *
      * Caller is responsible for clip / blur / fillStyle setup on `tctx`.
      */
-    private fun drawPerspectiveTitleText(
+    private fun drawTitleText(
         tctx: CanvasRenderingContext2D,
         width: Int,
         height: Int,
         fillStyle: String,
     ) {
-        val fontSize = (height * 0.135).coerceAtLeast(48.0)
         val textCy = height * 0.18
-
-        // Buffer just tall enough for ascenders / descenders.
-        val bufH = (fontSize * 1.4).toInt().coerceAtLeast(2)
-        val buf = document.createElement("canvas") as HTMLCanvasElement
-        buf.width = width
-        buf.height = bufH
-        val bctx = buf.getContext("2d") as CanvasRenderingContext2D
-        bctx.fillStyle = fillStyle
-        applyTitleTextStyle(bctx, height)
-        bctx.fillText("KLANG AUDIO MOTÖR", width / 2.0, bufH / 2.0)
-
-        // Tilt-back: top tapers (further away) and overall height compresses;
-        // pivot at the bottom edge so the baseline stays put. Tuned to match
-        // the brushed scratches' implied focal point ~1× height above the plate.
-        val topXScale = 0.85
-        val yCompress = 0.87
-        val cx = width / 2.0
-        val scaledBufH = (bufH * yCompress).toInt().coerceAtLeast(2)
-        val outBottomY = textCy + bufH / 2.0
-        val outTopY = outBottomY - scaledBufH
-        for (i in 0 until scaledBufH) {
-            val rowFrac = i.toDouble() / (scaledBufH - 1).toDouble()
-            val xScale = topXScale + (1.0 - topXScale) * rowFrac
-            val dstW = width * xScale
-            val dstX = cx - dstW / 2.0
-            val dstY = outTopY + i
-            val srcY = rowFrac * (bufH - 1)
-            tctx.asDynamic().drawImage(
-                buf,
-                0.0, srcY, width.toDouble(), 1.0,
-                dstX, dstY, dstW, 1.0,
-            )
-        }
+        tctx.fillStyle = fillStyle
+        applyTitleTextStyle(tctx, height)
+        tctx.fillText("KLANGMOTÖR", width / 2.0, textCy)
     }
 
     /**
-     * Albedo map for the plane — uniform dark metal grey with a dim teal title stamped in.
-     * The title inherits the material's metalness so it reads as the same metal as the plate,
-     * tinted just enough to be legible under the scene's cyan-leaning lighting.
+     * Albedo map for the plate — uniform dark metal in the menu background tone.
+     * The title lives on its own overlay plane (see [buildTitleOverlayMaps]) so
+     * the plate can be dimmed without dimming the title.
      */
-    private fun buildTitleBaseMap(addon: ThreeJsAddon, width: Int, height: Int): CanvasTexture {
+    private fun buildPlateBaseMap(addon: ThreeJsAddon, width: Int, height: Int): CanvasTexture {
         val cnv = document.createElement("canvas") as HTMLCanvasElement
         cnv.width = width
         cnv.height = height
         val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
-        tctx.fillStyle = "#13151a"
+        // Near-black like the editor surface — but with just enough albedo for
+        // the moving light to sheen (a pure-black metal reflects nothing).
+        tctx.fillStyle = "#0e0f13"
         tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
+
+        // Dark seam lines on the panel grid — albedo crispness on top of the
+        // normal-map bevels.
+        tctx.strokeStyle = "#07080a"
+        tctx.lineWidth = 2.0
+        var gx = 0.0
+        while (gx <= width) {
+            tctx.beginPath()
+            tctx.moveTo(gx, 0.0)
+            tctx.lineTo(gx, height.toDouble())
+            tctx.stroke()
+            gx += panelCell
+        }
+        var gy = 0.0
+        while (gy <= height) {
+            tctx.beginPath()
+            tctx.moveTo(0.0, gy)
+            tctx.lineTo(width.toDouble(), gy)
+            tctx.stroke()
+            gy += panelCell
+        }
+
+        val tex = addon.createCanvasTexture(cnv)
+        tex.wrapS = TextureWrapping.ClampToEdgeWrapping
+        tex.wrapT = TextureWrapping.ClampToEdgeWrapping
+        return tex
+    }
+
+    /**
+     * Albedo + normal map for the title overlay plane.
+     *
+     * The albedo is "KLANGMOTÖR" on a TRANSPARENT background — the material's
+     * alpha masks the overlay down to the letters (plus a plate-colored halo
+     * under the bevel ring), so the rest of this plane is invisible. The normal
+     * map carries the hammered letter fill and the raised edge bevels that used
+     * to be carved into the plate's normal map.
+     */
+    private fun buildTitleOverlayMaps(
+        addon: ThreeJsAddon,
+        width: Int,
+        height: Int,
+        onDone: (albedo: CanvasTexture, normal: CanvasTexture) -> Unit,
+    ) {
+        // ── Albedo: text only, transparent elsewhere ──
+        val cnv = document.createElement("canvas") as HTMLCanvasElement
+        cnv.width = width
+        cnv.height = height
+        val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
         // Clip so the blur halo doesn't bleed below the letter baseline — the
         // bottom edge of the engraving stays sharp.
         val fontSize = (height * 0.135).coerceAtLeast(48.0)
@@ -541,137 +663,42 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         tctx.beginPath()
         tctx.rect(0.0, 0.0, width.toDouble(), textBottomY)
         tctx.clip()
-        tctx.asDynamic().filter = "blur(1px)"
+        // Dark halo first — matches the plate tone, so the bevel ring around the
+        // letters has pixels to render on (its width matches the engrave mask blur).
+        tctx.asDynamic().filter = "blur(3px)"
+        drawTitleText(tctx, width, height, laf.menuBackground)
         // Off-white text — with the noise normals and metallic reflection this reads
         // as a faceted glass/crystal inlay; slightly dimmed so highlights don't blow out.
-        // Drawn with a tilt-back projection so it shares the plate's perspective.
-        drawPerspectiveTitleText(tctx, width, height, "#b8b8b8")
+        tctx.asDynamic().filter = "blur(1px)"
+        drawTitleText(tctx, width, height, "#b8b8b8")
         tctx.restore()
 
-        val tex = addon.createCanvasTexture(cnv)
-        tex.wrapS = TextureWrapping.ClampToEdgeWrapping
-        tex.wrapT = TextureWrapping.ClampToEdgeWrapping
-        return tex
-    }
+        val albedoTex = addon.createCanvasTexture(cnv)
+        albedoTex.wrapS = TextureWrapping.ClampToEdgeWrapping
+        albedoTex.wrapT = TextureWrapping.ClampToEdgeWrapping
 
-    /**
-     * Pre-renders "KLANG AUDIO MOTÖR" into a soft-edged alpha mask the size of the
-     * normal map. Returns a DoubleArray where 1.0 = deep inside text, 0.0 = plain metal.
-     * The gradient of this field is used to carve engraving bevels into the plate.
-     */
-    private fun buildEngraveMask(width: Int, height: Int): DoubleArray {
-        val cnv = document.createElement("canvas") as HTMLCanvasElement
-        cnv.width = width
-        cnv.height = height
-        val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
-        tctx.clearRect(0.0, 0.0, width.toDouble(), height.toDouble())
-        // Narrow blur → sharp bevel walls → raised lettering with crisp edges.
-        // Clip so the blur doesn't bleed below the letter baseline — the bottom
-        // edge of the relief stays crisp instead of fading into the plate.
-        val fontSize = (height * 0.135).coerceAtLeast(48.0)
-        val textCy = height * 0.18
-        val textBottomY = textCy + fontSize / 2.0
-        tctx.save()
-        tctx.beginPath()
-        tctx.rect(0.0, 0.0, width.toDouble(), textBottomY)
-        tctx.clip()
-        tctx.asDynamic().filter = "blur(3px)"
-        // Match the albedo map's tilt-back projection so the engraved relief
-        // follows the same perspective as the painted text.
-        drawPerspectiveTitleText(tctx, width, height, "white")
-        tctx.restore()
-
-        val img = tctx.getImageData(0.0, 0.0, width.toDouble(), height.toDouble())
-        val rgba = img.data.asDynamic()
-        val size = width * height
-        val mask = DoubleArray(size)
-        for (i in 0 until size) {
-            mask[i] = rgba[i * 4 + 3].unsafeCast<Int>() / 255.0
-        }
-        return mask
-    }
-
-    /**
-     * Generates a flat brushed-metal normal map.
-     *
-     * Horizontal brush lines come from a per-row tilt (shared across a whole scanline,
-     * so lighting reveals long horizontal scratches), combined with per-pixel grain
-     * and a slow lateral wobble so the brush isn't perfectly straight.
-     *
-     * The "KLANG AUDIO MOTÖR" text engraving still lives in this same normal map —
-     * its alpha mask's gradient perturbs normals at the letter edges, and inside the
-     * letter body the brushed pattern is replaced by a stepped hammered-grain noise.
-     */
-    private fun generateMotorNormalMap(addon: ThreeJsAddon, width: Int, height: Int): CanvasTexture {
-        val cnv = document.createElement("canvas") as HTMLCanvasElement
-        cnv.width = width
-        cnv.height = height
-        val g2d = cnv.getContext("2d") as CanvasRenderingContext2D
+        // ── Normal map: hammered fill inside the letters, bevels at the edges ──
+        val ncnv = document.createElement("canvas") as HTMLCanvasElement
+        ncnv.width = width
+        ncnv.height = height
+        val g2d = ncnv.getContext("2d") as CanvasRenderingContext2D
         val imageData = g2d.createImageData(width.toDouble(), height.toDouble())
-        val data = imageData.data
+        val d = imageData.data.asDynamic()
 
-        val d = data.asDynamic()
-
-        // Pre-render text as a soft-edged alpha mask — gradient gives engraving normals.
+        // Soft-edged alpha mask — its gradient gives the bevel normals.
         val engraveMask = buildEngraveMask(width, height)
         val engraveStrength = 2.5
 
-        // Curtain-fold brushed metal — scratches radiate from a focal point far
-        // above the canvas. At x = centre they're perfectly vertical, toward the
-        // sides they fan out smoothly, giving a hanging-curtain look.
-        val cx = width / 2.0
-        val focalDist = height.toDouble() * 0.9   // focal point ~1× height above top → strong fan at bottom
-        val scratchDensity = 300.0                 // angular density of scratches
-
-        for (py in 0 until height) {
-            val dy = py + focalDist
+        runChunked(height, { pyFrom, pyTo ->
+        for (py in pyFrom until pyTo) {
             for (px in 0 until width) {
                 val idx = (py * width + px) * 4
-
-                val dx = px - cx
-                // Angle from focal point → identical for all pixels on the same scratch.
-                val angle = atan2(dx, dy)
-                val scratchIdx = (angle * scratchDensity).toInt()
-                val h1 = hashCell(31, scratchIdx)
-                val h2 = hashCell(67, scratchIdx * 2 + 7)
-                val brushTilt = (h1 - 0.5) * 0.09 + (h2 - 0.5) * 0.045
-
-                // Scratch direction = radial from focal point (unit vector).
-                val len = sqrt(dx * dx + dy * dy)
-                val dirX = dx / len
-                val dirY = dy / len
-                // Perpendicular to scratch = rotate 90° → (-dirY, dirX).
-                val perpX = -dirY
-                val perpY = dirX
-
-                // Patchy grain — a low-frequency hash modulates the noise amplitude so
-                // the surface has calm and busier regions instead of uniform static.
-                val patchAmp = hashCell(px / 24 + 101, py / 24 + 53)
-                val grainScale = 0.006 + patchAmp * 0.045
-                // Smooth Perlin grain instead of per-pixel TV static. Scale
-                // ≈ 0.18 → ~5.5px per noise cell; two uncorrelated samples
-                // drive the X and Y normal offsets. Final * 0.05 = the prior
-                // ±0.5 range scaled down to ~10% of its previous strength.
-                val grainX = grainNoise.noise(px * 0.18, py * 0.18) * grainScale * 0.05
-                val grainY = grainNoise.noise(px * 0.18 + 113.7, py * 0.18 - 91.3) * grainScale * 0.05
-                // Two superposed slow sines with different frequencies break up
-                // the per-row uniformity without reintroducing horizontal bands —
-                // the py coefficients are tiny so the vertical period is far
-                // larger than the texture height.
-                val wobble = (sin(px * 0.004 + py * 0.002) + sin(px * 0.013 - py * 0.001) * 0.6) * 0.006
-
-                // Tilt the normal perpendicular to the local scratch direction.
-                var nx = perpX * brushTilt + grainX + wobble * 0.3
-                var ny = perpY * brushTilt + grainY
-                var nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
-
-                // Engrave "KLANG AUDIO MOTÖR" into the plate using the text alpha gradient.
-                // Inside the text body, keep a small fraction of the mosaic micro-variation
-                // so light still plays across the letters; at the edge apron (blurred
-                // transition band) push normals INTO the letter so the edges read as a
-                // recessed wall catching light.
                 val i1D = py * width + px
                 val maskVal = engraveMask[i1D]
+
+                var nx = 0.0
+                var ny = 0.0
+                var nz = 1.0
                 if (maskVal > 0.5) {
                     // Two-octave stepped surface: fine per-pixel grain + coarser patches.
                     // Combined they give a finely granulated, high-variation metal texture.
@@ -700,8 +727,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                         // Gradient points INTO the letter (mask goes 0→1 from plate→text).
                         // For a raised (embossed) letter, the bevel normal tilts OUTWARD —
                         // opposite to the gradient — so light catches the outer walls.
-                        nx += -gx * engraveStrength
-                        ny += -gy * engraveStrength
+                        nx = -gx * engraveStrength
+                        ny = -gy * engraveStrength
                         nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
                     }
                 }
@@ -712,12 +739,135 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 d[idx + 3] = 255
             }
         }
+        }, onDone = {
+            g2d.putImageData(imageData, 0.0, 0.0)
 
-        g2d.putImageData(imageData, 0.0, 0.0)
+            val normalTex = addon.createCanvasTexture(ncnv)
+            normalTex.wrapS = TextureWrapping.ClampToEdgeWrapping
+            normalTex.wrapT = TextureWrapping.ClampToEdgeWrapping
 
-        val tex = addon.createCanvasTexture(cnv)
-        tex.wrapS = TextureWrapping.ClampToEdgeWrapping
-        tex.wrapT = TextureWrapping.ClampToEdgeWrapping
-        return tex
+            onDone(albedoTex, normalTex)
+        })
+    }
+
+    /**
+     * Pre-renders "KLANGMOTÖR" into a soft-edged alpha mask the size of the
+     * normal map. Returns a DoubleArray where 1.0 = deep inside text, 0.0 = plain metal.
+     * The gradient of this field is used to carve engraving bevels into the plate.
+     */
+    private fun buildEngraveMask(width: Int, height: Int): DoubleArray {
+        val cnv = document.createElement("canvas") as HTMLCanvasElement
+        cnv.width = width
+        cnv.height = height
+        val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
+        tctx.clearRect(0.0, 0.0, width.toDouble(), height.toDouble())
+        // Narrow blur → sharp bevel walls → raised lettering with crisp edges.
+        // Clip so the blur doesn't bleed below the letter baseline — the bottom
+        // edge of the relief stays crisp instead of fading into the plate.
+        val fontSize = (height * 0.135).coerceAtLeast(48.0)
+        val textCy = height * 0.18
+        val textBottomY = textCy + fontSize / 2.0
+        tctx.save()
+        tctx.beginPath()
+        tctx.rect(0.0, 0.0, width.toDouble(), textBottomY)
+        tctx.clip()
+        tctx.asDynamic().filter = "blur(3px)"
+        // Same flat draw as the albedo map so the engraved relief and the
+        // painted text stay aligned.
+        drawTitleText(tctx, width, height, "white")
+        tctx.restore()
+
+        val img = tctx.getImageData(0.0, 0.0, width.toDouble(), height.toDouble())
+        val rgba = img.data.asDynamic()
+        val size = width * height
+        val mask = DoubleArray(size)
+        for (i in 0 until size) {
+            mask[i] = rgba[i * 4 + 3].unsafeCast<Int>() / 255.0
+        }
+        return mask
+    }
+
+    /**
+     * Generates the machined panel-grid normal map — near-black panels with
+     * sharp V-groove seams and per-panel micro-tilts that react crisply to
+     * the wandering light.
+     *
+     * The "KLANGMOTÖR" engraving lives on the separate title overlay plane —
+     * see [buildTitleOverlayMaps].
+     */
+    private fun generateMotorNormalMap(
+        addon: ThreeJsAddon,
+        width: Int,
+        height: Int,
+        onDone: (CanvasTexture) -> Unit,
+    ) {
+        val cnv = document.createElement("canvas") as HTMLCanvasElement
+        cnv.width = width
+        cnv.height = height
+        val g2d = cnv.getContext("2d") as CanvasRenderingContext2D
+        val imageData = g2d.createImageData(width.toDouble(), height.toDouble())
+        val data = imageData.data
+
+        val d = data.asDynamic()
+
+        // Machined panel grid — SHARP seams that catch the wandering light.
+        // Each seam is a V-groove: its two walls tilt in opposite directions,
+        // so one wall flares up while the other darkens as the light passes.
+        // Each panel additionally gets a tiny constant tilt of its own, so
+        // adjacent faces take the light differently and even the flat faces
+        // show a crisp step at the seam.
+        val seamHalf = 3.0
+        val bevel = 0.55
+
+        runChunked(height, { pyFrom, pyTo ->
+        for (py in pyFrom until pyTo) {
+            for (px in 0 until width) {
+                val idx = (py * width + px) * 4
+
+                val col = (px / panelCell).toInt()
+                val row = (py / panelCell).toInt()
+                val u = px - col * panelCell
+                val v = py - row * panelCell
+
+                // Per-panel constant tilt
+                val tiltX = (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
+                val tiltY = (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
+
+                // V-groove seams along the grid lines
+                val seamNx = when {
+                    u < seamHalf -> -bevel * (1.0 - u / seamHalf)
+                    u > panelCell - seamHalf -> bevel * (1.0 - (panelCell - u) / seamHalf)
+                    else -> 0.0
+                }
+                val seamNy = when {
+                    v < seamHalf -> -bevel * (1.0 - v / seamHalf)
+                    v > panelCell - seamHalf -> bevel * (1.0 - (panelCell - v) / seamHalf)
+                    else -> 0.0
+                }
+
+                // Patchy fine grain — calm and busier regions instead of static.
+                val patchAmp = hashCell(px / 24 + 101, py / 24 + 53)
+                val grainScale = 0.006 + patchAmp * 0.045
+                val grainX = grainNoise.noise(px * 0.18, py * 0.18) * grainScale * 0.1
+                val grainY = grainNoise.noise(px * 0.18 + 113.7, py * 0.18 - 91.3) * grainScale * 0.1
+
+                val nx = tiltX + seamNx + grainX
+                val ny = tiltY + seamNy + grainY
+                val nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
+
+                d[idx] = n2c(nx)
+                d[idx + 1] = n2c(-ny) // negate Y: canvas Y-down → WebGL Y-up
+                d[idx + 2] = n2c(nz)
+                d[idx + 3] = 255
+            }
+        }
+        }, onDone = {
+            g2d.putImageData(imageData, 0.0, 0.0)
+
+            val tex = addon.createCanvasTexture(cnv)
+            tex.wrapS = TextureWrapping.ClampToEdgeWrapping
+            tex.wrapT = TextureWrapping.ClampToEdgeWrapping
+            onDone(tex)
+        })
     }
 }

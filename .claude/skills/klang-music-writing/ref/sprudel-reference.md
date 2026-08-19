@@ -353,16 +353,16 @@ All filters accept pattern values and have envelope variants (`lpenv`, `lpadsr`,
 |------------------|-----------------------|----------------------------|--------------------------------------------------------------|
 | `lpf(freq)`      | `cutoff`, `ctf`, `lp` | Lowpass filter cutoff (Hz) | `note("c3").s("saw").lpf(800)`                               |
 | `resonance(q)`   | `lpq`, `res`          | Lowpass resonance/Q        | `note("c3").lpf(400).resonance(5)`                           |
-| `lpenv(depth)`   | `lpe`                 | Lowpass envelope depth     | `note("c3").lpf(200).lpenv(3000)`                            |
-| `lpadsr(params)` |                       | LP envelope ADSR           | `note("c3").lpf(200).lpenv(3000).lpadsr("0.01:0.3:0.5:0.5")` |
+| `lpenv(depth)`   | `lpe`                 | LP env depth (ratio of cutoff, NOT Hz — single digits sweep far) | `note("c3").lpf(200).lpenv(3)`                     |
+| `lpadsr(params)` |                       | LP envelope ADSR           | `note("c3").lpf(200).lpenv(3).lpadsr("0.01:0.3:0.5:0.5")`    |
 | `hpf(freq)`      | `hcutoff`, `hp`       | Highpass filter cutoff     | `s("bd").hpf(200)`                                           |
 | `hresonance(q)`  | `hpq`, `hres`         | Highpass resonance         | `s("bd").hpf(200).hresonance(2)`                             |
-| `hpenv(depth)`   | `hpe`                 | Highpass envelope depth    | `note("c3").hpf(100).hpenv(1000)`                            |
-| `hpadsr(params)` |                       | HP envelope ADSR           | `note("c3").hpf(100).hpenv(1000).hpadsr("0.01:0.2:0.3:0.5")` |
+| `hpenv(depth)`   | `hpe`                 | HP env depth (ratio, NOT Hz) | `note("c3").hpf(100).hpenv(3)`                               |
+| `hpadsr(params)` |                       | HP envelope ADSR           | `note("c3").hpf(100).hpenv(3).hpadsr("0.01:0.2:0.3:0.5")`    |
 | `bandf(freq)`    | `bpf`, `bp`           | Bandpass center freq       | `s("sd").bandf(1000)`                                        |
 | `bandq(q)`       | `bpq`                 | Bandpass Q                 | `s("sd").bandf(1000).bandq(5)`                               |
-| `bpenv(depth)`   | `bpe`                 | Bandpass envelope depth    | `note("c3").bpf(200).bpenv(4000)`                            |
-| `bpadsr(params)` |                       | BP envelope ADSR           | `note("c3").bpf(200).bpenv(4000).bpadsr("0.01:0.3:0.5:0.5")` |
+| `bpenv(depth)`   | `bpe`                 | BP env depth (ratio, NOT Hz) | `note("c3").bpf(200).bpenv(4)`                               |
+| `bpadsr(params)` |                       | BP envelope ADSR           | `note("c3").bpf(200).bpenv(4).bpadsr("0.01:0.3:0.5:0.5")`    |
 | `notchf(freq)`   |                       | Notch (band-reject) freq   | `s("sd").notchf(1000)`                                       |
 | `notchq(q)`      | `nresonance`          | Notch Q                    | `s("sd").notchf(1000).notchq(2)`                             |
 

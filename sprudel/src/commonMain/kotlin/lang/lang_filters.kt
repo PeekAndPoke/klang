@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -2083,14 +2083,14 @@ fun PatternMapperFn.lpenv(depth: PatternLike? = null, callInfo: CallInfo? = null
  * Alias for [lpenv]. Sets the LPF envelope depth.
  *
  * ```KlangScript(Playable)
- * note("c4").lpf(200).lpe(4000)   // alias for lpenv()
+ * note("c4").lpf(200).lpe(4.0)   // alias for lpenv()
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").apply(lpf(200).lpe(4000))   // chained PatternMapperFn
+ * note("c4").apply(lpf(200).lpe(4.0))   // chained PatternMapperFn
  * ```
  *
- * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth SprudelLpEnvSequenceEditor
  * @alias lpenv
@@ -2530,14 +2530,14 @@ fun PatternMapperFn.hpenv(depth: PatternLike? = null, callInfo: CallInfo? = null
  * Alias for [hpenv]. Sets the HPF envelope depth.
  *
  * ```KlangScript(Playable)
- * note("c4").hpf(200).hpe(3000)   // alias for hpenv()
+ * note("c4").hpf(200).hpe(3.0)   // alias for hpenv()
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").apply(hpf(200).hpe(3000))   // chained PatternMapperFn
+ * note("c4").apply(hpf(200).hpe(3.0))   // chained PatternMapperFn
  * ```
  *
- * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth SprudelHpEnvSequenceEditor
  * @alias hpenv
@@ -2984,7 +2984,7 @@ fun PatternMapperFn.bpenv(depth: PatternLike? = null, callInfo: CallInfo? = null
  * note("c4").apply(bandf(200).bpe(3000))   // chained PatternMapperFn
  * ```
  *
- * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the BPF envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth SprudelBpEnvSequenceEditor
  * @alias bpenv

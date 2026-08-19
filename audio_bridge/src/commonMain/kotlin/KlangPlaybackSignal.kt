@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -47,6 +47,14 @@ sealed class KlangPlaybackSignal {
      * Emitted when playback has stopped.
      */
     data object PlaybackStopped : KlangPlaybackSignal()
+
+    /**
+     * Emitted when a live update replaces the running pattern, BEFORE the new
+     * pattern's [VoicesScheduled] signals arrive. UI surfaces use it to cancel
+     * highlights already scheduled ahead for the old pattern — the engine drops
+     * those voices at the update cutoff, so their highlights must die with them.
+     */
+    data object PatternUpdated : KlangPlaybackSignal()
 
     /**
      * Emitted when a full cycle has been completed.

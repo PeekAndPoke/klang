@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.ultra.common.toFixed
+import kotlinx.css.Color
 import kotlinx.css.LinearDimension
 import kotlinx.html.Tag
 import kotlin.math.round
@@ -14,8 +15,12 @@ import kotlin.math.round
 fun Tag.roundCylindersGauge(
     value: Double?,
     size: LinearDimension,
+    glowColor: Color? = null,
+    glowIntensity: Double = 0.5,
 ) = RoundGauge(
     size = size,
+    glowColor = glowColor,
+    glowIntensity = glowIntensity,
     value = { value ?: 0.0 },
     display = { if (value == null) "-" else round(it).toInt().toString() },
     title = "Active Cylinders",
@@ -28,8 +33,12 @@ fun Tag.roundCylindersGauge(
 fun Tag.renderMotorHeatGauge(
     value: Double?,
     size: LinearDimension,
+    glowColor: Color? = null,
+    glowIntensity: Double = 0.5,
 ) = RoundGauge(
     size = size,
+    glowColor = glowColor,
+    glowIntensity = glowIntensity,
     value = { if (value != null) 1.0 - value else 0.0 },
     display = { if (value == null) "-.--" else it.toFixed(2) },
     title = "Motör Heat",
@@ -42,8 +51,12 @@ fun Tag.renderMotorHeatGauge(
 fun Tag.activeVoicesGauge(
     value: Int?,
     size: LinearDimension,
+    glowColor: Color? = null,
+    glowIntensity: Double = 0.5,
 ) = RoundGauge(
     size = size,
+    glowColor = glowColor,
+    glowIntensity = glowIntensity,
     value = { value?.toDouble() ?: 0.0 },
     display = {
         if (value == null) "--" else round(it).toInt().toString().padStart(2, '0')

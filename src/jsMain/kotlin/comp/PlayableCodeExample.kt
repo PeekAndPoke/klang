@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -113,7 +113,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     key = "controlBarItems"
 
                     // Play / Update button
-                    noui.item {
+                    noui.middle.aligned.item {
                         if (!state.isPlaying) {
                             ui.small.circular.white.button {
                                 onClick { ctrl.play() }
@@ -135,7 +135,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     }
 
                     // Stop button
-                    noui.item {
+                    noui.middle.aligned.item {
                         ui.small.circular.icon.givenNot(state.isPlaying) { disabled }.button {
                             onClick { ctrl.stop() }
                             icon.black.stop()
@@ -143,7 +143,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     }
 
                     // Reset button (only enabled if modified from original)
-                    noui.item {
+                    noui.middle.aligned.item {
                         ui.small.circular.givenNot(isModifiedFromOriginal) { disabled }.button {
                             onClick {
                                 ctrl.stop()
@@ -155,8 +155,21 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         }
                     }
 
+                    // Cycle counter
+                    noui.middle.aligned.item {
+                        css {
+                            alignSelf = Align.center
+                            color = Color.grey
+                        }
+                        LcdDisplay(
+                            value = state.currentCycle,
+                            digits = 3,
+                            dim = !state.isPlaying,
+                        )
+                    }
+
                     // RPM field
-                    noui.item {
+                    noui.middle.aligned.item {
                         css { width = 150.px }
                         UiInputField(state.rpm, { ctrl.setRpm(it) }) {
                             step(0.5)
@@ -168,7 +181,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     }
 
                     // Highlight-per-event field
-                    noui.item {
+                    noui.middle.aligned.item {
                         css { width = 120.px }
                         UiInputField(highlightPerEvent, { highlightPerEvent = it }) {
                             step(1)
@@ -180,20 +193,6 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                                 }
                             }
                         }
-                    }
-
-                    // Cycle counter
-                    noui.item {
-                        css {
-                            alignSelf = Align.center
-                            color = Color.grey
-                            height = 32.px
-                        }
-                        LcdDisplay(
-                            value = state.currentCycle,
-                            digits = 3,
-                            dim = !state.isPlaying,
-                        )
                     }
                 }
             }

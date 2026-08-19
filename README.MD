@@ -2,13 +2,13 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/peekandpoke/klang/badge?s=a4aca92dba91c2faa10e953058445a301b2191d8)](https://www.codefactor.io/repository/github/peekandpoke/klang)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-# Klang Audio Motör
+# Klangmotör
 
 Ein Klang-Generator | A Sound-Generator
 
-This is the home of the Klang Audio Motör, a Kotlin multiplatform realtime audio generatör.
+This is the home of the Klangmotör, a Kotlin multiplatform realtime audio generatör.
 
-![Klang Audio Motör](docs/media/klang-motör-02.png)
+![Klangmotör](docs/media/klang-motör-02.png)
 
 Currently supported platforms:
 
@@ -21,7 +21,7 @@ Currently supported live coding frameworks:
 
 # License
 
-Klang Audio Motör is free software, licensed under the **GNU Affero General Public License v3**.
+Klangmotör is free software, licensed under the **GNU Affero General Public License v3**.
 See [LICENSE](LICENSE) for the full terms.
 
 # Credits
@@ -31,7 +31,7 @@ See [CREDITS.MD](CREDITS.MD) for the full list.
 
 # Authors
 
-Copyright (C) 2025-2026 The Klang Audio Motör Authors.
+Copyright (C) 2025-2026 The Klangmotör Authors.
 See [AUTHORS.MD](AUTHORS.MD) for the list of copyright holders.
 
 # Pre-Alpha-Demo

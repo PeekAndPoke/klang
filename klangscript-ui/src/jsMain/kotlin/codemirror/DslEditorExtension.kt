@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -251,9 +251,6 @@ fun dslEditorExtension(
     var badgesHideTimer: dynamic = null
     var badgesShowTimer: dynamic = null
 
-    /** The mouse X when the user first hovered the current param (for damped tracking). */
-    var badgeInitialMouseX = 0.0
-
     fun cancelBadgesShow() {
         if (badgesShowTimer != null) window.clearTimeout(badgesShowTimer.unsafeCast<Int>())
         badgesShowTimer = null
@@ -311,9 +308,9 @@ fun dslEditorExtension(
         }
 
         val container = getOrCreateBadgeContainer(view)
-        // Dampen horizontal tracking: move at 50% of mouse offset from initial hover position
-        val dampedX = badgeInitialMouseX + (mouseX - badgeInitialMouseX) * 0.5
-        container.asDynamic().style.left = "${dampedX}px"
+        // Appears centred on the mouse X at show time, then stays put —
+        // deliberately does NOT track the mouse afterwards.
+        container.asDynamic().style.left = "${mouseX}px"
         container.asDynamic().style.top = "${rect.top - 26}px"
         container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
@@ -416,14 +413,21 @@ fun dslEditorExtension(
                 val visMidY = (visTop + visBottom) / 2.0
 
                 val pad = 8.0
+                // The popup's glow (box-shadow 0 0 8px) is not part of its measured
+                // box, so the bottom edge needs extra clearance or the glow (plus
+                // rounding) hangs past the viewport edge.
+                val bottomPad = 20.0
+                // NOTE kraft semantics: Top* = the popup extends UP from the anchor,
+                // Bottom* = it extends DOWN. Getting these backwards pushes the
+                // popup's bottom outside the viewport.
                 val (anchor, positioning) = if (mouseY < visMidY) {
-                    // Mouse in top half → show popup at bottom-right of visible editor
-                    Vector2D(x = visRight - pad, y = visBottom - pad) to
-                            PopupsManager.Positioning.BottomRight
-                } else {
-                    // Mouse in bottom half → show popup at top-right of visible editor
-                    Vector2D(x = visRight - pad, y = visTop + pad) to
+                    // Mouse in top half → popup sits in the bottom-right corner, growing up
+                    Vector2D(x = visRight - pad, y = visBottom - bottomPad) to
                             PopupsManager.Positioning.TopRight
+                } else {
+                    // Mouse in bottom half → popup sits in the top-right corner, growing down
+                    Vector2D(x = visRight - pad, y = visTop + pad) to
+                            PopupsManager.Positioning.BottomRight
                 }
                 hoverPopup.scheduleShow(doc = doc, anchor = anchor, positioning = positioning, content = hoverContent)
             } else {
@@ -441,13 +445,11 @@ fun dslEditorExtension(
                 if (argInfo != null && argInfo.tools.isNotEmpty()) {
                     cancelBadgesClose()
                     val newKey = "${argInfo.argFrom}:${argInfo.tools.joinToString(",") { it.first }}"
-                    if (newKey == badgeCacheKey) {
-                        // Badge already visible for this arg — just update position
-                        showBadges(argInfo, view, mouseX)
-                    } else {
-                        // New arg — record initial mouse X and schedule badge after 500ms
+                    if (newKey != badgeCacheKey) {
+                        // New arg — schedule the badge. The timer re-arms on every
+                        // move, so the mouseX that fires is where the mouse came to
+                        // rest; once shown the badge never repositions.
                         cancelBadgesShow()
-                        badgeInitialMouseX = mouseX
                         badgesShowTimer = window.setTimeout({
                             badgesShowTimer = null
                             showBadges(argInfo, view, mouseX)

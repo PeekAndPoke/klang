@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -44,7 +44,7 @@ class TourPage(ctx: NoProps) : PureComponent(ctx) {
                     borderWidth = 0.px
                 }
 
-                ui.header H1 { +"Klang Audio Motör - Tour" }
+                ui.header H1 { +"Klangmotör - Tour" }
 
                 ui.inverted.cards {
                     ui.card {

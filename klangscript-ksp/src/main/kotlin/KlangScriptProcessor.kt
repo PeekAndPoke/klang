@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -1657,8 +1657,9 @@ class KlangScriptProcessor(
      * Build the Kotlin source for a `List<ParamSpec>` covering [scriptParams].
      *
      * For optional params, attempts to extract the Kotlin default expression via
-     * [DefaultValueExtractor] and pastes it into a thunk if the text looks safe
-     * to embed (no `this`/`super` references). Unsafe defaults leave `default = null`;
+     * [DefaultValueExtractor] and pastes it into a thunk if [SafeDefaultLiteral]
+     * accepts it (pure literals only — numbers, plain strings without template
+     * splices, booleans, null, chars). Unsafe defaults leave `default = null`;
      * the runtime then rejects named-call omissions for those slots.
      *
      * Note on type aliases: [resolveKotlinType] follows aliases through to the

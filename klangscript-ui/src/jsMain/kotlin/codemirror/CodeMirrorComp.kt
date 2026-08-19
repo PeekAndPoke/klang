@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -29,11 +29,14 @@ import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.OnChange
+import kotlinx.browser.window
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.id
+import org.w3c.dom.Element
 import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.events.Event
 
 /** Backward-compatible alias. */
 @Suppress("unused")
@@ -91,6 +94,9 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
     val editorView: EditorView? get() = editor
 
     private val theme = CodeMirrorTheme()
+
+    /** (from, message) of the current diagnostics — lets the lint-panel click hook find the error position. */
+    private var lastDiagnostics: List<Pair<Int, String>> = emptyList()
 
     /** Import-aware documentation context — owns hover docs + completion data. */
     private val docContext = EditorDocContext(
@@ -172,6 +178,30 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         } catch (e: Throwable) {
             console.error("Error initializing CodeMirror:", e)
         }
+
+        // Clicking an entry in the lint panel places the cursor at the START of
+        // the error range and focuses the editor. The panel's own click handler
+        // selects the whole range and keeps focus in its list — the timeout runs
+        // after it so our cursor/focus wins.
+        val panelClickListener: (Event) -> Unit = { event ->
+            val diagEl = (event.target as? Element)?.closest(".cm-panel-lint .cm-diagnostic")
+            if (diagEl != null) {
+                val message = diagEl.querySelector(".cm-diagnosticText")?.textContent
+                val from = lastDiagnostics.firstOrNull { it.second == message }?.first
+                if (from != null) {
+                    window.setTimeout({
+                        editor?.let { v ->
+                            v.dispatch(jsObject<dynamic> {
+                                this.selection = jsObject<dynamic> { this.anchor = from }
+                                this.scrollIntoView = true
+                            })
+                            v.asDynamic().focus()
+                        }
+                    }, 0)
+                }
+            }
+        }
+        container.addEventListener("click", panelClickListener)
     }
 
     /** Builds DSL-aware extensions (hover docs, code completion) when libraries are configured. */
@@ -268,6 +298,10 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                     null
                 }
             }.toTypedArray()
+
+            lastDiagnostics = diagnostics.map { d ->
+                d.asDynamic().from.unsafeCast<Int>() to d.asDynamic().message.unsafeCast<String>()
+            }
 
             val transactionSpec = setDiagnostics(view.state, diagnostics)
             view.dispatch(transactionSpec.unsafeCast<dynamic>())

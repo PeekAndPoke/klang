@@ -225,6 +225,20 @@ tasks {
         dependsOn("jvmMainClasses")
     }
 
+    // Sample mirror: downloads all sample sets into the sibling static-hosting checkout.
+    // Usage: ./gradlew runSampleMirror                     (mirror into ../peekandpoke.github.io/klang)
+    //        ./gradlew runSampleMirror --args="--verify"   (offline check: manifest entries vs files on disk)
+    // Re-run until the report shows zero failures, then upload via console/deploy-samples-finzo.sh
+    register<JavaExec>("runSampleMirror") {
+        group = "application"
+        description = "Mirror all sample sets into ../peekandpoke.github.io/klang (see SampleMirrorMain)"
+        mainClass.set("io.peekandpoke.klang.SampleMirrorMainKt")
+
+        val jvmMain = kotlin.jvm().compilations["main"]
+        classpath = jvmMain.runtimeDependencyFiles + jvmMain.output.allOutputs
+        dependsOn("jvmMainClasses")
+    }
+
     // Song-level CPU benchmark: compiles real song code, renders offline, times per-block.
     // Usage: ./gradlew runSongBenchmark            (all suites)
     //        ./gradlew runSongBenchmark --args=ladders

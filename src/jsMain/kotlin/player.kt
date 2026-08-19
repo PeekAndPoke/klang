@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -21,6 +21,7 @@ import io.peekandpoke.kraft.utils.async
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.browser.window
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 
@@ -89,7 +90,16 @@ object Player {
 
     // We force downloading the sample immediately (better user experience later)
     private val samplesDeferred: Deferred<Samples> = async {
-        Samples.create(catalogue = SampleCatalogue.default)
+        // Runtime override for the sample host (same idiom as window.__APP_VERSION__, see VersionController):
+        // set `window.__KLANG_SAMPLE_BASE__ = "http://localhost:8000"` to load from a local mirror.
+        val override = window.asDynamic().__KLANG_SAMPLE_BASE__ as? String
+
+        val catalogue = when {
+            override.isNullOrBlank() -> SampleCatalogue.default
+            else -> SampleCatalogue.mirrored(override)
+        }
+
+        Samples.create(catalogue = catalogue)
     }.also { it.start() }
 
     init {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -11,65 +11,65 @@ class SampleCatalogue(
     companion object {
         fun of(vararg coordinates: Source) = SampleCatalogue(coordinates.toList())
 
-        // DRUMS ///////////////////////////////////////////////////////////////////////////////////////////////////////
+        /**
+         * Base url of the self-hosted sample mirror.
+         *
+         * Built by `./gradlew runSampleMirror` (see SampleMirrorMain for the upstream sources),
+         * uploaded via console/deploy-samples-finzo.sh.
+         */
+        const val MIRROR_BASE = "https://klang-assets.finzo.de/samples"
 
-        val strudelDefaultDrums = Bundle(
-            name = "Strudel Default Drums",
-            soundsUri = "https://raw.githubusercontent.com/tidalcycles/uzu-drumkit/main/strudel.json"
+        /**
+         * The sample sets on the mirror host. Each lives at `<base>/<dir>/index.json`.
+         *
+         * Mirrored manifests carry no "_base" — entries resolve relative to the manifest url
+         * (see SampleIndexLoader's fallback base). The GM soundfont index is relocatable the
+         * same way and always lives at `<base>/felixroos/gm/index.json`.
+         */
+        val mirrorSets: List<MirrorSet> = listOf(
+            // drums
+            MirrorSet(name = "Strudel Default Drums", dir = "uzu-drumkit"),
+            MirrorSet(name = "Tidal Drum Machine", dir = "tidal-drum-machines", hasAlias = true),
+            MirrorSet(name = "Dirt Samples", dir = "dirt-samples"),
+            MirrorSet(name = "Vcsl Samples", dir = "vcsl"),
+            MirrorSet(name = "mridangam", dir = "mridangam"),
+            // instruments
+            MirrorSet(name = "Piano", dir = "piano"),
         )
 
-        val tidalDrumMachine = Bundle(
-            name = "Tidal Drum Machine",
-            soundsUri = "https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json",
-            aliasUris = listOf(
-                "https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json"
-            ),
-        )
+        /** All sample sets served from one self-hosted [base] url */
+        fun mirrored(base: String): SampleCatalogue {
+            val b = base.trimEnd('/')
 
-        val doughSample = Bundle(
-            name = "Dough Samples",
-            soundsUri = "https://raw.githubusercontent.com/felixroos/dough-samples/main/Dirt-Samples.json",
-        )
+            return SampleCatalogue(
+                sources = mirrorSets.map { set ->
+                    Bundle(
+                        name = set.name,
+                        soundsUri = "$b/${set.dir}/index.json",
+                        aliasUris = when {
+                            set.hasAlias -> listOf("$b/${set.dir}/alias.json")
+                            else -> emptyList()
+                        },
+                    )
+                } + Soundfont(
+                    name = "GM - Felix Roos",
+                    indexUrl = "$b/felixroos/gm/index.json",
+                ),
+            )
+        }
 
-        val vcslSamples = Bundle(
-            name = "Vcsl Samples",
-            soundsUri = "https://raw.githubusercontent.com/felixroos/dough-samples/main/vcsl.json",
-        )
-
-        val mridangam = Bundle(
-            name = "mridangam",
-            soundsUri = "https://raw.githubusercontent.com/felixroos/dough-samples/main/mridangam.json",
-        )
-
-        // INSTRUMENTS /////////////////////////////////////////////////////////////////////////////////////////////////
-
-        val piano = Bundle(
-            name = "Piano",
-            soundsUri = "https://raw.githubusercontent.com/felixroos/dough-samples/main/piano.json",
-        )
-
-        // SOUNDFONTS //////////////////////////////////////////////////////////////////////////////////////////////////
-
-        val gmSoundFont = Soundfont(
-            name = "GM - Felix Roos",
-            indexUrl = "https://peekandpoke.github.io/klang/felixroos/gm/index.json",
-        )
-
-        val default = SampleCatalogue(
-            sources = listOf(
-                // drums
-                strudelDefaultDrums,
-                tidalDrumMachine,
-                doughSample,
-                vcslSamples,
-                mridangam,
-                // instruments
-                piano,
-                // soundfonts
-                gmSoundFont,
-            ),
-        )
+        val default = mirrored(MIRROR_BASE)
     }
+
+    /** One sample set on the mirror host */
+    data class MirrorSet(
+        /** Name of the set ... not used for anything just informal */
+        val name: String,
+        /** Directory of the set on the mirror host */
+        val dir: String,
+        /** Whether the set has an `alias.json` next to its `index.json` */
+        val hasAlias: Boolean = false,
+    )
 
     sealed interface Source {
         /** Name of the bundle ... not used for anything just informal */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -20,10 +20,9 @@ import io.peekandpoke.klang.comp.RoundGauge
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.sprudel.lang.adsr
-import io.peekandpoke.klang.sprudel.lang.compressor
 import io.peekandpoke.klang.sprudel.lang.fast
-import io.peekandpoke.klang.sprudel.lang.hpf
-import io.peekandpoke.klang.sprudel.lang.lpf
+import io.peekandpoke.klang.sprudel.lang.gain
+import io.peekandpoke.klang.sprudel.lang.rlp
 import io.peekandpoke.klang.sprudel.lang.room
 import io.peekandpoke.klang.sprudel.lang.rsize
 import io.peekandpoke.klang.sprudel.lang.sound
@@ -251,21 +250,36 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         val start = Kronos.systemUtc.millisNow()
         val opacityEase = Ease.In.quad.timed(previous.getOpacity(), 1.0, durationMs.milliseconds)
 
+        // The boot screen covers BOTH heavy jobs: loading the audio worklet and
+        // building the Motör background (row-chunked so this screen stays
+        // animated). We advance only when both are done — prepare() also fires
+        // its callback on a failed WebGL setup, so this cannot hang.
+        var workletReady = false
+        var backgroundReady = false
+
         init {
             launch {
-                Player.ensure().await()
+                try {
+                    Player.ensure().await()
+                } catch (e: Throwable) {
+                    // A failed worklet must not wedge the boot screen — proceed;
+                    // the jingle/navigation paths tolerate a missing player.
+                    console.error("Audio worklet failed to load", e)
+                }
+                workletReady = true
             }
+            motorBackgroundRef { it.prepare { backgroundReady = true } }
         }
 
         private fun elapsedMs() = Kronos.systemUtc.millisNow() - start
 
         override fun update() {
-            if (elapsedMs() >= durationMs) {
+            if (elapsedMs() >= durationMs && workletReady && backgroundReady) {
                 state = StateBenchmarking()
             }
         }
 
-        override fun getOpacity(): Double = opacityEase((elapsedMs()) / durationMs)
+        override fun getOpacity(): Double = opacityEase((elapsedMs() / durationMs).coerceAtMost(1.0))
 
         override fun gotoNext() {
             // noop
@@ -325,15 +339,22 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         override fun gotoNext() {
             val song = sound("<[sd sd sd sd  [bd, cr] ~ ~ ~] ~>").fast(1)
+                .gain(0.7)
                 .adsr("0.005:0.2:0.3:10.0")
-                .room(0.1).rsize(8.0)
-                .hpf(80).lpf("2300:1:1.5")
-                .compressor("-6:2:10:0.02:0.25")
+                .room(0.2).rsize(3.0).rlp(5000)
 
             val playback = Player.get()?.playOnce(song)
 
+            if (playback == null) {
+                // No player (worklet failed?) — skip the jingle but never let
+                // the click dead-end: navigate directly.
+                console.log("No player available, navigating without jingle")
+                router.navToUri(Nav.editSongCode(BuiltInSongs.songs.first().id))
+                return
+            }
+
             // Wait for the song to finish before navigating
-            playback?.signals?.invoke { signal ->
+            playback.signals.invoke { signal ->
                 if (signal is PlaybackStopped) {
                     launch {
                         kotlinx.coroutines.delay(500.milliseconds)
@@ -343,7 +364,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            playback?.start(KlangCyclicPlayback.Options(rpm = 60.0))
+            playback.start(KlangCyclicPlayback.Options(rpm = 60.0))
         }
 
         fun getResult() = result
@@ -382,7 +403,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        JoinedPageTitle { listOf("KLANG", "AUDIO", "MOTÖR") }
+        JoinedPageTitle { listOf("KLANGMOTÖR") }
 
         div {
             key = "start-page"
@@ -406,7 +427,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    // Subtle build-version stamp in the bottom-left corner. Renders nothing until loaded.
+    // Subtle build-version stamp at the bottom center. Renders nothing until loaded.
     private fun DIV.renderVersionStamp() {
         val info = versionInfo
         if (!info.isAvailable) return
@@ -416,20 +437,22 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             css {
                 position = Position.absolute
                 bottom = 8.px
-                left = 12.px
+                left = 50.pct
+                put("transform", "translateX(-50%)")
                 zIndex = 5
                 pointerEvents = PointerEvents.none
                 whiteSpace = WhiteSpace.nowrap
                 fontFamily = "monospace"
                 fontSize = 11.px
-                color = Color.white
-                opacity = 0.35
+                // Same tone as the engraved KLANGMOTÖR title, full opacity for
+                // readability
+                color = Color("#b8b8b8")
             }
             // e.g. "v0.1.0 · 5c7d2119"; full detail (branch, date) on hover via title
             title = "${info.project} ${info.version} · ${info.gitBranch} · ${info.gitRev}" +
                     (info.date?.let { " · $it" } ?: "")
 
-            +"v${info.version} · ${info.gitRev}"
+            +"v${info.version} · ${info.gitRev} · pre-alpha · is glitchd glei"
         }
     }
 
@@ -485,7 +508,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 key = "stats"
                 css {
                     marginBottom = 6.px
-                    opacity = 1.0
                     // Stack above the absolutely-positioned spectrum visualizer
                     position = Position.relative
                     zIndex = 1
@@ -547,40 +569,30 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun DIV.renderStateBenchmarking() {
-        renderHeader()
+        renderTitleSpacer()
         renderFlexGrowContent {
             renderBenchmarkingState()
         }
     }
 
     private fun DIV.renderStateBenchmarkComplete(completeState: StateBenchmarkComplete) {
-        renderHeader()
+        renderTitleSpacer()
         renderFlexGrowContent {
             renderBenchmarkCompleteState(completeState)
         }
         renderVisualizers()
     }
 
-    private fun DIV.renderHeader() {
+    /**
+     * Spacer where the DOM title used to sit — "KLANGMOTÖR" is engraved into
+     * the MotorBackground plate itself (via its normal map), not rendered as
+     * text. The pre-alpha tag lives in [renderVersionStamp].
+     */
+    private fun DIV.renderTitleSpacer() {
         div {
-            key = "title"
-
+            key = "title-spacer"
             css {
                 marginBottom = 32.px
-            }
-
-            // Title "KLANG AUDIO MOTÖR" is engraved into the MotorBackground plate
-            // itself — rendered via the normal map, not as DOM text.
-
-            // Pre-alpha sub-headline
-            div {
-                css {
-                    fontSize = 1.4.em
-                    color = Color.grey
-                    opacity = currentOpacity
-                    paddingTop = 8.px
-                }
-                +"pre-alpha | is glitchd glei"
             }
         }
     }
@@ -601,7 +613,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     state.gotoNext()
                 },
                 size = 75.px,
-                backgroundColor = Color(laf.appBackground),
+                backgroundColor = Color(laf.menuBackground),
             )
         }
     }

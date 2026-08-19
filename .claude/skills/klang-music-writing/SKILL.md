@@ -13,6 +13,7 @@ Trigger: "write music", "create an instrument", "compose", "make a beat", "klang
 | Writing patterns / composing music   | `ref/klangscript-basics.md` + `ref/sprudel-reference.md` |
 | Designing instruments / sound design | `ref/klangscript-basics.md` + `ref/ignitor-reference.md` |
 | Full track with custom instruments   | All three ref files                                      |
+| Judging / reviewing rendered audio   | `ref/production-quality-rubric.md`                       |
 
 ## Notes
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -252,7 +252,13 @@ class SampleIndexLoader(
             run {
                 val loaded = loader.download(bundle.soundsUri)?.decodeToString()
                 // Load the banks data
-                loaded?.let { parseSoundsFile(bundle.defaultPitchHz, it) }?.let { banks ->
+                loaded?.let {
+                    parseSoundsFile(
+                        defaultPitchHz = bundle.defaultPitchHz,
+                        jsonText = it,
+                        fallbackBase = bundle.soundsUri.substringBeforeLast('/', ""),
+                    )
+                }?.let { banks ->
                     // Merge all
                     banks.forEach { bank ->
                         val exising = collectedBanks[bank.key] ?: Samples.Bank(bank.key)
@@ -375,15 +381,23 @@ class SampleIndexLoader(
          * }
          *
          * TODO: what other kinds of shapes are there?
+         *
+         * Mirrored manifests (see SampleMirrorMain) carry no "_base" at all — their entries
+         * resolve relative to the manifest's own URL via [fallbackBase].
          */
-        private fun parseSoundsFile(defaultPitchHz: Double, jsonText: String): List<Samples.Bank> {
+        private fun parseSoundsFile(
+            defaultPitchHz: Double,
+            jsonText: String,
+            fallbackBase: String,
+        ): List<Samples.Bank> {
             val root = json.parseToJsonElement(jsonText)
             val obj = root as? JsonObject
                 ?: throw IllegalArgumentException("Sample map JSON must be an object")
 
-            // Get base url for sound files
+            // Get base url for sound files ... a manifest-level "_base" always wins
             val base = obj["_base"]?.jsonPrimitive?.contentOrNull
                 ?.trim()?.trimEnd('/')?.let { "$it/" }
+                ?: fallbackBase.takeIf { it.isNotBlank() }?.trimEnd('/')?.let { "$it/" }
                 ?: ""
 
             val banks = mutableMapOf<String, Samples.Bank>()

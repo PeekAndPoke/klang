@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -25,7 +25,7 @@ data class KlangLookAndFeel(
     // ── Surfaces ──────────────────────────────────────────────────────────────
 
     val appBackground: String = "#191C22",
-    val menuBackground: String = "#000000",
+    val menuBackground: String = "#12131c",
     val panelBackground: String = "#21252b",
     val cardBackground: String = "#2c313a",
     val overlayBackground: String = "#353a42",
@@ -40,6 +40,9 @@ data class KlangLookAndFeel(
     // ── Accent ────────────────────────────────────────────────────────────────
 
     val accent: String = "#528bff",
+
+    /** Desaturated, darker accent — for large surfaces (frames, glows, edge lights) where [accent] is too loud. */
+    val accentMuted: String = "#5c7cbc",
 
     // ── Gold — code highlights, links ─────────────────────────────────────────
 
@@ -77,6 +80,7 @@ data class KlangLookAndFeel(
                 textSecondary = v("--klang-text-secondary"),
                 textTertiary = v("--klang-text-tertiary"),
                 accent = v("--klang-accent"),
+                accentMuted = v("--klang-accent-muted"),
                 gold = v("--klang-gold"),
                 bronze = v("--klang-bronze"),
                 popupBackground = v("--klang-bg-popup"),

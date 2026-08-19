@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -47,6 +47,7 @@ fun Tag.RoundButton(
     disabled: Boolean = false,
     size: LinearDimension = 50.px,
     backgroundColor: Color? = null,
+    borderColor: Color? = null,
 ) = comp(
     RoundButton.Props(
         icon = icon,
@@ -56,6 +57,7 @@ fun Tag.RoundButton(
         disabled = disabled,
         size = size,
         backgroundColor = backgroundColor,
+        borderColor = borderColor,
     )
 ) {
     RoundButton(it)
@@ -71,6 +73,8 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
         val disabled: Boolean,
         val size: LinearDimension,
         val backgroundColor: Color?,
+        /** Ring color override — null keeps the shared `.gauge-ring` default */
+        val borderColor: Color?,
     )
 
     private var isHovered: Boolean by value(false)
@@ -95,9 +99,11 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                 onMouseLeave { isHovered = false }
             }
 
-            ui.basic.inverted.white.circular.icon.label {
+            ui.basic.inverted.white.circular.icon.label.with("gauge-ring") {
                 css {
-                    borderWidth = 1.8.px
+                    // Same ring as the round gauges (width here, color via .gauge-ring)
+                    borderWidth = 1.px
+                    props.borderColor?.let { put("border-color", "$it !important") }
                     width = props.size
                     height = props.size
                     props.backgroundColor?.let { bg ->
@@ -120,11 +126,13 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                         color = iconColor
                         put("padding", "0px !important")
                         put("transition", "filter 220ms ease, text-shadow 220ms ease")
-                        // Idle state reads as a dimmed ember; hover lifts to full
-                        // brightness with a wider glow so the button "lights up".
+                        // Idle state reads as a dimmed ember with NO glow; hover
+                        // turns the light on — the glow's blur animates from 0 on
+                        // the same 220ms ease as the icon brightness, so both
+                        // fade in together.
                         if (!isDisabled) {
                             put("filter", if (hovered) "brightness(1.0)" else "brightness(0.65)")
-                            val glowBlur = props.size * if (hovered) 0.32 else 0.25
+                            val glowBlur = if (hovered) props.size * 0.32 else 0.px
                             put("text-shadow", "0 0 $glowBlur")
                         }
                     }

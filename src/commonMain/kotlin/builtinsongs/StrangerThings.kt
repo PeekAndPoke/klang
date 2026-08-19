@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -15,9 +15,10 @@ internal val strangerThingsSong = Song(
     title = "Seltsamere Dinge",
     rpm = 33.0,
     icon = "film",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
+
+// Song status: WIP
 
 let wait = 16
 let keep = 32 * 6
@@ -36,9 +37,9 @@ stack(
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(2).s("supersaw").unison(15).spread(saw.range(0.05, 0.35).slow(16))
-    .gain(0.6).distort(0.7).postgain(0.12).adsr("0.008:3.0:0.5:0.1").lpadsr("0.008:5.0:0.2:0.1").clip(1.05)
-    .hpf(600).lpf(1400).lpe(perlin.range(2.5, 4.0).slow(8)).lpq(1.5).analog(15).body("violin").bodyMix(0.5)
+    .orbit(2).s("supersaw").unison(11).spread(saw.range(0.05, 0.35).slow(16))
+    .gain(0.6).distort(0.7).postgain(0.11).adsr("0.008:3.0:0.5:0.1").lpadsr("0.008:5.0:0.2:0.1").clip(1.05)
+    .hpf(800).lpf(1400).lpe(perlin.range(2.5, 4.0).slow(8)).lpq(1.5).analog(15).body("violin").bodyMix(0.5)
     .pan(0.5).superimpose(
       x => x.hpf(800).lpf(1500).lpq(5).bandf(notch).bandq(1.0).transpose(12).postgain(0.08).pan(0.3).superimpose(pan(0.7)),
       x => x.hpf(800).lpf(1500).lpq(5).bandf(notch).bandq(1.0).transpose(24).postgain(0.04).pan(0.1).superimpose(pan(0.9))
@@ -57,24 +58,25 @@ stack(
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))
-  , // Perc 2 ------------------------------------------------------------------------------------------------------------------
-  sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
-    .orbit(5).gain(0.5).pan(0.45).adsr("0.01:0.15:0.8:2.0").fast(2).degrade(0.1).lpf(7000).late(0.001)
-    .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
-  , // Perc 1 -----------------------------------------------------------------------------------------------------------------------
-  sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-    .orbit(6).gain(0.6).pan(0.55).adsr("0.017:0.3:0.5:1").degrade(0.01).hpf(80).lpf(7800)
-    .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
+  , // Drums ----------------------------------------------------------------------------------------------------------------------------------------- 
+  stack(
+    // Perc 1 ------------------------------------------------------------------------------------------------------------------
+    sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
+      .orbit(5).gain(0.5).pan(0.45).adsr("0.01:0.15:0.8:2.0").fast(2).degrade(0.1).lpf(7000).late(0.001)
+      .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
+    , // Perc 2 -----------------------------------------------------------------------------------------------------------------------
+    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
+      .orbit(6).gain(0.6).pan(0.55).adsr("0.017:0.3:0.5:1").degrade(0.01).hpf(80).lpf(7800)
+      .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
+  ).room(0.20).rsize(3.0).rlp(8000).compressor("-19:2:6:0.01:0.2")
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").legato(2)
     .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr("0.5:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(6)).bandq(sine.range(0.25, 5.0).slow(48).early(12))
   , // Master ------------------------------------------------------------------------------------------------------
   master(Master.of(
-    MasterFx.delay().wet(0.2).time(1/8 / 33).feedback(0.5),
-    MasterFx.reverb().wet(0.1).roomSize(10).roomFade(0.1).roomLp(12000),
+    MasterFx.reverb().wet(0.05).damp(0.5).roomSize(9),
     MasterFx.gain(1.5),
-    MasterFx.limiter(),
   ))
 )
 

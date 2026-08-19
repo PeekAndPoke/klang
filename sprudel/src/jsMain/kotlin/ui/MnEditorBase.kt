@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -23,7 +23,7 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.Stream
-import io.peekandpoke.ultra.streams.ops.filterIsInstance
+import io.peekandpoke.ultra.streams.ops.filter
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -152,12 +152,20 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         val stream = props.toolCtx.attrs[KlangUiToolContext.PlaybackVoiceEvents] ?: return@lazy null
         val base = props.toolCtx.attrs[KlangUiToolContext.BaseSourceLocation] ?: return@lazy null
         stream
-            .filterIsInstance<KlangPlaybackSignal.VoicesScheduled, KlangPlaybackSignal>()
+            .filter { signal ->
+                signal is KlangPlaybackSignal.VoicesScheduled ||
+                    signal is KlangPlaybackSignal.PatternUpdated ||
+                    signal is KlangPlaybackSignal.PlaybackStopped
+            }
             .map { signal ->
-                val voices = signal?.voices ?: return@map emptyList()
-                voices.mapNotNull { voice ->
-                    val range = voiceToSourceRange(voice, base, text) ?: return@mapNotNull null
-                    ResolvedVoiceHighlight(voice.startTime, voice.endTime, range)
+                when (signal) {
+                    is KlangPlaybackSignal.VoicesScheduled -> signal.voices.mapNotNull { voice ->
+                        val range = voiceToSourceRange(voice, base, text) ?: return@mapNotNull null
+                        ResolvedVoiceHighlight(voice.startTime, voice.endTime, range)
+                    }
+                    // Stop / live update: everything scheduled ahead is stale — the empty
+                    // list is the cancel marker (consumers clear their pending timers on it)
+                    else -> emptyList()
                 }
             }
     }
@@ -165,15 +173,41 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     /** Source ranges currently highlighted — used for the text input overlay and staff. */
     protected val highlightedRanges = mutableSetOf<IntRange>()
 
+    /** Pending highlight timers — each id removes itself when it fires; cleared wholesale on stop/update. */
+    private val highlightTimeouts = mutableSetOf<Int>()
+
+    private fun cancelPendingHighlights() {
+        highlightTimeouts.forEach { window.clearTimeout(it) }
+        highlightTimeouts.clear()
+        if (highlightedRanges.isNotEmpty()) {
+            highlightedRanges.clear()
+            triggerRedraw()
+        }
+    }
+
+    /** Schedules [action] and tracks the timer id; the id un-tracks itself once fired. */
+    private fun scheduleTracked(delayMs: Int, action: () -> Unit) {
+        var id = 0
+        id = window.setTimeout({
+            highlightTimeouts.remove(id)
+            action()
+        }, delayMs)
+        highlightTimeouts.add(id)
+    }
+
     private fun subscribeToHighlights() {
         resolvedHighlightStream?.subscribe { highlights ->
-            if (highlights.isEmpty()) return@subscribe
+            if (highlights.isEmpty()) {
+                // the cancel marker: stop or live update invalidated everything scheduled ahead
+                cancelPendingHighlights()
+                return@subscribe
+            }
             val now = Date.now()
             for (h in highlights) {
                 val startDelay = maxOf(1, (h.startTime * 1000.0 - now).toInt())
                 val endDelay = maxOf(1, (h.endTime * 1000.0 - now).toInt())
-                window.setTimeout({ if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }, startDelay)
-                window.setTimeout({ if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }, endDelay)
+                scheduleTracked(startDelay) { if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }
+                scheduleTracked(endDelay) { if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }
             }
         }
     }
@@ -186,7 +220,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
             }
             onUnmount {
                 document.removeEventListener("keydown", keydownListener)
-                highlightedRanges.clear()
+                cancelPendingHighlights()
             }
         }
     }

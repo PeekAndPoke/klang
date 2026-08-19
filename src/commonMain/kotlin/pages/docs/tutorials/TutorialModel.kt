@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -33,10 +33,93 @@ enum class TutorialTag(val label: String) {
     GettingStarted("Getting Started"),
 }
 
+/**
+ * Single source of truth for lesson titles. Prose in one lesson refers to another
+ * lesson by interpolating these constants — never by reading order ("last lesson",
+ * "next lesson" are banned and lint-enforced): readers browse lessons in any order,
+ * so every cross-reference must carry the lesson's name. Renaming a lesson here
+ * renames every reference to it.
+ */
+object Tut {
+    const val yourFirstBeat = "Your First Beat"
+    const val spaceAndRests = "Space and Rests"
+    const val firstNotes = "First Notes"
+    const val theFourWaveforms = "The Four Waveforms"
+    const val shapeOfANote = "The Shape of a Note"
+    const val subdivision = "Subdivision"
+    const val alternationAndRepetition = "Alternation and Repetition"
+    const val filters = "Filters"
+    const val theFilterEnvelope = "The Filter Envelope"
+    const val layers = "Layers"
+    const val chordsInOneStep = "Chords in One Step"
+    const val signalsMoveTheKnobs = "Signals Move the Knobs"
+    const val scalesAndMelodies = "Scales and Melodies"
+    const val theTransformToolkit = "The Transform Toolkit"
+    const val gates = "Gates"
+}
+
+/**
+ * A named, ordered sequence of lessons. A lesson can appear in any number of
+ * tracks; the braided main path is itself just a track. [buildsOn] declares the
+ * tracks whose vocabulary this one assumes — the per-track curriculum lint
+ * allows a lesson to use anything taught by a buildsOn track, by an earlier
+ * lesson in this track, or declared in the lesson's own previews.
+ */
+data class TutorialTrackDef(
+    val slug: String,
+    val title: String,
+    val description: String,
+    val lessons: List<Tutorial>,
+    val buildsOn: List<TutorialTrackDef> = emptyList(),
+)
+
+/**
+ * One content block inside a section. A section is an ordered list of blocks,
+ * so text, visuals, and code can interleave freely.
+ */
+sealed interface Block {
+    /**
+     * Prose rendered as plain paragraphs (\n\n-separated); callout labels open
+     * their own paragraph. Being migrated to [Markdown] — prefer Markdown for
+     * new sections; existing Text blocks get converted in a deliberate pass
+     * (their prose contains literal `*`, `<>`, `[]` that markdown would mangle
+     * unescaped).
+     */
+    data class Text(val text: String) : Block
+
+    /**
+     * Prose rendered as markdown (via MarkdownDisplay / marked). Paragraphs
+     * are \n\n-separated as in [Text]; bullets, **bold**, and `inline code`
+     * are available. Callout labels ("Try it:", "Listen for:") stay PLAIN at
+     * paragraph starts — the curriculum lint anchors on them. Escape or
+     * backtick literal mini-notation (`*`, `<>`, `[]`) so marked cannot eat it.
+     */
+    data class Markdown(val markdown: String) : Block
+
+    /** A runnable (or, for other langs, displayed) code example. */
+    data class Code(
+        val lang: String = "KlangScript",
+        val code: String,
+    ) : Block
+
+    /**
+     * A schematic, parameterized diagram — rendered as SVG in jsMain from the
+     * SAME values the neighbouring code block uses, so picture and code cannot
+     * drift (lint-enforced). Schematic by design: it draws the mental model,
+     * never engine internals (flux ruling).
+     */
+    sealed interface Visual : Block {
+        /** Envelope shape from the same colon string the code uses. */
+        data class Adsr(
+            val value: String,
+            val label: String = "loudness",
+        ) : Visual
+    }
+}
+
 data class TutorialSection(
     val heading: String? = null,
-    val text: String = "",
-    val code: String? = null,
+    val blocks: List<Block>,
 )
 
 data class Tutorial(
@@ -46,6 +129,19 @@ data class Tutorial(
     val difficulty: TutorialDifficulty,
     val scope: TutorialScope,
     val tags: List<TutorialTag>,
+    /**
+     * Vocabulary this lesson introduces: function names ("sound", "gain"),
+     * mini-notation symbols ("~", "[]"), and code-syntax tokens ("//"). The
+     * registry order defines what is already taught; the curriculum lint
+     * checks every code block against it.
+     */
+    val teaches: List<String>,
+    /**
+     * Vocabulary used here but taught in a LATER lesson. Every entry must be
+     * explicitly called out as a preview in the section text, with a pointer
+     * to the lesson that teaches it.
+     */
+    val previews: List<String> = emptyList(),
     val sections: List<TutorialSection>,
     val rpm: Double = 30.0,
 )

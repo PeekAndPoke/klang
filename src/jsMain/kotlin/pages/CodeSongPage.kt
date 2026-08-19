@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -42,30 +42,31 @@ import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
-import kotlinx.css.Cursor
+import kotlinx.css.Align
 import kotlinx.css.Display
 import kotlinx.css.Flex
 import kotlinx.css.FlexBasis
 import kotlinx.css.FlexDirection
+import kotlinx.css.JustifyContent
 import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
-import kotlinx.css.cursor
+import kotlinx.css.alignItems
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
 import kotlinx.css.flexShrink
 import kotlinx.css.height
+import kotlinx.css.justifyContent
 import kotlinx.css.minHeight
-import kotlinx.css.overflow
 import kotlinx.css.overflowX
 import kotlinx.css.overflowY
 import kotlinx.css.padding
-import kotlinx.css.paddingBottom
 import kotlinx.css.paddingLeft
 import kotlinx.css.px
 import kotlinx.css.vh
 import kotlinx.css.width
+import kotlinx.html.DIV
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -168,6 +169,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     // The code editor handles its own highlights via KlangCodeEditorComp.
     @Suppress("unused")
     private val blocksVoiceSub by subscribingTo(ctrl.signals) { signal ->
+        // Stop (the ctrl resets its stream to null) and live updates invalidate every
+        // highlight scheduled ahead for the old pattern
+        if (signal == null ||
+            signal is KlangPlaybackSignal.PlaybackStopped ||
+            signal is KlangPlaybackSignal.PatternUpdated
+        ) {
+            blocksHighlightBuffer.cancelAll()
+        }
         if (signal is KlangPlaybackSignal.VoicesScheduled && currentModals.isEmpty()) {
             signal.voices.forEach { voiceEvent ->
                 val chain = voiceEvent.sourceLocations ?: return@forEach
@@ -239,6 +248,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private fun codeHasComments(): Boolean = "//" in state.code || "/*" in state.code
 
     /** Switch to Blocks mode — asks for confirmation first if the code has comments. */
+    @Suppress("unused") // referenced only by the temporarily hidden blocks toggle
     private fun switchToBlocks(event: PointerEvent) {
         if (codeHasComments()) {
             popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomCenter) { handle ->
@@ -268,6 +278,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     /** Switch to Code mode. The code state already reflects the latest workspace contents. */
+    @Suppress("unused")
     private fun switchToCode() {
         editorMode = EditorMode.CODE
     }
@@ -276,7 +287,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     override fun VDom.render() {
 
-        ui.fluid.container.with("noise-bg") {
+        ui.fluid.container.with("chrome-bg") {
             key = "make-song-page"
             css {
                 display = Display.flex
@@ -290,27 +301,38 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     display = Display.flex
                     flexDirection = FlexDirection.column
                     flex = Flex(1.0, 1.0, FlexBasis.auto)
-                    overflow = Overflow.hidden
+                    // minHeight 0 (NOT overflow:hidden, which would clip the
+                    // editor's glow) keeps the form from growing past the 100vh
+                    // container — the header stays pinned and only the editor
+                    // wrapper scrolls internally.
+                    minHeight = 0.px
                 }
+                // Transparent — shows the page container's chrome-bg, so the
+                // rounded editor corner reveals the same surface with no seam
                 ui.basic.segment {
                     key = "dashboard-form-segment"
 
                     css {
-                        paddingBottom = 0.px
                         flexShrink = 0.0
-                    }
-
-                    // Fullscreen toggle
-                    ui.right.floated.basic.fitted.segment {
-                        ui.horizontal.list {
-                            noui.item {
-                                FullscreenToggleButton(fs = fs)
-                            }
-                        }
+                        // Balanced vertical padding — Fomantic's segment default is
+                        // 1em top with our old 0 bottom, which read lopsided
+                        put("padding", "13px 14px")
+                        // Fomantic gives segments a 1rem bottom margin — that was
+                        // the black gap between header and editor
+                        put("margin", "0")
                     }
 
                     ui.horizontal.list {
                         key = "dashboard-form-fields"
+
+                        css {
+                            // Centered flex row — also vertically centers the
+                            // mixed-height items (buttons, LCD, inputs, icons)
+                            display = Display.flex
+                            justifyContent = JustifyContent.center
+                            alignItems = Align.center
+                            put("flex-wrap", "wrap")
+                        }
 
                         // Play / Update / Stop controls
                         noui.item {
@@ -357,7 +379,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                         }
 
-                        noui.middle.aligned.item {
+                        noui.top.aligned.item {
                             LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
                         }
 
@@ -418,69 +440,121 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         }
 
                         // Code / Blocks toggle
-                        noui.item {
-                            val isCode = editorMode == EditorMode.CODE
-                            css {
-                                cursor = Cursor.pointer
-                                display = Display.inlineBlock
-                            }
-                            onClick { switchToCode() }
-                            title = "Switch to code editor"
-                            icon.given(isCode) { inverted.white }
-                                .givenNot(isCode) { grey }
-                                .code()
-                        }
+//                        noui.item {
+//                            val isCode = editorMode == EditorMode.CODE
+//                            css {
+//                                cursor = Cursor.pointer
+//                                display = Display.inlineBlock
+//                            }
+//                            onClick { switchToCode() }
+//                            title = "Switch to code editor"
+//                            icon.given(isCode) { inverted.white }
+//                                .givenNot(isCode) { grey }
+//                                .code()
+//                        }
+//
+//                         Blocks-editor toggle — hidden for now, the block editor
+//                         is not ready to show. Re-enable by uncommenting.
+//                         noui.item {
+//                             val isBlocks = editorMode == EditorMode.BLOCKS
+//                             css {
+//                                 cursor = Cursor.pointer
+//                                 display = Display.inlineBlock
+//                             }
+//                             onClick { switchToBlocks(it) }
+//                             title = "Switch to blocks editor"
+//                             icon.given(isBlocks) { inverted.white }
+//                                 .givenNot(isBlocks) { grey }
+//                                 .puzzle_piece()
+//                         }
 
+                        // Fullscreen toggle
                         noui.item {
-                            val isBlocks = editorMode == EditorMode.BLOCKS
-                            css {
-                                cursor = Cursor.pointer
-                                display = Display.inlineBlock
-                            }
-                            onClick { switchToBlocks(it) }
-                            title = "Switch to blocks editor"
-                            icon.given(isBlocks) { inverted.white }
-                                .givenNot(isBlocks) { grey }
-                                .puzzle_piece()
+                            FullscreenToggleButton(fs = fs)
                         }
                     }
                 }
 
+                // Outer FRAME — carries the accent strips, corner radius, glow
+                // and black surface. It does NOT scroll, so scrolled editor
+                // content can never paint over the frame lines.
                 div {
                     key = "dashboard-form-code"
                     css {
                         flex = Flex(1.0, 1.0, FlexBasis.auto)
                         minHeight = 0.px
-                        overflowY = Overflow.auto
-                        overflowX = Overflow.hidden
                         display = Display.flex
                         flexDirection = FlexDirection.column
-                        paddingLeft = 12.px
+                        // Accent frame — drawn as 1px background gradient strips
+                        // instead of real borders, so each line can fade
+                        // independently AND follow the rounded corner:
+                        //  · top line fades to 33% alpha over its last 20% of width
+                        //  · left line fades to 33% alpha over its last third of height
+                        // The 1px paddings keep the scroller off the strips.
+                        put("border-top-left-radius", "3px")
+                        put("padding-top", "1px")
+                        put("padding-left", "1px")
+                        put(
+                            "background-image",
+                            "linear-gradient(to right, ${laf.accentMuted} 0%, ${laf.accentMuted} 80%, ${laf.accentMuted}55 100%)," +
+                                    " linear-gradient(to bottom, ${laf.accentMuted} 0%, ${laf.accentMuted} 66%, ${laf.accentMuted}55 100%)"
+                        )
+                        put("background-repeat", "no-repeat")
+                        put("background-size", "100% 1px, 1px 100%")
+                        // Black like the editor surface — otherwise any sub-pixel
+                        // gap between the frame and the editor shows page chrome
+                        put("background-color", "#000000")
+                        // Soft accent light from the editor's top and left edges —
+                        // dimmed to match the layout's ambient edge light
+                        put(
+                            "box-shadow",
+                            "0 -10px 42px ${laf.accentMuted}2e, -10px 0 42px ${laf.accentMuted}2e"
+                        )
                     }
 
-                    when (editorMode) {
-                        EditorMode.CODE -> {
-                            KlangCodeEditorComp(
-                                ctrl = ctrl,
-                                availableLibraries = listOf(stdlibLib, sprudelLib),
-                                maxHighlightsPerEvent = highlightPerEvent,
-                                pauseHighlightsWhen = { currentModals.isNotEmpty() },
-                            ).track(codeEditorRef)
+                    // Inner SCROLLER — clips the editor content just inside the
+                    // frame; its small radius hugs the outer curve.
+                    div {
+                        key = "dashboard-form-code-scroll"
+                        css {
+                            flex = Flex(1.0, 1.0, FlexBasis.auto)
+                            minHeight = 0.px
+                            overflowY = Overflow.auto
+                            overflowX = Overflow.hidden
+                            display = Display.flex
+                            flexDirection = FlexDirection.column
+                            paddingLeft = 12.px
+                            put("border-top-left-radius", "2px")
                         }
 
-                        EditorMode.BLOCKS -> {
-                            KlangBlocksEditorComp(
-                                availableLibraries = listOf(stdlibLib, sprudelLib),
-                                initialCode = state.code,
-                                onCodeChanged = { newCode -> ctrl.setCode(newCode) },
-                                onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
-                                highlights = blocksHighlightBuffer.highlights,
-                                hoverPopup = hoverPopup,
-                                hoverContent = hoverContent,
-                            ).track(blocksEditorRef)
-                        }
+                        renderEditor()
                     }
                 }
+            }
+        }
+    }
+
+    private fun DIV.renderEditor() {
+        when (editorMode) {
+            EditorMode.CODE -> {
+                KlangCodeEditorComp(
+                    ctrl = ctrl,
+                    availableLibraries = listOf(stdlibLib, sprudelLib),
+                    maxHighlightsPerEvent = highlightPerEvent,
+                    pauseHighlightsWhen = { currentModals.isNotEmpty() },
+                ).track(codeEditorRef)
+            }
+
+            EditorMode.BLOCKS -> {
+                KlangBlocksEditorComp(
+                    availableLibraries = listOf(stdlibLib, sprudelLib),
+                    initialCode = state.code,
+                    onCodeChanged = { newCode -> ctrl.setCode(newCode) },
+                    onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
+                    highlights = blocksHighlightBuffer.highlights,
+                    hoverPopup = hoverPopup,
+                    hoverContent = hoverContent,
+                ).track(blocksEditorRef)
             }
         }
     }

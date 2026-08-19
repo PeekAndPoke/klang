@@ -9,8 +9,10 @@ metadata:
 
 **The split (under consideration, driven by trademark risk):**
 
-- **Motör** = the engine, kept *behind glass*, internal/dev-facing metaphor (Cylinder, Ignitor, Katalyst). See
-  [[behind-glass-design-principle]].
+- **Klangmotör** = the engine, kept *behind glass*, internal/dev-facing metaphor (Cylinder, Ignitor, Katalyst). See
+  [[behind-glass-design-principle]]. **⚠️ Renamed 2026-08-13** from "Klang Audio Motör" — see
+  [[klangmotor-naming-decision]] for the full reasoning. "Motör" survives as the trailing morpheme and as dev-facing
+  shorthand ("the Motör"); ASCII identifier form is `klangmotor`.
 - **Klang** = the consumer-facing platform + app brand. Consumer hits-app series renamed from "Motör Hits #N" →
   **"Klang Hits #N"** to dodge the Motörhead collision (Karsten's decision 2026-07-09).
 
@@ -27,15 +29,17 @@ active digital-music licensing incl. NetEnt slot, Rock Band/Rocksmith DLC). See 
   AI music transcription — very close to Karsten's lane). Also KLANGLOBBY (BMG production music). **klang.com and
   klang.io
   are already gone.**
-- **"Klang Audio Motör" as a word mark is weak** — three near-descriptive words (sound + audio + motor) for an audio
+- **"Klang Audio Motör" as a word mark was weak** *(this finding is what the 2026-08-13 rename acted on)* — three
+  near-descriptive words (sound + audio + motor) for an audio
   engine. Hard to protect, crowded, narrow scope even setting Motörhead aside. Fine as a descriptor/tagline; weak as a
   registrable brand. Stronger protection would come from a *stylized/logo* mark or a coined element, not the bare words.
 - **klang.art is REGISTERED BY KARSTEN** (confirmed 2026-07-09; the 2026-01-22 NameCheap privacy-protected reg is his).
 - **Main product/company name = "Klang.art"** (decision 2026-07-09), including intent to form **"Klang.art GmbH"**. The
-  engine
-  reads as **"Klang Audio Motör made by Klang.art"** — "Motör" stays the trailing behind-glass engine element. Consumer
-  app
-  series = "Klang Hits #N".
+  engine now reads as **"Klangmotör by Klang.art"** (was "Klang Audio Motör made by Klang.art" until the 2026-08-13
+  rename) — "Motör" stays the trailing behind-glass engine element. Consumer app series = "Klang Hits #N".
+  **Division of labor:** Klang.art is the mark that must carry consumer equity and should aspire to the opaque/coined
+  standard; Klangmotör is the engine name, where transparency is an asset. Do not judge the engine name by
+  consumer-brand criteria.
 - **The ".art" helps.** Per the Booking.com principle, a TLD adds no *automatic* distinctiveness, but "Klang.art" as a
   composite whole (+ stylization) is a meaningfully more distinctive/filable mark than the crowded bare word "Klang".
   File

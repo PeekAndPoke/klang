@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -155,8 +155,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         //   heat += instantEnergy * heatRate   (energy pumps heat in)
         //   heat *= cooling                    (radiative cooling)
         //   heat is clamped to [0, 1]          (saturates at peak glow)
-        // heatRate=0.006, cooling=0.995 → sustained-loud signal ramps to the 1.0
-        // ceiling in ~5 s at 60 fps; decay half-life ≈ 2.3 s when the music stops.
+        // heatRate=0.01, cooling=0.994 → same equilibrium glow as the original
+        // 0.005/0.997 tuning (equilibrium = energy·heatRate/(1−cooling)) but the
+        // dynamics run twice as fast: ramp ~3 s at 60 fps, decay half-life ≈ 1.9 s.
         var frameSum = 0.0
         for (v in bucketValues) frameSum += v
         val instantEnergy = (frameSum / bucketValues.size.coerceAtLeast(1)).coerceIn(0.0, 1.0)
@@ -164,8 +165,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // no heat, so the iron only glows under real audio energy.
         val heatThreshold = 0.12
         val effectiveEnergy = ((instantEnergy - heatThreshold) / (1.0 - heatThreshold)).coerceAtLeast(0.0)
-        val heatRate = 0.005
-        val cooling = 0.997
+        val heatRate = 0.01
+        val cooling = 0.994
         val heatCeiling = 1.8
         glowHeat = ((glowHeat + effectiveEnergy * heatRate) * cooling).coerceIn(0.0, heatCeiling)
         val glowEnergy = glowHeat
@@ -174,17 +175,20 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // Ease-in on heat keeps early buildup subtle before the glow really lights up.
         val heatNorm = glowEnergy / heatCeiling
         val heatCurve = Ease.In.pow(1.15).invoke(heatNorm)
+        // Top-end boost — near full engagement the glow steps up a further ~20%;
+        // the cubic ease-in keeps mid-heat levels virtually unaffected.
+        val fullBoost = 1.0 + 0.2 * Ease.In.pow(2.0).invoke(heatNorm)
         val glow = ctx.createLinearGradient(0.0, height, 0.0, 0.0)
         val palette = props.colors
         val n = palette.size.coerceAtLeast(1)
         for (i in 0 until n) {
             val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
             // Ease-out falloff — 0.45 at bottom, reaches 0 by ~77% up (faster than full-height).
-            val aMax = 0.45 * Ease.Out.quad((1.0 - t * 1.3).coerceAtLeast(0.0))
+            val aMax = 0.6 * Ease.Out.quad((1.0 - t * 1.3).coerceAtLeast(0.0))
 
             // Sometimes parsing the color fails, so we need to round the alpha:
             // Failed to execute 'addColorStop' on 'CanvasGradient': The value provided ('rgba(209, 154, 102, 6e-320.0)') could not be parsed as a color.
-            val alpha = (aMax * heatCurve).roundWithPrecision(5)
+            val alpha = (aMax * heatCurve * fullBoost).coerceAtMost(1.0).roundWithPrecision(5)
 
             glow.addColorStop(t, palette[i].withAlpha(alpha).toString())
         }

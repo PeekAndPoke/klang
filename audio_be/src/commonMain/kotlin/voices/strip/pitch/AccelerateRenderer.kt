@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -22,10 +22,10 @@ class AccelerateRenderer(
     private val accelerate: Voice.Accelerate,
     // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
     private val startFrame: Double,
-    private val endFrame: Double,
+    endFrame: Double,
 ) : BlockRenderer {
 
-    private val totalFrames = (endFrame - startFrame).toDouble()
+    private val totalFrames = (endFrame - startFrame)
 
     // Per-sample multiplicative step: ratio = 2^(amount / totalFrames)
     private val step = 2.0.pow(accelerate.amount / totalFrames)
@@ -35,7 +35,7 @@ class AccelerateRenderer(
 
         // Seed with pow() once at the block start, then multiply per sample
         val blockRelStart = (ctx.blockStart + ctx.offset) - startFrame
-        var ratio = 2.0.pow(accelerate.amount * blockRelStart.toDouble() / totalFrames)
+        var ratio = 2.0.pow(accelerate.amount * blockRelStart / totalFrames)
 
         if (ctx.freqModBufferWritten) {
             for (i in 0 until ctx.length) {

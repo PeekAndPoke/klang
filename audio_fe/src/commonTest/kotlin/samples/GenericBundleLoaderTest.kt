@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -216,6 +216,54 @@ class GenericBundleLoaderTest : StringSpec({
         val resolved = index.resolve(request)
         resolved.shouldNotBeNull()
         (resolved.sample as Samples.Sample.FromUrl).url shouldBe "https://example.com/sounds/My%20Kick%20Drum.wav"
+    }
+
+    "manifest without _base resolves entries relative to the manifest url" {
+        val jsonWithoutBase = """
+        {
+            "kit_bd": ["kick1.wav"],
+            "piano": { "C4": "notes/C4.mp3" }
+        }
+        """.trimIndent()
+
+        val loader = mockLoader(mapOf("https://example.com/mirror/drums/index.json" to jsonWithoutBase))
+        val indexLoader = SampleIndexLoader(loader, json)
+
+        val index = indexLoader.load(
+            SampleCatalogue.of(
+                SampleCatalogue.Bundle(name = "test", soundsUri = "https://example.com/mirror/drums/index.json")
+            )
+        )
+
+        val percussive = index.resolve(SampleRequest(bank = "kit", sound = "bd", index = 0, note = null))
+        percussive.shouldNotBeNull()
+        (percussive.sample as Samples.Sample.FromUrl).url shouldBe "https://example.com/mirror/drums/kick1.wav"
+
+        val pitched = index.resolve(SampleRequest(bank = "", sound = "piano", index = null, note = "C4"))
+        pitched.shouldNotBeNull()
+        (pitched.sample as Samples.Sample.FromUrl).url shouldBe "https://example.com/mirror/drums/notes/C4.mp3"
+    }
+
+    "manifest _base wins over the manifest-url fallback" {
+        val jsonWithBase = """
+        {
+            "_base": "https://cdn.example.com/sounds/",
+            "kit_bd": ["kick1.wav"]
+        }
+        """.trimIndent()
+
+        val loader = mockLoader(mapOf("https://example.com/mirror/drums/index.json" to jsonWithBase))
+        val indexLoader = SampleIndexLoader(loader, json)
+
+        val index = indexLoader.load(
+            SampleCatalogue.of(
+                SampleCatalogue.Bundle(name = "test", soundsUri = "https://example.com/mirror/drums/index.json")
+            )
+        )
+
+        val resolved = index.resolve(SampleRequest(bank = "kit", sound = "bd", index = 0, note = null))
+        resolved.shouldNotBeNull()
+        (resolved.sample as Samples.Sample.FromUrl).url shouldBe "https://cdn.example.com/sounds/kick1.wav"
     }
 
     "absolute URLs are not prefixed with base" {

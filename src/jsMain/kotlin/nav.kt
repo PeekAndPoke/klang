@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -20,6 +20,7 @@ import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
 import io.peekandpoke.klang.pages.docs.lexikon.LexikonPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialTrackPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 import io.peekandpoke.kraft.routing.RootRouterBuilder
 import io.peekandpoke.kraft.routing.Route1
@@ -56,6 +57,14 @@ object Nav {
 
     val tutorial = Route1("$tutorialsBase/{slug}")
 
+    /** Overview page of one tutorial track. */
+    val tutorialTrack = Route1("$tutorialsBase/track/{slug}")
+
+    /** A tutorial opened WITH track context — Prev/Next then walk that track. */
+    fun tutorialInTrack(slug: String, trackSlug: String?) =
+        if (trackSlug == null) tutorial(slug)
+        else tutorial(slug).withQueryParams(TutorialPage.PARAM_TRACK to trackSlug)
+
     val credits = Static("/credits")
 
     val tour = Static("/tour")
@@ -87,6 +96,7 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.manualsLibrary) { KlangScriptLibraryDocsPage(it["library"]) }
 
         mount(Nav.tutorials) { TutorialsListPage() }
+        mount(Nav.tutorialTrack) { TutorialTrackPage() }
         mount(Nav.tutorial) { TutorialPage() }
 
         mount(Nav.credits) { CreditsPage() }

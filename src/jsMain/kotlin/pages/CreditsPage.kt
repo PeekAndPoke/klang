@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klang Audio Motör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -397,6 +397,8 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         with most samples contributed by [Switch Angel](https://www.youtube.com/@Switch-Angel)
                         - **Tidal Drum Machines** — emulation samples of classic drum machines
                         - **[Versilian Community Sample Library (VCSL)](https://github.com/sgossner/VCSL)** by Versilian Studios — CC0 acoustic-instrument samples
+                        - **[Salamander Grand Piano](https://archive.org/details/SalamanderGrandPianoV3)** by Alexander Holm — the bundled piano samples ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/))
+                        - **Mridangam samples** — © [Arthur Carabott](https://www.arthurcarabott.com/konnakkol/), performed by Harishankar V Menon ([CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/))
                         - **[dough-samples](https://github.com/felixroos/dough-samples)** by Felix Roos — hosting and curation of the bundled sample sets (Dirt-Samples, VCSL, mridangam, piano, drum machines)
                         - **[todepond/samples](https://github.com/todepond/samples)** by Lu Wilson — drum-machine sample aliases
                         - **[WebAudioFont](https://github.com/surikov/webaudiofont)** by Sergey Surikov — source of the bundled General MIDI soundfont
