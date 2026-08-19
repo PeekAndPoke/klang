@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.FilterEnvDef
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
@@ -318,6 +319,88 @@ class EffectBenchmark(
             svfIgnitorCase("Ignitor sine (bare source baseline)") {
                 Ignitors.sine()
             },
+            // ── EqCore loop-shape bake-off (unified-equalizer plan, D2a) ──
+            // Copy-only baseline: monoFilterCase-shaped steps pay a copyInto inside the timed
+            // step that svfIgnitorCase does not — subtract this case for copy-free deltas
+            // (the D0 comparability rule).
+            Case("Copy-only baseline (128f)") { sr, bf ->
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = { src.copyInto(buf) }
+                step
+            },
+            Case("EqCore 1-serial (LP 1k, q=1, sampleMajor)") { sr, bf ->
+                // The single-node comparison the plan requires — decides whether R1 converts
+                // standalone filters to 1-section Eqs. Counterpart: "Ignitor.svf LPF (no env)".
+                val core = EqCore(1, EqCore.SHAPE_SAMPLE_MAJOR).also {
+                    it.configureSection(0, EqCore.LOWPASS, 1000.0, 1.0, 0.0, 1.0, sr.toDouble())
+                }
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    src.copyInto(buf)
+                    core.process(buf, 0, bf)
+                }
+                step
+            },
+            Case("EqCore 1-serial (LP 1k, q=1, sectionMajorLocals)") { sr, bf ->
+                val core = EqCore(1, EqCore.SHAPE_SECTION_MAJOR_LOCALS).also {
+                    it.configureSection(0, EqCore.LOWPASS, 1000.0, 1.0, 0.0, 1.0, sr.toDouble())
+                }
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    src.copyInto(buf)
+                    core.process(buf, 0, bf)
+                }
+                step
+            },
+            Case("EqCore 4-serial (sampleMajor)") { sr, bf ->
+                val core = EqCore(4, EqCore.SHAPE_SAMPLE_MAJOR).also {
+                    it.configureSection(0, EqCore.NOTCH, 210.0, 2.5, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(1, EqCore.HIGHPASS, 440.0, 0.707, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(2, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(3, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                }
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    src.copyInto(buf)
+                    core.process(buf, 0, bf)
+                }
+                step
+            },
+            Case("EqCore 4-serial (sectionMajorLocals)") { sr, bf ->
+                val core = EqCore(4, EqCore.SHAPE_SECTION_MAJOR_LOCALS).also {
+                    it.configureSection(0, EqCore.NOTCH, 210.0, 2.5, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(1, EqCore.HIGHPASS, 440.0, 0.707, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(2, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(3, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                }
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    src.copyInto(buf)
+                    core.process(buf, 0, bf)
+                }
+                step
+            },
+            Case("EqCore 4-serial (sectionMajor)") { sr, bf ->
+                val core = EqCore(4, EqCore.SHAPE_SECTION_MAJOR).also {
+                    it.configureSection(0, EqCore.NOTCH, 210.0, 2.5, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(1, EqCore.HIGHPASS, 440.0, 0.707, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(2, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(3, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                }
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    src.copyInto(buf)
+                    core.process(buf, 0, bf)
+                }
+                step
+            },
+
             // Coefficient-cached PLUMBING anchor: the Der Schmetterling guitar tail's shape as
             // chained Ignitor SVFs. Each node pays its own generate() call + scratch pass — the
             // plumbing the fused EqCore removes; EqCore's 4-section case is measured against this.
