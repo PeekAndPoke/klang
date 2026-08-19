@@ -43,7 +43,6 @@ import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import kotlinx.css.Align
-import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.Flex
 import kotlinx.css.FlexBasis
@@ -53,7 +52,6 @@ import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
 import kotlinx.css.alignItems
-import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
@@ -280,6 +278,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     /** Switch to Code mode. The code state already reflects the latest workspace contents. */
+    @Suppress("unused")
     private fun switchToCode() {
         editorMode = EditorMode.CODE
     }
@@ -441,33 +440,33 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         }
 
                         // Code / Blocks toggle
-                        noui.item {
-                            val isCode = editorMode == EditorMode.CODE
-                            css {
-                                cursor = Cursor.pointer
-                                display = Display.inlineBlock
-                            }
-                            onClick { switchToCode() }
-                            title = "Switch to code editor"
-                            icon.given(isCode) { inverted.white }
-                                .givenNot(isCode) { grey }
-                                .code()
-                        }
-
-                        // Blocks-editor toggle — hidden for now, the block editor
-                        // is not ready to show. Re-enable by uncommenting.
-                        // noui.item {
-                        //     val isBlocks = editorMode == EditorMode.BLOCKS
-                        //     css {
-                        //         cursor = Cursor.pointer
-                        //         display = Display.inlineBlock
-                        //     }
-                        //     onClick { switchToBlocks(it) }
-                        //     title = "Switch to blocks editor"
-                        //     icon.given(isBlocks) { inverted.white }
-                        //         .givenNot(isBlocks) { grey }
-                        //         .puzzle_piece()
-                        // }
+//                        noui.item {
+//                            val isCode = editorMode == EditorMode.CODE
+//                            css {
+//                                cursor = Cursor.pointer
+//                                display = Display.inlineBlock
+//                            }
+//                            onClick { switchToCode() }
+//                            title = "Switch to code editor"
+//                            icon.given(isCode) { inverted.white }
+//                                .givenNot(isCode) { grey }
+//                                .code()
+//                        }
+//
+//                         Blocks-editor toggle — hidden for now, the block editor
+//                         is not ready to show. Re-enable by uncommenting.
+//                         noui.item {
+//                             val isBlocks = editorMode == EditorMode.BLOCKS
+//                             css {
+//                                 cursor = Cursor.pointer
+//                                 display = Display.inlineBlock
+//                             }
+//                             onClick { switchToBlocks(it) }
+//                             title = "Switch to blocks editor"
+//                             icon.given(isBlocks) { inverted.white }
+//                                 .givenNot(isBlocks) { grey }
+//                                 .puzzle_piece()
+//                         }
 
                         // Fullscreen toggle
                         noui.item {
@@ -497,8 +496,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         put("padding-left", "1px")
                         put(
                             "background-image",
-                            "linear-gradient(to right, ${laf.accent} 0%, ${laf.accent} 80%, ${laf.accent}55 100%)," +
-                                    " linear-gradient(to bottom, ${laf.accent} 0%, ${laf.accent} 66%, ${laf.accent}55 100%)"
+                            "linear-gradient(to right, ${laf.accentMuted} 0%, ${laf.accentMuted} 80%, ${laf.accentMuted}55 100%)," +
+                                    " linear-gradient(to bottom, ${laf.accentMuted} 0%, ${laf.accentMuted} 66%, ${laf.accentMuted}55 100%)"
                         )
                         put("background-repeat", "no-repeat")
                         put("background-size", "100% 1px, 1px 100%")
@@ -509,7 +508,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // dimmed to match the layout's ambient edge light
                         put(
                             "box-shadow",
-                            "0 -10px 42px ${laf.accent}23, -10px 0 42px ${laf.accent}23"
+                            "0 -10px 42px ${laf.accentMuted}2e, -10px 0 42px ${laf.accentMuted}2e"
                         )
                     }
 

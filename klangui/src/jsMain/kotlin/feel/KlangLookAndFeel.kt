@@ -41,6 +41,9 @@ data class KlangLookAndFeel(
 
     val accent: String = "#528bff",
 
+    /** Desaturated, darker accent — for large surfaces (frames, glows, edge lights) where [accent] is too loud. */
+    val accentMuted: String = "#5c7cbc",
+
     // ── Gold — code highlights, links ─────────────────────────────────────────
 
     val gold: String = "#e8b84b",
@@ -77,6 +80,7 @@ data class KlangLookAndFeel(
                 textSecondary = v("--klang-text-secondary"),
                 textTertiary = v("--klang-text-tertiary"),
                 accent = v("--klang-accent"),
+                accentMuted = v("--klang-accent-muted"),
                 gold = v("--klang-gold"),
                 bronze = v("--klang-bronze"),
                 popupBackground = v("--klang-bg-popup"),

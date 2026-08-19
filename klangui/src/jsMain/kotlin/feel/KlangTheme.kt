@@ -71,6 +71,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
     val textTertiary: Color get() = Color(invoke().textTertiary)
 
     val accent: Color get() = Color(invoke().accent)
+    val accentMuted: Color get() = Color(invoke().accentMuted)
     val gold: Color get() = Color(invoke().gold)
     val bronze: Color get() = Color(invoke().bronze)
     val popupBackground: Color get() = Color(invoke().popupBackground)
@@ -109,6 +110,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         val textTertiary: String get() = KlangTheme().textTertiary
 
         val accent: String get() = KlangTheme().accent
+        val accentMuted: String get() = KlangTheme().accentMuted
         val gold: String get() = KlangTheme().gold
         val bronze: String get() = KlangTheme().bronze
         val popupBackground: String get() = KlangTheme().popupBackground
@@ -139,6 +141,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         style.setProperty("--klang-text-secondary", laf.textSecondary)
         style.setProperty("--klang-text-tertiary", laf.textTertiary)
         style.setProperty("--klang-accent", laf.accent)
+        style.setProperty("--klang-accent-muted", laf.accentMuted)
         style.setProperty("--klang-gold", laf.gold)
         style.setProperty("--klang-bronze", laf.bronze)
         style.setProperty("--klang-bg-popup", laf.popupBackground)

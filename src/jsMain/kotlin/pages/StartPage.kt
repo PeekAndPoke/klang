@@ -444,14 +444,15 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 whiteSpace = WhiteSpace.nowrap
                 fontFamily = "monospace"
                 fontSize = 11.px
-                color = Color.white
-                opacity = 0.35
+                // Same tone as the engraved KLANGMOTÖR title, full opacity for
+                // readability
+                color = Color("#b8b8b8")
             }
             // e.g. "v0.1.0 · 5c7d2119"; full detail (branch, date) on hover via title
             title = "${info.project} ${info.version} · ${info.gitBranch} · ${info.gitRev}" +
                     (info.date?.let { " · $it" } ?: "")
 
-            +"v${info.version} · ${info.gitRev} · pre-alpha | is glitchd glei"
+            +"v${info.version} · ${info.gitRev} · pre-alpha · is glitchd glei"
         }
     }
 

@@ -38,8 +38,6 @@ import kotlinx.html.style
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
-import kotlin.math.PI
-import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.max
@@ -63,8 +61,9 @@ fun Tag.MotorBackground(
 }
 
 /**
- * Industrial vinyl-groove metal background with a centred spotlight whose
- * cone width breathes and whose filament subtly flickers.
+ * Machined panel-grid background in the code page's surface language, with a
+ * wandering spotlight whose cone width breathes and whose filament subtly
+ * flickers.
  *
  * Pure Kotlin port of the former `motor-background.js` built on the kraft-threejs
  * addon. Exposes [powerOn], [startScan], [stopScan] as a lighting state machine.
@@ -131,15 +130,13 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var targetLightZ = defaultLightZ
     private var targetFillIntensity = 0.0
 
-    ////  CONE BREATHING  /////////////////////////////////////////////////////////////////////////////////////////
+    ////  LIGHT MOTION  ///////////////////////////////////////////////////////////////////////////////////////////
 
-    // The light sits fixed over the vinyl centre; instead of wandering around,
-    // its cone width breathes by oscillating the Z distance. The eased base Z
-    // (hover pulls it up) carries a sine breath on top.
+    // Fixed cone size: Z only eases toward the hover/default target.
     private var lightZ = defaultLightZ
-    private var breathePhase = 0.0
-    private var breatheAmp = 0.0
-    private var breatheRate = 0.0
+
+    // Slow autonomous Lissajous wander — the light roams the panel grid.
+    private var wanderTime = 0.0
 
     // Eased intensity lives here (not on the light) so the flicker riding on
     // top never pollutes the easing state.
@@ -156,6 +153,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     /** Rows per macrotask for the chunked per-pixel texture loops. */
     private val chunkRows = 128
+
+    /** Panel-grid cell size in texture px — shared by normal map and albedo seams. */
+    private val panelCell = 220.0
 
     /**
      * Builds the plate + title textures and meshes. The heavy per-pixel loops
@@ -512,20 +512,15 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         if (failed) return
         val delta = min(frame.deltaMs, 100.0)
 
-        // Cone breathing — scanning breathes deep and fast (the dyno-test
-        // "rev"), idle is a slow calm pulse. Amp and rate ease between the two,
-        // and the phase runs continuously, so mode switches never jump.
-        val targetAmp = if (scanning) 1.3 else 0.35
-        val targetRate = if (scanning) 0.0022 else 0.0007   // rad per ms
-        breatheAmp += (targetAmp - breatheAmp) * 0.01
-        breatheRate += (targetRate - breatheRate) * 0.01
-        breathePhase += delta * breatheRate
-
-        // The light stays centred over the vinyl; only its distance moves —
-        // base Z eases toward the hover/default target, the breath rides on top.
+        // The light wanders in a slow Lissajous over the panel grid — the seam
+        // bevels and per-panel tilts catch it as it passes. The cone size stays
+        // FIXED: Z only eases toward the hover/default target, no breathing.
+        wanderTime += delta * 0.001
         mainLight?.position?.let { pos ->
+            pos.x = sin(wanderTime * 0.4) * 0.35 * aspect
+            pos.y = cos(wanderTime * 0.33) * 0.15
             lightZ += (targetLightZ - lightZ) * 0.04
-            pos.z = lightZ + sin(breathePhase) * breatheAmp
+            pos.z = lightZ
         }
 
         // Smooth intensity transitions
@@ -607,9 +602,31 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         cnv.width = width
         cnv.height = height
         val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
-        // Plate base tone follows the menu / chrome background color
-        tctx.fillStyle = laf.menuBackground
+        // Near-black like the editor surface — but with just enough albedo for
+        // the moving light to sheen (a pure-black metal reflects nothing).
+        tctx.fillStyle = "#0e0f13"
         tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
+
+        // Dark seam lines on the panel grid — albedo crispness on top of the
+        // normal-map bevels.
+        tctx.strokeStyle = "#07080a"
+        tctx.lineWidth = 2.0
+        var gx = 0.0
+        while (gx <= width) {
+            tctx.beginPath()
+            tctx.moveTo(gx, 0.0)
+            tctx.lineTo(gx, height.toDouble())
+            tctx.stroke()
+            gx += panelCell
+        }
+        var gy = 0.0
+        while (gy <= height) {
+            tctx.beginPath()
+            tctx.moveTo(0.0, gy)
+            tctx.lineTo(width.toDouble(), gy)
+            tctx.stroke()
+            gy += panelCell
+        }
 
         val tex = addon.createCanvasTexture(cnv)
         tex.wrapS = TextureWrapping.ClampToEdgeWrapping
@@ -771,13 +788,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Generates a vinyl-record normal map.
-     *
-     * Concentric grooves circle the plate centre. Each groove tilts the normal
-     * radially with a sine profile across the groove pitch, a per-angle noise
-     * wobble presses the "music" into the groove, and a slow radial depth
-     * envelope fades passages louder and quieter — the near-silent stretches
-     * read as the dead wax between tracks.
+     * Generates the machined panel-grid normal map — near-black panels with
+     * sharp V-groove seams and per-panel micro-tilts that react crisply to
+     * the wandering light.
      *
      * The "KLANGMOTÖR" engraving lives on the separate title overlay plane —
      * see [buildTitleOverlayMaps].
@@ -797,64 +810,49 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
         val d = data.asDynamic()
 
-        // Vinyl grooves — concentric around the plate centre.
-        val cx = width / 2.0
-        val cy = height / 2.0
-        // Pitch well above the screen sampling limit — fine pitches (~6px) moiré
-        // when the 2048px texture is minified to viewport size.
-        val groovePitch = 24.0  // px between neighbouring grooves
-        val grooveAmp = 0.35    // normal tilt at the groove walls
+        // Machined panel grid — SHARP seams that catch the wandering light.
+        // Each seam is a V-groove: its two walls tilt in opposite directions,
+        // so one wall flares up while the other darkens as the light passes.
+        // Each panel additionally gets a tiny constant tilt of its own, so
+        // adjacent faces take the light differently and even the flat faces
+        // show a crisp step at the seam.
+        val seamHalf = 3.0
+        val bevel = 0.55
 
         runChunked(height, { pyFrom, pyTo ->
         for (py in pyFrom until pyTo) {
             for (px in 0 until width) {
                 val idx = (py * width + px) * 4
 
-                val dx = px - cx
-                val dy = py - cy
-                val r = sqrt(dx * dx + dy * dy)
-                // Radial unit vector — groove walls tilt along it.
-                val dirX = if (r > 1e-6) dx / r else 0.0
-                val dirY = if (r > 1e-6) dy / r else 0.0
-                val angle = atan2(dy, dx)
+                val col = (px / panelCell).toInt()
+                val row = (py / panelCell).toInt()
+                val u = px - col * panelCell
+                val v = py - row * panelCell
 
-                // Groove coordinate: integer part = which groove, fraction = position
-                // across the groove profile.
-                val band = r / groovePitch
+                // Per-panel constant tilt
+                val tiltX = (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
+                val tiltY = (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
 
-                // The "music" pressed into the groove — a phase wobble that must stay
-                // continuous everywhere, or it leaves visible ring seams. Sampling the
-                // noise on a circle keeps it seamless where the angle wraps; the small
-                // r-term drifts it slowly from groove to groove like a real signal.
-                val wobble = grainNoise.noise(
-                    cos(angle) * 2.5 + r * 0.02,
-                    sin(angle) * 2.5,
-                ) * 0.35
+                // V-groove seams along the grid lines
+                val seamNx = when {
+                    u < seamHalf -> -bevel * (1.0 - u / seamHalf)
+                    u > panelCell - seamHalf -> bevel * (1.0 - (panelCell - u) / seamHalf)
+                    else -> 0.0
+                }
+                val seamNy = when {
+                    v < seamHalf -> -bevel * (1.0 - v / seamHalf)
+                    v > panelCell - seamHalf -> bevel * (1.0 - (panelCell - v) / seamHalf)
+                    else -> 0.0
+                }
 
-                // Loud and quiet passages over the radius; the deep dips read as the
-                // dead wax between tracks. Two octaves, both smooth in r.
-                val depthMod = (
-                        0.55 +
-                                0.45 * grainNoise.noise(r * 0.01, 400.2) +
-                                0.15 * grainNoise.noise(r * 0.06, 77.7)
-                        ).coerceIn(0.08, 1.0)
-
-                val tilt = sin((band + wobble) * 2.0 * PI) * grooveAmp * depthMod
-
-                // Patchy grain — a low-frequency hash modulates the noise amplitude so
-                // the surface has calm and busier regions instead of uniform static.
+                // Patchy fine grain — calm and busier regions instead of static.
                 val patchAmp = hashCell(px / 24 + 101, py / 24 + 53)
                 val grainScale = 0.006 + patchAmp * 0.045
-                // Smooth Perlin grain instead of per-pixel TV static. Scale
-                // ≈ 0.18 → ~5.5px per noise cell; two uncorrelated samples
-                // drive the X and Y normal offsets. Final * 0.05 = the prior
-                // ±0.5 range scaled down to ~10% of its previous strength.
-                val grainX = grainNoise.noise(px * 0.18, py * 0.18) * grainScale * 0.05
-                val grainY = grainNoise.noise(px * 0.18 + 113.7, py * 0.18 - 91.3) * grainScale * 0.05
+                val grainX = grainNoise.noise(px * 0.18, py * 0.18) * grainScale * 0.1
+                val grainY = grainNoise.noise(px * 0.18 + 113.7, py * 0.18 - 91.3) * grainScale * 0.1
 
-                // Tilt the normal radially across the groove walls.
-                val nx = dirX * tilt + grainX
-                val ny = dirY * tilt + grainY
+                val nx = tiltX + seamNx + grainX
+                val ny = tiltY + seamNy + grainY
                 val nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
 
                 d[idx] = n2c(nx)

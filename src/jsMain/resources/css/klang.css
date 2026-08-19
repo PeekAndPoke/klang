@@ -11,6 +11,9 @@
     --klang-text-tertiary:  #5c6370;
 
     --klang-accent:         #528bff;
+    /* Desaturated, darker accent — for large surfaces (frames, edge lights)
+       where the full accent reads too loud */
+    --klang-accent-muted:   #5c7cbc;
     --klang-gold:           #EBC773;
     --klang-bronze:         #362820;
 

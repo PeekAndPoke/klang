@@ -62,6 +62,8 @@ fun Tag.RoundGauge(
     size: LinearDimension = 50.px,
     smoothing: Double = 0.933, // Default: 14/15 = heavy smoothing (0.0 = instant, 1.0 = maximum)
     borderColor: Color? = null,
+    glowColor: Color? = null,
+    glowIntensity: Double = 0.5,
 ) = comp(
     RoundGauge.Props(
         value = value,
@@ -74,6 +76,8 @@ fun Tag.RoundGauge(
         size = size,
         smoothing = smoothing,
         borderColor = borderColor,
+        glowColor = glowColor,
+        glowIntensity = glowIntensity,
     )
 ) {
     RoundGauge(it)
@@ -99,6 +103,10 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val smoothing: Double, // 0.0 = instant, higher = more smoothing (e.g., 0.933 = heavy smoothing)
         /** Ring color override — null keeps the shared `.gauge-ring` default */
         val borderColor: Color?,
+        /** Glow around the gauge — null means no glow */
+        val glowColor: Color?,
+        /** Glow opacity, 0.0..1.0 — the blur radius scales with [size] */
+        val glowIntensity: Double,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -184,6 +192,10 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                     boxSizing = BoxSizing.borderBox
                     borderWidth = 1.px
                     props.borderColor?.let { put("border-color", "$it !important") }
+                    props.glowColor?.takeIf { props.glowIntensity > 0.0 }?.let { glow ->
+                        val alpha = props.glowIntensity.coerceIn(0.0, 1.0)
+                        put("box-shadow", "0 0 ${props.size * 0.375} ${glow.withAlpha(alpha)}")
+                    }
                     width = props.size
                     height = props.size
                     position = Position.relative

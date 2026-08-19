@@ -77,8 +77,8 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
                     zIndex = 5
                     put(
                         "box-shadow",
-                        "inset 0 8px 30px color-mix(in srgb, var(--klang-accent) 5%, transparent)," +
-                                " inset 8px 0 30px color-mix(in srgb, var(--klang-accent) 5%, transparent)"
+                        "inset 0 8px 30px color-mix(in srgb, var(--klang-accent-muted) 5%, transparent)," +
+                                " inset 8px 0 30px color-mix(in srgb, var(--klang-accent-muted) 5%, transparent)"
                     )
                 }
             }

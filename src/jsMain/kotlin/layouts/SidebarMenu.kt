@@ -122,7 +122,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 cursor = Cursor.pointer
 
                 if (isSelected) {
-                    backgroundColor = Color(laf.accent)
+                    backgroundColor = Color(laf.accentMuted)
                     color = Color.black
                 } else {
                     // Transparent so the chrome-bg noise grain of the sidebar shows through
@@ -245,7 +245,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                             margin = Margin(0.px)
                             fontSize = 18.px
                             if (isSelected) {
-                                put("color", "${laf.accent} !important")
+                                put("color", "${laf.accentMuted} !important")
                             } else {
                                 put("color", "white !important")
                             }
