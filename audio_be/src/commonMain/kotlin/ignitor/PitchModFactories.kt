@@ -5,6 +5,9 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.safeDiv
+import io.peekandpoke.klang.audio_be.safeOut
+
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl

@@ -5,6 +5,9 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.SAFE_MAX
+import io.peekandpoke.klang.audio_be.SAFE_MIN
+
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse

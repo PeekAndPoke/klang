@@ -7,6 +7,9 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.AudioSample
+import io.peekandpoke.klang.audio_be.SAFE_MAX
+import io.peekandpoke.klang.audio_be.safeDiv
+import io.peekandpoke.klang.audio_be.safeOut
 
 import kotlin.math.ceil
 import kotlin.math.exp
@@ -1258,68 +1261,6 @@ private class SelectIgnitor(
             }
         }
     }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Numerical Safety Bounds
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-// Klang's safety contract — see `audio/ref/numerical-safety.md` for the full story.
-//
-// Every arithmetic operator that can produce `NaN`/`Inf` clamps either its inputs
-// (divisor-class ops: Div, Mod, Recip) or its output (output-clamp ops: Times,
-// Pow, Exp, Sq, Mul-by-constant). Naturally bounded ops (Plus, Minus, Lerp,
-// Range, Clamp, Min, Max, Abs, Neg, Sign, Floor, Ceil, Round, Frac, Tanh, Sqrt,
-// Log) need no extra guard.
-//
-// Values match the SuperCollider / ChucK / STK convention (`zapgremlins`,
-// `CK_DDN_*`): ±300 dBFS, well below any audible signal, well above subnormal.
-// `1 / SAFE_MIN = SAFE_MAX` ensures a reciprocal of the smallest allowed
-// divisor lands at the largest allowed output — round-trip safe. (Design intent, not an FP
-// bit-fact: 1.0 / 1e-15 evaluates to 9.999999999999999e14, just BELOW SAFE_MAX — so a
-// reciprocal of a safeDiv'd value can never actually engage safeOut.)
-
-/**
- * Smallest allowed magnitude for a divisor (or reciprocal input) in audio arithmetic.
- *
- * Values closer to zero are clamped to `±SAFE_MIN` (sign preserved) to prevent
- * `1/x` from overflowing. ≈ -300 dBFS — well below any audible signal.
- */
-const val SAFE_MIN: AudioSample = 1e-15
-
-/**
- * Largest allowed output magnitude for ops that can grow values (`Times`, `Pow`,
- * `Exp`, `Sq`, `Mul-by-constant`).
- *
- * Outputs above this are clamped to `±SAFE_MAX`. ≈ +300 dBFS — vastly above any
- * musical signal, well below `Double.MAX_VALUE` (`≈ 1.8e308`). Squaring two
- * `SAFE_MAX` values gives `1e30`, still finite Double.
- */
-const val SAFE_MAX: AudioSample = 1e15
-
-/**
- * Clamp a divisor's magnitude to `≥ SAFE_MIN`, preserving sign.
- *
- * Substitutes `0.0` and `NaN` with `+SAFE_MIN`. `±Inf` passes through unchanged
- * (since `±Inf` is already a valid divisor — `a / ±Inf = ±0`); the resulting
- * `0` or any `NaN` from `Inf - Inf` patterns is scrubbed downstream by [safeOut].
- */
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun safeDiv(d: AudioSample): AudioSample = when {
-    d.isNaN() -> SAFE_MIN
-    d > SAFE_MIN -> d
-    d < -SAFE_MIN -> d
-    d < 0.0 -> -SAFE_MIN
-    else -> SAFE_MIN
-}
-
-/** Clamp an output value to `[-SAFE_MAX, +SAFE_MAX]`. Scrubs `NaN` to `0`. */
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun safeOut(v: AudioSample): AudioSample = when {
-    v.isNaN() -> 0.0
-    v > SAFE_MAX -> SAFE_MAX
-    v < -SAFE_MAX -> -SAFE_MAX
-    else -> v
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -61,7 +61,7 @@ subnormal cliff (`1.18e-38`).
 Klang uses **`SAFE_MIN = 1e-15f` / `SAFE_MAX = 1e15f`** for arithmetic safety,
 matching SuperCollider/ChucK convention exactly.
 
-The constants live in `audio_be/src/commonMain/kotlin/ignitor/Ignitor.kt`.
+The constants live in `audio_be/src/commonMain/kotlin/DspUtil.kt`.
 
 ### Where guards apply
 
