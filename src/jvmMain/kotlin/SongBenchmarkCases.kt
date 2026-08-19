@@ -116,6 +116,182 @@ object SongBenchmarkCases {
     )
 
     // ────────────────────────────────────────────────────────────────────────────────────────
+    // GTR-FX ladder — the CURRENT guitar tone chain (parallel bandpass taps + notch + tracking
+    // highpass + double lowpass), transcribed from builtinsongs/DerSchmetterling.kt. Unlike
+    // ladder(), each rung swaps the RETURN EXPRESSION of the ignitor definition — the chain
+    // sits above the pattern, so the pattern-segment helper cannot express it.
+    // Baseline + before/after harness for the unified-equalizer work.
+    // ────────────────────────────────────────────────────────────────────────────────────────
+
+    // Ignitor definition transcribed 2026-08-19 from builtinsongs/DerSchmetterling.kt (working
+    // tree). Live edits to the song do NOT propagate here — re-transcribe when the guitar tone
+    // changes. RETURN_EXPR is replaced per rung; the template is pre-trimmed so the interpolated
+    // multi-line return expressions cannot pollute trimIndent's common-indent scan.
+    // PATTERN_EXPR is replaced per use: the GTR-FX ladder drives a melodic line (~1 concurrent
+    // voice); the GTR-POLY sweep drives sustained K-note chords (K concurrent chain instances).
+    private val gtrFxTemplate = """
+        let snareHz = 210
+        let guitar = (() => {
+          let pVoices  = OscSlot.voices
+          let pSpread  = OscSlot.spread
+          let pAnalog  = OscSlot.analog
+
+          let pMidsHz     = Osc.param("midsHz",      850.000, "Mids frequency")
+          let pMidsQ      = Osc.param("midsQ",         0.707, "Mids Q")
+          let pMids       = Osc.param("mids",          2.000, "Mids Volume")
+          let pPresenceHz = Osc.param("presenceHz", 2500.000, "Presence frequency")
+          let pPresenceQ  = Osc.param("presenceQ",     0.700, "Presence Q")
+          let pPresence   = Osc.param("presence",      5.000, "Presence Volume")
+          let pHpTrack    = Osc.param("hptrack",       1.000, "Highpass tracking")
+          let pHpQ        = Osc.param("hpq",           0.707, "Highpass resonance")
+
+          let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
+            .phasePool(on = 1, kMin = 0.50, kMax = 0.90)
+            .analog(pAnalog).spreadPower(1.0).sideAtten(0.1).gainJitter(0.20).centerJitter(0.20)
+            .pitchEnvelope(0.3, 0.001, 0.02)
+            .plus(Osc.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.14))
+            .distort(0.35, "hard", 4)
+
+          return RETURN_EXPR
+        })()
+        PATTERN_EXPR
+    """.trimIndent()
+
+    // The ladder pattern mirrors GTR1's real cost drivers: unison(15) and analog(13) — the song
+    // wraps the whole guitar stack in .analog(feel) with feel = 13.0. Without them the
+    // bare-signal denominator is far too cheap and the tone-chain share reads too high.
+    private val gtrFxLadderPattern = """
+        n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound(guitar).unison(15).spread(0.08)
+          .analog(13.0).gain(0.5).adsr("0.005:2.5:0.0:0.029")
+    """.trimIndent()
+
+    private fun gtrFxCode(returnExpr: String, patternExpr: String = gtrFxLadderPattern): String =
+        code(gtrFxTemplate.replace("RETURN_EXPR", returnExpr).replace("PATTERN_EXPR", patternExpr))
+
+    // NOTE on rung deltas: rung 0→1 also switches `signal`'s MemoizingIgnitor from the direct
+    // 1-consumer path onto the render-to-cache + copyInto-per-consumer path (2 consumers; rung 2
+    // makes it 3). So the "+mids tap" delta = bandpass + mul + add + that mode switch. The
+    // optimizer's R2 banks the reverse effect (3 -> 1 consumers) later.
+    private val gtrFxRungs = listOf(
+        "0 bare signal (supersaw+noise+distort)" to "",
+        "1 +mids tap (add bandpass.mul)" to ".add(signal.bandpass(pMidsHz, pMidsQ).mul(pMids))",
+        "2 +presence tap (add bandpass.mul)" to ".add(signal.bandpass(pPresenceHz, pPresenceQ).mul(pPresence))",
+        "3 +notch (snare room)" to ".notch(snareHz, 2.5)",
+        "4 +tracking highpass" to ".highpass(Osc.freq().mul(pHpTrack), pHpQ)",
+        "5 +double lowpass (cabinet)" to ".lowpass(5300).lowpass(5300)",
+    )
+
+    // cycles = 32 (not the ladder default 8): per-rung deltas sit near the in-run noise floor
+    // (~2-3.5e-4 medRTF at cycles=8 — negative deltas observed); the pattern repeats identically
+    // per cycle, so longer runs are pure statistics. HEADLINE METRIC for before/after comparisons
+    // is the IN-RUN chain total (rung5 - rung0), which is immune to the per-pass fixed-cost drift
+    // that dominates cheap cases across runs; individual rung deltas are indicative only.
+    private const val GTR_FX_CYCLES = 32
+
+    private val gtrFxLadder: List<SongBenchmark.Case> = run {
+        var expr = "signal"
+        val out = ArrayList<SongBenchmark.Case>()
+        // Floor: same pattern, trivial sine voice instead of the guitar. Approximates the fixed
+        // renderer overhead (scheduler, orbit mix, master limiter, output conversion) shared by
+        // every rung — but note it also removes one sine voice's ignitor+ADSR+pipeline cost, and
+        // the rungs (not the floor) carry .analog(13.0) drift. The floor-subtracted denominator
+        // is therefore "guitar voice minus a sine voice, incl. analog drift", NOT pure
+        // guitar-ignitor cost — state that whenever quoting the tone chain's share.
+        out += SongBenchmark.Case(
+            name = "GTR-FX: F floor (sine voice, no guitar)",
+            code = code(
+                """
+                n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("sine")
+                  .gain(0.5).adsr("0.005:2.5:0.0:0.029")
+                """.trimIndent(),
+            ),
+            group = "GTR-FX",
+            rpm = DER_RPM,
+            cycles = GTR_FX_CYCLES,
+        )
+        for ((label, seg) in gtrFxRungs) {
+            if (seg.isNotBlank()) expr = "$expr\n    $seg"
+            out += SongBenchmark.Case(
+                name = "GTR-FX: $label",
+                code = gtrFxCode(expr),
+                group = "GTR-FX",
+                rpm = DER_RPM,
+                cycles = GTR_FX_CYCLES,
+            )
+        }
+        out
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────────────────
+    // GTR-POLY sweep — cache-pressure hypothesis (maintainer, 2026-08-19): the single-voice
+    // anchors keep everything L1-hot, so per-node plumbing measures ~free. What actually scales
+    // with K concurrent chain instances: one MemoizingIgnitor cache (~1 KB, full-chain case only
+    // — bare `signal` has 1 consumer and takes the direct path), per-voice oscillator + drift
+    // state (unison-15 WaveVoiceStates + PolyAnalogDrift arrays) and ~6 SVF state pairs — about
+    // 2-3 KB per voice. The scratch-buffer pool and the voice buffer are SHARED per engine
+    // (VoiceScheduler allocates one of each) and stay hot across voices. So K=16 only REACHES
+    // L1 capacity (~32-48 KB); the sweep must go to K=32/64 to genuinely leave L1 and press L2
+    // — below that, a flat curve is a property of the probe, not a refutation. If the chain's
+    // marginal cost per voice, (full(K) − bare(K)) / K, GROWS with K, cache pressure is real and
+    // the fused EQ's win scales with polyphony. Sustained K-note chords (comma = parallel stack,
+    // sustain 1.0, one event per cycle) hold exactly K chain instances; signal cost cancels in
+    // the full − bare subtraction at each K.
+    // ────────────────────────────────────────────────────────────────────────────────────────
+
+    // Derived from gtrFxRungs so the sweep can NEVER measure a different chain than the ladder.
+    private val GTR_FULL_CHAIN: String = gtrFxRungs.fold("signal") { acc, (_, seg) ->
+        if (seg.isBlank()) acc else "$acc\n    $seg"
+    }
+
+    // K=1 runs ~170 ms/pass — with the default 2 warmup passes it measured ~12-18% above the
+    // K≥4 linear fit (JIT/alloc warmup, not signal). More warmup + cycles gets every K to
+    // steady state so the K=1→4 segment is interpretable.
+    private const val GTR_POLY_CYCLES = 16
+    private const val GTR_POLY_WARMUP_PASSES = 4
+
+    private fun gtrPolyPattern(k: Int): String {
+        // Degrees bounded to 0..26 (duplicates allowed above K=14): unbounded stacking pushed
+        // K=32/64 voices past Nyquist (degree 58+ on e2:minor), silently changing the per-sample
+        // code path (wrapPhase modulo branch, tracking-HP pinned at its clamp) — the sweep must
+        // vary only the COUNT, never the workload class. Residual caveat: the pitch SET still
+        // grows up to K=14 (saw flyback fraction rises with pitch, a few % oscillator cost), so
+        // raw bare/full columns are cross-K comparable only from K=16 up; the headline
+        // full − bare delta cancels it at every K.
+        val chord = (0 until k).joinToString(",") { ((it * 2) % 28).toString() }
+        return """
+            n("[$chord]").orbit(1).scale("e2:minor").sound(guitar).unison(15).spread(0.08)
+              .analog(13.0).gain(0.3).adsr("0.005:0.5:1.0:0.05")
+        """.trimIndent()
+    }
+
+    // POSITION-IN-RUN WARNING: turbo/clock decay shifts per-voice numbers ~5-10% across a sweep
+    // (measured 2026-08-19: ascending order showed a spurious +33% chain bump at K=32; the same
+    // sweep descending was flat 1.24-1.29e-3 at every K, and K=64 ran 10% cheaper when first).
+    // Any conclusion about K-scaling needs the sweep run in BOTH orders.
+    private val gtrPolySweep: List<SongBenchmark.Case> = listOf(1, 4, 8, 16, 32, 64).flatMap { k ->
+        listOf(
+            SongBenchmark.Case(
+                name = "GTR-POLY: K=$k bare signal",
+                code = gtrFxCode("signal", gtrPolyPattern(k)),
+                group = "GTR-POLY",
+                rpm = DER_RPM,
+                cycles = GTR_POLY_CYCLES,
+                warmupPasses = GTR_POLY_WARMUP_PASSES,
+            ),
+            SongBenchmark.Case(
+                name = "GTR-POLY: K=$k full chain",
+                code = gtrFxCode(GTR_FULL_CHAIN, gtrPolyPattern(k)),
+                group = "GTR-POLY",
+                rpm = DER_RPM,
+                cycles = GTR_POLY_CYCLES,
+                warmupPasses = GTR_POLY_WARMUP_PASSES,
+            ),
+        )
+    }
+
+    fun gtrPoly(): List<SongBenchmark.Case> = gtrPolySweep
+
+    // ────────────────────────────────────────────────────────────────────────────────────────
     // Isolated voices (full chains, section gates removed)
     // ────────────────────────────────────────────────────────────────────────────────────────
 
@@ -298,7 +474,7 @@ object SongBenchmarkCases {
         guitar2, bass, drumsKick, hats, pink,
     )
 
-    fun ladders(): List<SongBenchmark.Case> = leadLadder + guitar1Ladder
+    fun ladders(): List<SongBenchmark.Case> = leadLadder + guitar1Ladder + gtrFxLadder
 
     fun experiments(): List<SongBenchmark.Case> = distortSweep + unisonSweep + fxIsolation + interactionSweep
 

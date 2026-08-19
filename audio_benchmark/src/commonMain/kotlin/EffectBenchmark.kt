@@ -19,7 +19,9 @@ import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.highpass
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
+import io.peekandpoke.klang.audio_be.ignitor.notch
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
@@ -307,6 +309,28 @@ class EffectBenchmark(
                     q = 1.0,
                     env = FilterEnvDef(depth = 0.5, attackSec = 0.05, decaySec = 0.1, sustainLevel = 0.7, releaseSec = 0.5),
                 )
+            },
+
+            // ── EqCore baseline anchors (unified-equalizer plan, D0) ──
+            // Bare source: svfIgnitorCase times the sine INSIDE the step, unlike monoFilterCase
+            // (pre-rendered source). Subtract this case from the chained anchors below to get a
+            // source-free delta comparable to a pre-rendered-source EqCore case.
+            svfIgnitorCase("Ignitor sine (bare source baseline)") {
+                Ignitors.sine()
+            },
+            // Coefficient-cached PLUMBING anchor: the Der Schmetterling guitar tail's shape as
+            // chained Ignitor SVFs. Each node pays its own generate() call + scratch pass — the
+            // plumbing the fused EqCore removes; EqCore's 4-section case is measured against this.
+            // NOTE: the Double overloads wrap cutoff/q in ParamIgnitor, so coefficients compute
+            // ONCE here — the real song's script literals become Constants, which recompute
+            // per block (SvfIgnitor cache predicate is Param-only). This anchor isolates
+            // per-sample plumbing; it underestimates the song chain by 4 per-block tan() calls.
+            svfIgnitorCase("Ignitor SVF x4 chain (notch+hp+lp+lp)") {
+                Ignitors.sine()
+                    .notch(210.0, 2.5)
+                    .highpass(440.0, 0.707)
+                    .lowpass(5300.0)
+                    .lowpass(5300.0)
             },
 
             // Stereo effects with separate input/output

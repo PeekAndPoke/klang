@@ -19,7 +19,7 @@ import java.time.format.DateTimeFormatter
  * Run with:  `./gradlew runSongBenchmark`            (all suites)
  *            `./gradlew runSongBenchmark --args=ladders`   (one suite)
  *
- * Suites: `voices`, `ladders`, `experiments`, `songs`, `all` (default).
+ * Suites: `voices`, `ladders`, `experiments`, `gtrpoly`, `songs`, `live`, `all` (default).
  *
  * Prints a table per suite (with ladder deltas) and saves a markdown report to docs/benchmarks/.
  */
@@ -46,6 +46,7 @@ fun main(args: Array<String>) {
         "voices" -> SongBenchmarkCases.voices()
         "ladders" -> SongBenchmarkCases.ladders()
         "experiments", "exp" -> SongBenchmarkCases.experiments()
+        "gtrpoly" -> SongBenchmarkCases.gtrPoly()
         "songs", "full" -> SongBenchmarkCases.frozenSongs()
         "live" -> SongBenchmarkCases.live()
         else -> SongBenchmarkCases.all()
@@ -89,7 +90,7 @@ private fun printGroup(group: String, rows: List<SongBenchmark.Result>, md: Stri
         "full-song" -> "Full frozen songs"
         else -> group
     }
-    val isLadder = group == "LEAD" || group == "GTR1"
+    val isLadder = group == "LEAD" || group == "GTR1" || group == "GTR-FX"
 
     println("── $title " + "─".repeat(maxOf(1, 60 - title.length)))
     md.appendLine("## $title")
