@@ -1,8 +1,11 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-18**
+**SINCE: 2026-08-19**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-19, klang-ai session): offline renders of Der Schmetterling v34 only
+> (full mix + gain-1.5 A/B variant for limiter measurement) — no source changes, no test runs.
 
 > Last action (2026-08-17, claude-code tutorial session): ladder at 15 certified lessons —
 > B6/B7, A5/B8, B9/B10 all authored + certified + committed this session (block layout +
