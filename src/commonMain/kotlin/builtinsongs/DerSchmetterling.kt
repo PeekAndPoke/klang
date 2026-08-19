@@ -20,7 +20,7 @@ import * from "sprudel"
 
 // Song Status: Garage Band ...
 
-let feel          = 10.0   // 0.0 .. guitar | 100.0 .. rave
+let feel          = 15.0   // 0.0 .. guitar | 100.0 .. rave
 let transposition = -2     // -2 .. D | 0 .. E | 2 .. F#
 let snareHz       = 210    // Where does the snare cut through?
 
@@ -33,7 +33,7 @@ let guitar = (() => {
 
   let pMidsHz     = Osc.param("midsHz",      850.000, "Mids frequency")
   let pMidsQ      = Osc.param("midsQ",         0.707, "Mids Q")
-  let pMids       = Osc.param("mids",          2.000, "Mids Volume")
+  let pMids       = Osc.param("mids",          1.500, "Mids Volume")
   
   let pPresenceHz = Osc.param("presenceHz", 2500.000, "Presence frequency")
   let pPresenceQ  = Osc.param("presenceQ",     0.700, "Presence Q")
@@ -69,12 +69,12 @@ stack(
     // Lead - Inspired by: Editors - Papillon                                                                                                             
     n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3 [1 -1]|1|1|1|1]>*2`)
       .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>")
-      .gain(0.40).postgain("<0.170!48 0.085!16 0.170!48 0.220!16>")  // . solo()                  
+      .gain(0.40).postgain("<0.170!48 0.085!16 0.170!48 0.200!16>")  // . solo()                  
       .sound(guitar).unison(17).spread(0.20).oscp("presenceHz", 3400).oscp("presenceQ", 0.9).oscp("presence", 4.5).oscp("hptrack", 1.0)    
-      .adsr("0.007:3.0:0.1:0.125").clip(0.92).lpf(5000).lpe(perlin.range(0.5, 0.6).fast(2)).lpq(1.5).lpadsr("0.000:0.3:0.2:0.03") // . mute()            
+      .adsr("0.007:3.0:0.1:0.15").clip(0.90).lpf(5000).lpe(perlin.range(0.5, 0.6).fast(2)).lpq(1.5).lpadsr("0.000:0.3:0.2:0.03") // . mute()            
       .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                            
       .superimpose(x => x.transpose(12).velocity("[0.5 0.4 0.45 0.4]*2").pan(0.1).superimpose(pan(0.9)))
-      .mute("<1!64 0!32 1!32 0!16>").room("0.3:5:0.1").body("steel").bodyMix(0.4).late(berlin.range(0.0008, 0.0020))
+      .mute("<1!64 0!32 1!32 0!16>").room("0.3:5:0.1").body("steel").bodyMix(0.4).late(berlin.range(0.0005, 0.0015))
     , // Guitars       
     stack(
       // Guitar 1
@@ -103,7 +103,7 @@ stack(
         .orbit(2).scale("<e2:minor>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // . mute()
         .gain(0.5).postgain(0.115).velocity(dynamics.fast(2))
         .sound(guitar).unison(11).spread(0.10)
-        .oscp("midsHz", 750).oscp("midsQ", 0.8).oscp("presence", 5.7).oscp("presenceHz", 2200).oscp("presenceQ", 1.1).oscp("hptrack", 1.00).oscp("hpq", 1.7)
+        .oscp("midsHz", 750).oscp("midsQ", 0.8).oscp("presence", 5.7).oscp("presenceHz", 2200).oscp("presenceQ", 1.1).oscp("hptrack", 1.00).oscp("hpq", 1.6)
         .clip("<0.96!31 0.93 0.96!31 0.92 0.96!30 0.88 0.90>".fast(2)).adsr("0.003:4.0:0.0:0.010")
         .pan(0.40).superimpose(pan(0.60))
         .mute("<0!128 1!16 0!16>").late(berlin.range(0.0000, 0.0006))
@@ -121,17 +121,17 @@ stack(
   , // Drums
   stack(  
     sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>").n(0).mute("<0!128 1!32>")  // . solo()
-      .velocity("0.98 0.96 0.97 0.96").pan(0.5).orbit(5).gain(0.22).hpf(30).hpq(1).lpf(8000).adsr("0.001:0.05:0.95:0.2").distort(0.1)
+      .velocity("0.98 0.96 0.97 0.96").pan(0.5).orbit(5).gain(0.21).hpf(30).hpq(1).lpf(8000).adsr("0.001:0.05:0.95:0.2").distort(0.1)
       .superimpose(x => x.bandf("80").bandq(2.0).vel(0.80))
       .late(berlin.range(0.0000, 0.0007)),
     sound("<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>").n(5).mute("<0!128 1!32>") // . solo()
-      .pan(0.5).late(berlin.range(0.0010, 0.0020)).orbit(5).pan(0.50).gain(0.26).hpf(80).lpf(14500).lpq(0.5).adsr("0.001:0.05:0.95:0.2")
+      .pan(0.5).late(berlin.range(0.0010, 0.0020)).orbit(6).pan(0.50).gain(0.25).hpf(80).lpf(14500).lpq(0.5).adsr("0.001:0.05:0.95:0.2")
       .superimpose(x => x.bandf(pure(snareHz).add(berlin.mul(5).fast(4))).bandq(2.0).vel(0.80)),
     sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2).mute("<0!128 1!32>") // . solo()
-      .pan(0.50).late(berlin.range(0.0020, 0.0030)).orbit(5).gain(0.265).hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.5).adsr("0.003:0.05:0.95:0.5"), // . mute()
-    sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(5).gain(0.070).mute("<0!128 1!32>")
+      .pan(0.50).late(berlin.range(0.0020, 0.0030)).orbit(7).gain(0.26).hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.5).adsr("0.003:0.05:0.95:0.5"), // . mute()
+    sound("<~!79 [~ ~ ~ cp  cp ~ cp ~] ~!47 [~ ~ ~ cp  cp ~ cp ~]>").orbit(8).gain(0.065).mute("<0!128 1!32>")
       .pan(0.3).superimpose(pan(0.7)),
-    sound("<pink ~ pink pink>*16").orbit(5).gain(0.120).hpf(11000).hpq(0.5).lpf(17000).lpq(0.5).velocity("<1.0 0.90 0.95 0.90>*16")
+    sound("<pink ~ pink pink>*16").orbit(9).gain(0.120).hpf(11000).hpq(0.5).lpf(17000).lpq(0.5).velocity("<1.0 0.90 0.95 0.90>*16")
       .pan(sine.range(0.35, 0.65).slow(8)).adsr("0.006:0.15:0.0:0.01").late(berlin.range(0.0025, 0.0035)) //  .solo()
   ).analog(feel / 2).room(0.20).rsize(3.0).rlp(8000).compressor("-28:2:6:0.01:0.15") // .mute()
   // Master
@@ -144,6 +144,5 @@ stack(
 
 
 
-    
     """,
 )
