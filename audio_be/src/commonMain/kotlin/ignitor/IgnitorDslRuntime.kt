@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.random.Random
@@ -354,6 +355,30 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.OnePoleLowpass -> inner.withMod().onePoleLowpass(cutoffHz.noMod())
         is IgnitorDsl.Bandpass -> inner.withMod().bandpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
         is IgnitorDsl.Notch -> inner.withMod().notch(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+
+        // Eq: withMod ONLY on inner; noMod on all section params — mirrors the filter arms
+        // above (a withMod param subtree would change the freqHz the params see and break
+        // tracking-HP parity). The exhaustive `when` below IS the wire→EqCore type mapping:
+        // a new EqSection variant without an arm fails compilation.
+        is IgnitorDsl.Eq -> EqIgnitor(
+            upstream = inner.withMod(),
+            sections = sections.map { s ->
+                when (s) {
+                    is IgnitorDsl.EqSection.Lowpass ->
+                        EqIgnitor.Section(EqCore.LOWPASS, s.freqHz.noMod(), s.q.noMod())
+                    is IgnitorDsl.EqSection.Highpass ->
+                        EqIgnitor.Section(EqCore.HIGHPASS, s.freqHz.noMod(), s.q.noMod())
+                    is IgnitorDsl.EqSection.Bandpass ->
+                        EqIgnitor.Section(EqCore.BANDPASS, s.freqHz.noMod(), s.q.noMod())
+                    is IgnitorDsl.EqSection.Notch ->
+                        EqIgnitor.Section(EqCore.NOTCH, s.freqHz.noMod(), s.q.noMod())
+                    is IgnitorDsl.EqSection.Bell ->
+                        EqIgnitor.Section(EqCore.BELL, s.freqHz.noMod(), s.q.noMod(), db = s.db.noMod())
+                    is IgnitorDsl.EqSection.RawTap ->
+                        EqIgnitor.Section(EqCore.RAW_TAP, s.freqHz.noMod(), s.q.noMod(), gain = s.gain.noMod())
+                }
+            },
+        )
 
         // ── Envelope: pass mod through ──
 

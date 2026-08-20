@@ -1012,6 +1012,141 @@ sealed interface IgnitorDsl {
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // Equalizer (unified-eq: one fused EqCore pass instead of chained filter nodes)
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * One section of an [Eq]. A sealed hierarchy, NOT an enum — the house wire rule (types
+     * over enums): each variant carries exactly its own params, `@WireName`-keyed variants
+     * are order-independent on the wire (no enum-ordinal append-only hazard), and every
+     * consumer dispatches through an exhaustive `when` (the runtime maps each variant to
+     * `EqCore`'s Int section types in ONE such `when` — a new variant without a mapping
+     * fails compilation). Every param is a full [IgnitorDsl], resolved per block by the
+     * runtime adapter (`EqIgnitor`) — which is the only layer where `Freq`-backed params
+     * (the tracking highpass) can exist; the planned Master/Katalyst surfaces pass scalars.
+     */
+    @WireFormat
+    sealed interface EqSection {
+
+        /**
+         * Per-variant param collection — declared HERE so a future field on any variant must
+         * be wired next to its declaration (an external `when` over variants matches old
+         * arms silently when a variant merely gains a field; this way the variant's own
+         * override is the single place to forget, right beside the field).
+         */
+        fun collectParams(out: MutableList<Param>)
+
+        /**
+         * SVF low-pass section — the linear path of [IgnitorDsl.Lowpass], as an Eq section.
+         * Defaults MATCH the chained node (parameter-parity rule: same param, same surface,
+         * same meaning — and the same omitted-field sound).
+         */
+        @WireName("eqLowpass")
+        data class Lowpass(
+            val freqHz: IgnitorDsl = Constant(2000.0),
+            val q: IgnitorDsl = Constant(0.707),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freqHz.collectParams(out); q.collectParams(out)
+            }
+        }
+
+        /**
+         * SVF high-pass section — the linear path of [IgnitorDsl.Highpass], as an Eq
+         * section. Defaults match the chained node.
+         */
+        @WireName("eqHighpass")
+        data class Highpass(
+            val freqHz: IgnitorDsl = Constant(200.0),
+            val q: IgnitorDsl = Constant(0.707),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freqHz.collectParams(out); q.collectParams(out)
+            }
+        }
+
+        /** SVF band-pass section — [IgnitorDsl.Bandpass] as an Eq section; same defaults. */
+        @WireName("eqBandpass")
+        data class Bandpass(
+            val freqHz: IgnitorDsl = Constant(1000.0),
+            val q: IgnitorDsl = Constant(1.0),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freqHz.collectParams(out); q.collectParams(out)
+            }
+        }
+
+        /** SVF notch section — [IgnitorDsl.Notch] as an Eq section; same defaults. */
+        @WireName("eqNotch")
+        data class Notch(
+            val freqHz: IgnitorDsl = Constant(1000.0),
+            val q: IgnitorDsl = Constant(1.0),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freqHz.collectParams(out); q.collectParams(out)
+            }
+        }
+
+        /**
+         * Simper peaking bell: [db] decibels of gain at [freqHz], [q] the PRE-GAIN bandwidth
+         * (see `computeSvfBellCoeffs` for math + limits). 0 dB is bit-transparent; db is
+         * COEFFICIENT-bearing (an LFO on it zippers like an LFO on cutoff, per-block snap).
+         */
+        @WireName("eqBell")
+        data class Bell(
+            val freqHz: IgnitorDsl = Constant(1000.0),
+            val q: IgnitorDsl = Constant(1.0),
+            val db: IgnitorDsl = Constant(0.0),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freqHz.collectParams(out); q.collectParams(out); db.collectParams(out)
+            }
+        }
+
+        /**
+         * Parallel boost tap: a bandpass of the Eq INPUT (never the running chain) added at
+         * this list position, scaled by [gain] — the fused form of
+         * `signal.add(signal.bandpass(freq, q).mul(gain))` WHEN [gain] is
+         * Constant/Param-backed: the adapter snaps it once per block, while the legacy Times
+         * node multiplies per SAMPLE — an expression-backed gain (an LFO) must never fuse
+         * (a 128-frame gain staircase instead of a smooth tremolo; the optimizer's R2
+         * precondition, same class as [Bell]'s coefficient-bearing `db`).
+         */
+        @WireName("eqRawTap")
+        data class RawTap(
+            val freqHz: IgnitorDsl = Constant(1000.0),
+            val q: IgnitorDsl = Constant(1.0),
+            val gain: IgnitorDsl = Constant(1.0),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freqHz.collectParams(out); q.collectParams(out); gain.collectParams(out)
+            }
+        }
+    }
+
+    /**
+     * Fused serial equalizer over [inner]: an ordered [sections] list rendered in ONE
+     * `EqCore` pass instead of a chain of per-filter nodes. Produced by the graph optimizer
+     * (consecutive chained filters fold into sections, bit-identically — the chained syntax
+     * stays THE syntax for cutoff filters) or authored via the upcoming `.eq()/.band()`
+     * surface (bells only). Sections run serially in list order; taps read the Eq input and
+     * contribute at their position (the position-pinned definition in `EqCore`).
+     */
+    @WireName("eq")
+    data class Eq(
+        val inner: IgnitorDsl,
+        val sections: List<EqSection> = emptyList(),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+
+            for (s in sections) {
+                s.collectParams(out)
+            }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // Envelope
     // ═════════════════════════════════════════════════════════════════════════════
 
@@ -1582,6 +1717,7 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     is IgnitorDsl.Highpass -> inner.maxReleaseSec()
     is IgnitorDsl.Bandpass -> inner.maxReleaseSec()
     is IgnitorDsl.Notch -> inner.maxReleaseSec()
+    is IgnitorDsl.Eq -> inner.maxReleaseSec()
     is IgnitorDsl.OnePoleLowpass -> inner.maxReleaseSec()
     is IgnitorDsl.Distort -> inner.maxReleaseSec()
     is IgnitorDsl.Drive -> inner.maxReleaseSec()

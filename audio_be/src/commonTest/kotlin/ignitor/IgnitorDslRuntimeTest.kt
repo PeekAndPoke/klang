@@ -97,6 +97,16 @@ class IgnitorDslRuntimeTest : StringSpec({
         generateBlock(sig).all { it == 0.0 } shouldBe true
     }
 
+    "Eq DSL builds and produces non-zero output" {
+        val dsl = IgnitorDsl.Eq(
+            inner = IgnitorDsl.Sawtooth(),
+            sections = listOf(
+                IgnitorDsl.EqSection.Lowpass(IgnitorDsl.Constant(2000.0), IgnitorDsl.Constant(1.0)),
+            ),
+        )
+        generateBlock(dsl.toExciter()).hasNonZeroSamples() shouldBe true
+    }
+
     "Plus composition produces non-zero output" {
         val dsl = IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()
         val sig = dsl.toExciter()

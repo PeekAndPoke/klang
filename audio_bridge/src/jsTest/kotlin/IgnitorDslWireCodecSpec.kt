@@ -146,6 +146,25 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onePoleLowpass(3000.0)) }
     "Bandpass" { check(IgnitorDsl.Sine().bandpass(1000.0, 2.0)) }
     "Notch" { check(IgnitorDsl.Sine().notch(1000.0, 2.0)) }
+    "Eq (every section variant, all fields non-default)" {
+        check(
+            IgnitorDsl.Eq(
+                inner = IgnitorDsl.Sawtooth(),
+                sections = listOf(
+                    IgnitorDsl.EqSection.RawTap(
+                        IgnitorDsl.Constant(4000.0), IgnitorDsl.Constant(0.8), IgnitorDsl.Param("tapGain", 2.0),
+                    ),
+                    IgnitorDsl.EqSection.Bell(
+                        IgnitorDsl.Constant(850.0), IgnitorDsl.Constant(0.9), IgnitorDsl.Constant(6.0),
+                    ),
+                    IgnitorDsl.EqSection.Notch(IgnitorDsl.Constant(210.0), IgnitorDsl.Constant(2.5)),
+                    IgnitorDsl.EqSection.Highpass(IgnitorDsl.Constant(440.0), IgnitorDsl.Constant(1.4)),
+                    IgnitorDsl.EqSection.Lowpass(IgnitorDsl.Constant(5300.0), IgnitorDsl.Constant(0.9)),
+                    IgnitorDsl.EqSection.Bandpass(IgnitorDsl.Param("bpFreq", 900.0), IgnitorDsl.Constant(1.2)),
+                ),
+            )
+        )
+    }
 
     // --- envelope / FM --------------------------------------------------------------------------------------
     "Adsr" { check(IgnitorDsl.Sine().adsr(0.01, 0.3, 0.5, 0.5)) }

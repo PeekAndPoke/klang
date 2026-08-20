@@ -13,9 +13,8 @@ import io.peekandpoke.klang.audio_be.safeOut
 /**
  * Freq-agnostic serial EQ core — N second-order TPT-SVF sections in one `process()` call.
  *
- * The shared engine of the unified-equalizer work: the PLANNED per-voice `EqIgnitor` adapter
- * will drive it first; the planned `MasterFx.eq()` and Katalyst chains adopt the SAME core
- * later.
+ * The shared engine of the unified-equalizer work: the per-voice `EqIgnitor` adapter drives
+ * it (D3b); the planned `MasterFx.eq()` and Katalyst chains adopt the SAME core later.
  *
  * CONTRACT — the core owns: section state (`ic1`/`ic2`), coefficient storage and computation
  * (via [computeSvfCoeffs], or [computeSvfBellCoeffs] for [BELL] — NaN/Inf-safe through
@@ -40,7 +39,10 @@ import io.peekandpoke.klang.audio_be.safeOut
  * reconfiguration is the surface's job.
  *
  * Section types are plain Ints ([LOWPASS]..[RAW_TAP]) — NO audio_bridge dependency (Zig-port
- * purity); a sync spec pins them to the wire enum's ordinals when the DSL node lands. The
+ * purity); the wire side is a SEALED hierarchy (`IgnitorDsl.EqSection`), and the exhaustive
+ * variant→Int mapping `when` in the runtime's Eq arm is the guard: a new variant without a
+ * mapping fails compilation, and a swapped arm reddens `EqIgnitorSpec`'s per-variant parity
+ * rows (`EqCoreSpec` drives the Ints directly and cannot see the mapping). The
  * order is APPEND-ONLY (it differs from delivery order: [RAW_TAP] shipped before [BELL] but
  * takes the higher ordinal; both are implemented now). An UNKNOWN type value renders
  * as PASSTHROUGH (the only degradation that can neither invent gain nor gouge a spectral
