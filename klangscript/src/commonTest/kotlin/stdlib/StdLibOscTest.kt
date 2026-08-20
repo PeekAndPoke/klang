@@ -5,8 +5,11 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
@@ -443,6 +446,112 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.sine().notch(1000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Notch>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
+    }
+
+    "eq wraps the inner into an empty Eq" {
+        val dsl = evalIgnitorDsl("Osc.sine().eq()")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
+        dsl.sections shouldBe emptyList()
+    }
+
+    "eq is idempotent" {
+        val dsl = evalIgnitorDsl("Osc.sine().eq().eq()")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
+    }
+
+    "band on the Eq adds a bell with defaults" {
+        val dsl = evalIgnitorDsl("Osc.sine().eq().band(1200)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
+        dsl.sections.size shouldBe 1
+        val bell = dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
+        (bell.freqHz as IgnitorDsl.Constant).value shouldBe 1200.0
+        (bell.q as IgnitorDsl.Constant).value shouldBe 0.707
+        (bell.db as IgnitorDsl.Constant).value shouldBe 0.0
+    }
+
+    "band is a type extension, not available on a plain oscillator" {
+        // The supersaw config-method pattern: .eq() is the entry point; .band() on a
+        // non-Eq must be a dispatch error, never a silent auto-wrap. Asserting the ERROR
+        // TYPE and the method name matters: a bare shouldThrow<Exception> would also pass
+        // on a typo in the script, pinning nothing.
+        val error = shouldThrow<KlangScriptTypeError> {
+            evalIgnitorDsl("Osc.sine().band(1200)")
+        }
+        // NOT `shouldContain "band"`: the error appends the available-method list, which
+        // includes `bandpass`, so that substring matches for ANY unknown method.
+        error.message shouldContain "has no method 'band'"
+    }
+
+    "band appends to an existing Eq in list order" {
+        val dsl = evalIgnitorDsl("Osc.sine().eq().band(300, 1.0, 6).band(2500)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
+        dsl.sections.size shouldBe 2
+        val first = dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
+        (first.freqHz as IgnitorDsl.Constant).value shouldBe 300.0
+        (first.db as IgnitorDsl.Constant).value shouldBe 6.0
+        val second = dsl.sections[1].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
+        (second.freqHz as IgnitorDsl.Constant).value shouldBe 2500.0
+    }
+
+    "band with all-named args skips q" {
+        // The escape from the positional trap (.band(1200, 6) sets q, not gain). KlangScript
+        // forbids MIXING positional and named args, so the escape is the ALL-named form; it
+        // then works only because q's default is a SAFE LITERAL, so KSP emits a default thunk.
+        // A future `q: IgnitorDslLike = IgnitorDsl.Constant(0.707)` "parity" edit would kill
+        // the thunk and turn this documented call into a runtime error, every other row green.
+        val dsl = evalIgnitorDsl("Osc.saw().eq().band(freq = 1200, db = 6)")
+        val bell = (dsl as IgnitorDsl.Eq).sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
+        (bell.q as IgnitorDsl.Constant).value shouldBe 0.707
+        (bell.db as IgnitorDsl.Constant).value shouldBe 6.0
+    }
+
+    "base filters still chain AFTER an eq (the shape the songs ship)" {
+        // .notch()/.lowpass()/... resolve on an Eq receiver only through supertype dispatch.
+        // Der Schmetterling relies on this; without a row here it is pinned only incidentally,
+        // from another module, via maintainer-owned song source that can change any time.
+        val dsl = evalIgnitorDsl("Osc.saw().eq().tap(850, 0.707, 1.7).notch(210, 2.5).lowpass(5250)")
+        val lowpass = dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
+        val notch = lowpass.inner.shouldBeInstanceOf<IgnitorDsl.Notch>()
+        val eq = notch.inner.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        eq.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
+    }
+
+    "tap adds a RawTap section with defaults" {
+        val dsl = evalIgnitorDsl("Osc.saw().eq().tap(850)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        val tap = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
+        (tap.freqHz as IgnitorDsl.Constant).value shouldBe 850.0
+        (tap.q as IgnitorDsl.Constant).value shouldBe 1.0
+        (tap.gain as IgnitorDsl.Constant).value shouldBe 1.0
+    }
+
+    "tap and band mix in one section list, in written order" {
+        // The guitar shape: two parallel boosts, then serial tone shaping.
+        val dsl = evalIgnitorDsl("Osc.saw().eq().tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0).band(4000, 0.7, -3)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        dsl.sections.size shouldBe 3
+        dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
+        dsl.sections[1].shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
+        dsl.sections[2].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
+        ((dsl.sections[1] as IgnitorDsl.EqSection.RawTap).gain as IgnitorDsl.Constant).value shouldBe 5.0
+    }
+
+    "tap is a type extension, not available on a plain oscillator" {
+        val error = shouldThrow<KlangScriptTypeError> {
+            evalIgnitorDsl("Osc.sine().tap(850)")
+        }
+        error.message shouldContain "has no method 'tap'"
+    }
+
+    "band accepts an IgnitorDsl freq (note tracking)" {
+        val dsl = evalIgnitorDsl("Osc.saw().eq().band(Osc.freq().mul(2))")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        val bell = dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
+        bell.freqHz.shouldBeInstanceOf<IgnitorDsl.Times>()
     }
 
     "drive + clip chain" {

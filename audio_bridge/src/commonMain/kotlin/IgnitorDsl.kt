@@ -1091,11 +1091,26 @@ sealed interface IgnitorDsl {
          * Simper peaking bell: [db] decibels of gain at [freqHz], [q] the PRE-GAIN bandwidth
          * (see `computeSvfBellCoeffs` for math + limits). 0 dB is bit-transparent; db is
          * COEFFICIENT-bearing (an LFO on it zippers like an LFO on cutoff, per-block snap).
+         *
+         * The [q] default is 0.707 and MUST stay equal to the `band()` default on both DSL
+         * doors (parameter-parity: one bell, one omitted-field sound). It is deliberately
+         * wider than the bandpass/notch default of 1.0 — there 1.0 is a resonance setting,
+         * here it is a bell width, and musical bells sit wide (the tap-to-bell conversions
+         * of the voicings in the real song land at 0.33 to 0.70).
+         *
+         * ⚠ That conversion (`A² = 1 + g·Q`, `q_bell = Q/A`) is exact for ONE tap in
+         * isolation ONLY. N parallel taps are NOT N serial bells: bells multiply, taps sum,
+         * and the cross term is what it leaves behind. Migrating a parallel boost
+         * bank to bells is a NEW mix, not a conversion — use [RawTap]. See [IgnitorDsl.Eq].
+         * (Worked example: two boosts of gain 1.7 @ 850 Hz/Q 0.707 and 5.0 @ 2500 Hz/Q 0.7 —
+         * the guitar's default voicing — overshoot by +4.5 dB at 1200 Hz when run as serial
+         * bells instead of parallel taps. Wider/hotter voicings overshoot more; the term
+         * scales with `g₁·g₂`, so re-measure per patch rather than reusing this figure.)
          */
         @WireName("eqBell")
         data class Bell(
             val freqHz: IgnitorDsl = Constant(1000.0),
-            val q: IgnitorDsl = Constant(1.0),
+            val q: IgnitorDsl = Constant(0.707),
             val db: IgnitorDsl = Constant(0.0),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
@@ -1125,12 +1140,46 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Fused serial equalizer over [inner]: an ordered [sections] list rendered in ONE
-     * `EqCore` pass instead of a chain of per-filter nodes. Produced by the graph optimizer
-     * (consecutive chained filters fold into sections, bit-identically — the chained syntax
-     * stays THE syntax for cutoff filters) or authored via the upcoming `.eq()/.band()`
-     * surface (bells only). Sections run serially in list order; taps read the Eq input and
-     * contribute at their position (the position-pinned definition in `EqCore`).
+     * Fused equalizer over [inner]: an ordered [sections] list rendered in ONE `EqCore` pass
+     * instead of a chain of per-filter nodes. TODAY it is authored via the `.eq()` surface;
+     * once the graph optimizer lands (plan D4) it will ALSO be produced automatically by
+     * folding consecutive chained filters into sections, bit-identically, with the chained
+     * syntax staying THE syntax for cutoff filters. There is no fold pass in the tree yet.
+     *
+     * ## Two section families, two topologies
+     *
+     * Sections are visited in list order, and each one rewrites the running buffer in place,
+     * so a section normally sees what the previous section produced. That is the SERIAL
+     * family: [EqSection.Lowpass], [EqSection.Highpass], [EqSection.Bandpass],
+     * [EqSection.Notch] and [EqSection.Bell] (`.band()`).
+     *
+     * [EqSection.RawTap] (`.tap()`) is the exception and the reason this node can replace a
+     * hand-built parallel boost chain: a tap reads the **Eq INPUT** (a per-block snapshot
+     * taken before any section runs) rather than the running buffer, and ADDS its band onto
+     * the chain at its list position instead of replacing it.
+     *
+     * ```
+     * input ──┬─────────────► [bell] ──► [notch] ──► [lowpass] ──► out
+     *         │                 ▲
+     *         └── bandpass ─────┘  (a tap: reads input, adds in at its position)
+     * ```
+     *
+     * The practical consequence, and it is audible: N bells MULTIPLY
+     * (`(1 + m1₁H₁)(1 + m1₂H₂)`), while N taps SUM (`1 + g₁H₁ + g₂H₂`). Converting a
+     * parallel tap bank into serial bells leaves the cross term `g₁g₂H₁H₂` behind. On Der
+     * Schmetterling's guitar (850 Hz and 2500 Hz boosts) that term measured **+4.5 dB around
+     * 1200 Hz**, and more on wider or hotter voicings. Per-BAND the two forms convert
+     * exactly (`A² = 1 + g·Q`, `q_bell = Q/A`); per-CHAIN they do not. Use [EqSection.RawTap]
+     * to reproduce a parallel bank, and [EqSection.Bell] for ordinary cascading EQ bands.
+     *
+     * ⚠ The consequence when the two are MIXED: a bell earlier in the list cannot shape a
+     * later tap, because the tap always reads the pre-section input. `.band(3000.0, db = -12.0)`
+     * followed by `.tap(3000.0, 1.0, 5.0)` re-injects the very 3 kHz the band just removed,
+     * taken from the uncut source. Put taps first (as the diagram shows) unless that
+     * re-injection is what you want.
+     *
+     * Cost note: the input snapshot is taken ONLY when the list contains a tap, so a
+     * bell-only Eq copies nothing.
      */
     @WireName("eq")
     data class Eq(
@@ -1537,6 +1586,80 @@ fun IgnitorDsl.highpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Highpa
     cutoffHz = IgnitorDsl.Constant(cutoffHz),
     q = IgnitorDsl.Constant(q),
 )
+
+/**
+ * Starts (or continues) a fused equalizer — see [IgnitorDsl.Eq]. Idempotent. Same names and
+ * defaults as the KlangScript stdlib `eq()` (dual-surface rule).
+ *
+ * ⚠ Idempotence composes badly with [tap] on a SHARED sound: if `base` already ends in an Eq,
+ * `base.eq().tap(...)` appends into THAT Eq, so the tap reads base's PRE-Eq input rather than
+ * its output — silently a different sound, with no error. Wrap deliberately when layering onto
+ * someone else's Eq. Harmless for [band] (an append at the end is a plain serial append).
+ */
+fun IgnitorDsl.eq(): IgnitorDsl.Eq = when (this) {
+    is IgnitorDsl.Eq -> this
+    else -> IgnitorDsl.Eq(inner = this)
+}
+
+/**
+ * Appends a Simper peaking bell ([db] dB at [freq], [q] = pre-gain bandwidth; 0 dB is
+ * bit-transparent). Only available ON an Eq: `.eq()` is the entry point. Same names and
+ * defaults as the KlangScript stdlib `band()` (dual-surface rule).
+ *
+ * The [q] width is INVARIANT in [db] while `q·A` stays unclamped (1.90 octaves at the default
+ * q); below about -34 dB the clamp engages and deeper cuts narrow. Second positional arg is
+ * [q], not gain: `band(1200.0, 6.0)` is a silent 0 dB band, `band(1200.0, db = 6.0)` is gain.
+ * (In KlangScript that mixed form is rejected outright — there it is `band(freq = ..., db = ...)`.)
+ *
+ * All three params are resolved ONCE PER BLOCK and are coefficient-bearing, [db] included
+ * (it moves the filter coefficients through `q·A`, while the resulting half-gain WIDTH stays
+ * put — see above), so an LFO on [db] zippers exactly like an LFO on a cutoff. For a smooth
+ * gain ride use a VCA, not a bell.
+ */
+fun IgnitorDsl.Eq.band(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    db: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.Bell(freqHz = freq, q = q, db = db))
+
+/** Scalar convenience overload of [band]. */
+fun IgnitorDsl.Eq.band(freq: Double, q: Double = 0.707, db: Double = 0.0): IgnitorDsl.Eq =
+    band(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(db))
+
+/**
+ * Appends a PARALLEL band: a bandpass of the Eq INPUT, scaled by [gain] and added onto the
+ * chain at this position. This is the fused form of
+ * `signal.add(signal.bandpass(freq, q).mul(gain))` **when [gain] is Constant/Param-backed**.
+ *
+ * ⚠ An EXPRESSION-backed [gain] (an LFO) is NOT equivalent: the adapter resolves it once per
+ * block, so a swept tap gain becomes a per-block staircase, where the chained `Times` node
+ * multiplies per SAMPLE and stays smooth. Unlike [freq]/[q] — which snap per block on the
+ * chained `SvfIgnitor` too, so those really are parity — [gain] is the one param where fusing
+ * changes the sound. For a smoothly swept parallel boost, keep the chained form.
+ *
+ * Unlike [band], which cascades, taps SUM with the dry signal, so overlapping taps do not
+ * multiply each other. [q] is the plain bandpass Q and [gain] is a linear multiplier, NOT
+ * decibels, so the values from a hand-built tap chain transfer UNCHANGED. (Rewriting the same
+ * tap as a [band] does not: a tap's audible bump is wider than the bandpass inside it, so the
+ * bell needs `db = 20·log10(1 + gain·q)` and a WIDER `q / sqrt(1 + gain·q)`.)
+ *
+ * ⚠ [q] is LEVEL-BEARING here, unlike on [band]: the engine bandpass is constant-skirt (peak
+ * gain = its own Q), so a tap's peak lift is `1 + gain·q`. Raising [q] therefore NARROWS the
+ * band and LIFTS it at once (gain 1.0: q 0.5 → +3.5 dB over ~3.0 oct, q 4.0 → +14.0 dB over
+ * ~0.8 oct); to tighten a tap at constant level, lower [gain] as you raise [q]. [band]'s peak
+ * is `A²` for any [q]. The defaults (q 1.0, gain 1.0) give `1 + 1·1 = 2` — a +6 dB lift, where
+ * a default [band] is transparent. Same names and defaults as the KlangScript stdlib `tap()` (dual-surface rule).
+ * See [IgnitorDsl.Eq] for the topology diagram.
+ */
+fun IgnitorDsl.Eq.tap(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(1.0),
+    gain: IgnitorDsl = IgnitorDsl.Constant(1.0),
+): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.RawTap(freqHz = freq, q = q, gain = gain))
+
+/** Scalar convenience overload of [tap]. */
+fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 1.0, gain: Double = 1.0): IgnitorDsl.Eq =
+    tap(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(gain))
 
 /** Applies a lightweight one-pole lowpass filter at [cutoffHz]. */
 fun IgnitorDsl.onePoleLowpass(cutoffHz: Double) = IgnitorDsl.OnePoleLowpass(

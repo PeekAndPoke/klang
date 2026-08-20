@@ -216,4 +216,11 @@ class EasyFeaturesRoundTripTest : StringSpec({
         stmt.target shouldBe "arr[0]"
         stmt.value shouldBe KBNumberArg(5.0)
     }
+    // ── Method chains (generic call handling) ─────────────────────────────────
+
+    // klangblocks has ZERO IgnitorDsl coupling: an eq/band chain is generic call handling.
+    // This row pins that the .eq()/.band() surface survives blocks conversion unchanged.
+    "eq/band method chain round-trips" {
+        roundTrip("let s = Osc.saw().eq().band(300, 1.5, 6)").shouldRoundTripWithCode()
+    }
 })

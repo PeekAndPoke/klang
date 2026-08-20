@@ -11,10 +11,18 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl.EqSection
+import io.peekandpoke.klang.audio_bridge.band
+import io.peekandpoke.klang.audio_bridge.eq
+import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.maxReleaseSec
 import io.peekandpoke.klang.audio_bridge.notch
+import kotlin.math.abs
+import kotlin.math.log10
+import kotlin.math.sqrt
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
 import kotlin.random.Random
 
 /**
@@ -45,6 +53,35 @@ class EqIgnitorSpec : StringSpec({
         offset = 0
         length = blockFrames
         voiceElapsedFrames = 0
+    }
+
+    /**
+     * Largest absolute sample difference between two DSL trees across EVERY rendered block
+     * (scanned inside the render loop — a first-block-only divergence must not hide behind
+     * a later block), advancing voiceElapsedFrames like [assertDslParity] so envelope-bearing
+     * trees see real time.
+     */
+    fun maxAbsDiff(a: IgnitorDsl, b: IgnitorDsl): Double {
+        val ea = a.toExciter(null)
+        val eb = b.toExciter(null)
+        val bufA = AudioBuffer(blockFrames)
+        val bufB = AudioBuffer(blockFrames)
+        val ca = ctx()
+        val cb = ctx()
+        var worst = 0.0
+        repeat(blocks) {
+            ea.generate(bufA, 220.0, ca)
+            eb.generate(bufB, 220.0, cb)
+            for (i in 0 until blockFrames) {
+                val d = abs(bufA[i] - bufB[i])
+                if (d > worst) {
+                    worst = d
+                }
+            }
+            ca.voiceElapsedFrames += blockFrames
+            cb.voiceElapsedFrames += blockFrames
+        }
+        return worst
     }
 
     /**
@@ -458,6 +495,84 @@ class EqIgnitorSpec : StringSpec({
         assertDslParity(legacy, fused)
     }
 
+    "the .eq().tap() SURFACE reproduces the legacy parallel chain bit-exactly" {
+        // The row above proves a hand-built Eq tree matches the legacy graph. This one proves
+        // the authoring SURFACE builds the same thing: .tap() must produce a RawTap with the
+        // params in the right slots, or a wrong order / a Bell-instead-of-RawTap would leave
+        // every parity row above green. NOTE this is not the song's literal shape — the serial
+        // tail is appended as SECTIONS here, whereas a song chains .notch()/.lowpass() as
+        // separate nodes after the Eq (that shape is pinned by StdLibOscTest instead).
+        val sharedLegacy = IgnitorDsl.Sawtooth()
+        val legacy = IgnitorDsl.Plus(
+            IgnitorDsl.Plus(
+                sharedLegacy,
+                IgnitorDsl.Times(IgnitorDsl.Bandpass(sharedLegacy, c(1000.0), c(0.8)), c(2.0)),
+            ),
+            IgnitorDsl.Times(IgnitorDsl.Bandpass(sharedLegacy, c(4000.0), c(0.85)), c(5.5)),
+        )
+            .notch(210.0, 2.5)
+            .lowpass(5300.0, 0.707)
+
+        val authored = IgnitorDsl.Sawtooth()
+            .eq()
+            .tap(1000.0, 0.8, 2.0)
+            .tap(4000.0, 0.85, 5.5)
+            .let {
+                // No section methods for the serial filters yet (they stay chained nodes
+                // until the optimizer folds them), so the tail is appended directly.
+                it.copy(
+                    sections = it.sections +
+                            EqSection.Notch(c(210.0), c(2.5)) +
+                            EqSection.Lowpass(c(5300.0), c(0.707)),
+                )
+            }
+
+        assertDslParity(legacy, authored)
+    }
+
+    "ONE tap equals its exactly-converted bell" {
+        // The conversion the plan's D7 table documents: A² = 1 + gain·Q, q_bell = Q/A.
+        // For a SINGLE section this is a real identity (near-bit; one pow/tan rounding),
+        // and pinning it is what makes the next row's INEQUALITY meaningful.
+        val q = 0.707
+        val gain = 1.7
+        val aSq = 1.0 + gain * q
+        val qBell = q / sqrt(aSq)
+        val db = 20.0 * log10(aSq)
+
+        val oneTap = IgnitorDsl.Sawtooth().eq().tap(850.0, q, gain)
+        val oneBell = IgnitorDsl.Sawtooth().eq().band(850.0, qBell, db)
+
+        maxAbsDiff(oneTap, oneBell) shouldBeLessThan 1e-9
+    }
+
+    "TWO taps do NOT equal two exactly-converted bells (the cross term)" {
+        // Taps SUM onto the dry signal, bells MULTIPLY, so the identity above does not
+        // compose: the leftover gain₁·gain₂·H₁·H₂ term measured +4.5 dB around 1200 Hz on
+        // the real song. Each band below is converted EXACTLY (same formula as the row
+        // above), so the difference is purely topological, not a mis-conversion.
+        //
+        // This row is THE tripwire for EqCore's RAW_TAP reading `inputCopy` and not `buffer`:
+        // a tap on the running buffer makes two taps equal `1 + g₁H₁ + g₂H₂(1 + g₁H₁)`, which
+        // is the serial-bell product exactly, collapsing the gap to ~1e-15. The bound sits far
+        // above rounding but well below the real gap (order 0.3-1.0 here), so it is a topology
+        // tripwire with ~10x margin. It does NOT by itself establish audibility — the +4.5 dB
+        // figure does; a max-abs-diff bound cannot express that.
+        val bands = listOf(850.0 to (0.707 to 1.7), 2500.0 to (0.7 to 5.0))
+
+        var taps = IgnitorDsl.Sawtooth().eq()
+        var bells = IgnitorDsl.Sawtooth().eq()
+        for ((freq, spec) in bands) {
+            val (q, gain) = spec
+            val aSq = 1.0 + gain * q
+            taps = taps.tap(freq, q, gain)
+            bells = bells.band(freq, q / sqrt(aSq), 20.0 * log10(aSq))
+        }
+
+        // Far above any rounding: this is a real, audible gap.
+        maxAbsDiff(taps, bells) shouldBeGreaterThan 0.05
+    }
+
     "static 0 dB bell is skipped: bit-equal to the chain WITHOUT the bell" {
         // The adapter-owned skip (EqCore KDoc): Param-backed db is per-voice constant, so a
         // 0 dB bell can never move off zero and its slot is retired to passthrough.
@@ -499,6 +614,18 @@ class EqIgnitorSpec : StringSpec({
             sections = listOf(EqSection.Bell(c(850.0), c(0.9), c(6.0))),
         )
         assertDslParity(explicit, overridden, oscParams = mapOf("belldb" to 6.0))
+    }
+
+    "an Eq with zero sections is bit-transparent" {
+        // `.eq()` alone is the NORMAL intermediate state while live-coding (type .eq(), then
+        // add bands; or delete the last .band(...) from a line), so the empty section list is
+        // user-reachable, not a degenerate test case. What this pins precisely: construction
+        // and the process() entry guards neither throw nor mutate the buffer at sectionCount
+        // 0 (a later `require(sectionCount > 0)` is the realistic regression). It does NOT
+        // pin loop-index arithmetic — the 1-section rows carry that.
+        val bare = IgnitorDsl.Sawtooth()
+        val emptyEq = IgnitorDsl.Eq(inner = IgnitorDsl.Sawtooth(), sections = emptyList())
+        assertDslParity(bare, emptyEq)
     }
 
     "production sub-block onset renders bit-equal (offset != 0, partial length, first call)" {

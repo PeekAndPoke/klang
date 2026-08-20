@@ -197,8 +197,9 @@ fun IgnitorRegistry.registerDefaults() {
         dsl = IgnitorDsl.Square().lowpass(cutoffHz = 2000.0),
     )
 
-    // ─── Unified-EQ demo (D3-era test sound; the script-facing .eq()/.band() surface is
-    //     D5 — until then this is THE way to hear the fused EqCore, esp. the Simper bell) ──
+    // ─── Unified-EQ demo: the smallest sound that exercises the fused EqCore end to end
+    //     (the authoring surface for songs is `.eq().band(...)`; this preset stays as the
+    //     knob-per-param test sound) ─────────────────────────────────────────────────────
 
     // Sawtooth through one fused Eq: a bell (0 dB by default = bit-transparent, so the
     // sound equals a plain saw until "eqdb" moves) followed by a gentle cabinet lowpass.
@@ -210,7 +211,7 @@ fun IgnitorRegistry.registerDefaults() {
             sections = listOf(
                 IgnitorDsl.EqSection.Bell(
                     freqHz = IgnitorDsl.Param(name = "eqhz", default = 1200.0, description = "Bell centre frequency"),
-                    q = IgnitorDsl.Param(name = "eqq", default = 1.0, description = "Bell pre-gain bandwidth"),
+                    q = IgnitorDsl.Param(name = "eqq", default = 0.707, description = "Bell pre-gain bandwidth"),
                     db = IgnitorDsl.Param(name = "eqdb", default = 0.0, description = "Bell gain in dB (0 = transparent)"),
                 ),
                 IgnitorDsl.EqSection.Lowpass(

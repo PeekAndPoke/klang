@@ -11,9 +11,20 @@ in the same deliverable.
 - **IgnitorDsl**: the chained filter/effect/oscillator vocabulary largely has fluent Kotlin
   extensions in `audio_bridge` (`.notch()/.highpass()/.lowpass()/.bandpass()/.adsr()/.fm()/
   .drive()/.detune()/...` — the audio_be parity specs use them daily). **Gaps:**
-  - `Eq` has NO fluent builder on either surface (raw `IgnitorDsl.Eq(...)` constructors
-    only). The unified-eq plan's D5 adds `.eq()/.band()` — it MUST add the Kotlin extension
-    alongside the KlangScript stdlib function (plan updated).
+  - ~~`Eq` has NO fluent builder on either surface~~ **DONE (D5, 2026-08-20)**: `.eq()` on
+    the base type plus TWO section methods typed onto `IgnitorDsl.Eq` (the supersaw
+    config-method shape) — `.band(freq, q, db)` (serial bell) and `.tap(freq, q, gain)`
+    (parallel boost, the form Der Schmetterling's guitar uses). Both shipped on BOTH doors
+    with identical names and defaults. Future Eq section methods land on the same receiver.
+  - **Known gap (D5 round 3):** the Kotlin door ships HOMOGENEOUS overloads (all-IgnitorDsl or
+    all-Double), while the script door takes `IgnitorDslLike` per parameter — so the mixed
+    `band(someDsl, 0.7, 6.0)` shape compiles in script but not in Kotlin, where the scalars
+    need `IgnitorDsl.Constant(...)`. Names/defaults match (the rule holds in the letter);
+    expressiveness does not. **The older filter extensions are WORSE, not the same**:
+    `.lowpass()/.highpass()/.bandpass()/.notch()` have ONLY the all-`Double` form, with no
+    `IgnitorDsl` overload at all — so a tracking cutoff (`Osc.freq().mul(k)`, which the script
+    door supports and Der Schmetterling uses) is unreachable from Kotlin without hand-building
+    `IgnitorDsl.Highpass(...)`. Size the task from that, not from the Eq methods.
   - A full audit of script-stdlib functions vs Kotlin extensions has not been done; unknown
     smaller gaps likely (phasePool/analog/spreadPower/gainJitter etc. — check which exist as
     Kotlin extensions vs script-only).

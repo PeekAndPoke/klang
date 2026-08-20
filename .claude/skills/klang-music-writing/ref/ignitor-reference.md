@@ -223,6 +223,77 @@ modulation.
 | `.bandpass(cutoffHz, q?)`   | Bandpass filter                     |
 | `.notch(cutoffHz, q?)`      | Band-reject (notch) filter          |
 
+### Equalizer
+
+All sections of one `.eq()` run in one pass instead of one node each, which removes the scratch
+buffer, the extra buffer read/write traffic and the virtual call for every section after the
+first. (The per-sample filter loop itself stays: the core runs one loop per section by design.) The saving grows with the
+section count and is much larger in the browser and on weak hardware than on desktop JVM, where
+it is small. Measure your own patch rather than assuming a rate.
+
+Only `.band()` and `.tap()` sections exist today, so an `.eq()` fuses those and nothing else:
+`.lowpass()/.highpass()/.notch()` written after one remain separate nodes.
+
+| Method                  | Description                                                                                        |
+|-------------------------|----------------------------------------------------------------------------------------------------|
+| `.eq()`                 | Opens the EQ; `.band()`/`.tap()` exist only on an EQ, so this comes first                          |
+| `.band(freq, q?, db?)`  | **Serial** peaking band: `db` dB gain at `freq`, `q` = width (defaults q=0.707, db=0)             |
+| `.tap(freq, q?, gain?)` | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=1.0, gain=1.0)        |
+
+**The difference matters and it is audible.** `.band()` sections apply one after another, so
+they compound: two overlapping +6 dB bands give about +12 dB where they overlap, like any DAW EQ.
+`.tap()` sections all read the sound going INTO the eq and mix back onto it, so they add rather
+than compound. Converting a parallel tap bank into serial bands measured **+4.5 dB too hot around
+1200 Hz** on a real guitar patch.
+
+```javascript
+// EQ bands: shaping a sound, gains in dB
+Osc.saw().eq().band(3500, 0.7, 6).band(300, 1.0, -4)      // presence lift, mud cut
+
+// Parallel boosts: the classic guitar mids + presence lift, gains are plain multipliers
+Osc.saw().eq().tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0)
+```
+
+Use `.tap()` when you are stacking resonant boosts onto a sound, `.band()` when you are shaping
+with EQ bands. They mix freely in one `.eq()`, in written order.
+
+⚠ `.band(1200, 6)` sets **q**, not gain: the second positional arg is `q` and db stays 0, which
+is silent. Write `.band(freq = 1200, db = 6)` when you mean gain. KlangScript forbids MIXING
+positional and named arguments, so name them all or pass all three positionally.
+
+⚠ `.eq()` is only idempotent back-to-back. An `.eq()` written *after* other filters opens a
+SECOND eq, so the one-pass saving applies per eq, not across the whole line.
+
+⚠ Both `q` values are the ordinary width scale: `.band(f, 0.707)` and `.bandpass(f, 0.707)` span
+the same 1.90 octaves. What differs is CONVERSION. A tap keeps its numbers verbatim
+(`signal.add(signal.bandpass(f, Q).mul(g))` becomes `.tap(f, Q, g)`), but rewriting that tap as a
+`.band()` needs a WIDER setting, because a tap's audible bump is wider than the bandpass inside
+it: use `db = 20*log10(1 + g*Q)` and `q = Q / sqrt(1 + g*Q)`. Example: `.tap(850, 0.707, 1.7)`
+becomes `.band(850, 0.476, 6.86)`.
+
+⚠ Everything is control-rate (read once per block). For `.band()` that includes `db`, which
+moves filter coefficients, so an LFO on `db` zippers exactly like an LFO on a cutoff; use a VCA
+(`.mul(...)`) for a smooth gain ride. For `.tap()` the same applies to `gain`, which is a mix
+multiplier rather than a coefficient: a moving `gain` steps per block, whereas the chained
+`signal.add(signal.bandpass(...).mul(lfo))` is smooth per sample. Keep tap gains constant or
+osc-param driven.
+
+⚠ On a `.tap()`, `q` sets the **level** as well as the width, because the engine bandpass is
+constant-skirt: the boost at `freq` is `1 + gain*q`. Raising `q` therefore narrows the band AND
+makes it louder, both at once (gain 1.0: q 0.5 gives +3.5 dB over ~3.0 octaves, q 1.0 gives
++6.0 dB over ~1.9, q 4.0 gives +14.0 dB over ~0.8). **To tighten a tap without it getting hotter,
+lower `gain` as you raise `q`.** A `.band()` does not behave this way: its peak is set by `db`
+alone and does not move with `q`. This is also why `.tap(freq)` at its defaults is a **+6 dB
+lift** (`1 + 1*1 = 2`) while `.band(freq)` at its defaults is transparent.
+
+⚠ You cannot go back to a band after a chained filter: `.eq().band(...).lowpass(5000).band(...)`
+is an error, because `.lowpass()` returns a plain filter node. Open a new `.eq()` for more bands.
+
+⚠ Order matters when mixing them: a `.band()` earlier in the list cannot shape a later `.tap()`,
+because a tap always reads the sound entering the eq.
+`.band(freq = 3000, db = -12).tap(3000, 1.0, 5.0)` re-injects the 3 kHz the band just removed.
+Put taps first unless you want that.
+
 ### Envelope
 
 | Method                                   | Description                                                    |

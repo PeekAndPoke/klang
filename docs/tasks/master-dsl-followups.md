@@ -88,6 +88,13 @@ full parametric EQ.
   not gain shelves). If a per-orbit or per-voice shelf ever appears, names and units must match from day one — propose
   `eqLowDb/eqLowHz`, `eqHighDb/eqHighHz`, `eqMidDb/eqMidHz/eqMidQ` (dB gain + Hz corner, the industry-standard meaning)
   and record them in the parity table before shipping.
+  **UPDATE 2026-08-20 — the per-voice counterpart NOW EXISTS**, so this is no longer hypothetical:
+  the ignitor DSL ships `.eq()` plus `.band(freq, q, db)` (serial bell, dB gain, `q` = the ordinary
+  width scale, 0 dB transparent) and `.tap(freq, q, gain)` (parallel boost, LINEAR gain). Whoever
+  implements `MasterFx.eq()` must reconcile with those names and units rather than inventing a
+  parallel vocabulary — in particular `db` means the same thing on both, and a master `q` should
+  mean the same width it means on `.band()`. See also the pending `cutoffHz`/`freqHz`/`freq`
+  unification in `docs/tasks/filter-frequency-param-naming.md`, which will touch these names.
 - **Implementation:** stereo biquad shelves from the existing SVF/biquad infra; plain `var` params (no buffer sizing —
   unlike `lookaheadSeconds` there is no constructor-val constraint); wire model + KSP codec + `MasterDefaultsSyncSpec`
   -style assertion for defaults (all gains 0 dB = bit-transparent, so existing songs are untouched).

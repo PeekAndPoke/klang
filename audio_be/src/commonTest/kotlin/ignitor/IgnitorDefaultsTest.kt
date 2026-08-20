@@ -9,6 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 
 /**
@@ -185,6 +187,18 @@ class IgnitorDefaultsTest : StringSpec({
         // lowpass — the fused core is in the path but transparent.
         val demo = createAndGenerate("eqdemo")
         demo.any { it != 0.0 } shouldBe true
+    }
+
+    "eqdemo's eqq knob default matches the Bell wire default" {
+        // Third leg of the same parameter-parity drift the wire<->surface pin covers: the
+        // preset knob teaches users what "the" bell width is, so it must not disagree with
+        // the node it configures. Invisible at the shipped eqdb=0 (the section is retired),
+        // so only an explicit pin catches it.
+        val eq = registry.get("eqdemo").shouldBeInstanceOf<IgnitorDsl.Eq>()
+        val bell = eq.sections.filterIsInstance<IgnitorDsl.EqSection.Bell>().single()
+        val knob = bell.q.shouldBeInstanceOf<IgnitorDsl.Param>()
+
+        knob.default shouldBe (IgnitorDsl.EqSection.Bell().q as IgnitorDsl.Constant).value
     }
 
     "eqdemo bell responds to the eqdb oscparam override" {

@@ -103,6 +103,33 @@ object KlangScriptOscExtensions {
         analog = analog.toIgnitorDsl(),
     )
 
+    /**
+     * Opens an equalizer on [self]. Everything added to it runs in ONE pass instead of one node
+     * each, which drops the scratch buffer, the extra buffer traffic and the virtual call for
+     * every section after the first (the per-sample filter loop per section stays, by design). The saving grows with the section count and is much larger in the browser
+     * than on desktop JVM.
+     *
+     * Two kinds of section, and the difference is audible:
+     * - `.band(freq, q, db)` is an ordinary EQ band. Bands apply one after another, so two
+     *   overlapping boosts compound.
+     * - `.tap(freq, q, gain)` takes the sound going INTO the equalizer, filters that, and mixes
+     *   it back in. Taps mix with the original rather than stacking on each other.
+     *
+     * Both exist only on an equalizer, so `.eq()` comes first: `Osc.saw().eq().band(1200, 1.0, 6)`.
+     * Calling `.eq()` again right away changes nothing, but an `.eq()` written after other
+     * filters opens a SECOND equalizer. Filters written after it (`.lowpass()`, `.notch()`, ...)
+     * are still their own separate nodes.
+     *
+     * ⚠ Careful when adding a `.tap()` onto a sound someone ELSE built: if that sound already
+     * ends in an equalizer, your `.eq()` continues theirs, and your tap then reads THEIR input
+     * rather than their output. Bands are unaffected.
+     */
+    @KlangScript.Method
+    fun eq(self: IgnitorDsl): IgnitorDsl.Eq = when (self) {
+        is IgnitorDsl.Eq -> self
+        else -> IgnitorDsl.Eq(inner = self)
+    }
+
     /** SVF notch (band-reject) filter. See [bandpass] for `analog` semantics (currently a no-op). */
     @KlangScript.Method
     fun notch(
