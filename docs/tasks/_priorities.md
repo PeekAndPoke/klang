@@ -44,16 +44,12 @@ The release-defining set, regardless of when they're sequenced:
    Author per-orbit effect chains from KlangScript — the counterpart to the Ignitor/Pipeline DSLs.
    ⚠️ Q3 lists Katalyzers in the *lower* track; you've flagged it must-have. Reads as an Act-1
    engine-authoring item. → wants its own task doc.
-4. **SHOULD** · **Resonator swing** — [`resonator-swing.md`](resonator-swing.md) 🔴 *(designed 2026-08-12)* — *cheap
-   win, sound first*
-   `body()` / `vowel()` are fully static — fixed freq/Q per band, a purely linear `SvfBPF`, and even
-   `ParallelMixFilter.dryGain` precomputed. A fixed EQ curve, identical for every note and every dynamic; the user's
-   words are *"these combs feel hard, they need some movement."* Fix: each band's centre frequency swings off-centre as
-   energy accumulates in it (measured from the band output already computed in the loop) and relaxes back. **Needs zero
-   filter changes** — `BaseSvf.setCutoff` already recomputes and 32-sample-ramps every coefficient, exactly as
-   `FilterModRenderer` drives the voice filter each block. One `tan()` per band per block, **once per orbit**. Strength
-   in cents via `ANALOG_CENT_PER_MUL`; `swing = 0` is a bit-identical opt-out. Sits directly under item 3 — body/vowel
-   are Katalyst effects, so the authoring surface lands there.
+4. ~~**SHOULD** · **Resonator swing**~~ — ❌ **WON'T IMPLEMENT** (closed 2026-08-20). Archived with the full
+   decision record: [`20260820-resonator-swing.md`](../tasks-archive/2026-08/20260820-resonator-swing.md).
+   The design discussion revealed a three-axis model family (source/target/weighting), too diverse to tune by
+   ear; and the original "filters feel hard" complaint re-diagnosed as mostly a **mixing** issue, not static
+   banks. Taste call: *taste is also what you do not do.* Replacement work: **tune the material tables by ear**
+   (the deferred "POC starting points" item in the body-resonator work).
 5. **SHOULD** · **Resource warehouse pool** — [`resource-warehouse-pool.md`](resource-warehouse-pool.md) 🔴
    Self-balancing pool for expensive per-engine resources (~7.68 MB delay rings, cylinders); kills the
    audible first-note alloc spike (the "Der Schmetterling" stutter). Q3 schedules it **last**. (Audible

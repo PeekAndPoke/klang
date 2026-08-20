@@ -1,6 +1,32 @@
 # Resonator swing — make body/vowel move with the sound
 
-**Status:** planned (designed 2026-08-12, not started) · **Opened:** 2026-08-12
+**Status:** ❌ WON'T IMPLEMENT (archived 2026-08-20, kept for revision) · **Opened:** 2026-08-12
+
+## 0. Decision — won't implement (2026-08-20)
+
+Closed by the maintainer after a design discussion, for these reasons:
+
+1. **More complicated and diverse than it first looked.** The discussion revealed this is not one knob but a
+   family of models with three independent axes — *source* (self-excitation per band = drum/gong physics, vs a
+   shared corpus envelope = guitar/violin physics, where LF body motion modulates the HF modes), *target*
+   (freq swing vs Q swing — Q turned out to be the technically safer sibling: no FM warble, vowel-safe,
+   `k` is already a ramped coefficient in `BaseSvf`), and *weighting* (flat vs rising with band frequency).
+   Each axis is defensible; that is exactly the problem.
+2. **Hard to tune.** With several coupled mechanisms you hear "strange" things without being able to tell
+   *which* mechanism caused them. Violates the tune-by-ear workflow that everything else here relies on.
+3. **Root cause re-diagnosed.** The original complaint ("the filters feel hard and rigid") traced mostly to
+   **mixing**, not to the banks being static. The premise of the task weakened.
+4. **Taste.** *Taste is also what you do not do.* A static, learnable resonator that is mixed well beats a
+   moving one that cannot be attributed.
+
+**Instead:** revisit and tune the actual material tables by ear — already on the books as the deferred
+"material tables are POC starting points" item in the body-resonator work.
+
+If this is ever revived, start from the three-axis framing above (§3 below describes only freq-swing with
+self-excitation) and prefer corpus-source + Q-target as the safest first build. The rest of this document is
+preserved unchanged as the design record.
+
+---
 
 **The question (user, 2026-08-12):**
 
