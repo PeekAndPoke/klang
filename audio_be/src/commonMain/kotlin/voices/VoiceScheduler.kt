@@ -325,10 +325,12 @@ class VoiceScheduler(
             playbackContexts[pid] = PlaybackCtx(
                 playbackId = pid,
                 ignitorRegistry = ignitorFork,
-                // The pool gets its OWN rng stream, and creating it must not TOUCH Random.Default
-                // (which every per-voice super-osc draws from — one extra draw here would reorder
-                // every later note's phases even with the feature off). Live seeds from the clock
-                // ("takes vary"); offline passes a fixed seed so pool vocabularies reproduce.
+                // The pool gets its OWN rng stream (deliberately voice-SHARED vocabulary —
+                // distinct from the per-voice streams dealt from PlaybackCtx.coreRandom, the
+                // seeded-voice-rng derivation tree), and creating it must not consume from
+                // coreRandom (a draw here would shift every voice's seed). Live seeds from the
+                // clock ("takes vary"); offline passes a fixed seed so pool vocabularies
+                // reproduce.
                 // ⚠️ nowSec is UNIX-EPOCH-scale live (~1.8e9): a naive `* 1e6 → toInt()` SATURATES
                 // to Int.MAX_VALUE — a constant seed for every playback. Fold to sub-Int range and
                 // mix in the playback id (two playbacks can share a render block's nowSec).

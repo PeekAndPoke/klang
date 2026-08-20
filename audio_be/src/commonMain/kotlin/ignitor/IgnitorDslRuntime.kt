@@ -37,8 +37,9 @@ fun IgnitorDsl.toExciter(
     soundIndex: Int = 0,
     phasePools: PhasePools? = null,
     orbit: Int = 0,
+    random: Random = Random,
 ): Ignitor {
-    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit)
+    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit, random)
     return buildIgnitor(oscParams, cache)
 }
 
@@ -59,6 +60,11 @@ internal class IgnitorBuildCache(
     val phasePools: PhasePools? = null,
     /** The voice's orbit ([VoiceData.cylinder]) — half of the pool key. */
     val orbit: Int = 0,
+    /** The voice's random stream (see [IgniteContext.random]) — build-time consumers (noise,
+     *  supersaw jitter) capture it here; generate-time constructions (drift) read the SAME
+     *  instance from the context. Carried like [soundIndex] to reach the source branches
+     *  without threading a parameter through every recursive call. */
+    val random: Random = Random,
 ) {
     private val dslKeys = ArrayList<IgnitorDsl>()
     private val modKeys = ArrayList<Ignitor?>()
@@ -220,17 +226,17 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Silence -> applyMod(Ignitors.silence(), accumulatedMod)
 
         // Noise sources ignore phaseMod — skip ModApplyingIgnitor to avoid wasting cycles.
-        is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(Random, color.noMod())
-        is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(Random, depth.noMod())
-        is IgnitorDsl.PinkNoise -> Ignitors.pinkNoise(Random)
-        is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(Random, rate.noMod(), octaves.noMod(), persistence.noMod())
-        is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(Random, rate.noMod(), octaves.noMod(), persistence.noMod())
-        is IgnitorDsl.Dust -> Ignitors.dust(Random, density.noMod(), tail.noMod(), bipolar.noMod())
-        is IgnitorDsl.Crackle -> Ignitors.crackle(Random, chaos.noMod())
+        is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(cache.random, color.noMod())
+        is IgnitorDsl.BrownNoise -> Ignitors.brownNoise(cache.random, depth.noMod())
+        is IgnitorDsl.PinkNoise -> Ignitors.pinkNoise(cache.random)
+        is IgnitorDsl.PerlinNoise -> Ignitors.perlinNoise(cache.random, rate.noMod(), octaves.noMod(), persistence.noMod())
+        is IgnitorDsl.BerlinNoise -> Ignitors.berlinNoise(cache.random, rate.noMod(), octaves.noMod(), persistence.noMod())
+        is IgnitorDsl.Dust -> Ignitors.dust(cache.random, density.noMod(), tail.noMod(), bipolar.noMod())
+        is IgnitorDsl.Crackle -> Ignitors.crackle(cache.random, chaos.noMod())
 
         is IgnitorDsl.SuperSaw -> applyMod(
             Ignitors.superSaw(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -242,7 +248,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.SuperSine -> applyMod(
             Ignitors.superSine(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -254,7 +260,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.SuperSquare -> applyMod(
             Ignitors.superSquare(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -266,7 +272,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.SuperTri -> applyMod(
             Ignitors.superTri(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -278,7 +284,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.SuperRamp -> applyMod(
             Ignitors.superRamp(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(),
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -295,7 +301,8 @@ private fun IgnitorDsl.buildRaw(
                 brightness.noMod(),
                 pickPosition.noMod(),
                 stiffness.noMod(),
-                analog.noMod()
+                analog.noMod(),
+                rng = cache.random,
             ),
             accumulatedMod,
         )
@@ -309,7 +316,8 @@ private fun IgnitorDsl.buildRaw(
                 brightness.noMod(),
                 pickPosition.noMod(),
                 stiffness.noMod(),
-                analog.noMod()
+                analog.noMod(),
+                rng = cache.random,
             ),
             accumulatedMod,
         )

@@ -18,7 +18,9 @@ import kotlin.random.Random
  * engine — same rng consumption order (phases at voice creation, jitter in `computeVoiceGains`),
  * same samples. The golden values below were captured on the engine BEFORE the phase-pool
  * change (2026-08-11, commit fc05bf78) with a seeded rng and `analog = 0` (AnalogDrift seeds from
- * `Random.Default`, so drift cannot be part of a deterministic fixture).
+ * `Random.Default` when no stream is threaded; since seeded-voice-rng a fixture CAN pin
+ * drift by passing a seeded `IgniteContext.random` — this golden predates that and keeps
+ * drift out by design).
  *
  * Comparison is by TIGHT RELATIVE TOLERANCE (1e-9), not raw bits: the render goes through
  * `Math.pow`/`Math.sin`, which are 1-ulp-specified, not bit-reproducible across JDKs/CPUs —

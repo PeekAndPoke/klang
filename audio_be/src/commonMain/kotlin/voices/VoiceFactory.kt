@@ -110,9 +110,19 @@ class VoiceFactory(
         val bodyDef = data.filters.getByType<FilterDef.Body>()
         val vowelDef = data.filters.getByType<FilterDef.Formant>()
         val voiceFilterDefs = data.filters.filters.filter { it !is FilterDef.Body && it !is FilterDef.Formant }
-        val filters = voiceFilterDefs.map { it.toFilter(analog, filterStage) }
+
+        // Seeded-voice-rng: deal THIS voice's stream from the playback's coreRandom at the
+        // TOP of creation — before the filter build (per-voice cutoff tolerance + filter
+        // drift draw from it) and before any branch can bail (a `?: return null` after the
+        // deal would make the core draw count depend on e.g. async sample-load timing,
+        // shifting every later voice's seed). One instance feeds EVERYTHING this voice owns:
+        // filters here, the exciter build (IgnitorBuildCache.random), and the render context
+        // (IgniteContext.random).
+        val voiceRandom = Random(playbackCtx.coreRandom.nextInt())
+
+        val filters = voiceFilterDefs.map { it.toFilter(analog, filterStage, voiceRandom) }
         val modulators = voiceFilterDefs.zip(filters).mapNotNull { (def, filter) ->
-            def.toModulator(filter, sampleRate, analog, filterStage)
+            def.toModulator(filter, sampleRate, analog, filterStage, voiceRandom)
         }
         val bakedFilters = filters.combine()
 
@@ -255,13 +265,14 @@ class VoiceFactory(
                 val signal = playbackCtx.ignitorRegistry.createExciter(
                     sound, data, freqHz ?: 0.0,
                     phasePools = playbackCtx.phasePools,
+                    random = voiceRandom,
                 ) ?: return null
 
                 buildVoice(
                     data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
-                    fm, signal, freqHz ?: 0.0,
+                    fm, signal, freqHz ?: 0.0, voiceRandom = voiceRandom,
                     body = bodyDef, vowel = vowelDef,
                 )
             }
@@ -337,6 +348,7 @@ class VoiceFactory(
                 val voiceDurationFrames = (gateEndFrame - sampleStartFrame).toInt()
 
                 val signal = SampleIgnitor(
+                    rng = voiceRandom,
                     pcm = sample.pcm,
                     rate = rate,
                     playhead = playhead0,
@@ -352,7 +364,9 @@ class VoiceFactory(
                     data, resolvedAdsr, sampleStartFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
-                    fm, signal, baseSamplePitchHz, data.cut,
+                    fm, signal, baseSamplePitchHz,
+                    voiceRandom = voiceRandom,
+                    cut = data.cut,
                     body = bodyDef, vowel = vowelDef,
                 )
             }
@@ -365,12 +379,12 @@ class VoiceFactory(
     // Private helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    private fun FilterDef.toFilter(analog: Double, stage: StageDsl.Filter): AudioFilter {
+    private fun FilterDef.toFilter(analog: Double, stage: StageDsl.Filter, rng: Random): AudioFilter {
         // Per-voice constant cutoff offset — set once per filter at note-on so that
         // two voices through "the same" configured filter no longer process identically.
         // Real analog filters have component tolerances; we simulate that with a small
         // random multiplier per filter instance. The engine's Filter stage scales it.
-        val offsetMul = perVoiceCutoffOffsetMul(analog, stage.cutoffOffsetPerAnalog)
+        val offsetMul = perVoiceCutoffOffsetMul(analog, stage.cutoffOffsetPerAnalog, rng)
         return when (this) {
             is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog, offsetMul, stage.drivePerAnalog)
             is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(
@@ -398,9 +412,9 @@ class VoiceFactory(
      * cutoffOffsetPerAnalog`. At the shipped default (0.0002) that is ≈ ±0.02% at `analog=1`
      * (≈ ±0.35 cents); ≈ ±0.06% at `analog=3` (≈ ±1 cent); ≈ ±0.2% at `analog=10` (≈ ±3.5 cents).
      */
-    private fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Double): Double {
+    private fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Double, rng: Random): Double {
         if (analog <= 0.0) return 1.0
-        return 1.0 + (Random.nextDouble() - 0.5) * 2.0 * cutoffOffsetPerAnalog * analog
+        return 1.0 + (rng.nextDouble() - 0.5) * 2.0 * cutoffOffsetPerAnalog * analog
     }
 
     private fun FilterDef.toModulator(
@@ -408,6 +422,7 @@ class VoiceFactory(
         sampleRate: Int,
         analog: Double,
         stage: StageDsl.Filter,
+        rng: Random,
     ): Voice.FilterModulator? {
         // Non-tunable filters (Formant) can't be modulated at all.
         if (filter !is AudioFilter.Tunable) return null
@@ -429,7 +444,7 @@ class VoiceFactory(
         // ratio. At the shipped default of 0.25 the filter wanders 4x LESS than pitch —
         // whether that is the right way round is open, see docs/tasks/audio-bridge-constants.md §6.
         val drift = if (analog > 0.0) {
-            AnalogDrift(analog * stage.driftRelToOsc, driftUpdateRate)
+            AnalogDrift(analog * stage.driftRelToOsc, driftUpdateRate, rng)
         } else {
             null
         }
@@ -502,6 +517,10 @@ class VoiceFactory(
         fm: Voice.Fm?,
         signal: Ignitor,
         freqHz: Double,
+        /** The voice's random stream (seeded-voice-rng; same instance the exciter was built
+         *  with). NO default on purpose: a future call site must not silently fall back to
+         *  the global and split the build/render channels. */
+        voiceRandom: Random,
         cut: Int? = null,
         body: FilterDef.Body? = null,
         vowel: FilterDef.Formant? = null,
@@ -518,6 +537,7 @@ class VoiceFactory(
             releaseFrames = releaseFrames,
             voiceEndFrame = voiceEndFrame,
             scratchBuffers = scratchBuffers,
+            random = voiceRandom,
         )
 
         val pipeline = buildPitchPipeline(

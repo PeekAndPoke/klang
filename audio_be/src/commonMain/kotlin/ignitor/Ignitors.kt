@@ -151,7 +151,7 @@ object Ignitors {
             if (!driftInit) {
                 driftInit = true
                 val amt = readParam(analog, actualFreq, ctx)
-                voice.drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate) else null
+                voice.drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate, ctx.random) else null
             }
             val dt = actualFreq / ctx.sampleRateD
             val pm = ctx.phaseMod
@@ -743,7 +743,7 @@ object Ignitors {
                 // leave drift null so the hot loop skips it with a single null check (no allocation).
                 val analogAmt = readParam(analog, actualFreq, ctx)
                 for (n in 0 until v) {
-                    voiceStates[n].drift = if (analogAmt > 0.0) AnalogDrift(analogAmt, ctx.sampleRate) else null
+                    voiceStates[n].drift = if (analogAmt > 0.0) AnalogDrift(analogAmt, ctx.sampleRate, ctx.random) else null
                 }
                 computeVoiceGains()
                 // Gains BEFORE phases: the stateless path scores candidates against the note's
@@ -1174,7 +1174,8 @@ object Ignitors {
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
-    ): Ignitor = KarplusStrongIgnitor(freq, decay, brightness, pickPosition, stiffness, analog)
+        rng: Random = Random,
+    ): Ignitor = KarplusStrongIgnitor(freq, decay, brightness, pickPosition, stiffness, analog, rng)
 
     private class KarplusStrongIgnitor(
         private val freq: Ignitor,
@@ -1183,6 +1184,7 @@ object Ignitors {
         private val pickPosition: Ignitor,
         private val stiffness: Ignitor,
         private val analog: Ignitor,
+        private val rng: Random,
     ) : Ignitor {
         // Max delay line: supports down to ~20 Hz at 48kHz (2400 samples)
         private val maxDelay = 2500
@@ -1198,7 +1200,6 @@ object Ignitors {
         private var apPrevIn: Double = 0.0
         private var apPrevOut: Double = 0.0
 
-        private val rng: Random = Random
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
@@ -1281,7 +1282,8 @@ object Ignitors {
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
-    ): Ignitor = SuperKarplusStrongIgnitor(freq, voices, detune, decay, brightness, pickPosition, stiffness, analog)
+        rng: Random = Random,
+    ): Ignitor = SuperKarplusStrongIgnitor(freq, voices, detune, decay, brightness, pickPosition, stiffness, analog, rng)
 
     private class SuperKarplusStrongIgnitor(
         private val freq: Ignitor,
@@ -1292,6 +1294,7 @@ object Ignitors {
         private val pickPosition: Ignitor,
         private val stiffness: Ignitor,
         private val analog: Ignitor,
+        private val rng: Random,
     ) : Ignitor {
         private val maxDelay = 2500
 
@@ -1308,7 +1311,6 @@ object Ignitors {
         private var v: Int = 0
         private var voiceGain: Double = 0.0
         private var strings: Array<StringState> = emptyArray()
-        private val rng: Random = Random
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
@@ -1441,7 +1443,7 @@ object Ignitors {
 
     /** Initialize [AnalogDrift] lazily from the [analog] param on the first block (read once, control rate). */
     internal fun initAnalogDrift(analog: Ignitor, freqHz: Double, ctx: IgniteContext): AnalogDrift =
-        AnalogDrift(readParam(analog, freqHz, ctx), ctx.sampleRate)
+        AnalogDrift(readParam(analog, freqHz, ctx), ctx.sampleRate, ctx.random)
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Internal helpers

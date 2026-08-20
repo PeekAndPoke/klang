@@ -71,10 +71,11 @@ internal class EqIgnitor(
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         // Upstream renders FIRST — matching the chained path's RNG order: the source seeds
-        // its drift/unison/noise draws from the shared global Random BEFORE any section
-        // param's scratch render draws (an expression-backed param falls back to a full
-        // block render inside readParam). Resolving params first would reorder those draws
-        // and silently change the sound vs the chained graph. EqCore consumes no RNG and no
+        // its drift/unison/noise draws from THE VOICE'S stream (seeded-voice-rng) BEFORE any
+        // section param's scratch render draws (an expression-backed param falls back to a
+        // full block render inside readParam). Resolving params first would reorder those
+        // draws and silently change the sound vs the chained graph — pinned both white-box
+        // (the probe row) and black-box (the same-seeded drift parity row). EqCore consumes no RNG and no
         // ctx, so resolving ALL params between upstream and process (where the chain
         // interleaves them with recurrences) is order-neutral.
         upstream.generate(buffer, freqHz, ctx)

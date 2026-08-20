@@ -254,7 +254,8 @@ class PhasePoolSpec : StringSpec({
     // ── Bypass rng-stream position ───────────────────────────────────────────────────────────────
     // The JVM golden fixtures (PhasePoolBypassGoldenSpec) cannot see TRAILING rng consumption: an
     // extra draw after voice init changes no sample of THIS note, but reorders every later note in
-    // a session (all super-oscillators share Random.Default in production). This pins the stream
+    // a session (since seeded-voice-rng, super-oscillators share the VOICE'S stream — a
+    // trailing draw reorders the rest of that voice's draws). This pins the stream
     // position on the OFF path: note-on at v voices must consume exactly v phase draws + v jitter
     // draws, nothing more. Exact equality is safe — the rng is integer-based (xorwow), bit-exact
     // on JVM and JS alike, which is why this lives in commonTest.

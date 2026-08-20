@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import kotlin.random.Random
 
 /**
  * Single source of truth for all oscillator lookups.
@@ -52,6 +53,8 @@ class IgnitorRegistry(
         data: VoiceData,
         freqHz: Double,
         phasePools: PhasePools? = null,
+        /** The voice's random stream (seeded-voice-rng; see IgniteContext.random). */
+        random: Random = Random,
     ): Ignitor? {
         val key = (name ?: DEFAULT_SOUND).lowercase()
         val oscParams = data.oscParams
@@ -63,6 +66,7 @@ class IgnitorRegistry(
             soundIndex = data.soundIndex ?: 0,
             phasePools = phasePools,
             orbit = data.cylinder ?: 0,
+            random = random,
         )
         val warmth = oscParams?.get("warmth") ?: 0.0
         return if (warmth > 0.0) raw.withWarmth(warmth) else raw

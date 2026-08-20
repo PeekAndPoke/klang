@@ -77,10 +77,11 @@ import io.peekandpoke.klang.audio_be.safeOut
  * must be the very node that feeds the Eq's first section, matched by reference IDENTITY
  * (`===`) on the DSL node — NEVER by data-class `==`: runtime sharing is keyed on
  * `IgnitorBuildCache`'s (node identity, accumulated-mod identity) pair, so two structurally
- * equal noise nodes (whiteNoise/dust/crackle draw from the shared global RNG) are two
- * genuinely UNCORRELATED streams — a structural match would fuse them into ONE, turning an
- * uncorrelated ~+3 dB sum into a coherent ~+6 dB resonant peak, and no parity spec can catch
- * it (spec oracles only ever build graphs that already satisfy this rule); (3) taps fuse only from the LEFT-NESTED chain spine — `Plus(chain, tapSubtree)` per
+ * equal noise nodes (whiteNoise/dust/crackle interleave draws from the VOICE'S stream —
+ * seeded-voice-rng) are two genuinely UNCORRELATED streams — a structural match would fuse
+ * them into ONE, turning an uncorrelated ~+3 dB sum into a coherent ~+6 dB resonant peak,
+ * and no parity spec can catch it (spec oracles only ever build graphs that already satisfy
+ * this rule); (3) taps fuse only from the LEFT-NESTED chain spine — `Plus(chain, tapSubtree)` per
  * fold step: the section list sums `(x + t1) + t2`, while `x.add(t1.add(t2))` sums
  * `x + (t1 + t2)`, and IEEE `+` is NOT associative (x=1.0, t1=t2=2^-53 differ in the last
  * bit), so a spine-flattening matcher breaks bit-parity. Note for direct Kotlin-API users:

@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import kotlin.random.Random
+
 /**
  * Context for Ignitor rendering. Created ONCE per voice, mutated per block.
  * No reinstantiation in the hot path.
@@ -26,6 +28,16 @@ class IgniteContext(
     val voiceEndFrame: Int,
     /** Shared scratch buffer pool for binary composition operators */
     val scratchBuffers: ScratchBuffers,
+    /**
+     * THE VOICE'S random stream — derived per voice from the playback's `coreRandom`
+     * (`PlaybackCtx`), shared by every draw in this voice's sub-graph (generate-time drift
+     * construction reads it here; build-time consumers get the SAME instance via
+     * `IgnitorBuildCache.random`). One instance per voice is safe because in-graph draw
+     * order is deterministic; deriving per voice is what makes draw order BETWEEN voices
+     * irrelevant and playback runs bit-reproducible. Default = the global (test/tool
+     * convenience; production always passes the voice's own).
+     */
+    val random: Random = Random,
 
     // ── Mutable per block (updated by caller before each generate() call) ──────
     /** Start index in buffer for this block */

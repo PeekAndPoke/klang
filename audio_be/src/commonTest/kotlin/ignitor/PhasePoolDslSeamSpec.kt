@@ -24,7 +24,7 @@ import kotlin.random.Random
  * permanent silent no-op — no other spec would notice (`PhasePoolSpec` calls the factories
  * directly; the KlangScript specs stop at DSL object equality; the codec spec stops at the wire).
  *
- * The runtime does not thread an rng (production uses `Random.Default`), so this is statistical:
+ * Production now threads the voice's stream (seeded-voice-rng), but this spec predates it and stays statistical by design:
  * with the pool ON at a high band ([0.85, 0.95], 64 tries) the mean fundamental across notes sits
  * ≈ 0.63, versus ≈ 0.27 for honest random draws — an ~8σ separation at 60 notes per side, immune
  * to seed luck for any practical purpose. Three probes per node, each killing a different dropped

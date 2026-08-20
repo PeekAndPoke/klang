@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.maxReleaseSec
 import io.peekandpoke.klang.audio_bridge.notch
+import kotlin.random.Random
 
 /**
  * End-to-end ULP-0 parity for the D3b adapter path: `IgnitorDsl.Eq → EqIgnitor → EqCore`
@@ -116,9 +117,66 @@ class EqIgnitorSpec : StringSpec({
         assertDslParity(chained, fused)
     }
 
+    "chained vs fused stays bit-equal WITH ACTIVE DRIFT (same-seeded voice streams)" {
+        // The BLACK-BOX upgrade of the RNG-order probe below, possible only since
+        // seeded-voice-rng (D3c): each tree gets its OWN equal-seeded stream, so parity now
+        // REQUIRES the adapter to make its draws in the chained order (upstream's drift
+        // seeds before the LFO cutoff's) — a reorder hands the saw the LFO's numbers and
+        // diverges, no probes needed. (Relaxes dossier item 10 for same-seed setups.)
+        fun lfoCutoff() = IgnitorDsl.Plus(
+            c(2000.0),
+            IgnitorDsl.Times(IgnitorDsl.Sine(freq = c(2.0), analog = c(0.3)), c(500.0)),
+        )
+        val chained = IgnitorDsl.Lowpass(
+            inner = IgnitorDsl.Sawtooth(analog = c(0.7)),
+            cutoffHz = lfoCutoff(),
+            q = c(0.9),
+        )
+        val fused = IgnitorDsl.Eq(
+            inner = IgnitorDsl.Sawtooth(analog = c(0.7)),
+            sections = listOf(EqSection.Lowpass(lfoCutoff(), c(0.9))),
+        )
+
+        val ra = Random(11)
+        val rb = Random(11)
+        // (The LFO Sine inside lfoCutoff carries analog too — see lfoCutoff — so its draws
+        // are load-bearing by construction, not by SineIgnitor's incidental unconditional
+        // drift init.)
+        val a = chained.toExciter(random = ra)
+        val b = fused.toExciter(random = rb)
+
+        fun mk(r: Random) = IgniteContext(
+            sampleRate = sr,
+            voiceDurationFrames = blockFrames * 16,
+            gateEndFrame = blockFrames * 16,
+            releaseFrames = 0,
+            voiceEndFrame = blockFrames * 16,
+            scratchBuffers = ScratchBuffers(blockFrames),
+            random = r,
+        ).apply {
+            offset = 0
+            length = blockFrames
+            voiceElapsedFrames = 0
+        }
+
+        val ca = mk(ra)
+        val cb = mk(rb)
+        val bufA = AudioBuffer(blockFrames)
+        val bufB = AudioBuffer(blockFrames)
+        repeat(blocks) {
+            a.generate(bufA, 220.0, ca)
+            b.generate(bufB, 220.0, cb)
+            for (i in 0 until blockFrames) {
+                bufA[i].toRawBits() shouldBe bufB[i].toRawBits()
+            }
+            ca.voiceElapsedFrames += blockFrames
+            cb.voiceElapsedFrames += blockFrames
+        }
+    }
+
     "upstream renders BEFORE the first section param resolves (RNG draw order)" {
         // The property behind the chained path's sound: on block 0 the SOURCE seeds its
-        // drift/unison/noise draws from the shared global Random BEFORE any section param's
+        // drift/unison/noise draws from the voice's stream BEFORE any section param's
         // scratch render draws (SvfIgnitor renders upstream first, then reads params). No
         // cross-tree parity row can observe this (see the previous row's note), so the call
         // ORDER is pinned directly with probe ignitors.
