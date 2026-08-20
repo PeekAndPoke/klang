@@ -1,8 +1,17 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-19**
+**SINCE: 2026-08-20**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-20, claude-code session): `.tag()` sprudel addon shipped — semantic event
+> tags (`Set<String>`, unordered) in `SprudelVoiceData` AND engine `VoiceData` (cross the wire by
+> user decision; wire-codec KSP gained general `Set<T>` support: `WireCodecProcessor` +
+> `wireEncodeSet`/`wireDecodeSet`). New `LangTagSpec` (mutation-checked, 3/3 killed incl. a
+> symmetric-merge bug the mergeFrom==merge oracle cannot see). `:sprudel:jvmTest`,
+> `:klang:jvmTest`, `:audio_bridge:jvmTest`, `:audio_bridge:compileKotlinJs` all green.
+> No FE watcher was running during builds (verified via ps). Not committed.
+> Purpose: NOTSTROM stage-band demo — visualizations read tags off `VoicesScheduled.VoiceEvent.data.tags`.
 
 > Last action (2026-08-19, klang-ai session): offline renders of Der Schmetterling v34 only
 > (full mix + gain-1.5 A/B variant for limiter measurement) — no source changes, no test runs.

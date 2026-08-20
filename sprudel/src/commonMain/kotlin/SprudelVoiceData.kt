@@ -156,6 +156,15 @@ data class SprudelVoiceData(
 
     // Custom value
     var value: SprudelVoiceValue?,
+
+    /**
+     * Semantic tags accumulated via `.tag(...)`. A set by design: tags are unique and carry NO
+     * ordering guarantee — consumers must never rely on accumulation order. Copied into engine
+     * `VoiceData` by [toVoiceData] (and thus over the wire) for UI subscribers (visualizations)
+     * and analysis tools; the synthesis engine ignores them. Treated as immutable-replace like
+     * [oscParams] (shared reference in [clone], fresh set on write).
+     */
+    var tags: Set<String>?,
 ) {
     // --- Flat-field accessors over the grouped storage -------------------------------------------------
     // Bridge so the rest of the engine/DSL/tests keep using the flat names (data.attack, data.cutoff, …)
@@ -729,7 +738,8 @@ data class SprudelVoiceData(
             // a property of the carrier itself. Taking it from `other` would let a merged-in master
             // carrier silence real notes.
             control = control,
-            value = other.value ?: value
+            value = other.value ?: value,
+            tags = mergeTags(tags, other.tags),
         )
     }
 
@@ -778,6 +788,7 @@ data class SprudelVoiceData(
         master = other.master ?: master
         // control intentionally NOT merged — see merge()
         value = other.value ?: value
+        tags = mergeTags(tags, other.tags)
     }
 
     fun isTruthy(): Boolean {
@@ -1049,6 +1060,7 @@ data class SprudelVoiceData(
             pipeline = pipelineName,
             master = masterName,
             control = control,
+            tags = tags,
         )
     }
 
@@ -1422,6 +1434,7 @@ internal val blueprint = SprudelVoiceData(
     master = null,
     control = null,
     value = null,
+    tags = null,
 )
 
 /**
@@ -1437,6 +1450,37 @@ internal val blueprint = SprudelVoiceData(
  */
 inline fun createSprudelVoiceData(config: SprudelVoiceData.() -> Unit = {}): SprudelVoiceData =
     blueprint.clone().apply(config)
+
+/**
+ * Merges two tag sets (union). Null when both are null — a merge must not materialize an empty
+ * set on untagged data.
+ */
+private fun mergeTags(
+    base: Set<String>?,
+    other: Set<String>?,
+): Set<String>? = when {
+    base == null -> other
+    other == null -> base
+    else -> base + other
+}
+
+/**
+ * In-place tag add: no-op if [tag] is already present, else assigns a fresh set with [tag] added.
+ * `tags` is treated as immutable-replace like `oscParams` — no new [SprudelVoiceData] is
+ * allocated. Only safe on a single-owner instance (see [clone]).
+ */
+fun SprudelVoiceData.addTag(tag: String) {
+    val current = tags
+    if (current != null && tag in current) return
+    tags = current.orEmpty() + tag
+}
+
+/** Copy counterpart of [addTag]: returns this unchanged when [tag] is already present. */
+fun SprudelVoiceData.withTag(tag: String): SprudelVoiceData {
+    val current = tags
+    if (current != null && tag in current) return this
+    return copy(tags = current.orEmpty() + tag)
+}
 
 /** Merges two oscParams maps: other's values override this's values. */
 private fun mergeOscParams(

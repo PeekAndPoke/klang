@@ -33,6 +33,25 @@ inline fun <T> wireDecodeList(arr: dynamic, dec: (dynamic) -> T): List<T> {
     return out
 }
 
+/** Kotlin Set → JS array, element-encoded. */
+inline fun <T> wireEncodeSet(set: Set<T>, enc: (T) -> dynamic): dynamic {
+    val arr: dynamic = js("([])")
+    for (e in set) arr.push(enc(e))
+    return arr
+}
+
+/** JS array → Kotlin Set, element-decoded (insertion order preserved via LinkedHashSet). */
+inline fun <T> wireDecodeSet(arr: dynamic, dec: (dynamic) -> T): Set<T> {
+    val n: Int = arr.length.unsafeCast<Int>()
+    val out = LinkedHashSet<T>(n)
+    var i = 0
+    while (i < n) {
+        out.add(dec(arr[i]))
+        i++
+    }
+    return out
+}
+
 /** Map<String, Double> → JS object. */
 fun wireEncodeStringDoubleMap(m: Map<String, Double>): dynamic {
     val o = wireObj()

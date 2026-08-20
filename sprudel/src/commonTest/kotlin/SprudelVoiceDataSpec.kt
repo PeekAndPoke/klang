@@ -335,5 +335,6 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         loopBegin = b + 85; loopEnd = b + 86
         vowel = "v$seed"; compressor = "comp$seed"; solo = b + 88; patternId = "pid$seed"; pipeline = PipelineValue.Named("eng$seed")
         value = SprudelVoiceValue.Num(b + 87)
+        tags = setOf("t$seed")
     }
 }

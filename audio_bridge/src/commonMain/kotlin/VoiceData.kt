@@ -174,6 +174,13 @@ data class VoiceData(
      * registry resolves a null sound to the default oscillator.
      */
     val control: Boolean? = null,
+
+    /**
+     * Semantic tags accumulated via the pattern language's `.tag(...)`. A set: tags are unique and
+     * carry NO ordering guarantee. Consumed by UI subscribers (visualizations) and analysis tools;
+     * the synthesis engine ignores them.
+     */
+    val tags: Set<String>? = null,
 ) {
     companion object {
         val empty = VoiceData(

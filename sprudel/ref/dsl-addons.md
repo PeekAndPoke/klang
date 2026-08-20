@@ -25,11 +25,8 @@ sprudel/src/commonMain/kotlin/lang/addons/
 Every addon file must have:
 
 1. A top-of-file comment: `ADDONS: functions that are NOT available in the original strudel impl`
-2. An init sentinel var (forces class initialization so delegates register in `SprudelRegistry`):
-
-```kotlin
-var sprudelLangXxxAddonsInit = false
-```
+2. The `@file:KlangScript.Library("sprudel")` header — registration is fully automatic via
+   `klangscript-ksp`; there are no delegates and no init sentinels (the old delegate API is gone)
 
 ## KDoc Requirement: `addon` tag
 
@@ -48,24 +45,27 @@ Every addon function **must** include `addon` in its `@tags`:
 ```kotlin
 private fun applyMyAddon(pattern: SprudelPattern): SprudelPattern { ... }
 
-internal val SprudelPattern._myAddon by dslPatternExtension { p, _, _ -> applyMyAddon(p) }
-internal val String._myAddon by dslStringExtension { p, _, _ -> applyMyAddon(p) }
-
 /**
  * One-line summary.
  *
  * ```KlangScript
  * note("c d e f").myAddon()   // example
  * ```
+ *
+ * @return Description.
+ * @category structural
+ * @tags myAddon, something, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.myAddon(callInfo: CallInfo? = null): SprudelPattern = applyMyAddon(this)
 
-*
-* @category structural
-* @tags myAddon, something, addon
-  */
-  @SprudelDsl fun SprudelPattern.myAddon(): SprudelPattern = this._myAddon(emptyList())
-  @SprudelDsl fun String.myAddon(): SprudelPattern = this._myAddon(emptyList())
-
+@KlangScript.Function
+fun String.myAddon(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).myAddon(callInfo)
 ```
+
+See `tag()` in `lang_structural_addons.kt` for a full four-form example including the mapper
+forms (c)/(d) and a literal (non-mini-notation) string parameter.
 
 ## Existing Addons
 
@@ -80,6 +80,7 @@ internal val String._myAddon by dslStringExtension { p, _, _ -> applyMyAddon(p) 
 | `timeLoop(duration)` | structural | Tile pattern within a fixed cycle window |
 | `repeat(times)` | structural | Repeat pattern N times sequentially |
 | `solo()` / `solo(enabled)` | structural | Solo this pattern, muting others |
+| `tag(name)` | structural | Add a semantic tag (Set, unordered) to every event, e.g. for visualizations |
 | `cps` | continuous | Current cycles per second |
 | `bpm` | continuous | Current beats per minute (cps × 240) |
 | `timeOfDay` | continuous | Time of day 0.0 (midnight) → 1.0 |

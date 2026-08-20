@@ -26,7 +26,8 @@ import com.google.devtools.ksp.validate
  * Supported shapes: plain scalars (String/Double/Int/Boolean/Float), `DoubleArray` (pass-through), enums
  * (as ordinal Int), nested classes with a primary constructor, sealed classes — including intermediate sealed
  * levels, flattened to leaves — (string `t` type-tag from `@WireName`), `data object` sealed subtypes,
- * `List<T>`, `Map<String,Double>`, and nullability of any of those.
+ * `List<T>`, `Set<T>` (as a JS array; decode rebuilds a LinkedHashSet), `Map<String,Double>`, and nullability of
+ * any of those.
  *
  * Anything else (e.g. other typed arrays, `Map` with non-String/Double, a type with no primary constructor) is an
  * ERROR: the processor reports it via `logger.error` (failing the build) with the exact field/subtype path. It never
@@ -58,6 +59,7 @@ class WireCodecProcessor(
         private const val WIRE_TAG = "\"#t\""
 
         private const val LIST = "kotlin.collections.List"
+        private const val SET = "kotlin.collections.Set"
         private const val MAP = "kotlin.collections.Map"
 
         private val SCALARS = setOf(
@@ -129,6 +131,7 @@ class WireCodecProcessor(
 
         if (isPassthrough(qn)) return true
         if (qn == LIST) return collectType(type.arguments[0].type!!.resolve(), acc, "$ctx[]")
+        if (qn == SET) return collectType(type.arguments[0].type!!.resolve(), acc, "$ctx{}")
         if (qn == MAP) {
             val k = type.arguments[0].type!!.resolve().declaration.qualifiedName?.asString()
             val v = type.arguments[1].type!!.resolve().declaration.qualifiedName?.asString()
@@ -258,6 +261,7 @@ class WireCodecProcessor(
         val n = if (t.isMarkedNullable) "?" else ""
         return when (qn) {
             LIST -> "List<${typeSig(t.arguments[0].type!!.resolve())}>$n"
+            SET -> "Set<${typeSig(t.arguments[0].type!!.resolve())}>$n"
             MAP -> "Map<${typeSig(t.arguments[0].type!!.resolve())},${typeSig(t.arguments[1].type!!.resolve())}>$n"
             else -> "$qn$n"
         }
@@ -344,6 +348,13 @@ class WireCodecProcessor(
                 wrapEncNullable(acc, nullable, core)
             }
 
+            qn == SET -> {
+                val elem = type.arguments[0].type!!.resolve()
+                val v = fresh()
+                val core = "wireEncodeSet(SELF) { $v -> ${encExpr(v, elem)} }"
+                wrapEncNullable(acc, nullable, core)
+            }
+
             qn == MAP -> wrapEncNullable(acc, nullable, "wireEncodeStringDoubleMap(SELF)")
             decl != null -> wrapEncNullable(acc, nullable, "${encName(decl)}(SELF)")
             else -> acc
@@ -375,6 +386,14 @@ class WireCodecProcessor(
                 wrapDecNullable(acc, nullable) {
                     val e = fresh()
                     "wireDecodeList($it) { $e -> ${decExpr(e, elem)} }"
+                }
+            }
+
+            qn == SET -> {
+                val elem = type.arguments[0].type!!.resolve()
+                wrapDecNullable(acc, nullable) {
+                    val e = fresh()
+                    "wireDecodeSet($it) { $e -> ${decExpr(e, elem)} }"
                 }
             }
 

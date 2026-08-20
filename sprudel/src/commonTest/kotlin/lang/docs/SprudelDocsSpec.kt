@@ -34,6 +34,17 @@ class SprudelDocsSpec : StringSpec({
         seqDoc.tags shouldContain "sequence"
     }
 
+    "tag documentation should be registered as an addon" {
+        val tagDoc = KlangDocsRegistry.global.get("tag")
+
+        tagDoc shouldNotBe null
+        tagDoc!!.name shouldBe "tag"
+        tagDoc.category shouldBe "structural"
+        tagDoc.getLibrary()?.name shouldBe "sprudel"
+        tagDoc.tags shouldContain "addon"
+        tagDoc.tags shouldContain "visualization"
+    }
+
     "seq should have 3 variants" {
         val seqDoc = KlangDocsRegistry.global.get("seq")!!
 

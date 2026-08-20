@@ -1,5 +1,20 @@
 # Sprudel — Memory
 
+## Recent Work (2026-08-20)
+
+- `tag(name)` addon (`lang_structural_addons.kt`): semantic event tags for visualizations/analysis.
+  Tags live in `SprudelVoiceData.tags: Set<String>?` (unique, NO ordering guarantee), accumulate by
+  chaining (`.tag("a").tag("b")`), union through `merge()`/`mergeFrom()`, and are copied into engine
+  `VoiceData.tags` by `toVoiceData()` — they cross the wire (deliberate; analysis tools may use them).
+  The wire-codec KSP gained general `Set<T>` support for this (`WireCodecProcessor` + `wireEncodeSet`/
+  `wireDecodeSet`).
+- ⚠️ The tag argument is a LITERAL — deliberately NOT routed through the lift helpers, which would
+  parse `"guitar 1"` as mini-notation into two events. `reinterpretVoice { }` is the literal path.
+- `LangTagSpec` includes a merge-overlay test because the `SprudelVoiceDataSpec` mergeFrom==merge
+  oracle cannot see a SYMMETRIC bug in the shared `mergeTags` helper (mutation-verified).
+- `ref/dsl-conventions.md` + `ref/dsl-addons.md` rewritten to current reality: the old delegate API
+  (`@SprudelDsl`, `dslFunction`, init sentinels) is gone; plain `fun` + `@KlangScript.Function`.
+
 ## Current Status
 
 - **Features**: ~263 / 303 implemented (~87%)

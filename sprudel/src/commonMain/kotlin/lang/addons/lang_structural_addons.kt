@@ -35,8 +35,10 @@ import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.MergePattern
 import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 import io.peekandpoke.klang.sprudel.pattern.SoloPattern
+import io.peekandpoke.klang.sprudel.withTag
 import kotlin.math.floor
 
 // -- morse() ----------------------------------------------------------------------------------------------------------
@@ -618,3 +620,83 @@ fun solo(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
 @KlangScript.Function
 fun PatternMapperFn.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.solo(amount, callInfo) }
+
+// -- tag() ------------------------------------------------------------------------------------------------------------
+
+// The tag name is a LITERAL — deliberately NOT routed through the lift helpers, which would parse
+// it as mini-notation (`.tag("guitar 1")` must stay ONE tag, not two events).
+private fun applyTag(source: SprudelPattern, name: String): SprudelPattern =
+    source.reinterpretVoice { vd -> vd.withTag(name) }
+
+/**
+ * Tags every event of this pattern with a semantic name, e.g. for visualizations to know which
+ * instrument an event belongs to.
+ *
+ * Tags accumulate as a set: chaining adds (`.tag("a").tag("b")` → both), duplicates are ignored,
+ * and there is NO ordering guarantee. Outer tags join inner ones, so parts keep their identity
+ * inside a tagged group. Tags ride on the scheduled voice data (UI signal stream and wire) and
+ * never change the sound.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").tag("guitar1")   // every event carries "guitar1"
+ * ```
+ *
+ * ```KlangScript
+ * stack(
+ *   s("bd*4").tag("drums"),
+ *   note("c2 g2").tag("bass")
+ * ).tag("band")                     // events carry {"drums","band"} resp. {"bass","band"}
+ * ```
+ *
+ * @param name The tag to add. Taken literally — not parsed as mini-notation.
+ * @return A new pattern whose events carry the tag.
+ * @category structural
+ * @tags tag, tags, visualization, metadata, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.tag(name: String, callInfo: CallInfo? = null): SprudelPattern =
+    applyTag(this, name)
+
+/**
+ * Parses this string as a pattern and tags every event with a semantic name.
+ *
+ * ```KlangScript
+ * "c3 e3 g3".tag("lead").note()     // tag the string pattern's events
+ * ```
+ *
+ * @param name The tag to add. Taken literally — not parsed as mini-notation.
+ * @return A new pattern whose events carry the tag.
+ */
+@KlangScript.Function
+fun String.tag(name: String, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tag(name, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that tags every event of the input pattern.
+ *
+ * ```KlangScript
+ * s("bd*4").apply(tag("drums"))     // tag via a mapper
+ * ```
+ *
+ * @param name The tag to add. Taken literally — not parsed as mini-notation.
+ * @return A mapper that tags the pattern it is applied to.
+ * @category structural
+ * @tags tag, tags, visualization, metadata, addon
+ */
+@KlangScript.Function
+fun tag(name: String, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tag(name, callInfo) }
+
+/**
+ * Chains a tag operation onto this [PatternMapperFn].
+ *
+ * ```KlangScript
+ * s("bd*4").apply(tag("drums").tag("kit"))   // both tags accumulate
+ * ```
+ *
+ * @param name The tag to add. Taken literally — not parsed as mini-notation.
+ * @return A mapper that additionally tags the pattern it is applied to.
+ */
+@KlangScript.Function
+fun PatternMapperFn.tag(name: String, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tag(name, callInfo) }
