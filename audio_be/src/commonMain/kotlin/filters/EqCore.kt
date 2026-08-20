@@ -18,10 +18,12 @@ import io.peekandpoke.klang.audio_be.safeOut
  * later.
  *
  * CONTRACT — the core owns: section state (`ic1`/`ic2`), coefficient storage and computation
- * (via [computeSvfCoeffs] — NaN/Inf-safe through `bilinearK` + the q clamp; the core adds NO
- * clamps of its own, so it inherits the Ignitor path's behavior exactly — pinned by parity
- * spec rows at extreme freq/q), the process loop, and `flushDenormal` on both integrator
- * states. The SURFACE owns: param resolution (scalars per control tick), WHEN to call
+ * (via [computeSvfCoeffs], or [computeSvfBellCoeffs] for [BELL] — NaN/Inf-safe through
+ * `bilinearK` + the q clamp + the bell's db NaN-guard; the core adds NO clamps of its own:
+ * the structural types inherit the Ignitor path's behavior exactly — pinned by parity rows
+ * at extreme freq/q — and the bell's single clamp, safeOut on m1, lives in the coefficient
+ * HELPER, not here), the process loop, and `flushDenormal` on both integrator states.
+ * The SURFACE owns: param resolution (scalars per control tick), WHEN to call
  * [configureSection] (control rate; coefficients take effect immediately — the core is
  * SNAP-only, so any smoothing/ramping policy must be built by the surface BEFORE
  * MasterFx.eq/Katalyst can adopt it: a per-block-swept cutoff snaps here exactly like the
@@ -39,11 +41,23 @@ import io.peekandpoke.klang.audio_be.safeOut
  *
  * Section types are plain Ints ([LOWPASS]..[RAW_TAP]) — NO audio_bridge dependency (Zig-port
  * purity); a sync spec pins them to the wire enum's ordinals when the DSL node lands. The
- * order is APPEND-ONLY and reserved IN FULL here — note it differs from delivery order
- * ([RAW_TAP] shipped before [BELL] and takes the higher ordinal). An UNKNOWN type value renders
+ * order is APPEND-ONLY (it differs from delivery order: [RAW_TAP] shipped before [BELL] but
+ * takes the higher ordinal; both are implemented now). An UNKNOWN type value renders
  * as PASSTHROUGH (the only degradation that can neither invent gain nor gouge a spectral
- * hole — the house fall-through policy); the spec's reserved-type rows fail loudly the moment
- * a reserved ordinal starts rendering (proven live when [RAW_TAP] graduated).
+ * hole — the house fall-through policy); the spec's garbage-type rows include the NEXT
+ * append-only ordinal (6), so a newly implemented type fails loudly there and moves the
+ * tripwire forward (proven live twice: [RAW_TAP] in D2b, [BELL] in D2c).
+ *
+ * [BELL] — the parametric peaking section (Simper SVF bell): [configureSection]'s `db` is the
+ * gain, `q` the PRE-GAIN bandwidth; math + honest limits in [computeSvfBellCoeffs]. At
+ * db == 0.0 (m1 == 0.0) the output is BIT-TRANSPARENT through an EXPLICIT passthrough
+ * branch — never the algebraic `v0 + 0·v1`, which flips `-0.0` to `+0.0` and poisons the
+ * output on NaN/Inf input — while the recurrence keeps RUNNING at the A=1 coefficients, so
+ * an expression-backed db moving off zero mid-note continues from coherent state instead of
+ * clicking (at A=1 the state advances exactly like a [BANDPASS] at the same freq/q — same
+ * recurrence, different tap — which is the spec's continuity pin). Skipping the state
+ * entirely for a db that can never move (Constant/Param-backed = per-voice constant) is the
+ * ADAPTER's optimization, not the core's.
  *
  * [RAW_TAP] — the parallel-boost section (the guitar chain's
  * `signal.add(signal.bandpass(f, q).mul(g))`): a tap runs its bandpass on the Eq INPUT (never
@@ -109,9 +123,8 @@ class EqCore(
     val sectionCount: Int,
 ) {
     companion object {
-        // Section types — APPEND-ONLY reserved order (see class KDoc; BELL arrives with its
-        // slice but its ordinal is fixed NOW). UNCONFIGURED is the construction default:
-        // negative, so an unconfigured section renders as PASSTHROUGH.
+        // Section types — APPEND-ONLY order (see class KDoc). UNCONFIGURED is the
+        // construction default: negative, so an unconfigured section renders as PASSTHROUGH.
         const val UNCONFIGURED = -1
         const val LOWPASS = 0
         const val HIGHPASS = 1
@@ -130,6 +143,7 @@ class EqCore(
     private val a3 = DoubleArray(sectionCount)
     private val k = DoubleArray(sectionCount)
     private val gain = DoubleArray(sectionCount)
+    private val m1 = DoubleArray(sectionCount)
     private val ic1 = DoubleArray(sectionCount)
     private val ic2 = DoubleArray(sectionCount)
 
@@ -155,10 +169,11 @@ class EqCore(
      * Sets section [index]'s type and coefficients from control-rate scalars. Takes effect
      * immediately (snap — see the class KDoc's smoothing note). [gain] is the [RAW_TAP] mix
      * gain, stored RAW — safeOut is applied to the per-sample PRODUCT, matching the legacy
-     * Times node, never to the stored gain. [db] stays reserved for [BELL]. The four
-     * structural types ignore both. Freq/q travel through the same clamps as every SVF in
-     * the engine ([computeSvfCoeffs] / `bilinearK`) — the core must never add or remove a
-     * clamp here (parity contract).
+     * Times node, never to the stored gain. [db] is the [BELL] gain (coefficient-bearing —
+     * see [computeSvfBellCoeffs]; its safeOut lands on the m1 COEFFICIENT at configure time).
+     * The four structural types ignore both. Freq/q travel through the same clamps as every
+     * SVF in the engine ([computeSvfCoeffs] / `bilinearK`) — the core must never add or
+     * remove a clamp here (parity contract).
      *
      * An out-of-range [index] is IGNORED (house fall-through): configure calls run at control
      * rate ON the audio thread — never throw there — and JS typed arrays silently drop OOB
@@ -179,11 +194,18 @@ class EqCore(
 
         this.type[index] = type
         this.gain[index] = gain
-        computeSvfCoeffs(freqHz, q, sampleRate, coefs)
+
+        if (type == BELL) {
+            computeSvfBellCoeffs(freqHz, q, db, sampleRate, coefs)
+        } else {
+            computeSvfCoeffs(freqHz, q, sampleRate, coefs)
+        }
+
         a1[index] = coefs.a1
         a2[index] = coefs.a2
         a3[index] = coefs.a3
         k[index] = coefs.k
+        m1[index] = coefs.m1
         recomputeTapFlag()
     }
 
@@ -353,9 +375,42 @@ class EqCore(
                     }
                 }
 
+                BELL -> {
+                    val cm1 = m1[s]
+
+                    if (cm1 == 0.0) {
+                        // 0 dB: BIT-TRANSPARENT via the EXPLICIT branch — the algebraic
+                        // `v0 + 0·v1` flips -0.0 to +0.0 and poisons the output on NaN/Inf
+                        // input. State keeps RUNNING at the A=1 coefficients so a db moving
+                        // off zero continues click-free (class KDoc).
+                        for (i in offset until end) {
+                            val v0 = buffer[i]
+                            val v3 = v0 - s2
+                            val v1 = ca1 * s1 + ca2 * v3
+                            val v2 = s2 + ca2 * s1 + ca3 * v3
+                            s1 = (2.0 * v1 - s1).flushDenormal()
+                            s2 = (2.0 * v2 - s2).flushDenormal()
+                            buffer[i] = v0
+                        }
+                    } else {
+                        // Simper bell tap: v0 + m1·v1, bare — m1 was safeOut-capped at
+                        // configure time (computeSvfBellCoeffs), the per-sample path adds
+                        // no clamp (raw engine).
+                        for (i in offset until end) {
+                            val v0 = buffer[i]
+                            val v3 = v0 - s2
+                            val v1 = ca1 * s1 + ca2 * v3
+                            val v2 = s2 + ca2 * s1 + ca3 * v3
+                            s1 = (2.0 * v1 - s1).flushDenormal()
+                            s2 = (2.0 * v2 - s2).flushDenormal()
+                            buffer[i] = v0 + cm1 * v1
+                        }
+                    }
+                }
+
                 else -> {
-                    // BELL (reserved) + unknown/unconfigured types: PASSTHROUGH, state
-                    // untouched (class KDoc; the write-back below stores the unread snapshot).
+                    // Unknown/unconfigured types: PASSTHROUGH, state untouched (class KDoc;
+                    // the write-back below stores the unread snapshot).
                 }
             }
             ic1[s] = s1

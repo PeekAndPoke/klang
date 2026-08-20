@@ -7,9 +7,11 @@ package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.PI
+import kotlin.math.pow
 import kotlin.math.tan
 
 // ─────────────────────────────────────────────────────────────────────────────────────
@@ -187,9 +189,10 @@ internal const val VOWEL_FLOOR: Double = 0.2
 internal const val VOWEL_TAME: Double = 0.05
 
 /**
- * Bundled TPT-SVF coefficient set: `a1, a2, a3, k`. Mutable holder, allocated once per
- * filter instance (not per call) so [computeSvfCoeffs] can write all four without
- * returning a tuple. Used by both `BaseSvf` and `Ignitor.svf`.
+ * Bundled TPT-SVF coefficient set (`a1, a2, a3, k`, plus the exposed angle [g] and the bell
+ * mix [m1]). Mutable holder, allocated once per filter instance (not per call) so the
+ * compute helpers can write the whole bundle without returning a tuple. Consumers:
+ * `BaseSvf`, `Ignitor.svf`, and `EqCore`.
  */
 internal class SvfCoeffs {
     var a1: Double = 0.0
@@ -205,6 +208,14 @@ internal class SvfCoeffs {
      * use `kEff + g` for the per-sample closed-form solve.
      */
     var g: Double = 0.0
+
+    /**
+     * BELL mix coefficient — non-zero ONLY when written by [computeSvfBellCoeffs]; plain
+     * [computeSvfCoeffs] writes 0.0 so a SHARED per-instance holder can never carry one
+     * section's bell gain into the next configured section (harmless for today's readers —
+     * only the bell tap reads it — but a trap for future shelf sections without the guard).
+     */
+    var m1: Double = 0.0
 }
 
 /**
@@ -228,6 +239,54 @@ internal inline fun computeSvfCoeffs(cutoffHz: Double, q: Double, sampleRate: Do
     out.a2 = g * out.a1
     out.a3 = g * out.a2
     out.g = g
+    out.m1 = 0.0 // stale-holder guard: only computeSvfBellCoeffs sets a bell mix (see SvfCoeffs)
+}
+
+/**
+ * Computes the Simper-SVF BELL coefficient bundle: `db` decibels of peaking gain at
+ * [cutoffHz], bandwidth set by [q]. Reuses [computeSvfCoeffs] at `q·A` (with
+ * `A = 10^(db/40)`) and derives the bell mix `m1 = safeOut(k · (A² − 1))` from the CLAMPED
+ * `k` that [computeSvfCoeffs] actually wrote — NEVER from a recomputed `1/(q·A)`: with the
+ * q·A clamp active the two differ by tens of dB (q=10, db=+120 → the clamped k gives exactly
+ * +120 dB peak; a recomputed m1 lands ~34 dB off). The bell TAP is `v0 + m1·v1` on the same
+ * recurrence every other section type runs.
+ *
+ * Peak gain at fc is exactly `A² = 10^(db/20)` — for ANY effective k, so the q·A clamp
+ * NEVER moves the peak, only the bandwidth (unclamped, q·A holds the half-gain width at
+ * exactly 1/q for ANY gain — that constancy is the point of the parameterization; once q·A
+ * hits the 0.1 floor — at q=0.707, below ≈ −34 dB — the width becomes 10·A and the cut
+ * narrows as it deepens). Cut and boost are reciprocal at EVERY
+ * frequency while both q·A and q/A are unclamped. What DOES cap the peak is the safeOut on
+ * m1: once m1 saturates at SAFE_MAX the peak stops rising — db stops doing anything above
+ * ≈ 346 (at safeQ = 200; from ≈ 280 at the q-floor 0.1), saturating near
+ * `1 + SAFE_MAX·safeQ`. Far beyond that (db ≈ 12330) `A` itself overflows and q·A inherits
+ * the Butterworth fallback, DROPPING the peak — the composite db → gain map is monotone
+ * only below the cap.
+ *
+ * Non-finite [db] falls back to 0.0 (transparent bell). // NaN-guard
+ * The safeOut on m1 is the house output-clamp contract, closing the finite-but-astronomical
+ * window (db ∈ [346, 6165) yields finite m1 up to ~9e305 — unbounded, that ducks the master
+ * limiter for seconds or lands NaN → full-scale DC downstream) and the non-finite case in
+ * ONE guard. It is applied to the COEFFICIENT at configure time — the per-sample path stays
+ * untouched — and it does NOT shorten the limiter-duck symptom at extreme db (raw Motör:
+ * no musical clamp on db).
+ *
+ * [db] is COEFFICIENT-bearing: it moves bandwidth through `q·A`, so an LFO on db zippers
+ * exactly like an LFO on cutoff — the same per-block snap class as the rest of the SVF
+ * surface. [q] is the PRE-GAIN bandwidth parameter.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun computeSvfBellCoeffs(
+    cutoffHz: Double,
+    q: Double,
+    db: Double,
+    sampleRate: Double,
+    out: SvfCoeffs,
+) {
+    val safeDb = if (db.isFinite()) db else 0.0 // NaN-guard
+    val a = 10.0.pow(safeDb / 40.0)
+    computeSvfCoeffs(cutoffHz, q * a, sampleRate, out)
+    out.m1 = safeOut(out.k * (a * a - 1.0))
 }
 
 object LowPassHighPassFilters {

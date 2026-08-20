@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -20,6 +21,10 @@ import io.peekandpoke.klang.audio_be.ignitor.notch
 import io.peekandpoke.klang.audio_be.ignitor.bandpass
 import io.peekandpoke.klang.audio_be.ignitor.plus
 import io.peekandpoke.klang.audio_be.ignitor.times
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
@@ -45,6 +50,11 @@ import kotlin.random.Random
  * short-circuit, so gain 1.0 (what the optimizer synthesizes for a bare `.add(bandpass())`)
  * is a real parity row; the position-pinned tap definition is exercised by the mid-chain and
  * full-guitar-tail rows.
+ *
+ * BELL (D2c) has NO legacy oracle (new math): its VALUE is pinned by response rows against
+ * ground truth (peak = 10^(db/20), cut/boost reciprocity, the clamped-k +120 dB trap) and
+ * its loop MECHANICS bit-exactly by the bell relation `x + m1·bp(x, q·A)` (chainOracle's
+ * BELL arm) plus the 0 dB transparency and A=1 state-continuity rows.
  */
 class EqCoreSpec : StringSpec({
 
@@ -76,13 +86,19 @@ class EqCoreSpec : StringSpec({
         voiceElapsedFrames = 0
     }
 
-    /** Section spec: type + freq + q (+ RAW_TAP gain), applied identically to core and oracle. */
-    data class Section(val type: Int, val freq: Double, val q: Double, val gain: Double = 1.0)
+    /** Section spec: type + freq + q (+ RAW_TAP gain, BELL db), applied to core and oracle. */
+    data class Section(
+        val type: Int,
+        val freq: Double,
+        val q: Double,
+        val gain: Double = 1.0,
+        val db: Double = 0.0,
+    )
 
     fun buildCore(sections: List<Section>): EqCore =
         EqCore(sections.size).also { core ->
             sections.forEachIndexed { i, s ->
-                core.configureSection(i, s.type, s.freq, s.q, 0.0, s.gain, sr.toDouble())
+                core.configureSection(i, s.type, s.freq, s.q, s.db, s.gain, sr.toDouble())
             }
         }
 
@@ -97,9 +113,10 @@ class EqCoreSpec : StringSpec({
      * independent instances model exactly what the real graph's memoized `signal` replay
      * delivers).
      */
-    fun chainOracle(data: DoubleArray, sections: List<Section>, startAt: Int = 0): Ignitor =
-        sections.fold(BufferSourceIgnitor(data, startAt) as Ignitor) { acc, s ->
-            when (s.type) {
+    fun chainOracle(data: DoubleArray, sections: List<Section>, startAt: Int = 0): Ignitor {
+        var acc: Ignitor = BufferSourceIgnitor(data, startAt)
+        sections.forEachIndexed { idx, s ->
+            acc = when (s.type) {
                 EqCore.LOWPASS -> acc.lowpass(s.freq, s.q)
                 EqCore.HIGHPASS -> acc.highpass(s.freq, s.q)
                 EqCore.BANDPASS -> acc.bandpass(s.freq, s.q)
@@ -107,9 +124,56 @@ class EqCoreSpec : StringSpec({
                 EqCore.RAW_TAP ->
                     acc + BufferSourceIgnitor(data, startAt).bandpass(s.freq, s.q) *
                         ConstantIgnitor(s.gain)
+                EqCore.BELL -> {
+                    // Bell RELATION oracle: bell(x) = x + m1·bp(x; freq, q·A) — the same
+                    // recurrence, different tap, bit-exact wherever safeOut is the identity
+                    // on the product (the response rows pin m1's VALUE against ground truth;
+                    // this pins the arm's loop mechanics — together they close the m1
+                    // tautology of reusing computeSvfBellCoeffs here). Position 0 only: a
+                    // mid-chain bell would need a memoized chain-so-far as its source.
+                    check(idx == 0) { "bell oracle only valid as the first section" }
+                    check(s.db != 0.0) { "bell oracle needs db != 0 (0 dB is its own row)" }
+                    val c = SvfCoeffs()
+                    computeSvfBellCoeffs(s.freq, s.q, s.db, sr.toDouble(), c)
+                    acc + BufferSourceIgnitor(data, startAt)
+                        .bandpass(s.freq, s.q * 10.0.pow(s.db / 40.0)) *
+                        ConstantIgnitor(c.m1)
+                }
                 else -> error("EqCoreSpec oracle has no node for type ${s.type}")
             }
         }
+        return acc
+    }
+
+    /**
+     * Steady-state amplitude ratio of a sine at [freqHz] through [core]: renders
+     * [warmBlocks] to settle the filter (high effective Q needs ~Q/(π·fc) seconds), then
+     * measures peak(out)/peak(in) over [measureBlocks]. Response rows use this to pin the
+     * bell's dB math against GROUND TRUTH (10^(db/20)) — tolerances, not bits: bells are
+     * new math with no legacy oracle.
+     */
+    fun sineGainThrough(core: EqCore, freqHz: Double, warmBlocks: Int, measureBlocks: Int): Double {
+        val w = 2.0 * PI * freqHz / sr
+        val buf = AudioBuffer(blockFrames)
+        var peak = 0.0
+        var n = 0
+        repeat(warmBlocks + measureBlocks) { blk ->
+            for (i in 0 until blockFrames) {
+                buf[i] = 0.5 * sin(w * n)
+                n++
+            }
+            core.process(buf, 0, blockFrames)
+            if (blk >= warmBlocks) {
+                for (i in 0 until blockFrames) {
+                    val a = abs(buf[i])
+                    if (a > peak) {
+                        peak = a
+                    }
+                }
+            }
+        }
+        return peak / 0.5
+    }
 
     /**
      * Renders [blocks] full blocks through the fused core and the chained oracle from the same
@@ -150,6 +214,14 @@ class EqCoreSpec : StringSpec({
     // its arm is its own hand-written loop in the section-major body (checklist item 4).
     val tapSection = Section(EqCore.RAW_TAP, 850.0, 0.9, gain = 2.0)
     val allSections = singleSections + ("rawtap" to tapSection)
+
+    // BELL joins the sub-block + denormal parameterizations via its relation oracle, but
+    // NOT the pathological row: the bell tap is a BARE v0 + m1·v1 (m1 pre-clamped at
+    // configure) while the relation oracle's MulConst applies safeOut per sample — identical
+    // on sane data, divergent by design on NaN/Inf products. The bell's own pathology pin is
+    // the 0 dB transparency row; the gained arm propagates NaN like every bare tap.
+    val bellSection = Section(EqCore.BELL, 1234.0, 1.7, db = 6.0)
+    val windowSections = allSections + ("bell" to bellSection)
 
     for ((secName, section) in singleSections) {
         "single $secName section is bit-equal to the chained node" {
@@ -225,6 +297,202 @@ class EqCoreSpec : StringSpec({
         assertChainParity(listOf(Section(EqCore.RAW_TAP, 850.0, 0.9, gain = 1e300)))
     }
 
+    // ── BELL (D2c) ──
+
+    "BELL at 0 dB is bit-transparent, incl. -0.0 / Inf / NaN samples and sub-block windows" {
+        // The EXPLICIT passthrough branch: the algebraic v0 + 0·v1 flips -0.0 to +0.0 and
+        // goes NaN on Inf/NaN input (0·Inf = NaN). Transparent = raw-bit-equal for
+        // EVERYTHING, payloads included (the output is a copy of the input sample).
+        val data = DoubleArray(blockFrames * (blocks + 1)) { i -> input[i] }.also {
+            it[7] = -0.0
+            it[40] = Double.POSITIVE_INFINITY
+            it[100] = Double.NaN
+        }
+        val core = buildCore(listOf(Section(EqCore.BELL, 850.0, 0.9, db = 0.0)))
+        val buf = AudioBuffer(blockFrames)
+        repeat(blocks) { blk ->
+            data.copyInto(buf, 0, blk * blockFrames, (blk + 1) * blockFrames)
+            core.process(buf, 0, blockFrames)
+            for (i in 0 until blockFrames) {
+                buf[i].toRawBits() shouldBe data[blk * blockFrames + i].toRawBits()
+            }
+        }
+
+        // The 0 dB branch is its own hand-written windowed loop (checklist item 4): a
+        // mid-block first call must stay inside its window.
+        val sentinel = 123.456
+        val fresh = buildCore(listOf(Section(EqCore.BELL, 850.0, 0.9, db = 0.0)))
+        val winBuf = AudioBuffer(blockFrames).apply { fill(sentinel) }
+        input.copyInto(winBuf, 37, 37, 37 + 64)
+        fresh.process(winBuf, 37, 64)
+        for (i in 0 until blockFrames) {
+            if (i in 37 until 37 + 64) {
+                winBuf[i].toRawBits() shouldBe input[i].toRawBits()
+            } else {
+                winBuf[i] shouldBe sentinel
+            }
+        }
+
+        // The window's STATE half — the identity write-back makes the output
+        // bounds-INSENSITIVE (an offset-blind 0 dB loop rewrites every sample with itself
+        // and stays green above), so the pin is state: over the same mid-block window a
+        // 0 dB bell must advance state exactly like a BANDPASS at the same freq/q (A=1
+        // coefficients are identical), observed through the reconfigure channel. An
+        // offset-blind loop ingests the sentinel frames outside the window and diverges.
+        val bp = buildCore(listOf(Section(EqCore.BANDPASS, 850.0, 0.9)))
+        val bpBuf = AudioBuffer(blockFrames).apply { fill(sentinel) }
+        input.copyInto(bpBuf, 37, 37, 37 + 64)
+        bp.process(bpBuf, 37, 64)
+
+        fresh.configureSection(0, EqCore.BELL, 850.0, 0.9, 6.0, 1.0, sr.toDouble())
+        bp.configureSection(0, EqCore.BELL, 850.0, 0.9, 6.0, 1.0, sr.toDouble())
+        val nextA = AudioBuffer(blockFrames)
+        val nextB = AudioBuffer(blockFrames)
+        input.copyInto(nextA, 0, blockFrames, 2 * blockFrames)
+        input.copyInto(nextB, 0, blockFrames, 2 * blockFrames)
+        fresh.process(nextA, 0, blockFrames)
+        bp.process(nextB, 0, blockFrames)
+        for (i in 0 until blockFrames) {
+            nextA[i].toRawBits() shouldBe nextB[i].toRawBits()
+        }
+    }
+
+    "BELL with non-finite db is transparent (NaN-guard)" {
+        // db resolves from evaluated expressions at the DSL layer — one Inf control tick
+        // must not become a +300 dB blast (unguarded: A = Inf -> Butterworth fallback ->
+        // m1 = SAFE_MAX) or a full null (-Inf -> m1 = -10). NaN alone cannot kill a
+        // dropped-guard mutant (safeOut scrubs NaN back to 0) — the Inf legs are the teeth.
+        for (db in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            val core = buildCore(listOf(Section(EqCore.BELL, 850.0, 0.9, db = db)))
+            val buf = AudioBuffer(blockFrames)
+            input.copyInto(buf, 0, 0, blockFrames)
+            core.process(buf, 0, blockFrames)
+            for (i in 0 until blockFrames) {
+                buf[i].toRawBits() shouldBe input[i].toRawBits()
+            }
+        }
+    }
+
+    "BELL boost propagates Inf/NaN bare (no output clamp — legacy parity)" {
+        // The gained tap is v0 + m1·v1 BARE (m1 clamped at configure; the per-sample path
+        // adds nothing): an Inf input sample blows the output non-finite and the NaN'd
+        // state stays non-finite — a well-meant safeOut/NaN scrub on the bell output
+        // produces finite samples here and reddens. (The bell is excluded from the
+        // pathological PARITY row because the relation oracle's MulConst DOES scrub — this
+        // row is the bell's own pathology pin.)
+        val data = DoubleArray(blockFrames * 2) { i -> input[i] }.also {
+            it[40] = Double.POSITIVE_INFINITY
+        }
+        val core = buildCore(listOf(Section(EqCore.BELL, 850.0, 0.9, db = 12.0)))
+        val buf = AudioBuffer(blockFrames)
+        data.copyInto(buf, 0, 0, blockFrames)
+        core.process(buf, 0, blockFrames)
+        buf[40].isFinite() shouldBe false
+
+        // Block 2: state is NaN — every sample must come out non-finite.
+        data.copyInto(buf, 0, blockFrames, 2 * blockFrames)
+        core.process(buf, 0, blockFrames)
+        for (i in 0 until blockFrames) {
+            buf[i].isFinite() shouldBe false
+        }
+    }
+
+    "plain computeSvfCoeffs zeroes a stale bell m1 (shared-holder guard)" {
+        // EqCore reuses ONE SvfCoeffs holder across configure calls; without the zero-write
+        // a bell's m1 would leak into the next configured section — output-invisible today
+        // (only the BELL arm reads m1, and the bell helper always rewrites it), but the
+        // trap the SvfCoeffs KDoc names for future shelf sections. Pinned directly, like
+        // the other output-invisible invariants (hasRawTap, inputCopyCapacity).
+        val c = SvfCoeffs()
+        computeSvfBellCoeffs(1000.0, 1.0, 12.0, sr.toDouble(), c)
+        (c.m1 != 0.0) shouldBe true
+        computeSvfCoeffs(1000.0, 1.0, sr.toDouble(), c)
+        c.m1 shouldBe 0.0
+    }
+
+    "BELL boost and cut are bit-equal to the bell relation x + m1·bp(x, q·A)" {
+        // Pins the gained arm's loop mechanics bit-exactly (see chainOracle's BELL arm; the
+        // response rows below pin m1's VALUE against ground truth). This row ALSO carries
+        // the q·A pin alone: peak = A² holds for ANY effective k (the response rows are
+        // k-blind), so a swapped q/A or bare q dies only here, via the oracle's independent
+        // q·A restatement.
+        assertChainParity(listOf(Section(EqCore.BELL, 850.0, 0.9, db = 12.0)))
+        assertChainParity(listOf(Section(EqCore.BELL, 850.0, 0.9, db = -9.0)))
+    }
+
+    "BELL peak gain at fc is 10^(db/20)" {
+        for (db in listOf(12.0, -12.0)) {
+            val core = buildCore(listOf(Section(EqCore.BELL, 1000.0, 1.0, db = db)))
+            val ratio = sineGainThrough(core, 1000.0, warmBlocks = 40, measureBlocks = 10)
+            val expected = 10.0.pow(db / 20.0)
+            ratio shouldBe (expected plusOrMinus expected * 0.02)
+        }
+    }
+
+    "BELL cut/boost cancel at fc (reciprocal within the unclamped region)" {
+        val core = buildCore(
+            listOf(
+                Section(EqCore.BELL, 1000.0, 1.0, db = 9.0),
+                Section(EqCore.BELL, 1000.0, 1.0, db = -9.0),
+            ),
+        )
+        val ratio = sineGainThrough(core, 1000.0, warmBlocks = 40, measureBlocks = 10)
+        ratio shouldBe (1.0 plusOrMinus 0.02)
+    }
+
+    "BELL +120 dB at q=10 peaks at exactly 1e6 — m1 must come from the CLAMPED k" {
+        // q·A = 10·10^3 clamps to 200. m1 from the CLAMPED k keeps peak = A² = 1e6 exact; a
+        // recomputed m1 = (A²−1)/(q·A) lands ~34 dB off (factor ~50) and reddens. Effective
+        // Q=200 settles in ~Q/(π·fc) ≈ 64 ms — hence the long warmup.
+        val core = buildCore(listOf(Section(EqCore.BELL, 1000.0, 10.0, db = 120.0)))
+        val ratio = sineGainThrough(core, 1000.0, warmBlocks = 80, measureBlocks = 10)
+        ratio shouldBe (1e6 plusOrMinus 5e4)
+    }
+
+    "BELL at db=5000 stays finite and capped (safeOut on m1)" {
+        // A is finite (10^125) but an unbounded m1 = k·(A²−1) ≈ 5e247 (k = 0.005 at the
+        // q·A clamp) — the configure-time cap holds m1 at SAFE_MAX (1e15), bounding output
+        // near |v0| + SAFE_MAX·|v1|. Uncapped, samples reach ~1e248; capped they stay far
+        // below 1e17 on this input. isFinite() alone would NOT catch a dropped cap (the
+        // uncapped m1 is still finite) — the bound is what discriminates.
+        val core = buildCore(listOf(Section(EqCore.BELL, 1000.0, 1.0, db = 5000.0)))
+        val buf = AudioBuffer(blockFrames)
+        repeat(blocks) { blk ->
+            input.copyInto(buf, 0, blk * blockFrames, (blk + 1) * blockFrames)
+            core.process(buf, 0, blockFrames)
+            for (i in 0 until blockFrames) {
+                buf[i].isFinite() shouldBe true
+                (abs(buf[i]) < 1e17) shouldBe true
+            }
+        }
+    }
+
+    "BELL at 0 dB advances state at the A=1 coefficients (click-free zero crossing)" {
+        // A db crossing zero mid-note must not freeze state: at A=1 the bell's recurrence
+        // equals a BANDPASS at the same (freq, q) bit-exactly (identical coefficients,
+        // different tap). So a bell that spent block 0 at 0 dB must continue at db=6
+        // EXACTLY like a bandpass that processed the same block — a skip-freeze mutant
+        // (0 dB branch emitting v0 without running the recurrence) diverges here.
+        val x = buildCore(listOf(Section(EqCore.BELL, 1234.0, 1.7, db = 0.0)))
+        val y = buildCore(listOf(Section(EqCore.BANDPASS, 1234.0, 1.7)))
+        val bufX = AudioBuffer(blockFrames)
+        val bufY = AudioBuffer(blockFrames)
+        input.copyInto(bufX, 0, 0, blockFrames)
+        input.copyInto(bufY, 0, 0, blockFrames)
+        x.process(bufX, 0, blockFrames)
+        y.process(bufY, 0, blockFrames)
+
+        x.configureSection(0, EqCore.BELL, 1234.0, 1.7, 6.0, 1.0, sr.toDouble())
+        y.configureSection(0, EqCore.BELL, 1234.0, 1.7, 6.0, 1.0, sr.toDouble())
+        input.copyInto(bufX, 0, blockFrames, 2 * blockFrames)
+        input.copyInto(bufY, 0, blockFrames, 2 * blockFrames)
+        x.process(bufX, 0, blockFrames)
+        y.process(bufY, 0, blockFrames)
+        for (i in 0 until blockFrames) {
+            bufX[i].toRawBits() shouldBe bufY[i].toRawBits()
+        }
+    }
+
     "sub-block FIRST call windows correctly, then continues and GROWS the tap copy" {
         // Parameterized over EVERY section type: each type has its own hand-written
         // windowed loop (checklist item 4). For RAW_TAP the first call is also the
@@ -232,7 +500,7 @@ class EqCoreSpec : StringSpec({
         // samples on a mid-block first call (shifted by offset, zero-fill past length),
         // SILENTLY on both platforms (the capacity round-up keeps it in bounds); the value
         // comparison below is what catches it.
-        for ((_, single) in allSections) {
+        for ((_, single) in windowSections) {
             val sections = listOf(single)
             val offset = 37
             val length = 64
@@ -349,9 +617,9 @@ class EqCoreSpec : StringSpec({
         // EVERY type: each type's loop duplicates the state update, and the recurrence
         // (where the flush lives) is tap-independent.
         val tiny = DoubleArray(blockFrames * (blocks + 1)).also { it[0] = 1e-14 }
-        for ((_, single) in allSections) {
+        for ((_, single) in windowSections) {
             assertChainParity(
-                listOf(Section(single.type, 1234.0, 1.7, gain = 2.0)),
+                listOf(Section(single.type, 1234.0, 1.7, gain = 2.0, db = single.db)),
                 data = tiny,
             )
         }
@@ -374,12 +642,13 @@ class EqCoreSpec : StringSpec({
     }
 
     "unknown section type is PASSTHROUGH" {
-        // Reserved-but-unimplemented (BELL — RAW_TAP graduated to implemented in D2b and
-        // promptly reddened this row, the designed loud failure) and garbage types —
-        // POSITIVE and NEGATIVE (-42 is arbitrary garbage, the UNCONFIGURED sentinel has
-        // its own dedicated case) — must neither invent gain nor notch: output bit-equal
-        // to input. The state half is its own case below.
-        for (unknownType in listOf(EqCore.BELL, 99, -42)) {
+        // Garbage types — POSITIVE and NEGATIVE (-42 is arbitrary garbage, the UNCONFIGURED
+        // sentinel has its own dedicated case) — must neither invent gain nor notch: output
+        // bit-equal to input. The state half is its own case below. History: every reserved
+        // ordinal that graduated (RAW_TAP in D2b, BELL in D2c) reddened this row on arrival,
+        // the designed loud failure. Ordinal 6 is the NEXT append-only slot — implementing
+        // it reddens this row and moves the tripwire to 7.
+        for (unknownType in listOf(6, 99, -42)) {
             val core = EqCore(1).also {
                 it.configureSection(0, unknownType, 1000.0, 1.0, 6.0, 1.5, sr.toDouble())
             }
@@ -592,7 +861,7 @@ class EqCoreSpec : StringSpec({
         val hp = Section(EqCore.HIGHPASS, 440.0, 0.707)
         val core = EqCore(3).also {
             it.configureSection(0, lp.type, lp.freq, lp.q, 0.0, 1.0, sr.toDouble())
-            it.configureSection(1, EqCore.BELL, 1000.0, 1.0, 6.0, 1.5, sr.toDouble())
+            it.configureSection(1, 99, 1000.0, 1.0, 6.0, 1.5, sr.toDouble())
             it.configureSection(2, hp.type, hp.freq, hp.q, 0.0, 1.0, sr.toDouble())
         }
         val oracle = chainOracle(input, listOf(lp, hp))
@@ -616,10 +885,10 @@ class EqCoreSpec : StringSpec({
         // Reconfiguring the slot to LOWPASS is the observation channel — configureSection
         // keeps state (snap semantics), so a core whose unknown section secretly advanced
         // ic1/ic2 diverges from a fresh core on the very next block. Parameterized over
-        // reserved (BELL) and garbage-negative (-42): configureSection stores real
-        // coefficients regardless of type, so a mis-dispatched unknown type advances state
-        // invisibly.
-        for (unknownType in listOf(EqCore.BELL, -42)) {
+        // the next append-only ordinal (6), garbage-positive (99) and garbage-negative
+        // (-42): configureSection stores real coefficients regardless of type, so a
+        // mis-dispatched unknown type advances state invisibly.
+        for (unknownType in listOf(6, 99, -42)) {
             val core = EqCore(1).also {
                 it.configureSection(0, unknownType, 1234.0, 1.7, 6.0, 1.5, sr.toDouble())
             }
