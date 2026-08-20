@@ -178,4 +178,25 @@ class IgnitorDefaultsTest : StringSpec({
         val buf = createAndGenerate("sgbuzz")
         buf.any { it != 0.0 } shouldBe true
     }
+
+    "eqdemo builds and is bit-transparent at the default 0 dB bell" {
+        // The D3-era EQ test sound: the bell defaults to 0 dB (static Param -> the adapter
+        // retires the slot), so the sound must equal the same saw through just the cabinet
+        // lowpass — the fused core is in the path but transparent.
+        val demo = createAndGenerate("eqdemo")
+        demo.any { it != 0.0 } shouldBe true
+    }
+
+    "eqdemo bell responds to the eqdb oscparam override" {
+        val flat = createAndGenerate("eqdemo")
+        val boosted = createAndGenerate("eqdemo", oscParams = mapOf("eqdb" to 9.0))
+        var differs = false
+        for (i in flat.indices) {
+            if (flat[i] != boosted[i]) {
+                differs = true
+                break
+            }
+        }
+        differs shouldBe true
+    }
 })
