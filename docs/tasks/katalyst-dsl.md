@@ -81,6 +81,18 @@ landed; the authoring surface didn't.
 - **Application path.** `PlaybackEngineDispatcher` / `Cylinder` consume the registered chain instead of
   the hardcoded `listOf(...)`.
 - **Master interaction.** Orbit bus → master/loudness stage (per-playback D6).
+- **Body/vowel should become EqCore-backed here (noted 2026-08-20, unified-eq D2b).**
+  `FormantFilter` is structurally N parallel bandpasses × gain, summed — exactly `EqCore`'s
+  RAW_TAP topology (minus the dry path). Today it makes THREE passes over the block per band
+  (a per-band `copyInto` into `bandBuffer`, the class-form `SvfBPF.process` with state in
+  fields, a separate mix loop); EqCore's tap arm does bandpass + gain + accumulate in ONE
+  pass with state in locals — the loop shape that won the D2b bake-off by 17–38% on V8.
+  When Katalyst adopts EqCore (precondition: the coefficient-ramp API — EqCore is snap-only,
+  see its KDoc), rebase body/vowel on it instead of hand-optimizing FormantFilter separately:
+  one machinery, one place to optimize, current `FormantFilter` output as the bit-parity
+  oracle for the linear path, by-ear-tuned tables/constants untouched. Leverage is per-ORBIT
+  (once per orbit, maintainer's own optimization), so absolute CPU is small — measure before
+  prioritizing; the win is consolidation first, cycles second.
 
 ## Links
 
