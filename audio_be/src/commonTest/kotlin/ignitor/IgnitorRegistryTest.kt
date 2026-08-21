@@ -8,8 +8,11 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.lowpass
+import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.VoiceData
 
 class IgnitorRegistryTest : StringSpec({
@@ -19,6 +22,74 @@ class IgnitorRegistryTest : StringSpec({
         val sine = IgnitorDsl.Sine()
         registry.register("sine", sine)
         registry.get("sine") shouldBe sine
+    }
+
+    // ── The optimizer seam ────────────────────────────────────────────────────
+
+    "register optimizes once, and get() still returns the AUTHORED tree" {
+        // get() must stay authored: VoiceFactory reads it for maxReleaseSec, so voice lifetime
+        // follows what the user wrote. (The by-ear A/B does NOT go through here — .optimizer(0)
+        // travels inside the tree and comes back out of optimized() untouched.)
+        val registry = IgnitorRegistry()
+        val authored = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0)
+        registry.register("gtr", authored)
+
+        registry.get("gtr") shouldBe authored
+        val optimized = registry.optimized("gtr")
+        optimized shouldNotBe authored
+        (optimized as IgnitorDsl.Eq).sections.size shouldBe 2
+    }
+
+    "optimized() delegates to the parent, like get()" {
+        // Built-ins register on the ROOT registry while voices are created on a per-playback
+        // FORK. A local-only optimized() lookup returns null for every built-in and
+        // VoiceFactory then drops the voice: the whole song goes silent.
+        val root = IgnitorRegistry()
+        root.register("gtr", IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0))
+        val fork = root.fork()
+
+        fork.optimized("gtr") shouldNotBe null
+        (fork.optimized("gtr") as IgnitorDsl.Eq).sections.size shouldBe 2
+    }
+
+    "re-registering a name replaces BOTH the authored and the optimized tree" {
+        // Live coding re-registers names with edited trees; a getOrPut would keep playing the
+        // old sound forever.
+        val registry = IgnitorRegistry()
+        registry.register("s", IgnitorDsl.Sawtooth().lowpass(1000.0))
+        registry.register("s", IgnitorDsl.Sine().lowpass(2000.0).notch(300.0, 1.0))
+
+        (registry.optimized("s") as IgnitorDsl.Eq).let {
+            it.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
+            it.sections.size shouldBe 2
+        }
+        // BOTH maps: a getOrPut on defs alone would keep serving the stale authored tree to
+        // VoiceFactory's maxReleaseSec, with optimized() looking perfectly fine.
+        registry.get("s").shouldBeInstanceOf<IgnitorDsl.Notch>()
+            .inner.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
+            .inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
+    }
+
+    "createExciter renders the OPTIMIZED tree, not the authored one" {
+        // The seam that makes D4 real, and the ONE thing bit-identity makes invisible to every
+        // output-comparing test: swap `optimized(key)` back to `get(key)` in createExciter and
+        // every other spec in the repo stays green while every voice silently ships unfused.
+        // White-box by necessity.
+        val registry = IgnitorRegistry()
+        registry.register("gtr", IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0))
+
+        val exciter = registry.createExciter("gtr", VoiceData.empty.copy(sound = "gtr"), 440.0)!!
+
+        exciter.shouldBeInstanceOf<MemoizingIgnitor>()
+            .inner.shouldBeInstanceOf<EqIgnitor>()
+    }
+
+    "registering the built-in defaults never falls back to an unoptimized tree" {
+        // register() swallows an optimizer throw by design (the worklet dispatch has no
+        // try/catch), so the counter is the only signal that it happened. Non-zero here means
+        // the optimizer is crashing on a shipped sound and everyone is silently unoptimized.
+        val registry = IgnitorRegistry().apply { registerDefaults() }
+        registry.optimizerFailures shouldBe 0
     }
 
     "names are case-insensitive" {

@@ -231,12 +231,32 @@ first. (The per-sample filter loop itself stays: the core runs one loop per sect
 section count and is much larger in the browser and on weak hardware than on desktop JVM, where
 it is small. Measure your own patch rather than assuming a rate.
 
-Only `.band()` and `.tap()` sections exist today, so an `.eq()` fuses those and nothing else:
-`.lowpass()/.highpass()/.notch()` written after one remain separate nodes.
+You write `.band()` and `.tap()` sections yourself, and plain `.lowpass()/.highpass()/
+.bandpass()/.notch()` are folded into the same pass automatically, so there is no need to
+rewrite them as bands.
+
+**Only NEIGHBOURING filters merge, and nothing is ever reordered.** Anything else between two
+filters is a wall: `.distort()`, `.drive()`, `.clip()`, `.crush()`, `.mul()`, `.shimmer()`,
+`.tremolo()`, `.vibrato()` and friends. So `.lowpass(5000).distort(0.4).lowpass(3000)` is two
+passes, not one. Moving the distort to the end of the chain would make it one, though that is a
+different patch and a different sound, so make that choice by ear rather than for the saving.
+
+Two kinds of filter are never folded at all: `.warmth()/.onePoleLowpass()`, and any filter with a
+non-zero or osc-param `analog`. On `.lowpass()/.highpass()` that analog switches on a saturating
+character the fused EQ does not reproduce; on `.bandpass()/.notch()` it produces no sound of its
+own, and the filter stays out of the fusion for a subtler reason: reading the value each block is
+itself observable when it is an expression.
+
+A filter whose input is shared with another chain still folds, into its own pass; sharing only
+stops two chains merging into ONE pass, because that would compute the shared part twice.
+
+Fusing is meant to be inaudible. To check by ear, put `.optimizer(0)` on the sound to render it
+exactly as written, and compare.
 
 | Method                  | Description                                                                                        |
 |-------------------------|----------------------------------------------------------------------------------------------------|
 | `.eq()`                 | Opens the EQ; `.band()`/`.tap()` exist only on an EQ, so this comes first                          |
+| `.optimizer(0)`         | Renders a sound exactly as written, with no filter fusion; for A/B-ing the fusion by ear           |
 | `.band(freq, q?, db?)`  | **Serial** peaking band: `db` dB gain at `freq`, `q` = width (defaults q=0.707, db=0)             |
 | `.tap(freq, q?, gain?)` | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=1.0, gain=1.0)        |
 

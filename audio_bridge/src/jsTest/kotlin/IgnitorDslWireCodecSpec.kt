@@ -31,6 +31,10 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Freq" { check(IgnitorDsl.Freq) }
     "Silence" { check(IgnitorDsl.Silence) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
+
+    // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where
+    // it gets used; every field non-default so a dropped one shows up.
+    "OptimizerHint" { check(IgnitorDsl.Sine().lowpass(2000.0).optimizer(on = 0)) }
     "Param (with description)" { check(IgnitorDsl.Param("cutoff", 1000.0, "Filter cutoff")) }
 
     // --- oscillator primitives ------------------------------------------------------------------------------

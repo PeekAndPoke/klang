@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
 
@@ -26,11 +27,64 @@ class IgnitorRegistry(
 
     private val defs = mutableMapOf<String, IgnitorDsl>()
 
+    /**
+     * Optimized twin of [defs] — what voices actually render. Kept separate so [get] can keep
+     * returning the AUTHORED tree, which `VoiceFactory` reads for `maxReleaseSec` (voice
+     * lifetime must follow what the user wrote) and which keeps the two trees comparable for
+     * debugging. The by-ear A/B does NOT go through here: `.optimizer(0)` travels in the tree
+     * itself, so `optimized()` simply returns it untouched.
+     */
+    private val optimizedDefs = mutableMapOf<String, IgnitorDsl>()
+
+    /**
+     * Registers [dsl] under [name] and runs the graph optimizer ONCE, here, rather than per
+     * voice: `createExciter` runs per note-on, so optimizing there would pay an O(tree) cost on
+     * the render path for every note.
+     *
+     * Overwrite, never getOrPut: names are re-registered with edited trees during live coding,
+     * so caching by key alone would keep playing the previous sound forever.
+     *
+     * This function MUST stay total. The worklet's onmessage dispatch has no try/catch, so an
+     * escaping exception here would unwind after [defs] was written but before [optimizedDefs],
+     * silently dropping every voice of that instrument on JS while the JVM threw loudly. On
+     * failure the authored tree is stored instead, so a broken optimizer degrades to
+     * unoptimized audio rather than silence, and never serves a tree other than the last one
+     * registered.
+     */
     fun register(name: String, dsl: IgnitorDsl) {
-        defs[name.lowercase()] = dsl
+        val key = name.lowercase()
+        defs[key] = dsl
+        optimizedDefs[key] = try {
+            dsl.optimize()
+        } catch (_: Throwable) {
+            // Never rethrow (see the KDoc), but never silent either: a brand-new rewrite pass
+            // failing must be visible, or "the optimizer crashed" is indistinguishable from
+            // "nothing to fuse" on both platforms. This is a PROBE for a debugger or a
+            // regression sweep, not a mutation-checked guard: nothing in the suite can make
+            // optimize() throw today, so the increment itself is untested by construction.
+            optimizerFailures++
+            dsl
+        }
     }
 
+    /**
+     * How many registrations fell back to the authored tree because [optimize] threw. Stays 0 in
+     * a healthy build. Read it from a debugger or a sweep; the shipped spec only asserts that
+     * the built-in defaults register without a single failure.
+     */
+    internal var optimizerFailures: Int = 0
+        private set
+
+    /** The tree AS AUTHORED (VoiceFactory's `maxReleaseSec` source). See [optimized] for what renders. */
     fun get(name: String): IgnitorDsl? = defs[name.lowercase()] ?: parent?.get(name)
+
+    /**
+     * The tree that renders. Mirrors [get]'s parent delegation: built-ins register on the ROOT
+     * registry while voices are created on a per-playback fork, so a local-only lookup would
+     * return null for every built-in and silently drop the whole song.
+     */
+    fun optimized(name: String): IgnitorDsl? =
+        optimizedDefs[name.lowercase()] ?: parent?.optimized(name)
 
     fun contains(name: String?): Boolean {
         val key = (name ?: DEFAULT_SOUND).lowercase()
@@ -59,7 +113,10 @@ class IgnitorRegistry(
         val key = (name ?: DEFAULT_SOUND).lowercase()
         val oscParams = data.oscParams
 
-        val dsl = get(key) ?: return null
+        // No `?: get(key)` fallback on purpose: it could never fire (register writes both maps
+        // together), so it would only mask a future regression in optimized()'s delegation by
+        // silently rendering unoptimized instead of failing a test.
+        val dsl = optimized(key) ?: return null
 
         val raw = dsl.toExciter(
             oscParams,

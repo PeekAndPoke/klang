@@ -619,6 +619,24 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
+     * Disables the graph optimizer for the WHOLE registered definition this appears in, not just
+     * the subtree below it. Exists so a fusion can be ruled in or out BY EAR: wrap any sound,
+     * set `on = 0`, and the tree is rendered exactly as authored.
+     *
+     * [on] is a plain Int, structural on purpose: the optimizer runs once at registration, long
+     * before any note, so there is nothing to read a Param from. Coerced (`on != 0`), never
+     * required, per the house no-throw-on-user-input rule.
+     *
+     * Dissolves in the `buildIgnitor` prologue like [Variants], so it costs nothing at render.
+     */
+    @WireName("optimizerHint")
+    data class OptimizerHint(val inner: IgnitorDsl, val on: Int = 1) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
      * Selects one of several child ignitors based on the voice's `soundIndex`.
      *
      * Lets a single sound expose multiple variants, addressable per note via the
@@ -1141,10 +1159,11 @@ sealed interface IgnitorDsl {
 
     /**
      * Fused equalizer over [inner]: an ordered [sections] list rendered in ONE `EqCore` pass
-     * instead of a chain of per-filter nodes. TODAY it is authored via the `.eq()` surface;
-     * once the graph optimizer lands (plan D4) it will ALSO be produced automatically by
-     * folding consecutive chained filters into sections, bit-identically, with the chained
-     * syntax staying THE syntax for cutoff filters. There is no fold pass in the tree yet.
+     * instead of a chain of per-filter nodes. Authored via the `.eq()` surface, and ALSO
+     * produced automatically by the graph optimizer (`IgnitorDsl.optimize`), which folds runs
+     * of ADJACENT chained filters into sections bit-identically at registration time. The
+     * chained syntax stays THE syntax for cutoff filters; nothing is ever reordered, so a
+     * nonlinear node or a gain multiply between two filters keeps them apart.
      *
      * ## Two section families, two topologies
      *
@@ -1588,6 +1607,17 @@ fun IgnitorDsl.highpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Highpa
 )
 
 /**
+ * Controls the graph optimizer for the whole definition this node ends up in.
+ *
+ * `optimizer(0)` turns it OFF, so the tree renders exactly as authored — that is the useful
+ * call, for A/B-ing a fusion by ear or as a hatch if one ever misbehaves. Any other value
+ * leaves it on, and the marker then dissolves without trace (so it is not a fusion wall).
+ * Note the default is 1: a bare `optimizer()` changes nothing. Same name and default as the
+ * KlangScript stdlib `optimizer()`.
+ */
+fun IgnitorDsl.optimizer(on: Int = 1): IgnitorDsl = IgnitorDsl.OptimizerHint(inner = this, on = on)
+
+/**
  * Starts (or continues) a fused equalizer — see [IgnitorDsl.Eq]. Idempotent. Same names and
  * defaults as the KlangScript stdlib `eq()` (dual-surface rule).
  *
@@ -1884,6 +1914,7 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     is IgnitorDsl.Sq -> inner.maxReleaseSec()
     is IgnitorDsl.Select -> maxOf(cond.maxReleaseSec(), whenTrue.maxReleaseSec(), whenFalse.maxReleaseSec())
     is IgnitorDsl.Fm -> maxOf(carrier.maxReleaseSec(), modulator.maxReleaseSec())
+    is IgnitorDsl.OptimizerHint -> inner.maxReleaseSec()
     // Variants: voice lifetime must cover whichever child gets picked, so take the max.
     is IgnitorDsl.Variants -> children.maxOfOrNull { it.maxReleaseSec() } ?: 0.0
     // Leaf nodes — no release info

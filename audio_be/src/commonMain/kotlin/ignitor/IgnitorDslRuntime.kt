@@ -105,6 +105,11 @@ internal fun IgnitorDsl.buildIgnitor(
         }
     }
 
+    // ── Optimizer marker: a registration-time hint, invisible at render. Dissolve it. ──
+    if (this is IgnitorDsl.OptimizerHint) {
+        return inner.buildIgnitor(oscParams, cache, accumulatedMod)
+    }
+
     // ── Variants: dispatch on cache.soundIndex, no cache entry for this node itself. ──
     if (this is IgnitorDsl.Variants) {
         require(children.isNotEmpty()) { "Osc.variants(...) must have at least one child" }
@@ -198,6 +203,9 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Variants ->
             error("Variants DSL nodes must be absorbed in buildIgnitor, not buildRaw")
+
+        is IgnitorDsl.OptimizerHint ->
+            error("OptimizerHint DSL nodes must be absorbed in buildIgnitor, not buildRaw")
 
         // ── Sources: apply accumulated mod ──
 

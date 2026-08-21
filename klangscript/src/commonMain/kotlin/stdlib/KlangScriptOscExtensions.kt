@@ -104,6 +104,17 @@ object KlangScriptOscExtensions {
     )
 
     /**
+     * Turns the graph optimizer off for this sound (`optimizer(0)`), so it renders exactly as
+     * written instead of having its filter chain fused.
+     *
+     * Fusing is meant to be inaudible, so this is a listening tool: put `.optimizer(0)` on a
+     * sound, compare by ear, and take it off again. Anything but 0 leaves the optimizer on.
+     */
+    @KlangScript.Method
+    fun optimizer(self: IgnitorDsl, on: Int = 1): IgnitorDsl =
+        IgnitorDsl.OptimizerHint(inner = self, on = on)
+
+    /**
      * Opens an equalizer on [self]. Everything added to it runs in ONE pass instead of one node
      * each, which drops the scratch buffer, the extra buffer traffic and the virtual call for
      * every section after the first (the per-sample filter loop per section stays, by design). The saving grows with the section count and is much larger in the browser
@@ -117,8 +128,11 @@ object KlangScriptOscExtensions {
      *
      * Both exist only on an equalizer, so `.eq()` comes first: `Osc.saw().eq().band(1200, 1.0, 6)`.
      * Calling `.eq()` again right away changes nothing, but an `.eq()` written after other
-     * filters opens a SECOND equalizer. Filters written after it (`.lowpass()`, `.notch()`, ...)
-     * are still their own separate nodes.
+     * filters opens a SECOND equalizer. Plain filters written after it (`.lowpass()`,
+     * `.notch()`, ...) are folded into the same single pass automatically, so you do not have to
+     * write them as bands to get the saving — but only NEIGHBOURING filters merge: anything
+     * else in between (`.distort()`, `.mul()`, `.tremolo()`, ...) is a wall and starts a new
+     * pass. Use `.optimizer(0)` to render a sound exactly as written and compare by ear.
      *
      * ⚠ Careful when adding a `.tap()` onto a sound someone ELSE built: if that sound already
      * ends in an equalizer, your `.eq()` continues theirs, and your tap then reads THEIR input
