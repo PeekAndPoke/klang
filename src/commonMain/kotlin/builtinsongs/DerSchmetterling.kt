@@ -24,7 +24,7 @@ let feel          =   10    // 0.0 .. guitar | 100.0 .. rave
 let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    1    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
-let leadHz        = 3700    // Where does the lead sit?
+let leadHz        = 3750    // Where does the lead sit?
 
 let guitar = (() => {
 
@@ -69,18 +69,18 @@ export guitarDyna = "0.98 0.94!7 0.96 0.94!7"
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
 export lead_pat =  `<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-4 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
 
-export lead_shape = x => x.gain(0.65).sound(guitar).unison(5).spread(0.15)
-  .oscp("mids", 0.0).oscp("presence", 0.0).oscp("hptrack", 1.0).bandf(leadHz).bandq(2.5).hpf(leadHz - 300)
+export lead_shape = x => x.gain(0.90).sound(guitar).unison(5).spread(0.15)
+  .oscp("mids", 0.0).oscp("presence", 0.0).oscp("hptrack", 1.0).bandf(leadHz).bandq(1.5)
   .clip(0.85).adsr("0.010:5.0:0.1:0.25").lpf(leadHz).lpe(1).lpadsr("0.010:1.0:0.1:0.25") 
   .body("steel").bodyMix(0.8).apply(x => x.transpose(0).velocity(0.5).pan(0.33).superimpose(pan(0.66)))
 
 export lead_arrange = x => x.orbit(0)
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.500!48 0.215!16 0.500!48 0.375!16>")  
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.450!48 0.215!16 0.450!48 0.350!16>")  
   .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                            
   .mute("<1!64 0!32 1!32 0!16>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
 
-export lead = n(lead_pat).apply(lead_shape).room("0.1:5:0.1").tag("lead")
+export lead = n(lead_pat).apply(lead_shape).tag("lead")
 
 // Guitar 1  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar1_pat = 
