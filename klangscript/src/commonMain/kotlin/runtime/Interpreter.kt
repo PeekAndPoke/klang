@@ -1401,16 +1401,16 @@ class Interpreter(
                 )
             }
 
-            // Method not found - throw error with helpful message
+            // Method not found - lead with the nearest name, THEN a truncated list. Dumping all
+            // ~400 names unranked (the old behaviour) buries the one that matters: `.ocsp` for
+            // `.oscp` is a single transposition and was invisible in the middle of the dump.
             val availableMethods = engine.getExtensionMethodNames(objValue)
-            val suggestion = if (availableMethods.isNotEmpty()) {
-                " Available methods: ${availableMethods.joinToString(", ")}"
-            } else {
-                ""
-            }
+            val suggestion = suggestNames(memberAccess.property, availableMethods) +
+                    formatAvailableNames(availableMethods)
 
             throw KlangScriptTypeError(
-                message = "Native type '${objValue.qualifiedName}' has no method '${memberAccess.property}'.$suggestion",
+                message = "Native type '${engine.getDisplayTypeName(objValue)}' has no method " +
+                        "'${memberAccess.property}'.$suggestion",
                 operation = "member access",
                 location = memberAccess.location,
                 astNode = memberAccess,
@@ -1439,8 +1439,12 @@ class Interpreter(
             // throw a helpful error. Otherwise, fall through to the generic error below.
             val availableMethods = engine.getExtensionMethodNames(objValue)
             if (availableMethods.isNotEmpty()) {
-                val typeName = objValue::class.simpleName ?: "unknown"
-                val suggestion = " Available methods: ${availableMethods.joinToString(", ")}"
+                // Same treatment as the native-object branch above: sprudel registers String
+                // extensions, so `"c d e".gian(...)` reaches HERE and used to get the same
+                // unranked 4 KB dump this change exists to remove.
+                val typeName = engine.getDisplayTypeName(objValue)
+                val suggestion = suggestNames(memberAccess.property, availableMethods) +
+                        formatAvailableNames(availableMethods)
 
                 throw KlangScriptTypeError(
                     message = "Type '$typeName' has no method '${memberAccess.property}'.$suggestion",

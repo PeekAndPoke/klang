@@ -9,6 +9,8 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.play
+import io.peekandpoke.klang.sprudel.SprudelDiagnostic
+import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.ui.codemirror.EditorError
 import io.peekandpoke.kraft.utils.launch
@@ -192,12 +194,24 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
     private suspend fun runPlay() {
         _errors(emptyList())
 
+        // Pattern building swallows errors on purpose, so a bad edit mid-performance cannot kill
+        // the audio (see SprudelDiagnostics). Collect what it swallowed and surface it in the
+        // editor: without this a single typo silently discards a whole shape function and the
+        // only trace is a console stack trace nobody is watching while mixing.
+        //
+        // Declared OUTSIDE the try, and published in a `finally`, because installing a collector
+        // stops SprudelDiagnostics from printing. If the build then threw (or returned null),
+        // publishing from inside the try would lose the diagnostic from the editor AND from the
+        // console — strictly less than before this change existed.
+        val swallowed = mutableListOf<SprudelDiagnostic>()
+
         try {
             val codeToPlay = _state().code
             val player = Player.ensure().await()
             val engine = Player.createEngine(player = player)
-            val pattern = SprudelPattern.compile(engine, codeToPlay)
-                ?: error("Failed to compile Sprudel pattern from code")
+            val pattern = SprudelDiagnostics.collectingInto(swallowed) {
+                SprudelPattern.compile(engine, codeToPlay)
+            } ?: error("Failed to compile Sprudel pattern from code")
 
             when (val current = _playback()) {
                 null -> {
@@ -232,7 +246,21 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
             }
         } catch (e: Throwable) {
             console.error("KlangCodePlaybackCtrl: play failed", e)
-            _errors(listOf(mapToEditorError(e)))
+            // APPEND: a failure here must not discard markers published for swallowed errors.
+            _errors(_errors() + mapToEditorError(e))
+        } finally {
+            // Runs on every path — success, throw, and the null-compile elvis — so a swallowed
+            // error is never silently dropped. Keeps playing either way: a marker is
+            // information, not a reason to stop the music.
+            if (swallowed.isNotEmpty()) {
+                swallowed.forEach {
+                    // Keep the console trace too. With a collector installed SprudelDiagnostics
+                    // no longer prints, and for anything but a KlangScriptTypeError the marker
+                    // carries only `message`.
+                    console.warn("Swallowed in ${it.context}:", it.error)
+                }
+                _errors(_errors() + swallowed.map { mapToEditorError(it.error) })
+            }
         }
     }
 

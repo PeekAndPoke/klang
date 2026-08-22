@@ -7,6 +7,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.script.ast.CallInfo
@@ -145,7 +146,7 @@ fun PatternMapperFn.chain(next: PatternMapperFn?): PatternMapperFn {
             val result = this.invoke(input)
             next.invoke(result)
         } catch (e: Exception) {
-            println("Error while chaining pattern mappers: $this -> $next: \n${e.stackTraceToString()}")
+            SprudelDiagnostics.report("pattern mapper chain", e)
             input
         }
     }
@@ -169,7 +170,7 @@ fun patternMapper(mapper: Any?): PatternMapperFn? {
 
                     (result as? SprudelPattern) ?: input
                 } catch (e: Exception) {
-                    println("Error while invoking pattern mapper: $mapper: \n${e.stackTraceToString()}")
+                    SprudelDiagnostics.report("pattern mapper", e)
                     input
                 }
             }

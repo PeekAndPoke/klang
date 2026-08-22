@@ -8,6 +8,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.lcm
 import io.peekandpoke.klang.script.annotations.KlangScript
@@ -2012,7 +2013,7 @@ private fun applyLayer(source: SprudelPattern, transforms: Array<out PatternMapp
         try {
             transform(source)
         } catch (e: Exception) {
-            println("Error applying layer transform: ${e.stackTraceToString()}")
+            SprudelDiagnostics.report("layer transform", e)
             source
         }
     }

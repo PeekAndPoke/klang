@@ -23,12 +23,26 @@ fun mapToEditorError(e: Throwable): EditorError {
     if (e is SourceLocationAware) {
         val loc = e.location
         if (loc != null) {
+            val prefix = if (e is KlangScriptError) "${e.errorType.name}: " else ""
+
+            // `source` names an imported library; null means the main script, i.e. the buffer
+            // the user is looking at. Pointing an imported module's line number at the open
+            // document would underline an unrelated token, which is WORSE than no marker — so
+            // pin those to line 1 and say where they really came from.
+            if (loc.source != null) {
+                return EditorError(
+                    message = "$prefix[in ${loc.source} at line ${loc.startLine}] ${e.message}",
+                    line = 1,
+                    col = 1,
+                    len = 1,
+                )
+            }
+
             val len = if (loc.startLine == loc.endLine) {
                 (loc.endColumn - loc.startColumn).coerceAtLeast(1)
             } else {
                 1
             }
-            val prefix = if (e is KlangScriptError) "${e.errorType.name}: " else ""
             return EditorError(
                 message = "$prefix${e.message}",
                 line = loc.startLine,

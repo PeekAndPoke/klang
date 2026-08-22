@@ -205,6 +205,11 @@ class KlangScriptEngine private constructor(
         return environment.getExtensionMethod(value, methodName)
     }
 
+    /** Human-readable type name for error messages. See [Environment.getDisplayTypeName]. */
+    fun getDisplayTypeName(value: RuntimeValue): String {
+        return environment.getDisplayTypeName(value)
+    }
+
     /**
      * Get all registered extension method names for a native type
      *
