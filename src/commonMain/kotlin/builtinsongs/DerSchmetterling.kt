@@ -13,14 +13,14 @@ import io.peekandpoke.klang.Song
 internal val derSchmetterlingSong = Song(
     id = "${BuiltInSongs.PREFIX}-der-schmetterling",
     title = "Der Schmetterling",
-    rpm = 34.5,
+    rpm = 35.0,
     icon = "bug",
     code = """import * from "stdlib"
 import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   15    // 0.0 .. guitar | 100.0 .. rave
+let feel          =    5    // 0.0 .. guitar | 100.0 .. rave
 let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    1    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
@@ -59,7 +59,7 @@ let guitar = (() => {
     // character knobs — plain scalars, SuperSaw-typed, must precede the filter
     .analog(pAnalog).spreadPower(1.0).sideAtten(0.0).gainJitter(0.05).centerJitter(0.05)
     // Simulate plucked string, add noise burst
-    .pitchEnvelope(0.3, 0.001, 0.02)
+    .pitchEnvelope(0.3, 0.001, 0.01 * (1 + drunk))
     .plus(Osc.whitenoise().highpass(1000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.20))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease).adsrCurves("exp", "exp", "exp")
@@ -109,7 +109,7 @@ export guitarDyna = "0.98 0.94!7 0.96 0.94!7"
 export lead_pat =  `<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-4 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
 
 export lead_shape = x => x.gain(0.18).sound(guitar).unison(5).spread(0.15).oscp("hptrack", Math.pow(2, 7/12))
-  .oscp("mids", 6.0).oscp("midsQ", 4.0).oscp("midsHz", leadHz).oscp("midsHumm", 1.0).oscp("presence", 0.0) // .bandf(leadHz).bandq(1.5)
+  .oscp("mids", 6.0).oscp("midsQ", 4.0).oscp("midsHz", leadHz).oscp("midsHumm", 0.2).oscp("presence", 0.0) // .bandf(leadHz).bandq(1.5)
   .clip(0.95).vowel("a e i o u".scramble(4)).vowelMix(0.3)
   .apply(x => x.transpose(0).velocity(0.5).pan(0.33).superimpose(pan(0.66)))
 
@@ -130,7 +130,7 @@ export guitar1_pat =
 export guitar1_shape = x => x.gain(0.8).velocity(guitarDyna.fast(2)).sound(guitar).unison(15).spread(0.06) // . solo()
   .oscp("hptrack", Math.pow(2, 7/12)).oscp("hpq", 0.7)
   .oscp("mids", 2.0).oscp("midsHz", 1160).oscp("midsQ", 0.7).oscp("midsHumm", 0.0)
-  .oscp("presence", 2.0).oscp("presenceHz", 3000).oscp("presenceQ", 1.3)
+  .oscp("presence", 1.5).oscp("presenceHz", 2700).oscp("presenceQ", 1.3)
   .clip("<0.97!31 0.93 0.97!31 0.92 0.96!30 0.88 0.92>".fast(2))
   .pan(0.55).superimpose(pan(0.65)).body("oak").bodyMix(0.2)
 
@@ -149,8 +149,8 @@ export guitar2_pat =
 
 export guitar2_shape = x => x.gain(0.8).velocity(guitarDyna.fast(2)).sound(guitar).unison(13).spread(0.07)
   .oscp("hptrack", Math.pow(2, 4/12)).oscp("hpq", 1.2)
-  .oscp("mids", 2.0).oscp("midsHz", 980).oscp("midsQ", 0.7)
-  .oscp("presence", 2.0).oscp("presenceHz", 2700).oscp("presenceQ", 1.3)
+  .oscp("mids", 1.5).oscp("midsHz", 980).oscp("midsQ", 0.7)
+  .oscp("presence", 1.5).oscp("presenceHz", 2400).oscp("presenceQ", 1.3)
   .clip("<0.97!31 0.93 0.97!31 0.92 0.97!30 0.88 0.92>".fast(2))
   .pan(0.45).superimpose(pan(0.35)).body("cedar").bodyMix(0.2)
 
@@ -167,8 +167,8 @@ export guitar3_pat =
 
 export guitar3_shape = x => x.gain(0.8).velocity(guitarDyna.fast(2)).sound(guitar).unison(11).spread(0.08)
   .oscp("hptrack", 1.00).oscp("hpq", 1.4)
-  .oscp("mids", 2.0).oscp("midsHz", 750).oscp("midsQ", 0.7)
-  .oscp("presence", 2.0).oscp("presenceHz", 2300).oscp("presenceQ", 1.3)
+  .oscp("mids", 1.8).oscp("midsHz", 750).oscp("midsQ", 0.7)
+  .oscp("presence", 1.5).oscp("presenceHz", 2100).oscp("presenceQ", 1.3)
   .clip("<0.97!31 0.93 0.97!31 0.92 0.96!30 0.88 0.92>".fast(2))
   .pan(0.40).superimpose(pan(0.60))
 
