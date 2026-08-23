@@ -1266,80 +1266,88 @@ fun PatternMapperFn.release(time: PatternLike? = null, callInfo: CallInfo? = nul
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
-private val adsrMutation = voiceSetter {
-    val parts = it?.toString()?.split(":")
-        ?.mapNotNull { d -> d.toDoubleOrNull() } ?: emptyList()
-
-    attack = parts.getOrNull(0) ?: attack
-    decay = parts.getOrNull(1) ?: decay
-    sustain = parts.getOrNull(2) ?: sustain
-    release = parts.getOrNull(3) ?: release
-}
-
-private fun applyAdsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._applyControlFromParams(args, adsrMutation) { src, ctrl ->
-        src.attack = ctrl.attack ?: src.attack
-        src.decay = ctrl.decay ?: src.decay
-        src.sustain = ctrl.sustain ?: src.sustain
-        src.release = ctrl.release ?: src.release
-        src
-    }
-}
-
 /**
- * Sets all four ADSR envelope parameters at once via a colon-separated string
- * `"attack:decay:sustain:release"`.
+ * Sets the four ADSR envelope parameters. Each parameter is independent and patternable;
+ * omitted parameters keep their previous values.
  *
- * Each field is a number: attack/decay/release in seconds, sustain in 0–1 range.
- * Missing trailing fields keep their previous values.
+ * attack/decay/release are seconds, sustain is a 0-1 level.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("sine").adsr("0.01:0.2:0.7:0.5")          // standard ADSR
+ * note("c3 e3 g3").s("sine").adsr(0.01, 0.2, 0.7, 0.5)          // standard ADSR
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>")     // alternate envelopes
+ * note("c3*4").adsr("<0.01 0.5>", "<0.1 0.5>", "<0.5 0.8>", "<0.2 1.0>")  // alternate envelopes
  * ```
  *
- * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
- * @param-tool params SprudelAdsrSequenceEditor
- * @param-sub params attack Attack time in seconds — how quickly the note rises from silence to full volume
- * @param-sub params decay Decay time in seconds — how quickly the volume falls from peak to sustain level
- * @param-sub params sustain Sustain level (0–1) — the volume held while the note is pressed
- * @param-sub params release Release time in seconds — how long the note takes to fade to silence after note-off
+ * @param attack Attack time in seconds — how quickly the note rises from silence to full volume.
+ * @param decay Decay time in seconds — how quickly the volume falls from peak to sustain level.
+ * @param sustain Sustain level (0–1) — the volume held while the note is pressed.
+ * @param release Release time in seconds — how long the note takes to fade to silence after note-off.
+ * @param-tool attack SprudelAdsrSequenceEditor
  *
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope
  */
 @KlangScript.Function
-fun SprudelPattern.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyAdsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+fun SprudelPattern.adsr(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern {
+    var p = this
+    if (attack != null) p = p.attack(attack, callInfo?.forParam(0))
+    if (decay != null) p = p.decay(decay, callInfo?.forParam(1))
+    if (sustain != null) p = p.sustain(sustain, callInfo?.forParam(2))
+    if (release != null) p = p.release(release, callInfo?.forParam(3))
+    return p
+}
 
 /**
- * Parses this string as a pattern and sets all ADSR envelope parameters.
+ * Parses this string as a pattern and sets the ADSR envelope parameters.
  *
  * ```KlangScript(Playable)
- * "c3*4".adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>").note()    // alternate envelopes
+ * "c3*4".adsr(0.01, 0.1, 0.5, 0.2).note()
  * ```
  *
- * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ * @param attack Attack time in seconds.
+ * @param decay Decay time in seconds.
+ * @param sustain Sustain level (0–1).
+ * @param release Release time in seconds.
  */
 @KlangScript.Function
-fun String.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).adsr(params, callInfo)
+fun String.adsr(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).adsr(attack, decay, sustain, release, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets all ADSR envelope parameters for each event.
+ * Creates a [PatternMapperFn] that sets the ADSR envelope parameters for each event.
  *
  * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>"))  // alternate envelopes
+ * note("c3*4").s("sine").apply(adsr(0.01, 0.1, 0.5, 0.2))
  * ```
  *
- * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ * @param attack Attack time in seconds.
+ * @param decay Decay time in seconds.
+ * @param sustain Sustain level (0–1).
+ * @param release Release time in seconds.
  */
 @KlangScript.Function
-fun adsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.adsr(params, callInfo) }
+fun adsr(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    { p -> p.adsr(attack, decay, sustain, release, callInfo) }
 
 // -- ADSR curves ------------------------------------------------------------------------------------------------------
 
@@ -1353,20 +1361,34 @@ private fun parseAdsrCurveName(name: String?): AdsrCurve? = when (name?.trim()?.
     else -> null
 }
 
-private val adsrCurvesMutation = voiceSetter {
-    val parts = it?.toString()?.split(":") ?: emptyList()
-    val a = parts.getOrNull(0)?.let(::parseAdsrCurveName)
-    val d = parts.getOrNull(1)?.let(::parseAdsrCurveName)
-    val r = parts.getOrNull(2)?.let(::parseAdsrCurveName)
-    attackCurve = a ?: attackCurve
-    decayCurve = d ?: decayCurve
-    releaseCurve = r ?: releaseCurve
+private val attackCurveMutation = voiceSetter {
+    attackCurve = parseAdsrCurveName(it?.toString()) ?: attackCurve
 }
 
-private fun applyAdsrCurves(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._applyControlFromParams(args, adsrCurvesMutation) { src, ctrl ->
+private val decayCurveMutation = voiceSetter {
+    decayCurve = parseAdsrCurveName(it?.toString()) ?: decayCurve
+}
+
+private val releaseCurveMutation = voiceSetter {
+    releaseCurve = parseAdsrCurveName(it?.toString()) ?: releaseCurve
+}
+
+private fun applyAttackCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, attackCurveMutation) { src, ctrl ->
         src.attackCurve = ctrl.attackCurve ?: src.attackCurve
+        src
+    }
+}
+
+private fun applyDecayCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, decayCurveMutation) { src, ctrl ->
         src.decayCurve = ctrl.decayCurve ?: src.decayCurve
+        src
+    }
+}
+
+private fun applyReleaseCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, releaseCurveMutation) { src, ctrl ->
         src.releaseCurve = ctrl.releaseCurve ?: src.releaseCurve
         src
     }
@@ -1391,9 +1413,9 @@ private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?
 }
 
 /**
- * Sets per-stage ADSR shape curves via a colon-separated string `"attack:decay:release"`.
- * Empty/missing parts leave the corresponding curve untouched — e.g. `"::scurve"` changes
- * only the release.
+ * Sets per-stage ADSR shape curves. Each stage is an independent parameter; omitted
+ * stages keep their current curve — e.g. `adsrCurves(release = "scurve")` changes only
+ * the release.
  *
  * Available curves (aliases in parentheses):
  *  - `linear` (`lin`) — straight ramp.
@@ -1408,37 +1430,79 @@ private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * Defaults when unset: attack `square`, decay `exponential`, release `square`.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurves("square:exponential:scurve")
+ * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).adsrCurves("square", "exponential", "scurve")
  * ```
  *
- * @param params Curve names separated by `:` — e.g. `"square:exponential:scurve"`. Empty parts keep the current curve.
+ * @param attack Curve name for the attack stage. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
  *
  * @category dynamics
  * @tags adsr, curve, envelope, shape
  */
 @KlangScript.Function
-fun SprudelPattern.adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyAdsrCurves(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+fun SprudelPattern.adsrCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern {
+    var p = this
+    if (attack != null) p = applyAttackCurve(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(0)))
+    if (decay != null) p = applyDecayCurve(p, listOf<Any?>(decay).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (release != null) p = applyReleaseCurve(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(2)))
+    return p
+}
 
 /**
  * Parses this string as a pattern and sets per-stage ADSR shape curves.
  *
- * @param params Curve names separated by `:` — `linear` / `square` / `cube` / `scurve` /
- *   `invsquare` / `exponential` per stage. Empty parts keep the current curve.
+ * @param attack Curve name for the attack stage — `linear` / `square` / `cube` / `scurve` /
+ *   `invsquare` / `exponential`. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
  */
 @KlangScript.Function
-fun String.adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).adsrCurves(params, callInfo)
+fun String.adsrCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).adsrCurves(attack, decay, release, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets per-stage ADSR shape curves for each event.
  *
- * @param params Curve names separated by `:` — `linear` / `square` / `cube` / `scurve` /
- *   `invsquare` / `exponential` per stage. Empty parts keep the current curve.
+ * @param attack Curve name for the attack stage — `linear` / `square` / `cube` / `scurve` /
+ *   `invsquare` / `exponential`. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
  */
 @KlangScript.Function
-fun adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.adsrCurves(params, callInfo) }
+fun adsrCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    { p -> p.adsrCurves(attack, decay, release, callInfo) }
+
+/**
+ * Creates a chained [PatternMapperFn] that sets per-stage ADSR shape curves after the previous mapper.
+ *
+ * @param attack Curve name for the attack stage. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
+ */
+@KlangScript.Function
+fun PatternMapperFn.adsrCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.chain { p -> p.adsrCurves(attack, decay, release, callInfo) }
 
 /**
  * Sets the same ADSR shape curve on all three stages (attack, decay, release).
@@ -1447,7 +1511,7 @@ fun adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): Pattern
  * `adsrCurves` docs for the aliases and the shape of each).
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurve("scurve")
+ * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).adsrCurve("scurve")
  * ```
  *
  * @param params Curve name — `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential`.
@@ -1482,14 +1546,23 @@ fun adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): PatternM
  * Creates a chained [PatternMapperFn] that sets all ADSR parameters after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(gain(0.8).adsr("0.01:0.2:0.7:0.5"))  // gain + adsr chained
+ * note("c3*4").s("sine").apply(gain(0.8).adsr(0.01, 0.2, 0.7, 0.5))  // gain + adsr chained
  * ```
  *
- * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ * @param attack Attack time in seconds.
+ * @param decay Decay time in seconds.
+ * @param sustain Sustain level (0–1).
+ * @param release Release time in seconds.
  */
 @KlangScript.Function
-fun PatternMapperFn.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.adsr(params, callInfo) }
+fun PatternMapperFn.adsr(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.chain { p -> p.adsr(attack, decay, sustain, release, callInfo) }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing

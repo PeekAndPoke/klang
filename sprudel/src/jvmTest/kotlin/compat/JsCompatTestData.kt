@@ -497,7 +497,7 @@ object JsCompatTestData {
         Example("Struct #1", """note("c e").struct("x")"""),
         Example("Struct #2", """note("c,eb,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
         Example("Struct #3", """note("c3 d3").fast(2).struct("x")"""),
-        Example("Struct #4", """note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x")"""),
+        Example("Struct #4", """note("c3 d3").adsr(0.01, 0.2, 0.0, 0.0).fast(2).struct("x")"""),
         Example("Struct All #1", """note("c e").structAll("x")"""),
         Example("Struct All #2", """note("c,eb,g").structAll("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
         Example("Mask #1", """note("c [eb,g] d [eb,g]").mask("<1 [0 1]>")"""),

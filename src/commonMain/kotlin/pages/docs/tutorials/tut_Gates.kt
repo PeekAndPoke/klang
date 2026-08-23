@@ -40,8 +40,8 @@ val gatesTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3,a3]").sound("saw").adsr("0.001:0.3:0:0.1").struct("x ~ ~ x  ~ ~ x ~").gain(0.35)          // one chord + a gate
-                    // note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35) // spelled whole, swap
+                    note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ ~ x  ~ ~ x ~").gain(0.35)          // one chord + a gate
+                    // note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35) // spelled whole, swap
                     """.trimIndent(),
                 ),
             ),
@@ -60,8 +60,8 @@ val gatesTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3,a3]").sound("saw").adsr("0.001:0.3:0:0.1").struct("x ~ ~ x  ~ ~ x ~").gain(0.35)    // the tresillo: three, three, two
-                    // note("[a2,e3,a3]").sound("saw").adsr("0.001:0.3:0:0.1").struct("x ~ x ~  x ~ x ~").gain(0.35) // straightened, swap to compare
+                    note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ ~ x  ~ ~ x ~").gain(0.35)    // the tresillo: three, three, two
+                    // note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ x ~  x ~ x ~").gain(0.35) // straightened, swap to compare
                     """.trimIndent(),
                 ),
             ),
@@ -82,7 +82,7 @@ val gatesTutorial = Tutorial(
                     code = """
                     stack(
                       note("a2").sound("sine").struct("x ~ ~ x  ~ ~ x ~").gain(0.6),                                 // the bass on the gate
-                      note("[a2,e3,a3]").sound("saw").adsr("0.001:0.3:0:0.1").struct("x ~ ~ x  ~ ~ x ~").gain(0.35)  // the stabs on the same gate
+                      note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ ~ x  ~ ~ x ~").gain(0.35)  // the stabs on the same gate
                     )
                     """.trimIndent(),
                 ),
@@ -105,7 +105,7 @@ val gatesTutorial = Tutorial(
                     stack(
                       sound("bd ~ hh ~  ~ hh sd ~").gain(0.8),                                                       // the groove, square
                       note("a2").sound("sine").struct("x ~ ~ x  ~ ~ x ~").gain(0.6),                                 // tresillo bass
-                      note("[a2,e3,a3]").sound("saw").adsr("0.001:0.3:0:0.1").struct("x ~ ~ x  ~ ~ x ~").gain(0.35)  // tresillo stabs
+                      note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ ~ x  ~ ~ x ~").gain(0.35)  // tresillo stabs
                     )
                     """.trimIndent(),
                 ),

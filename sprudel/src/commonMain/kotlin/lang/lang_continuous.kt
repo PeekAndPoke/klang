@@ -607,7 +607,7 @@ private val sine2Base: SprudelPattern by lazy { sineBase.toBipolar() }
  * ```
  *
  * ```KlangScript(Playable)
- * note("a!8").adsr("0.2:1.0:1.0:0.2").gain(sine.slow(4))  // gain modulation
+ * note("a!8").adsr(0.2, 1.0, 1.0, 0.2).gain(sine.slow(4))  // gain modulation
  * ```
  *
  * @category continuous
@@ -653,7 +653,7 @@ private val cosine2Base: SprudelPattern by lazy { cosineBase.toBipolar() }
  * ```
  *
  * ```KlangScript(Playable)
- * note("a!8").adsr("0.2:1.0:1.0:0.2").pan(cosine.slow(4))  // stereo panning with cosine
+ * note("a!8").adsr(0.2, 1.0, 1.0, 0.2).pan(cosine.slow(4))  // stereo panning with cosine
  * ```
  * @category continuous
  * @tags cosine, oscillator, lfo, continuous, wave

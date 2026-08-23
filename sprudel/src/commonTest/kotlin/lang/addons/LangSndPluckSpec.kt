@@ -22,12 +22,12 @@ class LangSndPluckSpec : StringSpec({
 
     "sndPluck() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndPluck()" to note("c3").sndPluck("0.99:0.8"),
-            "string.sndPluck()" to "c3".sndPluck("0.99:0.8"),
-            "script pattern.sndPluck()" to SprudelPattern.compile("""note("c3").sndPluck("0.99:0.8")"""),
-            "script string.sndPluck()" to SprudelPattern.compile(""""c3".sndPluck("0.99:0.8")"""),
-            "apply(sndPluck())" to note("c3").apply(sndPluck("0.99:0.8")),
-            "script apply(sndPluck())" to SprudelPattern.compile("""note("c3").apply(sndPluck("0.99:0.8"))"""),
+            "pattern.sndPluck()" to note("c3").sndPluck(0.99, 0.8),
+            "string.sndPluck()" to "c3".sndPluck(0.99, 0.8),
+            "script pattern.sndPluck()" to SprudelPattern.compile("""note("c3").sndPluck(0.99, 0.8)"""),
+            "script string.sndPluck()" to SprudelPattern.compile(""""c3".sndPluck(0.99, 0.8)"""),
+            "apply(sndPluck())" to note("c3").apply(sndPluck(0.99, 0.8)),
+            "script apply(sndPluck())" to SprudelPattern.compile("""note("c3").apply(sndPluck(0.99, 0.8))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -52,7 +52,7 @@ class LangSndPluckSpec : StringSpec({
     // -- single param ------------------------------------------------------------------------------------------------
 
     "sndPluck(\"0.99\") sets decay only" {
-        val p = note("c3").sndPluck("0.99")
+        val p = note("c3").sndPluck(0.99)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -64,7 +64,7 @@ class LangSndPluckSpec : StringSpec({
     // -- two params --------------------------------------------------------------------------------------------------
 
     "sndPluck(\"0.99:0.8\") sets decay and brightness" {
-        val p = note("c3").sndPluck("0.99:0.8")
+        val p = note("c3").sndPluck(0.99, 0.8)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -76,7 +76,7 @@ class LangSndPluckSpec : StringSpec({
     // -- all four params ---------------------------------------------------------------------------------------------
 
     "sndPluck(\"0.996:0.5:0.2:0.3\") sets all four params" {
-        val p = note("c3").sndPluck("0.996:0.5:0.2:0.3")
+        val p = note("c3").sndPluck(0.996, 0.5, 0.2, 0.3)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -92,7 +92,7 @@ class LangSndPluckSpec : StringSpec({
     // -- control patterns --------------------------------------------------------------------------------------------
 
     "sndPluck() works with control pattern" {
-        val p = note("c3 e3").sndPluck("0.99:0.8 0.95:0.3")
+        val p = note("c3 e3").sndPluck("0.99 0.95", "0.8 0.3")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -106,7 +106,7 @@ class LangSndPluckSpec : StringSpec({
     // -- compiled scripts --------------------------------------------------------------------------------------------
 
     "sndPluck() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").sndPluck("0.99:0.8:0.2")""")
+        val p = SprudelPattern.compile("""note("c3").sndPluck(0.99, 0.8, 0.2)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -119,7 +119,7 @@ class LangSndPluckSpec : StringSpec({
     // -- string extension --------------------------------------------------------------------------------------------
 
     "sndPluck() works as string extension" {
-        val p = "c3".sndPluck("0.996")
+        val p = "c3".sndPluck(0.996)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -130,7 +130,7 @@ class LangSndPluckSpec : StringSpec({
     // -- chaining ----------------------------------------------------------------------------------------------------
 
     "sndPluck() can be chained with other effects" {
-        val p = note("c3").sndPluck("0.99:0.8").gain("0.5")
+        val p = note("c3").sndPluck(0.99, 0.8).gain("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

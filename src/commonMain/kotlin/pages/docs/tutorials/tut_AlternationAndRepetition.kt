@@ -31,7 +31,7 @@ val alternationAndRepetitionTutorial = Tutorial(
                     code = """
                     note("<a2 c3 g2 e2>")            // four entries, one per cycle, four cycles to rotate
                       .sound("saw")                  // the bright voice from ${Tut.theFourWaveforms}
-                      .adsr("0.001:0.3:0:0.1")       // the pluck shape from ${Tut.shapeOfANote}
+                      .adsr(0.001, 0.3, 0, 0.1)       // the pluck shape from ${Tut.shapeOfANote}
                       .gain(0.5)                     // synth voices sit around 0.5
                     """.trimIndent(),
                 ),
@@ -51,8 +51,8 @@ val alternationAndRepetitionTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("<[a2 a2 g2 a2] [c3 c3 g2 c3]>").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5) // two bars, one per cycle
-                    // note("[a2 a2 g2 a2]").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5)              // one bar, repeating
+                    note("<[a2 a2 g2 a2] [c3 c3 g2 c3]>").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5) // two bars, one per cycle
+                    // note("[a2 a2 g2 a2]").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)              // one bar, repeating
                     """.trimIndent(),
                 ),
             ),
@@ -71,8 +71,8 @@ val alternationAndRepetitionTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a2!3 g2").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5)    // !3: three real steps, four steps total
-                    // note("a2*3 g2").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5) // *3: three inside one step, two steps total
+                    note("a2!3 g2").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)    // !3: three real steps, four steps total
+                    // note("a2*3 g2").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5) // *3: three inside one step, two steps total
                     """.trimIndent(),
                 ),
             ),
@@ -91,8 +91,8 @@ val alternationAndRepetitionTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a2@3 g2").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5)  // @3: a2's step takes three shares of four, g2 waits
-                    // note("a2 g2").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5) // even: half and half
+                    note("a2@3 g2").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)  // @3: a2's step takes three shares of four, g2 waits
+                    // note("a2 g2").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5) // even: half and half
                     """.trimIndent(),
                 ),
             ),
@@ -113,7 +113,7 @@ val alternationAndRepetitionTutorial = Tutorial(
                     code = """
                     note("<[a2@2 a2 g2]!2 [c3@2 c3 b2] [e2@2 e2 g2]>")  // three bars, the first doubled: four cycles
                       .sound("saw")                                     // bass voice
-                      .adsr("0.001:0.3:0:0.1")                          // the pluck shape
+                      .adsr(0.001, 0.3, 0, 0.1)                          // the pluck shape
                       .gain(0.5)                                        // synths sit at 0.5
                     """.trimIndent(),
                 ),

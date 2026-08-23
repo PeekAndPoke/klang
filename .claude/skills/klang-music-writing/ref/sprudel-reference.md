@@ -37,10 +37,10 @@ import * from "sprudel"
 stack(
   n("0 2 4 7 6 4 2 0").scale("C4:minor")
     .sound("saw").lpf(800)
-    .adsr("0.01:0.1:0.5:0.2").gain(0.25),
+    .adsr(0.01, 0.1, 0.5, 0.2).gain(0.25),
   chord("<Am C F G>").voicing()
     .sound("supersaw").lpf(500)
-    .adsr("0.1:0.3:0.7:0.5").gain(0.2),
+    .adsr(0.1, 0.3, 0.7, 0.5).gain(0.2),
   n("0 ~ 0 ~").scale("C2:minor")
     .sound("sine").lpf(300).gain(0.4)
 )
@@ -321,7 +321,7 @@ selection — extended to ignitor variants and per-note gain.
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
 | `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).room(0.5)`       |
-| `adsr(params)`   |            | Amplitude envelope             | `note("c3").adsr("0.01:0.2:0.7:0.5")` |
+| `adsr(params)`   |            | Amplitude envelope             | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)` |
 | `attack(sec)`    |            | Envelope attack                | `note("c3").attack(0.01)`             |
 | `decay(sec)`     |            | Envelope decay                 | `note("c3").decay(0.2)`               |
 | `sustain(level)` |            | Envelope sustain level         | `note("c3").sustain(0.7)`             |
@@ -340,7 +340,7 @@ selection — extended to ignitor variants and per-note gain.
 | `spread(amt)`      |                 | Frequency spread between voices | `note("c3").s("supersaw").spread(0.1)` |
 | `density(amt)`     | `d`             | Oscillator density (noise)      | `note("a").s("dust").density(40)`      |
 | `warmth(amt)`      |                 | Analog warmth amount            | `s("bd").distort(3).warmth(0.3)`       |
-| `sndPluck(params)` |                 | Karplus-Strong shorthand        | `note("c3").sndPluck("0.999:0.8")`     |
+| `sndPluck(params)` |                 | Karplus-Strong shorthand        | `note("c3").sndPluck(0.999, 0.8)`     |
 | `sndSuperSaw()`    |                 | Super-saw shorthand             | `note("c3").sndSuperSaw()`             |
 | `bank(name)`       |                 | Sample bank                     | `s("bd").bank("RolandTR808")`          |
 
@@ -353,15 +353,15 @@ All filters accept pattern values and have envelope variants (`lpe` for depth, `
 | `lpf(freq)`      |  | Lowpass filter cutoff (Hz) | `note("c3").s("saw").lpf(800)`                               |
 | `lpq(q)`         |  | Lowpass resonance/Q        | `note("c3").lpf(400).lpq(5)`                                 |
 | `lpe(depth)`     |  | LP env depth (ratio of cutoff, NOT Hz; single digits sweep far) | `note("c3").lpf(200).lpe(3)`           |
-| `lpadsr(params)` |  | LP envelope ADSR           | `note("c3").lpf(200).lpe(3).lpadsr("0.01:0.3:0.5:0.5")`      |
+| `lpadsr(params)` |  | LP envelope ADSR           | `note("c3").lpf(200).lpe(3).lpadsr(0.01, 0.3, 0.5, 0.5)`      |
 | `hpf(freq)`      |  | Highpass filter cutoff     | `s("bd").hpf(200)`                                           |
 | `hpq(q)`         |  | Highpass resonance         | `s("bd").hpf(200).hpq(2)`                                    |
 | `hpe(depth)`     |  | HP env depth (ratio, NOT Hz) | `note("c3").hpf(100).hpe(3)`                               |
-| `hpadsr(params)` |  | HP envelope ADSR           | `note("c3").hpf(100).hpe(3).hpadsr("0.01:0.2:0.3:0.5")`      |
+| `hpadsr(params)` |  | HP envelope ADSR           | `note("c3").hpf(100).hpe(3).hpadsr(0.01, 0.2, 0.3, 0.5)`      |
 | `bpf(freq)`      |  | Bandpass center freq       | `s("sd").bpf(1000)`                                          |
 | `bpq(q)`         |  | Bandpass Q                 | `s("sd").bpf(1000).bpq(5)`                                   |
 | `bpe(depth)`     |  | BP env depth (ratio, NOT Hz) | `note("c3").bpf(200).bpe(4)`                               |
-| `bpadsr(params)` |  | BP envelope ADSR           | `note("c3").bpf(200).bpe(4).bpadsr("0.01:0.3:0.5:0.5")`      |
+| `bpadsr(params)` |  | BP envelope ADSR           | `note("c3").bpf(200).bpe(4).bpadsr(0.01, 0.3, 0.5, 0.5)`      |
 | `notchf(freq)`   |                       | Notch (band-reject) freq   | `s("sd").notchf(1000)`                                       |
 | `notchq(q)`      | `nresonance`          | Notch Q                    | `s("sd").notchf(1000).notchq(2)`                             |
 
@@ -605,14 +605,14 @@ stack(
 ```javascript
 n("<0 2 4 7> <0 3 5 7> <0 2 4 6> <0 3 5 8>")
   .scale("C4:minor").fast(2)
-  .sound("saw").lpf(1200).adsr("0.01:0.1:0.3:0.2").gain(0.3)
+  .sound("saw").lpf(1200).adsr(0.01, 0.1, 0.3, 0.2).gain(0.3)
 ```
 
 ### Filtered bass line
 
 ```javascript
 n("0 ~ 0 3 ~ 0 5 ~").scale("C2:minor")
-  .sound("saw").lpf(400).adsr("0.01:0.2:0.5:0.1").gain(0.5)
+  .sound("saw").lpf(400).adsr(0.01, 0.2, 0.5, 0.1).gain(0.5)
 ```
 
 ### Ambient drone with LFO modulation
@@ -620,7 +620,7 @@ n("0 ~ 0 3 ~ 0 5 ~").scale("C2:minor")
 ```javascript
 n("<0 3 5 7>").scale("C3:minor")
   .sound("supersaw").lpf(sine.range(400, 1200).slow(8))
-  .adsr("0.5:0.5:0.8:1.0").legato(2)
+  .adsr(0.5, 0.5, 0.8, 1.0).legato(2)
   .room(0.3).rsize(8).gain(0.2)
 ```
 
@@ -696,12 +696,12 @@ stack(
   // Melody: Karplus-Strong plucked string with tremolo
   n(`<[8@2 8 8 8@2 8 8] [8 4  6  8]  [7@2 7 7 7@2 7 7] [7 3  5  7]
       [8@2 8 8 8@2 8 8] [8 9 10 11]  [10 8 7 5]        [4@2 4@2  ]
-  >`).sndPluck("0.999:0.8")      // high decay + brightness pluck
+  >`).sndPluck(0.999, 0.8)      // high decay + brightness pluck
     .clip(0.8)                    // note duration 80%
     .scale("c3:dorian")          // dorian mode for folk feel
     .gain(0.8)
     .lpf("2000")                 // gentle lowpass
-    .lpadsr("0.01:0.1:0.2:0.1") // filter envelope
+    .lpadsr(0.01, 0.1, 0.2, 0.1) // filter envelope
     .tremolosync(8)              // tremolo synced to 8 per cycle
     .tremolodepth(0.33)
     .tremoloshape("sine")
@@ -712,15 +712,15 @@ stack(
         [8 15 13 15]!2  [7 14 10 14] [6 7 8 9]
 >`).scale("C1:minor")
     .sound("pluck")
-    .adsr("0.01:0.2:0.5:0.2")
+    .adsr(0.01, 0.2, 0.5, 0.2)
     .clip(0.5).distort(0.1).warmth(0.2).postgain(0.2)
     .superimpose(x => x.sound("tri"))  // layer triangle on top
 
   // Hi-hats
-  , s("hh!8").adsr("0.01:0.1:0.1:1.0").gain(0.8)
+  , s("hh!8").adsr(0.01, 0.1, 0.1, 1.0).gain(0.8)
 
   // Kick-snare
-  , s("<[[bd sd]!2]!8>").adsr("0.02:0.1:0.7:1.0").gain(0.75)
+  , s("<[[bd sd]!2]!8>").adsr(0.02, 0.1, 0.7, 1.0).gain(0.75)
 )
   .room(0.02).rsize(3)  // subtle room reverb
 ```

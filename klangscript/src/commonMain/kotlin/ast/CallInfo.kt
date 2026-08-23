@@ -24,4 +24,14 @@ data class CallInfo(
     val receiverLocation: SourceLocation? = null,
     /** List of parameter locations (from StringValue, NumberValue, etc.) - indices match argument positions */
     val paramLocations: List<SourceLocation?>,
-)
+) {
+    /**
+     * A view of this call for the single original argument at [index], for a multi-param DSL
+     * function that chains one argument into a single-param sibling call. The location lands at
+     * [targetIndex] in the resulting list, matching the sibling's own argument position
+     * (e.g. `oscparam(key, value)` reads its value location at index 1).
+     */
+    fun forParam(index: Int, targetIndex: Int = 0): CallInfo = copy(
+        paramLocations = List(targetIndex) { null } + listOf(paramLocations.getOrNull(index)),
+    )
+}

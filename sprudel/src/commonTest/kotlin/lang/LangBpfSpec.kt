@@ -114,4 +114,26 @@ class LangBpfSpec : StringSpec({
 
 
 
+
+    // ---- C0 guard: per-param (freq, q) ----
+
+    "bpf(freq, q) sets both fields" {
+        val p = note("c e").bpf("200 800", 1.5)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.bandf shouldBe 200.0
+        events[1].data.bandf shouldBe 800.0
+        events[0].data.bandq shouldBe 1.5
+        events[1].data.bandq shouldBe 1.5
+    }
+
+    "bpf(q = ...) does not clear a previously set freq" {
+        val p = SprudelPattern.compile("""note("c3").bpf(800).bpf(q = 12)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.bandf shouldBe 800.0
+        events[0].data.bandq shouldBe 12.0
+    }
 })

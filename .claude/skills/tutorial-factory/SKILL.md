@@ -114,7 +114,7 @@ val <camelCaseSlug> Tutorial = Tutorial(
 5. Stack for layering: `stack(pattern1, pattern2)`
 6. Method chaining: `note("c3").sound("sine").gain(0.5)`
 7. Scale applied after note numbers: `n("0 2 4 6").scale("C4:major").sound("saw")`
-8. ADSR as string: `.adsr("0.01:0.2:0.8:0.1")`
+8. ADSR as string: `.adsr(0.01, 0.2, 0.8, 0.1)`
 9. Filter values are numbers: `.lpf(800)` not `.lpf("800")`
 10. Available waveforms for .sound(): "sine", "saw", "tri", "square", "pulse", "brown", "pink", "supersaw"
 11. Available samples for .sound(): "bd", "hh", "sd", "cp", "oh", "ch", "rim"

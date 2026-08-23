@@ -220,7 +220,17 @@ object MnPatternToSprudelPattern {
                 "l", "legato" -> result.legato(value)
                 "pan" -> result.pan(value)
                 "pg", "postgain" -> result.postgain(value)
-                "adsr" -> result.adsr(value)
+                // Attr value syntax keeps the colon compound (like `bd:2`); split it here and
+                // feed the per-param adsr so semantics stay identical to the DSL door.
+                "adsr" -> {
+                    val parts = value.split(":")
+                    result.adsr(
+                        attack = parts.getOrNull(0)?.takeIf { it.isNotBlank() },
+                        decay = parts.getOrNull(1)?.takeIf { it.isNotBlank() },
+                        sustain = parts.getOrNull(2)?.takeIf { it.isNotBlank() },
+                        release = parts.getOrNull(3)?.takeIf { it.isNotBlank() },
+                    )
+                }
                 "o", "orbit", "cyl", "cylinder" -> result.orbit(value)
                 "bank" -> result.bank(value)
                 else -> result

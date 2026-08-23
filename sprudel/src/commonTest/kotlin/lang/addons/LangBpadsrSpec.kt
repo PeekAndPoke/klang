@@ -18,25 +18,24 @@ class LangBpadsrSpec : StringSpec({
 
     "bpadsr dsl interface" {
         val pat = "c3"
-        val ctrl = "0.01:0.3:0.5:0.5"
-
+        
         dslInterfaceTests(
-            "pattern.bpadsr(ctrl)" to
-                    note(pat).bpadsr(ctrl),
-            "script pattern.bpadsr(ctrl)" to
-                    SprudelPattern.compile("""note("$pat").bpadsr("$ctrl")"""),
-            "string.bpadsr(ctrl)" to
-                    pat.bpadsr(ctrl),
-            "script string.bpadsr(ctrl)" to
-                    SprudelPattern.compile(""""$pat".bpadsr("$ctrl")"""),
-            "bpadsr(ctrl)" to
-                    note(pat).apply(bpadsr(ctrl)),
-            "script bpadsr(ctrl)" to
-                    SprudelPattern.compile("""note("$pat").apply(bpadsr("$ctrl"))"""),
-            "chained bpadsr(ctrl)" to
-                    note(pat).apply(bpadsr(ctrl).bpadsr(ctrl)),
-            "script chained bpadsr(ctrl)" to
-                    SprudelPattern.compile("""note("$pat").apply(bpadsr("$ctrl").bpadsr("$ctrl"))"""),
+            "pattern.bpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    note(pat).bpadsr(0.01, 0.3, 0.5, 0.5),
+            "script pattern.bpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    SprudelPattern.compile("""note("$pat").bpadsr(0.01, 0.3, 0.5, 0.5)"""),
+            "string.bpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    pat.bpadsr(0.01, 0.3, 0.5, 0.5),
+            "script string.bpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    SprudelPattern.compile(""""$pat".bpadsr(0.01, 0.3, 0.5, 0.5)"""),
+            "bpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    note(pat).apply(bpadsr(0.01, 0.3, 0.5, 0.5)),
+            "script bpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    SprudelPattern.compile("""note("$pat").apply(bpadsr(0.01, 0.3, 0.5, 0.5))"""),
+            "chained bpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    note(pat).apply(bpadsr(0.01, 0.3, 0.5, 0.5).bpadsr(0.01, 0.3, 0.5, 0.5)),
+            "script chained bpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    SprudelPattern.compile("""note("$pat").apply(bpadsr(0.01, 0.3, 0.5, 0.5).bpadsr(0.01, 0.3, 0.5, 0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -49,7 +48,7 @@ class LangBpadsrSpec : StringSpec({
     }
 
     "bpadsr() sets all four params" {
-        val p = note("c3").bpadsr("0.02:0.4:0.6:0.8")
+        val p = note("c3").bpadsr(0.02, 0.4, 0.6, 0.8)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -62,7 +61,7 @@ class LangBpadsrSpec : StringSpec({
     }
 
     "bpadsr() with partial params sets only specified fields" {
-        val p = note("c3").bpadsr("0.01:0.3")
+        val p = note("c3").bpadsr(0.01, 0.3)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -75,7 +74,7 @@ class LangBpadsrSpec : StringSpec({
     }
 
     "bpadsr() works with control pattern" {
-        val p = note("c3 e3").bpadsr("0.01:0.2:0.5:0.3 0.05:0.4:0.7:0.6")
+        val p = note("c3 e3").bpadsr("0.01 0.05", "0.2 0.4", "0.5 0.7", "0.3 0.6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -86,7 +85,7 @@ class LangBpadsrSpec : StringSpec({
     }
 
     "bpadsr() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").bpadsr("0.01:0.3:0.5:0.5")""")
+        val p = SprudelPattern.compile("""note("c3").bpadsr(0.01, 0.3, 0.5, 0.5)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

@@ -152,7 +152,7 @@ no KDoc, no home. It sets how fast the perceptual drive curve climbs, so it is s
 Steps: name it in `audio_bridge/constants/`, add `StageDsl.Distort(driveExponent = …)` — which turns another marker
 object into a data class — thread it, add the KlangScript method.
 
-**Parity check:** sprudel has `distort(amount)` / the compound `distort("1:tube:4")` and `distos()`
+**Parity check:** sprudel has `distort(amount)` / the compound `distort(1, "tube", 4)` and `distos()`
 for oversampling. `amount` stays per-note; the exponent is per-engine. Make sure the KDoc on both sides states the
 relationship (`drive = 10^(amount × exponent)`) so nobody re-derives the scale wrongly — an author changing the exponent
 changes what every existing `distort(0.8)` in every song sounds like, which is worth a warning in the KDoc.

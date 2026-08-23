@@ -263,11 +263,19 @@ class TutorialCurriculumSpec : StringSpec({
                                         "'${visual.value}' does not parse as four colon-separated numbers"
                                 )
                             }
-                            if (codes.isNotEmpty() && codes.none { visual.value in it }) {
+                            // The visual keeps its compact colon encoding; the DSL is per-param
+                            // since C0, so the code shows `.adsr(a, d, s, r)`. Match that form.
+                            val perParamCall = parts.joinToString(", ") { n ->
+                                if (n == n.toInt().toDouble()) n.toInt().toString() else n.toString()
+                            }
+                            val matchesCode = codes.any { code ->
+                                visual.value in code || perParamCall in code
+                            }
+                            if (codes.isNotEmpty() && !matchesCode) {
                                 violations.add(
                                     "${tutorial.slug} (${section.heading}): Adsr visual value " +
-                                        "'${visual.value}' does not appear in the section's code — " +
-                                        "picture and code must not drift"
+                                        "'${visual.value}' (per-param: '$perParamCall') does not appear " +
+                                        "in the section's code — picture and code must not drift"
                                 )
                             }
                         }

@@ -22,7 +22,7 @@
 >   `[[KlangScript supports named arguments]]` (memory) for the KSP safe-literal-default caveat.
 > - The **noise-generator knobs** work (2026-06-30) deliberately extended the `snd*` family in the
 >   **compound colon-string** form as the *interim*: `sndCrackle("1.7")` (chaos), `sndNoise("-0.5")` (color),
->   `sndBrown("0.5")` (depth), `sndDust("0.2:4")` (density:tail). This was an explicit "do the compound string
+>   `sndBrown("0.5")` (depth), `sndDust("0.2:4")` (density:tail; historical form — C0 made these per-param). This was an explicit "do the compound string
 >   now, defer the real fix" decision — so the family is now larger and the per-param blocker is more pressing.
 > - **The blocker is unchanged and is the whole point of this task:** a compound `"a:b:c"` string is one value,
 >   so you cannot modulate one sub-param with its own control pattern. Per-param control-pattern support

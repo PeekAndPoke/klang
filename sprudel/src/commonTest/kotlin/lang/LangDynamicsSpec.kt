@@ -430,20 +430,20 @@ class LangDynamicsSpec : StringSpec({
 
     "adsr dsl interface" {
         dslInterfaceTests(
-            "pattern.adsr(params)" to note("a").adsr("0.01:0.2:0.7:0.5"),
-            "script pattern.adsr(params)" to SprudelPattern.compile("""note("a").adsr("0.01:0.2:0.7:0.5")"""),
-            "string.adsr(params)" to "a".adsr("0.01:0.2:0.7:0.5"),
-            "script string.adsr(params)" to SprudelPattern.compile(""""a".adsr("0.01:0.2:0.7:0.5")"""),
-            "adsr(params) via apply" to note("a").apply(adsr("0.01:0.2:0.7:0.5")),
+            "pattern.adsr(params)" to note("a").adsr(0.01, 0.2, 0.7, 0.5),
+            "script pattern.adsr(params)" to SprudelPattern.compile("""note("a").adsr(0.01, 0.2, 0.7, 0.5)"""),
+            "string.adsr(params)" to "a".adsr(0.01, 0.2, 0.7, 0.5),
+            "script string.adsr(params)" to SprudelPattern.compile(""""a".adsr(0.01, 0.2, 0.7, 0.5)"""),
+            "adsr(params) via apply" to note("a").apply(adsr(0.01, 0.2, 0.7, 0.5)),
             "script adsr(params) via apply" to
-                    SprudelPattern.compile("""note("a").apply(adsr("0.01:0.2:0.7:0.5"))"""),
+                    SprudelPattern.compile("""note("a").apply(adsr(0.01, 0.2, 0.7, 0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
     "apply(gain().adsr()) chains gain and adsr mappers" {
-        val p = note("a").apply(gain(0.8).adsr("0.01:0.2:0.7:0.5"))
+        val p = note("a").apply(gain(0.8).adsr(0.01, 0.2, 0.7, 0.5))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -455,7 +455,7 @@ class LangDynamicsSpec : StringSpec({
     }
 
     "script apply(adsr()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(adsr("0.01:0.2:0.7:0.5"))""")!!
+        val p = SprudelPattern.compile("""note("a").apply(adsr(0.01, 0.2, 0.7, 0.5))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

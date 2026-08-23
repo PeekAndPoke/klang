@@ -52,7 +52,7 @@ Per-effect oversampling lives in the effect params and renderers:
 
 - `audio_be/.../Oversampler.kt` — the per-effect up/down helper (repurpose this into region resamplers).
 - `voices/strip/filter/DistortionRenderer.kt`, `CrushRenderer.kt`, `CoarseRenderer.kt` — each owns its factor.
-- DSL params: `distort("amt:shape:OS")`, `coarseos`, `crushos` — these **go away** (see Migration).
+- DSL params: `distort(amt, shape, OS)`, `coarseos`, `crushos` — these **go away** (see Migration).
 
 ## Proposed model
 
@@ -172,7 +172,7 @@ mismatch. So the control-resampler is needed for exactly that subset, not everyt
   the `oversample()` marker.
 - **Codemod the built-in songs + goldens.** Smart migration: detect a *run* of oversampled effects and wrap the
   whole run in one region (this is the intended sound change), rather than one region per effect (which would
-  reproduce the old sound but defeat the point). Der Schmetterling's guitars (`distort("1:tube:4")` +
+  reproduce the old sound but defeat the point). Der Schmetterling's guitars (`distort(1, "tube", 4)` +
   `coarse(2).coarseos(4)`) are the canonical case to get right.
 - Consider a **deprecation window**: the old per-effect param still parses and maps to a tight one-effect region
   (old sound), with a warning, so existing user songs don't break on day one.

@@ -16,21 +16,20 @@ class LangAdsrSpec : StringSpec({
 
     "adsr dsl interface" {
         val pat = "0 1"
-        val ctrl = "0.1:0.2:0.8:0.5"
 
         dslInterfaceTests(
-            "pattern.adsr(ctrl)" to
-                    seq(pat).adsr(ctrl),
-            "script pattern.adsr(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").adsr("$ctrl")"""),
-            "string.adsr(ctrl)" to
-                    pat.adsr(ctrl),
-            "script string.adsr(ctrl)" to
-                    SprudelPattern.compile(""""$pat".adsr("$ctrl")"""),
-            "adsr(ctrl)" to
-                    seq(pat).apply(adsr(ctrl)),
-            "script adsr(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(adsr("$ctrl"))"""),
+            "pattern.adsr(a, d, s, r)" to
+                    seq(pat).adsr(0.1, 0.2, 0.8, 0.5),
+            "script pattern.adsr(a, d, s, r)" to
+                    SprudelPattern.compile("""seq("$pat").adsr(0.1, 0.2, 0.8, 0.5)"""),
+            "string.adsr(a, d, s, r)" to
+                    pat.adsr(0.1, 0.2, 0.8, 0.5),
+            "script string.adsr(a, d, s, r)" to
+                    SprudelPattern.compile(""""$pat".adsr(0.1, 0.2, 0.8, 0.5)"""),
+            "adsr(a, d, s, r)" to
+                    seq(pat).apply(adsr(0.1, 0.2, 0.8, 0.5)),
+            "script adsr(a, d, s, r)" to
+                    SprudelPattern.compile("""seq("$pat").apply(adsr(0.1, 0.2, 0.8, 0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -42,8 +41,8 @@ class LangAdsrSpec : StringSpec({
         }
     }
 
-    "adsr() sets VoiceData ADSR components correctly from string" {
-        val p = "0 1".apply(adsr("0.1:0.2:0.8:0.5"))
+    "adsr() sets VoiceData ADSR components correctly via mapper" {
+        val p = "0 1".apply(adsr(0.1, 0.2, 0.8, 0.5))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -55,8 +54,8 @@ class LangAdsrSpec : StringSpec({
         }
     }
 
-    "adsr() works as pattern extension" {
-        val p = note("c").adsr("0.1:0.2")
+    "adsr() with leading params only leaves the rest unset" {
+        val p = note("c").adsr(0.1, 0.2)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -68,21 +67,44 @@ class LangAdsrSpec : StringSpec({
         }
     }
 
-    "adsr() works as string extension" {
-        val p = "c".adsr("0.1:0.2:0.8")
-        val events = p.queryArc(0.0, 1.0)
+    "adsr() with named params skips unset stages" {
+        val p = SprudelPattern.compile("""note("c").adsr(sustain = 0.8, release = 0.5)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
         with(events[0].data) {
-            attack shouldBe 0.1
-            decay shouldBe 0.2
+            attack shouldBe null
+            decay shouldBe null
             sustain shouldBe 0.8
-            release shouldBe null
+            release shouldBe 0.5
         }
     }
 
+    "adsr() params are independently patternable" {
+        // attack follows the sequence per event, release stays constant
+        val p = note("c e").adsr("0.1 0.3", release = 0.5)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.attack shouldBe 0.1
+        events[1].data.attack shouldBe 0.3
+        events[0].data.release shouldBe 0.5
+        events[1].data.release shouldBe 0.5
+    }
+
+    "adsr() alternation form selects per cycle" {
+        val p = note("c").adsr("<0.1 0.3>")
+        val c0 = p.queryArc(0.0, 1.0)
+        val c1 = p.queryArc(1.0, 2.0)
+
+        c0.size shouldBe 1
+        c1.size shouldBe 1
+        c0[0].data.attack shouldBe 0.1
+        c1[0].data.attack shouldBe 0.3
+    }
+
     "adsr() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").adsr("0.1:0.2:0.8:0.5")""")
+        val p = SprudelPattern.compile("""note("c").adsr(0.1, 0.2, 0.8, 0.5)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {

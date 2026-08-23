@@ -25,28 +25,11 @@ import io.peekandpoke.klang.sprudel.lang.voiceSetter
 
 private val notchfMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
-    if (":" in str) {
-        val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
-        notchf = parts.getOrNull(0) ?: notchf
-        nresonance = parts.getOrNull(1) ?: nresonance
-        nfenv = parts.getOrNull(2) ?: nfenv
-    } else {
-        notchf = str.toDoubleOrNull()
-    }
+    notchf = str.toDoubleOrNull()
 }
 
 private fun applyNotchf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val str = args.firstOrNull()?.value?.toString() ?: ""
-    return if (":" in str) {
-        source._applyControlFromParams(args, notchfMutation) { src, ctrl ->
-            src.notchf = ctrl.notchf ?: src.notchf
-            src.nresonance = ctrl.nresonance ?: src.nresonance
-            src.nfenv = ctrl.nfenv ?: src.nfenv
-            src
-        }
-    } else {
-        source._liftOrReinterpretNumericalField(args, notchfMutation)
-    }
+    return source._liftOrReinterpretNumericalField(args, notchfMutation)
 }
 
 /**
@@ -77,8 +60,15 @@ private fun applyNotchf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @tags notchf, notch filter, filter, frequency
  */
 @KlangScript.Function
-fun SprudelPattern.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyNotchf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
+fun SprudelPattern.notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch freq: reinterpret runs only on a fully bare call.
+    val withFreq = if (freq != null || q == null) {
+        applyNotchf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
+    } else {
+        this
+    }
+    return if (q != null) withFreq.notchq(q, callInfo?.forParam(1)) else withFreq
+}
 
 /**
  * Parses this string as a pattern, then applies a Notch Filter.
@@ -94,8 +84,8 @@ fun SprudelPattern.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null)
  * @tags notchf, notch filter, filter, frequency
  */
 @KlangScript.Function
-fun String.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).notchf(freq, callInfo)
+fun String.notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).notchf(freq, q, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a Notch Filter.
@@ -115,8 +105,7 @@ fun String.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags notchf, notch filter, filter, frequency
  */
 @KlangScript.Function
-fun notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.notchf(freq, callInfo) }
+fun notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.notchf(freq, q, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies a Notch Filter after the previous mapper.
@@ -133,8 +122,8 @@ fun notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.notchf(freq, callInfo) }
+fun PatternMapperFn.notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.notchf(freq, q, callInfo) }
 
 // -- nresonance() / nres() - Notch Filter resonance ------------------------------------------------------------------
 

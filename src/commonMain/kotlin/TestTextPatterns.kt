@@ -292,11 +292,11 @@ object TestTextPatterns {
     val glisandoTest2 = """
         stack(        
           n("1 3 5 7 8 10 12 14").scale("C4:minor")
-           .adsr("0.1:0.5:0.2:0.5").gain(0.5)
+           .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
            .orbit(0).room(0.01).rsize(10.0).sound("sine")
            .slow(8).accelerate(3 / 12),
          n("8 10 12 14 1 3 5 7").scale("C4:minor")
-           .adsr("0.1:0.5:0.2:0.5").gain(0.5)
+           .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
            .orbit(2).room(0.01).rsize(10.0).sound("sine")
            .slow(8).accelerate(3 / 12),
         )

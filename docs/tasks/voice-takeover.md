@@ -65,7 +65,7 @@ slope-corner click documented in the VCA de-click work (`audio/MEMORY.md`, `ENV_
 expect to hear the difference.
 
 **Practical note:** the tail is often still *loud* when the next note lands (e.g. `clip(0.86)` with
-`adsr("0.005:3.5:0.0:0.05")` leaves only ~14 % of a step of decay). Loud tails need longer than 5 ms — expect to tune
+`adsr(0.005, 3.5, 0.0, 0.05)` leaves only ~14 % of a step of decay). Loud tails need longer than 5 ms — expect to tune
 5–40 ms by ear per patch. `takeover` is patternable from day one.
 
 ## Rejected alternatives (do not re-litigate)
@@ -99,7 +99,7 @@ so it reads as consistent. No rename needed.
 ### Surface
 
 ```kotlin
-note("c3 e3 g3 e3").s("gtr").adsr("0.005:3.5:0.0:0.05").takeover(0.005)
+note("c3 e3 g3 e3").s("gtr").adsr(0.005, 3.5, 0.0, 0.05).takeover(0.005)
 s("hh*4 oh").cut(1).takeover(0.003)                      // explicit group, now click-free
 note("c3 e3").s("gtr").takeover("<0.005 0.03>")          // patternable
 ```

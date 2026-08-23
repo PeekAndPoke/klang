@@ -5,7 +5,7 @@ Status: **planned / not started.** Created 2026-06-07. Designed during the mutab
 
 ## Context
 
-When a modifier gets a **constant** argument — `gain(0.5)`, `lpf(1625)`, `distort("0.3:tube:4")` — the current
+When a modifier gets a **constant** argument — `gain(0.5)`, `lpf(1625)`, `distort(0.3, "tube", 4)` — the current
 lift/control path (`SprudelPattern._liftNumericField` / `_applyControlFromParams`) builds a control pattern and
 **`sampleAt` + `clone()`s it once per source event** to recover a value that never changes. On a modifier-heavy
 voice (e.g. Der Schmetterling) that's ~15–25 redundant control-atom clones per event. The value is constant, so the

@@ -107,4 +107,26 @@ class LangHpfSpec : StringSpec({
     }
 
 
+
+    // ---- C0 guard: per-param (freq, q) ----
+
+    "hpf(freq, q) sets both fields" {
+        val p = note("c e").hpf("200 800", 1.5)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.hcutoff shouldBe 200.0
+        events[1].data.hcutoff shouldBe 800.0
+        events[0].data.hresonance shouldBe 1.5
+        events[1].data.hresonance shouldBe 1.5
+    }
+
+    "hpf(q = ...) does not clear a previously set freq" {
+        val p = SprudelPattern.compile("""note("c3").hpf(800).hpf(q = 12)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.hcutoff shouldBe 800.0
+        events[0].data.hresonance shouldBe 12.0
+    }
 })

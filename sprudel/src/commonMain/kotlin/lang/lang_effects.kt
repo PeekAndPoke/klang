@@ -19,28 +19,11 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
 
 private val distortMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
-    if (":" in str) {
-        val parts = str.split(":")
-        distort = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: distort
-        distortShape = parts.getOrNull(1)?.trim()?.takeIf { s -> s.isNotEmpty() } ?: distortShape
-        distortOversample = parts.getOrNull(2)?.trim()?.toIntOrNull() ?: distortOversample
-    } else {
-        distort = str.toDoubleOrNull() ?: distort
-    }
+    distort = str.toDoubleOrNull() ?: distort
 }
 
 private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val str = args.firstOrNull()?.value?.toString() ?: ""
-    return if (":" in str) {
-        source._applyControlFromParams(args, distortMutation) { src, ctrl ->
-            src.distort = ctrl.distort ?: src.distort
-            src.distortShape = ctrl.distortShape ?: src.distortShape
-            src.distortOversample = ctrl.distortOversample ?: src.distortOversample
-            src
-        }
-    } else {
-        source._liftOrReinterpretNumericalField(args, distortMutation)
-    }
+    return source._liftOrReinterpretNumericalField(args, distortMutation)
 }
 
 /**
@@ -49,7 +32,7 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * Higher values produce more harmonic saturation and clipping. Works well on synth
  * bass lines and leads; combine with `lpf` to tame harsh high frequencies.
  *
- * Accepts either a single numeric value or a colon-separated `"amount:shape"` string
+ * Takes the drive amount plus optional shape and oversampling parameters
  * to set both distortion amount and waveshaper shape at once. Available shapes:
  *  - **Symmetric soft:** `soft` (tanh), `gentle`, `softsat`, `cubic`, `exp`, `sineshaper`.
  *  - **Symmetric hard / wavefolding:** `hard`, `zerosquare`, `chebyshev`, `fold`, `linearfold`.
@@ -57,11 +40,12 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
- * @param amount The distortion amount, or `"amount:shape"` compound string.
+ * @param amount The distortion amount.
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount SprudelDistortSequenceEditor
  * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
  * @param-sub amount shape Waveshaper curve: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify
+ * @param-sub amount oversample Oversampling factor (2/4/8), reduces aliasing on hot drive settings
  * @return A new pattern with distortion applied.
  *
  * ```KlangScript(Playable)
@@ -73,75 +57,84 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.5:soft")       // warm tanh saturation
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5, "soft")       // warm tanh saturation
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.7:hard")       // aggressive hard clipping
+ * note("c2 eb2 g2").s("sawtooth").distort(0.7, "hard")       // aggressive hard clipping
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.4:gentle")     // smooth x/(1+|x|) saturation
+ * note("c2 eb2 g2").s("sawtooth").distort(0.4, "gentle")     // smooth x/(1+|x|) saturation
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.6:cubic")      // tube-like, 3rd harmonic
+ * note("c2 eb2 g2").s("sawtooth").distort(0.6, "cubic")      // tube-like, 3rd harmonic
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.5:diode")      // asymmetric, even harmonics
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5, "diode")      // asymmetric, even harmonics
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.8:fold")       // sine wavefolding, metallic
+ * note("c2 eb2 g2").s("sawtooth").distort(0.8, "fold")       // sine wavefolding, metallic
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.5:chebyshev")  // T3 polynomial, tape saturation
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5, "chebyshev")  // T3 polynomial, tape saturation
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.7:rectify")    // full-wave rectification, octave-up
+ * note("c2 eb2 g2").s("sawtooth").distort(0.7, "rectify")    // full-wave rectification, octave-up
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.6:exp")        // exponential, transistor-style
+ * note("c2 eb2 g2").s("sawtooth").distort(0.6, "exp")        // exponential, transistor-style
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.5:softsat")    // gentlest soft saturation
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5, "softsat")    // gentlest soft saturation
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.7:tube")       // shifted-tanh tube, warm + asymmetric
+ * note("c2 eb2 g2").s("sawtooth").distort(0.7, "tube")       // shifted-tanh tube, warm + asymmetric
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.8:linearfold") // triangle wavefolding, sharper than fold
+ * note("c2 eb2 g2").s("sawtooth").distort(0.8, "linearfold") // triangle wavefolding, sharper than fold
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.6:zerosquare") // pushes signal toward square
+ * note("c2 eb2 g2").s("sawtooth").distort(0.6, "zerosquare") // pushes signal toward square
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.7:stompbox")   // asymmetric diode pedal grit
+ * note("c2 eb2 g2").s("sawtooth").distort(0.7, "stompbox")   // asymmetric diode pedal grit
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.6:asym")       // polynomial asymmetry, even+odd
+ * note("c2 eb2 g2").s("sawtooth").distort(0.6, "asym")       // polynomial asymmetry, even+odd
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").distort("0.5:sineshaper") // normalised sine fold (peak at unity)
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5, "sineshaper") // normalised sine fold (peak at unity)
  * ```
  * @alias dist
  * @category effects
  * @tags distort, dist, distortion, waveshaper, overdrive
  */
 @KlangScript.Function
-fun SprudelPattern.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyDistort(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.distort(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
+    var p = if (amount != null || !(shape != null || oversample != null)) {
+        applyDistort(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+    } else {
+        this
+    }
+    if (shape != null) p = p.distortshape(shape, callInfo?.forParam(1))
+    if (oversample != null) p = p.distos(oversample, callInfo?.forParam(2))
+    return p
+}
 
 /**
  * Parses this string as a pattern, then applies waveshaper distortion.
@@ -157,8 +150,8 @@ fun SprudelPattern.distort(amount: PatternLike? = null, callInfo: CallInfo? = nu
  * ```
  */
 @KlangScript.Function
-fun String.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, callInfo)
+fun String.distort(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, shape, oversample, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies waveshaper distortion.
@@ -166,11 +159,12 @@ fun String.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
- * @param amount The distortion amount or `"amount:shape"` compound string.
+ * @param amount The distortion amount.
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount SprudelDistortSequenceEditor
  * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
  * @param-sub amount shape Waveshaper curve: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify
+ * @param-sub amount oversample Oversampling factor (2/4/8), reduces aliasing on hot drive settings
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript(Playable)
@@ -185,7 +179,7 @@ fun String.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @tags distort, dist, distortion, waveshaper, overdrive
  */
 @KlangScript.Function
-fun distort(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, callInfo) }
+fun distort(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, shape, oversample, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies waveshaper distortion after the previous mapper.
@@ -202,19 +196,20 @@ fun distort(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.distort(amount, callInfo) }
+fun PatternMapperFn.distort(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distort(amount, shape, oversample, callInfo) }
 
 /**
  * Alias for [distort]. Applies waveshaper distortion to this pattern.
  *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
- * @param amount The distortion amount or `"amount:shape"` compound string.
+ * @param amount The distortion amount.
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount SprudelDistortSequenceEditor
  * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
  * @param-sub amount shape Waveshaper curve: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify
+ * @param-sub amount oversample Oversampling factor (2/4/8), reduces aliasing on hot drive settings
  * @return A new pattern with distortion applied.
  *
  * ```KlangScript(Playable)
@@ -233,8 +228,8 @@ fun PatternMapperFn.distort(amount: PatternLike? = null, callInfo: CallInfo? = n
  * @tags dist, distort, distortion, waveshaper, overdrive
  */
 @KlangScript.Function
-fun SprudelPattern.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.distort(amount, callInfo)
+fun SprudelPattern.dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.distort(amount, shape, oversample, callInfo)
 
 /**
  * Alias for [distort]. Parses this string as a pattern, then applies waveshaper distortion.
@@ -250,8 +245,8 @@ fun SprudelPattern.dist(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * ```
  */
 @KlangScript.Function
-fun String.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, callInfo)
+fun String.dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, shape, oversample, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies waveshaper distortion. Alias for [distort].
@@ -259,11 +254,12 @@ fun String.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
- * @param amount The distortion amount or `"amount:shape"` compound string.
+ * @param amount The distortion amount.
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount SprudelDistortSequenceEditor
  * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
  * @param-sub amount shape Waveshaper curve: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify
+ * @param-sub amount oversample Oversampling factor (2/4/8), reduces aliasing on hot drive settings
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript(Playable)
@@ -278,7 +274,7 @@ fun String.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags dist, distort, distortion, waveshaper, overdrive
  */
 @KlangScript.Function
-fun dist(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, callInfo) }
+fun dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, shape, oversample, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies waveshaper distortion (alias for [distort]) after the previous mapper.
@@ -295,12 +291,12 @@ fun dist(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.distort(amount, callInfo) }
+fun PatternMapperFn.dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distort(amount, shape, oversample, callInfo) }
 
 // -- distos() / distortoversampling() ---------------------------------------------------------------------------------
 
-private val distortOversampleMutation = voiceSetter { distortOversample = it?.toString()?.toIntOrNull() }
+private val distortOversampleMutation = voiceSetter { distortOversample = it?.toString()?.toDoubleOrNull()?.toInt() }
 
 private fun applyDistortOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, distortOversampleMutation)
@@ -320,7 +316,7 @@ private fun applyDistortOversample(source: SprudelPattern, args: List<SprudelDsl
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").distort("0.8:exp").distos(4)                 // 4x oversampled exp distortion
+ * note("c3*4").distort(0.8, "exp").distos(4)                 // 4x oversampled exp distortion
  * ```
  * @alias distortOversampling
  * @category effects
@@ -918,14 +914,7 @@ fun PatternMapperFn.coarseOversampling(factor: PatternLike? = null, callInfo: Ca
 // -- room() -----------------------------------------------------------------------------------------------------------
 
 private val roomMutation = voiceSetter {
-    val parts = it?.toString()?.split(":")
-        ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
-
-    room = parts.getOrNull(0) ?: room
-    roomSize = parts.getOrNull(1) ?: roomSize
-    roomFade = parts.getOrNull(2) ?: roomFade
-    roomLp = parts.getOrNull(3) ?: roomLp
-    roomDim = parts.getOrNull(4) ?: roomDim
+    room = it?.toString()?.toDoubleOrNull() ?: room
 }
 
 private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -938,10 +927,6 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 
     return source._applyControlFromParams(args, roomMutation) { src, ctrl ->
         src.room = ctrl.room ?: src.room
-        src.roomSize = ctrl.roomSize ?: src.roomSize
-        src.roomFade = ctrl.roomFade ?: src.roomFade
-        src.roomLp = ctrl.roomLp ?: src.roomLp
-        src.roomDim = ctrl.roomDim ?: src.roomDim
         src
     }
 }
@@ -964,7 +949,7 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * | 4 | `roomlp` | Hz |
  * | 5 | `roomdim` | currently unused by the engine |
  *
- * So `room("0.3:5:0.1")` is mix 0.3 with a **0.1** tail — the `5` is inert, because slot 3 wins.
+ * So `room(0.3, 5, 0.1)` is mix 0.3 with a **0.1** tail — the `5` is inert, because slot 3 wins.
  * The master bus takes the same values as `MasterFx.reverb().wet(0.3).roomFade(0.1)`.
  *
  * ```KlangScript(Playable)
@@ -980,14 +965,29 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
+ * @param size Room size (~0–10). Omit to leave it unchanged.
+ * @param fade Tail override (0–1), wins over size. Omit to leave it unchanged.
+ * @param lowpass Lowpass on the reverb tail in Hz. Omit to leave it unchanged.
+ * @param dim Currently unused by the engine.
  * @param-tool amount SprudelReverbSequenceEditor
  * @return A new pattern with reverb wet/dry mix applied.
  * @category effects
  * @tags room, reverb, wet, mix, space
  */
 @KlangScript.Function
-fun SprudelPattern.room(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyRoom(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.room(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
+    var p = if (amount != null || !(size != null || fade != null || lowpass != null || dim != null)) {
+        applyRoom(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+    } else {
+        this
+    }
+    if (size != null) p = p.roomsize(size, callInfo?.forParam(1))
+    if (fade != null) p = p.roomfade(fade, callInfo?.forParam(2))
+    if (lowpass != null) p = p.roomlp(lowpass, callInfo?.forParam(3))
+    if (dim != null) p = p.roomdim(dim, callInfo?.forParam(4))
+    return p
+}
 
 /**
  * Parses this string as a pattern and sets the reverb wet/dry mix.
@@ -1002,8 +1002,8 @@ fun SprudelPattern.room(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * ```
  */
 @KlangScript.Function
-fun String.room(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).room(amount, callInfo)
+fun String.room(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).room(amount, size, fade, lowpass, dim, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb wet/dry mix.
@@ -1026,7 +1026,7 @@ fun String.room(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags room, reverb, wet, mix, space
  */
 @KlangScript.Function
-fun room(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.room(amount, callInfo) }
+fun room(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.room(amount, size, fade, lowpass, dim, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb wet/dry mix after the previous mapper.
@@ -1043,8 +1043,8 @@ fun room(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.room(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.room(amount, callInfo) }
+fun PatternMapperFn.room(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.room(amount, size, fade, lowpass, dim, callInfo) }
 
 // -- roomsize() / rsize() / sz() / size() -----------------------------------------------------------------------------
 
@@ -2056,39 +2056,20 @@ fun PatternMapperFn.ir(name: PatternLike, callInfo: CallInfo? = null): PatternMa
 
 // -- delay() ----------------------------------------------------------------------------------------------------------
 
-// Supports both single value (wet/dry mix) and combined "wet:time:feedback" format.
 private val delayMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
-    if (":" in str) {
-        val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
-        delay = parts.getOrNull(0) ?: delay
-        delayTime = parts.getOrNull(1) ?: delayTime
-        delayFeedback = parts.getOrNull(2) ?: delayFeedback
-    } else {
-        delay = str.toDoubleOrNull() ?: delay
-    }
+    delay = str.toDoubleOrNull() ?: delay
 }
 
 private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val str = args.firstOrNull()?.value?.toString() ?: ""
-    return if (":" in str) {
-        source._applyControlFromParams(args, delayMutation) { src, ctrl ->
-            src.delay = ctrl.delay ?: src.delay
-            src.delayTime = ctrl.delayTime ?: src.delayTime
-            src.delayFeedback = ctrl.delayFeedback ?: src.delayFeedback
-            src
-        }
-    } else {
-        source._liftOrReinterpretNumericalField(args, delayMutation)
-    }
+    return source._liftOrReinterpretNumericalField(args, delayMutation)
 }
 
 /**
  * Sets the delay effect for this pattern.
  *
- * Accepts either a single value (wet/dry mix 0–1) or a colon-separated string
- * `"wet:time:feedback"` to set all delay parameters at once.
- * Trailing fields can be omitted.
+ * Takes the wet/dry mix plus optional time and feedback parameters.
+ * Each parameter is independent and patternable; omitted parameters keep their previous values.
  *
  * - **wet**: wet/dry mix (0–1)
  * - **time**: delay interval in seconds
@@ -2096,7 +2077,7 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as delay mix.
  *
- * @param amount The delay parameters: a single value (wet/dry mix) or `"wet:time:feedback"`.
+ * @param amount The delay wet/dry mix (0–1).
  * @return A new pattern with the delay applied.
  *
  * ```KlangScript(Playable)
@@ -2104,11 +2085,11 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").delay("0.5:0.25:0.6")               // wet=0.5, time=0.25s, feedback=0.6
+ * note("c3*4").delay(0.5, 0.25, 0.6)               // wet=0.5, time=0.25s, feedback=0.6
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").delay("<0.3:0.125 0.6:0.25:0.8>")   // alternating delay per cycle
+ * note("c3*4").delay("<0.3 0.6>", "<0.125 0.25>", "<~ 0.8>")   // alternating delay per cycle
  * ```
  *
  * @param-tool amount SprudelDelaySequenceEditor
@@ -2119,8 +2100,17 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @tags delay, echo, wet, mix, delaytime, delayfeedback
  */
 @KlangScript.Function
-fun SprudelPattern.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyDelay(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.delay(amount: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
+    var p = if (amount != null || !(time != null || feedback != null)) {
+        applyDelay(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+    } else {
+        this
+    }
+    if (time != null) p = p.delaytime(time, callInfo?.forParam(1))
+    if (feedback != null) p = p.delayfeedback(feedback, callInfo?.forParam(2))
+    return p
+}
 
 /**
  * Parses this string as a pattern and sets the delay wet/dry mix.
@@ -2134,8 +2124,8 @@ fun SprudelPattern.delay(amount: PatternLike? = null, callInfo: CallInfo? = null
  * ```
  */
 @KlangScript.Function
-fun String.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).delay(amount, callInfo)
+fun String.delay(amount: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delay(amount, time, feedback, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay wet/dry mix.
@@ -2158,7 +2148,7 @@ fun String.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @tags delay, echo, wet, mix
  */
 @KlangScript.Function
-fun delay(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delay(amount, callInfo) }
+fun delay(amount: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delay(amount, time, feedback, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay wet/dry mix after the previous mapper.
@@ -2175,8 +2165,8 @@ fun delay(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.delay(amount, callInfo) }
+fun PatternMapperFn.delay(amount: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delay(amount, time, feedback, callInfo) }
 
 // -- delaytime() ------------------------------------------------------------------------------------------------------
 
@@ -2532,30 +2522,11 @@ fun PatternMapperFn.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null)
 
 private val phaserMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
-    if (":" in str) {
-        val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
-        phaserRate = parts.getOrNull(0) ?: phaserRate
-        phaserDepth = parts.getOrNull(1) ?: phaserDepth
-        phaserCenter = parts.getOrNull(2) ?: phaserCenter
-        phaserSweep = parts.getOrNull(3) ?: phaserSweep
-    } else {
-        phaserRate = str.toDoubleOrNull() ?: phaserRate
-    }
+    phaserRate = str.toDoubleOrNull() ?: phaserRate
 }
 
 private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val str = args.firstOrNull()?.value?.toString() ?: ""
-    return if (":" in str) {
-        source._applyControlFromParams(args, phaserMutation) { src, ctrl ->
-            src.phaserRate = ctrl.phaserRate ?: src.phaserRate
-            src.phaserDepth = ctrl.phaserDepth ?: src.phaserDepth
-            src.phaserCenter = ctrl.phaserCenter ?: src.phaserCenter
-            src.phaserSweep = ctrl.phaserSweep ?: src.phaserSweep
-            src
-        }
-    } else {
-        source._liftOrReinterpretNumericalField(args, phaserMutation)
-    }
+    return source._liftOrReinterpretNumericalField(args, phaserMutation)
 }
 
 /**
@@ -2564,12 +2535,12 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * A phaser creates a sweeping comb-filter effect by modulating a series of all-pass filters.
  * Higher rate values produce faster sweeping. Use with `phaserdepth` and `phasercenter`.
  *
- * Accepts either a single numeric value (rate) or a colon-separated `"rate:depth:center:sweep"`
- * string to set all phaser parameters at once. Trailing fields can be omitted.
+ * Takes the LFO rate plus optional depth, center, and sweep parameters.
+ * Each parameter is independent and patternable; omitted parameters keep their previous values.
  *
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
- * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
+ * @param rate The phaser LFO rate in Hz.
  *   Omit to reinterpret the pattern's values as phaser rate.
  * @param-tool rate SprudelPhaserSequenceEditor
  * @param-sub rate rate LFO speed in Hz controlling the sweep rate
@@ -2587,11 +2558,11 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("sawtooth").phaser("0.5:0.8:500:1000")   // full compound phaser
+ * note("c3 e3 g3").s("sawtooth").phaser(0.5, 0.8, 500, 1000)   // full compound phaser
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("sawtooth").phaser("2.0:0.6")   // rate + depth only
+ * note("c3 e3 g3").s("sawtooth").phaser(2.0, 0.6)   // rate + depth only
  * ```
  *
  * @alias ph
@@ -2599,8 +2570,18 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @tags phaser, ph, phase, sweep, modulation
  */
 @KlangScript.Function
-fun SprudelPattern.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPhaser(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
+fun SprudelPattern.phaser(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch rate: reinterpret runs only on a fully bare call.
+    var p = if (rate != null || !(depth != null || center != null || sweep != null)) {
+        applyPhaser(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
+    } else {
+        this
+    }
+    if (depth != null) p = p.phaserdepth(depth, callInfo?.forParam(1))
+    if (center != null) p = p.phasercenter(center, callInfo?.forParam(2))
+    if (sweep != null) p = p.phasersweep(sweep, callInfo?.forParam(3))
+    return p
+}
 
 /**
  * Parses this string as a pattern and sets the phaser LFO rate.
@@ -2614,8 +2595,8 @@ fun SprudelPattern.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null)
  * ```
  */
 @KlangScript.Function
-fun String.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, callInfo)
+fun String.phaser(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, depth, center, sweep, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate.
@@ -2623,7 +2604,7 @@ fun String.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
- * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
+ * @param rate The phaser LFO rate in Hz.
  *   Omit to reinterpret the pattern's values as phaser rate.
  * @param-tool rate SprudelPhaserSequenceEditor
  * @param-sub rate rate LFO speed in Hz controlling the sweep rate
@@ -2645,7 +2626,7 @@ fun String.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags phaser, ph, phase, sweep, modulation
  */
 @KlangScript.Function
-fun phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, callInfo) }
+fun phaser(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, depth, center, sweep, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate after the previous mapper.
@@ -2662,15 +2643,15 @@ fun phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaser(rate, callInfo) }
+fun PatternMapperFn.phaser(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaser(rate, depth, center, sweep, callInfo) }
 
 /**
  * Alias for [phaser]. Sets the phaser LFO rate in Hz for this pattern.
  *
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
- * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
+ * @param rate The phaser LFO rate in Hz.
  *   Omit to reinterpret the pattern's values as phaser rate.
  * @param-tool rate SprudelPhaserSequenceEditor
  * @param-sub rate rate LFO speed in Hz controlling the sweep rate
@@ -2696,8 +2677,8 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null
  * @tags ph, phaser, phase, sweep, modulation
  */
 @KlangScript.Function
-fun SprudelPattern.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.phaser(rate, callInfo)
+fun SprudelPattern.ph(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.phaser(rate, depth, center, sweep, callInfo)
 
 /**
  * Alias for [phaser]. Parses this string as a pattern and sets the phaser LFO rate.
@@ -2711,13 +2692,13 @@ fun SprudelPattern.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * ```
  */
 @KlangScript.Function
-fun String.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, callInfo)
+fun String.ph(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, depth, center, sweep, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate. Alias for [phaser].
  *
- * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
+ * @param rate The phaser LFO rate in Hz.
  *   Omit to reinterpret the pattern's values as phaser rate.
  * @param-tool rate SprudelPhaserSequenceEditor
  * @param-sub rate rate LFO speed in Hz controlling the sweep rate
@@ -2735,7 +2716,7 @@ fun String.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * @tags ph, phaser, phase, sweep, modulation
  */
 @KlangScript.Function
-fun ph(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, callInfo) }
+fun ph(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, depth, center, sweep, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate (alias for phaser) after the previous mapper.
@@ -2752,8 +2733,8 @@ fun ph(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaser(rate, callInfo) }
+fun PatternMapperFn.ph(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaser(rate, depth, center, sweep, callInfo) }
 
 // -- phaserdepth() / phd() / phasdp() ---------------------------------------------------------------------------------
 

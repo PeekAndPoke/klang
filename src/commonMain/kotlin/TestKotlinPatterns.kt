@@ -67,7 +67,7 @@ object TestKotlinPatterns {
             .room(0.2).rsize(0.1)
             .clip(0.3)
             .hpf(600)
-//            .adsr("0.025:0.2:0.5:0.0")
+//            .adsr(0.025, 0.2, 0.5, 0.0)
             .superimpose({ x -> x.transpose("<0 12 0 -12>/8") })
 //            .rev(4.1).rev(3)
         ,
@@ -89,7 +89,7 @@ object TestKotlinPatterns {
             .spread(sine.range(0.05, 0.3).early(1.5).slow(12))
             .orbit(2).gain(0.55)
             .pan(sine.slow(48).range(0.3, 0.7))
-            .adsr("0.01:0.3:0.4:0.5")
+            .adsr(0.01, 0.3, 0.4, 0.5)
 //            .lpf(4000)
             .room(0.02).rsize(0.5)
             .superimpose({ x -> x.transpose("<0 12 0 -12>/8") })
@@ -119,7 +119,7 @@ object TestKotlinPatterns {
         )
             .orbit(3).pan(-0.0).gain(1.0)
             .room(0.02).rsize(0.5)
-            .adsr("0.01:0.2:0.8:0.5")
+            .adsr(0.01, 0.2, 0.8, 0.5)
             .fast(2)
 //            .rev(4).rev(3),
     )
@@ -131,7 +131,7 @@ object TestKotlinPatterns {
             listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
         ).orbit(1)
             .scale("C4:minor")
-            .adsr("0.05:0.7:0.0:0.5")
+            .adsr(0.05, 0.7, 0.0, 0.5)
             .hpf(800)
             .sound("triangle")
             .gain(0.6),
@@ -142,7 +142,7 @@ object TestKotlinPatterns {
             listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
         ).orbit(2)
             .scale("C5:minor")
-            .adsr("0.05:0.7:0.0:0.5")
+            .adsr(0.05, 0.7, 0.0, 0.5)
             .hpf(1600)
             .sound("triangle")
             .gain(0.7),
@@ -151,7 +151,7 @@ object TestKotlinPatterns {
         note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
             .orbit(3)
             .sound("supersaw").unison(4).spread(0.1)
-            .adsr("0.0:0.3:0.0:0.8")
+            .adsr(0.0, 0.3, 0.0, 0.8)
             .lpf(800)
             .gain(0.7).pan(-0.5),
 

@@ -38,8 +38,8 @@ val chordsInOneStepTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3] ~ [a2,e3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.4)    // comma: both notes strike together
-                    // note("[a2 e3] ~ [a2 e3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.4) // space: the same notes take turns, swap
+                    note("[a2,e3] ~ [a2,e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.4)    // comma: both notes strike together
+                    // note("[a2 e3] ~ [a2 e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.4) // space: the same notes take turns, swap
                     """.trimIndent(),
                 ),
             ),
@@ -60,8 +60,8 @@ val chordsInOneStepTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35)    // three-note stabs on steps one, four, seven
-                    // note("[a2,e3] ~ ~ [a2,e3]  ~ ~ [a2,e3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35)          // the two-note version, swap to compare
+                    note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)    // three-note stabs on steps one, four, seven
+                    // note("[a2,e3] ~ ~ [a2,e3]  ~ ~ [a2,e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)          // the two-note version, swap to compare
                     """.trimIndent(),
                 ),
             ),
@@ -83,7 +83,7 @@ val chordsInOneStepTutorial = Tutorial(
                 Block.Code(
                     code = """
                     note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~")  // the last stab: a random pick, A or the same shape on G
-                      .sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35)              // voice, pluck, and level unchanged
+                      .sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)              // voice, pluck, and level unchanged
                     """.trimIndent(),
                 ),
             ),
@@ -104,7 +104,7 @@ val chordsInOneStepTutorial = Tutorial(
                     code = """
                     stack(
                       sound("bd ~ hh ~  ~ hh sd ~").gain(0.8),                                                                        // the groove, steady every cycle
-                      note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35)  // the stab riff, unchanged
+                      note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)  // the stab riff, unchanged
                     )
                     """.trimIndent(),
                 ),

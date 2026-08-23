@@ -41,7 +41,7 @@ stack(
   .fast(2).scale("C3:major").body("rosewood").bodyMix(1.0).bodyFloor(0.2)
   .sound("sine").hpf(100).lpf(5000).warmth(0.05).gain(0.5).clip(0.5)
   // Hover the param and click the little icon!
-  .adsr("0.07:0.2:0.5:0.15")
+  .adsr(0.07, 0.2, 0.5, 0.15)
 
 ).room(0.25).rsize(roomSize).analog(5)
 

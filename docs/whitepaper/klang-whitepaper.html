@@ -1131,7 +1131,7 @@
 
   n(<span class="st">"0 2 4 7 6 4 2 0"</span>).scale(<span class="st">"C4:minor"</span>)
     .sound(<span class="st">"saw"</span>).lpf(800)
-    .adsr(<span class="st">"0.01:0.1:0.5:0.2"</span>).gain(0.25),
+    .adsr(<span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">0.2</span>).gain(0.25),
 
   chord(<span class="st">"&lt;Am C F G&gt;"</span>).voicing()
     .sound(<span class="st">"supersaw"</span>).lpf(500).gain(0.2)
@@ -1665,7 +1665,7 @@ stack(
   , sound(<span class="st">"pink"</span>).gain(0.010).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000)
   , sound(<span class="st">"brown"</span>).gain(0.015).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
 
-).room(<span class="st">"0.25:7:0.75"</span>).delay(0.2).delaytime(pure(1/8).div(cps))
+).room(<span class="fl">0.25</span>, <span class="fl">7</span>, <span class="fl">0.75</span>).delay(0.2).delaytime(pure(1/8).div(cps))
  .compressor(<span class="st">"-15:2:6:0.01:0.2"</span>).analog(8)</pre>
                 </div>
                 <figcaption>Abridged — the full song is 125 lines. The <code>let wait = 14</code> at the top is the

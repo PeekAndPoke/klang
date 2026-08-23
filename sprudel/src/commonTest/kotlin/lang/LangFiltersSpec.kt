@@ -233,4 +233,26 @@ class LangFiltersSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.nresonance shouldBe 0.8
     }
+
+    // ---- C0 guard: notchf(freq, q) ----
+
+    "notchf(freq, q) sets both fields" {
+        val p = note("c e").notchf("200 800", 1.5)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.notchf shouldBe 200.0
+        events[1].data.notchf shouldBe 800.0
+        events[0].data.nresonance shouldBe 1.5
+        events[1].data.nresonance shouldBe 1.5
+    }
+
+    "notchf(q = ...) does not clear a previously set freq" {
+        val p = SprudelPattern.compile("""note("c3").notchf(800).notchf(q = 12)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.notchf shouldBe 800.0
+        events[0].data.nresonance shouldBe 12.0
+    }
 })

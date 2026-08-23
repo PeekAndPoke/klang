@@ -87,4 +87,49 @@ class LangLpfSpec : StringSpec({
         events.size shouldBe 1
         events[0].data.cutoff shouldBe 1000.0
     }
+
+    // ---- C0 guard: per-param flow (docs/plans/filter-unification.md, C0) ----
+
+    "lpf(freq-sequence, q) gives per-event freq and constant q" {
+        val p = note("c e").lpf("200 800", 1.5)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.cutoff shouldBe 200.0
+        events[1].data.cutoff shouldBe 800.0
+        events[0].data.resonance shouldBe 1.5
+        events[1].data.resonance shouldBe 1.5
+    }
+
+    "lpf(freq-alternation, q) selects freq per cycle, q stays" {
+        val p = note("c").lpf("<200 800>", 1.5)
+        val c0 = p.queryArc(0.0, 1.0)
+        val c1 = p.queryArc(1.0, 2.0)
+
+        c0.size shouldBe 1
+        c1.size shouldBe 1
+        c0[0].data.cutoff shouldBe 200.0
+        c1[0].data.cutoff shouldBe 800.0
+        c0[0].data.resonance shouldBe 1.5
+        c1[0].data.resonance shouldBe 1.5
+    }
+
+    "lpf(q = ...) alone sets only q, cutoff stays untouched" {
+        val p = SprudelPattern.compile("""seq("300 600").lpf(q = 2)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.cutoff shouldBe null
+        events[1].data.cutoff shouldBe null
+        events[0].data.resonance shouldBe 2.0
+    }
+
+    "lpf(q = ...) does not clear a previously set cutoff" {
+        val p = SprudelPattern.compile("""note("c3").lpf(800).lpf(q = 12)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.cutoff shouldBe 800.0
+        events[0].data.resonance shouldBe 12.0
+    }
 })

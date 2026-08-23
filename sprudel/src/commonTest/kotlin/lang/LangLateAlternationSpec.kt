@@ -72,7 +72,7 @@ class LangLateAlternationSpec : StringSpec({
     "full reported chain: silent in cycles 0-7, onsets from cycle 8" {
         val full = SprudelPattern.compile(
             """sound("$alt").mute("<0!128 1!32>").late(0.002).orbit(6).gain(0.40).hpf(200).lpf(5200)""" +
-                    """.adsr("0.005:0.1:0.7:0.2").superimpose(x => x.bpf(250).bpq(4).gain(0.20))"""
+                    """.adsr(0.005, 0.1, 0.7, 0.2).superimpose(x => x.bpf(250).bpq(4).gain(0.20))"""
         )!!
 
         (0..7).forEach { c -> full.onsetsInCycle(c).size shouldBe 0 }

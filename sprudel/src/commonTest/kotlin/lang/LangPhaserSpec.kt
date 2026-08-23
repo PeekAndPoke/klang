@@ -166,7 +166,7 @@ class LangPhaserSpec : StringSpec({
         events[1].data.phaserSweep shouldBe 1500.0
     }
 
-    // -- combined tests ---------------------------------------------------------------------------------------------------
+    // -- chaining tests ---------------------------------------------------------------------------------------------------
 
     "phaser functions can be chained together" {
         val p = note("c3").phaser("2.0").phaserdepth("0.8").phasercenter("500").phasersweep("1000")
@@ -188,10 +188,10 @@ class LangPhaserSpec : StringSpec({
         events[0].data.phaserDepth shouldBe 0.8
     }
 
-    // -- combined "rate:depth:center:sweep" format ----------------------------------------
+    // -- per-param (rate, depth, center, sweep) ----------------------------------------
 
-    "phaser() combined sets all four VoiceData fields" {
-        val p = note("c3").phaser("2.0:0.8:500:1000")
+    "phaser() per-param sets all four VoiceData fields" {
+        val p = note("c3").phaser(2.0, 0.8, 500, 1000)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -203,8 +203,8 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "phaser() combined with partial params sets only specified fields" {
-        val p = note("c3").phaser("1.5:0.6")
+    "phaser() per-param with partial params sets only specified fields" {
+        val p = note("c3").phaser(1.5, 0.6)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -216,8 +216,8 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "phaser() combined works as string extension" {
-        val p = "c3".phaser("2.0:0.8:500:1000")
+    "phaser() per-param works as string extension" {
+        val p = "c3".phaser(2.0, 0.8, 500, 1000)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -229,8 +229,8 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "phaser() combined works in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").phaser("2.0:0.8:500:1000")""")
+    "phaser() per-param works in compiled code" {
+        val p = SprudelPattern.compile("""note("c3").phaser(2.0, 0.8, 500, 1000)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {
@@ -241,8 +241,8 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "phaser() combined works with mini-notation patterns" {
-        val p = note("c3 e3").phaser("<0.5:0.3 2.0:0.8:500:1000>")
+    "phaser() per-param mini-notation patterns" {
+        val p = note("c3 e3").phaser("<0.5 2.0>", "<0.3 0.8>", "<~ 500>", "<~ 1000>")
         val cycle0 = p.queryArc(0.0, 1.0)
         val cycle1 = p.queryArc(1.0, 2.0)
 
@@ -250,6 +250,7 @@ class LangPhaserSpec : StringSpec({
             cycle0.size shouldBe 2
             cycle0[0].data.phaserRate shouldBe 0.5
             cycle0[0].data.phaserDepth shouldBe 0.3
+            cycle0[0].data.phaserCenter shouldBe null    // rest in the center pattern leaves it unset
 
             cycle1.size shouldBe 2
             cycle1[0].data.phaserRate shouldBe 2.0
@@ -259,8 +260,8 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "phaser() combined works chained with other effects" {
-        val p = note("c3").apply(gain(0.8).phaser("2.0:0.6:500:1000"))
+    "phaser() per-param works chained with other effects" {
+        val p = note("c3").apply(gain(0.8).phaser(2.0, 0.6, 500, 1000))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -273,8 +274,8 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "ph() combined works" {
-        val p = note("c3").ph("1.0:0.5:300")
+    "ph() per-param works" {
+        val p = note("c3").ph(1.0, 0.5, 300)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -295,5 +296,16 @@ class LangPhaserSpec : StringSpec({
         events[0].data.phaserDepth shouldBe null
         events[0].data.phaserCenter shouldBe null
         events[0].data.phaserSweep shouldBe null
+    }
+
+    "phaser(tail-only) does not touch the head field" {
+        // numeric receiver: without the tail-only guard the head apply would REINTERPRET
+        // the values ("3"/"4") into the phaserRate field
+        val p = SprudelPattern.compile("""seq("3 4").phaser(depth = 0.6)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.phaserRate shouldBe null
+        events[0].data.phaserDepth shouldBe 0.6
     }
 })

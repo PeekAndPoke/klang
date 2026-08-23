@@ -340,7 +340,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override fun gotoNext() {
             val song = sound("<[sd sd sd sd  [bd, cr] ~ ~ ~] ~>").fast(1)
                 .gain(0.7)
-                .adsr("0.005:0.2:0.3:10.0")
+                .adsr(0.005, 0.2, 0.3, 10.0)
                 .room(0.2).rsize(3.0).rlp(5000)
 
             val playback = Player.get()?.playOnce(song)

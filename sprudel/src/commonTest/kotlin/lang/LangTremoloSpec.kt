@@ -170,7 +170,7 @@ class LangTremoloSpec : StringSpec({
         events[0].data.tremoloShape shouldBe "sine"
     }
 
-    // -- combined tests ---------------------------------------------------------------------------------------------------
+    // -- per-param tests --------------------------------------------------------------------------------
 
     "tremolo functions can be chained together" {
         val p = note("c3")

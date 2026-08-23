@@ -75,7 +75,7 @@ class CallInfoTest : StringSpec({
     }
 
     "adsr passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").adsr("0.01:0.2:0.7:0.5")""")
+        assertCallInfoPresent("""seq("0 1").adsr(0.01, 0.2, 0.7, 0.5)""")
     }
 
     "orbit passes CallInfo from KlangScript" {
@@ -143,27 +143,27 @@ class CallInfoTest : StringSpec({
     }
 
     "reverb passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").reverb("0.5:2")""")
+        assertCallInfoPresent("""seq("0 1").reverb(0.5, 2)""")
     }
 
     "lpadsr passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").lpadsr("0.01:0.3:0.5:0.5")""")
+        assertCallInfoPresent("""seq("0 1").lpadsr(0.01, 0.3, 0.5, 0.5)""")
     }
 
     "hpadsr passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").hpadsr("0.01:0.3:0.5:0.5")""")
+        assertCallInfoPresent("""seq("0 1").hpadsr(0.01, 0.3, 0.5, 0.5)""")
     }
 
     "bpadsr passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").bpadsr("0.01:0.3:0.5:0.5")""")
+        assertCallInfoPresent("""seq("0 1").bpadsr(0.01, 0.3, 0.5, 0.5)""")
     }
 
     "tremolo passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").tremolo("0.5:4")""")
+        assertCallInfoPresent("""seq("0 1").tremolo(0.5, 4)""")
     }
 
     "nfadsr passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").nfadsr("0.01:0.3:0.5:0.5")""")
+        assertCallInfoPresent("""seq("0 1").nfadsr(0.01, 0.3, 0.5, 0.5)""")
     }
 
     "euclid passes CallInfo from KlangScript" {
@@ -311,7 +311,7 @@ class CallInfoTest : StringSpec({
     }
 
     "sndPluck passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndPluck("0.99:0.5")""")
+        assertCallInfoPresent("""note("c3").sndPluck(0.99, 0.5)""")
     }
 
     "sndSuperPluck passes CallInfo from KlangScript" {
@@ -489,15 +489,15 @@ class CallInfoTest : StringSpec({
     }
 
     "lpadsr passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").lpadsr("0.1:0.3:0.5:0.2")""")
+        assertCallInfoPresent("""note("c4").lpadsr(0.1, 0.3, 0.5, 0.2)""")
     }
 
     "hpadsr passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").hpadsr("0.1:0.3:0.5:0.2")""")
+        assertCallInfoPresent("""note("c4").hpadsr(0.1, 0.3, 0.5, 0.2)""")
     }
 
     "bpadsr passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").bpadsr("0.1:0.3:0.5:0.2")""")
+        assertCallInfoPresent("""note("c4").bpadsr(0.1, 0.3, 0.5, 0.2)""")
     }
 
     "note passes CallInfo from KlangScript" {

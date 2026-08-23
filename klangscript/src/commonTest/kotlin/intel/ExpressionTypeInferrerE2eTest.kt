@@ -294,7 +294,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         // Multiline code mimicking real editor content
         val code = """
             import * from "sprudel"
-            note("c3").adsr("0.01:0.2:0.5:0.5")
+            note("c3").adsr(0.01, 0.2, 0.5, 0.5)
         """.trimIndent()
         val program = KlangScriptParser.parse(code)
         val astIndex = AstIndex.build(program, code)
@@ -369,7 +369,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
                 )
             )
         }
-        val code = """note("c3").adsr("0.01:0.2:0.5:0.5")"""
+        val code = """note("c3").adsr(0.01, 0.2, 0.5, 0.5)"""
         val program = KlangScriptParser.parse(code)
         val astIndex = AstIndex.build(program, code)
         val inferrer = ExpressionTypeInferrer(reg)

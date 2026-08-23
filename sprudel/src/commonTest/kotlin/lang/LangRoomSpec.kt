@@ -94,10 +94,10 @@ class LangRoomSpec : StringSpec({
         events[0].data.room shouldBe 0.5
     }
 
-    // ── Colon-separated reverb params via room() ──────────────────────
+    // ── Per-param reverb params via room() ───────────────────────────
 
-    "room() parses colon-separated string setting all reverb params" {
-        val p = note("c").room("0.5:2:0.3:4000:2000")
+    "room() per-param sets all reverb params" {
+        val p = note("c").room(0.5, 2, 0.3, 4000, 2000)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -110,8 +110,8 @@ class LangRoomSpec : StringSpec({
         }
     }
 
-    "room() parses partial colon-separated string (only room and size)" {
-        val p = note("c").room("0.8:4")
+    "room() with leading params sets only room and size" {
+        val p = note("c").room(0.8, 4)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -132,8 +132,8 @@ class LangRoomSpec : StringSpec({
         events[0].data.room shouldBe (0.6 plusOrMinus EPSILON)
     }
 
-    "room() with sequenced colon-separated values" {
-        val p = note("c c").room("0.3:1 0.8:4")
+    "room() with per-param sequenced values" {
+        val p = note("c c").room("0.3 0.8", "1 4")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -159,5 +159,16 @@ class LangRoomSpec : StringSpec({
         events[2].data.room shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.75: sine(0.75) = 0.0
         events[3].data.room shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "room(tail-only) does not touch the head field" {
+        // numeric receiver: without the tail-only guard the head apply would REINTERPRET
+        // the values ("3"/"4") into the room field
+        val p = SprudelPattern.compile("""seq("3 4").room(size = 8)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.room shouldBe null
+        events[0].data.roomSize shouldBe 8.0
     }
 })

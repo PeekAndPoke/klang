@@ -464,6 +464,11 @@ for the doomed. C6a removes the doomed; C0 then reshapes what remains.
   same field values as before.
 - This is the largest chunk by blast radius and it goes FIRST, because every later chunk writes
   functions to this shape. Doing it later would mean writing C5/C6 twice.
+- **Perf note (C0.1 review):** per-param chaining builds one control layer per provided param
+  (`adsr` went 1 -> 4 outer joins at ~111 sites). Pattern-build/query cost only, not the audio
+  thread — but it is exactly the shape the designed-not-built constant-control fast-path
+  (docs/tasks/constant-control-fast-path.md) collapses; that item should land before the
+  Fairphone perf push.
 - **Execution order (2026-08-23):** C0.1 lang layer per-param + full call-site migration
   (everything except compressor); C0.2 compressor wire sub-step (VoiceData fields, audio_be
   parsing, codec/schema, worklet, sprudel surface, songs); C0.3 the two tool tiers (MultiParam

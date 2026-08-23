@@ -150,10 +150,10 @@ class LangSndSpec : StringSpec({
 
     "sndPulze() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndPulze()" to note("c3").sndPulze("0.25"),
-            "string.sndPulze()" to "c3".sndPulze("0.25"),
-            "script pattern.sndPulze()" to SprudelPattern.compile("""note("c3").sndPulze("0.25")"""),
-            "script string.sndPulze()" to SprudelPattern.compile(""""c3".sndPulze("0.25")"""),
+            "pattern.sndPulze()" to note("c3").sndPulze(0.25),
+            "string.sndPulze()" to "c3".sndPulze(0.25),
+            "script pattern.sndPulze()" to SprudelPattern.compile("""note("c3").sndPulze(0.25)"""),
+            "script string.sndPulze()" to SprudelPattern.compile(""""c3".sndPulze(0.25)"""),
             "apply(sndPulze())" to note("c3").apply(sndPulze("0.25")),
             "script apply(sndPulze())" to SprudelPattern.compile("""note("c3").apply(sndPulze("0.25"))"""),
         ) { _, events ->
@@ -174,10 +174,10 @@ class LangSndSpec : StringSpec({
 
     "sndDust() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndDust()" to note("c3").sndDust("0.3"),
-            "string.sndDust()" to "c3".sndDust("0.3"),
-            "script pattern.sndDust()" to SprudelPattern.compile("""note("c3").sndDust("0.3")"""),
-            "script string.sndDust()" to SprudelPattern.compile(""""c3".sndDust("0.3")"""),
+            "pattern.sndDust()" to note("c3").sndDust(0.3),
+            "string.sndDust()" to "c3".sndDust(0.3),
+            "script pattern.sndDust()" to SprudelPattern.compile("""note("c3").sndDust(0.3)"""),
+            "script string.sndDust()" to SprudelPattern.compile(""""c3".sndDust(0.3)"""),
             "apply(sndDust())" to note("c3").apply(sndDust("0.3")),
             "script apply(sndDust())" to SprudelPattern.compile("""note("c3").apply(sndDust("0.3"))"""),
         ) { _, events ->
@@ -196,8 +196,8 @@ class LangSndSpec : StringSpec({
         events[0].data.soundName shouldBe "dust"
     }
 
-    "sndDust(\"density:tail\") compound string sets both oscParams" {
-        val events = note("c3").sndDust("0.3:4").queryArc(0.0, 1.0)
+    "sndDust(density, tail) sets both oscParams" {
+        val events = note("c3").sndDust(0.3, 4).queryArc(0.0, 1.0)
         events.shouldNotBeEmpty()
         assertSoftly {
             events[0].data.oscParams?.get("density") shouldBe 0.3
@@ -215,7 +215,7 @@ class LangSndSpec : StringSpec({
     }
 
     "sndBrown(\"depth\") compound string sets the white-leak oscParam" {
-        val events = note("c3").sndBrown("0.5").queryArc(0.0, 1.0)
+        val events = note("c3").sndBrown(0.5).queryArc(0.0, 1.0)
         events.shouldNotBeEmpty()
         assertSoftly {
             events[0].data.soundName shouldBe "brownnoise"
@@ -225,10 +225,10 @@ class LangSndSpec : StringSpec({
 
     "sndCrackle() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndCrackle()" to note("c3").sndCrackle("0.5"),
-            "string.sndCrackle()" to "c3".sndCrackle("0.5"),
-            "script pattern.sndCrackle()" to SprudelPattern.compile("""note("c3").sndCrackle("0.5")"""),
-            "script string.sndCrackle()" to SprudelPattern.compile(""""c3".sndCrackle("0.5")"""),
+            "pattern.sndCrackle()" to note("c3").sndCrackle(0.5),
+            "string.sndCrackle()" to "c3".sndCrackle(0.5),
+            "script pattern.sndCrackle()" to SprudelPattern.compile("""note("c3").sndCrackle(0.5)"""),
+            "script string.sndCrackle()" to SprudelPattern.compile(""""c3".sndCrackle(0.5)"""),
             "apply(sndCrackle())" to note("c3").apply(sndCrackle("0.5")),
             "script apply(sndCrackle())" to SprudelPattern.compile("""note("c3").apply(sndCrackle("0.5"))"""),
         ) { _, events ->
@@ -251,12 +251,12 @@ class LangSndSpec : StringSpec({
 
     "sndSuperSaw() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndSuperSaw()" to note("c3").sndSuperSaw("7:0.3"),
-            "string.sndSuperSaw()" to "c3".sndSuperSaw("7:0.3"),
-            "script pattern.sndSuperSaw()" to SprudelPattern.compile("""note("c3").sndSuperSaw("7:0.3")"""),
-            "script string.sndSuperSaw()" to SprudelPattern.compile(""""c3".sndSuperSaw("7:0.3")"""),
-            "apply(sndSuperSaw())" to note("c3").apply(sndSuperSaw("7:0.3")),
-            "script apply(sndSuperSaw())" to SprudelPattern.compile("""note("c3").apply(sndSuperSaw("7:0.3"))"""),
+            "pattern.sndSuperSaw()" to note("c3").sndSuperSaw(7, 0.3),
+            "string.sndSuperSaw()" to "c3".sndSuperSaw(7, 0.3),
+            "script pattern.sndSuperSaw()" to SprudelPattern.compile("""note("c3").sndSuperSaw(7, 0.3)"""),
+            "script string.sndSuperSaw()" to SprudelPattern.compile(""""c3".sndSuperSaw(7, 0.3)"""),
+            "apply(sndSuperSaw())" to note("c3").apply(sndSuperSaw(7, 0.3)),
+            "script apply(sndSuperSaw())" to SprudelPattern.compile("""note("c3").apply(sndSuperSaw(7, 0.3))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -276,12 +276,12 @@ class LangSndSpec : StringSpec({
 
     "sndSuperSine() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndSuperSine()" to note("c3").sndSuperSine("5:0.2"),
-            "string.sndSuperSine()" to "c3".sndSuperSine("5:0.2"),
-            "script pattern.sndSuperSine()" to SprudelPattern.compile("""note("c3").sndSuperSine("5:0.2")"""),
-            "script string.sndSuperSine()" to SprudelPattern.compile(""""c3".sndSuperSine("5:0.2")"""),
-            "apply(sndSuperSine())" to note("c3").apply(sndSuperSine("5:0.2")),
-            "script apply(sndSuperSine())" to SprudelPattern.compile("""note("c3").apply(sndSuperSine("5:0.2"))"""),
+            "pattern.sndSuperSine()" to note("c3").sndSuperSine(5, 0.2),
+            "string.sndSuperSine()" to "c3".sndSuperSine(5, 0.2),
+            "script pattern.sndSuperSine()" to SprudelPattern.compile("""note("c3").sndSuperSine(5, 0.2)"""),
+            "script string.sndSuperSine()" to SprudelPattern.compile(""""c3".sndSuperSine(5, 0.2)"""),
+            "apply(sndSuperSine())" to note("c3").apply(sndSuperSine(5, 0.2)),
+            "script apply(sndSuperSine())" to SprudelPattern.compile("""note("c3").apply(sndSuperSine(5, 0.2))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -301,12 +301,12 @@ class LangSndSpec : StringSpec({
 
     "sndSuperSquare() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndSuperSquare()" to note("c3").sndSuperSquare("7:0.3"),
-            "string.sndSuperSquare()" to "c3".sndSuperSquare("7:0.3"),
-            "script pattern.sndSuperSquare()" to SprudelPattern.compile("""note("c3").sndSuperSquare("7:0.3")"""),
-            "script string.sndSuperSquare()" to SprudelPattern.compile(""""c3".sndSuperSquare("7:0.3")"""),
-            "apply(sndSuperSquare())" to note("c3").apply(sndSuperSquare("7:0.3")),
-            "script apply(sndSuperSquare())" to SprudelPattern.compile("""note("c3").apply(sndSuperSquare("7:0.3"))"""),
+            "pattern.sndSuperSquare()" to note("c3").sndSuperSquare(7, 0.3),
+            "string.sndSuperSquare()" to "c3".sndSuperSquare(7, 0.3),
+            "script pattern.sndSuperSquare()" to SprudelPattern.compile("""note("c3").sndSuperSquare(7, 0.3)"""),
+            "script string.sndSuperSquare()" to SprudelPattern.compile(""""c3".sndSuperSquare(7, 0.3)"""),
+            "apply(sndSuperSquare())" to note("c3").apply(sndSuperSquare(7, 0.3)),
+            "script apply(sndSuperSquare())" to SprudelPattern.compile("""note("c3").apply(sndSuperSquare(7, 0.3))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -326,12 +326,12 @@ class LangSndSpec : StringSpec({
 
     "sndSuperTri() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndSuperTri()" to note("c3").sndSuperTri("5:0.2"),
-            "string.sndSuperTri()" to "c3".sndSuperTri("5:0.2"),
-            "script pattern.sndSuperTri()" to SprudelPattern.compile("""note("c3").sndSuperTri("5:0.2")"""),
-            "script string.sndSuperTri()" to SprudelPattern.compile(""""c3".sndSuperTri("5:0.2")"""),
-            "apply(sndSuperTri())" to note("c3").apply(sndSuperTri("5:0.2")),
-            "script apply(sndSuperTri())" to SprudelPattern.compile("""note("c3").apply(sndSuperTri("5:0.2"))"""),
+            "pattern.sndSuperTri()" to note("c3").sndSuperTri(5, 0.2),
+            "string.sndSuperTri()" to "c3".sndSuperTri(5, 0.2),
+            "script pattern.sndSuperTri()" to SprudelPattern.compile("""note("c3").sndSuperTri(5, 0.2)"""),
+            "script string.sndSuperTri()" to SprudelPattern.compile(""""c3".sndSuperTri(5, 0.2)"""),
+            "apply(sndSuperTri())" to note("c3").apply(sndSuperTri(5, 0.2)),
+            "script apply(sndSuperTri())" to SprudelPattern.compile("""note("c3").apply(sndSuperTri(5, 0.2))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -351,12 +351,12 @@ class LangSndSpec : StringSpec({
 
     "sndSuperRamp() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndSuperRamp()" to note("c3").sndSuperRamp("7:0.3"),
-            "string.sndSuperRamp()" to "c3".sndSuperRamp("7:0.3"),
-            "script pattern.sndSuperRamp()" to SprudelPattern.compile("""note("c3").sndSuperRamp("7:0.3")"""),
-            "script string.sndSuperRamp()" to SprudelPattern.compile(""""c3".sndSuperRamp("7:0.3")"""),
-            "apply(sndSuperRamp())" to note("c3").apply(sndSuperRamp("7:0.3")),
-            "script apply(sndSuperRamp())" to SprudelPattern.compile("""note("c3").apply(sndSuperRamp("7:0.3"))"""),
+            "pattern.sndSuperRamp()" to note("c3").sndSuperRamp(7, 0.3),
+            "string.sndSuperRamp()" to "c3".sndSuperRamp(7, 0.3),
+            "script pattern.sndSuperRamp()" to SprudelPattern.compile("""note("c3").sndSuperRamp(7, 0.3)"""),
+            "script string.sndSuperRamp()" to SprudelPattern.compile(""""c3".sndSuperRamp(7, 0.3)"""),
+            "apply(sndSuperRamp())" to note("c3").apply(sndSuperRamp(7, 0.3)),
+            "script apply(sndSuperRamp())" to SprudelPattern.compile("""note("c3").apply(sndSuperRamp(7, 0.3))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {

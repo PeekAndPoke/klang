@@ -22,10 +22,11 @@ Known asymmetries already spotted, as a starting list:
 - **`room` (orbit) vs `wet` (master)** — same thing, two words. The master reuses `wet` across reverb and delay; sprudel
   inherits `room` from Strudel.
 - **`roomsize` is ~0..10 but `roomfade` is 0..1**, and `roomfade` silently makes `roomsize` inert. Inherited from the
-  `room("a:b:c")` packing; documented rather than fixed, because redefining it would retune shipped songs.
+  old `room("a:b:c")` packing (removed in C0, semantics kept); documented rather than fixed, because redefining it
+  would retune shipped songs.
 - **`damp` is master-only**; sprudel reaches damping through `roomlp` (Hz) instead.
-- **`delaycap`/`dcap` has no slot** in the `delay("wet:time:feedback")` compound string, while the reverb's compound
-  documents all five slots.
+- **`delaycap`/`dcap` is not a `delay()` parameter** (the per-param C0 form covers amount/time/feedback only), while
+  the reverb family exposes all five of its knobs.
 - **`roomDim` / `iResponse`** are stored but never read on **both** paths (`Reverb.kt` TODO) — dead vocabulary that
   still appears in the DSL and docs.
 

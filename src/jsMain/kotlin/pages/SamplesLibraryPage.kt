@@ -143,7 +143,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
         val pattern = s(sound)
             .n(effectiveIndex)
             .bank(bank.takeIf { it.isNotEmpty() })
-            .adsr("0.01:1.0:1.8:1.0")
+            .adsr(0.01, 1.0, 1.8, 1.0)
             .slow(4)  // give enough time to ring out
 
         // Format as code string for display
