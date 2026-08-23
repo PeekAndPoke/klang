@@ -20,9 +20,11 @@ import kotlin.math.pow
  * deliberate — fixed resonances emphasize different harmonics for different notes, breaking the
  * spectral "lockstep" that makes a pure source sound plastic.
  *
- * **Per-band gain semantics:** the SVF bandpass tap (`v1`) peaks at `Q` at fc; the per-band gain
- * divides that out (`10^(db/20) / Q`) so `mode.db` is the *actual* peak emphasis in dB,
- * independent of the mode's sharpness (`Q`). Real bodies emphasize modes by ~3–10 dB, not 20+.
+ * **Per-band gain semantics:** the SVF bandpass is UNITY-peak at fc (C2 of the filter
+ * unification), so the per-band gain is the plain `10^(db/20)` and `mode.db` is the *actual*
+ * peak emphasis in dB, independent of the mode's sharpness (`Q`). (Pre-C2 this class divided
+ * the old Q peak out explicitly — same audible result.) Real bodies emphasize modes by
+ * ~3–10 dB, not 20+.
  *
  * **NaN safety:** `mode.freq`/`mode.q` are guarded inside the SVF (`bilinearK` /
  * `computeSvfCoeffs`); `mode.db` is guarded here (non-finite → 0 dB).
@@ -39,14 +41,13 @@ class BodyFilter(
     private data class BandFilter(val filter: LowPassHighPassFilters.SvfBPF, val gain: Double)
 
     private val filters = bands.map { mode ->
-        // dB → linear, with NaN/Inf guard. Divide by Q to cancel the constant-skirt BPF's
-        // intrinsic peak gain (= Q), so `db` is the actual peak emphasis in dB, independent of
-        // sharpness. Match the SVF's own Q clamp so the cancellation is exact.
+        // dB → linear, with NaN/Inf guard.
         val safeDb = if (mode.db.isFinite()) mode.db else 0.0
-        val safeQ = if (mode.q.isFinite()) mode.q.coerceIn(0.1, 200.0) else 0.7071067811865475
         BandFilter(
             filter = LowPassHighPassFilters.SvfBPF(mode.freq, mode.q, sampleRate),
-            gain = 10.0.pow(safeDb / 20.0) / safeQ,
+            // C2 (filter unification): the SVF bandpass is unity-peak now — the old explicit
+            // 1/Q normalisation would double-normalise, so the gain is the plain dB factor.
+            gain = 10.0.pow(safeDb / 20.0),
         )
     }
 

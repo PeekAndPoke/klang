@@ -335,6 +335,9 @@ class EqCore(
                 }
 
                 BANDPASS -> {
+                    // C2 (filter unification): the raw v1 tap peaks at Q; scaling by the stored
+                    // k (= 1/clampedQ) normalises the peak at fc to unity, so q is a pure WIDTH
+                    // control. A clamped q normalises by the CLAMPED value automatically.
                     for (i in offset until end) {
                         val v0 = buffer[i]
                         val v3 = v0 - s2
@@ -342,7 +345,7 @@ class EqCore(
                         val v2 = s2 + ca2 * s1 + ca3 * v3
                         s1 = (2.0 * v1 - s1).flushDenormal()
                         s2 = (2.0 * v2 - s2).flushDenormal()
-                        buffer[i] = v1
+                        buffer[i] = ck * v1
                     }
                 }
 
@@ -374,7 +377,8 @@ class EqCore(
                         val v2 = s2 + ca2 * s1 + ca3 * v3
                         s1 = (2.0 * v1 - s1).flushDenormal()
                         s2 = (2.0 * v2 - s2).flushDenormal()
-                        buffer[i] += safeOut(v1 * cg)
+                        // C2: ck * v1 = unity-peak band (see BANDPASS); gain rides on top.
+                        buffer[i] += safeOut(ck * v1 * cg)
                     }
                 }
 

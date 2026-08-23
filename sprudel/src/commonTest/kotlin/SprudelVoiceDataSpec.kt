@@ -207,7 +207,7 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.filters.size shouldBe 1
         val lpf = voiceData.filters[0] as FilterDef.LowPass
         lpf.cutoffHz shouldBe 1000.0
-        lpf.q shouldBe 1.0 // defaults to 1.0
+        lpf.q shouldBe 0.707 // C1 (filter unification): ONE default q on every surface
     }
 
     "toVoiceData() maps all basic fields correctly" {

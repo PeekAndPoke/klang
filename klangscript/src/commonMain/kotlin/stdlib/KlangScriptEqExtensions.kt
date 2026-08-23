@@ -70,12 +70,11 @@ object KlangScriptEqExtensions {
      * Taps mix with the original sound rather than stacking on each other, so several taps stay
      * predictable where several [band] calls would compound.
      *
-     * ⚠ On a tap, [q] sets the LEVEL as well as the width: the boost at [freq] is `1 + gain·q`,
-     * so raising [q] narrows the band AND lifts it at the same time (at gain 1.0: q 0.5 is
-     * +3.5 dB over ~3.0 octaves, q 4.0 is +14.0 dB over ~0.8). To tighten a tap without it
-     * getting louder, lower [gain] as you raise [q]. On [band] the gain is [db] alone and the
-     * width does not move with it. This is also why the default `tap(freq)` is NOT silent:
-     * `1 + 1·1 = 2`, a lift of about 6 dB, where the default `band(freq)` is transparent.
+     * Since C2 of the filter unification the engine bandpass is UNITY-peak at [freq], so [q]
+     * is a pure WIDTH control: the boost at [freq] is `1 + gain` for ANY q. Tighten a tap by
+     * raising [q]; the level stays put, and [gain] alone sets how loud the band comes back.
+     * The default `tap(freq)` is NOT silent: `1 + 1 = 2`, a lift of about 6 dB, where the
+     * default `band(freq)` is transparent.
      *
      * ⚠ Give [gain] a number or an osc-param, not a moving signal. A moving [gain] is re-read
      * only once per block, so a swept tap gain steps instead of gliding; for that, use the
@@ -85,7 +84,7 @@ object KlangScriptEqExtensions {
     fun tap(
         self: IgnitorDsl.Eq,
         freq: IgnitorDslLike,
-        q: IgnitorDslLike = 1.0,
+        q: IgnitorDslLike = 0.707,
         gain: IgnitorDslLike = 1.0,
     ): IgnitorDsl.Eq = self.copy(
         sections = self.sections + IgnitorDsl.EqSection.RawTap(

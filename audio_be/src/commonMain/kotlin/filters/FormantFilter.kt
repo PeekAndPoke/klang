@@ -13,12 +13,15 @@ import kotlin.math.pow
  * Formant filter for vowel synthesis. Parallel bandpass cascade — one [SvfBPF][LowPassHighPassFilters.SvfBPF]
  * per formant band, outputs summed.
  *
- * **Per-band gain semantics (constant-skirt BPF):** the SVF bandpass tap (`v1`) follows
- * the standard SVF convention where peak gain at fc equals `Q`. The user-facing `band.db`
- * parameter is *additional* gain on top of that intrinsic Q peak. So a band configured
- * with `freq = 730, q = 10, db = 0` produces a peak of **+20 dB** (≈ Q) at 730 Hz, not
- * 0 dB. Existing vowel tables in `SprudelVoiceData` are tuned with this convention —
- * F1 typically has `db = 0` and upper formants use negative dB to compensate.
+ * **Per-band gain semantics (legacy Q-peak convention, folded):** since C2 of the filter
+ * unification the underlying [SvfBPF][LowPassHighPassFilters.SvfBPF] is UNITY-peak at fc
+ * (q is a pure width control). The vowel/body tables however were tuned against the old
+ * convention where the peak at fc equalled `Q` and `band.db` was additional gain on top.
+ * To keep every table sounding identical (algebraically exact; sub-ulp in floats),
+ * the constructor folds the legacy peak back in:
+ * `gain = 10^(db/20) * clampedQ`. This is EXACT (the SVF scales by k = 1/clampedQ, and
+ * k * q = 1), so `freq = 730, q = 10, db = 0` still peaks at +20 dB here. Flipping the
+ * tables to the absolute-peak convention (db = peak at fc) is a deferred follow-up.
  *
  * **Q range**: as of 2026-04-29 the SVF accepts `q ∈ [0.1, 200.0]`; vowel tables use
  * Q=60–130 per band, which now produce the intended sharp resonances. Before 2026-04-29
@@ -52,7 +55,11 @@ class FormantFilter(
     private val filters = bands.map { band ->
         // dB → linear, with NaN/Inf guard (matches Round-1+ pattern in `bilinearK`).
         val safeDb = if (band.db.isFinite()) band.db else 0.0
-        val gain = 10.0.pow(safeDb / 20.0) * gainScale
+        // Legacy Q-peak fold (see class KDoc): the SVF is unity-peak since C2, the tables
+        // are tuned to the old Q-peak convention — multiplying by the SAME clamped q the
+        // SVF uses makes the fold exact (k * q = 1).
+        val safeQ = if (band.q.isFinite()) band.q.coerceIn(0.1, 200.0) else 0.7071067811865475
+        val gain = 10.0.pow(safeDb / 20.0) * safeQ * gainScale
         BandFilter(
             filter = LowPassHighPassFilters.SvfBPF(band.freq, band.q, sampleRate),
             gain = gain

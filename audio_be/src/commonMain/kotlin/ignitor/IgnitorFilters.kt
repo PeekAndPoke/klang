@@ -78,8 +78,8 @@ data class FilterEnvDef(
  *   Typical: 200–8000 for LP, 100–2000 for HP, 300–5000 for BP/Notch.
  * @param q Resonance / Q factor. 0.707 = flat (Butterworth), higher = sharper peak.
  *   Clamped to [0.1, 200.0]. Default: 0.707. Typical range: 0.5–10.0.
- *   Note: BPF tap uses constant-skirt convention — peak gain at fc equals Q.
- *   `bandpass(q=10)` ⇒ ~+20 dB at the centre.
+ * BPF tap is unity-peak at fc since C2 (`k·v1`) — q is a pure width control;
+ * `bandpass(q=10)` gets narrower, not louder.
  * @param env Optional ADSR envelope to modulate cutoff over time. Default: none.
  */
 fun Ignitor.svf(
@@ -234,6 +234,10 @@ private class SvfIgnitor(
                 }
 
                 SvfMode.BANDPASS -> {
+                    // C2 (filter unification): k * v1 = unity peak at fc (k = 1/clampedQ) —
+                    // q is a pure width control, matching SvfBPF and the fused EqCore
+                    // BANDPASS arm bit-for-bit. Both env-path coefficient sets share one
+                    // per-block q, so kStep is structurally 0 — no mid-ramp mismatch.
                     for (i in ctx.offset until end) {
                         val v0 = input[i]
                         val v3 = v0 - ic2eq
@@ -241,7 +245,7 @@ private class SvfIgnitor(
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
                         ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
                         ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                        buffer[i] = v1
+                        buffer[i] = k * v1
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                     }
                 }
@@ -340,12 +344,12 @@ fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Fi
  * Bandpass filter — keeps only a frequency band, removes everything above and below.
  *
  * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
- * @param q Width of the pass band. 1.0 = moderate, higher = narrower band. Default: 1.0.
+ * @param q Width of the pass band (peak at fc is unity since C2). Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
 fun Ignitor.bandpass(
     cutoffHz: Ignitor,
-    q: Ignitor = ParamIgnitor("q", 1.0),
+    q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
 ): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
@@ -354,23 +358,23 @@ fun Ignitor.bandpass(
  * Bandpass filter (convenience overload with fixed values).
  *
  * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
- * @param q Width of the pass band. Default: 1.0. Clamped to [0.1, 200.0].
+ * @param q Width of the pass band (peak at fc is unity since C2). Default: 0.707. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  * @param analog Reserved — currently a no-op (BP saturation not implemented).
  */
-fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
+fun Ignitor.bandpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
     svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
 
 /**
  * Notch (band-reject) filter — removes one frequency band, keeps everything else.
  *
  * @param cutoffHz Center frequency of the notch in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
- * @param q Width of the notch. 1.0 = moderate, higher = narrower cut. Default: 1.0.
+ * @param q Width of the notch. Higher = narrower cut. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
 fun Ignitor.notch(
     cutoffHz: Ignitor,
-    q: Ignitor = ParamIgnitor("q", 1.0),
+    q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
 ): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
@@ -379,11 +383,11 @@ fun Ignitor.notch(
  * Notch (band-reject) filter (convenience overload with fixed values).
  *
  * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
- * @param q Width of the notch. Default: 1.0. Clamped to [0.1, 200.0].
+ * @param q Width of the notch. Higher = narrower cut. Default: 0.707. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  * @param analog Reserved — currently a no-op.
  */
-fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
+fun Ignitor.notch(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
     svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -92,8 +92,8 @@ import kotlin.math.tan
 // - `BaseSvf.q` stays construction-time immutable; `Ignitor.svf` supports audio-rate
 //   `q: Ignitor`. Different surfaces, intentional. The strip pipeline only modulates
 //   cutoff, never Q.
-// - BPF tap is the constant-skirt form (`v1` direct), peak gain = Q at fc. Standard
-//   SVF convention. `bandpass(q=10)` ⇒ +20 dB at fc — documented in `IgnitorFilters.kt`.
+// - BPF tap is UNITY-peak since C2 of the filter unification (`k·v1`): q is a pure
+//   width control. `bandpass(q=10)` gets narrower, not louder — see `IgnitorFilters.kt`.
 //
 // **Round 4 (2026-04-29) — Q clamp widened from [0.1, 50] to [0.1, 200]:**
 //
@@ -338,14 +338,14 @@ object LowPassHighPassFilters {
         q: Double?,
         sampleRate: Double,
         cutoffOffsetMul: Double = 1.0,
-    ): AudioFilter = SvfBPF(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
+    ): AudioFilter = SvfBPF(cutoffHz, q ?: 0.707, sampleRate, cutoffOffsetMul)
 
     fun createNotch(
         cutoffHz: Double,
         q: Double?,
         sampleRate: Double,
         cutoffOffsetMul: Double = 1.0,
-    ): AudioFilter = SvfNotch(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
+    ): AudioFilter = SvfNotch(cutoffHz, q ?: 0.707, sampleRate, cutoffOffsetMul)
 
     fun createFormant(
         bands: List<FilterDef.Formant.Band>,
@@ -803,7 +803,10 @@ object LowPassHighPassFilters {
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
                 ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
                 ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                buffer[i] = v1
+                // C2 (filter unification): k * v1 normalises the peak at fc to unity, so q is
+                // a pure width control. k belongs to the ramped coefficient set; q is fixed per
+                // instance, so kInc is structurally 0 — no mid-ramp k/a mismatch can occur.
+                buffer[i] = k * v1
             }
             transitionSamples = trans
         }

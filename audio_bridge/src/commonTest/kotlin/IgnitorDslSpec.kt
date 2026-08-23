@@ -101,7 +101,8 @@ class IgnitorDslSpec : StringSpec({
         val dsl = IgnitorDsl.Sawtooth().eq().tap(850.0)
         val tap = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
         (tap.freqHz as IgnitorDsl.Constant).value shouldBe 850.0
-        (tap.q as IgnitorDsl.Constant).value shouldBe 1.0
+        // C1 (filter unification): ONE default q = 0.707 on every surface, tap included.
+        (tap.q as IgnitorDsl.Constant).value shouldBe 0.707
         (tap.gain as IgnitorDsl.Constant).value shouldBe 1.0
     }
 

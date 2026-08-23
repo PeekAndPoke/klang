@@ -187,7 +187,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
 
     /**
      * Sum of the material's parallel bandpass modes — the "fingerprint" the ear reads. Each mode is
-     * a constant-skirt BPF (peak 1 at its centre) scaled by its linear `db` gain; the sum is
+     * a unity-peak BPF (peak 1 at its centre, matching the post-C2 BodyFilter) scaled by its linear `db` gain; the sum is
      * normalized to its own max so every material fills the plot. Log-frequency axis (20 Hz–20 kHz).
      */
     private fun FlowContent.renderResponseSvg() {

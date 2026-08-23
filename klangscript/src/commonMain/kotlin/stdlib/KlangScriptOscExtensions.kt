@@ -96,7 +96,7 @@ object KlangScriptOscExtensions {
     fun bandpass(
         self: IgnitorDsl,
         cutoffHz: IgnitorDslLike,
-        q: IgnitorDslLike = 1.0,
+        q: IgnitorDslLike = 0.707,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Bandpass(
         inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
@@ -149,7 +149,7 @@ object KlangScriptOscExtensions {
     fun notch(
         self: IgnitorDsl,
         cutoffHz: IgnitorDslLike,
-        q: IgnitorDslLike = 1.0,
+        q: IgnitorDslLike = 0.707,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Notch(
         inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),

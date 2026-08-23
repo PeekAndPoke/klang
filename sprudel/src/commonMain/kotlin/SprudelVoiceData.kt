@@ -875,7 +875,7 @@ data class SprudelVoiceData(
                 add(
                     FilterDef.LowPass(
                         cutoffHz = cutoffValue,
-                        q = resonance ?: 1.0,
+                        q = resonance ?: 0.707,
                         envelope = envelope
                     )
                 )
@@ -898,7 +898,7 @@ data class SprudelVoiceData(
                 add(
                     FilterDef.HighPass(
                         cutoffHz = hcutoffValue,
-                        q = hresonance ?: 1.0,
+                        q = hresonance ?: 0.707,
                         envelope = envelope
                     )
                 )
@@ -921,7 +921,7 @@ data class SprudelVoiceData(
                 add(
                     FilterDef.BandPass(
                         cutoffHz = bandfValue,
-                        q = bandq ?: 1.0,
+                        q = bandq ?: 0.707,
                         envelope = envelope
                     )
                 )
@@ -944,7 +944,7 @@ data class SprudelVoiceData(
                 add(
                     FilterDef.Notch(
                         cutoffHz = notchfValue,
-                        q = nresonance ?: 1.0,
+                        q = nresonance ?: 0.707,
                         envelope = envelope
                     )
                 )

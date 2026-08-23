@@ -1002,7 +1002,7 @@ sealed interface IgnitorDsl {
     data class Bandpass(
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(1000.0),
-        val q: IgnitorDsl = Constant(1.0),
+        val q: IgnitorDsl = Constant(0.707),
         /**
          * Reserved for forward-compat — accepted but currently a no-op (BP saturation
          * not yet implemented; same pattern as the voice-strip `SvfBPF`).
@@ -1020,7 +1020,7 @@ sealed interface IgnitorDsl {
     data class Notch(
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(1000.0),
-        val q: IgnitorDsl = Constant(1.0),
+        val q: IgnitorDsl = Constant(0.707),
         /** Reserved for forward-compat — accepted but currently a no-op (see [Bandpass.analog]). */
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
@@ -1087,7 +1087,7 @@ sealed interface IgnitorDsl {
         @WireName("eqBandpass")
         data class Bandpass(
             val freqHz: IgnitorDsl = Constant(1000.0),
-            val q: IgnitorDsl = Constant(1.0),
+            val q: IgnitorDsl = Constant(0.707),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
                 freqHz.collectParams(out); q.collectParams(out)
@@ -1098,7 +1098,7 @@ sealed interface IgnitorDsl {
         @WireName("eqNotch")
         data class Notch(
             val freqHz: IgnitorDsl = Constant(1000.0),
-            val q: IgnitorDsl = Constant(1.0),
+            val q: IgnitorDsl = Constant(0.707),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
                 freqHz.collectParams(out); q.collectParams(out)
@@ -1111,17 +1111,17 @@ sealed interface IgnitorDsl {
          * COEFFICIENT-bearing (an LFO on it zippers like an LFO on cutoff, per-block snap).
          *
          * The [q] default is 0.707 and MUST stay equal to the `band()` default on both DSL
-         * doors (parameter-parity: one bell, one omitted-field sound). It is deliberately
-         * wider than the bandpass/notch default of 1.0 — there 1.0 is a resonance setting,
-         * here it is a bell width, and musical bells sit wide (the tap-to-bell conversions
-         * of the voicings in the real song land at 0.33 to 0.70).
+         * doors (parameter-parity: one bell, one omitted-field sound). Since C1 every
+         * filter shares the 0.707 default — here it is a bell width, and musical bells sit
+         * wide (the tap-to-bell conversions of the voicings in the real song land at
+         * 0.33 to 0.70).
          *
-         * ⚠ That conversion (`A² = 1 + g·Q`, `q_bell = Q/A`) is exact for ONE tap in
+         * ⚠ That conversion (`A² = 1 + g` since the C2 unity-peak taps, `q_bell = Q/A`) is exact for ONE tap in
          * isolation ONLY. N parallel taps are NOT N serial bells: bells multiply, taps sum,
          * and the cross term is what it leaves behind. Migrating a parallel boost
          * bank to bells is a NEW mix, not a conversion — use [RawTap]. See [IgnitorDsl.Eq].
          * (Worked example: two boosts of gain 1.7 @ 850 Hz/Q 0.707 and 5.0 @ 2500 Hz/Q 0.7 —
-         * the guitar's default voicing — overshoot by +4.5 dB at 1200 Hz when run as serial
+         * the guitar's default voicing — overshot by +4.5 dB at 1200 Hz (measured pre-C2; re-measure under unity-peak taps) when run as serial
          * bells instead of parallel taps. Wider/hotter voicings overshoot more; the term
          * scales with `g₁·g₂`, so re-measure per patch rather than reusing this figure.)
          */
@@ -1148,7 +1148,7 @@ sealed interface IgnitorDsl {
         @WireName("eqRawTap")
         data class RawTap(
             val freqHz: IgnitorDsl = Constant(1000.0),
-            val q: IgnitorDsl = Constant(1.0),
+            val q: IgnitorDsl = Constant(0.707),
             val gain: IgnitorDsl = Constant(1.0),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
@@ -1187,8 +1187,8 @@ sealed interface IgnitorDsl {
      * (`(1 + m1₁H₁)(1 + m1₂H₂)`), while N taps SUM (`1 + g₁H₁ + g₂H₂`). Converting a
      * parallel tap bank into serial bells leaves the cross term `g₁g₂H₁H₂` behind. On Der
      * Schmetterling's guitar (850 Hz and 2500 Hz boosts) that term measured **+4.5 dB around
-     * 1200 Hz**, and more on wider or hotter voicings. Per-BAND the two forms convert
-     * exactly (`A² = 1 + g·Q`, `q_bell = Q/A`); per-CHAIN they do not. Use [EqSection.RawTap]
+     * 1200 Hz** (pre-C2; the exact figure needs a re-measure under unity-peak taps), and more on wider or hotter voicings. Per-BAND the two forms convert
+     * exactly (`A² = 1 + g` since the C2 unity-peak taps, `q_bell = Q/A`); per-CHAIN they do not. Use [EqSection.RawTap]
      * to reproduce a parallel bank, and [EqSection.Bell] for ordinary cascading EQ bands.
      *
      * ⚠ The consequence when the two are MIXED: a bell earlier in the list cannot shape a
@@ -1668,27 +1668,26 @@ fun IgnitorDsl.Eq.band(freq: Double, q: Double = 0.707, db: Double = 0.0): Ignit
  * changes the sound. For a smoothly swept parallel boost, keep the chained form.
  *
  * Unlike [band], which cascades, taps SUM with the dry signal, so overlapping taps do not
- * multiply each other. [q] is the plain bandpass Q and [gain] is a linear multiplier, NOT
- * decibels, so the values from a hand-built tap chain transfer UNCHANGED. (Rewriting the same
- * tap as a [band] does not: a tap's audible bump is wider than the bandpass inside it, so the
- * bell needs `db = 20·log10(1 + gain·q)` and a WIDER `q / sqrt(1 + gain·q)`.)
+ * multiply each other. [q] is the bandpass width and [gain] is a linear multiplier, NOT
+ * decibels. (Rewriting the same tap as a [band]: the bell needs `db = 20·log10(1 + gain)`
+ * and `q / sqrt(1 + gain)` — exact for one tap in isolation.)
  *
- * ⚠ [q] is LEVEL-BEARING here, unlike on [band]: the engine bandpass is constant-skirt (peak
- * gain = its own Q), so a tap's peak lift is `1 + gain·q`. Raising [q] therefore NARROWS the
- * band and LIFTS it at once (gain 1.0: q 0.5 → +3.5 dB over ~3.0 oct, q 4.0 → +14.0 dB over
- * ~0.8 oct); to tighten a tap at constant level, lower [gain] as you raise [q]. [band]'s peak
- * is `A²` for any [q]. The defaults (q 1.0, gain 1.0) give `1 + 1·1 = 2` — a +6 dB lift, where
- * a default [band] is transparent. Same names and defaults as the KlangScript stdlib `tap()` (dual-surface rule).
+ * Since C2 of the filter unification the engine bandpass is UNITY-peak at fc, so [q] is a
+ * pure WIDTH control here too: a tap's peak lift is `1 + gain` for ANY q (the old
+ * constant-skirt engine made q level-bearing; that coupling is gone). To tighten a tap,
+ * just raise [q]; the level stays put. The defaults (q 0.707, gain 1.0) give `1 + 1 = 2` —
+ * a +6 dB lift, where a default [band] is transparent. Same names and defaults as the
+ * KlangScript stdlib `tap()` (dual-surface rule).
  * See [IgnitorDsl.Eq] for the topology diagram.
  */
 fun IgnitorDsl.Eq.tap(
     freq: IgnitorDsl,
-    q: IgnitorDsl = IgnitorDsl.Constant(1.0),
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     gain: IgnitorDsl = IgnitorDsl.Constant(1.0),
 ): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.RawTap(freqHz = freq, q = q, gain = gain))
 
 /** Scalar convenience overload of [tap]. */
-fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 1.0, gain: Double = 1.0): IgnitorDsl.Eq =
+fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 0.707, gain: Double = 1.0): IgnitorDsl.Eq =
     tap(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(gain))
 
 /** Applies a lightweight one-pole lowpass filter at [cutoffHz]. */
@@ -1697,11 +1696,11 @@ fun IgnitorDsl.onePoleLowpass(cutoffHz: Double) = IgnitorDsl.OnePoleLowpass(
     cutoffHz = IgnitorDsl.Constant(cutoffHz),
 )
 
-fun IgnitorDsl.bandpass(cutoffHz: Double, q: Double = 1.0) = IgnitorDsl.Bandpass(
+fun IgnitorDsl.bandpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Bandpass(
     this, IgnitorDsl.Constant(cutoffHz), IgnitorDsl.Constant(q),
 )
 
-fun IgnitorDsl.notch(cutoffHz: Double, q: Double = 1.0) = IgnitorDsl.Notch(
+fun IgnitorDsl.notch(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Notch(
     this, IgnitorDsl.Constant(cutoffHz), IgnitorDsl.Constant(q),
 )
 

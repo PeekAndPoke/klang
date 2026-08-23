@@ -12,6 +12,12 @@ different guarantee.
 
 ## 1. R2 — parallel tap fusion (biggest win, not implemented)
 
+> **Re-specified NON-PARITY by C2 (filter unification, 2026-08-24):** the bandpass family is
+> unity-peak now (EqCore RAW_TAP, the ignitor svf kernel and SvfBPF all scale the v1 tap by
+> the stored k), so R2's acceptance criterion is NO LONGER bit-parity with the legacy
+> Plus/Times graph — both sides are normalised, and a fused tap must match the NORMALISED
+> unfused chain. The old coupled behaviour is not an oracle for anything any more.
+
 `Plus(base, Times(Bandpass(source, f, q, analog = 0), gain))` where the base chain reads the same
 `source` is exactly a `RawTap` section, and `EqCore` already implements RAW_TAP. Without this
 rule, any song that hand-built a parallel boost bank keeps paying separate `Plus`/`Times`/

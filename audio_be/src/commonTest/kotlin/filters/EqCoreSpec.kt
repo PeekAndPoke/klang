@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.filters
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -23,6 +24,7 @@ import io.peekandpoke.klang.audio_be.ignitor.plus
 import io.peekandpoke.klang.audio_be.ignitor.times
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -135,9 +137,15 @@ class EqCoreSpec : StringSpec({
                     check(s.db != 0.0) { "bell oracle needs db != 0 (0 dB is its own row)" }
                     val c = SvfCoeffs()
                     computeSvfBellCoeffs(s.freq, s.q, s.db, sr.toDouble(), c)
+                    // C2: the public bandpass node is unity-peak now (outputs k'·v1). The bell
+                    // relation needs the RAW tap, so multiply by 1/k' = clamped(q·A). This adds
+                    // one rounding step, which is why bell rows compare with a tolerance below (1e-12 relative:
+                    // the real divergence is 1-2 ulp; anything a mutant produces is macroscopic).
+                    val qA = s.q * 10.0.pow(s.db / 40.0)
+                    val clampedQA = if (qA.isFinite()) qA.coerceIn(0.1, 200.0) else 0.7071067811865475
                     acc + BufferSourceIgnitor(data, startAt)
-                        .bandpass(s.freq, s.q * 10.0.pow(s.db / 40.0)) *
-                        ConstantIgnitor(c.m1)
+                        .bandpass(s.freq, qA) *
+                        ConstantIgnitor(c.m1 * clampedQA)
                 }
                 else -> error("EqCoreSpec oracle has no node for type ${s.type}")
             }
@@ -190,13 +198,22 @@ class EqCoreSpec : StringSpec({
         val c = ctx()
         val bufCore = AudioBuffer(blockFrames)
         val bufOracle = AudioBuffer(blockFrames)
+        // Bell sections cannot be bit-exact against the oracle since C2: the public bandpass
+        // node is unity-peak, so the oracle re-scales by clamped(q·A) — ONE extra rounding
+        // step. Everything else stays raw-bits.
+        val bellTolerance = if (sections.any { it.type == EqCore.BELL }) 1e-12 else null
         repeat(blocks) { blk ->
             data.copyInto(bufCore, 0, blk * blockFrames, (blk + 1) * blockFrames)
             core.process(bufCore, 0, blockFrames)
             oracle.generate(bufOracle, 220.0, c)
             for (i in 0 until blockFrames) {
                 if (!(bufCore[i].isNaN() && bufOracle[i].isNaN())) {
-                    bufCore[i].toRawBits() shouldBe bufOracle[i].toRawBits()
+                    if (bellTolerance != null) {
+                        val scale = max(abs(bufCore[i]), abs(bufOracle[i]))
+                        abs(bufCore[i] - bufOracle[i]) shouldBeLessThanOrEqual scale * bellTolerance
+                    } else {
+                        bufCore[i].toRawBits() shouldBe bufOracle[i].toRawBits()
+                    }
                 }
             }
             c.voiceElapsedFrames += blockFrames
@@ -410,7 +427,7 @@ class EqCoreSpec : StringSpec({
         c.m1 shouldBe 0.0
     }
 
-    "BELL boost and cut are bit-equal to the bell relation x + m1·bp(x, q·A)" {
+    "BELL boost and cut match the bell relation x + m1·bp(x, q·A) (tolerance: C2 rescale)" {
         // Pins the gained arm's loop mechanics bit-exactly (see chainOracle's BELL arm; the
         // response rows below pin m1's VALUE against ground truth). This row ALSO carries
         // the q·A pin alone: peak = A² holds for ANY effective k (the response rows are
@@ -520,9 +537,16 @@ class EqCoreSpec : StringSpec({
             }
             oracle.generate(bufOracle, 220.0, c)
 
+            // Bell entries compare with the C2 tolerance (see assertChainParity's note).
+            val tol = if (single.type == EqCore.BELL) 1e-12 else null
             for (i in 0 until blockFrames) {
                 if (i in offset until offset + length) {
-                    bufCore[i].toRawBits() shouldBe bufOracle[i].toRawBits()
+                    if (tol != null) {
+                        val scale = max(abs(bufCore[i]), abs(bufOracle[i]))
+                        abs(bufCore[i] - bufOracle[i]) shouldBeLessThanOrEqual scale * tol
+                    } else {
+                        bufCore[i].toRawBits() shouldBe bufOracle[i].toRawBits()
+                    }
                 } else {
                     bufCore[i] shouldBe sentinel
                     bufOracle[i] shouldBe sentinel
@@ -552,7 +576,12 @@ class EqCoreSpec : StringSpec({
             c.voiceElapsedFrames += blockFrames
 
             for (i in 0 until blockFrames) {
-                bufCore2[i].toRawBits() shouldBe bufOracle2[i].toRawBits()
+                if (tol != null) {
+                    val scale = max(abs(bufCore2[i]), abs(bufOracle2[i]))
+                    abs(bufCore2[i] - bufOracle2[i]) shouldBeLessThanOrEqual scale * tol
+                } else {
+                    bufCore2[i].toRawBits() shouldBe bufOracle2[i].toRawBits()
+                }
             }
 
             // THIRD call at DOUBLE length: the capacity-GROW branch. The onset capacity is
@@ -577,8 +606,14 @@ class EqCoreSpec : StringSpec({
                 c.length = blockFrames
                 oracle.generate(bufOracle3, 220.0, c)
                 for (i in 0 until blockFrames) {
-                    bufCore3[half * blockFrames + i].toRawBits() shouldBe
-                        bufOracle3[i].toRawBits()
+                    if (tol != null) {
+                        val a = bufCore3[half * blockFrames + i]
+                        val b = bufOracle3[i]
+                        abs(a - b) shouldBeLessThanOrEqual max(abs(a), abs(b)) * tol
+                    } else {
+                        bufCore3[half * blockFrames + i].toRawBits() shouldBe
+                            bufOracle3[i].toRawBits()
+                    }
                 }
                 c.voiceElapsedFrames += blockFrames
             }

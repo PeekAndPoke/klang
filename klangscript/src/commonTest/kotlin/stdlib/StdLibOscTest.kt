@@ -525,7 +525,7 @@ class StdLibOscTest : StringSpec({
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         val tap = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
         (tap.freqHz as IgnitorDsl.Constant).value shouldBe 850.0
-        (tap.q as IgnitorDsl.Constant).value shouldBe 1.0
+        (tap.q as IgnitorDsl.Constant).value shouldBe 0.707 // C1: unified default q
         (tap.gain as IgnitorDsl.Constant).value shouldBe 1.0
     }
 

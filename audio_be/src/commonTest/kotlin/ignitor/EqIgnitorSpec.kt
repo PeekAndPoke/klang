@@ -531,12 +531,14 @@ class EqIgnitorSpec : StringSpec({
     }
 
     "ONE tap equals its exactly-converted bell" {
-        // The conversion the plan's D7 table documents: A² = 1 + gain·Q, q_bell = Q/A.
-        // For a SINGLE section this is a real identity (near-bit; one pow/tan rounding),
-        // and pinning it is what makes the next row's INEQUALITY meaningful.
+        // Tap-to-bell conversion, post-C2: the tap is UNITY-peak now, so its contribution
+        // at fc is just `gain` — A² = 1 + gain (q drops out of the level entirely; that
+        // decoupling is the point of C2), q_bell = Q/A as before. For a SINGLE section this
+        // is a real identity (near-bit; one pow/tan rounding), and pinning it is what makes
+        // the next row's INEQUALITY meaningful.
         val q = 0.707
         val gain = 1.7
-        val aSq = 1.0 + gain * q
+        val aSq = 1.0 + gain
         val qBell = q / sqrt(aSq)
         val db = 20.0 * log10(aSq)
 
@@ -549,8 +551,10 @@ class EqIgnitorSpec : StringSpec({
     "TWO taps do NOT equal two exactly-converted bells (the cross term)" {
         // Taps SUM onto the dry signal, bells MULTIPLY, so the identity above does not
         // compose: the leftover gain₁·gain₂·H₁·H₂ term measured +4.5 dB around 1200 Hz on
-        // the real song. Each band below is converted EXACTLY (same formula as the row
-        // above), so the difference is purely topological, not a mis-conversion.
+        // the real song (measured pre-C2; the structure survives the unity-peak taps, the
+        // exact dB figure needs a re-measure). Each band below is converted EXACTLY (same
+        // formula as the row above), so the difference is purely topological, not a
+        // mis-conversion.
         //
         // This row is THE tripwire for EqCore's RAW_TAP reading `inputCopy` and not `buffer`:
         // a tap on the running buffer makes two taps equal `1 + g₁H₁ + g₂H₂(1 + g₁H₁)`, which
@@ -564,7 +568,7 @@ class EqIgnitorSpec : StringSpec({
         var bells = IgnitorDsl.Sawtooth().eq()
         for ((freq, spec) in bands) {
             val (q, gain) = spec
-            val aSq = 1.0 + gain * q
+            val aSq = 1.0 + gain // C2 unity-peak taps: q is out of the level
             taps = taps.tap(freq, q, gain)
             bells = bells.band(freq, q / sqrt(aSq), 20.0 * log10(aSq))
         }

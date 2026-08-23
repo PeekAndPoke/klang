@@ -258,13 +258,13 @@ exactly as written, and compare.
 | `.eq()`                 | Opens the EQ; `.band()`/`.tap()` exist only on an EQ, so this comes first                          |
 | `.optimizer(0)`         | Renders a sound exactly as written, with no filter fusion; for A/B-ing the fusion by ear           |
 | `.band(freq, q?, db?)`  | **Serial** peaking band: `db` dB gain at `freq`, `q` = width (defaults q=0.707, db=0)             |
-| `.tap(freq, q?, gain?)` | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=1.0, gain=1.0)        |
+| `.tap(freq, q?, gain?)` | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=0.707, gain=1.0)        |
 
 **The difference matters and it is audible.** `.band()` sections apply one after another, so
 they compound: two overlapping +6 dB bands give about +12 dB where they overlap, like any DAW EQ.
 `.tap()` sections all read the sound going INTO the eq and mix back onto it, so they add rather
 than compound. Converting a parallel tap bank into serial bands measured **+4.5 dB too hot around
-1200 Hz** on a real guitar patch.
+1200 Hz** on a real guitar patch (figure measured pre-C2; re-measure under the unity-peak taps).
 
 ```javascript
 // EQ bands: shaping a sound, gains in dB
@@ -288,8 +288,9 @@ SECOND eq, so the one-pass saving applies per eq, not across the whole line.
 the same 1.90 octaves. What differs is CONVERSION. A tap keeps its numbers verbatim
 (`signal.add(signal.bandpass(f, Q).mul(g))` becomes `.tap(f, Q, g)`), but rewriting that tap as a
 `.band()` needs a WIDER setting, because a tap's audible bump is wider than the bandpass inside
-it: use `db = 20*log10(1 + g*Q)` and `q = Q / sqrt(1 + g*Q)`. Example: `.tap(850, 0.707, 1.7)`
-becomes `.band(850, 0.476, 6.86)`.
+it: use `db = 20*log10(1 + g)` and `q = Q / sqrt(1 + g)` (since C2 the tap is unity-peak, so
+`q` is out of the level equation). Example: `.tap(850, 0.707, 1.7)` becomes
+`.band(850, 0.430, 8.63)`.
 
 ⚠ Everything is control-rate (read once per block). For `.band()` that includes `db`, which
 moves filter coefficients, so an LFO on `db` zippers exactly like an LFO on a cutoff; use a VCA
@@ -298,13 +299,11 @@ multiplier rather than a coefficient: a moving `gain` steps per block, whereas t
 `signal.add(signal.bandpass(...).mul(lfo))` is smooth per sample. Keep tap gains constant or
 osc-param driven.
 
-⚠ On a `.tap()`, `q` sets the **level** as well as the width, because the engine bandpass is
-constant-skirt: the boost at `freq` is `1 + gain*q`. Raising `q` therefore narrows the band AND
-makes it louder, both at once (gain 1.0: q 0.5 gives +3.5 dB over ~3.0 octaves, q 1.0 gives
-+6.0 dB over ~1.9, q 4.0 gives +14.0 dB over ~0.8). **To tighten a tap without it getting hotter,
-lower `gain` as you raise `q`.** A `.band()` does not behave this way: its peak is set by `db`
-alone and does not move with `q`. This is also why `.tap(freq)` at its defaults is a **+6 dB
-lift** (`1 + 1*1 = 2`) while `.band(freq)` at its defaults is transparent.
+Since C2 of the filter unification the engine bandpass is **unity-peak**, so on a `.tap()` `q`
+is a pure WIDTH control: the boost at `freq` is `1 + gain` for ANY `q`. Tighten a tap by raising
+`q`; the level stays put, and `gain` alone decides how loud the band comes back. `.tap(freq)` at
+its defaults is still a **+6 dB lift** (`1 + 1 = 2`) while `.band(freq)` at its defaults is
+transparent.
 
 ⚠ You cannot go back to a band after a chained filter: `.eq().band(...).lowpass(5000).band(...)`
 is an error, because `.lowpass()` returns a plain filter node. Open a new `.eq()` for more bands.
