@@ -434,8 +434,9 @@ for the doomed. C6a removes the doomed; C0 then reshapes what remains.
 - **`compressor` is a WIRE field, not a lang-layer string.** `SprudelVoiceData.compressor:
   String?` is parsed inside the engine (`audio_be/effects/Compressor.kt parseSettings`, called
   from `Voice.kt`). Removing that colon-string is a wire-format change (VoiceData shape, KSP
-  trust-codec, `WIRE_SCHEMA_HASH`, worklet), not a sprudel edit, and it is 8x in songs. Either
-  it gets its own sub-step with the wire work, or `compressor` is explicitly carved out of C0.
+  trust-codec, `WIRE_SCHEMA_HASH`, worklet), not a sprudel edit, and it is 8x in songs.
+  **DECIDED (maintainer, 2026-08-23): own sub-step INSIDE C0** — the wire work lands as a
+  separate commit within the chunk (C0.2 below), so the whole compound-args story ships in C0.
 - **`adsrCurves("square:exponential:scurve")`** is a compound of ENUM values with no per-param
   form proposed. It gets `adsrCurves(attack, decay, release)` with three string params.
 - **`ratio("5:4")`** is a division, a third meaning of the colon, and stays colon-only as an
@@ -450,9 +451,10 @@ for the doomed. C6a removes the doomed; C0 then reshapes what remains.
   `KlangUiToolEmbeddable` contract; `@param-sub` deleted; the compound `*SequenceEditor`
   bindings re-pointed at the pattern-valued parameter only.
 - **Migration, same commit — the FULL parse-breaking surface, not just songs + tutorials:**
-  songs, tutorials, `src/jvmMain/FrozenSongs.kt` (23 colon strings; its header says "DO NOT
-  edit these to track song changes" — a policy conflict needing a decision: a frozen song that
-  no longer parses is worse than one that tracks), `SongBenchmarkCases.kt` (32), the golden
+  songs, tutorials, `src/jvmMain/FrozenSongs.kt` (23 colon strings;
+  **DECIDED (maintainer, 2026-08-23): syntax-only migrations are permitted** — mechanical
+  DSL-shape migrations (renames, colon-split), never value changes; note the policy in the
+  file header. The "do not track song changes" spirit stays), `SongBenchmarkCases.kt` (32), the golden
   corpus (13), ~15 sprudel `Lang*Spec` files (`LangSndSpec` 31, `LangDynamicsSpec` 15, ...),
   the compat test data, `CallInfoTest`, `TestKotlinPatterns`/`TestTextPatterns`, the
   `ExpressionTypeInferrerE2eTest`, `StartPage.kt`, `SamplesLibraryPage.kt`,
@@ -462,6 +464,11 @@ for the doomed. C6a removes the doomed; C0 then reshapes what remains.
   same field values as before.
 - This is the largest chunk by blast radius and it goes FIRST, because every later chunk writes
   functions to this shape. Doing it later would mean writing C5/C6 twice.
+- **Execution order (2026-08-23):** C0.1 lang layer per-param + full call-site migration
+  (everything except compressor); C0.2 compressor wire sub-step (VoiceData fields, audio_be
+  parsing, codec/schema, worklet, sprudel surface, songs); C0.3 the two tool tiers (MultiParam
+  modal, inline popovers, binding re-point, `@param-sub` removal). Each sub-step gets its own
+  review loop and commit.
 
 ### C1 + C2 land as ONE commit
 The default-q change alone ships a -3 dB level drop on every bare `bandf` in the corpus (an
