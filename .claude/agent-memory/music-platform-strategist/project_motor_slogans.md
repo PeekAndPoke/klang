@@ -1,13 +1,19 @@
 ---
 name: Motör slogan thinking
-description: Current state of Motör slogan exploration — what's in, what's out, and the reasoning behind each
+description: Current state of slogan and positioning-line exploration (Sound First!, Come closer., Band as Code) — what's in, what's out, and why
 type: project
 ---
 
-# Motör slogan state (as of 2026-04-11)
+# Motör slogan state (as of 2026-08-21)
 
 ## Decided / leading
 
+- **"Band as Code"** — added 2026-08-21, Karsten's own line, for the **NOTSTROM** artifact specifically. Sits in
+  the Infrastructure-as-Code idiom family, so it lands instantly for developers with no explanation. It is the
+  *bridge sentence* between a listener-side artifact and the maker-side platform, which makes it the highest-value
+  phrase in the NOTSTROM concept. ⚠️ **Developer-channel only:** it is not musician-legible (the lapsed-musician
+  persona has no "X as Code" idiom) and it names a method, not a feeling. Needs a warmer twin for musician
+  channels. Full assessment in [[notstrom-positioning]].
 - **"Sound First!"** — the user-facing promise. What the listener gets. Remains the primary slogan.
 - **"Come closer."** — the invitation slogan, paired with "Sound First!". My recommended secondary. Drops "to the
   machine" because the engine metaphor is already carried by the entire product surface (Cylinder, Injection, Ignitor,

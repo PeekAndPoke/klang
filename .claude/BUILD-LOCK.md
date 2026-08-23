@@ -1,8 +1,19 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-20**
+**SINCE: 2026-08-23**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-21, klang-ai session): offline renders of Der Schmetterling v36/v37 plus
+> lead- and bass-isolation stems — no source changes, no test runs. Renders need `--cycles 258`
+> (2-cycle count-in). The missing `.` before `tag("hats")` is FIXED in v37 by the maintainer; the
+> parser task it exposed is written up in `docs/tasks/klangscript-statement-boundaries.md`
+> (juxtaposed expressions parse as two statements and silently discard the second's value).
+
+> Last action (2026-08-20, klang-ai session): offline renders of Der Schmetterling v35 only
+> (full mix + guitars-only + drums-only isolation variants) — no source changes, no test runs.
+> Note: the song now has a 2-cycle count-in, so offline renders need `--cycles 258` to keep
+> 256 cycles of song body.
 
 > Last action (2026-08-20, claude-code session): `.tag()` sprudel addon shipped — semantic event
 > tags (`Set<String>`, unordered) in `SprudelVoiceData` AND engine `VoiceData` (cross the wire by

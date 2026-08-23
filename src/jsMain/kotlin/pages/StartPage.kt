@@ -364,7 +364,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            playback.start(KlangCyclicPlayback.Options(rpm = 60.0))
+            playback.start(KlangCyclicPlayback.Options(rpm = 50.0))
         }
 
         fun getResult() = result
@@ -512,7 +512,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     position = Position.relative
                     zIndex = 1
                 }
-                PlayerMiniStats()
+                PlayerMiniStats(
+                    glowColor = Color(MotorBackground.lightColorHex),
+                    // Half strength — the background lamp already lights the page.
+                    glowIntensity = 0.225,
+                )
             }
 
             div {

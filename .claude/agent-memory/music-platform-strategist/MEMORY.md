@@ -11,8 +11,10 @@
   genres across 73-tutorial library, saved 2026-04-07
 - [Doc-block quality standard](project_docblock_quality_standard.md) — Every DSL param needs description, default, and
   range for live docs; backlog cleanup needed, saved 2026-04-07
-- [Motör slogan thinking](project_motor_slogans.md) — "Sound First!" + "Come closer." leading pair; "Be closer" ruled
-  out as state-verb half-measure, updated 2026-04-11
+- [Motör slogan thinking](project_motor_slogans.md) — "Sound First!" + "Come closer." + "Band as Code"; "Be closer"
+  ruled out as state-verb half-measure, updated 2026-08-21
+- [NOTSTROM positioning](project_notstrom_positioning.md) — it is ADVERTISING for Klang, not a music business;
+  "Band as Code", no-streaming scarcity, merch rules, domain verdict + TLD ranking, 2026-08-21
 - [Project Disco strategic plan](project_disco_strategy.md) — Full social-launch plan: mascot Pip, low-poly 3D,
   archive-not-delete, 6-drop roadmap, HN at drop #3, saved 2026-04-15
 - [Brand architecture: Klang vs Motör](project_brand_architecture_klang_motor.md) — Motör=engine/behind-glass,

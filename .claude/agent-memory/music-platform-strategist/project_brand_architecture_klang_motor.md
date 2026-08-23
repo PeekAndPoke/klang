@@ -66,5 +66,18 @@ entertainment/education), as an EUTM BEFORE announcing; US can follow within the
 Standalone
 "Motör"/"Der Motör" = low registration priority, keep as unregistered behind-glass metaphor.
 
+**Third tier added 2026-08-21 — personas are CANONICAL under the anchor; a persona domain may exist, but only
+as a redirect.** The NOTSTROM virtual band (see [[notstrom-positioning]]) is canonically `klang.art/notstrom`.
+A second domain (`notstrom.de` / `.art` / `.band`) is approved as a redirect and spoken/printed shortcut, not
+as the home. **Why:** NOTSTROM's stated purpose is advertising for Klang, and advertising's cardinal sin is
+unattributed reach, so every shared URL must carry the platform name and the link equity must land on Klang.
+A persona would only need its own apex domain if it needed to *feel independent*, and Karsten has chosen the
+opposite framing (explicit machine-nature, "Band as Code", no reveal staged). **How to apply:** general rule
+for any future Klang persona or demo act. Two standing sub-rules: (1) never buy a domain for name protection,
+it confers no naming rights, that is what use and filings are for, so "it's only 20 euros" is never sufficient
+reason; (2) never point a live domain at a page that does not exist yet. *(Revised the same day: the first
+call was a flat no to `notstrom.band`. Karsten's explicit-copy and no-streaming premises defeated two of the
+five objections. Reversal audit in `.claude/vision/decisions.md`.)*
+
 **Open:** Karsten hasn't picked the definitive consumer wordmark to file, nor confirmed klang.art ownership. Recommended
 he get a clearance search (esp. vs Klangio + KLANG:technologies) + a trademark attorney before spending.

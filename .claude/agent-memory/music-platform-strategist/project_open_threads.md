@@ -7,7 +7,18 @@ metadata:
 
 # Open threads — read this first on a cold session open
 
-**Last session: 2026-08-19.** A long audience-sizing session that ended with genre lanes and flagship
+**Last session: 2026-08-21.** Opened as "should I register notstrom.band?", became a full NOTSTROM positioning
+session. Verdict flipped mid-session: first answer was a flat no, Karsten supplied four premises (explicit
+framing, no streaming, "Band as Code", NOTSTROM-is-advertising-for-Klang) that defeated two of the five
+objections, and the call became **register a domain, but `klang.art/notstrom` stays canonical and the second
+domain is a redirect**. See [[notstrom-positioning]] and the 2026-08-21 entry in `.claude/vision/decisions.md`
+(rewritten in place, with a reversal audit). Awaiting Karsten's confirmation.
+
+⚠️ **Lesson worth carrying:** the first answer was reasoned from premises Karsten had not yet stated. When a
+question looks small ("should I buy a domain"), ask what the artifact is *for* before ruling. The 2026-08-19
+threads below are all still open.
+
+**Prior session: 2026-08-19.** A long audience-sizing session that ended with genre lanes and flagship
 sequencing decided. Everything below is open, none of it is urgent, and none of it overrides the
 [[project_sound_first]] phase order (engine work-streams → tutorials quarter → launch → hard perf).
 
