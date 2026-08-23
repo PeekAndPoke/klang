@@ -49,7 +49,7 @@ private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * @param material The body material — one of `wood`, `cedar`, `tube`, `glass`, `membrane`, `brass`.
- * @param-tool material SprudelBodySequenceEditor
+ * @param-tool material SprudelBodyEditor, SprudelBodySequenceEditor
  * @category effects
  * @tags body, resonator, modal, formant, material, wood, cedar, spruce, mahogany, rosewood, maple, oak, violin, croon, voice, tube, glass, brass, steel, bell, metal, none
  */

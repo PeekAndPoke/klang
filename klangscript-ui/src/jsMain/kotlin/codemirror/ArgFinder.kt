@@ -36,6 +36,120 @@ data class CallArgInfo(
     val argText: String,
 )
 
+
+/**
+ * The full argument-list span of one call: `argsFrom` is the offset just after `(`,
+ * `argsTo` the offset of the matching `)`, and [argTexts] the trimmed raw text per
+ * argument position (empty list for a bare call).
+ */
+data class CallArgsSpan(
+    val argsFrom: Int,
+    val argsTo: Int,
+    val argTexts: List<String>,
+)
+
+/**
+ * Scans the argument list of the call whose opening paren encloses [innerPos], starting the
+ * backward paren search at innerPos (an offset INSIDE the argument list). Respects nesting and
+ * string literals on the forward scan (same rules as [findCallArgAt]). Returns null when no
+ * enclosing call is found.
+ */
+fun scanCallArgsSpan(source: String, innerPos: Int): CallArgsSpan? {
+    var depth = 0
+    var openParen = -1
+    var i = minOf(innerPos - 1, source.lastIndex)
+    while (i >= 0) {
+        when (source[i]) {
+            ')' -> depth++
+            '(' -> {
+                if (depth == 0) {
+                    openParen = i
+                    break
+                }
+                depth--
+            }
+        }
+        i--
+    }
+    if (openParen < 0) return null
+
+    val texts = mutableListOf<String>()
+    var argStart = openParen + 1
+    var fwdDepth = 0
+    var inString = false
+    var stringChar = ' '
+    var k = openParen + 1
+    var closeParen = -1
+    while (k < source.length) {
+        val ch = source[k]
+        when {
+            inString -> if (ch == stringChar && source[k - 1] != '\\') inString = false
+            ch == '"' || ch == '\'' -> {
+                inString = true; stringChar = ch
+            }
+            ch == '(' || ch == '[' || ch == '{' -> fwdDepth++
+            ch == ')' || ch == ']' || ch == '}' -> {
+                if (ch == ')' && fwdDepth == 0) {
+                    texts.add(source.substring(argStart, k).trim())
+                    closeParen = k
+                    break
+                }
+                fwdDepth--
+            }
+            ch == ',' && fwdDepth == 0 -> {
+                texts.add(source.substring(argStart, k).trim())
+                argStart = k + 1
+            }
+        }
+        k++
+    }
+    if (closeParen < 0) return null
+    val cleaned = if (texts.size == 1 && texts[0].isEmpty()) emptyList() else texts.toList()
+    return CallArgsSpan(argsFrom = openParen + 1, argsTo = closeParen, argTexts = cleaned)
+}
+
+private val namedArgRegex = Regex("^(\\w+)\\s*=(?!=)\\s*([\\s\\S]*)$")
+
+/**
+ * Aligns raw argument texts to declared parameter positions. All-named calls align by name;
+ * otherwise the texts are taken positionally (KlangScript forbids mixing the two forms).
+ * Unknown names and overflow positions are dropped.
+ */
+fun alignArgsToParams(paramNames: List<String>, argTexts: List<String>): List<String?> {
+    val out = MutableList<String?>(paramNames.size) { null }
+    val named = argTexts.mapNotNull { t -> namedArgRegex.matchEntire(t) }
+    if (named.size == argTexts.size && argTexts.isNotEmpty()) {
+        for (m in named) {
+            val idx = paramNames.indexOf(m.groupValues[1])
+            if (idx >= 0) out[idx] = m.groupValues[2].trim()
+        }
+    } else {
+        argTexts.forEachIndexed { i, t ->
+            if (i < out.size && t.isNotEmpty()) out[i] = t
+        }
+    }
+    return out
+}
+
+/**
+ * Serializes per-param texts back into an argument list: a contiguous prefix of provided
+ * values becomes positional args; anything with gaps becomes ALL-named args (KlangScript
+ * forbids mixing positional and named).
+ */
+fun serializeCallArgs(paramNames: List<String>, texts: List<String?>): String {
+    @Suppress("NAME_SHADOWING")
+    val texts = texts.map { t -> t?.takeIf { it.isNotBlank() } }
+    val lastIdx = texts.indexOfLast { it != null }
+    if (lastIdx < 0) return ""
+    val prefix = texts.take(lastIdx + 1)
+    return if (prefix.all { it != null }) {
+        prefix.joinToString(", ")
+    } else {
+        texts.mapIndexedNotNull { i, t -> t?.let { "${paramNames[i]} = $it" } }
+            .joinToString(", ")
+    }
+}
+
 /**
  * Resolves the parameter for a given argument index, handling vararg params.
  * If argIndex is beyond the param list and the last param is vararg, returns the last param.

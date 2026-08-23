@@ -33,7 +33,14 @@ import kotlinx.html.unsafe
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing a single ADSR envelope string. */
+/**
+ * [KlangUiToolEmbeddable] for the per-param adsr(attack, decay, sustain, release) call.
+ *
+ * Two modes (C0.3 two-tool-tier design):
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits all four envelope
+ *   params of the host call and commits the full argument list.
+ * - Scalar fallback (embedded / sequence atom): edits a single attack value in seconds.
+ */
 object SprudelAdsrEditorTool : KlangUiToolEmbeddable {
     override val title: String = "ADSR Editor"
 
@@ -68,26 +75,41 @@ private class SprudelAdsrEditorComp(ctx: Ctx<Props>) : Component<SprudelAdsrEdit
 
     private val formCtrl = formController()
 
+    private val call = props.toolCtx.call
+
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private val parsed
-        get() = run {
-            val raw = currentValue.trim().removePrefix("\"").removeSuffix("\"")
+    private fun parseNum(text: String?, fallback: Double): Double =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
 
-        val parts = raw.split(":").mapNotNull { it.toDoubleOrNull() }
-        listOf(
-            parts.getOrNull(0) ?: 0.01,   // attack
-            parts.getOrNull(1) ?: 0.1,    // decay
-            parts.getOrNull(2) ?: 0.8,    // sustain
-            parts.getOrNull(3) ?: 0.3,    // release
-        )
-    }
+    private fun parseNumOrNull(text: String?): Double? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
-    private var attack by value(parsed[0])
-    private var decay by value(parsed[1])
-    private var sustain by value(parsed[2])
-    private var release by value(parsed[3])
+    // Whole-call mode reads the envelope from the host call's args; scalar mode reads the single arg.
+    private val parsedAttack
+        get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, 0.01)
+
+    private val parsedDecay
+        get() = parseNum(call?.args?.getOrNull(1), 0.1)
+
+    // Display fallbacks for missing args mirror the engine defaults (AdsrDef Std.defaultSynth).
+    private val parsedSustain
+        get() = parseNum(call?.args?.getOrNull(2), 1.0)
+
+    private val parsedRelease
+        get() = parseNum(call?.args?.getOrNull(3), 0.05)
+
+    private var attack by value(parsedAttack)
+    private var decay by value(parsedDecay)
+    private var sustain by value(parsedSustain)
+    private var release by value(parsedRelease)
+
+    // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
+    // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
+    private val parseable: List<Boolean> = List(4) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val dirty = mutableSetOf<Int>()
+    private var hasCommitted = false
 
     private var resetCounter by value(0)
 
@@ -97,40 +119,83 @@ private class SprudelAdsrEditorComp(ctx: Ctx<Props>) : Component<SprudelAdsrEdit
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String =
-        "\"${attack.fmt()}:${decay.fmt()}:${sustain.fmt()}:${release.fmt()}\""
+        if (call != null) {
+            "${attack.fmt()}, ${decay.fmt()}, ${sustain.fmt()}, ${release.fmt()}"
+        } else {
+            attack.fmt()
+        }
 
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = currentValue != buildValue()
+    /**
+     * Writes a slot only when that is safe: the user touched it, or the original arg parses
+     * (rewriting it loses nothing). Untouched non-parseable args are preserved; untouched
+     * absent slots stay absent so the engine defaults apply.
+     */
+    private fun put(texts: MutableList<String?>, index: Int, text: String?) {
+        val original = call?.args?.getOrNull(index)
+        if (index in dirty || (original != null && parseable[index])) {
+            texts[index] = text
+        }
+    }
+
+    private fun commitValue() {
+        val c = call
+        if (c != null) {
+            val texts = c.args.toMutableList()
+            while (texts.size < 4) texts.add(null)
+            put(texts, 0, attack.fmt())
+            put(texts, 1, decay.fmt())
+            put(texts, 2, sustain.fmt())
+            put(texts, 3, release.fmt())
+            c.onCommitCall(texts)
+        } else {
+            props.toolCtx.onCommit(attack.fmt())
+        }
+        hasCommitted = true
+        lastCommitted = buildValue()
+    }
+
+    // Built-state fingerprints: in whole-call mode [initialValue] is only the clicked arg's
+    // text, so the Reset/Update buttons compare built snapshots instead (initial state and
+    // last committed state); scalar mode keeps the plain text comparison.
+    private val initialBuiltValue = buildValue()
+    private var lastCommitted = initialBuiltValue
+
+    private val isInitialModified
+        get() = if (call != null) buildValue() != initialBuiltValue else initialValue != buildValue()
+
+    private val isCurrentModified
+        get() = if (call != null) buildValue() != lastCommitted else currentValue != buildValue()
 
     /** Called after every slider change in embedded mode — propagates live updates to the host. */
     private fun liveUpdate() {
         if (props.embedded || autoUpdate) {
-            props.toolCtx.onCommit(buildValue())
+            commitValue()
         }
     }
 
     private fun onCancel() {
-        if (!props.embedded && autoUpdate && isInitialModified) {
-            props.toolCtx.onCommit(initialValue)
+        if (!props.embedded && autoUpdate && hasCommitted && isInitialModified) {
+            val c = call
+            if (c != null) c.onCommitCall(c.args) else props.toolCtx.onCommit(initialValue)
         }
         props.toolCtx.onCancel()
     }
 
     private fun onReset() {
-        console.log("resetting")
+        dirty.clear()
         currentValue = initialValue
-        attack = parsed[0]
-        decay = parsed[1]
-        sustain = parsed[2]
-        release = parsed[3]
+        attack = parsedAttack
+        decay = parsedDecay
+        sustain = parsedSustain
+        release = parsedRelease
         formCtrl.resetAllFields()
-        props.toolCtx.onCommit(currentValue)
+        commitValue()
         resetCounter++
     }
 
     private fun onCommit() {
         currentValue = buildValue()
-        props.toolCtx.onCommit(currentValue)
+        commitValue()
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -160,16 +225,16 @@ private class SprudelAdsrEditorComp(ctx: Ctx<Props>) : Component<SprudelAdsrEdit
         div {
             key = "adsr-editor-content-$resetCounter"
 
-            console.log("resetCounter: $resetCounter")
-
             ui.form {
                 key = "adsr-editor-form"
                 ui.four.stackable.fields {
                     key = "adsr-editor-fields"
-                    adsrRow("Attack", "sec", attack, 0.001, "attack") { attack = it; liveUpdate() }
-                    adsrRow("Decay", "sec", decay, 0.001, "decay") { decay = it; liveUpdate() }
-                    adsrRow("Sustain", "", sustain, 0.01, "sustain") { sustain = it; liveUpdate() }
-                    adsrRow("Release", "sec", release, 0.001, "release") { release = it; liveUpdate() }
+                    adsrRow("Attack", "sec", attack, 0.001, "attack") { attack = it; dirty += 0; liveUpdate() }
+                    if (call != null) {
+                        adsrRow("Decay", "sec", decay, 0.001, "decay") { decay = it; dirty += 1; liveUpdate() }
+                        adsrRow("Sustain", "", sustain, 0.01, "sustain") { sustain = it; dirty += 2; liveUpdate() }
+                        adsrRow("Release", "sec", release, 0.001, "release") { release = it; dirty += 3; liveUpdate() }
+                    }
                 }
             }
             ui.divider {
@@ -246,7 +311,7 @@ private class SprudelAdsrEditorComp(ctx: Ctx<Props>) : Component<SprudelAdsrEdit
             step(step)
             label {
                 +label
-                subFieldInfoIcon("params", subField, props.toolCtx, infoPopup)
+                paramInfoIcon(subField, props.toolCtx, infoPopup)
             }
             if (unit.isNotEmpty()) rightLabel { ui.basic.label { +unit } }
         }

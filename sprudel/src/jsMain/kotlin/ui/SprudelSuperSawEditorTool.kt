@@ -39,7 +39,16 @@ import kotlinx.html.div
 
 // ── Tool singleton ───────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing super saw parameters: voices:detune. */
+/**
+ * [KlangUiToolEmbeddable] for the per-param sndSuperSaw(voices, spread) call
+ * (also serves the other sndSuper* functions sharing that signature).
+ *
+ * Two modes (C0.3 two-tool-tier design):
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits voices AND spread of the
+ *   host call (incl. presets) and commits the full argument list. voices commits as an integer
+ *   literal (no decimal point).
+ * - Scalar fallback (embedded / sequence atom): edits a single voices count.
+ */
 object SprudelSuperSawEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Super Saw Editor"
 
@@ -90,19 +99,32 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
 
     private val formCtrl = formController()
 
+    private val call = props.toolCtx.call
+
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private fun parseInput(): List<String> {
-        val raw = currentValue.trim().removePrefix("\"").removeSuffix("\"")
-        if (raw.isBlank()) return emptyList()
-        return raw.split(":").map { it.trim() }
-    }
+    private fun parseNum(text: String?, fallback: Double): Double =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
 
-    private val parsedParts = parseInput()
+    private fun parseNumOrNull(text: String?): Double? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
-    private var voices by value(parsedParts.getOrNull(0)?.toIntOrNull() ?: 5)
-    private var detune by value(parsedParts.getOrNull(1)?.toDoubleOrNull() ?: 0.2)
+    // Whole-call mode reads voices/spread from the host call's args; scalar mode reads the single arg.
+    private val parsedVoices
+        get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, 5.0).toInt()
+
+    private val parsedDetune
+        get() = parseNum(call?.args?.getOrNull(1), 0.2)
+
+    private var voices by value(parsedVoices)
+    private var detune by value(parsedDetune)
+
+    // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
+    // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
+    private val parseable: List<Boolean> = List(2) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val dirty = mutableSetOf<Int>()
+    private var hasCommitted = false
 
     private var resetCounter by value(0)
 
@@ -112,42 +134,85 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String =
-        "\"$voices:${detune.fmt()}\""
+        if (call != null) {
+            "$voices, ${detune.fmt()}"
+        } else {
+            voices.toString()
+        }
 
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = currentValue != buildValue()
+    /**
+     * Writes a slot only when that is safe: the user touched it, or the original arg parses
+     * (rewriting it loses nothing). Untouched non-parseable args are preserved; untouched
+     * absent slots stay absent so the engine defaults apply.
+     */
+    private fun put(texts: MutableList<String?>, index: Int, text: String?) {
+        val original = call?.args?.getOrNull(index)
+        if (index in dirty || (original != null && parseable[index])) {
+            texts[index] = text
+        }
+    }
+
+    private fun commitValue() {
+        val c = call
+        if (c != null) {
+            val texts = c.args.toMutableList()
+            while (texts.size < 2) texts.add(null)
+            // voices is an integer param — no decimal point
+            put(texts, 0, voices.toString())
+            put(texts, 1, detune.fmt())
+            c.onCommitCall(texts)
+        } else {
+            props.toolCtx.onCommit(voices.toString())
+        }
+        hasCommitted = true
+        lastCommitted = buildValue()
+    }
+
+    // Built-state fingerprints: in whole-call mode [initialValue] is only the clicked arg's
+    // text, so the Reset/Update buttons compare built snapshots instead (initial state and
+    // last committed state); scalar mode keeps the plain text comparison.
+    private val initialBuiltValue = buildValue()
+    private var lastCommitted = initialBuiltValue
+
+    private val isInitialModified
+        get() = if (call != null) buildValue() != initialBuiltValue else initialValue != buildValue()
+
+    private val isCurrentModified
+        get() = if (call != null) buildValue() != lastCommitted else currentValue != buildValue()
 
     private fun liveUpdate() {
         if (props.embedded || autoUpdate) {
-            props.toolCtx.onCommit(buildValue())
+            commitValue()
         }
     }
 
     private fun onCancel() {
-        if (!props.embedded && autoUpdate && isInitialModified) {
-            props.toolCtx.onCommit(initialValue)
+        if (!props.embedded && autoUpdate && hasCommitted && isInitialModified) {
+            val c = call
+            if (c != null) c.onCommitCall(c.args) else props.toolCtx.onCommit(initialValue)
         }
         props.toolCtx.onCancel()
     }
 
     private fun onReset() {
+        dirty.clear()
         currentValue = initialValue
-        val p = parseInput()
-        voices = p.getOrNull(0)?.toIntOrNull() ?: 5
-        detune = p.getOrNull(1)?.toDoubleOrNull() ?: 0.2
+        voices = parsedVoices
+        detune = parsedDetune
         formCtrl.resetAllFields()
-        props.toolCtx.onCommit(currentValue)
+        commitValue()
         resetCounter++
     }
 
     private fun onCommit() {
         currentValue = buildValue()
-        props.toolCtx.onCommit(currentValue)
+        commitValue()
     }
 
     private fun applyPreset(preset: SuperSawPreset) {
         voices = preset.voices
         detune = preset.detune
+        dirty += 0..1
         formCtrl.resetAllFields()
         resetCounter++
         liveUpdate()
@@ -180,55 +245,59 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
         div {
             key = "supersaw-editor-content-$resetCounter"
 
-            // Presets
-            div {
-                key = "supersaw-presets"
-                css {
-                    display = Display.flex
-                    flexWrap = FlexWrap.wrap
-                    gap = 4.px
-                    marginBottom = 8.px
-                }
-                val matchedPreset = PRESETS.find {
-                    it.voices == voices && it.detune == detune
-                }
+            // Presets set both params, so they only make sense in whole-call mode
+            if (call != null) {
+                div {
+                    key = "supersaw-presets"
+                    css {
+                        display = Display.flex
+                        flexWrap = FlexWrap.wrap
+                        gap = 4.px
+                        marginBottom = 8.px
+                    }
+                    val matchedPreset = PRESETS.find {
+                        it.voices == voices && it.detune == detune
+                    }
 
-                for (preset in PRESETS) {
-                    val isSelected = preset === matchedPreset
-                    ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
+                    for (preset in PRESETS) {
+                        val isSelected = preset === matchedPreset
+                        ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
+                            css { whiteSpace = WhiteSpace.nowrap }
+                            onClick { applyPreset(preset) }
+                            +preset.name
+                        }
+                    }
+
+                    val isCustom = matchedPreset == null
+                    ui.mini.givenNot(isCustom) { basic }.given(isCustom) { with(laf.styles.goldButton()) }.button {
                         css { whiteSpace = WhiteSpace.nowrap }
-                        onClick { applyPreset(preset) }
-                        +preset.name
+                        +"Custom"
                     }
                 }
 
-                val isCustom = matchedPreset == null
-                ui.mini.givenNot(isCustom) { basic }.given(isCustom) { with(laf.styles.goldButton()) }.button {
-                    css { whiteSpace = WhiteSpace.nowrap }
-                    +"Custom"
-                }
+                ui.divider()
             }
-
-            ui.divider()
 
             ui.form {
                 key = "supersaw-editor-form"
                 ui.two.stackable.fields {
                     key = "supersaw-editor-fields"
-                    UiInputField(voices, { voices = it; liveUpdate() }) {
+                    UiInputField(voices, { voices = it; dirty += 0; liveUpdate() }) {
                         domKey("voices")
                         step(1)
                         label {
                             +"Voices"
-                            subFieldInfoIcon("params", "voices", props.toolCtx, infoPopup)
+                            paramInfoIcon("voices", props.toolCtx, infoPopup)
                         }
                     }
-                    UiInputField(detune, { detune = it; liveUpdate() }) {
-                        domKey("spread")
-                        step(0.01)
-                        label {
-                            +"Spread"
-                            subFieldInfoIcon("params", "spread", props.toolCtx, infoPopup)
+                    if (call != null) {
+                        UiInputField(detune, { detune = it; dirty += 1; liveUpdate() }) {
+                            domKey("spread")
+                            step(0.01)
+                            label {
+                                +"Spread"
+                                paramInfoIcon("spread", props.toolCtx, infoPopup)
+                            }
                         }
                     }
                 }

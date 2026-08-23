@@ -50,7 +50,16 @@ enum class FilterCurveShape {
 
 // ── Configurable tool class ──────────────────────────────────────────────────
 
-/** Configurable [KlangUiToolEmbeddable] for editing combined filter strings (freq:resonance:env). */
+/**
+ * Configurable [KlangUiToolEmbeddable] for the per-param filter functions (freq, q).
+ *
+ * Two modes (C0.3 two-tool-tier design):
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits freq AND q of the host
+ *   call and commits the full argument list.
+ * - Scalar fallback (embedded / sequence atom): edits a single freq value.
+ *
+ * The envelope depth is NOT part of the filter call any more (it lives on lpe/hpe/bpe/nfe).
+ */
 class SprudelFilterEditorTool(
     override val title: String,
     override val iconFn: SemanticIconFn,
@@ -133,23 +142,33 @@ private class SprudelFilterEditorComp(ctx: Ctx<Props>) : Component<SprudelFilter
 
     private val formCtrl = formController()
 
+    private val call = props.toolCtx.call
+
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private val parsed
-        get() = run {
-            val raw = currentValue.trim().removePrefix("\"").removeSuffix("\"")
-            val parts = raw.split(":").map { it.toDoubleOrNull() }
-            Triple(
-                parts.getOrNull(0) ?: 2000.0,   // freq Hz
-                parts.getOrNull(1) ?: 1.0,       // resonance / Q
-                parts.getOrNull(2) ?: 0.0,       // env depth
-            )
-        }
+    private fun parseNum(text: String?, fallback: Double): Double =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
 
-    private var freq by value(parsed.first)
-    private var resonance by value(parsed.second)
-    private var envDepth by value(parsed.third)
+    private fun parseNumOrNull(text: String?): Double? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
+
+    // Whole-call mode reads freq/q from the host call's args; scalar mode reads the single arg.
+    private val parsedFreq
+        get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, 2000.0)
+
+    // NOTE: 1.0 mirrors today's sprudel-side default; C1 unifies the default q to 0.707.
+    private val parsedQ
+        get() = parseNum(call?.args?.getOrNull(1), 1.0)
+
+    private var freq by value(parsedFreq)
+    private var resonance by value(parsedQ)
+
+    // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
+    // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
+    private val parseable: List<Boolean> = List(2) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val dirty = mutableSetOf<Int>()
+    private var hasCommitted = false
 
     private var resetCounter by value(0)
 
@@ -159,37 +178,74 @@ private class SprudelFilterEditorComp(ctx: Ctx<Props>) : Component<SprudelFilter
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String =
-        "\"${freq.fmt()}:${resonance.fmt()}:${envDepth.fmt()}\""
+        if (call != null) "${freq.fmt()}, ${resonance.fmt()}" else freq.fmt()
 
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = currentValue != buildValue()
+    /**
+     * Writes a slot only when that is safe: the user touched it, or the original arg parses
+     * (rewriting it loses nothing). Untouched non-parseable args are preserved; untouched
+     * absent slots stay absent so the engine defaults apply.
+     */
+    private fun put(texts: MutableList<String?>, index: Int, text: String?) {
+        val original = call?.args?.getOrNull(index)
+        if (index in dirty || (original != null && parseable[index])) {
+            texts[index] = text
+        }
+    }
+
+    private fun commitValue() {
+        val c = call
+        if (c != null) {
+            val texts = c.args.toMutableList()
+            while (texts.size < 2) texts.add(null)
+            put(texts, 0, freq.fmt())
+            put(texts, 1, resonance.fmt())
+            c.onCommitCall(texts)
+        } else {
+            props.toolCtx.onCommit(freq.fmt())
+        }
+        hasCommitted = true
+        lastCommitted = buildValue()
+    }
+
+    // Built-state fingerprints: in whole-call mode [initialValue] is only the clicked arg's
+    // text, so the Reset/Update buttons compare built snapshots instead (initial state and
+    // last committed state); scalar mode keeps the plain text comparison.
+    private val initialBuiltValue = buildValue()
+    private var lastCommitted = initialBuiltValue
+
+    private val isInitialModified
+        get() = if (call != null) buildValue() != initialBuiltValue else initialValue != buildValue()
+
+    private val isCurrentModified
+        get() = if (call != null) buildValue() != lastCommitted else currentValue != buildValue()
 
     private fun liveUpdate() {
         if (props.embedded || autoUpdate) {
-            props.toolCtx.onCommit(buildValue())
+            commitValue()
         }
     }
 
     private fun onCancel() {
-        if (!props.embedded && autoUpdate && isInitialModified) {
-            props.toolCtx.onCommit(initialValue)
+        if (!props.embedded && autoUpdate && hasCommitted && isInitialModified) {
+            val c = call
+            if (c != null) c.onCommitCall(c.args) else props.toolCtx.onCommit(initialValue)
         }
         props.toolCtx.onCancel()
     }
 
     private fun onReset() {
+        dirty.clear()
         currentValue = initialValue
-        freq = parsed.first
-        resonance = parsed.second
-        envDepth = parsed.third
+        freq = parsedFreq
+        resonance = parsedQ
         formCtrl.resetAllFields()
-        props.toolCtx.onCommit(currentValue)
+        commitValue()
         resetCounter++
     }
 
     private fun onCommit() {
         currentValue = buildValue()
-        props.toolCtx.onCommit(currentValue)
+        commitValue()
     }
 
     // ── Render ───────────────────────────────────────────────────────────────
@@ -221,23 +277,20 @@ private class SprudelFilterEditorComp(ctx: Ctx<Props>) : Component<SprudelFilter
 
             ui.form {
                 key = "filter-editor-form"
-                ui.three.stackable.fields {
+                ui.two.stackable.fields {
                     key = "filter-editor-fields"
-                    UiInputField(freq, { freq = it; liveUpdate() }) {
+                    UiInputField(freq, { freq = it; dirty += 0; liveUpdate() }) {
                         domKey("freq")
                         step(10.0)
                         label(props.tool.freqLabel)
                         rightLabel { ui.basic.label { +"Hz" } }
                     }
-                    UiInputField(resonance, { resonance = it; liveUpdate() }) {
-                        domKey("resonance")
-                        step(0.1)
-                        label(props.tool.resLabel)
-                    }
-                    UiInputField(envDepth, { envDepth = it; liveUpdate() }) {
-                        domKey("env")
-                        step(0.1)
-                        label("Env Depth")
+                    if (call != null) {
+                        UiInputField(resonance, { resonance = it; dirty += 1; liveUpdate() }) {
+                            domKey("q")
+                            step(0.1)
+                            label(props.tool.resLabel)
+                        }
                     }
                 }
             }

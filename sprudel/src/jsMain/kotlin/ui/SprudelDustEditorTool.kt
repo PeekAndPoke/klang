@@ -211,7 +211,7 @@ private class SprudelDustEditorComp(ctx: Ctx<Props>) : Component<SprudelDustEdit
                         step(0.01)
                         label {
                             +"Density"
-                            subFieldInfoIcon("params", "density", props.toolCtx, infoPopup)
+                            paramInfoIcon("density", props.toolCtx, infoPopup)
                         }
                     }
                 }

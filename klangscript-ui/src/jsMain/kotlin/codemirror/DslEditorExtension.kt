@@ -15,8 +15,10 @@ import io.peekandpoke.klang.codemirror.ext.StateEffect
 import io.peekandpoke.klang.codemirror.ext.StateField
 import io.peekandpoke.klang.codemirror.ext.StateFieldConfig
 import io.peekandpoke.klang.script.intel.AnalyzedAst
+import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolCall
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.ui.scheduleShow
@@ -158,6 +160,41 @@ fun dslEditorExtension(
         return findCallArgAtAst(analysisProvider(), source, pos, docProvider)
     }
 
+    /**
+     * Builds the whole-call view for MultiParam tools: current per-param texts of the host
+     * call plus a commit that rewrites the ENTIRE argument list (contiguous prefix ->
+     * positional, gaps -> all-named; KlangScript forbids mixing the two forms).
+     */
+    fun makeToolCall(argInfo: CallArgInfo, view: EditorView): KlangUiToolCall? {
+        val source = view.state.doc.toString()
+        val span = scanCallArgsSpan(source, argInfo.argFrom) ?: return null
+        // Sanity guard: the backward paren scan is string-blind (parity with findCallArgAt), so
+        // an unbalanced paren inside a preceding string arg could yield a wrong span. If the
+        // clicked argument's text is not part of the scanned span, refuse the whole-call view
+        // rather than risk rewriting the wrong source range.
+        if (span.argTexts.none { argInfo.argText == it || argInfo.argText in it }) return null
+        val callable = argInfo.symbol.variants.filterIsInstance<KlangCallable>().firstOrNull() ?: return null
+        val paramNames = callable.params.map { it.name }
+        if (paramNames.isEmpty()) return null
+        val aligned = alignArgsToParams(paramNames, span.argTexts)
+        var argsTo = span.argsTo
+        return KlangUiToolCall(
+            paramNames = paramNames,
+            args = aligned,
+            onCommitCall = { texts ->
+                val result = serializeCallArgs(paramNames, texts)
+                view.dispatch(view.state.update(jsObject {
+                    this.changes = jsObject<dynamic> {
+                        this.from = span.argsFrom
+                        this.to = argsTo
+                        this.insert = result
+                    }
+                }))
+                argsTo = span.argsFrom + result.length
+            },
+        )
+    }
+
     fun makeToolContext(argInfo: CallArgInfo, view: EditorView): KlangUiToolContext {
         var argTo = argInfo.argTo
         return KlangUiToolContext(
@@ -175,8 +212,10 @@ fun dslEditorExtension(
                 argTo = argInfo.argFrom + result.length
             },
             onCancel = {},
+            call = makeToolCall(argInfo, view),
         )
     }
+
 
     // ── Context menu ───────────────────────────────────────────────────────
 

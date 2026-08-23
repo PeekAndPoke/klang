@@ -41,7 +41,7 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * @param amount The control value to use for gain.
- * @param-tool amount SprudelGainSequenceEditor
+ * @param-tool amount SprudelGainEditor, SprudelGainSequenceEditor
  *
  * @category dynamics
  * @tags gain, volume, amplitude, dynamics
@@ -115,7 +115,7 @@ private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * ```
  *
  * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
- * @param-tool amount SprudelPanSequenceEditor
+ * @param-tool amount SprudelPanEditor, SprudelPanSequenceEditor
  *
  * @category dynamics
  * @tags pan, stereo, panning, position
@@ -472,7 +472,7 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * @param attack How quickly compression engages, in seconds (e.g. 0.003).
  * @param release How quickly compression releases, in seconds (e.g. 0.1).
  *
- * @param-tool threshold SprudelCompressorSequenceEditor
+ * @param-tool threshold SprudelCompressorEditor, SprudelCompressorSequenceEditor
  * @alias comp
  * @category dynamics
  * @tags compressor, comp, compression, threshold, ratio, dynamics
@@ -552,7 +552,7 @@ fun PatternMapperFn.compressor(threshold: PatternLike? = null, ratio: PatternLik
  * @param attack How quickly compression engages, in seconds (e.g. 0.003).
  * @param release How quickly compression releases, in seconds (e.g. 0.1).
  *
- * @param-tool threshold SprudelCompressorSequenceEditor
+ * @param-tool threshold SprudelCompressorEditor, SprudelCompressorSequenceEditor
  * @alias compressor
  * @category dynamics
  * @tags comp, compressor, compression, threshold, ratio, dynamics
@@ -1363,7 +1363,7 @@ fun PatternMapperFn.release(time: PatternLike? = null, callInfo: CallInfo? = nul
  * @param decay Decay time in seconds — how quickly the volume falls from peak to sustain level.
  * @param sustain Sustain level (0–1) — the volume held while the note is pressed.
  * @param release Release time in seconds — how long the note takes to fade to silence after note-off.
- * @param-tool attack SprudelAdsrSequenceEditor
+ * @param-tool attack SprudelAdsrEditor, SprudelAdsrSequenceEditor
  *
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope

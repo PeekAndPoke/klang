@@ -43,7 +43,15 @@ import kotlin.math.sin
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing phaser parameters: rate:depth:center:sweep. */
+/**
+ * [KlangUiToolEmbeddable] for the per-param phaser(rate, depth, center, sweep) call.
+ *
+ * Two modes (C0.3 two-tool-tier design):
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits rate plus the optional
+ *   depth/center/sweep params of the host call and commits the full argument list. Unset
+ *   optionals stay omitted (null slots).
+ * - Scalar fallback (embedded / sequence atom): edits a single rate value.
+ */
 object SprudelPhaserEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Phaser Editor"
 
@@ -79,20 +87,39 @@ private class SprudelPhaserEditorComp(ctx: Ctx<Props>) : Component<SprudelPhaser
 
     private val formCtrl = formController()
 
+    private val call = props.toolCtx.call
+
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseInput(): List<Double?> {
-        val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
-        if (raw.isBlank()) return emptyList()
-        return raw.split(":").map { it.trim().toDoubleOrNull() }
-    }
+    private fun parseNum(text: String?, fallback: Double): Double =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
 
-    private val parsedParts = parseInput()
+    private fun parseNumOrNull(text: String?): Double? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
-    private var rate by value(parsedParts.getOrNull(0) ?: 0.5)
-    private var depth by value(parsedParts.getOrNull(1))
-    private var center by value(parsedParts.getOrNull(2))
-    private var sweep by value(parsedParts.getOrNull(3))
+    // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
+    private val parsedRate
+        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
+
+    private val parsedDepth
+        get() = parseNumOrNull(call?.args?.getOrNull(1))
+
+    private val parsedCenter
+        get() = parseNumOrNull(call?.args?.getOrNull(2))
+
+    private val parsedSweep
+        get() = parseNumOrNull(call?.args?.getOrNull(3))
+
+    private var rate by value(parsedRate)
+    private var depth by value(parsedDepth)
+    private var center by value(parsedCenter)
+    private var sweep by value(parsedSweep)
+
+    // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
+    // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
+    private val parseable: List<Boolean> = List(4) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val dirty = mutableSetOf<Int>()
+    private var hasCommitted = false
 
     private var resetCounter by value(0)
 
@@ -101,50 +128,81 @@ private class SprudelPhaserEditorComp(ctx: Ctx<Props>) : Component<SprudelPhaser
     private fun Double.fmt(): String =
         toFixed(3).trimEnd('0').trimEnd('.')
 
-    private fun buildValue(): String {
-        val parts = mutableListOf(rate.fmt())
-
-        val optionals = listOf(depth, center, sweep)
-        val lastSetIndex = optionals.indexOfLast { it != null }
-
-        if (lastSetIndex >= 0) {
-            for (i in 0..lastSetIndex) {
-                parts.add(optionals[i]?.fmt() ?: "")
-            }
+    private fun buildValue(): String =
+        if (call != null) {
+            "${rate.fmt()}, ${depth?.fmt() ?: "-"}, ${center?.fmt() ?: "-"}, ${sweep?.fmt() ?: "-"}"
+        } else {
+            rate.fmt()
         }
 
-        return "\"${parts.joinToString(":")}\""
+    /**
+     * Writes a slot only when that is safe: the user touched it, or the original arg parses
+     * (rewriting it loses nothing). Untouched non-parseable args are preserved; untouched
+     * absent slots stay absent so the engine defaults apply.
+     */
+    private fun put(texts: MutableList<String?>, index: Int, text: String?) {
+        val original = call?.args?.getOrNull(index)
+        if (index in dirty || (original != null && parseable[index])) {
+            texts[index] = text
+        }
     }
 
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
+    private fun commitValue() {
+        val c = call
+        if (c != null) {
+            val texts = c.args.toMutableList()
+            while (texts.size < 4) texts.add(null)
+            put(texts, 0, rate.fmt())
+            put(texts, 1, depth?.fmt())
+            put(texts, 2, center?.fmt())
+            put(texts, 3, sweep?.fmt())
+            c.onCommitCall(texts)
+        } else {
+            props.toolCtx.onCommit(rate.fmt())
+        }
+        hasCommitted = true
+        lastCommitted = buildValue()
+    }
+
+    // Built-state fingerprints: in whole-call mode [initialValue] is only the clicked arg's
+    // text, so the Reset/Update buttons compare built snapshots instead (initial state and
+    // last committed state); scalar mode keeps the plain text comparison.
+    private val initialBuiltValue = buildValue()
+    private var lastCommitted = initialBuiltValue
+
+    private val isInitialModified
+        get() = if (call != null) buildValue() != initialBuiltValue else initialValue != buildValue()
+
+    private val isCurrentModified
+        get() = if (call != null) buildValue() != lastCommitted else (props.toolCtx.currentValue ?: "") != buildValue()
 
     private fun liveUpdate() {
         if (props.embedded || autoUpdate) {
-            props.toolCtx.onCommit(buildValue())
+            commitValue()
         }
     }
 
     private fun onCancel() {
-        if (!props.embedded && autoUpdate && isInitialModified) {
-            props.toolCtx.onCommit(initialValue)
+        if (!props.embedded && autoUpdate && hasCommitted && isInitialModified) {
+            val c = call
+            if (c != null) c.onCommitCall(c.args) else props.toolCtx.onCommit(initialValue)
         }
         props.toolCtx.onCancel()
     }
 
     private fun onReset() {
-        val p = parseInput()
-        rate = p.getOrNull(0) ?: 0.5
-        depth = p.getOrNull(1)
-        center = p.getOrNull(2)
-        sweep = p.getOrNull(3)
+        dirty.clear()
+        rate = parsedRate
+        depth = parsedDepth
+        center = parsedCenter
+        sweep = parsedSweep
         formCtrl.resetAllFields()
-        props.toolCtx.onCommit(initialValue)
+        commitValue()
         resetCounter++
     }
 
     private fun onCommit() {
-        props.toolCtx.onCommit(buildValue())
+        commitValue()
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -175,19 +233,23 @@ private class SprudelPhaserEditorComp(ctx: Ctx<Props>) : Component<SprudelPhaser
 
             ui.form {
                 ui.two.stackable.fields {
-                    UiInputField(rate, { rate = it; liveUpdate() }) {
+                    UiInputField(rate, { rate = it; dirty += 0; liveUpdate() }) {
                         domKey("rate")
                         step(0.1)
                         label {
                             +"Rate (Hz)"
-                            subFieldInfoIcon("rate", "rate", props.toolCtx, infoPopup)
+                            paramInfoIcon("rate", props.toolCtx, infoPopup)
                         }
                     }
-                    nullableField("depth", "Depth", 0.01, depth, subField = "depth") { depth = it; liveUpdate() }
+                    if (call != null) {
+                        nullableField("depth", "Depth", 0.01, depth, subField = "depth") { depth = it; dirty += 1; liveUpdate() }
+                    }
                 }
-                ui.two.stackable.fields {
-                    nullableField("center", "Center (Hz)", 10.0, center, subField = "center") { center = it; liveUpdate() }
-                    nullableField("sweep", "Sweep (Hz)", 10.0, sweep, subField = "sweep") { sweep = it; liveUpdate() }
+                if (call != null) {
+                    ui.two.stackable.fields {
+                        nullableField("center", "Center (Hz)", 10.0, center, subField = "center") { center = it; dirty += 2; liveUpdate() }
+                        nullableField("sweep", "Sweep (Hz)", 10.0, sweep, subField = "sweep") { sweep = it; dirty += 3; liveUpdate() }
+                    }
                 }
             }
             ui.divider {}
@@ -212,7 +274,7 @@ private class SprudelPhaserEditorComp(ctx: Ctx<Props>) : Component<SprudelPhaser
             if (subField != null) {
                 label {
                     +labelText
-                    subFieldInfoIcon("rate", subField, props.toolCtx, infoPopup)
+                    paramInfoIcon(subField, props.toolCtx, infoPopup)
                 }
             } else {
                 label(labelText)

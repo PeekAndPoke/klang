@@ -50,8 +50,8 @@ private fun applyLpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * seq("200 500 1000").lpf()          // reinterpret values as cutoff
  * ```
  *
- * @param-tool freq SprudelLpFilterSequenceEditor
- * @param-tool q SprudelLpResonanceSequenceEditor
+ * @param-tool freq SprudelLpFilterEditor, SprudelLpFilterSequenceEditor
+ * @param-tool q SprudelLpResonanceEditor, SprudelLpResonanceSequenceEditor
  * @category effects
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
@@ -165,8 +165,8 @@ private fun applyHpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * seq("100 300 800").hpf()         // reinterpret values as HPF cutoff
  * ```
  *
- * @param-tool freq SprudelHpFilterSequenceEditor
- * @param-tool q SprudelHpResonanceSequenceEditor
+ * @param-tool freq SprudelHpFilterEditor, SprudelHpFilterSequenceEditor
+ * @param-tool q SprudelHpResonanceEditor, SprudelHpResonanceSequenceEditor
  * @category effects
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
@@ -275,8 +275,8 @@ private fun applyBpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * seq("500 1000 2000").bpf()      // reinterpret values as BPF centre
  * ```
  *
- * @param-tool freq SprudelBpFilterSequenceEditor
- * @param-tool q SprudelBpQSequenceEditor
+ * @param-tool freq SprudelBpFilterEditor, SprudelBpFilterSequenceEditor
+ * @param-tool q SprudelBpQEditor, SprudelBpQSequenceEditor
  * @category effects
  * @tags bandf, bpf, band pass filter, filter, frequency
  */
@@ -381,7 +381,7 @@ private fun applyResonance(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * seq("0 5 10 20").lpq()            // reinterpret values as resonance Q
  * ```
  *
- * @param-tool q SprudelLpResonanceSequenceEditor
+ * @param-tool q SprudelLpResonanceEditor, SprudelLpResonanceSequenceEditor
  * @category effects
  * @tags resonance, res, lpq, low pass filter, Q
  */
@@ -476,7 +476,7 @@ private fun applyHresonance(source: SprudelPattern, args: List<SprudelDslArg<Any
  * seq("0 5 15").hpq()                // reinterpret values as HPF Q
  * ```
  *
- * @param-tool q SprudelHpResonanceSequenceEditor
+ * @param-tool q SprudelHpResonanceEditor, SprudelHpResonanceSequenceEditor
  * @category effects
  * @tags hresonance, hres, hpq, high pass filter, Q, resonance
  */
@@ -571,7 +571,7 @@ private fun applyBandq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * seq("1 5 10 20").bpq()                // reinterpret values as BPF Q
  * ```
  *
- * @param-tool q SprudelBpQSequenceEditor
+ * @param-tool q SprudelBpQEditor, SprudelBpQSequenceEditor
  * @category effects
  * @tags bandq, bpq, band pass filter, Q, bandwidth
  */
@@ -681,7 +681,7 @@ private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  *
  * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth SprudelLpEnvSequenceEditor
+ * @param-tool depth SprudelLpEnvEditor, SprudelLpEnvSequenceEditor
  * @category effects
  * @tags lpenv, lpe, low pass filter, envelope, depth, modulation
  */
@@ -750,7 +750,7 @@ private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  *
  * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth SprudelHpEnvSequenceEditor
+ * @param-tool depth SprudelHpEnvEditor, SprudelHpEnvSequenceEditor
  * @category effects
  * @tags hpenv, hpe, high pass filter, envelope, depth, modulation
  */
@@ -819,7 +819,7 @@ private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  *
  * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the BPF envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth SprudelBpEnvSequenceEditor
+ * @param-tool depth SprudelBpEnvEditor, SprudelBpEnvSequenceEditor
  * @category effects
  * @tags bpenv, bpe, band pass filter, envelope, depth, modulation
  */

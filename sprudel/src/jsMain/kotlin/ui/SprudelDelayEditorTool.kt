@@ -42,7 +42,15 @@ import kotlin.math.exp
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing delay parameters: wet:time:feedback. */
+/**
+ * [KlangUiToolEmbeddable] for the per-param delay(amount, time, feedback) call.
+ *
+ * Two modes (C0.3 two-tool-tier design):
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits amount plus the optional
+ *   time/feedback params of the host call and commits the full argument list. Unset optionals
+ *   stay omitted (null slots).
+ * - Scalar fallback (embedded / sequence atom): edits a single wet amount value.
+ */
 object SprudelDelayEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Delay Editor"
 
@@ -78,19 +86,35 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
 
     private val formCtrl = formController()
 
+    private val call = props.toolCtx.call
+
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseInput(): List<Double?> {
-        val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
-        if (raw.isBlank()) return emptyList()
-        return raw.split(":").map { it.trim().toDoubleOrNull() }
-    }
+    private fun parseNum(text: String?, fallback: Double): Double =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
 
-    private val parsedParts = parseInput()
+    private fun parseNumOrNull(text: String?): Double? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
-    private var wet by value(parsedParts.getOrNull(0) ?: 0.5)
-    private var time by value(parsedParts.getOrNull(1))
-    private var feedback by value(parsedParts.getOrNull(2))
+    // Whole-call mode reads amount/time/feedback from the host call's args; scalar mode reads the single arg.
+    private val parsedWet
+        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
+
+    private val parsedTime
+        get() = parseNumOrNull(call?.args?.getOrNull(1))
+
+    private val parsedFeedback
+        get() = parseNumOrNull(call?.args?.getOrNull(2))
+
+    private var wet by value(parsedWet)
+    private var time by value(parsedTime)
+    private var feedback by value(parsedFeedback)
+
+    // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
+    // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
+    private val parseable: List<Boolean> = List(3) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val dirty = mutableSetOf<Int>()
+    private var hasCommitted = false
 
     private var resetCounter by value(0)
 
@@ -99,49 +123,79 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
     private fun Double.fmt(): String =
         toFixed(3).trimEnd('0').trimEnd('.')
 
-    private fun buildValue(): String {
-        val parts = mutableListOf(wet.fmt())
-
-        val optionals = listOf(time, feedback)
-        val lastSetIndex = optionals.indexOfLast { it != null }
-
-        if (lastSetIndex >= 0) {
-            for (i in 0..lastSetIndex) {
-                parts.add(optionals[i]?.fmt() ?: "")
-            }
+    private fun buildValue(): String =
+        if (call != null) {
+            "${wet.fmt()}, ${time?.fmt() ?: "-"}, ${feedback?.fmt() ?: "-"}"
+        } else {
+            wet.fmt()
         }
 
-        return "\"${parts.joinToString(":")}\""
+    /**
+     * Writes a slot only when that is safe: the user touched it, or the original arg parses
+     * (rewriting it loses nothing). Untouched non-parseable args are preserved; untouched
+     * absent slots stay absent so the engine defaults apply.
+     */
+    private fun put(texts: MutableList<String?>, index: Int, text: String?) {
+        val original = call?.args?.getOrNull(index)
+        if (index in dirty || (original != null && parseable[index])) {
+            texts[index] = text
+        }
     }
 
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
+    private fun commitValue() {
+        val c = call
+        if (c != null) {
+            val texts = c.args.toMutableList()
+            while (texts.size < 3) texts.add(null)
+            put(texts, 0, wet.fmt())
+            put(texts, 1, time?.fmt())
+            put(texts, 2, feedback?.fmt())
+            c.onCommitCall(texts)
+        } else {
+            props.toolCtx.onCommit(wet.fmt())
+        }
+        hasCommitted = true
+        lastCommitted = buildValue()
+    }
+
+    // Built-state fingerprints: in whole-call mode [initialValue] is only the clicked arg's
+    // text, so the Reset/Update buttons compare built snapshots instead (initial state and
+    // last committed state); scalar mode keeps the plain text comparison.
+    private val initialBuiltValue = buildValue()
+    private var lastCommitted = initialBuiltValue
+
+    private val isInitialModified
+        get() = if (call != null) buildValue() != initialBuiltValue else initialValue != buildValue()
+
+    private val isCurrentModified
+        get() = if (call != null) buildValue() != lastCommitted else (props.toolCtx.currentValue ?: "") != buildValue()
 
     private fun liveUpdate() {
         if (props.embedded || autoUpdate) {
-            props.toolCtx.onCommit(buildValue())
+            commitValue()
         }
     }
 
     private fun onCancel() {
-        if (!props.embedded && autoUpdate && isInitialModified) {
-            props.toolCtx.onCommit(initialValue)
+        if (!props.embedded && autoUpdate && hasCommitted && isInitialModified) {
+            val c = call
+            if (c != null) c.onCommitCall(c.args) else props.toolCtx.onCommit(initialValue)
         }
         props.toolCtx.onCancel()
     }
 
     private fun onReset() {
-        val p = parseInput()
-        wet = p.getOrNull(0) ?: 0.5
-        time = p.getOrNull(1)
-        feedback = p.getOrNull(2)
+        dirty.clear()
+        wet = parsedWet
+        time = parsedTime
+        feedback = parsedFeedback
         formCtrl.resetAllFields()
-        props.toolCtx.onCommit(initialValue)
+        commitValue()
         resetCounter++
     }
 
     private fun onCommit() {
-        props.toolCtx.onCommit(buildValue())
+        commitValue()
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -172,16 +226,18 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
 
             ui.form {
                 ui.three.stackable.fields {
-                    UiInputField(wet, { wet = it; liveUpdate() }) {
+                    UiInputField(wet, { wet = it; dirty += 0; liveUpdate() }) {
                         domKey("wet")
                         step(0.01)
                         label {
                             +"Wet/Dry"
-                            subFieldInfoIcon("amount", "wet", props.toolCtx, infoPopup)
+                            paramInfoIcon("amount", props.toolCtx, infoPopup)
                         }
                     }
-                    nullableField("time", "Time (s)", 0.01, time, subField = "time") { time = it; liveUpdate() }
-                    nullableField("feedback", "Feedback", 0.01, feedback, subField = "feedback") { feedback = it; liveUpdate() }
+                    if (call != null) {
+                        nullableField("time", "Time (s)", 0.01, time, subField = "time") { time = it; dirty += 1; liveUpdate() }
+                        nullableField("feedback", "Feedback", 0.01, feedback, subField = "feedback") { feedback = it; dirty += 2; liveUpdate() }
+                    }
                 }
             }
             ui.divider {}
@@ -206,7 +262,7 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
             if (subField != null) {
                 label {
                     +labelText
-                    subFieldInfoIcon("amount", subField, props.toolCtx, infoPopup)
+                    paramInfoIcon(subField, props.toolCtx, infoPopup)
                 }
             } else {
                 label(labelText)

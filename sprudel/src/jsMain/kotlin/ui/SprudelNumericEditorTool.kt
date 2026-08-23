@@ -24,6 +24,7 @@ import io.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.Cursor
 import kotlinx.css.LinearDimension
@@ -283,6 +284,9 @@ class SprudelNumericEditorTool(
     val centerValue: Double? = null,
 ) : KlangUiToolEmbeddable {
 
+    /** Scalar single-value editor: opens as an inline popover (C0.3 popover tier). */
+    override val prefersPopover: Boolean get() = true
+
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         SprudelNumericEditorComp(ctx, this@SprudelNumericEditorTool, embedded = false)
     }
@@ -334,6 +338,9 @@ private class SprudelNumericEditorComp(ctx: Ctx<Props>) : Component<SprudelNumer
 
     private var dragTarget: Element? = null
 
+    /** True once the active drag has actually moved; plain clicks stay unaffected. */
+    private var dragMoved = false
+
     private val barMin get() = cfg.minValue ?: 0.0
     private val barMax get() = cfg.maxValue
     private val hasBar get() = barMax != null
@@ -342,6 +349,7 @@ private class SprudelNumericEditorComp(ctx: Ctx<Props>) : Component<SprudelNumer
         val bar = dragTarget
         val max = barMax
         if (bar != null && max != null) {
+            dragMoved = true
             val me = e as MouseEvent
             val rect = bar.getBoundingClientRect()
             val ratio = ((me.clientX.toDouble() - rect.left) / rect.width).coerceIn(0.0, 1.0)
@@ -351,17 +359,45 @@ private class SprudelNumericEditorComp(ctx: Ctx<Props>) : Component<SprudelNumer
     }
 
     private val onDocumentMouseUp: (Event) -> Unit = {
+        val moved = dragMoved
         dragTarget = null
+        dragMoved = false
         document.removeEventListener("mousemove", onDocumentMouseMove)
         document.removeEventListener("mouseup", onDocumentMouseUp)
+        if (moved) {
+            suppressNextClick()
+        }
+    }
+
+    private val onSuppressedClick: (Event) -> Unit = { e ->
+        e.stopPropagation()
+        removeSuppressClickListener()
+    }
+
+    private fun removeSuppressClickListener() {
+        document.removeEventListener("click", onSuppressedClick, true)
+    }
+
+    /**
+     * A drag that ends with the pointer outside the popover makes the browser fire a synthetic
+     * click on the common ancestor (body). That click bypasses the popover's stopPropagation
+     * guard and would reach kraft PopupsStage's document click listener, closing the popover.
+     * Swallow exactly that one click with a one-shot capture-phase listener; the timeout
+     * removes it again in case no click fires at all.
+     */
+    private fun suppressNextClick() {
+        document.addEventListener("click", onSuppressedClick, true)
+        window.setTimeout({ removeSuppressClickListener() }, 0)
     }
 
     init {
         lifecycle {
             onUnmount {
                 dragTarget = null
+                dragMoved = false
                 document.removeEventListener("mousemove", onDocumentMouseMove)
                 document.removeEventListener("mouseup", onDocumentMouseUp)
+                removeSuppressClickListener()
             }
         }
     }
@@ -404,6 +440,7 @@ private class SprudelNumericEditorComp(ctx: Ctx<Props>) : Component<SprudelNumer
         val max = barMax ?: return
         val bar = e.currentTarget as? Element ?: return
         dragTarget = bar
+        dragMoved = false
         val rect = bar.getBoundingClientRect()
         val ratio = ((e.clientX.toDouble() - rect.left) / rect.width).coerceIn(0.0, 1.0)
         current = (barMin + ratio * (max - barMin)).roundTo(2)

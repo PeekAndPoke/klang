@@ -88,36 +88,11 @@ internal fun FlowContent.paramInfoIcon(
 ) {
     if (popupCtrl == null) return
 
+    // Variants may document the param on only one form: take the first NON-BLANK description.
     val description = ctx.symbol.variants.filterIsInstance<KlangCallable>()
         .flatMap { it.params }
-        .firstOrNull { it.name == paramName }
-        ?.description
-        ?.takeIf { it.isNotBlank() }
-        ?: return
-
-    infoIconWithPopup(description, popupCtrl)
-}
-
-// ── Per-sub-field info icon (multi-field tools) ──────────────────────────────
-
-/**
- * Looks up the description for [subFieldName] within [paramName]'s subFields.
- * Renders an (i) icon that shows the description on hover.
- * Renders nothing if no description exists.
- */
-internal fun FlowContent.subFieldInfoIcon(
-    paramName: String,
-    subFieldName: String,
-    ctx: KlangUiToolContext,
-    popupCtrl: HoverPopupCtrl?,
-) {
-    if (popupCtrl == null) return
-
-    val description = ctx.symbol.variants.filterIsInstance<KlangCallable>()
-        .flatMap { it.params }
-        .firstOrNull { it.name == paramName }
-        ?.subFields?.get(subFieldName)
-        ?.takeIf { it.isNotBlank() }
+        .filter { it.name == paramName }
+        .firstNotNullOfOrNull { p -> p.description?.takeIf { it.isNotBlank() } }
         ?: return
 
     infoIconWithPopup(description, popupCtrl)

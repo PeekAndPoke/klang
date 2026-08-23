@@ -395,7 +395,7 @@ private fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
- * @param-tool name SprudelSampleSequenceEditor
+ * @param-tool name SprudelSampleEditor, SprudelSampleSequenceEditor
  * @alias s
  * @category tonal
  * @tags sound, sample, instrument, s, pattern-creator
@@ -420,7 +420,7 @@ fun String.sound(name: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * Creates a pattern of sounds.
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
- * @param-tool name SprudelSampleSequenceEditor
+ * @param-tool name SprudelSampleEditor, SprudelSampleSequenceEditor
  */
 @KlangScript.Function
 fun sound(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
@@ -443,7 +443,7 @@ fun sound(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * ```
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
- * @param-tool name SprudelSampleSequenceEditor
+ * @param-tool name SprudelSampleEditor, SprudelSampleSequenceEditor
  * @alias sound
  * @category tonal
  * @tags sound, sample, instrument, s, pattern-creator
@@ -461,7 +461,7 @@ fun String.s(name: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatt
  * Alias for [sound]. Creates a sound pattern.
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
- * @param-tool name SprudelSampleSequenceEditor
+ * @param-tool name SprudelSampleEditor, SprudelSampleSequenceEditor
  */
 @KlangScript.Function
 fun s(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =

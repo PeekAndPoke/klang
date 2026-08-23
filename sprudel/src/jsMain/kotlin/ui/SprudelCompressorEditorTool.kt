@@ -46,7 +46,14 @@ import kotlin.math.max
 
 // ── Tool singleton ───────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing a compressor string `"threshold:ratio:knee:attack:release"`. */
+/**
+ * [KlangUiToolEmbeddable] for the per-param compressor(threshold, ratio, knee, attack, release) call.
+ *
+ * Two modes (C0.3 two-tool-tier design):
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits all five params of the
+ *   host call (incl. presets) and commits the full argument list.
+ * - Scalar fallback (embedded / sequence atom): edits a single threshold value in dB.
+ */
 object SprudelCompressorEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Compressor"
 
@@ -102,27 +109,44 @@ private class SprudelCompressorEditorComp(ctx: Ctx<Props>) : Component<SprudelCo
 
     private val formCtrl = formController()
 
+    private val call = props.toolCtx.call
+
     private val initialValue = props.toolCtx.currentValue ?: ""
     private var currentValue by value(initialValue)
 
-    private val parsed
-        get() = run {
-            val raw = currentValue.trim().removePrefix("\"").removeSuffix("\"")
-            val parts = raw.split(":").map { it.toDoubleOrNull() }
-            listOf(
-                parts.getOrNull(0) ?: -20.0,   // threshold dB
-                parts.getOrNull(1) ?: 4.0,      // ratio
-                parts.getOrNull(2) ?: 6.0,      // knee dB
-                parts.getOrNull(3) ?: 0.003,    // attack sec
-                parts.getOrNull(4) ?: 0.1,      // release sec
-            )
-        }
+    private fun parseNum(text: String?, fallback: Double): Double =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
 
-    private var threshold by value(parsed[0])
-    private var ratio by value(parsed[1])
-    private var knee by value(parsed[2])
-    private var attack by value(parsed[3])
-    private var release by value(parsed[4])
+    private fun parseNumOrNull(text: String?): Double? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
+
+    // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
+    private val parsedThreshold
+        get() = parseNum(call?.args?.getOrNull(0) ?: currentValue, -20.0)
+
+    private val parsedRatio
+        get() = parseNum(call?.args?.getOrNull(1), 4.0)
+
+    private val parsedKnee
+        get() = parseNum(call?.args?.getOrNull(2), 6.0)
+
+    private val parsedAttack
+        get() = parseNum(call?.args?.getOrNull(3), 0.003)
+
+    private val parsedRelease
+        get() = parseNum(call?.args?.getOrNull(4), 0.1)
+
+    private var threshold by value(parsedThreshold)
+    private var ratio by value(parsedRatio)
+    private var knee by value(parsedKnee)
+    private var attack by value(parsedAttack)
+    private var release by value(parsedRelease)
+
+    // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
+    // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
+    private val parseable: List<Boolean> = List(5) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val dirty = mutableSetOf<Int>()
+    private var hasCommitted = false
 
     private var resetCounter by value(0)
 
@@ -132,39 +156,84 @@ private class SprudelCompressorEditorComp(ctx: Ctx<Props>) : Component<SprudelCo
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String =
-        "\"${threshold.fmt()}:${ratio.fmt()}:${knee.fmt()}:${attack.fmt()}:${release.fmt()}\""
+        if (call != null) {
+            "${threshold.fmt()}, ${ratio.fmt()}, ${knee.fmt()}, ${attack.fmt()}, ${release.fmt()}"
+        } else {
+            threshold.fmt()
+        }
 
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = currentValue != buildValue()
+    /**
+     * Writes a slot only when that is safe: the user touched it, or the original arg parses
+     * (rewriting it loses nothing). Untouched non-parseable args are preserved; untouched
+     * absent slots stay absent so the engine defaults apply.
+     */
+    private fun put(texts: MutableList<String?>, index: Int, text: String?) {
+        val original = call?.args?.getOrNull(index)
+        if (index in dirty || (original != null && parseable[index])) {
+            texts[index] = text
+        }
+    }
+
+    private fun commitValue() {
+        val c = call
+        if (c != null) {
+            val texts = c.args.toMutableList()
+            while (texts.size < 5) texts.add(null)
+            put(texts, 0, threshold.fmt())
+            put(texts, 1, ratio.fmt())
+            put(texts, 2, knee.fmt())
+            put(texts, 3, attack.fmt())
+            put(texts, 4, release.fmt())
+            c.onCommitCall(texts)
+        } else {
+            props.toolCtx.onCommit(threshold.fmt())
+        }
+        hasCommitted = true
+        lastCommitted = buildValue()
+    }
+
+    // Built-state fingerprints: in whole-call mode [initialValue] is only the clicked arg's
+    // text, so the Reset/Update buttons compare built snapshots instead (initial state and
+    // last committed state); scalar mode keeps the plain text comparison.
+    private val initialBuiltValue = buildValue()
+    private var lastCommitted = initialBuiltValue
+
+    private val isInitialModified
+        get() = if (call != null) buildValue() != initialBuiltValue else initialValue != buildValue()
+
+    private val isCurrentModified
+        get() = if (call != null) buildValue() != lastCommitted else currentValue != buildValue()
 
     private fun liveUpdate() {
         if (props.embedded || autoUpdate) {
-            props.toolCtx.onCommit(buildValue())
+            commitValue()
         }
     }
 
     private fun onCancel() {
-        if (!props.embedded && autoUpdate && isInitialModified) {
-            props.toolCtx.onCommit(initialValue)
+        if (!props.embedded && autoUpdate && hasCommitted && isInitialModified) {
+            val c = call
+            if (c != null) c.onCommitCall(c.args) else props.toolCtx.onCommit(initialValue)
         }
         props.toolCtx.onCancel()
     }
 
     private fun onReset() {
+        dirty.clear()
         currentValue = initialValue
-        threshold = parsed[0]
-        ratio = parsed[1]
-        knee = parsed[2]
-        attack = parsed[3]
-        release = parsed[4]
+        threshold = parsedThreshold
+        ratio = parsedRatio
+        knee = parsedKnee
+        attack = parsedAttack
+        release = parsedRelease
         formCtrl.resetAllFields()
-        props.toolCtx.onCommit(currentValue)
+        commitValue()
         resetCounter++
     }
 
     private fun onCommit() {
         currentValue = buildValue()
-        props.toolCtx.onCommit(currentValue)
+        commitValue()
     }
 
     private fun applyPreset(preset: CompressorPreset) {
@@ -173,6 +242,7 @@ private class SprudelCompressorEditorComp(ctx: Ctx<Props>) : Component<SprudelCo
         knee = preset.knee
         attack = preset.attack
         release = preset.release
+        dirty += 0..4
         formCtrl.resetAllFields()
         resetCounter++
         liveUpdate()
@@ -205,85 +275,89 @@ private class SprudelCompressorEditorComp(ctx: Ctx<Props>) : Component<SprudelCo
         div {
             key = "compressor-editor-content-$resetCounter"
 
-            // Presets
-            div {
-                key = "compressor-presets"
-                css {
-                    display = Display.flex
-                    flexWrap = FlexWrap.wrap
-                    gap = 4.px
-                    marginBottom = 8.px
-                }
-                val matchedPreset = PRESETS.find {
-                    it.threshold == threshold && it.ratio == ratio && it.knee == knee &&
-                            it.attack == attack && it.release == release
-                }
+            // Presets set all five params, so they only make sense in whole-call mode
+            if (call != null) {
+                div {
+                    key = "compressor-presets"
+                    css {
+                        display = Display.flex
+                        flexWrap = FlexWrap.wrap
+                        gap = 4.px
+                        marginBottom = 8.px
+                    }
+                    val matchedPreset = PRESETS.find {
+                        it.threshold == threshold && it.ratio == ratio && it.knee == knee &&
+                                it.attack == attack && it.release == release
+                    }
 
-                for (preset in PRESETS) {
-                    val isSelected = preset === matchedPreset
-                    ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
+                    for (preset in PRESETS) {
+                        val isSelected = preset === matchedPreset
+                        ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
+                            css { whiteSpace = WhiteSpace.nowrap }
+                            onClick { applyPreset(preset) }
+                            +preset.name
+                        }
+                    }
+
+                    val isCustom = matchedPreset == null
+                    ui.mini.givenNot(isCustom) { basic }.given(isCustom) { with(laf.styles.goldButton()) }.button {
                         css { whiteSpace = WhiteSpace.nowrap }
-                        onClick { applyPreset(preset) }
-                        +preset.name
+                        +"Custom"
                     }
                 }
 
-                val isCustom = matchedPreset == null
-                ui.mini.givenNot(isCustom) { basic }.given(isCustom) { with(laf.styles.goldButton()) }.button {
-                    css { whiteSpace = WhiteSpace.nowrap }
-                    +"Custom"
-                }
+                ui.divider()
             }
-
-            ui.divider()
 
             ui.form {
                 key = "compressor-editor-form"
                 ui.five.stackable.fields {
                     key = "compressor-editor-fields"
-                    UiInputField(threshold, { threshold = it; liveUpdate() }) {
+                    UiInputField(threshold, { threshold = it; dirty += 0; liveUpdate() }) {
                         domKey("threshold")
                         step(1.0)
                         label {
                             +"Threshold"
-                            subFieldInfoIcon("params", "threshold", props.toolCtx, infoPopup)
+                            paramInfoIcon("threshold", props.toolCtx, infoPopup)
                         }
                         rightLabel { ui.basic.label { +"dB" } }
                     }
-                    UiInputField(ratio, { ratio = it; liveUpdate() }) {
-                        domKey("ratio")
-                        step(0.5)
-                        label {
-                            +"Ratio"
-                            subFieldInfoIcon("params", "ratio", props.toolCtx, infoPopup)
+                    if (call != null) {
+                        UiInputField(ratio, { ratio = it; dirty += 1; liveUpdate() }) {
+                            domKey("ratio")
+                            step(0.5)
+                            label {
+                                +"Ratio"
+                                paramInfoIcon("ratio", props.toolCtx, infoPopup)
+                            }
                         }
-                    }
-                    UiInputField(knee, { knee = it; liveUpdate() }) {
-                        domKey("knee")
-                        step(0.5)
-                        label {
-                            +"Knee"
-                            subFieldInfoIcon("params", "knee", props.toolCtx, infoPopup)
+                        UiInputField(knee, { knee = it; dirty += 2; liveUpdate() }) {
+                            domKey("knee")
+                            step(0.5)
+                            label {
+                                +"Knee"
+                                paramInfoIcon("knee", props.toolCtx, infoPopup)
+                            }
+                            rightLabel { ui.basic.label { +"dB" } }
                         }
-                        rightLabel { ui.basic.label { +"dB" } }
-                    }
-                    UiInputField(attack, { attack = it; liveUpdate() }) {
-                        domKey("attack")
-                        step(0.001)
-                        label {
-                            +"Attack"
-                            subFieldInfoIcon("params", "attack", props.toolCtx, infoPopup)
+                        UiInputField(attack, { attack = it; dirty += 3; liveUpdate() }) {
+                            domKey("attack")
+                            step(0.001)
+                            label {
+                                +"Attack"
+                                paramInfoIcon("attack", props.toolCtx, infoPopup)
+                            }
+                            rightLabel { ui.basic.label { +"sec" } }
                         }
-                        rightLabel { ui.basic.label { +"sec" } }
-                    }
-                    UiInputField(release, { release = it; liveUpdate() }) {
-                        domKey("release")
-                        step(0.01)
-                        label {
-                            +"Release"
-                            subFieldInfoIcon("params", "release", props.toolCtx, infoPopup)
+                        UiInputField(release, { release = it; dirty += 4; liveUpdate() }) {
+                            domKey("release")
+                            step(0.01)
+                            label {
+                                +"Release"
+                                paramInfoIcon("release", props.toolCtx, infoPopup)
+                            }
+                            rightLabel { ui.basic.label { +"sec" } }
                         }
-                        rightLabel { ui.basic.label { +"sec" } }
                     }
                 }
             }

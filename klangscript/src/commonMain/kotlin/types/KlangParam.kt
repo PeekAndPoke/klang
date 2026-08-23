@@ -28,7 +28,6 @@ data class KlangParam(
     val defaultDoc: String? = null,
     val description: String = "",
     val uitools: List<String> = emptyList(),
-    val subFields: Map<String, String> = emptyMap(),
 ) {
     /**
      * Render this parameter as a signature fragment.

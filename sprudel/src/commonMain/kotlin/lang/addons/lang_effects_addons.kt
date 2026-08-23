@@ -67,7 +67,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  *
  * @param amount Effect amount / wet-dry mix.
  * @param dim Currently unused by the engine.
- * @param-tool amount SprudelReverbSequenceEditor
+ * @param-tool amount SprudelReverbEditor, SprudelReverbSequenceEditor
  * @param size Room size — larger values produce longer reverb tails
  * @param fade Tail override, 0..1 (not seconds). Overrides size.
  * @param lowpass Lowpass filter frequency on reverb output in Hz
@@ -221,7 +221,7 @@ private fun applyLpRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @param decay Decay time in seconds.
  * @param sustain Sustain level (0–1).
  * @param release Release time in seconds.
- * @param-tool attack SprudelLpAdsrSequenceEditor
+ * @param-tool attack SprudelLpAdsrEditor, SprudelLpAdsrSequenceEditor
  * @return A new pattern with all specified LPF envelope parameters applied.
  * @category effects
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
@@ -347,7 +347,7 @@ private fun applyHpRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @param decay Decay time in seconds.
  * @param sustain Sustain level (0–1).
  * @param release Release time in seconds.
- * @param-tool attack SprudelHpAdsrSequenceEditor
+ * @param-tool attack SprudelHpAdsrEditor, SprudelHpAdsrSequenceEditor
  * @return A new pattern with all specified HPF envelope parameters applied.
  * @category effects
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
@@ -473,7 +473,7 @@ private fun applyBpRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @param decay Decay time in seconds.
  * @param sustain Sustain level (0–1).
  * @param release Release time in seconds.
- * @param-tool attack SprudelBpAdsrSequenceEditor
+ * @param-tool attack SprudelBpAdsrEditor, SprudelBpAdsrSequenceEditor
  * @return A new pattern with all specified BPF envelope parameters applied.
  * @category effects
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
@@ -573,7 +573,7 @@ private fun applyTremolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * ```
  *
  * @param sync Rate in cycles per cycle.
- * @param-tool depth SprudelTremoloSequenceEditor
+ * @param-tool depth SprudelTremoloEditor, SprudelTremoloSequenceEditor
  * @param depth Modulation intensity (0 = no effect, 1 = full tremolo)
  * @param shape LFO waveform: sine, triangle, square, saw
  * @param skew Waveform skew (0–1)
@@ -718,7 +718,7 @@ private fun applyNfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @param decay Decay time in seconds.
  * @param sustain Sustain level (0–1).
  * @param release Release time in seconds.
- * @param-tool attack SprudelNfAdsrSequenceEditor
+ * @param-tool attack SprudelNfAdsrEditor, SprudelNfAdsrSequenceEditor
  * @return A new pattern with all specified notch filter envelope parameters applied.
  * @category effects
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon

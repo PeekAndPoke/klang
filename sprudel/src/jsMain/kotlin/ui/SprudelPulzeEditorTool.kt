@@ -212,7 +212,7 @@ private class SprudelPulzeEditorComp(ctx: Ctx<Props>) : Component<SprudelPulzeEd
                         step(0.05)
                         label {
                             +"Duty"
-                            subFieldInfoIcon("params", "duty", props.toolCtx, infoPopup)
+                            paramInfoIcon("duty", props.toolCtx, infoPopup)
                         }
                     }
                 }

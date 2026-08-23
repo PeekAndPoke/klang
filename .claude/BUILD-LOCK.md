@@ -1,8 +1,12 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-23**
+**SINCE: 2026-08-24**
 **STATE: FREE — take the lock before building.**
+
+> Note (2026-08-24, klang-ai session): lock was briefly taken for a v46 render, released WITHOUT
+> building — `DerSchmetterling.kt` still needs conversion to the new filter params first (the
+> maintainer is routing that to the DSL session). No renders, no source changes this hold.
 
 > Last action (2026-08-21, klang-ai session): offline renders of Der Schmetterling v36/v37 plus
 > lead- and bass-isolation stems — no source changes, no test runs. Renders need `--cycles 258`

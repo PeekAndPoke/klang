@@ -60,7 +60,6 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
 
 - Examples: fenced ` ```KlangScript ``` ` blocks (or ` ```KlangScript(Playable) ``` `) — **NOT** `@sample` tags
 - Required tags: `@param`, `@return`, `@category` (one word), `@tags` (comma-separated)
-- `@param-sub` required for composite params (colon-separated values like `"amount:shape"`)
 - `@param-tool <ParamName> <ToolName>` wires a param to a `KlangUiTool` (see `ref/uitools.md`)
 - `@alias` required when aliases exist — every alias must list all the others
 - Max line length: 120 chars
