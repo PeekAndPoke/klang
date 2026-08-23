@@ -389,7 +389,7 @@ All filters accept pattern values and have envelope variants (`lpe` for depth, `
 | `tremolodepth(d)`       | `tremdepth`                                                                              | Tremolo depth                                 | `note("c3").tremolo(4).tremolodepth(0.5)` |
 | `tremolosync(n)`        | `tremsync`                                                                               | Sync tremolo to cycle                         | `note("c3").tremolosync(8)`               |
 | `tremoloshape(s)`       | `tremshape`                                                                              | Tremolo LFO shape                             | `note("c3").tremolo(4).tremshape("sine")` |
-| `compressor(params)`    | `comp`                                                                                   | Compressor (thresh:ratio:knee:att:rel)        | `s("bd sd").comp("-20:4:3:0.01:0.3")`     |
+| `compressor(threshold, ratio, knee, attack, release)`    | `comp`                                                                                   | Compressor (per-param)        | `s("bd sd").comp(-20, 4, 3, 0.01, 0.3)`     |
 | `iresponse(path)`       | `ir`                                                                                     | Impulse response convolution                  | `note("c3").ir("hall.wav")`               |
 
 Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`

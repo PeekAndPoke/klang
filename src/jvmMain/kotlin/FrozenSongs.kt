@@ -84,7 +84,7 @@ stack(                                                                          
   sound("pink!8").orbit(6).gain(0.08).hpf(8000).pan(sine.range(0.25, 0.75).slow(3)).adsr(0.007, 0.3, 0.0, 0.05) //  .solo(),
   // Master
 ).room(0.10, 8, 0.12).rlp(12500).seed(timeOfDay.mul(60*60*24))
- .compressor("-6:2:5:0.02:0.05")
+ .compressor(-6, 2, 5, 0.02, 0.05)
 
 
 // Inspired by: Editors - Papillon
@@ -164,7 +164,7 @@ stack(
     .orbit(0).gain(0.12).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(perlin.range(440, 440 * 4).segment(16).slow(48)).bpq(sine.range(0.25, 5.0).slow(48).early(12))
   ,
-).delay(0.2, feedback = 0.5).delaytime(pure(1/8).div(cps)).room(0.1, 10.0).compressor("-10:2:6:0.01:0.05")
+).delay(0.2, feedback = 0.5).delaytime(pure(1/8).div(cps)).room(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
 
 
 

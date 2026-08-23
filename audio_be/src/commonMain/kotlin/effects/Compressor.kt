@@ -581,43 +581,6 @@ class Compressor(
         private fun guardOr(value: Double, fallback: Double): Double =
             if (value.isFinite()) value else fallback
 
-        /**
-         * Parse compressor settings from a string.
-         * Format: "threshold:ratio:knee:attack:release"
-         * Example: "-20:4:6:0.003:0.1"
-         *
-         * @return CompressorSettings or null if parsing fails
-         */
-        fun parseSettings(input: String): CompressorSettings? {
-            val parts = input.split(":").mapNotNull { it.toDoubleOrNull() }
-
-            return when (parts.size) {
-                5 -> CompressorSettings(
-                    thresholdDb = parts[0],
-                    ratio = parts[1],
-                    kneeDb = parts[2],
-                    attackSeconds = parts[3],
-                    releaseSeconds = parts[4]
-                )
-
-                2 -> CompressorSettings(
-                    thresholdDb = parts[0],
-                    ratio = parts[1],
-                    kneeDb = 6.0,
-                    attackSeconds = 0.003,
-                    releaseSeconds = 0.1
-                )
-
-                else -> null
-            }
-        }
     }
 
-    data class CompressorSettings(
-        val thresholdDb: Double,
-        val ratio: Double,
-        val kneeDb: Double,
-        val attackSeconds: Double,
-        val releaseSeconds: Double,
-    )
 }

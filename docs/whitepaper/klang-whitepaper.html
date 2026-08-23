@@ -1666,7 +1666,7 @@ stack(
   , sound(<span class="st">"brown"</span>).gain(0.015).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
 
 ).room(<span class="fl">0.25</span>, <span class="fl">7</span>, <span class="fl">0.75</span>).delay(0.2).delaytime(pure(1/8).div(cps))
- .compressor(<span class="st">"-15:2:6:0.01:0.2"</span>).analog(8)</pre>
+ .compressor(<span class="fl">-15</span>, <span class="fl">2</span>, <span class="fl">6</span>, <span class="fl">0.01</span>, <span class="fl">0.2</span>).analog(8)</pre>
                 </div>
                 <figcaption>Abridged — the full song is 125 lines. The <code>let wait = 14</code> at the top is the
                     whole arrangement: every layer's entry is expressed as a multiple of it, so one number restructures

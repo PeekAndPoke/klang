@@ -94,7 +94,7 @@ stack(
     .early(0.002).orbit(5).gain(0.95).hpf(180).lpf(7000).adsr(0.006, 0.25, 0.1, 0.1).superimpose(bpf(220).bpq(4).gain(0.4)),
   sound("<[hh hh oh hh]!48 [cr hh cr hh]!16 [0 hh 0 hh]!16>").fast(2).mute("<0!128 1!32>")
     .late(0.004).orbit(5).gain(1.00).hpf(3000).lpf(6000).lpq(1.2).adsr(0.01, 0.2, 0.5, 0.2)
-).room(0.02, 5).compressor("-6:3:10:0.02:0.25").seed(42)
+).room(0.02, 5).compressor(-6, 3, 10, 0.02, 0.25).seed(42)
     """.trimIndent()
 
     val entries: List<Entry> = listOf(

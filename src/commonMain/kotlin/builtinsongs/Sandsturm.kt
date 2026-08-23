@@ -94,7 +94,7 @@ arrange(
   [8, groove],
   [8, build],
   [16, drop]
-).compressor("-10:2:6:0.01:0.1").room(0.12).rsize(6)
+).compressor(-10, 2, 6, 0.01, 0.1).room(0.12).rsize(6)
 
 // Inspired by: Darude — Sandstorm
 // Composed by: Claude, Motör, peekandpoke

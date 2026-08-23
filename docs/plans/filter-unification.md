@@ -437,6 +437,13 @@ for the doomed. C6a removes the doomed; C0 then reshapes what remains.
   trust-codec, `WIRE_SCHEMA_HASH`, worklet), not a sprudel edit, and it is 8x in songs.
   **DECIDED (maintainer, 2026-08-23): own sub-step INSIDE C0** — the wire work lands as a
   separate commit within the chunk (C0.2 below), so the whole compound-args story ships in C0.
+  **C0.2 posture on legacy colon strings (review round 1):** an out-of-repo script passing the
+  old compound (`compressor("-20:4:...")` — or any C0.1 compound) is now silently inert: the
+  string lands in the head param, fails to parse, and keep-on-garbage leaves the fields unset.
+  ACCEPTED for pre-alpha (compounds leave the language entirely; no compat shim). The right
+  future mitigation is a SprudelDiagnostics warning ("colon string passed to a per-param
+  function") on the existing error-visibility channel — belongs to the query-time diagnostics
+  backlog, not to C0.
 - **`adsrCurves("square:exponential:scurve")`** is a compound of ENUM values with no per-param
   form proposed. It gets `adsrCurves(attack, decay, release)` with three string params.
 - **`ratio("5:4")`** is a division, a third meaning of the colon, and stays colon-only as an

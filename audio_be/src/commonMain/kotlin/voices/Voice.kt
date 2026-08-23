@@ -209,16 +209,27 @@ class Voice(
         val releaseSeconds: Double,
     ) {
         companion object {
-            fun fromStringConfig(config: String?): Compressor? {
-                val settings = config?.let {
-                    io.peekandpoke.klang.audio_be.effects.Compressor.parseSettings(it)
-                } ?: return null
+            /**
+             * Builds per-voice compressor settings from the per-param wire fields (C0.2).
+             * Null when no field is set; missing fields fall back to the classic defaults
+             * (threshold -20 dB, ratio 4:1, knee 6 dB, attack 3 ms, release 100 ms).
+             */
+            fun fromParams(
+                threshold: Double?,
+                ratio: Double?,
+                knee: Double?,
+                attack: Double?,
+                release: Double?,
+            ): Compressor? {
+                if (threshold == null && ratio == null && knee == null && attack == null && release == null) {
+                    return null
+                }
                 return Compressor(
-                    thresholdDb = settings.thresholdDb,
-                    ratio = settings.ratio,
-                    kneeDb = settings.kneeDb,
-                    attackSeconds = settings.attackSeconds,
-                    releaseSeconds = settings.releaseSeconds,
+                    thresholdDb = threshold ?: -20.0,
+                    ratio = ratio ?: 4.0,
+                    kneeDb = knee ?: 6.0,
+                    attackSeconds = attack ?: 0.003,
+                    releaseSeconds = release ?: 0.1,
                 )
             }
         }

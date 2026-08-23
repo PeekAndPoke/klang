@@ -364,15 +364,64 @@ fun PatternMapperFn.postgain(amount: PatternLike? = null, callInfo: CallInfo? = 
 
 // -- compressor() / comp() --------------------------------------------------------------------------------------------
 
-private val compressorMutation = voiceSetter { compressor = it?.toString() }
+private val compressorThresholdMutation = voiceSetter {
+    compressorThreshold = it?.toString()?.toDoubleOrNull() ?: compressorThreshold
+}
 
-private fun applyCompressor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args, compressorMutation)
+private val compressorRatioMutation = voiceSetter {
+    compressorRatio = it?.toString()?.toDoubleOrNull() ?: compressorRatio
+}
+
+private val compressorKneeMutation = voiceSetter {
+    compressorKnee = it?.toString()?.toDoubleOrNull() ?: compressorKnee
+}
+
+private val compressorAttackMutation = voiceSetter {
+    compressorAttack = it?.toString()?.toDoubleOrNull() ?: compressorAttack
+}
+
+private val compressorReleaseMutation = voiceSetter {
+    compressorRelease = it?.toString()?.toDoubleOrNull() ?: compressorRelease
+}
+
+private fun applyCompressorThreshold(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorThresholdMutation) { src, ctrl ->
+        src.compressorThreshold = ctrl.compressorThreshold ?: src.compressorThreshold
+        src
+    }
+}
+
+private fun applyCompressorRatio(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorRatioMutation) { src, ctrl ->
+        src.compressorRatio = ctrl.compressorRatio ?: src.compressorRatio
+        src
+    }
+}
+
+private fun applyCompressorKnee(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorKneeMutation) { src, ctrl ->
+        src.compressorKnee = ctrl.compressorKnee ?: src.compressorKnee
+        src
+    }
+}
+
+private fun applyCompressorAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorAttackMutation) { src, ctrl ->
+        src.compressorAttack = ctrl.compressorAttack ?: src.compressorAttack
+        src
+    }
+}
+
+private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorReleaseMutation) { src, ctrl ->
+        src.compressorRelease = ctrl.compressorRelease ?: src.compressorRelease
+        src
+    }
 }
 
 /**
- * Sets dynamic range compression parameters as a colon-separated string
- * `"threshold:ratio:knee:attack:release"`.
+ * Sets dynamic range compression parameters. Each parameter is independent and patternable;
+ * omitted parameters use the classic defaults in the engine.
  *
  * **Threshold:** The volume level (in decibels) at which compression starts.
  * - Logic: Signals above this level are attenuated.
@@ -399,140 +448,170 @@ private fun applyCompressor(source: SprudelPattern, args: List<SprudelDslArg<Any
  *
  * | Use Case          | Configuration        | Description                                                                              |
  * | ----------------- | -------------------- | ---------------------------------------------------------------------------------------- |
- * | Gentle Leveling   | `-15:2:6:0.01:0.2`   | Low ratio and soft knee to subtly even out a melody or pad.                              |
- * | Punchy Drums      | `-20:4:3:0.03:0.1`   | Slightly slower attack to let the drum "hit" (transient) pass before squeezing the tail. |
- * | Brickwall Limiter | `-2:40:0:0.001:0.05` | High ratio and instant attack to prevent any signal from clipping above -2dB.            |
- * | Heavy Squeeze     | `-30:8:2:0.005:0.1`  | Low threshold and high ratio for that "pumping" aggressive sound.                        |
+ * | Gentle Leveling   | `(-15, 2, 6, 0.01, 0.2)`   | Low ratio and soft knee to subtly even out a melody or pad.                              |
+ * | Punchy Drums      | `(-20, 4, 3, 0.03, 0.1)`   | Slightly slower attack to let the drum "hit" (transient) pass before squeezing the tail. |
+ * | Brickwall Limiter | `(-2, 40, 0, 0.001, 0.05)` | High ratio and instant attack to prevent any signal from clipping above -2dB.            |
+ * | Heavy Squeeze     | `(-30, 8, 2, 0.005, 0.1)`  | Low threshold and high ratio for that "pumping" aggressive sound.                        |
  *
  * ```KlangScript(Playable)
- * s("bd sd").compressor("-20:4:3:0.03:0.1")  // standard compression
+ * s("bd sd").compressor(-20, 4, 3, 0.03, 0.1)  // standard compression
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * s("bd*4").compressor("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>")   // alternate settings
  * ```
  *
  * ```KlangScript(Playable)
  * // Shorthand: only threshold and ratio (defaults: knee=6.0, attack=0.003, release=0.1)
- * s("hh*8").compressor("-15:4")
+ * s("hh*8").compressor(-15, 4)
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  *
- * @param-tool params SprudelCompressorSequenceEditor
- * @param-sub params threshold Level in dB above which compression starts (e.g. -20)
- * @param-sub params ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold)
- * @param-sub params knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft)
- * @param-sub params attack How quickly compression engages, in seconds (e.g. 0.003)
- * @param-sub params release How quickly compression releases, in seconds (e.g. 0.1)
+ * @param-tool threshold SprudelCompressorSequenceEditor
  * @alias comp
  * @category dynamics
  * @tags compressor, comp, compression, threshold, ratio, dynamics
  */
 @KlangScript.Function
-fun SprudelPattern.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyCompressor(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+fun SprudelPattern.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    var p = this
+    if (threshold != null) p = applyCompressorThreshold(p, listOf<Any?>(threshold).asSprudelDslArgs(callInfo?.forParam(0)))
+    if (ratio != null) p = applyCompressorRatio(p, listOf<Any?>(ratio).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (knee != null) p = applyCompressorKnee(p, listOf<Any?>(knee).asSprudelDslArgs(callInfo?.forParam(2)))
+    if (attack != null) p = applyCompressorAttack(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(3)))
+    if (release != null) p = applyCompressorRelease(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(4)))
+    return p
+}
 
 /**
  * Parses this string as a pattern and sets dynamic range compression parameters.
  *
  * ```KlangScript(Playable)
- * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * s("bd*4").compressor("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>")   // alternate settings
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun String.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(params, callInfo)
+fun String.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(threshold, ratio, knee, attack, release, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
  *
  * ```KlangScript(Playable)
- * s("bd*4").apply(compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
+ * s("bd*4").apply(compressor("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>"))   // alternate settings
  * ```
 
  */
 @KlangScript.Function
-fun compressor(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.compressor(params, callInfo) }
+fun compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets compressor parameters after the previous mapper.
  *
  * ```KlangScript(Playable)
- * s("bd*4").apply(compressor("-20:4:3:0.03:0.1").gain(0.8))  // compress + gain chained
+ * s("bd*4").apply(compressor(-20, 4, 3, 0.03, 0.1).gain(0.8))  // compress + gain chained
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun PatternMapperFn.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.compressor(params, callInfo) }
+fun PatternMapperFn.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 /**
- * Alias for [compressor]. Sets dynamic range compression parameters as a colon-separated string
- * `"threshold:ratio:knee:attack:release"`.
+ * Alias for [compressor]. Sets dynamic range compression parameters; each parameter is
+ * independent and patternable.
  *
  * ```KlangScript(Playable)
- * s("bd sd").comp("-20:4:3:0.01:0.3")                        // standard compression
+ * s("bd sd").comp(-20, 4, 3, 0.01, 0.3)                        // standard compression
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * s("bd*4").comp("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>")   // alternate settings
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  *
- * @param-tool params SprudelCompressorSequenceEditor
+ * @param-tool threshold SprudelCompressorSequenceEditor
  * @alias compressor
  * @category dynamics
  * @tags comp, compressor, compression, threshold, ratio, dynamics
  */
 @KlangScript.Function
-fun SprudelPattern.comp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.compressor(params, callInfo)
+fun SprudelPattern.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.compressor(threshold, ratio, knee, attack, release, callInfo)
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
  *
  * ```KlangScript(Playable)
- * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * s("bd*4").comp("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>")   // alternate settings
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun String.comp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(params, callInfo)
+fun String.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(threshold, ratio, knee, attack, release, callInfo)
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
  *
  * ```KlangScript(Playable)
- * s("bd*4").apply(comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
+ * s("bd*4").apply(comp("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>"))   // alternate settings
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun comp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.compressor(params, callInfo) }
+fun comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 /**
  * Alias for [compressor]. Creates a chained [PatternMapperFn] that sets compressor parameters after the previous
  * mapper.
  *
  * ```KlangScript(Playable)
- * s("bd*4").apply(comp("-20:4:3:0.03:0.1").gain(0.8))  // compress + gain chained
+ * s("bd*4").apply(comp(-20, 4, 3, 0.03, 0.1).gain(0.8))  // compress + gain chained
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun PatternMapperFn.comp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.compressor(params, callInfo) }
+fun PatternMapperFn.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 // -- unison() / uni() -------------------------------------------------------------------------------------------------
 

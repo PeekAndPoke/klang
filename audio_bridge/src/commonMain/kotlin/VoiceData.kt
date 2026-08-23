@@ -132,8 +132,12 @@ data class VoiceData(
     val loopBegin: Double?,
     val loopEnd: Double?,
 
-    // Dynamics / Compression
-    val compressor: String?,
+    // Dynamics / Compression (per-param since C0.2; audio_be applies defaults for missing values)
+    val compressorThreshold: Double?,
+    val compressorRatio: Double?,
+    val compressorKnee: Double?,
+    val compressorAttack: Double?,
+    val compressorRelease: Double?,
 
     // Solo
     /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. */
@@ -249,7 +253,11 @@ data class VoiceData(
             cut = null,
             loopBegin = null,
             loopEnd = null,
-            compressor = null,
+            compressorThreshold = null,
+            compressorRatio = null,
+            compressorKnee = null,
+            compressorAttack = null,
+            compressorRelease = null,
             solo = null,
             sourceId = null,
         )

@@ -68,7 +68,7 @@ stack(
     sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
       .orbit(6).gain(0.6).pan(0.55).adsr(0.017, 0.3, 0.5, 1).degrade(0.01).hpf(80).lpf(7800)
       .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
-  ).room(0.20).rsize(3.0).rlp(8000).compressor("-19:2:6:0.01:0.2")
+  ).room(0.20).rsize(3.0).rlp(8000).compressor(-19, 2, 6, 0.01, 0.2)
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").legato(2)
     .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)

@@ -210,7 +210,13 @@ class VoiceFactory(
         val postGain = data.postGain ?: 1.0
 
         // Compressor
-        val compressor = Voice.Compressor.fromStringConfig(data.compressor)
+        val compressor = Voice.Compressor.fromParams(
+            threshold = data.compressorThreshold,
+            ratio = data.compressorRatio,
+            knee = data.compressorKnee,
+            attack = data.compressorAttack,
+            release = data.compressorRelease,
+        )
 
         // Effects
         val distort = Voice.Distort(

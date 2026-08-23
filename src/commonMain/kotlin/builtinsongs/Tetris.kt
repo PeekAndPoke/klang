@@ -106,7 +106,7 @@ export song = stack(
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
     master(Master.of(MasterFx.gain(1.5))),
-).room(0.3, 3, 0.05, 11500).compressor("-6:2.5:7:0.02:0.025").swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
+).room(0.3, 3, 0.05, 11500).compressor(-6, 2.5, 7, 0.02, 0.025).swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
 
 
 

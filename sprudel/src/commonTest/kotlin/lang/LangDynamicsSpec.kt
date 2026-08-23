@@ -151,15 +151,15 @@ class LangDynamicsSpec : StringSpec({
 
     "compressor dsl interface" {
         dslInterfaceTests(
-            "pattern.compressor(params)" to note("a").compressor("-20:4:3:0.03:0.1"),
+            "pattern.compressor(params)" to note("a").compressor(-20, 4, 3, 0.03, 0.1),
             "script pattern.compressor(params)" to
-                    SprudelPattern.compile("""note("a").compressor("-20:4:3:0.03:0.1")"""),
-            "string.compressor(params)" to "a".compressor("-20:4:3:0.03:0.1"),
+                    SprudelPattern.compile("""note("a").compressor(-20, 4, 3, 0.03, 0.1)"""),
+            "string.compressor(params)" to "a".compressor(-20, 4, 3, 0.03, 0.1),
             "script string.compressor(params)" to
-                    SprudelPattern.compile(""""a".compressor("-20:4:3:0.03:0.1")"""),
-            "compressor(params) via apply" to note("a").apply(compressor("-20:4:3:0.03:0.1")),
+                    SprudelPattern.compile(""""a".compressor(-20, 4, 3, 0.03, 0.1)"""),
+            "compressor(params) via apply" to note("a").apply(compressor(-20, 4, 3, 0.03, 0.1)),
             "script compressor(params) via apply" to
-                    SprudelPattern.compile("""note("a").apply(compressor("-20:4:3:0.03:0.1"))"""),
+                    SprudelPattern.compile("""note("a").apply(compressor(-20, 4, 3, 0.03, 0.1))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -167,23 +167,27 @@ class LangDynamicsSpec : StringSpec({
 
     "comp dsl interface" {
         dslInterfaceTests(
-            "pattern.comp(params)" to note("a").comp("-20:4"),
-            "script pattern.comp(params)" to SprudelPattern.compile("""note("a").comp("-20:4")"""),
-            "string.comp(params)" to "a".comp("-20:4"),
-            "script string.comp(params)" to SprudelPattern.compile(""""a".comp("-20:4")"""),
-            "comp(params) via apply" to note("a").apply(comp("-20:4")),
-            "script comp(params) via apply" to SprudelPattern.compile("""note("a").apply(comp("-20:4"))"""),
+            "pattern.comp(params)" to note("a").comp(-20, 4),
+            "script pattern.comp(params)" to SprudelPattern.compile("""note("a").comp(-20, 4)"""),
+            "string.comp(params)" to "a".comp(-20, 4),
+            "script string.comp(params)" to SprudelPattern.compile(""""a".comp(-20, 4)"""),
+            "comp(params) via apply" to note("a").apply(comp(-20, 4)),
+            "script comp(params) via apply" to SprudelPattern.compile("""note("a").apply(comp(-20, 4))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
     "script apply(compressor()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(compressor("-20:4:3:0.03:0.1"))""")!!
+        val p = SprudelPattern.compile("""note("a").apply(compressor(-20, 4, 3, 0.03, 0.1))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.compressor shouldBe "-20:4:3:0.03:0.1"
+        events[0].data.compressorThreshold shouldBe -20.0
+        events[0].data.compressorRatio shouldBe 4.0
+        events[0].data.compressorKnee shouldBe 3.0
+        events[0].data.compressorAttack shouldBe 0.03
+        events[0].data.compressorRelease shouldBe 0.1
     }
 
     // ---- unison() / uni() -------------------------------------------------------------------------------

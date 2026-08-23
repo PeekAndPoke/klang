@@ -71,7 +71,7 @@ export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").orbit(7).clip(0.8).disto
 
 // ── Song: dub plate with broad reverb tail and gentle bus compression ──
 export song = stack(kick, snare, hat, skank, lead, bass, sub)
-  .compressor("-6:2:6:0.02:0.05").analog(3.5)
+  .compressor(-6, 2, 6, 0.02, 0.05).analog(3.5)
 
 // Composed by: peekandpoke + Claude (echo of Korobeiniki, by way of King Tubby)
 

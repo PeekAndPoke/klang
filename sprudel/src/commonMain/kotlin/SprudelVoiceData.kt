@@ -122,9 +122,17 @@ data class SprudelVoiceData(
     // Body resonator — grouped (see SvdBody). Flat fields (body/bodyMix/bodyFloor) are accessors below.
     var bodyFx: SvdBody?,
 
-    // Dynamics / Compression
-    /** Dynamic range compression settings (threshold:ratio:knee:attack:release) */
-    var compressor: String?,
+    // Dynamics / Compression (per-param since C0.2)
+    /** Compressor threshold in dB (e.g. -20). */
+    var compressorThreshold: Double?,
+    /** Compression ratio (e.g. 4 = 4:1 above threshold). */
+    var compressorRatio: Double?,
+    /** Knee smoothness in dB (0 = hard knee). */
+    var compressorKnee: Double?,
+    /** Attack time in seconds. */
+    var compressorAttack: Double?,
+    /** Release time in seconds. */
+    var compressorRelease: Double?,
 
     // Playback control
     /** Solo value - 0.0 = disabled, 0.0..1.0 = enabled (amount), null = not set */
@@ -729,7 +737,11 @@ data class SprudelVoiceData(
             sample = mergeSvdSample(sample, other.sample),
             vowelFx = mergeSvdVowel(vowelFx, other.vowelFx),
             bodyFx = mergeSvdBody(bodyFx, other.bodyFx),
-            compressor = other.compressor ?: compressor,
+            compressorThreshold = other.compressorThreshold ?: compressorThreshold,
+            compressorRatio = other.compressorRatio ?: compressorRatio,
+            compressorKnee = other.compressorKnee ?: compressorKnee,
+            compressorAttack = other.compressorAttack ?: compressorAttack,
+            compressorRelease = other.compressorRelease ?: compressorRelease,
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
             pipeline = other.pipeline ?: pipeline,
@@ -781,7 +793,11 @@ data class SprudelVoiceData(
         sample = mergeSvdSample(sample, other.sample)
         vowelFx = mergeSvdVowel(vowelFx, other.vowelFx)
         bodyFx = mergeSvdBody(bodyFx, other.bodyFx)
-        compressor = other.compressor ?: compressor
+        compressorThreshold = other.compressorThreshold ?: compressorThreshold
+        compressorRatio = other.compressorRatio ?: compressorRatio
+        compressorKnee = other.compressorKnee ?: compressorKnee
+        compressorAttack = other.compressorAttack ?: compressorAttack
+        compressorRelease = other.compressorRelease ?: compressorRelease
         solo = other.solo ?: solo
         // patternId intentionally preserved (never taken from other) — matches merge()
         pipeline = other.pipeline ?: pipeline
@@ -1054,7 +1070,11 @@ data class SprudelVoiceData(
             cut = cut,
             loopBegin = loopBegin,
             loopEnd = loopEnd,
-            compressor = compressor,
+            compressorThreshold = compressorThreshold,
+            compressorRatio = compressorRatio,
+            compressorKnee = compressorKnee,
+            compressorAttack = compressorAttack,
+            compressorRelease = compressorRelease,
             solo = solo,
             sourceId = patternId,
             pipeline = pipelineName,
@@ -1427,7 +1447,11 @@ internal val blueprint = SprudelVoiceData(
     sample = null,
     vowelFx = null,
     bodyFx = null,
-    compressor = null,
+    compressorThreshold = null,
+    compressorRatio = null,
+    compressorKnee = null,
+    compressorAttack = null,
+    compressorRelease = null,
     solo = null,
     patternId = null,
     pipeline = null,

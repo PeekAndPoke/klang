@@ -39,7 +39,7 @@ class CallInfoTest : StringSpec({
     }
 
     "compressor passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").compressor("-20:4:3:0.03:0.1")""")
+        assertCallInfoPresent("""seq("0 1").compressor(-20, 4, 3, 0.03, 0.1)""")
     }
 
     "unison passes CallInfo from KlangScript" {

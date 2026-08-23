@@ -110,7 +110,7 @@ stack(
   , sound("pink").gain(0.0050).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000)
   , sound("brown").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
  
-).room(0.25, 7, 0.75).delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(8)
+).room(0.25, 7, 0.75).delay(0.2).delaytime(pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
 
 
 

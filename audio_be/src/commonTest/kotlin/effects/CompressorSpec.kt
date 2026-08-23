@@ -58,34 +58,6 @@ class CompressorSpec : StringSpec({
         }
     }
 
-    "Compressor.parseSettings parses full format" {
-        val settings = Compressor.parseSettings("-20:4:6:0.003:0.1")
-
-        settings shouldBe Compressor.CompressorSettings(
-            thresholdDb = -20.0,
-            ratio = 4.0,
-            kneeDb = 6.0,
-            attackSeconds = 0.003,
-            releaseSeconds = 0.1
-        )
-    }
-
-    "Compressor.parseSettings parses short format (threshold:ratio only)" {
-        val settings = Compressor.parseSettings("-15:3")
-
-        settings shouldBe Compressor.CompressorSettings(
-            thresholdDb = -15.0,
-            ratio = 3.0,
-            kneeDb = 6.0,
-            attackSeconds = 0.003,
-            releaseSeconds = 0.1
-        )
-    }
-
-    "Compressor.parseSettings returns null for invalid input" {
-        val settings = Compressor.parseSettings("invalid")
-        settings shouldBe null
-    }
 
     "Compressor reset clears state" {
         val compressor = Compressor(

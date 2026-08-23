@@ -436,8 +436,15 @@ class GraalSprudelPattern(
                 it.loopEnd = null
                 // Voice / Singing
                 it.vowel = vowel
-                // Dynamics / Compression
-                it.compressor = compressor
+                // Dynamics / Compression (JS oracle emits the legacy compound string; split it,
+                // keeping the OLD activation gate: only fully-parsable 5- or 2-slot forms count)
+                val compParts = compressor?.split(":")?.mapNotNull { d -> d.toDoubleOrNull() }
+                    ?.takeIf { parts -> parts.size == 5 || parts.size == 2 }
+                it.compressorThreshold = compParts?.getOrNull(0)
+                it.compressorRatio = compParts?.getOrNull(1)
+                it.compressorKnee = compParts?.getOrNull(2)
+                it.compressorAttack = compParts?.getOrNull(3)
+                it.compressorRelease = compParts?.getOrNull(4)
                 // Playback control
                 it.solo = null
                 // Value
