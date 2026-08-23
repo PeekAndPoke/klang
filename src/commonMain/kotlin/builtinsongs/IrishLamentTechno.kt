@@ -78,7 +78,7 @@ let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing(rank = sine.range(0, 1.9).fas
 
 // ── THE WIND (riser used inside a 16-cycle section so saw ramps once)
 let riser = note("c").fast(3).sound("pink").superimpose(x => x.sound("brown"))
-    .lpf(saw.range(200, 5000).slow(16)).resonance(1.8)
+    .lpf(saw.range(200, 5000).slow(16)).lpq(1.8)
     .adsr("0.005:0:1:0.05").legato(1.2)
     .gain(saw.range(0.0, 0.19).slow(16))
     .hpf(150).orbit(6)
@@ -89,7 +89,7 @@ let riser = note("c").fast(3).sound("pink").superimpose(x => x.sound("brown"))
 // matches the first cycle of every 2-cycle period, so the hit fires every loop.
 let hitKick = s("bd:2").gain(0.95).hpf(60).adsr("0.05:0.22:0.5:1.0").orbit(1)
 let hitBass = note("d2").sound("saw").distort("0.8:hard:4")
-    .hpf(100).lpf(900).resonance(2.5).adsr("0.02:0.3:0.5:10.0")
+    .hpf(100).lpf(900).lpq(2.5).adsr("0.02:0.3:0.5:10.0")
     .gain(0.4).postgain(0.22).warmth(0.25)
     .orbit(0)
 let hitSub  = note("d1").sound("sine")
@@ -134,7 +134,7 @@ let quietBuild = stack(
     s("[~ hh sd oh]!4").gain(saw.range(0.0, 0.22).slow(64)).hpf(5000).orbit(2),
     // Sub bass — always present, gain grows
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x]!32 [x!2]!32>").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.05")
-        .hpf(60).lpf(220).lpenv(4).gain(saw.range(0.2, 0.4).slow(64)).orbit(3),
+        .hpf(60).lpf(220).lpe(4).gain(saw.range(0.2, 0.4).slow(64)).orbit(3),
     // Saw bass — gain swells from silent to full
     note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>").sound("saw").legato(0.7).hpf(160).lpf(800)
         .adsr("0.002:0.08:0.5:0.05").distort("0.4:soft:2").postgain(0.4)
@@ -205,13 +205,13 @@ let darkBuild = stack(
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.4)))
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]").transpose(0)
         .sound("superpulse").unison(2).spread(0.05).pan(0.2).superimpose(pan(0.8))
-        .hpf(400).lpf(saw.range(1500, 2500).slow(32)).lpenv(3).warmth(0.5)
+        .hpf(400).lpf(saw.range(1500, 2500).slow(32)).lpe(3).warmth(0.5)
         .adsr("0.005:0.1:0.25:0.1").legato(0.7)
         .gain(0.11).orbit(6).room(0.4).rsize(6),
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift
     note("<a5 d6 bb5 c6 g5 f5 a5 d6>")
         .sound("supersine").unison(8).spread(0.15).adsr("0.5:0.3:0.5:0.5")
-        .hpf(1500).lpf(3000).lpenv(2).bandf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibmod(0.1)
+        .hpf(1500).lpf(3000).lpe(2).bpf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibmod(0.1)
         .gain(saw.range(0.0, 0.7).slow(64)).body("glass")
         .pan(sine.range(0.25, 0.75).slow(5))
         .delay(0.4).delaytime(pure(2/8).div(cps)).delayfeedback(0.45)

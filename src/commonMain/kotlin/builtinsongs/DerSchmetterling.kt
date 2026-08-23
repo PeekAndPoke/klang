@@ -109,7 +109,7 @@ export guitarDyna = "0.98 0.94!7 0.96 0.94!7"
 export lead_pat =  `<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-4 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
 
 export lead_shape = x => x.gain(0.18).sound(guitar).unison(5).spread(0.15).oscp("hptrack", Math.pow(2, 7/12))
-  .oscp("mids", 6.0).oscp("midsQ", 4.0).oscp("midsHz", leadHz).oscp("midsHumm", 0.2).oscp("presence", 0.0) // .bandf(leadHz).bandq(1.5)
+  .oscp("mids", 6.0).oscp("midsQ", 4.0).oscp("midsHz", leadHz).oscp("midsHumm", 0.2).oscp("presence", 0.0)
   .clip(0.95).vowel("a e i o u".scramble(4)).vowelMix(0.3)
   .apply(x => x.transpose(0).velocity(0.5).pan(0.33).superimpose(pan(0.66)))
 
@@ -197,14 +197,14 @@ export bass = n(bass_pat).struct("<[x!2]!16 [x!2 [x x] x]!16 [[x x] x!3]!32>").f
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>`
 export kick_shape = x => x.n(0).gain(0.200).velocity("0.98 0.96 0.97 0.96").pan(0.5)
   .hpf(30).hpq(1).lpf(8000).adsr("0.001:0.03:0.80:0.25").distort(0.1)
-  .superimpose(x => x.bandf("75").bandq(4.0).vel(0.75))
+  .superimpose(x => x.bpf(75).bpq(4.0).vel(0.75))
 export kick_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0007).mul(drunk).slow(4))
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>`
 export snare_shape = x => x.n(5).gain(0.255).pan(0.5)
   .hpf(80).lpf(15000).lpq(0.6).adsr("0.001:0.03:0.80:0.50")
-  .superimpose(x => x.bandf(pure(snareHz).add(berlin.mul(5).fast(4))).bandq(3.0).vel(0.80))
+  .superimpose(x => x.bpf(pure(snareHz).add(berlin.mul(5).fast(4))).bpq(3.0).vel(0.80))
 export snare_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0020).mul(drunk).slow(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare")
 

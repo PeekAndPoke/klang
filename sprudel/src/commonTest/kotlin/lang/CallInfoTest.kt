@@ -460,80 +460,44 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""note("c4").hpf("500")""")
     }
 
-    "bandf passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").bandf("500")""")
+    "bpf passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").bpf("500")""")
     }
 
-    "resonance passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").resonance("5")""")
+    "lpq passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").lpq("5")""")
     }
 
-    "hresonance passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").hresonance("5")""")
+    "hpq passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").hpq("5")""")
     }
 
-    "bandq passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").bandq("5")""")
+    "bpq passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").bpq("5")""")
     }
 
-    "lpenv passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").lpenv("2000")""")
+    "lpe passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").lpe("2000")""")
     }
 
-    "hpenv passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").hpenv("2000")""")
+    "hpe passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").hpe("2000")""")
     }
 
-    "bpenv passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").bpenv("2000")""")
+    "bpe passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").bpe("2000")""")
     }
 
-    "lpattack passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").lpattack("0.1")""")
+    "lpadsr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").lpadsr("0.1:0.3:0.5:0.2")""")
     }
 
-    "lpdecay passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").lpdecay("0.3")""")
+    "hpadsr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").hpadsr("0.1:0.3:0.5:0.2")""")
     }
 
-    "lpsustain passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").lpsustain("0.5")""")
-    }
-
-    "lprelease passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").lprelease("0.5")""")
-    }
-
-    "hpattack passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").hpattack("0.1")""")
-    }
-
-    "hpdecay passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").hpdecay("0.3")""")
-    }
-
-    "hpsustain passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").hpsustain("0.5")""")
-    }
-
-    "hprelease passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").hprelease("0.5")""")
-    }
-
-    "bpattack passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").bpattack("0.1")""")
-    }
-
-    "bpdecay passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").bpdecay("0.3")""")
-    }
-
-    "bpsustain passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").bpsustain("0.5")""")
-    }
-
-    "bprelease passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c4").bprelease("0.5")""")
+    "bpadsr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c4").bpadsr("0.1:0.3:0.5:0.2")""")
     }
 
     "note passes CallInfo from KlangScript" {

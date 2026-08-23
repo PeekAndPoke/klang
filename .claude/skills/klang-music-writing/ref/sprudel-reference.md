@@ -185,7 +185,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > | Scope | Effects |
 > |-------|---------|
 > | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delay` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserdepth`/`phasercenter`/`phasersweep`), `compressor`, ducking |
-> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bandf`/`notchf` (+ their `*env`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master.of(...))` with `MasterFx.gain` (make-up level), `MasterFx.limiter`, `MasterFx.reverb`, `MasterFx.delay` |
 
 **Master limiter knobs.** `MasterFx.limiter()` chains: `.thresholdDb(db)` `.ratio(x)` `.kneeDb(db)`
@@ -346,23 +346,22 @@ selection — extended to ignitor variants and per-note gain.
 
 ### Filters
 
-All filters accept pattern values and have envelope variants (`lpenv`, `lpadsr`, `lpattack`, `lpdecay`, `lpsustain`,
-`lprelease` etc.)
+All filters accept pattern values and have envelope variants (`lpe` for depth, `lpadsr` for shape; same for `hp*`/`bp*`)
 
 | Function         | Aliases               | Description                | Example                                                      |
 |------------------|-----------------------|----------------------------|--------------------------------------------------------------|
-| `lpf(freq)`      | `cutoff`, `ctf`, `lp` | Lowpass filter cutoff (Hz) | `note("c3").s("saw").lpf(800)`                               |
-| `resonance(q)`   | `lpq`, `res`          | Lowpass resonance/Q        | `note("c3").lpf(400).resonance(5)`                           |
-| `lpenv(depth)`   | `lpe`                 | LP env depth (ratio of cutoff, NOT Hz — single digits sweep far) | `note("c3").lpf(200).lpenv(3)`                     |
-| `lpadsr(params)` |                       | LP envelope ADSR           | `note("c3").lpf(200).lpenv(3).lpadsr("0.01:0.3:0.5:0.5")`    |
-| `hpf(freq)`      | `hcutoff`, `hp`       | Highpass filter cutoff     | `s("bd").hpf(200)`                                           |
-| `hresonance(q)`  | `hpq`, `hres`         | Highpass resonance         | `s("bd").hpf(200).hresonance(2)`                             |
-| `hpenv(depth)`   | `hpe`                 | HP env depth (ratio, NOT Hz) | `note("c3").hpf(100).hpenv(3)`                               |
-| `hpadsr(params)` |                       | HP envelope ADSR           | `note("c3").hpf(100).hpenv(3).hpadsr("0.01:0.2:0.3:0.5")`    |
-| `bandf(freq)`    | `bpf`, `bp`           | Bandpass center freq       | `s("sd").bandf(1000)`                                        |
-| `bandq(q)`       | `bpq`                 | Bandpass Q                 | `s("sd").bandf(1000).bandq(5)`                               |
-| `bpenv(depth)`   | `bpe`                 | BP env depth (ratio, NOT Hz) | `note("c3").bpf(200).bpenv(4)`                               |
-| `bpadsr(params)` |                       | BP envelope ADSR           | `note("c3").bpf(200).bpenv(4).bpadsr("0.01:0.3:0.5:0.5")`    |
+| `lpf(freq)`      |  | Lowpass filter cutoff (Hz) | `note("c3").s("saw").lpf(800)`                               |
+| `lpq(q)`         |  | Lowpass resonance/Q        | `note("c3").lpf(400).lpq(5)`                                 |
+| `lpe(depth)`     |  | LP env depth (ratio of cutoff, NOT Hz; single digits sweep far) | `note("c3").lpf(200).lpe(3)`           |
+| `lpadsr(params)` |  | LP envelope ADSR           | `note("c3").lpf(200).lpe(3).lpadsr("0.01:0.3:0.5:0.5")`      |
+| `hpf(freq)`      |  | Highpass filter cutoff     | `s("bd").hpf(200)`                                           |
+| `hpq(q)`         |  | Highpass resonance         | `s("bd").hpf(200).hpq(2)`                                    |
+| `hpe(depth)`     |  | HP env depth (ratio, NOT Hz) | `note("c3").hpf(100).hpe(3)`                               |
+| `hpadsr(params)` |  | HP envelope ADSR           | `note("c3").hpf(100).hpe(3).hpadsr("0.01:0.2:0.3:0.5")`      |
+| `bpf(freq)`      |  | Bandpass center freq       | `s("sd").bpf(1000)`                                          |
+| `bpq(q)`         |  | Bandpass Q                 | `s("sd").bpf(1000).bpq(5)`                                   |
+| `bpe(depth)`     |  | BP env depth (ratio, NOT Hz) | `note("c3").bpf(200).bpe(4)`                               |
+| `bpadsr(params)` |  | BP envelope ADSR           | `note("c3").bpf(200).bpe(4).bpadsr("0.01:0.3:0.5:0.5")`      |
 | `notchf(freq)`   |                       | Notch (band-reject) freq   | `s("sd").notchf(1000)`                                       |
 | `notchq(q)`      | `nresonance`          | Notch Q                    | `s("sd").notchf(1000).notchq(2)`                             |
 

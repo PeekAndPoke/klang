@@ -1167,9 +1167,9 @@ class LangContinuousPatternsSpec : StringSpec({
         p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus 0.1)
     }
 
-    "note(\"a\").cutoff(sine.range(200, 2000)) - apply continuous pattern to filter cutoff" {
+    "note(\"a\").lpf(sine.range(200, 2000)) - apply continuous pattern to filter cutoff" {
         // Test applying continuous pattern to filter frequency
-        val pattern = note("a").cutoff(sine.range(200.0, 2000.0))
+        val pattern = note("a").lpf(sine.range(200.0, 2000.0))
 
         val events = pattern.queryArc(0.0, 1.0)
 

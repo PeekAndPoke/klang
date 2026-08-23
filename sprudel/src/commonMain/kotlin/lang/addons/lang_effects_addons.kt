@@ -173,7 +173,7 @@ private fun applyLpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * - **release**: time in seconds for the filter to close after note release
  *
  * ```KlangScript(Playable)
- * note("c3").lpf(200).lpenv(4000).lpadsr("0.01:0.3:0.5:0.5")
+ * note("c3").lpf(200).lpe(4000).lpadsr("0.01:0.3:0.5:0.5")
  * ```
  *
  * @param params The ADSR parameters as `"attack:decay:sustain:release"`.
@@ -261,7 +261,7 @@ private fun applyHpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * - **release**: time in seconds for the filter to close after note release
  *
  * ```KlangScript(Playable)
- * note("c3").hpf(200).hpenv(4000).hpadsr("0.01:0.3:0.5:0.5")
+ * note("c3").hpf(200).hpe(4000).hpadsr("0.01:0.3:0.5:0.5")
  * ```
  *
  * @param params The ADSR parameters as `"attack:decay:sustain:release"`.
@@ -349,7 +349,7 @@ private fun applyBpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * - **release**: time in seconds for the filter to close after note release
  *
  * ```KlangScript(Playable)
- * note("c3").bpf(200).bpenv(4000).bpadsr("0.01:0.3:0.5:0.5")
+ * note("c3").bpf(200).bpe(4000).bpadsr("0.01:0.3:0.5:0.5")
  * ```
  *
  * @param params The ADSR parameters as `"attack:decay:sustain:release"`.
