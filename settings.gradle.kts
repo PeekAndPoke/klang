@@ -11,7 +11,6 @@ include(
     ":klangscript-annotations",
     ":klangscript-ksp",
     // Visual block editor
-    ":klangblocks",
     // Shared UI utilities (kraft + klangscript, JS-only)
     ":klangui",
     // External JS declarations (CodeMirror, etc.)

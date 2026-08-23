@@ -7,8 +7,6 @@
 3. **Interpreter** — add `when` branch in `runtime/Interpreter.kt`
 4. **Tests** — add test file in `src/commonTest/kotlin/`
 5. **Run tests** — `./gradlew :klangscript:jvmTest`
-6. **KlangBlocks** — add support in `AstToKBlocks.kt` + round-trip test (see `klangblocks/ref/adding-features.md` and
-   `klangblocks/ref/round-trip-testing.md`)
 
 ## Documentation Requirement for Every Feature
 
@@ -18,7 +16,7 @@ Every feature needs clear, concise docs covering:
 - **Syntax** — example KlangScript code
 - **Semantics** — what it evaluates to; edge cases
 
-This documentation serves two purposes: user-facing language docs and klangblocks implementation guidance.
+This documentation is the user-facing language reference.
 
 ## Example: Adding Array Indexing (`arr[0]`)
 

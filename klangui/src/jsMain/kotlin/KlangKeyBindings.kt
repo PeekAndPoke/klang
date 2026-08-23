@@ -11,7 +11,7 @@ import org.w3c.dom.events.KeyboardEvent
  * Centralised keyboard-shortcut definitions for the Klang UI.
  *
  * Use these helpers wherever keyboard shortcuts are handled so that all
- * tools (mini-notation editor, block editor, …) react to the same keys.
+ * tools (the mini-notation editor, …) react to the same keys.
  */
 object KlangKeyBindings {
 

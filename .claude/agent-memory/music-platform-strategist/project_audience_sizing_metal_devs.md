@@ -219,7 +219,9 @@ already the seed inventory.
   **2.6M remixes**; **30%+ of recently shared projects were remixes** (Mar 2021); ~17% of a 1.27M-project sample
   carried remix status. A platform whose whole premise is openable artifacts sustains a ~17–30% remix rate.
 - **BandLab: 100M+ registered users, 15M tracks uploaded/month**, fork-and-remix built in. This is the size of the
-  prize *if the maker bar drops below code* — relevant to how klangblocks is positioned.
+  prize *if the maker bar drops below code* — relevant to how a block view would be positioned.
+  (NOTE 2026-08-23: the `klangblocks` module was REMOVED; it was never user-visible. The
+  strategic question of a blocks surface stays open, the implementation does not exist.)
 - Participation inequality (90-9-1 / 1% rule): classic ratio is 90% lurk / 9% edit / 1% create, but modern data
   varies widely (small communities ~33% creators; 10k–50k communities ~20%). Use as a range, not a law.
 - **Algorave audience research (soft but pointed): non-coders gave the MOST positive responses to projected

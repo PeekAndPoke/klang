@@ -110,7 +110,6 @@ Not in scope for immediate implementation. Design notes:
 | Task                          | Relationship                                                                                                                                               |
 |-------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `sprudel-ui-tools.md`         | Proposes a **legato editor tool** (Tier 1). Once `{legato=N}` exists in mini-notation, the editor tool could generate/read it. Not blocking.               |
-| `klang-blocks-take-1.md`      | Block editor converts AST ↔ blocks. `Attrs` on `Mods` will eventually need block representations. Not blocking — blocks can ignore unknown mods initially. |
 | `klang-pattern-extraction.md` | Extracts playback to generic `KlangPattern`. Mini-notation changes are upstream (parser level) and don't conflict. Could be done in parallel.              |
 
 ### Sequencing recommendation

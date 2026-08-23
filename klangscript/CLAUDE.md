@@ -37,7 +37,7 @@ Interpreter (tree-walking)  →  RuntimeValue / Environment
 | Editor intelligence (AnalyzedAst, symbolAt, scope, Origin)    | `ref/intel-analyzer.md`   |
 | Adding a new language feature                                 | `ref/adding-features.md`  |
 | Testing strategy                                              | `ref/testing-strategy.md` |
-| All implemented features + test file links + klangblocks sync | `ref/feature-catalog.md`  |
+| All implemented features + test file links | `ref/feature-catalog.md`  |
 
 ## Build & Test
 

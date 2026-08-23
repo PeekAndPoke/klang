@@ -16,7 +16,7 @@
   supertype inferrer, Adsr `declickSeconds`/`expK` knobs.
 - Suite was green (JVM+JS) at merge time. **First step on resume: re-run the full suite** to confirm the baseline
   (remember: no concurrent Gradle builds — KSP cache corruption).
-- Only unmerged branch: `code-blocks-with-mutator` — a stale klangblocks MVP from 2026-02. Ignore.
+- Only unmerged branch: `code-blocks-with-mutator` — a stale MVP of the block editor from 2026-02. The block editor was REMOVED from the project on 2026-08-23; delete the branch.
 
 ## 2. What the last conversations were about (Jul 4 → Aug 2)
 

@@ -108,7 +108,6 @@ The release-defining set, regardless of when they're sequenced:
 15. **SHOULD** · **Soundfont looping bug** — [`soundfont-looping-investigation.md`](soundfont-looping-investigation.md)
     🔴
     Sustained soundfont instruments loop incorrectly (correctness bug); matters if they feature in tutorials.
-16. **SHOULD** · **Code-quality H3** (block-editor loop drop) — [`code-quality-review.md`](code-quality-review.md) 🟡
     The only user-visible item on that list; blocks round-trip drops loop/break/continue.
 17. **NICE** · **Filter-envelope curve config** (`lpadsrCurves`) — [
     `filter-envelope-configuration.md`](filter-envelope-configuration.md) 🔴

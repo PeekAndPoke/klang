@@ -76,7 +76,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val maxHighlightsPerEvent: Int,
         /** Returning `true` suppresses the highlight buffer for the current voice event (e.g. while a modal is open). */
         val pauseHighlightsWhen: (() -> Boolean)?,
-        /** Called in addition to the internal highlight buffer — useful for parallel highlight surfaces (e.g. a block editor). */
+        /** Called in addition to the internal highlight buffer, for any parallel highlight surface. */
         val extraVoiceHandler: ((KlangPlaybackSignal.VoicesScheduled.VoiceEvent) -> Unit)?,
         /**
          * Source identity of the file shown in this editor. Highlight events whose
