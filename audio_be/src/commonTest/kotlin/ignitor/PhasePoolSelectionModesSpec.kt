@@ -19,9 +19,9 @@ import kotlin.random.Random
 
 /**
  * The `selection` modes (user decisions, 2026-08-24): STRING-valued, value-colon compound
- * `"name[:width[:blend]]"` — `"normal"` (NEW DEFAULT: median-centered normal serving over
+ * `"name[:width[:outliers]]"` — `"normal"` (NEW DEFAULT: median-centered normal serving over
  * the vocabulary's RANK order — rank space so an unreachable band cannot collapse serving
- * onto one extreme entry, the review's HIGH finding; blend mixes in plain-random serves),
+ * onto one extreme entry, the review's HIGH finding; outliers = extreme-take probability),
  * `"random"` (as before), `"roundrobin"` (the OLD default, now opt-in: its cycling period
  * gargles audibly at short vocabularies).
  */
@@ -63,16 +63,16 @@ class PhasePoolSelectionModesSpec : StringSpec({
         parsePhasePoolSelection(" Normal:0.1 ").let {
             it.mode shouldBe PhasePoolSelection.Normal
             it.width shouldBe 0.1
-            it.blend shouldBe PHASE_POOL_DEFAULT_BLEND
+            it.outliers shouldBe PHASE_POOL_DEFAULT_OUTLIERS
         }
-        parsePhasePoolSelection("normal:0.1:0.5").let {
+        parsePhasePoolSelection("normal:0.1:0.05").let {
             it.width shouldBe 0.1
-            it.blend shouldBe 0.5
+            it.outliers shouldBe 0.05
         }
-        // empty width slot: "almost fully random with a slight center edge"
+        // empty width slot: default width, outliers only
         parsePhasePoolSelection("normal::0.9").let {
             it.width shouldBe PHASE_POOL_DEFAULT_WIDTH
-            it.blend shouldBe 0.9
+            it.outliers shouldBe 0.9
         }
         parsePhasePoolSelection("normal").width shouldBe PHASE_POOL_DEFAULT_WIDTH
     }
@@ -84,9 +84,9 @@ class PhasePoolSelectionModesSpec : StringSpec({
         parsePhasePoolSelection("normal:x").width shouldBe PHASE_POOL_DEFAULT_WIDTH
         parsePhasePoolSelection("normal:-3").width shouldBe PHASE_POOL_DEFAULT_WIDTH
         parsePhasePoolSelection("normal:0").width shouldBe 0.0 // "no spread — always the median take"
-        parsePhasePoolSelection("normal:0.5:7").blend shouldBe 1.0   // clamped
-        parsePhasePoolSelection("normal:0.5:-1").blend shouldBe 0.0  // clamped
-        parsePhasePoolSelection("normal:0.5:x").blend shouldBe PHASE_POOL_DEFAULT_BLEND
+        parsePhasePoolSelection("normal:0.5:7").outliers shouldBe 1.0   // clamped
+        parsePhasePoolSelection("normal:0.5:-1").outliers shouldBe 0.0  // clamped
+        parsePhasePoolSelection("normal:0.5:x").outliers shouldBe PHASE_POOL_DEFAULT_OUTLIERS
     }
 
     // ── normal serving (rank space) ──────────────────────────────────────────
@@ -105,12 +105,17 @@ class PhasePoolSelectionModesSpec : StringSpec({
         lower shouldBe 16 / 2
     }
 
-    "normal: blend = 1 serves uniformly even at tiny width (the almost-random mix)" {
+    "normal: outliers = 1 serves ONLY the vocabulary's extreme takes, whatever the width" {
         val p = widePool()
-        val served = (1..20).map { p.next(PhasePoolSelection.Normal, width = 0.0, blend = 1.0) }
-        val first = served.first()
-        // with pure-random mixing the serve stream is NOT constant (kills a dropped blend)
-        served.any { it !== first } shouldBe true
+        val ks = (0 until 16).map { kOf(p.peek(it)) }.sorted()
+        val served = (1..20).map { p.next(PhasePoolSelection.Normal, width = 0.0, outliers = 1.0) }
+        // every serve is the lowest- OR highest-K entry (coin-flip side); and BOTH sides
+        // genuinely occur (kills a dropped coin flip as well as a dropped outlier branch)
+        served.forEach { e ->
+            val k = kOf(e)
+            (k == ks.first() || k == ks.last()) shouldBe true
+        }
+        (served.any { kOf(it) == ks.first() } && served.any { kOf(it) == ks.last() }) shouldBe true
     }
 
     "normal vs random: at default width the serves concentrate toward the population middle" {
@@ -161,7 +166,7 @@ class PhasePoolSelectionModesSpec : StringSpec({
     // ── the engine seam (review finding 4) ───────────────────────────────────
 
     "the Ignitor seam forwards the parsed mode — different selections render differently" {
-        // A mutant that hardcodes the mode (or drops the parsed width/blend forwarding)
+        // A mutant that hardcodes the mode (or drops the parsed width/outliers forwarding)
         // makes these two configurations render identically.
         fun renderNotes(selection: String): DoubleArray {
             val pools = PhasePools(Random(5))
@@ -203,7 +208,7 @@ class PhasePoolSelectionModesSpec : StringSpec({
         differs shouldBe true
 
         // and the COEFFICIENTS are forwarded too: an always-median serve stream must differ
-        // from an always-uniform one (a mutant dropping the width/blend arguments makes
+        // from an always-extreme one (a mutant dropping the width/outliers arguments makes
         // both fall back to the engine defaults and render identically)
         val tight = renderNotes("normal:0")
         val mixed = renderNotes("normal::1.0")

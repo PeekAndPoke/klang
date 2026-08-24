@@ -14,7 +14,7 @@ import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
  * `selection` surface pin (2026-08-24): a STRING on the script door, default `"normal"`,
- * the value-colon compound `"name[:width[:blend]]"` passed through VERBATIM to the wire
+ * the value-colon compound `"name[:width[:outliers]]"` passed through VERBATIM to the wire
  * (parsed at voice build). Round-robin — the old default — is opt-in.
  */
 class KlangScriptPhasePoolSelectionSpec : StringSpec({

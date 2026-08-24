@@ -404,15 +404,17 @@ sealed interface IgnitorDsl {
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /**
-         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form). `"normal"`
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
          * centered — width sets the spread (`0` = always the median take, `0.1` tight,
-         * `0.5` default, `1`+ near-uniform); blend (0..1, default 0) is the fraction of
-         * serves that instead pick a uniformly random VOCABULARY entry (still a
-         * band-accepted take — not the un-pooled legacy randomness): `0` = pure bell,
-         * `1` = same as `"random"`, `"normal::0.9"` = almost random with a slight center
-         * edge. `"random"`: uniform vocabulary pick. `"roundrobin"` (opt-in): cycle the
-         * vocabulary — can gargle audibly. Unrecognized names coerce to the default.
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
          */
         val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
@@ -454,15 +456,17 @@ sealed interface IgnitorDsl {
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /**
-         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form). `"normal"`
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
          * centered — width sets the spread (`0` = always the median take, `0.1` tight,
-         * `0.5` default, `1`+ near-uniform); blend (0..1, default 0) is the fraction of
-         * serves that instead pick a uniformly random VOCABULARY entry (still a
-         * band-accepted take — not the un-pooled legacy randomness): `0` = pure bell,
-         * `1` = same as `"random"`, `"normal::0.9"` = almost random with a slight center
-         * edge. `"random"`: uniform vocabulary pick. `"roundrobin"` (opt-in): cycle the
-         * vocabulary — can gargle audibly. Unrecognized names coerce to the default.
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
          */
         val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
@@ -502,15 +506,17 @@ sealed interface IgnitorDsl {
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /**
-         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form). `"normal"`
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
          * centered — width sets the spread (`0` = always the median take, `0.1` tight,
-         * `0.5` default, `1`+ near-uniform); blend (0..1, default 0) is the fraction of
-         * serves that instead pick a uniformly random VOCABULARY entry (still a
-         * band-accepted take — not the un-pooled legacy randomness): `0` = pure bell,
-         * `1` = same as `"random"`, `"normal::0.9"` = almost random with a slight center
-         * edge. `"random"`: uniform vocabulary pick. `"roundrobin"` (opt-in): cycle the
-         * vocabulary — can gargle audibly. Unrecognized names coerce to the default.
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
          */
         val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
@@ -551,15 +557,17 @@ sealed interface IgnitorDsl {
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /**
-         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form). `"normal"`
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
          * centered — width sets the spread (`0` = always the median take, `0.1` tight,
-         * `0.5` default, `1`+ near-uniform); blend (0..1, default 0) is the fraction of
-         * serves that instead pick a uniformly random VOCABULARY entry (still a
-         * band-accepted take — not the un-pooled legacy randomness): `0` = pure bell,
-         * `1` = same as `"random"`, `"normal::0.9"` = almost random with a slight center
-         * edge. `"random"`: uniform vocabulary pick. `"roundrobin"` (opt-in): cycle the
-         * vocabulary — can gargle audibly. Unrecognized names coerce to the default.
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
          */
         val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
@@ -599,15 +607,17 @@ sealed interface IgnitorDsl {
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
         /**
-         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form). `"normal"`
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
          * centered — width sets the spread (`0` = always the median take, `0.1` tight,
-         * `0.5` default, `1`+ near-uniform); blend (0..1, default 0) is the fraction of
-         * serves that instead pick a uniformly random VOCABULARY entry (still a
-         * band-accepted take — not the un-pooled legacy randomness): `0` = pure bell,
-         * `1` = same as `"random"`, `"normal::0.9"` = almost random with a slight center
-         * edge. `"random"`: uniform vocabulary pick. `"roundrobin"` (opt-in): cycle the
-         * vocabulary — can gargle audibly. Unrecognized names coerce to the default.
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
          */
         val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */

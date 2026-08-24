@@ -15,7 +15,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /** How [PhasePool.next] serves entries. The user surface is a STRING (`selection`), value-colon
- * compound form `"name[:width[:blend]]"` — parsed by [parsePhasePoolSelection] at voice build. */
+ * compound form `"name[:width[:outliers]]"` — parsed by [parsePhasePoolSelection] at voice build. */
 enum class PhasePoolSelection {
     /** Normal-distribution serving over the vocabulary's RANK ORDER (median-centered) — the
      *  "guitar-like" default. Rank space makes it robust: even when the accept band is
@@ -32,7 +32,7 @@ enum class PhasePoolSelection {
 }
 
 /** Parsed `selection`: the mode plus the Normal mode's two coefficients. */
-class PhasePoolSelectionParsed(val mode: PhasePoolSelection, val width: Double, val blend: Double)
+class PhasePoolSelectionParsed(val mode: PhasePoolSelection, val width: Double, val outliers: Double)
 
 /** Normal-mode width when no coeff is given: σ = width · filled/2 in RANK space, so the
  *  default 0.5 keeps ~95% of targets within the vocabulary span (out-of-range targets are
@@ -41,21 +41,22 @@ class PhasePoolSelectionParsed(val mode: PhasePoolSelection, val width: Double, 
  *  takes; larger loosens toward uniform. */
 const val PHASE_POOL_DEFAULT_WIDTH: Double = 0.5
 
-/** Normal-mode random blend when no second coeff is given: 0 = pure normal serving. */
-const val PHASE_POOL_DEFAULT_BLEND: Double = 0.0
+/** Normal-mode outlier probability when no second coeff is given: 0 = no forced extremes. */
+const val PHASE_POOL_DEFAULT_OUTLIERS: Double = 0.0
 
 /**
- * Parses the `selection` string: `"name[:width[:blend]]"` (the sanctioned VALUE-colon form,
+ * Parses the `selection` string: `"name[:width[:outliers]]"` (the sanctioned VALUE-colon form,
  * like `bd:2`). Names (aliases in parens): `"normal"` (`distribution`, `dist`, `gauss`,
  * `gaussian`) — the default; `"random"` (`rnd`); `"roundrobin"` (`roundrobbin`, `rr`).
  *
- * Normal-mode coefficients (positional, either may be left empty — `"normal::0.9"`):
- *  - width: center tightness in rank space (σ = width · vocabulary/2). 0.1 = tight,
- *    0.5 = default, larger = looser.
- *  - blend: fraction of serves that instead pick a uniformly random VOCABULARY entry
- *    (0..1, default 0) — still a band-accepted take, not the un-pooled legacy randomness.
- *    `0` = pure bell, `1` = same as `"random"`; "almost fully random with a slight edge
- *    in the center" = `"normal::0.9"` (≡ `"normal:0.5:0.9"` — 0.5 IS the default width).
+ * Normal-mode coefficients (positional, either may be left empty — `"normal::0.05"`):
+ *  - width: center tightness in rank space (σ = width · vocabulary/2). 0 = always the
+ *    median take, 0.1 = tight, 0.5 = default, ≥ 1 ≈ uniform ("almost fully random with a
+ *    slight center edge" is just a LARGE width, e.g. `"normal:1.5"`).
+ *  - outliers: probability (0..1, default 0) that a serve is an EXTREME take instead —
+ *    the vocabulary's lowest- or highest-K entry (coin-flip side); with a reachable band
+ *    those sit directly at kMin/kMax. `"normal:0.1:0.05"` = tight typical takes with a
+ *    5% chance of a wild pluck.
  *
  * An unrecognized name or a bad coefficient COERCES to its default (never throws); modes
  * without coefficients ignore them silently.
@@ -76,12 +77,12 @@ fun parsePhasePoolSelection(raw: String?): PhasePoolSelectionParsed {
         PHASE_POOL_DEFAULT_WIDTH
     }
     val c2 = parts.getOrNull(2)?.trim()?.toDoubleOrNull()
-    val blend = if (c2 != null && c2.isFinite()) {
+    val outliers = if (c2 != null && c2.isFinite()) {
         c2.coerceIn(0.0, 1.0)
     } else {
-        PHASE_POOL_DEFAULT_BLEND
+        PHASE_POOL_DEFAULT_OUTLIERS
     }
-    return PhasePoolSelectionParsed(mode = mode, width = width, blend = blend)
+    return PhasePoolSelectionParsed(mode = mode, width = width, outliers = outliers)
 }
 
 /**
@@ -327,7 +328,7 @@ class PhasePool(
     }
 
     /**
-     * Serve one entry for a note-on ([mode]/[width]/[blend] from [parsePhasePoolSelection]).
+     * Serve one entry for a note-on ([mode]/[width]/[outliers] from [parsePhasePoolSelection]).
      * The returned array is pool-owned — COPY from it, never mutate or retain it.
      *
      * [PhasePoolSelection.Normal] (the default) draws a target RANK from a normal centered on
@@ -335,15 +336,16 @@ class PhasePool(
      * rank — center-heavy, extremes rare, no cycling period, and robust to unreachable bands
      * (rank space always spans the vocabulary; a K-space target would collapse onto one
      * extreme entry whenever the stored Ks don't straddle the band center — review finding,
-     * 2026-08-24). [blend] mixes in plain uniform serves: `blend = 0.9` is "almost fully
-     * random with a slight edge in the center". [PhasePoolSelection.RoundRobin] (the
+     * 2026-08-24). [outliers] is the probability of serving an EXTREME take instead — the
+     * vocabulary's lowest- or highest-K entry, coin-flip side (with a reachable band those
+     * sit directly at kMin/kMax). [PhasePoolSelection.RoundRobin] (the
      * pre-2026-08-24 default, §9.2) is opt-in now: its cycling gargles audibly at short
      * vocabularies.
      */
     fun next(
         mode: PhasePoolSelection,
         width: Double = PHASE_POOL_DEFAULT_WIDTH,
-        blend: Double = PHASE_POOL_DEFAULT_BLEND,
+        outliers: Double = PHASE_POOL_DEFAULT_OUTLIERS,
     ): DoubleArray {
         if (filled < entries.size) {
             // Growing phase: a few ~µs top-ups per note stand in for refresh (the vocabulary is
@@ -376,10 +378,12 @@ class PhasePool(
             }
 
             PhasePoolSelection.Normal -> {
-                if (blend > 0.0 && rng.nextDouble() < blend) {
-                    return entries[rng.nextInt(filled)]!!
-                }
                 ensureRanks()
+                if (outliers > 0.0 && rng.nextDouble() < outliers) {
+                    // an extreme take: the lowest- or highest-K entry, coin-flip side
+                    val edge = if (rng.nextDouble() < 0.5) 0 else filled - 1
+                    return entries[rankIdx[edge]]!!
+                }
                 val median = (filled - 1) / 2.0
                 val sigma = width * filled / 2.0
                 var t = median + gaussian() * sigma

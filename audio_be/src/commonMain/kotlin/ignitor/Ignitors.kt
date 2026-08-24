@@ -698,7 +698,7 @@ object Ignitors {
         private val phasePools: PhasePools?,
         private val orbit: Int,
     ) : Ignitor {
-        /** `selection` parsed lazily at the first POOLED note-on (`"name[:width[:blend]]"` —
+        /** `selection` parsed lazily at the first POOLED note-on (`"name[:width[:outliers]]"` —
          *  see [parsePhasePoolSelection]); voices with the pool OFF (the default) never pay
          *  the parse, and the per-sample render loop never touches the string. */
         private var parsedSelection: PhasePoolSelectionParsed? = null
@@ -763,7 +763,7 @@ object Ignitors {
                     )
                     if (pool != null) {
                         val sel = parsedSelection ?: parsePhasePoolSelection(selection).also { parsedSelection = it }
-                        val entry = pool.next(sel.mode, sel.width, sel.blend)
+                        val entry = pool.next(sel.mode, sel.width, sel.outliers)
                         for (n in 0 until v) {
                             voiceStates[n].phase = entry[n]
                         }
