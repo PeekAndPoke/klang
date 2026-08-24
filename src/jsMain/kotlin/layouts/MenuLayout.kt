@@ -65,9 +65,14 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
                 position = Position.relative
             }
 
-            // Ambient accent light shining in from the screen's top and left
-            // edges — same character as the editor's glow. Sits above the
-            // columns (which have opaque backgrounds), ignores the mouse.
+            // Ambient accent light shining in from the screen's LEFT edge only —
+            // same character as the editor's glow. Sits above the columns (which
+            // have opaque backgrounds), ignores the mouse.
+            //
+            // Painted as a gradient rather than an inset box-shadow: an inset
+            // shadow whose blur exceeds its offset bleeds a faint band onto the
+            // three edges it is NOT aimed at, which is where the stray lights at
+            // the top and far right came from. A gradient lights one edge, full stop.
             div {
                 key = "edge-light"
                 css {
@@ -76,9 +81,10 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
                     put("pointer-events", "none")
                     zIndex = 5
                     put(
-                        "box-shadow",
-                        "inset 0 8px 30px color-mix(in srgb, var(--klang-accent-muted) 5%, transparent)," +
-                                " inset 8px 0 30px color-mix(in srgb, var(--klang-accent-muted) 5%, transparent)"
+                        "background-image",
+                        "linear-gradient(to right," +
+                                " color-mix(in srgb, var(--klang-accent-muted) 5%, transparent) 0," +
+                                " transparent 30px)"
                     )
                 }
             }
