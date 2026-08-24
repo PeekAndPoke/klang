@@ -611,6 +611,24 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     "square" parameter defaults) while sprudel/strip resolved Exponential. ⚠ EAR: every
     ignitor instrument using .adsr() without explicit curves changes attack/release shape
     Square -> Exponential (nothing in the suite pinned the old waveforms).
+  - (session ledger) Phase-pool `selection` rework (user decisions, 2026-08-24): STRING
+    with value-colon compound `"name[:width[:blend]]"`; canonical `"normal"` (user: easier
+    to write; `distribution`/`dist`/`gauss` are aliases), `"random"`, `"roundrobin"`
+    (+`roundrobbin`/`rr`) — round-robin was the DEFAULT and is now OPT-IN (its cycling
+    gargles audibly). Normal serves over the vocabulary's RANK order, median-centered
+    (review HIGH: a K-space target collapsed to ONE entry on ~96% of notes whenever the
+    band is unreachable — e.g. kMin 0.6/kMax 0.8 at 25 voices has ~0.1% in-band draws);
+    width = rank-σ as a vocabulary fraction (0.1 tight / 0.5 default), blend = fraction of
+    plain-random serves ("normal::0.9" = almost random, slight center edge — the user's
+    asked-for shape). Postures: legacy NUMERIC selection now fails loudly (a CCE at the
+    thunk — pre-alpha; silence would be worse since 0/2 SWAPPED meanings between the old
+    and proposed numeric tables); alias rows in the parser spec share the coercion arm by
+    design (unknown names ARE the default — aliases are documentation, not dispatch).
+    ⚠ BENCHMARK: SongBenchmarkCases' phasePool case flips roundrobin->normal (+2 rng draws
+    + an O(filled) rank serve per note-on) — per-block numbers not comparable across this
+    commit. ⚠ The Schmetterling phasePool line currently carries the user's LIVE by-ear
+    edits (band 0.60–0.80 at high unison is band-unreachable; every mode serves off-band
+    Ks there — a kMin/kMax retune is the actual lever, selection only changes VARIETY).
 - C4.2 decisions AS BUILT: (a) the ignitor floor knob is `dryFloor` (the plan's own rule:
   `floor()` is the arithmetic round-down, one word one concept); (b) `room`/`delay` HEAD
   functions renamed to `roomWet`/`delayWet` (their first slot IS the wet, and keeping

@@ -73,6 +73,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
         "SuperRamp" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
@@ -80,6 +82,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
         "SuperSquare" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
@@ -87,6 +91,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
         "SuperTri" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
@@ -94,6 +100,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
         "SuperSine" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
@@ -101,6 +109,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
     )

@@ -622,7 +622,7 @@ object Ignitors {
         kMax: Double = SUPERSAW_K_MAX,
         poolSize: Double = SUPERSAW_POOL_SIZE,
         refreshEvery: Double = SUPERSAW_REFRESH_EVERY,
-        selection: Double = SUPERSAW_SELECTION,
+        selection: String = SUPERSAW_SELECTION,
         warmup: Double = SUPERSAW_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
@@ -653,7 +653,7 @@ object Ignitors {
         kMax: Double = SUPERSAW_K_MAX,
         poolSize: Double = SUPERSAW_POOL_SIZE,
         refreshEvery: Double = SUPERSAW_REFRESH_EVERY,
-        selection: Double = SUPERSAW_SELECTION,
+        selection: String = SUPERSAW_SELECTION,
         warmup: Double = SUPERSAW_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
@@ -693,11 +693,16 @@ object Ignitors {
         private val kMax: Double,
         private val poolSize: Double,
         private val refreshEvery: Double,
-        private val selection: Double,
+        private val selection: String,
         private val warmup: Double,
         private val phasePools: PhasePools?,
         private val orbit: Int,
     ) : Ignitor {
+        /** `selection` parsed lazily at the first POOLED note-on (`"name[:width[:blend]]"` —
+         *  see [parsePhasePoolSelection]); voices with the pool OFF (the default) never pay
+         *  the parse, and the per-sample render loop never touches the string. */
+        private var parsedSelection: PhasePoolSelectionParsed? = null
+
         private var v: Int = 0
         private var voiceStates: Array<WaveVoiceState> = emptyArray()
 
@@ -757,7 +762,8 @@ object Ignitors {
                         warmup = warmup,
                     )
                     if (pool != null) {
-                        val entry = pool.next(selection)
+                        val sel = parsedSelection ?: parsePhasePoolSelection(selection).also { parsedSelection = it }
+                        val entry = pool.next(sel.mode, sel.width, sel.blend)
                         for (n in 0 until v) {
                             voiceStates[n].phase = entry[n]
                         }
@@ -897,7 +903,7 @@ object Ignitors {
         freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: Double, warmup: Double,
+        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
     ) : DetunedStackIgnitor(
         freq, voices, detune, analog, rng,
@@ -939,7 +945,7 @@ object Ignitors {
         freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: Double, warmup: Double,
+        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
         private val resetSamples: Double, private val shapeMax: Double,
     ) : TrapezoidStackIgnitor(
@@ -960,7 +966,7 @@ object Ignitors {
         freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: Double, warmup: Double,
+        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
         private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
         private val flankSamples: Double,
@@ -982,7 +988,7 @@ object Ignitors {
         freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
         sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
-        poolSize: Double, refreshEvery: Double, selection: Double, warmup: Double,
+        poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
     ) : DetunedStackIgnitor(
         freq, voices, detune, analog, rng,
@@ -1037,7 +1043,7 @@ object Ignitors {
         kMax: Double = SUPERSINE_K_MAX,
         poolSize: Double = SUPERSINE_POOL_SIZE,
         refreshEvery: Double = SUPERSINE_REFRESH_EVERY,
-        selection: Double = SUPERSINE_SELECTION,
+        selection: String = SUPERSINE_SELECTION,
         warmup: Double = SUPERSINE_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
@@ -1073,7 +1079,7 @@ object Ignitors {
         kMax: Double = SUPERSQUARE_K_MAX,
         poolSize: Double = SUPERSQUARE_POOL_SIZE,
         refreshEvery: Double = SUPERSQUARE_REFRESH_EVERY,
-        selection: Double = SUPERSQUARE_SELECTION,
+        selection: String = SUPERSQUARE_SELECTION,
         warmup: Double = SUPERSQUARE_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
@@ -1110,7 +1116,7 @@ object Ignitors {
         kMax: Double = SUPERTRI_K_MAX,
         poolSize: Double = SUPERTRI_POOL_SIZE,
         refreshEvery: Double = SUPERTRI_REFRESH_EVERY,
-        selection: Double = SUPERTRI_SELECTION,
+        selection: String = SUPERTRI_SELECTION,
         warmup: Double = SUPERTRI_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,
@@ -1147,7 +1153,7 @@ object Ignitors {
         kMax: Double = SUPERRAMP_K_MAX,
         poolSize: Double = SUPERRAMP_POOL_SIZE,
         refreshEvery: Double = SUPERRAMP_REFRESH_EVERY,
-        selection: Double = SUPERRAMP_SELECTION,
+        selection: String = SUPERRAMP_SELECTION,
         warmup: Double = SUPERRAMP_WARMUP,
         phasePools: PhasePools? = null,
         orbit: Int = 0,

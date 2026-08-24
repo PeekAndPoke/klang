@@ -99,7 +99,7 @@ class KlangScriptSuperSawSpec : StringSpec({
     "every typed config method in one chain" {
         val code = "Osc.supersaw().freq(110).voices(11).spread(0.12).analog(4.0)" +
                 ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
-                ".phasePool(1, 0.2, 0.7, 8, 64, 5, 1, 8)"
+                ".phasePool(1, 0.2, 0.7, 8, 64, 5, \"random\", 8)"
 
         ks(code) shouldBe superSaw().copy(
             freq = IgnitorDsl.Constant(110.0),
@@ -116,7 +116,7 @@ class KlangScriptSuperSawSpec : StringSpec({
             kMax = 0.7,
             poolSize = 64.0,
             refreshEvery = 5.0,
-            selection = 1.0,
+            selection = "random",
             warmup = 8.0,
         )
     }

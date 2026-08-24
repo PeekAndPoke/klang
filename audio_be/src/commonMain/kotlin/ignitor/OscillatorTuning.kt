@@ -84,8 +84,8 @@ internal const val SUPERSAW_POOL_SIZE: Double = 256.0
 /** Notes between fresh pool draws (random eviction); 0 = frozen pool (reproducible vocabulary). */
 internal const val SUPERSAW_REFRESH_EVERY: Double = 10.0
 
-/** Pool entry selection: 0 = roundRobin (cycle the array — the settled default), 1 = random. */
-internal const val SUPERSAW_SELECTION: Double = 0.0
+/** Pool entry selection (string, `"name[:width[:blend]]"`): `"normal"` default; see `parsePhasePoolSelection`. */
+internal const val SUPERSAW_SELECTION: String = "normal"
 
 /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
 internal const val SUPERSAW_WARMUP: Double = 16.0
@@ -113,7 +113,7 @@ internal const val SUPERRAMP_K_MIN: Double = SUPERSAW_K_MIN
 internal const val SUPERRAMP_K_MAX: Double = SUPERSAW_K_MAX
 internal const val SUPERRAMP_POOL_SIZE: Double = SUPERSAW_POOL_SIZE
 internal const val SUPERRAMP_REFRESH_EVERY: Double = SUPERSAW_REFRESH_EVERY
-internal const val SUPERRAMP_SELECTION: Double = SUPERSAW_SELECTION
+internal const val SUPERRAMP_SELECTION: String = SUPERSAW_SELECTION
 internal const val SUPERRAMP_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Super-square (unison) ────────────────────────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ internal const val SUPERSQUARE_K_MIN: Double = SUPERSAW_K_MIN
 internal const val SUPERSQUARE_K_MAX: Double = SUPERSAW_K_MAX
 internal const val SUPERSQUARE_POOL_SIZE: Double = SUPERSAW_POOL_SIZE
 internal const val SUPERSQUARE_REFRESH_EVERY: Double = SUPERSAW_REFRESH_EVERY
-internal const val SUPERSQUARE_SELECTION: Double = SUPERSAW_SELECTION
+internal const val SUPERSQUARE_SELECTION: String = SUPERSAW_SELECTION
 internal const val SUPERSQUARE_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Super-triangle (unison) ──────────────────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ internal const val SUPERTRI_K_MIN: Double = 0.40
 internal const val SUPERTRI_K_MAX: Double = 0.65
 internal const val SUPERTRI_POOL_SIZE: Double = SUPERSAW_POOL_SIZE
 internal const val SUPERTRI_REFRESH_EVERY: Double = SUPERSAW_REFRESH_EVERY
-internal const val SUPERTRI_SELECTION: Double = SUPERSAW_SELECTION
+internal const val SUPERTRI_SELECTION: String = SUPERSAW_SELECTION
 internal const val SUPERTRI_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Super-sine (unison) ──────────────────────────────────────────────────────────────────────────
@@ -199,7 +199,7 @@ internal const val SUPERSINE_K_MIN: Double = 0.50
 internal const val SUPERSINE_K_MAX: Double = 0.80
 internal const val SUPERSINE_POOL_SIZE: Double = SUPERSAW_POOL_SIZE
 internal const val SUPERSINE_REFRESH_EVERY: Double = SUPERSAW_REFRESH_EVERY
-internal const val SUPERSINE_SELECTION: Double = SUPERSAW_SELECTION
+internal const val SUPERSINE_SELECTION: String = SUPERSAW_SELECTION
 internal const val SUPERSINE_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Pulse family (square / pulse / pulze / triangle share one shape) ──────────────────────────────

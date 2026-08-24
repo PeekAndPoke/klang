@@ -75,7 +75,11 @@ object KlangScriptSuperSquareExtensions {
      * @param drawTries candidate phase sets scored per draw (engine caps at 64).
      * @param poolSize vocabulary size per pool key (engine caps at 1024).
      * @param refreshEvery notes between fresh pool draws; 0 = frozen pool.
-     * @param selection 0 = roundRobin (default), 1 = random.
+     * @param selection `"name[:width[:blend]]"` (value-colon form): `"normal"` (default —
+     *   median-centered normal serving over the vocabulary; width `"normal:0.1"` tight /
+     *   `0.5` default / larger looser; blend mixes in plain-random serves, `"normal::0.9"` =
+     *   almost random with a slight center edge), `"random"`, `"roundrobin"` (opt-in:
+     *   cycling can gargle audibly). Unrecognized names coerce to the default.
      * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
      */
     @KlangScript.Method
@@ -87,7 +91,7 @@ object KlangScriptSuperSquareExtensions {
         drawTries: Double = 5.0,
         poolSize: Double = 256.0,
         refreshEvery: Double = 10.0,
-        selection: Double = 0.0,
+        selection: String = "normal",
         warmup: Double = 16.0,
     ): IgnitorDsl.SuperSquare = self.copy(
         phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,

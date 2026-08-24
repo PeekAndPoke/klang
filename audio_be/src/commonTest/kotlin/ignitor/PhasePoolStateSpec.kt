@@ -58,7 +58,7 @@ class PhasePoolStateSpec : StringSpec({
     "amortized warm - every served entry is overwhelmingly in-band, from note one" {
         val p = pool(size = 200.0)
         val inBand = (1..200).count {
-            val k = kOf(p.next(selection = 0.0))
+            val k = kOf(p.next(PhasePoolSelection.RoundRobin))
             k >= lo - 1e-9 && k <= hi + 1e-9
         }
         // Same acceptance statistics as the stateless path: ~88 % in-band at 5 tries; the rest
@@ -68,25 +68,25 @@ class PhasePoolStateSpec : StringSpec({
 
     "roundRobin - cycles the whole vocabulary before repeating" {
         val p = pool(size = 8.0)
-        val first = (1..8).map { p.next(selection = 0.0) }
+        val first = (1..8).map { p.next(PhasePoolSelection.RoundRobin) }
         // 8 distinct entry objects, then the cycle wraps to the same objects in the same order.
         first.toSet().size shouldBe 8
-        val second = (1..8).map { p.next(selection = 0.0) }
+        val second = (1..8).map { p.next(PhasePoolSelection.RoundRobin) }
         second shouldBe first
     }
 
     "refresh - every Nth note redraws EXACTLY ONE entry, not always the same one; frozen never changes" {
         val frozen = pool(size = 8.0, refreshEvery = 0.0)
-        val before = (1..8).map { frozen.next(0.0).copyOf() }
-        repeat(64) { frozen.next(0.0) }
-        (1..8).map { frozen.next(0.0).copyOf() } shouldBe before
+        val before = (1..8).map { frozen.next(PhasePoolSelection.RoundRobin).copyOf() }
+        repeat(64) { frozen.next(PhasePoolSelection.RoundRobin) }
+        (1..8).map { frozen.next(PhasePoolSelection.RoundRobin).copyOf() } shouldBe before
 
         val evolving = pool(size = 8.0, refreshEvery = 4.0)
         val changedIndices = mutableSetOf<Int>()
         var inBandRefreshes = 0
         repeat(12) {
             val snapshot = (0 until 8).map { evolving.peek(it).copyOf() }
-            repeat(4) { evolving.next(0.0) } // exactly one refresh cycle
+            repeat(4) { evolving.next(PhasePoolSelection.RoundRobin) } // exactly one refresh cycle
             val changed = (0 until 8).filter { evolving.peek(it).toList() != snapshot[it].toList() }
             changed.size shouldBe 1 // ONE entry redrawn — never zero, never all
             changedIndices.add(changed.single())
@@ -108,11 +108,11 @@ class PhasePoolStateSpec : StringSpec({
         p.filled shouldBe 32
         val servedRefs = ArrayList<DoubleArray>()
         repeat(32) { n ->
-            servedRefs.add(p.next(0.0))
+            servedRefs.add(p.next(PhasePoolSelection.RoundRobin))
             p.filled shouldBe 33 + n // exactly one top-up per served note
         }
         p.filled shouldBe 64
-        repeat(32) { servedRefs.add(p.next(0.0)) }
+        repeat(32) { servedRefs.add(p.next(PhasePoolSelection.RoundRobin)) }
         // 64 serves over a 64-entry pool: roundRobin walks 0,1,2,…,63 IN ORDER — the order pin
         // (not just distinctness) is what catches a serve-the-just-drawn-entry or frozen-rr
         // mutant, which also produces 64 distinct entries but out of sequence.
@@ -127,10 +127,10 @@ class PhasePoolStateSpec : StringSpec({
         val p = pool(size = 1000.0)
         p.filled shouldBe 32
         repeat(10) { n ->
-            p.next(0.0)
+            p.next(PhasePoolSelection.RoundRobin)
             p.filled shouldBe 32 + 3 * (n + 1)
         }
-        repeat(320) { p.next(0.0) }
+        repeat(320) { p.next(PhasePoolSelection.RoundRobin) }
         p.filled shouldBe 1000 // clamped exactly at poolSize — no overshoot past the last slot
     }
 
@@ -148,14 +148,14 @@ class PhasePoolStateSpec : StringSpec({
         val cold = pool(size = 64.0, warmup = 0.0)
         cold.filled shouldBe 0
         // First serve tops up before serving — no unfilled slot is ever reachable.
-        cold.next(0.0)
+        cold.next(PhasePoolSelection.RoundRobin)
         cold.filled shouldBe 1
     }
 
     "seeded registry - identical seeds produce identical vocabularies (offline reproducibility)" {
         val a = PhasePools(Random(42)).pool(2, v, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0)
         val b = PhasePools(Random(42)).pool(2, v, 0.1, lo, hi, 5.0, 16.0, 0.0, warmup = 16.0)
-        (1..16).map { a.next(0.0).toList() } shouldBe (1..16).map { b.next(0.0).toList() }
+        (1..16).map { a.next(PhasePoolSelection.RoundRobin).toList() } shouldBe (1..16).map { b.next(PhasePoolSelection.RoundRobin).toList() }
     }
 
     "registry - caps at MAX_POOLS via least-recently-served eviction; the active key stays pooled" {
@@ -262,7 +262,7 @@ class PhasePoolStateSpec : StringSpec({
                 rng = Random(seed),
                 sideAtten = 0.1, gainJitter = 0.0, // jitter off → the phase entry alone sets K
                 phasePool = 1.0, drawTries = 5.0, kMin = lo, kMax = hi,
-                poolSize = 2.0, refreshEvery = 0.0, selection = 0.0,
+                poolSize = 2.0, refreshEvery = 0.0, selection = "roundrobin",
                 phasePools = pools, orbit = 2,
             )
         )
@@ -286,7 +286,7 @@ class PhasePoolStateSpec : StringSpec({
                 rng = Random(1),
                 sideAtten = 0.1, gainJitter = 0.0,
                 phasePool = 1.0, drawTries = 64.0, kMin = 0.85, kMax = 0.95,
-                poolSize = 8.0, refreshEvery = 0.0, selection = 0.0,
+                poolSize = 8.0, refreshEvery = 0.0, selection = "roundrobin",
                 phasePools = pools, orbit = 0,
             )
         )

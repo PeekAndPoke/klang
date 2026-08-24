@@ -403,8 +403,15 @@ sealed interface IgnitorDsl {
         val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        /**
+         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form): `"normal"`
+         * (default — normal-distribution serving over the vocabulary's rank order, median-
+         * centered; width `0.1` tight / `0.5` default / larger looser; blend = fraction of
+         * plain-random serves mixed in, `"normal::0.9"` = almost random with a slight center
+         * edge), `"random"`, `"roundrobin"` (opt-in: cycling can gargle audibly).
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = 16.0,
     ) : IgnitorDsl {
@@ -443,8 +450,15 @@ sealed interface IgnitorDsl {
         val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        /**
+         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form): `"normal"`
+         * (default — normal-distribution serving over the vocabulary's rank order, median-
+         * centered; width `0.1` tight / `0.5` default / larger looser; blend = fraction of
+         * plain-random serves mixed in, `"normal::0.9"` = almost random with a slight center
+         * edge), `"random"`, `"roundrobin"` (opt-in: cycling can gargle audibly).
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = 16.0,
     ) : IgnitorDsl {
@@ -481,8 +495,15 @@ sealed interface IgnitorDsl {
         val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        /**
+         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form): `"normal"`
+         * (default — normal-distribution serving over the vocabulary's rank order, median-
+         * centered; width `0.1` tight / `0.5` default / larger looser; blend = fraction of
+         * plain-random serves mixed in, `"normal::0.9"` = almost random with a slight center
+         * edge), `"random"`, `"roundrobin"` (opt-in: cycling can gargle audibly).
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = 16.0,
     ) : IgnitorDsl {
@@ -520,8 +541,15 @@ sealed interface IgnitorDsl {
         val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        /**
+         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form): `"normal"`
+         * (default — normal-distribution serving over the vocabulary's rank order, median-
+         * centered; width `0.1` tight / `0.5` default / larger looser; blend = fraction of
+         * plain-random serves mixed in, `"normal::0.9"` = almost random with a slight center
+         * edge), `"random"`, `"roundrobin"` (opt-in: cycling can gargle audibly).
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = 16.0,
     ) : IgnitorDsl {
@@ -558,8 +586,15 @@ sealed interface IgnitorDsl {
         val poolSize: Double = 256.0,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        /**
+         * Pool entry selection, `"name[:width[:blend]]"` (value-colon form): `"normal"`
+         * (default — normal-distribution serving over the vocabulary's rank order, median-
+         * centered; width `0.1` tight / `0.5` default / larger looser; blend = fraction of
+         * plain-random serves mixed in, `"normal::0.9"` = almost random with a slight center
+         * edge), `"random"`, `"roundrobin"` (opt-in: cycling can gargle audibly).
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = "normal",
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
         val warmup: Double = 16.0,
     ) : IgnitorDsl {
