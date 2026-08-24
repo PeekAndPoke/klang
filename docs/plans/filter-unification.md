@@ -739,6 +739,25 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   cardinality), and parallel boosts stay an ignitor-surface concept; or (b) sprudel's filter
   list becomes genuinely ordered with repeatable entries, which is the "unordered voice model"
   flaw this plan explicitly does not fix. (a) is the honest default.
+- **Pre-walkthrough facts, measured 2026-08-24 (after C5), so the chunk review starts from
+  numbers rather than from the draft's estimates:**
+  - **The `band`/`tap` gate is CLOSED: D9's static tier has not landed.** There is no
+    `EqCoreAudioFilter` anywhere in the repo, and `VoiceFactory` references `EqCore` zero
+    times — the voice path is still `toFilter()` + `combine()`. By this section's own gate,
+    sprudel `band`/`tap` cannot ship in C6; the open (a)/(b) decision below is therefore not
+    blocking C6, it is deferred with D9.
+  - Canonical names genuinely missing on the sprudel door: `lowpass`, `highpass`, `bandpass`,
+    `notch` (0 declarations each) and `ntf`/`ntq` (0). `notchf`/`notchq` already exist.
+  - `freq`/`cutoffHz` unification blast radius across the three DSL-surface modules:
+    57 `cutoffHz` + 51 `freqHz` occurrences. The recorded trap still applies — the render-arg
+    `freqHz` is note pitch and is OUT of scope.
+  - Aliases still to delete: `phd`, `phasdp`, `reverb`, `vibmod`.
+  - **STALE NUMBER CORRECTED:** the sweep below budgets "bandf x13, bandq x11 in
+    songs+tutorials". That is spent — C6a already deleted the callable aliases and migrated
+    the corpus; songs+tutorials now contain ZERO. The 83 remaining `bandf`/`bandq` references
+    are voice-data FIELD names (`bandf = str.toDoubleOrNull()`) plus KDoc `@tags` search
+    keywords. Field names are wire-adjacent and this plan's rule keeps them, so the mechanical
+    corpus sweep C6 was sized for is much smaller than drafted. `resonance` still has 2 sites.
 - Envelope: `lpe/hpe/bpe` keep their names (depth), `lpadsr/hpadsr/bpadsr` are the shape, the
   ten-per-filter ADSR aliases go.
 - Compat suite cut to structural cases.
