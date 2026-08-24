@@ -278,13 +278,14 @@ Decision for the C4 review: either define the helper's law for `w > 1` (e.g. the
 coefficient continues past 1 linearly while dry stays at floor, preserving today's raw
 behaviour) or accept the deletion and retire that KDoc + spec row. Not clamp-and-pretend.
 
-**Migration is NOT "same value":** measured against today's `ParallelMixFilter` coefficients,
-every `bodyMix`/`vowelMix` in the useful middle gets ~3-4 dB more resonator under the new curve
-(`Tetris` bodyMix 0.2: wet +3.8 dB; `StrangerThings` vowelMix 0.4: wet +3.4 dB AND dry +1.5 dB);
-only `mix = 1.0` is a fixed point. The orbit phaser's three song sites (`Tetris` 0.15,
-`IrishLamentTechno` 0.25 and a `saw.range(0.3, 0.6)`) move +3.6 to +3.8 dB too, because with
-`floor = 1` the dry matches EXACTLY but the wet law changes from `depth` to `sin`. These are
-ear-retune sites, listed in C4, not mechanical renames.
+**Migration is NOT "same value" — CORRECTED in the C4.1 review (the original paragraph was
+computed for p = 1/sin; the decided correlated law is p = 2/sin², which flips the sign):**
+measured against today's coefficients, mid-knob values get SUBTLER, not hotter — `Tetris`
+bodyMix 0.2: wet −6.4 dB; `StrangerThings` vowelMix 0.4: wet −1.3 dB, dry −0.3 dB; the orbit
+phaser sites `Tetris` 0.15: wet −8.8 dB, `IrishLamentTechno` 0.25: −4.6 dB (with `floor = 1`
+the dry matches exactly; the wet law changes from linear `depth` to `sin²`, identical only at
+0, 0.5 and 1). `mix = 1.0` stays a fixed point. The C4.2 ear-retunes therefore go UP.
+These are ear-retune sites, listed in C4, not mechanical renames.
 
 ### Passes (the original D6)
 
@@ -548,6 +549,10 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   when feedback is ALSO zero; that is the one that would go red). Orbit phaser at `floor(1)`:
   pin the dry coefficient at `w = 0.5`, where the two curves genuinely differ in wet law, not at
   `w = 1` where they agree trivially.
+- C4.2 note (from the C4.1 review): `IgnitorDsl.kt` lines ~1364/1400 teach the linear blend
+  formula and ~1781/1799 say "crossfade" - the blend->wet rename must CORRECT the behaviour
+  claims in the same pass, not merely rename. Helper landed as `WetDryMix` (one name for the
+  law; the exponent picks the statistic) rather than the tentative `equalPowerMix`.
 - Songs: every `bodyMix`/`vowelMix` -> `bodyWet`/`vowelWet` is a RENAME PLUS an ear retune
   (+3 to +4 dB more resonator in the useful middle, see the Decisions section); the three orbit
   `phaserdepth` sites (`Tetris`, `IrishLamentTechno` x2) move +3.6 to +3.8 dB for the same

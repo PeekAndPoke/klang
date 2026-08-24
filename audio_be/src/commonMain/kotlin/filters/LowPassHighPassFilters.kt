@@ -162,11 +162,14 @@ internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
 /**
  * Broadband transmission floor for the body resonator (see [LowPassHighPassFilters.createBody]).
- * At `bodyMix >= 1` the dry is held at this fraction (it never drops below it), so the body
- * emphasizes its resonant modes over a broadband floor instead of collapsing to a few isolated
- * tones — the way a real passive body behaves. A LOWER floor makes the body more audible at a
+ * Under the C4 law the floor PINS the dry from `w* = (2/pi)*acos(sqrt(floor))` upward
+ * (~0.56 for 0.4), i.e. from the middle of the knob, not just at the top (it never drops
+ * below the floor anywhere). That floor is what lets the body emphasize its resonant modes
+ * over a broadband bed instead of collapsing to a few isolated tones — the way a real
+ * passive body behaves. A LOWER floor makes the body more audible at a
  * given mix (the resonances sit over less dry); a higher floor is subtler. `bodyMix` itself is
- * uncapped above 1, so the resonances can always be pushed further regardless of the floor.
+ * clamped to [0, 1] since C4 (the shared wet/dry law lives on that domain; the old raw
+ * extension above 1 is a deleted capability - plan: Helper domain).
  * Tunable by ear.
  */
 internal const val BODY_FLOOR: Double = 0.4

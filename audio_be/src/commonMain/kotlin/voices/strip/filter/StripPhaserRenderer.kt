@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
+import io.peekandpoke.klang.audio_be.filters.WetDryMix
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 
@@ -39,7 +40,9 @@ class StripPhaserRenderer(
         if (depth <= 0.0) return
 
         val buf = ctx.audioBuffer
-        val d = depth
+        // C4 (filter unification): shared wet/dry law, additive floor-1 semantics, p = 2 —
+        // MUST stay identical to the cylinder-bus Phaser (one knob, one law).
+        val wetC = WetDryMix.wetCoeff(depth, p = 2)
 
         // Control-rate: compute α at block boundaries once.
         core.prepareBlock(ctx.length)
@@ -48,7 +51,7 @@ class StripPhaserRenderer(
             val idx = ctx.offset + i
             val dry = buf[idx]
             val wet = core.step(dry)
-            buf[idx] = dry + wet * d
+            buf[idx] = dry + wet * wetC
         }
     }
 }

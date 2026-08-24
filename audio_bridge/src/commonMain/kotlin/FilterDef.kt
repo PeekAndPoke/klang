@@ -79,10 +79,11 @@ sealed class FilterDef {
      * tone. Same parallel-SVF-bandpass core as [Formant], with two differences that make it
      * a *body* rather than a vowel:
      *
-     * 1. **Additive body amount** ([mix]) — the resonances are *added on top of* the full dry
-     *    source (`out = dry + wet·mix`), so no broadband content is lost. [Formant] is wet-only
-     *    and would strip the spectrum. `mix = 0` is the untouched source; values > 1 drive the
-     *    resonances harder.
+     * 1. **Floored body amount** ([mix]) — the resonances blend on top of a dry that never
+     *    drops below its physical floor (the shared C4 wet/dry law, correlated branch, with
+     *    `BODY_FLOOR`), so broadband content is never lost. [Formant] is wet-only and would
+     *    strip the spectrum. `mix = 0` is the untouched source; the mix lives on [0, 1]
+     *    (values above 1 behave as 1; the old raw extension is a deleted capability).
      * 2. **Fixed Hz centers that do not track the played note** — different notes get
      *    emphasized at different points in their harmonic series, breaking the spectral
      *    "lockstep" that reads as plastic. (Already how SVF centers work; called out here
@@ -98,7 +99,7 @@ sealed class FilterDef {
         /**
          * Broadband dry floor for the blend (the `bodyFloor()` DSL). `null` = engine default
          * (`BODY_FLOOR`). Lower = more audible body (resonances over less dry); higher = subtler
-         * colour. Independent of [mix], which is uncapped above 1.
+         * colour. Independent of [mix] (which lives on [0, 1] since C4).
          */
         val floor: Double? = null,
     ) : FilterDef() {

@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.filters.WetDryMix
 import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
@@ -428,12 +429,14 @@ private class PhaserIgnitor(
             // Precompute α at block boundaries — see PhaserCore KDoc.
             phaser.prepareBlock(ctx.length)
 
-            val d = blendVal
-            val dInv = 1.0 - d
+            // C4 (filter unification): the shared wet/dry law, correlated branch (p = 2) —
+            // an allpass cascade is unit-magnitude and fully correlated, so amplitudes add.
+            val dryC = WetDryMix.dryCoeff(blendVal, floor = 0.0, p = 2)
+            val wetC = WetDryMix.wetCoeff(blendVal, p = 2)
             for (i in ctx.offset until end) {
                 val dry = input[i]
                 val wet = phaser.step(dry)
-                buffer[i] = dry * dInv + wet * d
+                buffer[i] = dry * dryC + wet * wetC
             }
         }
     }
@@ -542,7 +545,8 @@ fun Ignitor.tremolo(
  * pitched rates, with a feedback loop through a tone lowpass.
  *
  * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
- *   Formula: `out = dry · (1 − blend) + wet · blend`.
+ * Mix: the shared wet/dry law, equal-POWER branch (p = 1) — the pitch-shifted tail is
+ * decorrelated from the dry, so powers add and the level holds across the knob.
  * @param feedback Wet → grain-buffer feedback. 0.0 = single pass, 0.9 = long cascading tails.
  *   Hard-clamped to 0.95 for stability.
  * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
@@ -566,6 +570,9 @@ private class ShimmerIgnitor(
     private val tone: Ignitor,
     pitches: List<Double>,
 ) : Ignitor {
+    /** True once the grain engine has produced state that a bypass must clear. */
+    private var stateDirty = false
+
     private val ringSize = 96_000
     private val ring = AudioBuffer(ringSize)
     private var writePos: Int = 0
@@ -596,13 +603,25 @@ private class ShimmerIgnitor(
             val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
             val end = ctx.offset + ctx.length
 
-            if (blendVal <= 0.0 && fbVal <= 0.0) {
+            // C4: wet == 0 IS bypass, regardless of feedback — bit-identical passthrough is
+            // the wet(0) contract. State is CLEARED on bypass entry (decided in the C4.1
+            // review): a modulated blend dipping to 0 must not freeze a stale tail and
+            // resurrect it later, detached from wall time.
+            if (blendVal <= 0.0) {
+                if (stateDirty) {
+                    ring.fill(0.0)
+                    for (g in 0 until maxGrains) grainActive[g] = false
+                    feedbackTap = 0.0
+                    lpfState = 0.0
+                    stateDirty = false
+                }
                 for (i in ctx.offset until end) {
                     buffer[i] = input[i]
                 }
                 return@use
             }
 
+            stateDirty = true
             val sampleRate = ctx.sampleRate
             val grainPeriodSamples = (sampleRate / grainsPerSecond).toInt().coerceAtLeast(1)
             val grainTotalSamples = (sampleRate * grainSizeSec).toInt().coerceAtLeast(1)
@@ -610,6 +629,11 @@ private class ShimmerIgnitor(
 
             val lpfA = exp(-TWO_PI * toneVal / sampleRate)
             val lpfOneMinusA = 1.0 - lpfA
+
+            // C4 (filter unification): shared wet/dry law, DEcorrelated branch (p = 1) — the
+            // pitch-shifted grain tail carries no phase relation to the dry, powers add.
+            val dryC = WetDryMix.dryCoeff(blendVal, floor = 0.0, p = 1)
+            val wetC = WetDryMix.wetCoeff(blendVal, p = 1)
 
             for (i in ctx.offset until end) {
                 val dry = input[i]
@@ -668,7 +692,7 @@ private class ShimmerIgnitor(
                 lpfState = (lpfOneMinusA * wet + lpfA * lpfState).flushDenormal()
                 feedbackTap = lpfState
 
-                buffer[i] = (dry * (1.0 - blendVal) + wet * blendVal)
+                buffer[i] = (dry * dryC + wet * wetC)
             }
         }
     }
