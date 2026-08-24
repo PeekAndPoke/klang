@@ -34,7 +34,7 @@ let guitar = (() => {
   let pAnalog  = OscSlot.analog
 
   // ADSR
-  let pAttack     = Osc.param("attack",        0.004, "Attack")
+  let pAttack     = Osc.param("attack",        0.005, "Attack")
   let pDecay      = Osc.param("decay",         1.500, "Decay")
   let pSustain    = Osc.param("sustain",       0.250, "sustain")
   let pRelease    = Osc.param("release",       0.040, "Release")
@@ -114,7 +114,7 @@ let bass = (() => {
   // Band-limited to land in the mid scoop and NOT in the 120–250 Hz mud band.
   // Asymmetric shapes also produce DC; the highpass removes it.
   let grind = Osc.saw()
-    .pitchEnvelope(7, 0.001, 0.03)
+    .pitchEnvelope(12, 0.001, 0.02)
     .distort(pDrive, "tube", 4)
     .highpass(cutoffHz = pGrindLo, q = 0.707)
     .lowpass(cutoffHz = pGrindHi, q = 0.707)
