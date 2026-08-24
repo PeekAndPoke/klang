@@ -348,16 +348,23 @@ selection — extended to ignitor variants and per-note gain.
 
 All filters accept pattern values and have envelope variants (`lpe` for depth, `lpadsr` for shape; same for `hp*`/`bp*`)
 
+Lowpass and highpass also take a **cascade count** as their third argument: `lpf(freq, q, passes)`.
+At the default q the cascade keeps its -3 dB point AT the cutoff (`lpf(800, 0.707, 2)` still means
+800, it is just twice as steep); a resonant q compounds instead (`q = 1.0, passes = 2` sits +3 dB
+at the cutoff). Same third slot on the ignitor door.
+
 | Function         | Aliases               | Description                | Example                                                      |
 |------------------|-----------------------|----------------------------|--------------------------------------------------------------|
 | `lpf(freq)`      |  | Lowpass filter cutoff (Hz) | `note("c3").s("saw").lpf(800)`                               |
 | `lpq(q)`         |  | Lowpass resonance/Q        | `note("c3").lpf(400).lpq(5)`                                 |
 | `lpe(depth)`     |  | LP env depth in SEMITONES (+12 doubles the cutoff at full env; negative sweeps down) | `note("c3").lpf(200).lpe(24)`           |
 | `lpadsr(params)` |  | LP envelope ADSR           | `note("c3").lpf(200).lpe(24).lpadsr(0.01, 0.3, 0.5, 0.5)`      |
+| `lpx(passes)`    |  | LP cascade count: `2` = 24 dB/oct, `3` = 36 (also the third slot of `lpf`) | `note("c3").lpf(800).lpx("<1 2>")`      |
 | `hpf(freq)`      |  | Highpass filter cutoff     | `s("bd").hpf(200)`                                           |
 | `hpq(q)`         |  | Highpass resonance         | `s("bd").hpf(200).hpq(2)`                                    |
 | `hpe(depth)`     |  | HP env depth in SEMITONES | `note("c3").hpf(100).hpe(24)`                               |
 | `hpadsr(params)` |  | HP envelope ADSR           | `note("c3").hpf(100).hpe(24).hpadsr(0.01, 0.2, 0.3, 0.5)`      |
+| `hpx(passes)`    |  | HP cascade count (also the third slot of `hpf`) | `s("bd").hpf(200).hpx(2)`      |
 | `bpf(freq)`      |  | Bandpass center freq       | `s("sd").bpf(1000)`                                          |
 | `bpq(q)`         |  | Bandpass Q                 | `s("sd").bpf(1000).bpq(5)`                                   |
 | `bpe(depth)`     |  | BP env depth in SEMITONES | `note("c3").bpf(200).bpe(27.9)`                               |

@@ -339,7 +339,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         tremoloSync = b + 36; tremoloDepth = b + 37; tremoloSkew = b + 38; tremoloPhase = b + 39
         tremoloShape = "ts$seed"
         duckCylinder = seed + 40; duckAttack = b + 41; duckDepth = b + 42
-        cutoff = b + 43; resonance = b + 44; hcutoff = b + 45; hresonance = b + 46
+        cutoff = b + 43; resonance = b + 44; hcutoff = b + 45; hresonance = b + 46; lpPasses = b + 46.2; hpPasses = b + 46.4
         bandf = b + 47; bandq = b + 48; notchf = b + 49; nresonance = b + 50
         lpattack = b + 51; lpdecay = b + 52; lpsustain = b + 53; lprelease = b + 54; lpenv = b + 55
         hpattack = b + 56; hpdecay = b + 57; hpsustain = b + 58; hprelease = b + 59; hpenv = b + 60

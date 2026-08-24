@@ -146,6 +146,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- frequency / filters --------------------------------------------------------------------------------
     "Detune" { check(IgnitorDsl.Sine().detune(7.0)) }
     "Lowpass" { check(IgnitorDsl.Square().lowpass(2000.0)) }
+    "Lowpass with passes" { check(IgnitorDsl.Square().lowpass(2000.0, 1.2, passes = 3)) }
     "Highpass (custom q)" { check(IgnitorDsl.Sawtooth().highpass(500.0, 1.5)) }
     "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onepole(3000.0)) }
     "Bandpass" { check(IgnitorDsl.Sine().bandpass(1000.0, 2.0)) }

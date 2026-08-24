@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -22,6 +23,7 @@ import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.tap
+import kotlin.math.abs
 import kotlin.random.Random
 
 /**
@@ -82,8 +84,11 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         offset: Int = 0,
         length: Int = blockFrames,
         expectFused: Boolean = true,
+        oscParams: Map<String, Double>? = null,
+        minPeak: Double = 0.0,
     ) {
         val optimized = authored.optimize()
+        var peak = 0.0
 
         withClue("optimizer must actually have rewritten this tree") {
             (optimized !== authored) shouldBe expectFused
@@ -96,8 +101,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             // future rule that shifts a draw across the build/generate boundary.
             val rngA = Random(seed)
             val rngB = Random(seed)
-            val a = authored.toExciter(null, random = rngA)
-            val b = optimized.toExciter(null, random = rngB)
+            val a = authored.toExciter(oscParams, random = rngA)
+            val b = optimized.toExciter(oscParams, random = rngB)
             val sentinel = -12345.0
             val bufA = AudioBuffer(blockFrames)
             val bufB = AudioBuffer(blockFrames)
@@ -110,8 +115,15 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 // EqCore runs over a partial AND a full window on one core, captureInput is
                 // reused at a second length, and the out-of-window sentinel below stops being
                 // vacuous (at offset 0 it checks nothing). It does NOT exercise
-                // MemoizingIgnitor's offset/length cache key — every node in these rows has a
-                // single consumer, so that path short-circuits before the key is read — and it
+                // MemoizingIgnitor's offset/length cache key: no row combines a CHANGING
+                // offset/length with a multi-consumer memo. The two rows that change them
+                // (Der Schmetterling and the sub-block onset row) are single-consumer
+                // chains, so the key path short-circuits before the key is read; the
+                // multi-consumer rows (the shared-intermediate notch, and the C5 modulated-q
+                // cascade whose one `Plus` q node feeds both expanded sections on both
+                // doors) all run at offset 0. The other C5 rows carry a LEAF q — Constant or
+                // Param — which `buildIgnitor` returns uncached, so nothing is shared at all.
+                // It
                 // does not RE-grow the input copy, since the quantum round-up already
                 // allocated 128 for the 64-frame window (EqCoreSpec pins re-growth directly).
                 val curOffset = if (block == 0) offset else 0
@@ -127,6 +139,10 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 b.generate(bufB, f, cb)
 
                 for (i in curOffset until curOffset + curLength) {
+                    val a0 = bufA[i]
+                    if (a0.isFinite() && abs(a0) > peak) {
+                        peak = abs(a0)
+                    }
                     // NaN compares as NaN: payload bits are outside the contract (EqCoreSpec).
                     if (!(bufA[i].isNaN() && bufB[i].isNaN())) {
                         withClue("freq=$f sample=$i") {
@@ -149,6 +165,94 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 cb.voiceElapsedFrames += blockFrames
             }
         }
+
+        if (minPeak > 0.0) {
+            withClue("both trees rendered (near) silence — the parity assertion was vacuous") {
+                peak shouldBeGreaterThan minPeak
+            }
+        }
+    }
+
+    "C5: a passes = 2 lowpass fuses to TWO sections and renders the same bits" {
+        // The graph shape `passes` introduces: N EqCore sections on the fused side vs N
+        // chained SvfIgnitors carrying a scaled q on the authored side, produced by two
+        // INDEPENDENTLY written ladder implementations (bridge `passesLadderRel` and engine
+        // `butterworthQLadder`). PassesLadderParitySpec pins the numbers; this pins the render.
+        assertOptimizeIsInaudible(
+            IgnitorDsl.Sawtooth().lowpass(2400.0, 0.707, passes = 2)
+        )
+    }
+
+    "C5: a passes = 3 highpass with a PARAM-backed q renders the same bits" {
+        // The q that is not a literal. Both doors stage it as `Times(q, Constant(rel))` — the
+        // shapes agree by construction, which is the point: `scaledBy` and `expandPasses` are
+        // written to mirror each other. This row pins that they still do.
+        assertOptimizeIsInaudible(
+            IgnitorDsl.Highpass(
+                inner = IgnitorDsl.Sawtooth(),
+                cutoffHz = IgnitorDsl.Constant(600.0),
+                q = IgnitorDsl.Param("res", 1.2),
+                passes = 3,
+            )
+        )
+    }
+
+    "C5: a NON-FINITE oscparam q lands on the SAME filter on both doors" {
+        // Where the doors could silently disagree, and the reason `scaledBy` routes a
+        // non-literal q through `times` instead of folding it into the value: only the
+        // `times` path applies `safeOut`. Fold it instead and NaN reaches the chained door
+        // raw (`computeSvfCoeffs` takes its Butterworth 0.7071 fallback) while the fused
+        // door sees `safeOut(NaN) = 0.0` and clamps to the 0.1 q floor. Same program, two
+        // filters. EVERY finite q hides this — even 1e300 clamps to 200 on both paths — so
+        // the poison has to be explicit. (+Inf diverges the other way: safeOut clamps it to
+        // SAFE_MAX, which IS finite, so the fused door lands on the 200 ceiling.)
+        //
+        // BOTH parities, even and odd N. passes = 2 is the one that pins the `safeOut`
+        // symmetry (neither ladder factor is 1.0, so every stage goes through `times`).
+        // passes = 3 is the one that pins the `rel == 1.0` middle-stage short-circuit pair
+        // (`expandPasses`'s `rel == 1.0 -> q` and `scaledBy`'s `factor == 1.0 -> this`):
+        // those two live in different modules, nothing pairs them, and for a non-finite q
+        // they are NOT interchangeable — raw NaN takes computeSvfCoeffs' Butterworth 0.7071
+        // fallback while `safeOut(NaN)` takes the 0.1 q floor. Remove ONE arm and this row
+        // fails. Removing BOTH is invisible here and always will be: this is a door-vs-door
+        // comparison, so anything that moves both doors together passes by construction. It
+        // would still change the sound (an odd-N middle stage fed a non-finite oscparam q
+        // moves from the 0.7071 fallback to the 0.1 floor for NaN and -Inf, and to the 200
+        // ceiling for +Inf, since safeOut CLAMPS an infinity to a finite SAFE_MAX rather
+        // than scrubbing it), so that pair is a decision, not a test result.
+        for (n in listOf(2, 3)) {
+            for (poisoned in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+                assertOptimizeIsInaudible(
+                    IgnitorDsl.Lowpass(
+                        inner = IgnitorDsl.Sawtooth(),
+                        cutoffHz = IgnitorDsl.Constant(1500.0),
+                        q = IgnitorDsl.Param("res", 1.2),
+                        passes = n,
+                    ),
+                    oscParams = mapOf("res" to poisoned),
+                    // Non-vacuity: a poisoned q that silenced BOTH doors would compare two
+                    // silences and pass. Every one of these lands on a finite q at a finite
+                    // cutoff, so real audio must come out.
+                    minPeak = 1e-6,
+                )
+            }
+        }
+    }
+
+    "C5: a passes = 2 lowpass with a MODULATED q renders the same bits" {
+        // A live signal in the q slot: both doors must multiply it by the same ladder factor
+        // per stage, through the same `times` semantics.
+        assertOptimizeIsInaudible(
+            IgnitorDsl.Lowpass(
+                inner = IgnitorDsl.Sawtooth(),
+                cutoffHz = IgnitorDsl.Constant(1800.0),
+                q = IgnitorDsl.Plus(
+                    IgnitorDsl.Constant(1.4),
+                    IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)), IgnitorDsl.Constant(0.5)),
+                ),
+                passes = 2,
+            )
+        )
     }
 
     "the guitar tail: four chained filters fuse inaudibly" {

@@ -36,6 +36,7 @@ private fun applyLpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  *
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
  * @return A new pattern with LPF applied.
  *
  * ```KlangScript(Playable)
@@ -56,14 +57,20 @@ private fun applyLpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
 @KlangScript.Function
-fun SprudelPattern.lpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     // A tail-only call must not touch freq: reinterpret runs only on a fully bare call.
-    val withFreq = if (freq != null || q == null) {
+    var p = if (freq != null || (q == null && passes == null)) {
         applyLpf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
     } else {
         this
     }
-    return if (q != null) withFreq.lpq(q, callInfo?.forParam(1)) else withFreq
+    if (q != null) {
+        p = p.lpq(q, callInfo?.forParam(1))
+    }
+    if (passes != null) {
+        p = p.lpx(passes, callInfo?.forParam(2))
+    }
+    return p
 }
 
 /**
@@ -73,6 +80,7 @@ fun SprudelPattern.lpf(freq: PatternLike? = null, q: PatternLike? = null, callIn
  *
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
  * @return A new pattern with LPF applied.
  *
  * ```KlangScript(Playable)
@@ -83,8 +91,8 @@ fun SprudelPattern.lpf(freq: PatternLike? = null, q: PatternLike? = null, callIn
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
 @KlangScript.Function
-fun String.lpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).lpf(freq, q, callInfo)
+fun String.lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lpf(freq, q, passes, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a Low Pass Filter.
@@ -94,6 +102,7 @@ fun String.lpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: Call
  *
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
  * @return A [PatternMapperFn] that applies LPF.
  *
  * ```KlangScript(Playable)
@@ -108,14 +117,15 @@ fun String.lpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: Call
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
 @KlangScript.Function
-fun lpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.lpf(freq, q, callInfo) }
+fun lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lpf(freq, q, passes, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies a Low Pass Filter after the previous mapper.
  *
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
  * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
  *
  * ```KlangScript(Playable)
@@ -127,8 +137,8 @@ fun lpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? =
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.lpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.lpf(freq, q, callInfo) }
+fun PatternMapperFn.lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.lpf(freq, q, passes, callInfo) }
 
 // -- hpf() -------------------------------------------------------------------------------------------------------------
 
@@ -151,6 +161,7 @@ private fun applyHpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  *
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
  * @return A new pattern with HPF applied.
  *
  * ```KlangScript(Playable)
@@ -171,14 +182,20 @@ private fun applyHpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
 @KlangScript.Function
-fun SprudelPattern.hpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     // A tail-only call must not touch freq: reinterpret runs only on a fully bare call.
-    val withFreq = if (freq != null || q == null) {
+    var p = if (freq != null || (q == null && passes == null)) {
         applyHpf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
     } else {
         this
     }
-    return if (q != null) withFreq.hpq(q, callInfo?.forParam(1)) else withFreq
+    if (q != null) {
+        p = p.hpq(q, callInfo?.forParam(1))
+    }
+    if (passes != null) {
+        p = p.hpx(passes, callInfo?.forParam(2))
+    }
+    return p
 }
 
 /**
@@ -186,6 +203,7 @@ fun SprudelPattern.hpf(freq: PatternLike? = null, q: PatternLike? = null, callIn
  *
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
  * @return A new pattern with HPF applied.
  *
  * ```KlangScript(Playable)
@@ -196,14 +214,15 @@ fun SprudelPattern.hpf(freq: PatternLike? = null, q: PatternLike? = null, callIn
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
 @KlangScript.Function
-fun String.hpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).hpf(freq, q, callInfo)
+fun String.hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).hpf(freq, q, passes, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a High Pass Filter.
  *
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
  * @return A [PatternMapperFn] that applies HPF.
  *
  * ```KlangScript(Playable)
@@ -218,14 +237,15 @@ fun String.hpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: Call
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
 @KlangScript.Function
-fun hpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.hpf(freq, q, callInfo) }
+fun hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.hpf(freq, q, passes, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies a High Pass Filter after the previous mapper.
  *
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
  * @return A new [PatternMapperFn] chaining HPF after the previous mapper.
  *
  * ```KlangScript(Playable)
@@ -237,8 +257,8 @@ fun hpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? =
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.hpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.hpf(freq, q, callInfo) }
+fun PatternMapperFn.hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.hpf(freq, q, passes, callInfo) }
 
 // -- bpf() -------------------------------------------------------------------------------------------------------------
 
@@ -707,6 +727,58 @@ fun lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
     { p -> p.lpe(semitones, callInfo) }
 
 
+// -- lpx() -----------------------------------------------------------------------------------------------------------
+
+private val lpxMutation = voiceSetter { lpPasses = it?.asDoubleOrNull() }
+
+private fun applyLpx(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, lpxMutation)
+}
+
+/**
+ * Sets the lowpass CASCADE count (C5): run the 12 dB/oct filter stage that many times —
+ * `2` = 24 dB/oct, `3` = 36. The per-stage q is STAGGERED (Butterworth ladder scaled by
+ * `q/0.707`) so at the DEFAULT q the cascade is exactly Butterworth: -3 dB AT the cutoff,
+ * `lpf(800, 0.707, 2)` still means 800, no darker-with-a-drifting-knee. A resonant q keeps
+ * its character but COMPOUNDS across stages: the gain AT the cutoff is `(q*sqrt(2))^N / sqrt(2)`,
+ * so `q = 1.0, passes = 2` sits +3 dB there, and `lpf(800, 10, 4)` peaks near +89 dB. That is
+ * the raw engine doing what it was told, not a bug — but it is one digit away from a surprise.
+ * `analog` compounds the same way: every stage gets the full drive. Values are rounded and
+ * coerced to 1..16 (a resource count, not a tone knob); when omitted, the pattern's own
+ * numeric values are reinterpreted as the count.
+ *
+ * ```KlangScript(Playable)
+ * note("c2*4").s("sawtooth").lpf(900, 0.707, 2)   // 24 dB/oct - steeper, same knee
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2*4").s("sawtooth").lpf(900).lpx("<1 2 3>")   // the tail form: slope per cycle
+ * ```
+ *
+ * @param passes The cascade count (1, 2, 3, ...). Omit to reinterpret the pattern's values.
+ * @return A new pattern with the lowpass cascade count applied.
+ * @category effects
+ * @tags lpx, lpf, lowpass, passes, cascade, slope, butterworth
+ */
+@KlangScript.Function
+fun SprudelPattern.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyLpx(this, listOfNotNull(passes).asSprudelDslArgs(callInfo))
+
+/** Sets the lowpass cascade count on a string pattern (see [SprudelPattern.lpx]). */
+@KlangScript.Function
+fun String.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lpx(passes, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the lowpass cascade count (see [SprudelPattern.lpx]). */
+@KlangScript.Function
+fun lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lpx(passes, callInfo) }
+
+/** Chains a lpx step onto this [PatternMapperFn]. */
+@KlangScript.Function
+fun PatternMapperFn.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.lpx(passes, callInfo) }
+
 // -- hpe() - High Pass Filter Envelope Depth ---------------------------------------------------------------------------
 
 private val hpenvMutation = voiceSetter { hpenv = it?.asDoubleOrNull() }
@@ -777,6 +849,52 @@ fun PatternMapperFn.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
 fun hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpe(semitones, callInfo) }
 
+
+// -- hpx() -----------------------------------------------------------------------------------------------------------
+
+private val hpxMutation = voiceSetter { hpPasses = it?.asDoubleOrNull() }
+
+private fun applyHpx(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, hpxMutation)
+}
+
+/**
+ * Sets the highpass CASCADE count — the highpass twin of [lpx]: `2` = 24 dB/oct with the
+ * staggered q ladder keeping -3 dB AT the cutoff at the DEFAULT q (a resonant q compounds,
+ * see [lpx]). Coerced to 1..16; when omitted, the pattern's own numeric values are
+ * reinterpreted as the count.
+ *
+ * ```KlangScript(Playable)
+ * note("c4*4").s("sawtooth").hpf(400, 0.707, 2)   // 24 dB/oct highpass, same knee
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c4*4").s("sawtooth").hpf(400).hpx(2)   // the tail form
+ * ```
+ *
+ * @param passes The cascade count (1, 2, 3, ...). Omit to reinterpret the pattern's values.
+ * @return A new pattern with the highpass cascade count applied.
+ * @category effects
+ * @tags hpx, hpf, highpass, passes, cascade, slope, butterworth
+ */
+@KlangScript.Function
+fun SprudelPattern.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyHpx(this, listOfNotNull(passes).asSprudelDslArgs(callInfo))
+
+/** Sets the highpass cascade count on a string pattern (see [SprudelPattern.hpx]). */
+@KlangScript.Function
+fun String.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).hpx(passes, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the highpass cascade count (see [SprudelPattern.hpx]). */
+@KlangScript.Function
+fun hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.hpx(passes, callInfo) }
+
+/** Chains a hpx step onto this [PatternMapperFn]. */
+@KlangScript.Function
+fun PatternMapperFn.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.hpx(passes, callInfo) }
 
 // -- bpe() - Band Pass Filter Envelope Depth ---------------------------------------------------------------------------
 

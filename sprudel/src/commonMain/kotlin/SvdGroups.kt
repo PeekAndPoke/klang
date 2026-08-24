@@ -49,6 +49,8 @@ data class SvdFilter(
     var sustain: Double? = null,
     var release: Double? = null,
     var env: Double? = null,
+    /** Cascade count (C5, `lpx`/`hpx`): null = 1. Only lp/hp surfaces exist. */
+    var passes: Double? = null,
 )
 
 /** Pitch modulation: glide ([accelerate]) + vibrato. */
@@ -187,6 +189,7 @@ fun mergeSvdFilter(base: SvdFilter?, over: SvdFilter?): SvdFilter? {
         sustain = over.sustain ?: base.sustain,
         release = over.release ?: base.release,
         env = over.env ?: base.env,
+        passes = over.passes ?: base.passes,
     )
 }
 

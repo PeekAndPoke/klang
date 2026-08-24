@@ -7,6 +7,7 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.bandpass
@@ -48,6 +49,20 @@ object KlangScriptOscExtensions {
     /**
      * Applies a resonant lowpass filter. Cutoff and Q accept Number or IgnitorDsl.
      *
+     * `passes` is the THIRD slot on every door (`lpf(freq, q, passes)` in sprudel,
+     * `lowpass(freq, q, passes)` from Kotlin), so the same positional call means the same
+     * filter everywhere. [analog] is fourth, and exists on this door only. KlangScript does
+     * not allow MIXING positional and named arguments, so reach for [analog] either fully
+     * positionally, `lowpass(800, 1.8, 1, 3)`, or all-named:
+     * `lowpass(cutoffHz = 800, q = 1.8, analog = 3)`.
+     *
+     * The cascade's per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at
+     * the DEFAULT q it stays -3 dB AT the cutoff: `lowpass(800, 0.707, 2)` still means 800.
+     * A resonant q keeps its character but COMPOUNDS across stages — gain at the cutoff is
+     * `(q*sqrt(2))^passes / sqrt(2)`, so `q = 1.0, passes = 2` sits +3 dB there, not -3. So
+     * does [analog]: every stage gets the full drive.
+     *
+     * @param passes Cascade count: `2` = 24 dB/oct, `3` = 36. Rounded, coerced to 1..16.
      * @param analog Analog character amount, 0..10. `0` = clean linear filter
      * (default — bit-identical to pre-analog behaviour). Higher values engage
      * OB-X-style state-dependent damping that compresses the resonance peak.
@@ -58,22 +73,24 @@ object KlangScriptOscExtensions {
         self: IgnitorDsl,
         cutoffHz: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
+        passes: Double = 1.0,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Lowpass(
         inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
-        analog = analog.toIgnitorDsl(),
+        analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
     )
 
-    /** Applies a resonant highpass filter. See [lowpass] for `analog` semantics. */
+    /** Applies a resonant highpass filter. See [lowpass] for `passes` and `analog` semantics. */
     @KlangScript.Method
     fun highpass(
         self: IgnitorDsl,
         cutoffHz: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
+        passes: Double = 1.0,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Highpass(
         inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
-        analog = analog.toIgnitorDsl(),
+        analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
     )
 
     /**

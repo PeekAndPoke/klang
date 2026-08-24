@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import kotlin.math.roundToInt
+
 
 sealed class FilterDef {
     @WireName("low-pass")
@@ -12,6 +14,17 @@ sealed class FilterDef {
         val cutoffHz: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
+        /**
+         * Cascade count (C5): run the 12 dB/oct stage [passes] times — 2 = 24 dB/oct,
+         * 3 = 36. Structural, coerced `>= 1` at the engine. The per-stage q is STAGGERED
+         * (Butterworth ladder scaled by `q/0.707`) so the cascade stays -3 dB AT [cutoffHz]
+         * — `lpf(800, passes = 2)` still means 800, it does not go darker-with-a-moved-knee.
+         * A resonant q's peak compounds across stages: gain at [cutoffHz] is
+         * `(q*sqrt(2))^passes / sqrt(2)`, so `q = 1.0, passes = 2` is +3 dB and `q = 10,
+         * passes = 4` is about +89 dB (documented, raw engine, no clamp). So does `analog`,
+         * which every stage receives in full.
+         */
+        val passes: Int = 1,
     ) : FilterDef()
 
     @WireName("high-pass")
@@ -19,6 +32,8 @@ sealed class FilterDef {
         val cutoffHz: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
+        /** Cascade count — see [LowPass.passes]. */
+        val passes: Int = 1,
     ) : FilterDef()
 
     @WireName("band-pass")
@@ -119,4 +134,40 @@ sealed class FilterDef {
             val q: Double,
         )
     }
+}
+
+/**
+ * Upper bound for the `passes` cascade count (C5). 16 stages is 192 dB/oct — far past any
+ * musical use; the bound exists because `passes` is a RESOURCE count, not a tone knob:
+ * a live-typed `lpx(1e9)` would otherwise allocate a billion filter stages inside a note-on
+ * on the render thread. Nothing about the sound of a reachable value is clamped.
+ */
+const val FILTER_MAX_PASSES = 16
+
+/**
+ * The ONE place a `passes` value is coerced (parameter-parity rule: conversions live in a
+ * single place). Every consumer funnels through here — the sprudel voice-data builder, the
+ * ignitor runtime, the graph optimizer and the engine's q-ladder — so a value that is legal
+ * on one door cannot be illegal on another.
+ *
+ * Two callers coerce while CONSTRUCTING the node rather than while consuming it: sprudel's
+ * `toVoiceData` (which builds the `FilterDef` the wire carries) and, on the ignitor door, the
+ * KlangScript stdlib builder — the latter because its generated thunk would truncate a `Double`
+ * (`0.3 * 10` is 2.9999999999999996, and every KlangScript number is a double). Coercing
+ * early only normalises the value that gets stored and encoded; every consumer re-coerces
+ * idempotently, so the two timings cannot disagree about the rendered filter.
+ */
+fun coercePasses(passes: Int): Int = passes.coerceIn(1, FILTER_MAX_PASSES)
+
+/**
+ * The pattern-value door onto [coercePasses]. Sprudel carries every control value as a
+ * `Double`, and pattern arithmetic lands on things like `2.9999999996` — truncating there
+ * silently drops a cascade stage, so the value is ROUNDED. `roundToInt()` throws on NaN, and
+ * this runs on the render thread, hence the explicit guard rather than a try.
+ */
+fun coercePasses(passes: Double): Int {
+    if (passes != passes) { // NaN-guard
+        return 1
+    }
+    return coercePasses(passes.roundToInt())
 }

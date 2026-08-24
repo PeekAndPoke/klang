@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.maxReleaseSec
 import io.peekandpoke.klang.audio_bridge.notch
+import io.peekandpoke.klang.audio_bridge.optimize
 import kotlin.math.abs
 import kotlin.math.log10
 import kotlin.math.sqrt
@@ -671,12 +672,54 @@ class EqIgnitorSpec : StringSpec({
             .isStatic shouldBe true
         EqIgnitor.Section(EqCore.HIGHPASS, FreqIgnitor, ConstantIgnitor(1.0))
             .isStatic shouldBe false
+        // A wrapped voice-constant IS voice-constant (C5 round 2): `buildIgnitor` wraps every
+        // non-leaf node, so treating the wrapper itself as "dynamic" would classify by
+        // packaging rather than by value. Configuring once is output-identical here.
         EqIgnitor.Section(
             EqCore.BELL,
             ConstantIgnitor(850.0),
             ConstantIgnitor(0.9),
             db = MemoizingIgnitor(ConstantIgnitor(0.0)),
+        ).isStatic shouldBe true
+
+        // ...but the recursion must not launder a DYNAMIC operand into static: a scaled
+        // FreqIgnitor is still note-tracking and must reconfigure per block.
+        EqIgnitor.Section(
+            EqCore.LOWPASS,
+            ParamIgnitor("f", 1000.0),
+            MemoizingIgnitor(FreqIgnitor * ConstantIgnitor(0.5412)),
         ).isStatic shouldBe false
+    }
+
+    "C5 production path: an oscparam-driven passes cascade configures ONCE per voice" {
+        // The row the first version of this guard should have been: built through
+        // optimize() + toExciter(), the way IgnitorRegistry.register does it, instead of
+        // hand-assembling a node shape the runtime never produces. The optimizer stages the
+        // Param q as `Times(Param, Constant(rel))` and buildIgnitor wraps it, so this row
+        // fails the moment the predicate stops looking through either.
+        fun eqOf(ig: Ignitor): EqIgnitor = when (ig) {
+            is EqIgnitor -> ig
+            is MemoizingIgnitor -> eqOf(ig.inner)
+            else -> error("expected an EqIgnitor, got ${ig::class.simpleName}")
+        }
+
+        val eq = eqOf(
+            IgnitorDsl.Lowpass(
+                inner = IgnitorDsl.Sawtooth(),
+                cutoffHz = IgnitorDsl.Constant(1200.0),
+                q = IgnitorDsl.Param("res", 1.2),
+                passes = 3,
+            ).optimize().toExciter()
+        )
+
+        val buf = AudioBuffer(blockFrames)
+        val c = ctx()
+        eq.generate(buf, 220.0, c)
+        c.voiceElapsedFrames += blockFrames
+        eq.generate(buf, 220.0, c)
+
+        // Block 0 configures all three cascade sections; block 1 skips all three.
+        eq.staticConfigureSkips shouldBe 3
     }
 
     "Eq maxReleaseSec delegates to inner" {

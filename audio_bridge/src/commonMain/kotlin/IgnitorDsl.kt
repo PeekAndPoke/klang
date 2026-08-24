@@ -1013,7 +1013,7 @@ sealed interface IgnitorDsl {
     // Filters
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Biquad lowpass filter. Attenuates frequencies above the cutoff. */
+    /** SVF lowpass filter. Attenuates frequencies above the cutoff; [passes] cascades the stage. */
     @WireName("lowpass")
     data class Lowpass(
         val inner: IgnitorDsl,
@@ -1026,13 +1026,19 @@ sealed interface IgnitorDsl {
          * Typical range 0..10; values around 1–3 give Diva-default warmth.
          */
         val analog: IgnitorDsl = Constant(0.0),
+        /**
+         * Cascade count (C5, structural): run the stage [passes] times — 2 = 24 dB/oct.
+         * Per-stage q is staggered (Butterworth ladder scaled by `q/0.707`) so the cascade
+         * stays -3 dB at [cutoffHz]; a resonant q's peak compounds across stages.
+         */
+        val passes: Int = 1,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
-    /** Biquad highpass filter. Attenuates frequencies below the cutoff. */
+    /** SVF highpass filter. Attenuates frequencies below the cutoff; [passes] cascades the stage. */
     @WireName("highpass")
     data class Highpass(
         val inner: IgnitorDsl,
@@ -1040,6 +1046,8 @@ sealed interface IgnitorDsl {
         val q: IgnitorDsl = Constant(0.707),
         /** See [Lowpass.analog] — same semantics for the HP tap. */
         val analog: IgnitorDsl = Constant(0.0),
+        /** Cascade count — see [Lowpass.passes]. */
+        val passes: Int = 1,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
@@ -1678,18 +1686,32 @@ fun IgnitorDsl.detune(semitones: Double) = IgnitorDsl.Detune(
 
 // Filters
 
-/** Applies a biquad lowpass filter at [cutoffHz] with resonance [q]. */
-fun IgnitorDsl.lowpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Lowpass(
+/**
+ * Applies an SVF lowpass filter at [cutoffHz] with resonance [q].
+ *
+ * @param passes Cascade count (C5): run the 12 dB/oct stage that many times — `2` = 24 dB/oct,
+ * `3` = 36. The per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at the
+ * default q the cascade is -3 dB AT [cutoffHz] — `lowpass(800, passes = 2)` still means 800.
+ * A resonant q compounds instead (`q = 1.0, passes = 2` is +3 dB at the cutoff). Coerced to
+ * 1..[FILTER_MAX_PASSES]. Third slot on EVERY door: `lpf(freq, q, passes)`.
+ */
+fun IgnitorDsl.lowpass(cutoffHz: Double, q: Double = 0.707, passes: Int = 1) = IgnitorDsl.Lowpass(
     inner = this,
     cutoffHz = IgnitorDsl.Constant(cutoffHz),
     q = IgnitorDsl.Constant(q),
+    passes = passes,
 )
 
-/** Applies a biquad highpass filter at [cutoffHz] with resonance [q]. */
-fun IgnitorDsl.highpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Highpass(
+/**
+ * Applies an SVF highpass filter at [cutoffHz] with resonance [q].
+ *
+ * @param passes Cascade count — see [lowpass].
+ */
+fun IgnitorDsl.highpass(cutoffHz: Double, q: Double = 0.707, passes: Int = 1) = IgnitorDsl.Highpass(
     inner = this,
     cutoffHz = IgnitorDsl.Constant(cutoffHz),
     q = IgnitorDsl.Constant(q),
+    passes = passes,
 )
 
 /**

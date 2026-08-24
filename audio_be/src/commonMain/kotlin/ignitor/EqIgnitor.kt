@@ -26,7 +26,10 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
  * "restoring" Param-only parity would drop the cache for every Constant-authored section
  * (four of the guitar tail's six). PER SECTION, not per Eq: the guitar chain has ONE
  * expression-backed param among ~6 sections; a per-Eq predicate would recompute every
- * section's tan() every block.
+ * section's tan() every block. The predicate looks THROUGH `MemoizingIgnitor` (which
+ * `buildIgnitor` puts around every non-leaf node) and through a product of two
+ * voice-constants — otherwise a composite that cannot change after note-on, such as the C5
+ * `passes` cascade's staggered q, would be classified dynamic purely because of its wrapper.
  */
 internal class EqIgnitor(
     private val upstream: Ignitor,
@@ -51,8 +54,28 @@ internal class EqIgnitor(
                 (db == null || isVoiceConstant(db)) &&
                 (gain == null || isVoiceConstant(gain))
 
-        private fun isVoiceConstant(p: Ignitor): Boolean =
-            p is ParamIgnitor || p is ConstantIgnitor
+        private fun isVoiceConstant(p: Ignitor): Boolean = when (p) {
+            is ParamIgnitor, is ConstantIgnitor -> true
+
+            // `buildIgnitor` wraps EVERY non-leaf node in a MemoizingIgnitor, so a predicate
+            // that only matches leaves can never see a composite — which is what made the
+            // first version of the C5 fix inert (two reviewers, round 2). The wrapper is a
+            // rendering optimisation, not a semantic marker: it delegates the scalar read
+            // purely, and it keeps NO serve count, so a section that goes static and stops
+            // calling it cannot starve another consumer of the same node.
+            is MemoizingIgnitor -> isVoiceConstant(p.inner)
+
+            // A product of two voice-constants is voice-constant. Not a general
+            // arithmetic-folding ambition — it is the C5 `passes` cascade: the optimizer
+            // stages a modulated q as `q * Constant(ladderRel[k])`, and without this every
+            // section of an oscparam-driven cascade would re-derive its coefficients (a
+            // `tan`) every block for a value that cannot change after note-on.
+            is TimesIgnitor -> isVoiceConstant(p.a) && isVoiceConstant(p.b)
+
+            // Everything else — including FreqIgnitor, which is block-constant but NOT
+            // voice-constant (note tracking must keep tracking).
+            else -> false
+        }
     }
 
     private val core = EqCore(sections.size)

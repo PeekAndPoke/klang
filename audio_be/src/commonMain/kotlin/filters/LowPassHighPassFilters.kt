@@ -9,9 +9,12 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.sqrt
 import kotlin.math.tan
 
 // ─────────────────────────────────────────────────────────────────────────────────────
@@ -292,7 +295,63 @@ internal inline fun computeSvfBellCoeffs(
     out.m1 = safeOut(out.k * (a * a - 1.0))
 }
 
+private val SQRT2 = sqrt(2.0)
+
+/**
+ * Per-stage q values for a [passes]-deep cascade of 12 dB/oct SVF stages (C5).
+ *
+ * The ladder is the classic Butterworth pole arrangement for a 2·[passes]-order filter —
+ * `q_k = 1/(2·cos((2k+1)π/(4N)))` — SCALED by `userQ/0.7071`, so:
+ *  - at the default q the cascade is exactly Butterworth: flat passband, −3 dB AT fc —
+ *    `lpf(800, passes = 2)` still means 800 (staggering was the maintainer's C5 decision;
+ *    a plain q-per-stage cascade is −6 dB at fc with the knee drifting to ~0.64·fc);
+ *  - a resonant userQ keeps its character but the peak COMPOUNDS across stages (raw
+ *    engine, documented, no clamp). So does `analog`: every stage gets the full drive,
+ *    so `passes = 3, analog = 3` is three helpings of state-dependent damping, not one
+ *    steeper filter with the same character.
+ *
+ * `passes = 1` returns `[userQ]` verbatim — the single-stage path stays bit-identical.
+ *
+ * ASSOCIATION IS LOAD-BEARING: `userQ · (√2 / 2cosθ)` — the RELATIVE factor first, exactly as
+ * the bridge's `passesLadderRel` computes it. Written as `(userQ · √2) / 2cosθ` the two differ
+ * by 1 ULP and the optimizer's fused sections stop being bit-identical to the authored tree;
+ * `PassesLadderParitySpec` asserts raw bits.
+ */
+internal fun butterworthQLadder(passes: Int, userQ: Double): DoubleArray {
+    val n = coercePasses(passes)
+    if (n == 1) {
+        return doubleArrayOf(userQ)
+    }
+    return DoubleArray(n) { k ->
+        userQ * (SQRT2 / (2.0 * cos((2.0 * k + 1.0) * PI / (4.0 * n))))
+    }
+}
+
 object LowPassHighPassFilters {
+
+    /**
+     * A `passes`-deep serial cascade of identical-cutoff stages (C5). Not [ChainAudioFilter]:
+     * that one is a plain chain of arbitrary filters and deliberately NOT [AudioFilter.Tunable]
+     * — making it tunable would silently hand filter-envelope sweeps to every baked voice chain.
+     * This cascade forwards the cutoff to every stage, which is exactly what a cascade of ONE
+     * filter split into N sections must do.
+     */
+    internal class PassCascadeFilter(private val stages: List<AudioFilter>) : AudioFilter, AudioFilter.Tunable {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+            for (i in stages.indices) {
+                stages[i].process(buffer, offset, length)
+            }
+        }
+
+        override fun setCutoff(cutoffHz: Double) {
+            for (i in stages.indices) {
+                val stage = stages[i]
+                if (stage is AudioFilter.Tunable) {
+                    stage.setCutoff(cutoffHz)
+                }
+            }
+        }
+    }
 
     fun createLPF(
         cutoffHz: Double,
@@ -310,12 +369,22 @@ object LowPassHighPassFilters {
         // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
         // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
-    ): AudioFilter = when (q) {
+        passes: Int = 1,
+    ): AudioFilter {
         // No secret effect swap (maintainer decision, 2026-08-24): an absent q means the
         // DEFAULT q, not a different filter topology. The one-pole is its own named thing
         // (`onepole(freq)`), never what `lpf` quietly becomes.
-        null -> SvfLPF(cutoffHz, 0.707, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
-        else -> SvfLPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+        val userQ = q ?: 0.707
+        // The default path allocates nothing extra: no ladder array, no wrapper.
+        if (coercePasses(passes) == 1) {
+            return SvfLPF(cutoffHz, userQ, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+        }
+        val ladder = butterworthQLadder(passes, userQ)
+        return PassCascadeFilter(
+            List(ladder.size) { k ->
+                SvfLPF(cutoffHz, ladder[k], sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+            }
+        )
     }
 
     fun createHPF(
@@ -334,10 +403,20 @@ object LowPassHighPassFilters {
         // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
         // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
-    ): AudioFilter = when (q) {
+        passes: Int = 1,
+    ): AudioFilter {
         // Same rule as createLPF: absent q = default q, never a topology swap.
-        null -> SvfHPF(cutoffHz, 0.707, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
-        else -> SvfHPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+        val userQ = q ?: 0.707
+        // See createLPF: the passes = 1 path allocates nothing extra.
+        if (coercePasses(passes) == 1) {
+            return SvfHPF(cutoffHz, userQ, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+        }
+        val ladder = butterworthQLadder(passes, userQ)
+        return PassCascadeFilter(
+            List(ladder.size) { k ->
+                SvfHPF(cutoffHz, ladder[k], sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+            }
+        )
     }
 
     fun createBPF(

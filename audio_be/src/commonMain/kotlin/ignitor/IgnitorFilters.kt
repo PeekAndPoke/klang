@@ -296,6 +296,26 @@ fun Ignitor.svf(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Staggers the per-stage q of a `passes` cascade (C5): stage k reads `userQ · ladderRel[k]`.
+ *
+ * The two arms mirror `IgnitorDslOptimizer.expandPasses` EXACTLY, which is what keeps the
+ * fused and the chained door bit-identical: a literal folds into the value on both sides
+ * (no `safeOut` on either), and anything else goes through [times] on both sides (so both
+ * get the same block-constant fold, the same `safeOut` scrubbing and the same
+ * `controlRateValueOrNull` contract). Folding a [ParamIgnitor]'s value here instead would
+ * be safe as far as `oscParams` goes — substitution already happened in `IgnitorDslRuntime`
+ * — but it would skip the `safeOut` the fused door applies, so a non-finite oscparam q would
+ * land on the SVF's Butterworth 0.7071 fallback on one door and on the scrubbed value's clamp
+ * on the other: the 0.1 floor for NaN and -Inf, the 200 ceiling for +Inf (safeOut clamps an
+ * infinity to a finite SAFE_MAX). Same program, two filters.
+ */
+internal fun Ignitor.scaledBy(factor: Double): Ignitor = when {
+    factor == 1.0 -> this
+    this is ConstantIgnitor -> ConstantIgnitor(value * factor)
+    else -> this * ConstantIgnitor(factor)
+}
+
+/**
  * Lowpass filter — lets low frequencies through, dulls the highs.
  *
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 200–8000.

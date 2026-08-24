@@ -45,8 +45,8 @@ let guitar = (() => {
     .plus(Osc.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.3))  // Noise burst
     .bandpass(700, 0.30)                                                            // Gentle mid-focus before distortion
     .distort(pDrive, "tube", 8)                                                     // Overdrive + Oversample
-    .lowpass(pBrightness, 1.8, pAnalog)                                             // Post-distortion: control fizz + warmth roll-off
-    .highpass(Osc.freq(), 0.7, pAnalog)                                             // Cut away muddy low frequencies
+    .lowpass(cutoffHz = pBrightness, q = 1.8, analog = pAnalog)                                             // Post-distortion: control fizz + warmth roll-off
+    .highpass(cutoffHz = Osc.freq(), q = 0.7, analog = pAnalog)                                             // Cut away muddy low frequencies
     .coarse(2)
     .adsr(pAttack, 8.0, pSustain, 0.07).adsrCurves("exp", "exp", "exp")             // Tight rhythm envelope
    

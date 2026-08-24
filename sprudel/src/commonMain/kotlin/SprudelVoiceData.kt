@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.uniqueId
 
 /**
@@ -302,6 +303,11 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || lpf != null) lpfOrNew().env = v
         }
+    var lpPasses: Double?
+        get() = lpf?.passes
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().passes = v
+        }
 
     var hcutoff: Double?
         get() = hpf?.cutoff
@@ -312,6 +318,11 @@ data class SprudelVoiceData(
         get() = hpf?.resonance
         set(v) {
             if (v != null || hpf != null) hpfOrNew().resonance = v
+        }
+    var hpPasses: Double?
+        get() = hpf?.passes
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().passes = v
         }
     var hpattack: Double?
         get() = hpf?.attack
@@ -882,7 +893,8 @@ data class SprudelVoiceData(
                     FilterDef.LowPass(
                         cutoffHz = cutoffValue,
                         q = resonance ?: 0.707,
-                        envelope = envelope
+                        envelope = envelope,
+                        passes = coercePasses(lpPasses ?: 1.0),
                     )
                 )
             }
@@ -905,7 +917,8 @@ data class SprudelVoiceData(
                     FilterDef.HighPass(
                         cutoffHz = hcutoffValue,
                         q = hresonance ?: 0.707,
-                        envelope = envelope
+                        envelope = envelope,
+                        passes = coercePasses(hpPasses ?: 1.0),
                     )
                 )
             }

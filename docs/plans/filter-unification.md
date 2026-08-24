@@ -654,12 +654,61 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   positional parameter, all in one commit per the D6 rule.
 - Guard: `passes = 2` measures -24 dB/oct vs -12 at one octave above fc; optimizer expands to N
   sections; codec round-trip with non-default passes; `passes = 0` and negative coerce to 1.
-- **Musician-facing truth to document:** two cascaded Butterworth stages are -6 dB AT fc, and the
-  -3 dB knee moves to ~0.64 fc. So `lpf(800, passes = 2)` is darker, not merely steeper, and its
-  knee is no longer at 800. Either document it plainly or stagger the per-stage q so the cascade
-  stays -3 dB at fc (the textbook Butterworth-cascade approach). Decide in the chunk review.
-  Also: `q == null` (one-pole) with `passes = 2` would be 6 -> 12 dB/oct, a third meaning; either
-  refuse passes on the one-pole path or document it.
+- **DECIDED + BUILT (2026-08-24).** The two open questions are closed:
+  - *Stagger, not plain cascade* (maintainer choice): the per-stage q is the Butterworth pole
+    ladder `userQ * sqrt(2)/(2*cos((2k+1)*pi/(4N)))`, so at the DEFAULT q the cascade is exactly
+    Butterworth - flat passband, -3 dB AT fc, `lpf(800, 0.707, 2)` still means 800. A resonant q
+    compounds instead: `q = 1.0, passes = 2` sits **+3 dB** at fc (raw engine, documented on every
+    door, no clamp). `analog` compounds the same way - every stage gets the full drive.
+  - *The one-pole question is moot*: C0 removed the null-q topology swap, so `q == null` is the
+    DEFAULT q on an SVF, never a one-pole. `onepole(freq)` is its own named thing and carries no
+    `passes`.
+- **Slot order is cross-door, decided in the C5 review (round 1, finding 1):** `passes` is the
+  THIRD positional slot on every door - `lpf(freq, q, passes)` in sprudel, `lowpass(freq, q,
+  passes)` from Kotlin, and the KlangScript door was REORDERED to match (`analog` moved from
+  slot 3 to slot 4). Before the fix, `.lowpass(800, 1, 2)` built a 24 dB/oct cascade from Kotlin
+  and a saturating single stage from KlangScript - the exact "same call, two meanings" bug this
+  plan exists to remove. Migration cost was two call sites (`ATruthWorthLyingFor`), both moved to
+  the all-named form because **KlangScript forbids mixing positional and named arguments** (the
+  smoke test taught us that: `lowpass(x, 1.8, analog = a)` throws `KlangScriptArgumentError`).
+- **Round 2 (two fresh reviewers, coding + DSP, 2026-08-24) - what changed:**
+  - Both reviewers independently caught that round 1's `TimesIgnitor` fix was INERT: `buildIgnitor`
+    wraps every non-leaf node in a `MemoizingIgnitor`, so `EqIgnitor`'s `isVoiceConstant` could only
+    ever see leaves, and the guard for it hand-built a node shape the runtime never produces. Fixed
+    by looking THROUGH the wrapper (it is pure delegation and keeps no serve count, so a section that
+    goes static and stops calling it cannot starve another consumer), and the guard was rebuilt on
+    the real `optimize() + toExciter()` path via `staticConfigureSkips`. Side effect, deliberate: the
+    pinned `MemoizingIgnitor(ConstantIgnitor)` row flipped from dynamic to static - a wrapped
+    voice-constant IS voice-constant; classifying by packaging was the bug.
+  - `VoiceFactory` forwarding `passes` to `createLPF`/`createHPF` was completely untested: deleting
+    it left EVERY C5 spec green while the entire sprudel door rendered single stages. Pinned in
+    `VoiceFactoryFilterOrderSpec`.
+  - `scaledBy` now mirrors `expandPasses` EXACTLY (literal folds; everything else through `times`).
+    The round-1 `ParamIgnitor` fold was correct about `oscParams` but skipped the `safeOut` the fused
+    door applies, so a NaN/Inf oscparam q would land on the SVF Butterworth fallback on one door and
+    on the 0.1 q floor on the other.
+  - Sprudel now ROUNDS the count instead of truncating (`2.9999999996` silently dropped a stage),
+    NaN-guarded because `roundToInt()` throws on the render thread.
+  - The KlangScript slot order is pinned by `KlangScriptFilterSlotOrderSpec` (it was pinned by
+    nothing, and it is the highest-blast-radius line in C5).
+- **PARKED for the maintainer (round 2, coding finding 5):** the slot reorder is right, but a user
+  song in browser storage containing `.lowpass(2000, 1.2, 3)` (which meant `analog = 3`) now silently
+  means `passes = 3, analog = 0` - a clean 36 dB/oct filter where there was a warm saturating one. No
+  error, no diagnostic; the only symptom is that the patch sounds different. Options: a one-release
+  intellisense warning on any 3-positional `lowpass`/`highpass`, or a release note. In-repo migration
+  is complete (verified with a paren-depth-aware sweep, not a regex).
+- **Follow-up, REJECTED for C5 scope (round 2, DSP):** `SvfIgnitor`'s coefficient cache requires BOTH
+  `cutoffHz` and `q` to be `ParamIgnitor`, so it never engages for DSL-authored filters (their params
+  are `ConstantIgnitor`) - every ignitor-door filter re-runs `computeSvfCoeffs` (a `tan`) per block,
+  and a `passes = 4, analog = 3` cascade now pays that four times. Widening the predicate to
+  Param-or-Constant, exactly as `EqIgnitor` already does deliberately, is output-identical and would
+  make cascade cost flat. It is a change to the hottest path in the engine for every existing voice,
+  so it belongs to the audio_be optimisation workstream, not to C5.
+- **Resource ceiling (C5 review finding 2), flagged for the maintainer:** `passes` is coerced to
+  `1..16` in ONE place (`coercePasses` in `FilterDef.kt`). It is a resource count, not a tone
+  knob - unbounded, a live-typed `lpx(1e9)` allocates a billion filter stages inside a note-on on
+  the render thread. 16 = 192 dB/oct, far past any musical use. If you want it raw, the ceiling is
+  a one-line change.
 
 ### C6 — Canonical names + sprudel `band` (+ `tap` if decided)
 (The alias deletions and the compat cut moved to C6a, which runs first.)

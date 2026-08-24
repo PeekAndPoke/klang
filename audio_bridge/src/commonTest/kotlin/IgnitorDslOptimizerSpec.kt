@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_bridge
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
@@ -33,6 +34,32 @@ class IgnitorDslOptimizerSpec : StringSpec({
         eq.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Notch>()
         eq.sections[1].shouldBeInstanceOf<IgnitorDsl.EqSection.Highpass>()
         eq.sections[2].shouldBeInstanceOf<IgnitorDsl.EqSection.Lowpass>()
+    }
+
+    "C5/D6: passes = N expands into N staggered sections — never one section that loses slope" {
+        val eq = IgnitorDsl.Sine().lowpass(2000.0, 1.0, passes = 2).optimize()
+            .shouldBeInstanceOf<IgnitorDsl.Eq>()
+        eq.sections.size shouldBe 2
+        val q0 = (eq.sections[0] as IgnitorDsl.EqSection.Lowpass).q
+            .shouldBeInstanceOf<IgnitorDsl.Constant>()
+        val q1 = (eq.sections[1] as IgnitorDsl.EqSection.Lowpass).q
+            .shouldBeInstanceOf<IgnitorDsl.Constant>()
+        // the 4th-order Butterworth ladder, scaled by userQ/0.7071 (userQ = 1.0)
+        q0.value shouldBe (0.7654 plusOrMinus 0.001)
+        q1.value shouldBe (1.8478 plusOrMinus 0.002)
+    }
+
+    "C5: a MODULATED q still expands — per-stage Times wrappers keep the sweep coherent" {
+        val lfoQ = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.5))
+        val node = IgnitorDsl.Lowpass(
+            inner = IgnitorDsl.Sine(),
+            cutoffHz = IgnitorDsl.Constant(2000.0),
+            q = lfoQ,
+            passes = 2,
+        )
+        val eq = node.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
+        eq.sections.size shouldBe 2
+        (eq.sections[0] as IgnitorDsl.EqSection.Lowpass).q.shouldBeInstanceOf<IgnitorDsl.Times>()
     }
 
     "a lone filter converts to a one-section Eq" {

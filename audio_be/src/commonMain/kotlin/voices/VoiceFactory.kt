@@ -393,14 +393,15 @@ class VoiceFactory(
         // random multiplier per filter instance. The engine's Filter stage scales it.
         val offsetMul = perVoiceCutoffOffsetMul(analog, stage.cutoffOffsetPerAnalog, rng)
         return when (this) {
-            is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog, offsetMul, stage.drivePerAnalog)
+            is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog, offsetMul, stage.drivePerAnalog, passes = passes)
             is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(
                 cutoffHz,
                 q,
                 sampleRateDouble,
                 analog,
                 offsetMul,
-                stage.drivePerAnalog
+                stage.drivePerAnalog,
+                passes = passes,
             )
             is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble, offsetMul)
             is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble, offsetMul)

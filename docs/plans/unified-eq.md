@@ -736,7 +736,7 @@ over-conservative optimizer, and RNG draw order all needed structural or white-b
   | presence GTR1 | 5.5 × 0.85 | +15.1 | 0.357 |
   | presence GTR2/3 | 5.3 × 0.8 | +14.4 | 0.349 |
 - One spec asserts parallel-tap ≡ bell response for several (amount, Q) pairs (near-bit tolerance
-  — one pow/tan rounding). Rename params mids→midsDb etc. `.lowpass(5300, 0.707, 0, 2)` optional.
+  — one pow/tan rounding). Rename params mids→midsDb etc. `.lowpass(5300, 0.707, 2)` optional (C5 fixed the slot order: freq, q, passes, analog).
 
 ### D8 — Benchmarks, JS + device acceptance, docs, parity table
 - EffectBenchmark: full-chain composite `EqCore (2 tap + 4 serial)`; run complete comparison.

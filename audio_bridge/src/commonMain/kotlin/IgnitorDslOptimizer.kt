@@ -5,6 +5,10 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sqrt
+
 /**
  * Pure `IgnitorDsl -> IgnitorDsl` rewrite pass: collapses filter chains that were authored as
  * separate nodes into fused [IgnitorDsl.Eq] sections, without changing a single sample.
@@ -196,7 +200,7 @@ private fun fuseSerialFilters(
     original: IgnitorDsl,
     refCounts: RefCounts,
 ): IgnitorDsl {
-    val section = node.asFusibleSection() ?: return node
+    val sections = node.asFusibleSections() ?: return node
     val inner = node.filterInner() ?: return node
 
     // Read the pre-rewrite inner by NAME, not by child position: a constructor reorder would
@@ -215,17 +219,66 @@ private fun fuseSerialFilters(
         // Continue an Eq that this filter sits directly on top of. Guarded on the ORIGINAL
         // inner: if that Eq is shared, appending would fork it and duplicate every section.
         inner is IgnitorDsl.Eq && refCounts.isExclusivelyOwned(originalInner) ->
-            inner.copy(sections = inner.sections + section)
+            inner.copy(sections = inner.sections + sections)
 
         // Otherwise start a fresh Eq. A single filter converting to a one-section Eq is a
         // measured win on the deployment platform (Node 0.44 vs 0.74 us/block) and a wash on
         // the JVM, so standalone conversion is ON. See the D2a bake-off record in the plan.
-        else -> IgnitorDsl.Eq(inner = inner, sections = listOf(section))
+        else -> IgnitorDsl.Eq(inner = inner, sections = sections)
     }
 }
 
 /**
- * Maps a chained filter node to the equivalent EQ section, or null when it must NOT fuse.
+ * The staggered per-stage q for section k of a passes-N cascade, RELATIVE to the user q:
+ * the Butterworth pole ladder `√2 / (2·cos((2k+1)π/(4N)))` (identically 1.0 at N = 1) —
+ * the same math as the engine's `butterworthQLadder`, duplicated here because the bridge
+ * cannot depend on audio_be; `PassesLadderParitySpec` pins the two against each other.
+ */
+private fun passesLadderRel(k: Int, n: Int): Double =
+    sqrt(2.0) / (2.0 * cos((2.0 * k + 1.0) * PI / (4.0 * n)))
+
+/**
+ * Expands one filter node into its [passes] cascade sections, each carrying its staggered q.
+ *
+ * [q] is passed in rather than re-derived from the node: the two call sites already hold it,
+ * and a `when (this)` with an `else` arm here would silently substitute a default q for any
+ * node type added later.
+ */
+private fun expandPasses(
+    passes: Int,
+    q: IgnitorDsl,
+    build: (stageQ: IgnitorDsl) -> IgnitorDsl.EqSection,
+): List<IgnitorDsl.EqSection> {
+    val n = coercePasses(passes)
+    if (n == 1) {
+        return listOf(build(q))
+    }
+    return List(n) { k ->
+        val rel = passesLadderRel(k, n)
+        val stageQ = when {
+            // Odd N has a middle stage at EXACTLY 1.0 (sqrt(2)/(2*cos(pi/4)); never 1.0 by
+            // rounding). Passing q through unwrapped there mirrors the chained door's
+            // `scaledBy(1.0) -> this` (IgnitorFilters.kt), so both doors build the SAME graph
+            // rather than merely the same numbers.
+            //
+            // THESE TWO ARMS ARE A PAIR — keep them or remove them together. They live in
+            // different modules and nothing pairs them structurally, so it is worth spelling
+            // out: `safeOut(x * 1.0) == x` only for FINITE x. With a non-finite oscparam q,
+            // an unwrapped q reaches `computeSvfCoeffs` raw and takes its Butterworth 0.7071
+            // fallback, while `Times(q, Constant(1.0))` becomes `safeOut(NaN) = 0.0` and
+            // takes the 0.1 q floor. Drop one arm alone and the middle stage of an odd-N
+            // cascade is a different filter on the two doors. `IgnitorDslOptimizerRenderSpec`
+            // drives NaN and +/-Inf through passes = 3 for exactly this.
+            rel == 1.0 -> q
+            q is IgnitorDsl.Constant -> IgnitorDsl.Constant(q.value * rel)
+            else -> IgnitorDsl.Times(q, IgnitorDsl.Constant(rel))
+        }
+        build(stageQ)
+    }
+}
+
+/**
+ * Maps a chained filter node to the equivalent EQ section list, or null when it must NOT fuse.
  *
  * Refuses when `analog` is anything but a literal zero: a non-zero analog switches SvfLPF/SvfHPF
  * to their state-dependent saturating branch, which is deliberate nonlinear character that
@@ -235,18 +288,38 @@ private fun fuseSerialFilters(
  * `OnePoleLowpass` (the `onepole()` door) is absent by design: there is no one-pole section
  * type, and substituting an SVF would change the sound.
  */
-private fun IgnitorDsl.asFusibleSection(): IgnitorDsl.EqSection? = when (this) {
+private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (this) {
+    // C5 (the D6 rule): `passes = N` EXPANDS into N sections with the staggered q ladder in
+    // the SAME commit the field landed — there is never a window where a passes-2 filter
+    // fuses as one section and silently loses 12 dB/oct. A Constant q folds per stage; a
+    // modulated q gets a Times wrapper so every stage keeps sweeping coherently.
     is IgnitorDsl.Lowpass ->
-        if (analog.isLiteralZero()) IgnitorDsl.EqSection.Lowpass(cutoffHz, q) else null
+        if (analog.isLiteralZero()) {
+            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(cutoffHz, stageQ) }
+        } else {
+            null
+        }
 
     is IgnitorDsl.Highpass ->
-        if (analog.isLiteralZero()) IgnitorDsl.EqSection.Highpass(cutoffHz, q) else null
+        if (analog.isLiteralZero()) {
+            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Highpass(cutoffHz, stageQ) }
+        } else {
+            null
+        }
 
     is IgnitorDsl.Bandpass ->
-        if (analog.isLiteralZero()) IgnitorDsl.EqSection.Bandpass(cutoffHz, q) else null
+        if (analog.isLiteralZero()) {
+            listOf(IgnitorDsl.EqSection.Bandpass(cutoffHz, q))
+        } else {
+            null
+        }
 
     is IgnitorDsl.Notch ->
-        if (analog.isLiteralZero()) IgnitorDsl.EqSection.Notch(cutoffHz, q) else null
+        if (analog.isLiteralZero()) {
+            listOf(IgnitorDsl.EqSection.Notch(cutoffHz, q))
+        } else {
+            null
+        }
 
     else -> null
 }

@@ -216,11 +216,17 @@ modulation.
 
 | Method                      | Description                         |
 |-----------------------------|-------------------------------------|
-| `.lowpass(cutoffHz, q?)`    | Resonant lowpass (default q=0.707)  |
-| `.highpass(cutoffHz, q?)`   | Resonant highpass                   |
+| `.lowpass(cutoffHz, q?, passes?, analog?)`  | Resonant lowpass (default q=0.707, passes=1)  |
+| `.highpass(cutoffHz, q?, passes?, analog?)` | Resonant highpass                            |
 | `.onepole(freq)`            | Gentle one-pole lowpass (-6 dB/oct) |
 | `.bandpass(cutoffHz, q?)`   | Bandpass filter                     |
 | `.notch(cutoffHz, q?)`      | Band-reject (notch) filter          |
+
+`passes` is the cascade count and sits in the SAME third slot on every door (`lpf(freq, q, passes)`
+in sprudel): `2` = 24 dB/oct, `3` = 36, coerced to 1..16. At the default q the cascade stays -3 dB
+AT the cutoff; a resonant q compounds across stages, and so does `analog` (every stage gets the
+full drive). KlangScript forbids mixing positional and named arguments, so combine with `analog`
+in the all-named form: `.lowpass(cutoffHz = 800, q = 1.8, analog = 3)`.
 
 ### Equalizer
 

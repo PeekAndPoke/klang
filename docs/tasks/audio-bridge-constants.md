@@ -297,8 +297,11 @@ super-osc renormalisation alone, which reads as a guarantee and is not one.
 
 ⚠️ **The first survey of this missed `ATruthWorthLyingFor` entirely** (its `Osc.freq()` nests a paren, defeating a regex
 sweep) — and that is the song sitting at the top of the analog range. The conclusion survived, but a sound change was
-justified on a one-song survey. Grep for `.lowpass(`/`.highpass(` with a third positional argument, not for a literal
-`analog =`.
+justified on a one-song survey. Sweep `.lowpass(`/`.highpass(` with a paren-depth-aware scan, not a regex, and not for a literal
+`analog =`. **Updated 2026-08-24 (C5):** the third positional argument is now `passes`; `analog` is the
+FOURTH, and because KlangScript forbids mixing positional and named arguments, real analog call sites are
+either all-named or four-positional. A survey that still flags "third positional" reads every cascade as a
+high-analog voice and misses the actual ones.
 
 Stability also moves the *safe* way. The diode-pair polynomial dips negative (`tCfb = -0.0034` at `ic1eq ≈ -1.55`), so
 the **instantaneous** `kEff` can go negative once `k < 2·driveScale·0.0034`. Halving the drive **doubles** the Q at

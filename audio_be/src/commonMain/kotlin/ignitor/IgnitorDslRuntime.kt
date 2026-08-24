@@ -7,8 +7,10 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.filters.EqCore
+import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import kotlin.random.Random
 
 /**
@@ -366,8 +368,38 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Filters: pass mod through to inner ──
 
-        is IgnitorDsl.Lowpass -> inner.withMod().lowpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
-        is IgnitorDsl.Highpass -> inner.withMod().highpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+        is IgnitorDsl.Lowpass -> {
+            // C5: `passes` cascades the stage with the Butterworth q ladder (relative
+            // factors — the modulated q scales every stage coherently). passes = 1 is the
+            // untouched single-stage path, bit-identical. `analog` is handed to EVERY stage,
+            // so its drive character compounds with the slope (documented, not a bug).
+            val n = coercePasses(passes)
+            if (n == 1) {
+                inner.withMod().lowpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+            } else {
+                val rel = butterworthQLadder(n, 1.0)
+                var chain = inner.withMod()
+                for (k in 0 until n) {
+                    chain = chain.lowpass(cutoffHz.noMod(), q.noMod().scaledBy(rel[k]), analog = analog.noMod())
+                }
+                chain
+            }
+        }
+
+        is IgnitorDsl.Highpass -> {
+            // See Lowpass above: same ladder, same analog-compounding note.
+            val n = coercePasses(passes)
+            if (n == 1) {
+                inner.withMod().highpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+            } else {
+                val rel = butterworthQLadder(n, 1.0)
+                var chain = inner.withMod()
+                for (k in 0 until n) {
+                    chain = chain.highpass(cutoffHz.noMod(), q.noMod().scaledBy(rel[k]), analog = analog.noMod())
+                }
+                chain
+            }
+        }
         is IgnitorDsl.OnePoleLowpass -> inner.withMod().onePoleLowpass(cutoffHz.noMod())
         is IgnitorDsl.Bandpass -> inner.withMod().bandpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
         is IgnitorDsl.Notch -> inner.withMod().notch(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())

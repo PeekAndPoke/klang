@@ -209,7 +209,10 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
  */
 operator fun Ignitor.times(other: Ignitor): Ignitor = TimesIgnitor(this, other)
 
-private class TimesIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
+// `internal` with exposed operands so EqIgnitor can see through a scaled voice-constant
+// (a `passes` cascade stage's staggered q) instead of demoting the whole section to
+// per-block reconfigure.
+internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : Ignitor {
     private val aConst = a.isBlockConstant
     private val bConst = b.isBlockConstant
 
