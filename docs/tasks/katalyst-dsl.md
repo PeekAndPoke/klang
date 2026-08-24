@@ -68,6 +68,39 @@ params — mirroring how `PipelineDsl` declares the per-voice pipeline and `Igni
 is the materialised **Phase 4 ("Katalyzer")** of the archived engine-dsl design record — the effects
 landed; the authoring surface didn't.
 
+## Settled design decisions (2026-08-24, with the maintainer)
+
+Decided during the Der Schmetterling guitar-amp work; the empirical driver is in the last bullet.
+
+- **Cab + mix-shaping EQ belong in Katalyst.** Both are case 1 (static + linear): they move to the
+  orbit losslessly and get N× cheaper. Pitch-tracking filters stay per-voice (case 2, unfixable).
+- **The power amp (any saturating stage) stays on the VOICE by default.** Shared clipping on a bus is
+  cross-voice intermodulation — chords eat each other (and orbits do share: two rhythm guitars ride one
+  orbit today). An orbit-level drive stage may be offered later as an explicitly *different* effect,
+  placed before reverb — not as an optimization.
+- **Doctrine, in studio terms: voice = string + amp head (per-note, nonlinear); Katalyst = cab + mics
+  + outboard (shared, mostly linear).**
+- **Params: `Kat.param("name", default, doc)` in the builder, `.katp("name", v)` from sprudel.**
+  Semantics deliberately differ from `oscp`: NO per-note snapshot — orbit-scoped continuous state,
+  read per block, last-writer-wins per orbit (the existing `roomWet`/`compressor` rule). Values may
+  be patterns → control-rate automation of the bus.
+- **The EQ stage reuses the fused `EqCore` / `IgnitorDsl.Eq` sections** — same section vocabulary
+  (lowpass/highpass/bell/tap/notch), same per-block param reads, hosted on the orbit.
+- **Multi-mic taps (added 2026-08-24): the chain cannot be a pure serial list.** The maintainer wants
+  to place multiple "microphones" on one cab — N parallel taps off the bus, each with its own short
+  delay (sub-ms..few ms), EQ color, pan, and gain, summed back. This is how thickness works without
+  doubling the performance: a static comb (fixed mic placement) reads as a cab/room *signature*; a
+  drifting comb (two detuned copies of the performance) reads as a phaser. Measured on the song: the
+  doubled guitars bought <±1.2 dB of spectrum and an audible slow phaser; removing them and getting
+  width from placement improved everything. Multi-mic is still case 1 — N linear paths paid once per
+  orbit — and it needs a split/process/sum construct in the builder, not just a stage list.
+
+- **Why the EQ must live here (measured 2026-08-22):** a mix-shaping EQ placed before the voice's
+  power amp is compressed away — a +10 dB tap boost came out as +2.7 dB after `distort(0.30,"gentle")`,
+  because saturation is a level equalizer. Color EQ stays pre-amp on the voice (useful range gain 1–3);
+  anything meant to change the MIX must sit after the last nonlinearity, i.e. on the orbit bus. That is
+  the concrete reason this DSL is a MUST for the guitar work, not a nice-to-have.
+
 ## Open design questions
 
 - **Surface.** A `Katalyst { ... }` builder mirroring `PipelineDsl`'s `StageDsl`? How does an orbit get

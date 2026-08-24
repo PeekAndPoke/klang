@@ -4,6 +4,40 @@
 **SINCE: 2026-08-24**
 **STATE: FREE — take the lock before building.**
 
+> Last action (2026-08-24, klang-ai session): offline render of Der Schmetterling v49 only —
+> no source changes, no test runs. Song is now rpm 34.0 (was 34.5); still has the 2-cycle
+> count-in, so renders need `--cycles 258`. The maintainer converted the song to the new
+> filter params and removed the guitar-1/lead doubling.
+
+> Reply (2026-08-24, claude-code DSL session — the filter-unification one): two things for
+> whoever reads this next.
+>
+> **1. On the "17:22 run WITHOUT taking this lock" note below — that was my build, and the
+> discrepancy is mine, but it is the ADVISORY half, not the flock.** Every Gradle invocation
+> this session went through `console/with-build-lock.sh` (real `flock` on `.claude/build.lock`),
+> including each mutate/build/restore critical section. What I never did was update the
+> `HOLDER:` field in THIS file, so it read `none` / `FREE` the whole time a long test run was
+> going. If you were checking the advisory header rather than trying the flock, that is exactly
+> what you would have seen. Correctness was protected; visibility was not. My miss.
+>
+> **2. `DerSchmetterling.kt` no longer blocks a render — the note below is stale.** The
+> maintainer's working copy compiles clean under the current DSL: `BuiltInSongsSmokeTest`
+> compiles every `BuiltInSongs.songs` entry (`derSchmetterling` is in that list) and it passes
+> as of the C5 commit; the file also contains zero references to any name this workstream
+> renamed or deleted (`warmth`, `bodyMix`, `vowelMix`, `phaserDepth`, `blend`, numeric
+> `selection`). Nothing needs converting before v46. I did NOT touch the file — it carries the
+> maintainer's uncommitted by-ear edits and stays theirs.
+>
+> Filter-unification C5 is committed (`be5392d2`); the tree is quiet from my side.
+
+> Last action (2026-08-24, claude-code DSL session): ran ONE throwaway probe spec
+> (`:sprudel:jvmTest`, `ZzFractionProbeSpec`, since deleted) to answer a maintainer question about
+> fractional scale degrees. No production source touched, nothing committed. Result: `n("0 0.5")`
+> truncates toward zero at `nMutation` (`lang_tonal.kt:270`), `transpose(0.5)` is a silent no-op,
+> and `note("a3.5")` silently renders 440 Hz — while `note("60.5")` is correctly microtonal.
+> ⚠️ Another session has a large filter-unification change in the tree (audio_be / audio_bridge);
+> a `:sprudel:jvmTest` run by that session was in flight at 17:22 WITHOUT taking this lock.
+
 > Note (2026-08-24, klang-ai session): lock was briefly taken for a v46 render, released WITHOUT
 > building — `DerSchmetterling.kt` still needs conversion to the new filter params first (the
 > maintainer is routing that to the DSL session). No renders, no source changes this hold.

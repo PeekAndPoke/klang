@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val derSchmetterlingSong = Song(
     id = "${BuiltInSongs.PREFIX}-der-schmetterling",
     title = "Der Schmetterling",
-    rpm = 35.0,
+    rpm = 34.0,
     icon = "bug",
     code = """import * from "stdlib"
 import * from "sprudel"
@@ -21,10 +21,10 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =   20    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -2 .. D | 0 .. E | 2 .. F#
+let transposition =    0    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    1    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
-let leadHz        = 3200    // Where does the lead sit?
+let leadHz        = 3300    // Where does the lead sit?
 
 let guitar = (() => {
 
@@ -34,16 +34,16 @@ let guitar = (() => {
   let pAnalog  = OscSlot.analog
 
   // ADSR
-  let pAttack     = Osc.param("attack",        0.003, "Attack")
-  let pDecay      = Osc.param("decay",         2.000, "Decay")
-  let pSustain    = Osc.param("sustain",       0.250, "sustain")
-  let pRelease    = Osc.param("release",       0.030, "Release")
+  let pAttack     = Osc.param("attack",        0.005, "Attack")
+  let pDecay      = Osc.param("decay",         1.500, "Decay")
+  let pSustain    = Osc.param("sustain",       0.050, "sustain")
+  let pRelease    = Osc.param("release",       0.020, "Release")
 
   // String params — both dimensionless harmonic counts, no absolute Hz anywhere
   let pStrFloor   = Osc.param("strFloor",      6.000, "String lowpass floor, in harmonics of the note")
   let pStrSweep   = Osc.param("strSweep",     26.000, "Extra harmonics alive at the pluck")
   let pStrDecay   = Osc.param("strDecay",      1.000, "How fast the string darkens")
-  let pStrQ       = Osc.param("strQ",          1.250, "String brightness")
+  let pStrQ       = Osc.param("strQ",          1.750, "String brightness")
 
   // amp tone
   let pMidsHz     = Osc.param("midsHz",      850.000, "Mids frequency")
@@ -58,29 +58,28 @@ let guitar = (() => {
   let pHpTrack    = Osc.param("hptrack",       1.000, "Highpass cutoff as a multiple of the note frequency")
   let pHpQ        = Osc.param("hpq",           0.707, "Highpass resonance")
   // --------------------------------------------------------------------------------------------------------------
-  
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = 25, spread = 0.10)
+ 
+  let signal = Osc.supersaw(freq = Osc.freq(), voices = 35, spread = 0.10)
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.60, kMax = 0.80, warmup = 0, selection = "normal:1")
     // character knobs — plain scalars, SuperSaw-typed, must precede the filter
-    .analog(pAnalog).spreadPower(8.0).sideAtten(0.2).gainJitter(0.30).centerJitter(0.5)
+    .analog(pAnalog).spreadPower(4.0).sideAtten(0.2).gainJitter(0.20).centerJitter(0.25)
     // Simulate plucked string
     .pitchEnvelope(1, 0.001, 0.02)
     // String brightness
-    .lowpass(cutoffHz = Osc.freq().mul(pStrFloor.plus(pStrSweep.adsr(pAttack, pStrDecay, 0.0, pRelease))), q = pStrQ)    
-    // follow freq to avoid low mud
-    .highpass(cutoffHz = Osc.freq().mul(pHpTrack), q = pHpQ)          
+    .lowpass(cutoffHz = Osc.freq().mul(pStrFloor.plus(pStrSweep.adsr(pAttack, pStrDecay, 0.0, pRelease))), q = pStrQ)
+      .analog(pAnalog)    
     // noise burst
     .plus(Osc.whitenoise().highpass(1000).adsr(0.0, 0.05, 0.0, 0.005).mul(0.25))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease)
 
   // the amp
-  let amped = signal   
+  let amped = signal  
     // pre amp
     .distort(0.40, "tube", 4)
     // drive amp
-    .distort(0.40, "gentle", 4)  
+    .distort(0.30, "gentle", 4)  
     .eq()
       .tap(freq = pMidsHz,     q = pMidsQ,     gain = pMids)      // mids: parallel boost off the dry signal
       .tap(freq = pPresenceHz, q = pPresenceQ, gain = pPresence)  // presence: parallel boost off the dry signal
@@ -92,8 +91,8 @@ let guitar = (() => {
       .band(freq = snareHz, q = 5.0, db   = -3)                   // let the snare cut through
       .lowpass(4900).lowpass(4900)                                // cabinet speaker sim    
       .highpass(60)                                               // filter the low end
-  
-  return amped.mul(0.5)
+ 
+  return amped.mul(0.55)
 })()
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
@@ -125,18 +124,17 @@ let bass = (() => {
   return sub.plus(grind)
 })()
 
-export guitarDyna = "0.98 0.94!7 0.96 0.94!7"
+export guitarDyna = "0.98 0.90!7 0.94 0.90!7".mul(berlin.range(0.90, 1.00))
 
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
 export lead_pat =  `<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-4 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
 
-export lead_shape = x => x.gain(0.40).sound(guitar).unison(5).spread(0.05).oscp("decay", 3.0).oscp("hptrack", Math.pow(2, 5/12))
-  .oscp("mids", 3.0).oscp("midsQ", 1.2).oscp("midsHz", leadHz).oscp("presence", 0.0) // .bpf(leadHz).bpq(1.5)
-  .clip(0.95).vowel("a e i o u".scramble(4)).vowelWet(0.3)
-  .apply(x => x.transpose(0).pan(0.33).superimpose(pan(0.66)))
+export lead_shape = x => x.gain(0.40).sound(guitar).unison(5).spread(0.05).oscp("decay", 0.75).oscp("hptrack", Math.pow(2, 5/12))
+  .oscp("mids", 2.0).oscp("midsQ", 1.8).oscp("midsHz", leadHz).oscp("presence", 0.0)
+  .clip(0.95).vowel("a e i o u".scramble(4)).vowelWet(0.3).pan(0.55)
 
 export lead_arrange = x => x.orbit(0)
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.185!48 0.120!16 0.185!48 0.210!16>")  
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.200!48 0.120!16 0.200!48 0.220!16>")  
   .shuffle("<1!80 1!1 4/8!14 1!33>")                                                                            
   .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
@@ -152,13 +150,14 @@ export guitar1_pat =
 export guitar1_shape = x => x.gain(0.8).velocity(guitarDyna.fast(2)).sound(guitar).unison(15).spread(0.05) // . solo()
   .oscp("hptrack", Math.pow(2, 7/12)).oscp("hpq", 0.7)
   .oscp("mids", 3.0).oscp("midsHz", 1160).oscp("midsQ", 0.7)
-  .oscp("presence", 1.5).oscp("presenceHz", 3000).oscp("presenceQ", 0.7)
+  .oscp("presence", 2.0).oscp("presenceHz", 3000).oscp("presenceQ", 0.9)
   .clip("<0.97!31 0.93 0.97!31 0.92 0.96!30 0.88 0.92>".fast(2))
-  .pan(0.55).superimpose(pan(0.65)).body("oak").bodyWet(0.2)
+  .pan(0.30) // .superimpose(pan(0.7))
+  .body("oak").bodyWet(0.3)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").postgain(0.100)
-  .late(berlin.range(0.0002, 0.0007).mul(drunk).seg(4))
+  .late(berlin.range(0.0003, 0.0008).mul(drunk).seg(4))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
 
@@ -170,15 +169,16 @@ export guitar2_pat =
     [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 3 4 6] 9]>/4`
 
 export guitar2_shape = x => x.gain(0.8).velocity(guitarDyna.fast(2)).sound(guitar).unison(13).spread(0.05)
-  .oscp("hptrack", Math.pow(2, 3/12)).oscp("hpq", 1.0)
-  .oscp("mids", 4.0).oscp("midsHz", 980).oscp("midsQ", 0.7)
-  .oscp("presence", 2.0).oscp("presenceHz", 2700).oscp("presenceQ", 1.5)
+  .oscp("hptrack", Math.pow(2, 4/12)).oscp("hpq", 1.2)
+  .oscp("mids", 3.0).oscp("midsHz", 900).oscp("midsQ", 0.7)
+  .oscp("presence", 2.0).oscp("presenceHz", 2700).oscp("presenceQ", 1.0)
   .clip("<0.97!31 0.93 0.97!31 0.92 0.97!30 0.88 0.92>".fast(2))
-  .pan(0.45).superimpose(pan(0.35)).body("cedar").bodyWet(0.2)
+  .pan(0.70) // .superimpose(pan(0.60))
+  .body("cedar").bodyWet(0.3)
 
-export guitar2_arrange = x => x.orbit(2) // . solo()
+export guitar2_arrange = x => x.orbit(2)  // . solo()
   .scale("<e2:minor>").postgain(0.100).mute("<0!128 1!16 0!16>")
-  .late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4))
+  .late(berlin.range(0.0002, 0.0007).mul(drunk).seg(4))
 
 export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar2_shape).tag("guitar2")
 
@@ -189,14 +189,14 @@ export guitar3_pat =
 
 export guitar3_shape = x => x.gain(0.8).velocity(guitarDyna.fast(2)).sound(guitar).unison(11).spread(0.05)
   .oscp("hptrack", 1.0).oscp("hpq", 1.2)
-  .oscp("mids", 6.0).oscp("midsHz", 750).oscp("midsQ", 0.7)
-  .oscp("presence", 2.0).oscp("presenceHz", 2300).oscp("presenceQ", 1.5)
+  .oscp("mids", 3.0).oscp("midsHz", 650).oscp("midsQ", 0.7)
+  .oscp("presence", 2.0).oscp("presenceHz", 2300).oscp("presenceQ", 1.0)
   .clip("<0.97!31 0.93 0.97!31 0.92 0.96!30 0.88 0.92>".fast(2))
-  .pan(0.40).superimpose(pan(0.60))
+  .pan(0.25).superimpose(pan(0.75))
 
-export guitar3_arrange = x => x.orbit(2) // . solo()
-  .scale("<e2:minor>").postgain(0.100).mute("<0!128 1!16 0!16>")
-  .late(berlin.range(0.0000, 0.0004).mul(drunk).seg(4))
+export guitar3_arrange = x => x.orbit(2)  // . solo()
+  .scale("<e2:minor>").postgain(0.095).mute("<0!128 1!16 0!16>")
+  .late(berlin.range(0.0001, 0.0006).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
 
@@ -205,34 +205,34 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!4
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 6 2 -1]!1 [0 0 3 0  0 0 [0 3 4 6] 9]!1>/8`
 
-export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.14) //. mute()
-    .oscp("drive", 0.50).oscp("grindlo", 100).oscp("grindhi", 500).oscp("grind", 0.90).oscp("sub", 0.90).hpf(25) // . solo()
+export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.11) //. mute()
+    .oscp("drive", 0.50).oscp("grindlo", 100).oscp("grindhi", 800).oscp("grind", 0.65).oscp("sub", 0.90).hpf(25) // . solo()
     .adsr(0.005, 0.35, 0.25, 0.010)
 
 export bass_arrange = x => x.orbit(3) // .solo()
   .scale("e1:minor").notchf(snareHz).notchq(1.0).mute("<0!128 1!32>")
   .late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4))
 
-export bass = n(bass_pat).struct("<[x!2]!16 [x!2 [x x] x]!16 [[x x] x!3]!28 [x!8]!2 [[x x] x!3]!2>").fast(2).apply(bass_shape).tag("bass")
+export bass = n(bass_pat).struct("<[x!2]!16 [x!2 [x x] x]!16 [[x x] x!3]!32>").fast(2).apply(bass_shape).tag("bass")
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
-export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd]!1>`
+export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>`
 export kick_shape = x => x.n(0).gain(0.200).velocity("0.98 0.96 0.97 0.96").pan(0.5)
-  .hpf(30).hpq(1).lpf(10000).adsr(0.001, 0.03, 0.80, 0.25).distort(0.1)
-  .superimpose(x => x.bpf("85").bpq(3.0).vel(0.75))
+  .hpf(30).hpq(1).lpf(8000).adsr(0.001, 0.03, 0.80, 0.25).distort(0.1)
+  .superimpose(x => x.bpf("85").bpq(2.0).vel(0.75))
 export kick_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4))
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!32 [~ sd ~ sd]!32>`
-export snare_shape = x => x.n(5).gain(0.260).pan(0.5)
+export snare_shape = x => x.n(5).gain(0.255).pan(0.5)
   .hpf(80).lpf(15000).lpq(0.6).adsr(0.001, 0.03, 0.80, 0.50)
-  .superimpose(x => x.bpf(pure(snareHz).add(berlin.mul(5).fast(4))).bpq(3.0).vel(1.00))
+  .superimpose(x => x.bpf(pure(snareHz).add(berlin.mul(5).fast(4))).bpq(2.0).vel(1.50))
 export snare_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare")
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
 export hats_shape = x => x.gain(0.245).pan(0.50)
-  .hpf(700).lpf("14500".add(perlin.mul(250).fast(4))).lpq(0.7).adsr(0.003, 0.05, 0.80, 1.0)
+  .hpf(700).lpf("13500".add(perlin.mul(250).fast(4))).lpq(0.7).adsr(0.003, 0.05, 0.80, 1.0)
 export hats_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4").tag("hats")
 
@@ -244,7 +244,7 @@ export clap = sound(clap_pat).apply(clap_shape).tag("clap")
 export shaker_pat = `<pink ~ pink pink>*16`
 export shaker_shape = x => x.gain(0.125).velocity("<1.0 0.90 0.95 0.90>*16") // . mute()
   .hpf(10000).hpq(0.5).lpf(17000).lpq(0.7)
-  .pan(sine.range(0.35, 0.65).slow(8)).adsr(0.010, 0.15, 0.0, 0.01)
+  .pan(sine.range(0.4, 0.6).slow(8)).adsr(0.010, 0.15, 0.0, 0.01)
 export shaker_arrange = x => x.orbit(9).late(berlin.range(0.0015, 0.0025).mul(drunk))
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
@@ -267,7 +267,7 @@ export song_body = stack(
       guitar2.apply(guitar2_arrange) // .solo() .mute()
       , // Guitar 3
       guitar3.apply(guitar3_arrange) // .solo() .mute()
-    ).roomWet(0.20).rsize(3.0).rlp(3500).compressor(-28, 2, 6, 0.003, 0.075)
+    ).roomWet(0.30).rsize(3.0).rlp(3500).compressor(-28, 2, 6, 0.003, 0.075)
     , // Bass
     bass.apply(bass_arrange) // .solo() .mute()
   ).analog(feel).transpose(transposition)
@@ -296,6 +296,6 @@ export song = stack(
 
 
 
-    
+
     """,
 )
