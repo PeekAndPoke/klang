@@ -649,7 +649,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   is in nearly every song and 19x in the skill reference, and `phaserdepth` is the orbit
   phaser's wet, so both are in the rename sweep.
 
-### C5 — `passes` on lowpass/highpass (the original D6)
+### C5 — `passes` on lowpass/highpass (the original D6) — ✅ DONE 2026-08-24 (commit be5392d2)
 - Field + builder + R1 expansion + script/Kotlin surface + sprudel `lpx`/`hpx` as the third
   positional parameter, all in one commit per the D6 rule.
 - Guard: `passes = 2` measures -24 dB/oct vs -12 at one octave above fc; optimizer expands to N
