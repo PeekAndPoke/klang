@@ -16,8 +16,9 @@ import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
  * ADSR amplitude envelope combinator.
  *
  * Multiplies the signal by a time-varying gain envelope. Each stage has its
- * own shape curve (Linear/Square/Cube):
+ * own shape curve (Linear/Square/Cube/SCurve/InvSquare/Exponential; default [AdsrCurve.Default] = exp):
  * - Attack:  ramps from 0.0 to 1.0 over [attackSec], shape via [attackCurve]
+ *   (curves: Linear/Square/Cube/SCurve/InvSquare/Exponential — default [AdsrCurve.Default] = exp)
  * - Decay:   ramps from 1.0 to [sustainLevel] over [decaySec], shape via [decayCurve]
  * - Sustain: holds at [sustainLevel] until gate ends
  * - Release: ramps from current level to 0.0 over [releaseSec], shape via [releaseCurve]
@@ -32,9 +33,9 @@ fun Ignitor.adsr(
     decaySec: Ignitor,
     sustainLevel: Ignitor,
     releaseSec: Ignitor,
-    attackCurve: AdsrCurve = AdsrCurve.Square,
-    decayCurve: AdsrCurve = AdsrCurve.Exponential,
-    releaseCurve: AdsrCurve = AdsrCurve.Square,
+    attackCurve: AdsrCurve = AdsrCurve.Default,
+    decayCurve: AdsrCurve = AdsrCurve.Default,
+    releaseCurve: AdsrCurve = AdsrCurve.Default,
     declickSeconds: Ignitor = ParamIgnitor("declickSeconds", 0.0),
     expK: Ignitor = ParamIgnitor("expK", ADSR_EXP_K),
 ): Ignitor = AdsrIgnitor(
@@ -176,9 +177,9 @@ fun Ignitor.adsr(
     decaySec: Double,
     sustainLevel: Double,
     releaseSec: Double,
-    attackCurve: AdsrCurve = AdsrCurve.Square,
-    decayCurve: AdsrCurve = AdsrCurve.Exponential,
-    releaseCurve: AdsrCurve = AdsrCurve.Square,
+    attackCurve: AdsrCurve = AdsrCurve.Default,
+    decayCurve: AdsrCurve = AdsrCurve.Default,
+    releaseCurve: AdsrCurve = AdsrCurve.Default,
     declickSeconds: Double = 0.0,
     expK: Double = ADSR_EXP_K,
 ): Ignitor = adsr(

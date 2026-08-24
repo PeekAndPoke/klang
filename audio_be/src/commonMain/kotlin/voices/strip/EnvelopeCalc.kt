@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  * Shared control-rate envelope calculation for filter modulation and FM depth.
  *
  * Calculates a single envelope value (0.0–1.0) at the given block position.
- * Per-stage shape curves (Linear/Square/Cube) are read from [Voice.Envelope].
+ * Per-stage shape curves (Linear/Square/Cube/SCurve/InvSquare/Exponential; default exp) are read from [Voice.Envelope].
  * Uses the fixed release calculation: decays from the actual level at gate end,
  * not from sustainLevel.
  *

@@ -602,6 +602,15 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     same way; special-casing +Inf floor would make the coercion input-dependent for an input
     that is only reachable through a runaway user expression. Raw engine, one rule.
     (`WetDryMixSpec` pins +/-Inf floor -> 0.0.)
+  - (session ledger, not a C4 item) ADSR curve default unified to EXP (user decision,
+    2026-08-24, own commit after the pitch-param work): UNSET = Exponential on every stage
+    and every door, single authority `AdsrCurve.Default`. Ignitor door: bare adsrCurve()
+    and typos coerce to exp; sprudel door keeps its control-pattern semantics (bare = no-op,
+    typo = keep prior) — only the unset default is cross-door. The ignitor door used
+    to default Square attack/release (runtime fallback + engine factory + script method
+    "square" parameter defaults) while sprudel/strip resolved Exponential. ⚠ EAR: every
+    ignitor instrument using .adsr() without explicit curves changes attack/release shape
+    Square -> Exponential (nothing in the suite pinned the old waveforms).
 - C4.2 decisions AS BUILT: (a) the ignitor floor knob is `dryFloor` (the plan's own rule:
   `floor()` is the arithmetic round-down, one word one concept); (b) `room`/`delay` HEAD
   functions renamed to `roomWet`/`delayWet` (their first slot IS the wet, and keeping

@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
  * ADSR amplitude envelope (VCA stage).
  * Multiplies the audio buffer by the envelope value per sample.
  *
- * Per-stage shape curves (Linear/Square/Cube) are applied to attack, decay
+ * Per-stage shape curves (Linear/Square/Cube/SCurve/InvSquare/Exponential; default exp) are applied to attack, decay
  * and release independently. All math is multiplies only — no `pow()`, no
  * LUT — so a Square curve adds two multiplies/sample over the linear path.
  *

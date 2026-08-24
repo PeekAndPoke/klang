@@ -1506,7 +1506,8 @@ private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?
  *    gently into the endpoint.
  *  - `exponential` (`exp`, `expo`) — a true exponential (convex, long tail).
  *
- * Defaults when unset: attack `square`, decay `exponential`, release `square`.
+ * Default when unset: `exp` on EVERY stage — the engine-wide default on every door
+ * (maintainer decision, 2026-08-24).
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).adsrCurves("square", "exponential", "scurve")

@@ -26,7 +26,16 @@ package io.peekandpoke.klang.audio_bridge
  * For decay and release the ramp uses `(1 - p)` so the level falls from
  * its starting value to its endpoint with a curved tail.
  */
-enum class AdsrCurve { Linear, Square, Cube, SCurve, InvSquare, Exponential }
+enum class AdsrCurve {
+    Linear, Square, Cube, SCurve, InvSquare, Exponential;
+
+    companion object {
+        /** THE default curve on every stage and every door (maintainer decision, 2026-08-24):
+         *  unset means [Exponential]. Every fallback site references THIS value — flip it here,
+         *  it flips everywhere. */
+        val Default = Exponential
+    }
+}
 
 sealed interface AdsrDef {
 
@@ -71,9 +80,9 @@ sealed interface AdsrDef {
                 decay = decay ?: d.decay ?: 0.1,
                 sustain = sustain ?: d.sustain ?: 1.0,
                 release = release ?: d.release ?: 0.1,
-                attackCurve = attackCurve ?: d.attackCurve ?: AdsrCurve.Exponential,
-                decayCurve = decayCurve ?: d.decayCurve ?: AdsrCurve.Exponential,
-                releaseCurve = releaseCurve ?: d.releaseCurve ?: AdsrCurve.Exponential,
+                attackCurve = attackCurve ?: d.attackCurve ?: AdsrCurve.Default,
+                decayCurve = decayCurve ?: d.decayCurve ?: AdsrCurve.Default,
+                releaseCurve = releaseCurve ?: d.releaseCurve ?: AdsrCurve.Default,
             )
         }
 
@@ -86,9 +95,9 @@ sealed interface AdsrDef {
                 decay = 0.1,
                 sustain = 1.0,
                 release = 0.05,
-                attackCurve = AdsrCurve.Exponential,
-                decayCurve = AdsrCurve.Exponential,
-                releaseCurve = AdsrCurve.Exponential,
+                attackCurve = AdsrCurve.Default,
+                decayCurve = AdsrCurve.Default,
+                releaseCurve = AdsrCurve.Default,
             )
         }
     }

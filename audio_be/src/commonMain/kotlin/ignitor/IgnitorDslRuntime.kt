@@ -400,9 +400,11 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Adsr -> inner.withMod().adsr(
             attackSec.noMod(), decaySec.noMod(), sustainLevel.noMod(), releaseSec.noMod(),
-            attackCurve ?: AdsrCurve.Square,
-            decayCurve ?: AdsrCurve.Exponential,
-            releaseCurve ?: AdsrCurve.Square,
+            // Unset curve = "exp" on EVERY stage and EVERY door (maintainer decision,
+            // 2026-08-24) — the strip path's AdsrDef.Resolved already defaults Exponential.
+            attackCurve ?: AdsrCurve.Default,
+            decayCurve ?: AdsrCurve.Default,
+            releaseCurve ?: AdsrCurve.Default,
             declickSeconds = declickSeconds.noMod(),
             expK = expK.noMod(),
         )

@@ -174,8 +174,14 @@ object KlangScriptOscExtensions {
     )
 
     /**
-     * Sets per-stage ADSR shape curves. Each stage takes `"linear"` (straight ramp),
-     * `"square"` (default — fast initial drop, long tail), or `"cube"` (more aggressive).
+     * Sets per-stage ADSR shape curves. Each stage takes `"exp"` (the DEFAULT everywhere —
+     * analog-style curvature, see `expK`), `"linear"` (`lin`), `"square"` (`sq`/`quad`),
+     * `"cube"` (`cb`), `"scurve"` (`s`/`smooth`/`sigmoid`) or `"invsquare"` (`inv`/`concave`).
+     * An unrecognized name coerces to `"exp"`, the same as not setting it.
+     *
+     * ⚠ A PARTIAL call RESETS the omitted stages to `"exp"` (every param defaults to it) —
+     * unlike the sprudel door's `adsrCurves`, whose omitted stages keep their current curve
+     * (per-event control-pattern semantics). Set all three when you mean all three.
      *
      * If [self] is already an [IgnitorDsl.Adsr], the curves are set on it via copy.
      * Otherwise, a new [IgnitorDsl.Adsr] is wrapped around [self] with default times.
@@ -183,13 +189,13 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun adsrCurves(
         self: IgnitorDsl,
-        attackCurve: String = "square",
-        decayCurve: String = "square",
-        releaseCurve: String = "square",
+        attackCurve: String = "exp",
+        decayCurve: String = "exp",
+        releaseCurve: String = "exp",
     ): IgnitorDsl {
-        val a = parseAdsrCurveName(attackCurve) ?: AdsrCurve.Square
-        val d = parseAdsrCurveName(decayCurve) ?: AdsrCurve.Square
-        val r = parseAdsrCurveName(releaseCurve) ?: AdsrCurve.Square
+        val a = parseAdsrCurveName(attackCurve) ?: AdsrCurve.Default
+        val d = parseAdsrCurveName(decayCurve) ?: AdsrCurve.Default
+        val r = parseAdsrCurveName(releaseCurve) ?: AdsrCurve.Default
         return when (self) {
             is IgnitorDsl.Adsr -> self.copy(
                 attackCurve = a, decayCurve = d, releaseCurve = r,
@@ -202,9 +208,9 @@ object KlangScriptOscExtensions {
         }
     }
 
-    /** Applies the same ADSR shape curve to all three stages. Accepts `"linear"`, `"square"`, or `"cube"`. */
+    /** Applies the same ADSR shape curve to all three stages — same names as [adsrCurves] (`"exp"` default). */
     @KlangScript.Method
-    fun adsrCurve(self: IgnitorDsl, curve: String = "square"): IgnitorDsl =
+    fun adsrCurve(self: IgnitorDsl, curve: String = "exp"): IgnitorDsl =
         adsrCurves(self, curve, curve, curve)
 
     /**
