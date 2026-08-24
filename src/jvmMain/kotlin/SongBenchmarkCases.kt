@@ -80,7 +80,7 @@ object SongBenchmarkCases {
                     """.superimpose(x => x.transpose(12).spread(0.12).velocity(0.10).pan(0.15).superimpose(pan(0.85)))""",
             "5 +analog(feel)" to """.analog(feel)""",
             "6 +pipeline(pedal)" to """.pipeline("pedal")""",
-            "7 +room(0.3:5:0.1)" to """.room(0.3, 5, 0.1)""",
+            "7 +room(0.3:5:0.1)" to """.roomWet(0.3, 5, 0.1)""",
         ),
     )
 
@@ -110,8 +110,8 @@ object SongBenchmarkCases {
             "4 +superimpose#1 (pan copy)" to """.pan(0.15).superimpose(pan(0.85))""",
             "5 +superimpose#2 (hpf/lpf air)" to """.superimpose(hpf(3800).lpf(6700).postgain(0.03))""",
             "6 +pipeline(pedal)" to """.pipeline("pedal")""",
-            "7 +body(wood, mix0.3)" to """.body("wood").bodyMix(0.3)""",
-            "8 +room(0.10:8:0.12)" to """.room(0.10, 8, 0.12)""",
+            "7 +body(wood, mix0.3)" to """.body("wood").bodyWet(0.3)""",
+            "8 +room(0.10:8:0.12)" to """.roomWet(0.10, 8, 0.12)""",
         ),
     )
 
@@ -308,7 +308,7 @@ object SongBenchmarkCases {
             x => x.pan(0.7),
             x => x.postgain(0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
                  .pan(0.2).superimpose(pan(0.8))
-          ).superimpose(hpf(3500).lpf(6200).postgain(0.03)).pipeline("pedal").body("wood").bodyMix(0.30)
+          ).superimpose(hpf(3500).lpf(6200).postgain(0.03)).pipeline("pedal").body("wood").bodyWet(0.30)
         """.trimIndent(),
     )
 
@@ -372,7 +372,7 @@ object SongBenchmarkCases {
         """.lpadsr(0.005, 1.1, 0.0, 0.015).hpf(400).lpf(3000).lpe(8.1).lpq(2.0)""" +
                 """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(2).coarseos(4)""" +
                 """.pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))""" +
-                """.pipeline("pedal").body("wood").bodyMix(0.3)"""
+                """.pipeline("pedal").body("wood").bodyWet(0.3)"""
 
     private fun unisonCase(n: Int): SongBenchmark.Case =
         voice(
@@ -393,11 +393,11 @@ object SongBenchmarkCases {
     private val fxIsolation = listOf(
         voice("FX: base (osc+filt+dist)", "exp-fx", fxBase),
         voice("FX: base +pipeline(pedal)", "exp-fx", """$fxBase.pipeline("pedal")"""),
-        voice("FX: base +body(wood)", "exp-fx", """$fxBase.body("wood").bodyMix(0.3)"""),
-        voice("FX: base +body(glass)", "exp-fx", """$fxBase.body("glass").bodyMix(0.3)"""),
-        voice("FX: base +vowel(a)", "exp-fx", """$fxBase.vowel("a").vowelMix(0.3)"""),
-        voice("FX: base +room", "exp-fx", """$fxBase.room(0.10, 8, 0.12)"""),
-        voice("FX: base +pipeline+body+room", "exp-fx", """$fxBase.pipeline("pedal").body("wood").bodyMix(0.3).room(0.10, 8, 0.12)"""),
+        voice("FX: base +body(wood)", "exp-fx", """$fxBase.body("wood").bodyWet(0.3)"""),
+        voice("FX: base +body(glass)", "exp-fx", """$fxBase.body("glass").bodyWet(0.3)"""),
+        voice("FX: base +vowel(a)", "exp-fx", """$fxBase.vowel("a").vowelWet(0.3)"""),
+        voice("FX: base +room", "exp-fx", """$fxBase.roomWet(0.10, 8, 0.12)"""),
+        voice("FX: base +pipeline+body+room", "exp-fx", """$fxBase.pipeline("pedal").body("wood").bodyWet(0.3).roomWet(0.10, 8, 0.12)"""),
     )
 
     // 2x2 interaction: does `superimpose` MULTIPLY the cost of a per-voice effect (`body`)?
@@ -411,9 +411,9 @@ object SongBenchmarkCases {
 
     private val interactionSweep = listOf(
         voice("INT: base (no super, no body)", "exp-interaction", intBase),
-        voice("INT: +body (no super)", "exp-interaction", """$intBase.body("wood").bodyMix(0.3)"""),
+        voice("INT: +body (no super)", "exp-interaction", """$intBase.body("wood").bodyWet(0.3)"""),
         voice("INT: +super (no body)", "exp-interaction", """$intBase.pan(0.15).superimpose(pan(0.85))"""),
-        voice("INT: +super +body", "exp-interaction", """$intBase.pan(0.15).superimpose(pan(0.85)).body("wood").bodyMix(0.3)"""),
+        voice("INT: +super +body", "exp-interaction", """$intBase.pan(0.15).superimpose(pan(0.85)).body("wood").bodyWet(0.3)"""),
     )
 
     // ────────────────────────────────────────────────────────────────────────────────────────

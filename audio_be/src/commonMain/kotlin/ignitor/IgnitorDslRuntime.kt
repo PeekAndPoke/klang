@@ -414,8 +414,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Clip -> inner.withMod().clip(shape, Oversampler.factorToStages(oversample))
         is IgnitorDsl.Crush -> inner.withMod().crush(amount.noMod())
         is IgnitorDsl.Coarse -> inner.withMod().coarse(amount.noMod())
-        is IgnitorDsl.Phaser -> inner.withMod().phaser(rate.noMod(), blend.noMod(), center.noMod(), sweep.noMod())
+        is IgnitorDsl.Phaser -> inner.withMod().phaser(rate.noMod(), wet.noMod(), center.noMod(), sweep.noMod(), dryFloor.noMod())
         is IgnitorDsl.Tremolo -> inner.withMod().tremolo(rate.noMod(), depth.noMod())
-        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(blend.noMod(), feedback.noMod(), tone.noMod(), pitches)
+        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, dryFloor.noMod())
     }
 }

@@ -191,7 +191,7 @@ class LangReverbSpec : StringSpec({
 
     "reverb functions can be chained together" {
         val p = note("c3")
-            .room("0.8")
+            .roomWet("0.8")
             .roomsize("0.9")
             .roomfade("0.5")
             .roomlp("1000")
@@ -210,7 +210,7 @@ class LangReverbSpec : StringSpec({
 
     "reverb functions work with aliases chained" {
         val p = note("c3")
-            .room("0.7")
+            .roomWet("0.7")
             .sz("0.85")
             .rfade("0.4")
             .rlp("2000")
@@ -228,7 +228,7 @@ class LangReverbSpec : StringSpec({
     }
 
     "reverb functions work in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").room(0.8).roomfade(0.5).roomlp(1000).iresponse("hall")""")
+        val p = SprudelPattern.compile("""note("c3").roomWet(0.8).roomfade(0.5).roomlp(1000).iresponse("hall")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

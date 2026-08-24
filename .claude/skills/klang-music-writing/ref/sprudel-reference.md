@@ -67,7 +67,7 @@ stack(
   note("a1 ~ ~ ~").sound(kick).gain(0.8),
   sound("~ ~ cp ~").gain(0.4),
   sound("hh*8").gain(0.3)
-).room(0.2).rsize(5)
+).roomWet(0.2).rsize(5)
 ```
 
 ---
@@ -184,7 +184,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delay` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserdepth`/`phasercenter`/`phasersweep`), `compressor`, ducking |
+> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; ⚠ runs on the per-voice strip AND the orbit bus — a floor < 1 applies twice), `compressor`, ducking |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master.of(...))` with `MasterFx.gain` (make-up level), `MasterFx.limiter`, `MasterFx.reverb`, `MasterFx.delay` |
 
@@ -320,7 +320,7 @@ selection — extended to ignitor variants and per-note gain.
 | `gain(amt)`      |            | Volume (0-1+)                  | `s("bd").gain(0.8)`                   |
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
-| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).room(0.5)`       |
+| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).roomWet(0.5)`       |
 | `adsr(params)`   |            | Amplitude envelope             | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)` |
 | `attack(sec)`    |            | Envelope attack                | `note("c3").attack(0.01)`             |
 | `decay(sec)`     |            | Envelope decay                 | `note("c3").decay(0.2)`               |
@@ -369,20 +369,20 @@ All filters accept pattern values and have envelope variants (`lpe` for depth, `
 
 | Function                | Aliases                                                                                  | Description                                   | Example                                   |
 |-------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------------------|
-| `room(mix)`             | `reverb`                                                                                 | Reverb amount (0-1)                           | `note("c3").room(0.3)`                    |
-| `roomsize(size)`        | `rsize`, `sz`, `size`                                                                    | Reverb room size                              | `note("c3").room(0.3).rsize(5)`           |
-| `roomdim(dim)`          | `rdim`                                                                                   | Reverb damping/dimension                      | `note("c3").room(0.3).rdim(0.5)`          |
-| `roomfade(x)` / `rfade` | Reverb tail **override**, 0..1 (NOT seconds) — wins over `roomsize`, which is then inert | `note("c3").room(0.3).roomsize(8).rfade(0.1)` |
-| `roomlp(freq)`          | `rlp`                                                                                    | Reverb lowpass                                | `note("c3").room(0.3).rlp(3000)`          |
-| `delay(mix)`            |                                                                                          | Delay amount (0-1)                            | `s("sd").delay(0.5)`                      |
-| `delaytime(time)`       |                                                                                          | Delay time in cycles                          | `s("sd").delay(0.5).delaytime(0.33)`      |
-| `delayfeedback(fb)`     | `delayfb`, `dfb`                                                                         | Delay feedback                                | `s("sd").delay(0.5).delayfeedback(0.3)`   |
+| `roomWet(mix)`             | `reverb`                                                                                 | Reverb amount (0-1)                           | `note("c3").roomWet(0.3)`                    |
+| `roomsize(size)`        | `rsize`, `sz`, `size`                                                                    | Reverb room size                              | `note("c3").roomWet(0.3).rsize(5)`           |
+| `roomdim(dim)`          | `rdim`                                                                                   | Reverb damping/dimension                      | `note("c3").roomWet(0.3).rdim(0.5)`          |
+| `roomfade(x)` / `rfade` | Reverb tail **override**, 0..1 (NOT seconds) — wins over `roomsize`, which is then inert | `note("c3").roomWet(0.3).roomsize(8).rfade(0.1)` |
+| `roomlp(freq)`          | `rlp`                                                                                    | Reverb lowpass                                | `note("c3").roomWet(0.3).rlp(3000)`          |
+| `delayWet(mix)`            |                                                                                          | Delay amount (0-1)                            | `s("sd").delayWet(0.5)`                      |
+| `delaytime(time)`       |                                                                                          | Delay time in cycles                          | `s("sd").delayWet(0.5).delaytime(0.33)`      |
+| `delayfeedback(fb)`     | `delayfb`, `dfb`                                                                         | Delay feedback                                | `s("sd").delayWet(0.5).delayfeedback(0.3)`   |
 | `distort(amt)`          | `dist`                                                                                   | Distortion amount                             | `s("bd").distort(0.5)`                    |
 | `distortshape(shape)`   | `distshape`, `dshape`                                                                    | Distortion shape                              | `s("bd").distort(2).distshape("fold")`    |
 | `crush(bits)`           |                                                                                          | Bitcrusher                                    | `s("hh").crush(8)`                        |
 | `coarse(amt)`           |                                                                                          | Sample-rate reduction                         | `note("c3").s("saw").coarse(3)`           |
 | `phaser(params)`        | `ph`                                                                                     | Phaser effect                                 | `note("c3").phaser(1)`                    |
-| `phaserdepth(d)`        | `phasdp`, `phd`                                                                          | Phaser depth                                  | `note("c3").phaser(1).phaserdepth(0.5)`   |
+| `phaserWet(d)`        | `phasdp`, `phd`                                                                          | Phaser wet (additive by default)              | `note("c3").phaser(1).phaserWet(0.5)`   |
 | `phasercenter(hz)`      | `phc`                                                                                    | Phaser center freq                            | `note("c3").phaser(1).phc(1000)`          |
 | `phasersweep(hz)`       | `phs`                                                                                    | Phaser sweep range                            | `note("c3").phaser(1).phs(500)`           |
 | `tremolo(params)`       |                                                                                          | Tremolo rate                                  | `note("c3").tremolo(4)`                   |
@@ -506,7 +506,7 @@ note("c3").s("saw").lpf(sine.range(200, 2000).slow(4))
 s("hh*8").pan(rand)
 
 // Tempo-synced delay
-s("sd").delay(0.5).delaytime(pure(1/8).div(cps))
+s("sd").delayWet(0.5).delaytime(pure(1/8).div(cps))
 
 // Organic modulation
 note("c3").s("supersaw").spread(perlin.range(0.0, 0.3).slow(16))
@@ -621,7 +621,7 @@ n("0 ~ 0 3 ~ 0 5 ~").scale("C2:minor")
 n("<0 3 5 7>").scale("C3:minor")
   .sound("supersaw").lpf(sine.range(400, 1200).slow(8))
   .adsr(0.5, 0.5, 0.8, 1.0).legato(2)
-  .room(0.3).rsize(8).gain(0.2)
+  .roomWet(0.3).rsize(8).gain(0.2)
 ```
 
 ### Polyrhythmic pattern
@@ -659,7 +659,7 @@ let chorus = stack(
 )
 
 arrange([8, verse], [8, chorus], [8, verse], [8, chorus])
-  .room(0.15).rsize(4)
+  .roomWet(0.15).rsize(4)
 ```
 
 ### Timed layer entry with filterWhen
@@ -672,14 +672,14 @@ stack(
     .filterWhen(x => x >= 8),                              // enters at cycle 8
   chord("<Am C F G>").voicing().s("supersaw").gain(0.15)
     .filterWhen(x => x >= 16)                              // enters at cycle 16
-).room(0.1).rsize(5)
+).roomWet(0.1).rsize(5)
 ```
 
 ### Delay synced to tempo
 
 ```javascript
 note("c4 ~ e4 ~").sound("pluck")
-  .delay(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.4)
+  .delayWet(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.4)
 ```
 
 ---
@@ -722,5 +722,5 @@ stack(
   // Kick-snare
   , s("<[[bd sd]!2]!8>").adsr(0.02, 0.1, 0.7, 1.0).gain(0.75)
 )
-  .room(0.02).rsize(3)  // subtle room reverb
+  .roomWet(0.02).rsize(3)  // subtle room reverb
 ```

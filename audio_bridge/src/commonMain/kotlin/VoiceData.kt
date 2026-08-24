@@ -79,6 +79,8 @@ data class VoiceData(
     val phaserDepth: Double?,
     val phaserCenter: Double?,
     val phaserSweep: Double?,
+    /** Minimum dry coefficient of the phaser wet/dry law; null = engine default 1.0 (purely additive). */
+    val phaserFloor: Double? = null,
 
     // Tremolo
     val tremoloSync: Double?,
@@ -223,6 +225,7 @@ data class VoiceData(
             phaserDepth = null,
             phaserCenter = null,
             phaserSweep = null,
+            phaserFloor = null,
             tremoloSync = null,
             tremoloDepth = null,
             tremoloSkew = null,

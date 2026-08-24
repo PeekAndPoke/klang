@@ -38,12 +38,12 @@ stack(
           [-2 -1 0 2] [5 6 7  9] [12 13 14 16] [19 20 21 23] [26 23 21 20] [19 16 14 13] [12  9 7 6] [5 2 0 -1]>`),
   )
   // Hover "roosewood" and click the little icon!
-  .fast(2).scale("C3:major").body("rosewood").bodyMix(1.0).bodyFloor(0.2)
+  .fast(2).scale("C3:major").body("rosewood").bodyWet(1.0).bodyFloor(0.2)
   .sound("sine").hpf(100).lpf(5000).warmth(0.05).gain(0.5).clip(0.5)
   // Hover the param and click the little icon!
   .adsr(0.07, 0.2, 0.5, 0.15)
 
-).room(0.25).rsize(roomSize).analog(5)
+).roomWet(0.25).rsize(roomSize).analog(5)
 
 
 

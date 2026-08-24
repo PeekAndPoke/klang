@@ -64,7 +64,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.OptimizerHint -> listOf(inner)
         is IgnitorDsl.Param -> emptyList()
         is IgnitorDsl.PerlinNoise -> listOf(rate, octaves, persistence)
-        is IgnitorDsl.Phaser -> listOf(inner, rate, blend, center, sweep)
+        is IgnitorDsl.Phaser -> listOf(inner, rate, wet, center, sweep, dryFloor)
         is IgnitorDsl.PinkNoise -> emptyList()
         is IgnitorDsl.PitchEnvelope -> listOf(inner, amount, attackSec, decaySec, releaseSec, curve, anchor)
         is IgnitorDsl.PitchMod -> listOf(inner, mod)
@@ -79,7 +79,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Round -> listOf(inner)
         is IgnitorDsl.Sawtooth -> listOf(freq, analog)
         is IgnitorDsl.Select -> listOf(cond, whenTrue, whenFalse)
-        is IgnitorDsl.Shimmer -> listOf(inner, blend, feedback, tone)
+        is IgnitorDsl.Shimmer -> listOf(inner, wet, feedback, tone, dryFloor)
         is IgnitorDsl.Sign -> listOf(inner)
         is IgnitorDsl.Silence -> emptyList()
         is IgnitorDsl.Sine -> listOf(freq, analog)
@@ -194,7 +194,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.OptimizerHint -> copy(inner = new[0])
         is IgnitorDsl.Param -> this
         is IgnitorDsl.PerlinNoise -> copy(rate = new[0], octaves = new[1], persistence = new[2])
-        is IgnitorDsl.Phaser -> copy(inner = new[0], rate = new[1], blend = new[2], center = new[3], sweep = new[4])
+        is IgnitorDsl.Phaser -> copy(inner = new[0], rate = new[1], wet = new[2], center = new[3], sweep = new[4], dryFloor = new[5])
         is IgnitorDsl.PinkNoise -> this
         is IgnitorDsl.PitchEnvelope -> copy(
             inner = new[0],
@@ -224,7 +224,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Round -> copy(inner = new[0])
         is IgnitorDsl.Sawtooth -> copy(freq = new[0], analog = new[1])
         is IgnitorDsl.Select -> copy(cond = new[0], whenTrue = new[1], whenFalse = new[2])
-        is IgnitorDsl.Shimmer -> copy(inner = new[0], blend = new[1], feedback = new[2], tone = new[3])
+        is IgnitorDsl.Shimmer -> copy(inner = new[0], wet = new[1], feedback = new[2], tone = new[3], dryFloor = new[4])
         is IgnitorDsl.Sign -> copy(inner = new[0])
         is IgnitorDsl.Silence -> this
         is IgnitorDsl.Sine -> copy(freq = new[0], analog = new[1])

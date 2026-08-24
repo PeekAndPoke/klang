@@ -94,6 +94,8 @@ data class SvdPhaser(
     var phaserDepth: Double? = null,
     var phaserCenter: Double? = null,
     var phaserSweep: Double? = null,
+    /** Minimum dry coefficient of the C4 wet/dry law (`phaserFloor`); null = engine default 1.0 (additive). */
+    var phaserFloor: Double? = null,
 )
 
 /** Tremolo. */
@@ -244,6 +246,7 @@ fun mergeSvdPhaser(base: SvdPhaser?, over: SvdPhaser?): SvdPhaser? {
         phaserDepth = over.phaserDepth ?: base.phaserDepth,
         phaserCenter = over.phaserCenter ?: base.phaserCenter,
         phaserSweep = over.phaserSweep ?: base.phaserSweep,
+        phaserFloor = over.phaserFloor ?: base.phaserFloor,
     )
 }
 

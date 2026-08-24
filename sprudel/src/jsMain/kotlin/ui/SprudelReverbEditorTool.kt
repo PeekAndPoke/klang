@@ -43,13 +43,13 @@ import kotlin.math.exp
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param reverb(amount, size, fade, lowpass, dim) call.
+ * [KlangUiToolEmbeddable] for the per-param roomWet(wet, size, fade, lowpass, dim) / reverb(wet, ...) call.
  *
  * Two modes (C0.3 two-tool-tier design):
- * - Whole-call modal: when [KlangUiToolContext.call] is present, edits amount (room) and size
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the reverb send (roomWet) and size
  *   plus the optional fade/lowpass/dim params of the host call and commits the full argument
  *   list. Unset optionals stay omitted (null slots).
- * - Scalar fallback (embedded / sequence atom): edits a single amount (wet/dry) value.
+ * - Scalar fallback (embedded / sequence atom): edits a single wet (send) value.
  */
 object SprudelReverbEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Reverb Editor"
@@ -242,8 +242,8 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
                         domKey("room")
                         step(0.01)
                         label {
-                            +"Room (wet/dry)"
-                            paramInfoIcon("amount", props.toolCtx, infoPopup)
+                            +"Room (send)"
+                            paramInfoIcon("wet", props.toolCtx, infoPopup)
                         }
                     }
                     if (call != null) {

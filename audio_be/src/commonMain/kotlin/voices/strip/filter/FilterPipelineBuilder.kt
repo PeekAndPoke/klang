@@ -77,6 +77,7 @@ fun buildFilterPipeline(
                             depth = phaser.depth,
                             center = if (phaser.center > 0) phaser.center else 1000.0,
                             sweep = if (phaser.sweep > 0) phaser.sweep else 1000.0,
+                            floor = phaser.floor,
                             sampleRate = sampleRate,
                         )
                     )

@@ -38,7 +38,7 @@ stack(
   // Drums 2
   , s("<[[bd sd]!2]!8>").adsr(0.02, 0.1, 0.7, 1.0).gain(0.75) // . solo()
 )
-  .room(0.02).rsize(3)
+  .roomWet(0.02).rsize(3)
 
             """,
 )

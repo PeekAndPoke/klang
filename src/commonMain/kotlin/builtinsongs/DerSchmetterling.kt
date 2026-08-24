@@ -122,7 +122,7 @@ export lead_pat =  `<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-4 -1 
 
 export lead_shape = x => x.gain(0.80).sound(guitar).unison(5).spread(0.05).oscp("hptrack", Math.pow(2, 7/12))
   .oscp("mids", 3.0).oscp("midsQ", 1.3).oscp("midsHz", leadHz).oscp("midsHumm", 0.0).oscp("presence", 0.0) // .bpf(leadHz).bpq(1.5)
-  .clip(0.95).vowel("a e i o u".scramble(4)).vowelMix(0.3)
+  .clip(0.95).vowel("a e i o u".scramble(4)).vowelWet(0.3)
   .apply(x => x.transpose(0).velocity(0.5).pan(0.33).superimpose(pan(0.66)))
 
 export lead_arrange = x => x.orbit(0)
@@ -144,7 +144,7 @@ export guitar1_shape = x => x.gain(0.8).velocity(guitarDyna.fast(2)).sound(guita
   .oscp("mids", 1.5).oscp("midsHz", 1160).oscp("midsQ", 0.7).oscp("midsHumm", 0.0)
   .oscp("presence", 1.0).oscp("presenceHz", 3000).oscp("presenceQ", 1.0)
   .clip("<0.97!31 0.93 0.97!31 0.92 0.96!30 0.88 0.92>".fast(2))
-  .pan(0.55).superimpose(pan(0.65)).body("oak").bodyMix(0.2)
+  .pan(0.55).superimpose(pan(0.65)).body("oak").bodyWet(0.2)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").postgain(0.100)
@@ -164,7 +164,7 @@ export guitar2_shape = x => x.gain(0.8).velocity(guitarDyna.fast(2)).sound(guita
   .oscp("mids", 1.5).oscp("midsHz", 980).oscp("midsQ", 0.7)
   .oscp("presence", 1.0).oscp("presenceHz", 2700).oscp("presenceQ", 1.0)
   .clip("<0.97!31 0.93 0.97!31 0.92 0.97!30 0.88 0.92>".fast(2))
-  .pan(0.45).superimpose(pan(0.35)).body("cedar").bodyMix(0.2)
+  .pan(0.45).superimpose(pan(0.35)).body("cedar").bodyWet(0.2)
 
 export guitar2_arrange = x => x.orbit(2) // . solo()
   .scale("<e2:minor>").postgain(0.100).mute("<0!128 1!16 0!16>")
@@ -239,7 +239,7 @@ export shaker_arrange = x => x.orbit(9).late(berlin.range(0.0025, 0.0035).mul(dr
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
 // Count-in  --------------------------------------------------------------------------------------------------------------------------------------------------
-export countin = sound("oh!2").apply(hats_shape).velocity(0.8).tag("countin").room("0.1")
+export countin = sound("oh!2").apply(hats_shape).velocity(0.8).tag("countin").roomWet("0.1")
 export countin_arrange = x => x.orbit(7).filterWhen(t => t < 2)
 
 // Song  ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -257,7 +257,7 @@ export song_body = stack(
       guitar2.apply(guitar2_arrange) // .solo() .mute()
       , // Guitar 3
       guitar3.apply(guitar3_arrange) // .solo() .mute()
-    ).room(0.20).rsize(3.0).rlp(3500).compressor(-28, 2, 6, 0.003, 0.075)
+    ).roomWet(0.20).rsize(3.0).rlp(3500).compressor(-28, 2, 6, 0.003, 0.075)
     , // Bass
     bass.apply(bass_arrange) // .solo() .mute()
   ).analog(feel).transpose(transposition)
@@ -268,7 +268,7 @@ export song_body = stack(
     hats.apply(hats_arrange),     // .solo() .mute()
     clap.apply(clap_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
-  ).analog(feel / 2).room(0.20).rsize(3.0).rlp(8000).compressor(-28, 2, 6, 0.005, 0.15) // .mute()
+  ).analog(feel / 2).roomWet(0.20).rsize(3.0).rlp(8000).compressor(-28, 2, 6, 0.005, 0.15) // .mute()
 ).seed(timeOfDay.mul(60*60*60*24)).shuffle("<1!80 2!48 1!112 2!32>").swingBy(0.005, 4)
 
 export song = stack(

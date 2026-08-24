@@ -103,14 +103,14 @@ stack(
     ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.3).hpf(800)
     // High fifth
     ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.6).hpf(1000)
-  ).orbit(4).coarse(3).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
+  ).orbit(4).coarse(3).filterWhen(x => x >= wait * 3).body("tube").bodyWet(0.3)
 
   // Noise
   , sound("dust").gain(0.0200).vel(sine.range(0.500, 1.0).slow(21)).lpf(8000)
   , sound("pink").gain(0.0050).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000)
   , sound("brown").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
  
-).room(0.25, 7, 0.75).delay(0.2).delaytime(pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
+).roomWet(0.25, 7, 0.75).delayWet(0.2).delaytime(pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
 
 
 

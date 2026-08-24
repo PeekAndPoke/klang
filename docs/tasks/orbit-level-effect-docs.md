@@ -5,16 +5,19 @@ Captured 2026-08-17 (user, mid tutorial session — B6 "Layers" teaches exactly 
 ## The problem
 
 Whether a function is a **per-orbit (bus) effect** or a **per-voice setting** is load-bearing
-knowledge — `room()` on one pattern wets every pattern sharing the orbit — but today it lives
+knowledge — `roomWet()` on one pattern wets every pattern sharing the orbit — but today it lives
 only in one table inside `.claude/skills/klang-music-writing/ref/sprudel-reference.md`
 ("Effect scope" section). The user-facing docs (KDoc on the `lang_*.kt` DSL functions, and
 whatever the editor docs popup renders from them) don't carry it at all.
 
 Ground truth (from the skill ref — verify against the engine before publishing):
 
-- **PER-ORBIT (bus)**, shared by all voices on the orbit: `body`/`vowel`, `room`/`reverb`
-  (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delay` family, `phaser` family,
-  `compressor`, ducking.
+- **PER-ORBIT (bus)**, shared by all voices on the orbit: `body`/`vowel`, `roomWet`/`reverb`
+  (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` family, `compressor`, ducking.
+  ⚠ CORRECTION (C4.2 engine review, 2026-08-24): the `phaser` family is NOT purely per-orbit —
+  it runs on the per-voice strip pipeline (`StripPhaserRenderer`, in the default `modern`
+  preset) AND on the cylinder bus (`KatalystPhaserEffect`), both driven by the same knobs;
+  with `phaserFloor < 1` the dry is floored in both passes. Document it as "both", not bus.
 - **PER-VOICE**: filters (`lpf`/`hpf`/`bandf`/`notchf` + envs/qs), `distort`, `crush`,
   `coarse`, `gain`/`velocity`/`pan`/`postgain`, envelopes, `vibrato`/`tremolo`, `fm*`,
   pitch env, `unison`/`spread`, `analog`, `sound`/`n`/`note`.
@@ -30,9 +33,9 @@ review (2026-08-17, verified in audio_be):
   (`SendRenderer.kt`: only voices with `room > 0` are summed into the orbit's reverb send
   buffer). "Shared by all voices on the orbit" is wrong for the send — a dry voice on a
   wet orbit stays dry.
-- A bare `.room(x)` is **silent**: the reverb gates on `roomFade == null && roomSize < 0.01`
-  (`KatalystReverbEffect.kt`), and `roomSize` defaults to 0.0. Every real song pairs `room`
-  with `rsize`/`roomfade` or uses the colon form.
+- A bare `.roomWet(x)` is **silent**: the reverb gates on `roomFade == null && roomSize < 0.01`
+  (`KatalystReverbEffect.kt`), and `roomSize` defaults to 0.0. Every real song pairs `roomWet`
+  with `rsize`/`roomfade` (the colon form is gone since C0).
 - Orbit bus **settings** are first-writer-wins (`Cylinder.kt`: "ONE owner per orbit … route
   to a different orbit if you want different bus settings"). The skill ref's scope box says
   "last-writer-wins" — stale; Cylinder.kt explicitly replaced last-writer-wins with the lease.

@@ -553,6 +553,50 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   formula and ~1781/1799 say "crossfade" - the blend->wet rename must CORRECT the behaviour
   claims in the same pass, not merely rename. Helper landed as `WetDryMix` (one name for the
   law; the exponent picks the statistic) rather than the tentative `equalPowerMix`.
+- C4.2 review flags (round 1, 2026-08-24):
+  - ⚠ USER DECISION (parked): the phaser runs TWICE per note on the default `modern`
+    pipeline — per-voice `StripPhaserRenderer` AND the cylinder-bus `Phaser`, from the SAME
+    `Voice.Phaser` knobs. Pre-existing (at the additive floor-1 default the second pass only
+    adds more wet; that is the shipped sound and why the goldens hold). But with the new
+    `phaserFloor < 1` the dry is floored in BOTH passes (`dryC²`), so a full crossfade
+    (`phaserWet(1).phaserFloor(0)`) does NOT leave the phased signal alone. KDoc now states
+    the real path. Decide: which path OWNS the phaser (and should the two bypass gates —
+    strip `> 0`, katalyst `>= 0.01` — agree)? Also note: the C4 orbit-phaser retune numbers
+    in Decisions were computed single-application.
+  - ACCEPTED posture (like C0.2's inert colon strings): out-of-repo scripts calling the
+    ignitor builders POSITIONALLY with the deleted 2nd slot (`.phaser(0.3, 0.3)`,
+    `.shimmer(0.3)`) are silently reinterpreted (slot 2 is now center / feedback). Named
+    `blend =` fails loudly (guarded); positional cannot be detected. In-repo sites swept.
+  - ACCEPTED debt (accumulating since C6a/C0.1/C3): the strudel-compat suite's remaining
+    song cases feed `roomWet`/`delayWet`/... to the vendored strudel oracle, which cannot
+    compile them — those cases only run on GraalVM environments. The plan's answer stays
+    "cut non-structural cases from the compat suite"; do that cut as its own cleanup, not
+    inside a rename chunk.
+  - DEFERRED TO THE USER (deliberate, same as C1+C2's "build now, listen after"): the C4
+    ear retunes. Every song site in C4.2 is a pure RENAME (values kept), so the corpus ships
+    at the C4.1 level shift (Tetris body wet about -6.4 dB, Tetris orbit phaser -8.8 dB,
+    IrishLamentTechno -4.6 dB per the corrected p=2 numbers above) until the user's listening
+    pass moves the values UP by ear. Sites: Tetris bodyWet(0.2)/phaserWet(0.15),
+    IrishLamentTechno phaserWet(saw.range 0.3..0.6)/phaserWet(0.25), StrangerThings
+    vowelWet(0.40), GoldenCorpus phaserWet(0.15), plus every bare bodyWet/vowelWet user song.
+  - REJECTED in round 3 (reason recorded): mapping a `+Inf` floor to 1.0 instead of the
+    law's uniform non-finite -> 0.0. The law treats EVERY non-finite input (w or floor) the
+    same way; special-casing +Inf floor would make the coercion input-dependent for an input
+    that is only reachable through a runaway user expression. Raw engine, one rule.
+    (`WetDryMixSpec` pins +/-Inf floor -> 0.0.)
+- C4.2 decisions AS BUILT: (a) the ignitor floor knob is `dryFloor` (the plan's own rule:
+  `floor()` is the arithmetic round-down, one word one concept); (b) `room`/`delay` HEAD
+  functions renamed to `roomWet`/`delayWet` (their first slot IS the wet, and keeping
+  `room(x)` alongside `roomWet(x)` would be two names for one knob - the C6a disease); the
+  `room*`/`delay*` tails keep their names; (c) wet/dryFloor are NOT builder params on the
+  ignitor - `phaser(rate, center, sweep)` / `shimmer(feedback, tone, pitches)` plus the
+  typed knobs `.wet()`/`.dryFloor()` on the node (both doors), so the knob exists in exactly
+  one place; (d) NEW wire field `phaserFloor` (sprudel `phaserFloor()`, engine default 1.0 =
+  additive) reaches BOTH phaser paths; `IgnitorDsl.Phaser/Shimmer` gained `dryFloor` and
+  renamed `blend`->`wet` on the node (goldens carry no ignitor param names - byte-identical);
+  (e) sprudel `phd`/`phasdp` aliases stay, re-pointed at `phaserWet` (alias deletion is C6);
+  (f) sprudel has NO shimmer fields, so `shimmerWet` exists only as the ignitor door's
+  `.shimmer().wet()` until someone asks for a sprudel shimmer.
 - Songs: every `bodyMix`/`vowelMix` -> `bodyWet`/`vowelWet` is a RENAME PLUS an ear retune
   (+3 to +4 dB more resonator in the useful middle, see the Decisions section); the three orbit
   `phaserdepth` sites (`Tetris`, `IrishLamentTechno` x2) move +3.6 to +3.8 dB for the same

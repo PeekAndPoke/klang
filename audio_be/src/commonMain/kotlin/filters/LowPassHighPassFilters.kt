@@ -167,7 +167,7 @@ internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
  * below the floor anywhere). That floor is what lets the body emphasize its resonant modes
  * over a broadband bed instead of collapsing to a few isolated tones — the way a real
  * passive body behaves. A LOWER floor makes the body more audible at a
- * given mix (the resonances sit over less dry); a higher floor is subtler. `bodyMix` itself is
+ * given mix (the resonances sit over less dry); a higher floor is subtler. `bodyWet` (wire spelling: `bodyMix`) itself is
  * clamped to [0, 1] since C4 (the shared wet/dry law lives on that domain; the old raw
  * extension above 1 is a deleted capability - plan: Helper domain).
  * Tunable by ear.

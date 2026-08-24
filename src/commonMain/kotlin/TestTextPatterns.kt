@@ -38,8 +38,8 @@ object TestTextPatterns {
                     >`).sound("triangle").orbit(0)
                     .gain("0.3")
                     .fast(1)
-                    .room(0.01).rsize(3.0)
-                    .delay("0.25").delaytime(0.25).delayfeedback(0.75),
+                    .roomWet(0.01).rsize(3.0)
+                    .delayWet("0.25").delaytime(0.25).delayfeedback(0.75),
 
                     note(`<
                         [[e2 e3]*4]
@@ -52,12 +52,12 @@ object TestTextPatterns {
                         [[a1 a2]*4]
                     >`).sound("supersaw").orbit(1)
                     .pan(0.6).gain(0.6)
-                    .room(0.01).rsize(3.0),
+                    .roomWet(0.01).rsize(3.0),
 
                     sound("bd hh sd hh").orbit(2)
                     .pan(-0.7).gain(0.9)
-                    .room(0.01).rsize(3.0)
-                    .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
+                    .roomWet(0.01).rsize(3.0)
+                    .delayWet("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
                     .fast(2),
                 )
 
@@ -77,8 +77,8 @@ object TestTextPatterns {
                     >`).sound("triangle").orbit(0)
                     .gain("0.3")
                     .fast(0.5)
-                    .room(0.01).rsize(3.0)
-                    .delay("0.25").delaytime(0.25).delayfeedback(0.75),
+                    .roomWet(0.01).rsize(3.0)
+                    .delayWet("0.25").delaytime(0.25).delayfeedback(0.75),
 
                     note(`<
                         [[e2 e3]*4]
@@ -91,12 +91,12 @@ object TestTextPatterns {
                         [[a1 a2]*4]
                     >`).sound("supersaw").orbit(1)
                     .pan(0.6).gain(0.6)
-                    .room(0.01).rsize(3.0),
+                    .roomWet(0.01).rsize(3.0),
 
                     sound("bd hh sd hh").orbit(2)
                     .pan(-0.7).gain(0.8)
-                    .room(0.01).rsize(3.0)
-                    .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
+                    .roomWet(0.01).rsize(3.0)
+                    .delayWet("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
                     .fast(2),
                 )
             """.trimIndent()
@@ -155,7 +155,7 @@ object TestTextPatterns {
     val simpleDrumsDelay = """
         sound("bd hh sd oh")
         .gain(0.8)
-        .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
+        .delayWet("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
         .pan(sine.slow(8))
         .fast(2)
     """.trimIndent()
@@ -163,7 +163,7 @@ object TestTextPatterns {
     val simpleDrumsReverb = """
         sound("bd hh sd oh")
         .gain(0.8)
-        .room(0.01).rsize(3.0)
+        .roomWet(0.01).rsize(3.0)
         .pan(sine.slow(8))
         .fast(2)
     """.trimIndent()
@@ -212,8 +212,8 @@ object TestTextPatterns {
     val delayOffBeatDrums = """
         sound("bd hh sd oh")
          .gain(1.0)
-//         .delay("0.0 0.0 0.5 0.0")
-         .delay(0.5)
+//         .delayWet("0.0 0.0 0.5 0.0")
+         .delayWet(0.5)
          .delaytime(0.25)
          .delayfeedback(0.5)
         """.trimIndent()
@@ -224,7 +224,7 @@ object TestTextPatterns {
      */
     val delayDubTripletsDrums = """
         sound("bd hh sd oh")
-          .delay(0.6)
+          .delayWet(0.6)
           .delaytime(0.375)
           // High feedback for long tails
           .delayfeedback(0.7)         
@@ -236,7 +236,7 @@ object TestTextPatterns {
      */
     val delaySlapBackDrums = """
          sound("bd hh sd oh")
-          .delay(0.4)
+          .delayWet(0.4)
            // 50ms
           .delaytime(0.05)    
           // Low feedback
@@ -246,9 +246,9 @@ object TestTextPatterns {
     val twoCylinders = """
         stack(
           // Snare only delay on the drums
-          sound("bd hh sd oh").gain(0.7).delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5).orbit(0),
+          sound("bd hh sd oh").gain(0.7).delayWet("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5).orbit(0),
           // Full delay on the melody
-          note("c ~ d ~ e ~ f ~").delay("0.0").delaytime(0.25).orbit(1),
+          note("c ~ d ~ e ~ f ~").delayWet("0.0").delaytime(0.25).orbit(1),
         )
     """.trimIndent()
 
@@ -272,7 +272,7 @@ object TestTextPatterns {
 
     val coarseTest = """
          sound("[bd hh sd oh]*4")
-           .delay(0.4)
+           .delayWet(0.4)
            .delaytime(0.05)    
            .delayfeedback(0.2)
            .slow(2)
@@ -293,11 +293,11 @@ object TestTextPatterns {
         stack(        
           n("1 3 5 7 8 10 12 14").scale("C4:minor")
            .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
-           .orbit(0).room(0.01).rsize(10.0).sound("sine")
+           .orbit(0).roomWet(0.01).rsize(10.0).sound("sine")
            .slow(8).accelerate(3 / 12),
          n("8 10 12 14 1 3 5 7").scale("C4:minor")
            .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
-           .orbit(2).room(0.01).rsize(10.0).sound("sine")
+           .orbit(2).roomWet(0.01).rsize(10.0).sound("sine")
            .slow(8).accelerate(3 / 12),
         )
     """.trimIndent()

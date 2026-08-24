@@ -13,7 +13,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * example IS the B2 groove plus the B3 melody.
  *
  * Engine truth behind §§3–4 (verified in audio_be): the reverb
- * is per-orbit; `room` is a per-voice SEND into it, and a bare room() is
+ * is per-orbit; `roomWet` is a per-voice SEND into it, and a bare roomWet() is
  * silent — the gate needs roomsize (KatalystReverbEffect). Orbit bus settings
  * are first-writer-wins (Cylinder.kt), so the lesson only ever demos
  * uncontested configurations and teaches the engine's own craft rule — an
@@ -28,7 +28,7 @@ val layersTutorial = Tutorial(
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Patterns, TutorialTag.Mixing),
     teaches = listOf("stack", "orbit"),
-    previews = listOf("room", "rsize"),
+    previews = listOf("roomWet", "rsize"),
     sections = listOf(
         TutorialSection(
             heading = "Two lines at once",
@@ -78,7 +78,7 @@ val layersTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    Set the drums aside for a moment, just the melody. `room()` puts a sound in a room: **reverb**, the wash of reflections a space adds. It comes as a pair with `rsize()`, and both are borrowed from a Sound-track lesson still to come: `room()` sets how much of the sound goes into the room, `rsize()` how big that room is.
+                    Set the drums aside for a moment, just the melody. `roomWet()` puts a sound in a room: **reverb**, the wash of reflections a space adds. It comes as a pair with `rsize()`, and both are borrowed from a Sound-track lesson still to come: `roomWet()` sets how much of the sound goes into the room, `rsize()` how big that room is.
 
                     **Try it:** swap the `//` and press Update. Then, with the first line live, grow `rsize` to 8, and shrink it to 1.
 
@@ -87,7 +87,7 @@ val layersTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).room(0.4).rsize(4)    // room: how much goes in; rsize: how big it is
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).roomWet(0.4).rsize(4)    // roomWet: how much goes in; rsize: how big it is
                     // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5)                    // dry, swap to compare
                     """.trimIndent(),
                 ),
@@ -102,14 +102,14 @@ val layersTutorial = Tutorial(
 
                     `orbit()` picks the channel. Give the melody `orbit(1)` and its room settings go with it: channel 1's room, with only the melody playing into it. The drums keep channel 0 for themselves, dry and untouched.
 
-                    **Try it:** swap the `//` to hear the roomed mix against the dry one. Then move `.orbit(1).room(0.4).rsize(4)` over to the drum line instead: a wet beat under a dry melody is a real sound too. You choose who lives in the room.
+                    **Try it:** swap the `//` to hear the roomed mix against the dry one. Then move `.orbit(1).roomWet(0.4).rsize(4)` over to the drum line instead: a wet beat under a dry melody is a real sound too. You choose who lives in the room.
 
                     **Listen for:** dry drums under a wet lead. The kick and snare snap shut exactly as they did before the room existed, while every melody note rings out into its own space.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    stack(sound("bd ~ hh ~  ~ hh sd ~").gain(0.8), note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).orbit(1).room(0.4).rsize(4))    // wet lead on channel 1
+                    stack(sound("bd ~ hh ~  ~ hh sd ~").gain(0.8), note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).orbit(1).roomWet(0.4).rsize(4))    // wet lead on channel 1
                     // stack(sound("bd ~ hh ~  ~ hh sd ~").gain(0.8), note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5))                             // all dry, swap
                     """.trimIndent(),
                 ),
@@ -132,7 +132,7 @@ val layersTutorial = Tutorial(
                     stack(
                       sound("bd ~ hh ~  ~ hh sd ~").gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8"),             // the accented groove: channel 0, dry
                       note("a2 ~ ~ a2  ~ ~ e2 ~").sound("sine").gain(0.6),                                // new: the bass, on the kick, in the gap, then e2 under the snare
-                      note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).orbit(1).room(0.4).rsize(4)  // the lead: its own channel, its own room
+                      note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).orbit(1).roomWet(0.4).rsize(4)  // the lead: its own channel, its own room
                     )
                     """.trimIndent(),
                 ),

@@ -52,6 +52,24 @@ class SprudelVoiceDataSpec : StringSpec({
         viaMergeFrom shouldBe viaMerge
     }
 
+    "merge() completeness has an INDEPENDENT oracle for the phaser group (incl. phaserFloor)" {
+        // The parity row above compares mergeFrom against merge, but both flow through the
+        // SAME mergeSvdPhaser helper — a field dropped from the helper changes both sides
+        // identically and stays green. These rows pin the helper against the inputs.
+        val a = populatedVoiceData(0)
+        val b = populatedVoiceData(1000)
+        val merged = a.merge(b)
+        merged.phaserRate shouldBe b.phaserRate
+        merged.phaserDepth shouldBe b.phaserDepth
+        merged.phaserCenter shouldBe b.phaserCenter
+        merged.phaserSweep shouldBe b.phaserSweep
+        merged.phaserFloor shouldBe b.phaserFloor
+
+        // and the base side survives an empty over side (the `?: base` half)
+        val kept = a.merge(createSprudelVoiceData { })
+        kept.phaserFloor shouldBe a.phaserFloor
+    }
+
     "can create SprudelVoiceData with basic fields" {
         val data = createSprudelVoiceData {
             note = "c4"
@@ -317,7 +335,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         fmh = b + 21; fmAttack = b + 22; fmDecay = b + 23; fmSustain = b + 24; fmEnv = b + 25
         distort = b + 26; distortShape = "ds$seed"; distortOversample = seed + 27
         coarse = b + 28; coarseOversample = seed + 29; crush = b + 30; crushOversample = seed + 31
-        phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35
+        phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35; phaserFloor = b + 35.5
         tremoloSync = b + 36; tremoloDepth = b + 37; tremoloSkew = b + 38; tremoloPhase = b + 39
         tremoloShape = "ts$seed"
         duckCylinder = seed + 40; duckAttack = b + 41; duckDepth = b + 42

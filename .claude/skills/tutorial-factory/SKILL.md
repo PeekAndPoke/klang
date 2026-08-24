@@ -44,7 +44,7 @@ Run `/six-hats` with this topic:
 > Current difficulty spread: [list counts per difficulty].
 > Current topic spread: [list existing tags].
 > The tutorial should use ONLY these verified functions: note(), n(), sound(), s(), stack(), cat(), fastcat(),
-> slowcat(), silence, fast(), slow(), gain(), pan(), lpf(), hpf(), bandf(), delay(), delaytime(), delayfeedback(), room(),
+> slowcat(), silence, fast(), slow(), gain(), pan(), lpf(), hpf(), bandf(), delayWet(), delaytime(), delayfeedback(), roomWet(),
 > rsize(), scale(), transpose(), chord(), adsr(), attack(), decay(), sustain(), release(), legato(), every(),
 > superimpose(), jux(), scramble(), shuffle(), pick(), distort(), crush(), tremolo(), vibrato(), phaser(), sine, saw, tri,
 > square, brown, pink, supersaw, pure(), range(), bpm(), cps, arrange(), orbit(), spread()."

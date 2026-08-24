@@ -55,7 +55,7 @@ sharing one onset).
 **send** stage stops it *feeding* those resonators while their own high-Q state keeps ringing out.
 
 That is exactly the acoustic caricature we want, for free: **the string stops, the body does not.**
-Der Schmetterling already runs `.body("violin").bodyMix(0.3)`, so it benefits immediately.
+Der Schmetterling already runs `.body("violin").bodyWet(0.3)`, so it benefits immediately.
 
 ### Why the fade can be short
 

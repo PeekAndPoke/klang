@@ -83,7 +83,7 @@ object JsCompatTestData {
                 CM9#11 CM7#5 Cm6 Cm69 Cm^7 
                 C-M7 Cm^9 C-M9 Cm9 Cmadd9 
                 Cm11 Cm7b5 Cmb6 Cm#5
-            >`).voicing().room(0.5)
+            >`).voicing().roomWet(0.5)
         """.trimIndent()
         ),
         // Freq

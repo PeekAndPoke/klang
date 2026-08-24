@@ -258,7 +258,8 @@ class Voice(
     class Distort(val amount: Double, val shape: String = "soft", val oversample: Int = 0)
     class Crush(val amount: Double, val oversample: Int = 0)
     class Coarse(val amount: Double, val oversample: Int = 0, var lastCoarseValue: Double = 0.0, var coarseCounter: Double = 0.0)
-    class Phaser(val rate: Double, val depth: Double, val center: Double, val sweep: Double)
+    /** [floor] = minimum dry coefficient of the C4 wet/dry law; 1.0 (default) = purely additive. */
+    class Phaser(val rate: Double, val depth: Double, val center: Double, val sweep: Double, val floor: Double = 1.0)
     class Tremolo(
         val rate: Double, val depth: Double, val skew: Double, val phase: Double,
         val shape: String?, var currentPhase: Double = 0.0,

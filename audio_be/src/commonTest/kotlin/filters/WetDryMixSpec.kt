@@ -70,6 +70,12 @@ class WetDryMixSpec : StringSpec({
         WetDryMix.dryCoeff(Double.NaN, floor = 0.0, p = 2) shouldBe (1.0 plusOrMinus 1e-12)
         WetDryMix.wetCoeff(Double.NaN, p = 2) shouldBe (0.0 plusOrMinus 1e-12)
         WetDryMix.dryCoeff(0.5, floor = Double.NaN, p = 2) shouldBe (0.5 plusOrMinus 1e-12)
+        // +/-Inf floor falls to 0.0 like NaN — every door passes floor RAW, so this IS the
+        // one behaviour a runaway modulated floor gets on bus, strip and ignitor alike
+        WetDryMix.dryCoeff(0.9, floor = Double.POSITIVE_INFINITY, p = 2) shouldBe
+            (WetDryMix.dryCoeff(0.9, floor = 0.0, p = 2) plusOrMinus 1e-15)
+        WetDryMix.dryCoeff(0.9, floor = Double.NEGATIVE_INFINITY, p = 2) shouldBe
+            (WetDryMix.dryCoeff(0.9, floor = 0.0, p = 2) plusOrMinus 1e-15)
         // endpoints are exact: w = 0 is full dry / no wet, w = 1 is no dry (floor 0) / full wet
         WetDryMix.dryCoeff(0.0, floor = 0.0, p = 2) shouldBe 1.0
         WetDryMix.wetCoeff(0.0, p = 2) shouldBe 0.0

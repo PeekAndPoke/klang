@@ -380,26 +380,30 @@ fun Ignitor.coarse(amount: Double): Ignitor {
  *
  * @param rate LFO speed in Hz. 0.0 = static, 0.5 = slow sweep, 2.0 = moderate,
  *   5.0+ = fast. Typical range: 0.1–5.0. Default: no default (required).
- * @param blend Wet/dry mix amount. 0.0 = bypass, 0.5 = subtle, 1.0 = full effect.
- *   Typical range: 0.3–1.0. Default: no default (required).
+ * @param wet Wet/dry balance under the shared C4 law (correlated branch, p = 2):
+ *   0.0 = bit-exact bypass, 0.5 = equal mix, 1.0 = phased only. Typical range: 0.3–1.0.
  * @param center Center frequency of the notch sweep in Hz. Default: 1000.0.
  *   Clamped to [100, 18000]. Typical range: 500–4000.
  * @param sweep Modulation width in Hz — how far the notch sweeps from center.
  *   Default: 1000.0. Clamped to [100, 18000]. Typical range: 500–3000.
+ * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade);
+ *   1.0 makes the phaser purely additive like the orbit-side phaser.
  */
 fun Ignitor.phaser(
     rate: Ignitor,
-    blend: Ignitor,
+    wet: Ignitor,
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
-): Ignitor = PhaserIgnitor(this, rate, blend, center, sweep)
+    dryFloor: Ignitor = ParamIgnitor("dryFloor", 0.0),
+): Ignitor = PhaserIgnitor(this, rate, wet, center, sweep, dryFloor)
 
 private class PhaserIgnitor(
     private val upstream: Ignitor,
     private val rate: Ignitor,
-    private val blend: Ignitor,
+    private val wet: Ignitor,
     private val center: Ignitor,
     private val sweep: Ignitor,
+    private val dryFloor: Ignitor,
 ) : Ignitor {
     // Lazy-init: PhaserCore needs sampleRate at construction, but we only see
     // ctx.sampleRate on the first generate() call.
@@ -411,10 +415,10 @@ private class PhaserIgnitor(
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
 
-            val blendVal = Ignitors.readParam(blend, freqHz, ctx).coerceIn(0.0, 1.0)
+            val wetVal = Ignitors.readParam(wet, freqHz, ctx).coerceIn(0.0, 1.0)
             val end = ctx.offset + ctx.length
 
-            if (blendVal <= 0.0) {
+            if (wetVal <= 0.0) {
                 for (i in ctx.offset until end) {
                     buffer[i] = input[i]
                 }
@@ -431,12 +435,15 @@ private class PhaserIgnitor(
 
             // C4 (filter unification): the shared wet/dry law, correlated branch (p = 2) —
             // an allpass cascade is unit-magnitude and fully correlated, so amplitudes add.
-            val dryC = WetDryMix.dryCoeff(blendVal, floor = 0.0, p = 2)
-            val wetC = WetDryMix.wetCoeff(blendVal, p = 2)
+            // floor passed RAW: WetDryMix owns the domain coercion (incl. non-finite -> 0.0),
+            // so every door resolves a bad floor the SAME way (bus/strip store raw too)
+            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
+            val dryC = WetDryMix.dryCoeff(wetVal, floor = floorVal, p = 2)
+            val wetC = WetDryMix.wetCoeff(wetVal, p = 2)
             for (i in ctx.offset until end) {
                 val dry = input[i]
-                val wet = phaser.step(dry)
-                buffer[i] = dry * dryC + wet * wetC
+                val phased = phaser.step(dry) // local name: `wet` is the Ignitor property
+                buffer[i] = dry * dryC + phased * wetC
             }
         }
     }
@@ -446,22 +453,25 @@ private class PhaserIgnitor(
  * 4-stage all-pass cascade phaser (convenience overload with fixed values).
  *
  * @param rate LFO speed in Hz. Typical range: 0.1–5.0.
- * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default: 0.5.
+ * @param wet Wet/dry balance (shared C4 law, p = 2): 0.0 = bypass, 1.0 = phased only. Default: 0.5.
  * @param center Center frequency in Hz. Default: 1000.0. Clamped to [100, 18000].
  * @param sweep Modulation width in Hz. Default: 1000.0. Clamped to [100, 18000].
+ * @param dryFloor Minimum dry coefficient. Default: 0.0 (true crossfade).
  */
 fun Ignitor.phaser(
     rate: Double,
-    blend: Double = 0.5,
+    wet: Double = 0.5,
     center: Double = 1000.0,
     sweep: Double = 1000.0,
+    dryFloor: Double = 0.0,
 ): Ignitor {
-    if (blend <= 0.0) return this
+    if (wet <= 0.0) return this
     return phaser(
         ParamIgnitor("rate", rate),
-        ParamIgnitor("blend", blend),
+        ParamIgnitor("wet", wet),
         ParamIgnitor("center", center),
         ParamIgnitor("sweep", sweep),
+        ParamIgnitor("dryFloor", dryFloor),
     )
 }
 
@@ -544,9 +554,10 @@ fun Ignitor.tremolo(
  * Granular shimmer effect — short overlapping grains read back from a ring buffer at
  * pitched rates, with a feedback loop through a tone lowpass.
  *
- * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
+ * @param wet Wet/dry balance. 0.0 = bit-exact bypass regardless of feedback, 1.0 = cloud only.
  * Mix: the shared wet/dry law, equal-POWER branch (p = 1) — the pitch-shifted tail is
  * decorrelated from the dry, so powers add and the level holds across the knob.
+ * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade).
  * @param feedback Wet → grain-buffer feedback. 0.0 = single pass, 0.9 = long cascading tails.
  *   Hard-clamped to 0.95 for stability.
  * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
@@ -554,21 +565,23 @@ fun Ignitor.tremolo(
  *   list in round-robin order. Default: `[0, 7, 12]` (root + fifth + octave).
  */
 fun Ignitor.shimmer(
-    blend: Ignitor,
+    wet: Ignitor,
     feedback: Ignitor,
     tone: Ignitor,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
-): Ignitor = ShimmerIgnitor(this, blend, feedback, tone, pitches)
+    dryFloor: Ignitor = ParamIgnitor("dryFloor", 0.0),
+): Ignitor = ShimmerIgnitor(this, wet, feedback, tone, pitches, dryFloor)
 
 // NOTE: shimmer is WIP — internal grain bookkeeping may still change. Keep the
 // per-block logic readable; revisit perf rules (audio/ref/performance.md) once
 // the grain scheduler is finalised.
 private class ShimmerIgnitor(
     private val upstream: Ignitor,
-    private val blend: Ignitor,
+    private val wet: Ignitor,
     private val feedback: Ignitor,
     private val tone: Ignitor,
     pitches: List<Double>,
+    private val dryFloor: Ignitor,
 ) : Ignitor {
     /** True once the grain engine has produced state that a bypass must clear. */
     private var stateDirty = false
@@ -598,16 +611,16 @@ private class ShimmerIgnitor(
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
 
-            val blendVal = Ignitors.readParam(blend, freqHz, ctx).coerceIn(0.0, 1.0)
+            val wetVal = Ignitors.readParam(wet, freqHz, ctx).coerceIn(0.0, 1.0)
             val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
             val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
             val end = ctx.offset + ctx.length
 
             // C4: wet == 0 IS bypass, regardless of feedback — bit-identical passthrough is
             // the wet(0) contract. State is CLEARED on bypass entry (decided in the C4.1
-            // review): a modulated blend dipping to 0 must not freeze a stale tail and
+            // review): a modulated wet dipping to 0 must not freeze a stale tail and
             // resurrect it later, detached from wall time.
-            if (blendVal <= 0.0) {
+            if (wetVal <= 0.0) {
                 if (stateDirty) {
                     ring.fill(0.0)
                     for (g in 0 until maxGrains) grainActive[g] = false
@@ -632,8 +645,10 @@ private class ShimmerIgnitor(
 
             // C4 (filter unification): shared wet/dry law, DEcorrelated branch (p = 1) — the
             // pitch-shifted grain tail carries no phase relation to the dry, powers add.
-            val dryC = WetDryMix.dryCoeff(blendVal, floor = 0.0, p = 1)
-            val wetC = WetDryMix.wetCoeff(blendVal, p = 1)
+            // floor passed RAW: WetDryMix owns the domain coercion (see the phaser above)
+            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
+            val dryC = WetDryMix.dryCoeff(wetVal, floor = floorVal, p = 1)
+            val wetC = WetDryMix.wetCoeff(wetVal, p = 1)
 
             for (i in ctx.offset until end) {
                 val dry = input[i]
@@ -668,7 +683,7 @@ private class ShimmerIgnitor(
                 }
                 samplesUntilNextGrain--
 
-                var wet = 0.0
+                var wetSample = 0.0 // local name: `wet` is the Ignitor property
                 for (g in 0 until maxGrains) {
                     if (!grainActive[g]) continue
 
@@ -680,7 +695,7 @@ private class ShimmerIgnitor(
 
                     val phase = grainElapsed[g] * invGrainTotal
                     val win = 0.5 - 0.5 * cos(TWO_PI * phase)
-                    wet += sample * win
+                    wetSample += sample * win
 
                     var nextPos = pos + grainRate[g]
                     while (nextPos >= ringSize) nextPos -= ringSize
@@ -689,10 +704,10 @@ private class ShimmerIgnitor(
                     if (grainElapsed[g] >= grainTotal[g]) grainActive[g] = false
                 }
 
-                lpfState = (lpfOneMinusA * wet + lpfA * lpfState).flushDenormal()
+                lpfState = (lpfOneMinusA * wetSample + lpfA * lpfState).flushDenormal()
                 feedbackTap = lpfState
 
-                buffer[i] = (dry * dryC + wet * wetC)
+                buffer[i] = (dry * dryC + wetSample * wetC)
             }
         }
     }
@@ -701,23 +716,27 @@ private class ShimmerIgnitor(
 /**
  * Granular shimmer (convenience overload with fixed values).
  *
- * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default: 0.5.
+ * @param wet Wet/dry balance: 0.0 = bypass (regardless of feedback — the C4 contract),
+ *   1.0 = cloud only. Default: 0.5.
  * @param feedback Cascade feedback. 0.0 = single pass, 0.9 = long tails. Default: 0.5.
  * @param tone Feedback-path LPF cutoff in Hz. Default: 4000.0.
  * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]`.
+ * @param dryFloor Minimum dry coefficient. Default: 0.0 (true crossfade).
  */
 fun Ignitor.shimmer(
-    blend: Double = 0.5,
+    wet: Double = 0.5,
     feedback: Double = 0.5,
     tone: Double = 4000.0,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
+    dryFloor: Double = 0.0,
 ): Ignitor {
-    if (blend <= 0.0 && feedback <= 0.0) return this
+    if (wet <= 0.0) return this
     return shimmer(
-        ParamIgnitor("blend", blend),
+        ParamIgnitor("wet", wet),
         ParamIgnitor("feedback", feedback),
         ParamIgnitor("tone", tone),
         pitches,
+        ParamIgnitor("dryFloor", dryFloor),
     )
 }
 

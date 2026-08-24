@@ -255,7 +255,7 @@ class OrbitBusPipelineSpec : StringSpec({
     "updateFromVoice configures phaser parameters" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            phaser = Voice.Phaser(rate = 2.0, depth = 0.5, center = 800.0, sweep = 600.0),
+            phaser = Voice.Phaser(rate = 2.0, depth = 0.5, center = 800.0, sweep = 600.0, floor = 0.25),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -263,6 +263,18 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.phaser.phaser.depth shouldBe 0.5
         cylinder.phaser.phaser.center shouldBe 800.0
         cylinder.phaser.phaser.sweep shouldBe 600.0
+        // C4.2: the floor must be FORWARDED (a dropped line falls back to additive 1.0
+        // and phaserFloor() becomes a silent no-op on the bus path)
+        cylinder.phaser.phaser.floor shouldBe 0.25
+    }
+
+    "updateFromVoice: an absent phaser floor arrives as the additive default 1.0" {
+        val cylinder = createOrbit()
+        val voice = VoiceTestHelpers.createSynthVoice(
+            phaser = Voice.Phaser(rate = 2.0, depth = 0.5, center = 800.0, sweep = 600.0),
+        )
+        cylinder.updateFromVoice(voice, blockStart = 0.0)
+        cylinder.phaser.phaser.floor shouldBe 1.0
     }
 
     "updateFromVoice configures ducking" {

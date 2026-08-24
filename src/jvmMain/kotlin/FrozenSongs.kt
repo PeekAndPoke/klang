@@ -18,7 +18,7 @@ package io.peekandpoke.klang
  * SYNTAX-ONLY migrations are permitted when the DSL itself changes shape (renames,
  * colon-compound -> per-param), because a frozen song that no longer parses guards
  * nothing. Values must never change; each such migration keeps the sound identical.
- * Applied so far: C6a filter-alias renames, C0 per-param argument split.
+ * Applied so far: C6a filter-alias renames, C0 per-param argument split, C3 lpe semitone re-expression, C4 wet renames (room->roomWet, delay->delayWet, phaserdepth->phaserWet).
  *
  * Source at snapshot time:
  *  - Der Schmetterling  → builtinsongs/DerSchmetterling.kt  (rpm 34.5)
@@ -44,7 +44,7 @@ stack(                                                                          
     .release("<0.04!16 0.11!16>").vibrato(8).vibmod(0.01)                                                                           //   //.         //  //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                        // //.              // //.
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.10).pan(0.15).superimpose(pan(0.85)))           //.                      //.
-    .mute("<1!32 0!192>").analog(feel).pipeline("pedal").room(0.3, 5, 0.1)
+    .mute("<1!32 0!192>").analog(feel).pipeline("pedal").roomWet(0.3, 5, 0.1)
   , // Guitar 1
   n(`<[7 [4@4 2 -1] 2 1 [0 -1 -3 -1] [0 -3] -2 <[-1 5@3] [5 6@3] [[4 5] 8@3] [[3 4] 3@3]>]!4
       [[4@2 [2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
@@ -55,7 +55,7 @@ stack(                                                                          
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.029).lpadsr(0.005, 1.1, 0.0, 0.015)    
     .hpf("<550!16 360!16 550!16 800!16>").lpf("3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4)).lpe(8.1).lpq(2.0)
     .coarse(2).coarseos(4).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))
-    .pipeline("pedal").body("wood").bodyMix(0.3)
+    .pipeline("pedal").body("wood").bodyWet(0.3)
   , // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
     .orbit(1).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
@@ -67,7 +67,7 @@ stack(                                                                          
       x => x.pan(0.7),
       x => x.postgain(0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
-    ).superimpose(hpf(3500).lpf(6200).postgain(0.03)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("wood").bodyMix(0.30)
+    ).superimpose(hpf(3500).lpf(6200).postgain(0.03)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("wood").bodyWet(0.30)
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.98 0.99 0.98".fast(2))  // . mute()
     .orbit(4).scale("e1:minor").sound("saw").gain(0.5).distort(0.05, "soft", 2).postgain(0.20).clip(0.65)
@@ -83,7 +83,7 @@ stack(                                                                          
     .pan(0.515).late(0.0005).orbit(5).gain(0.33).hpf(800).lpf("11500".add(perlin.mul(300))).adsr(0.005, 0.15, 0.8, 0.2), // . mute()
   sound("pink!8").orbit(6).gain(0.08).hpf(8000).pan(sine.range(0.25, 0.75).slow(3)).adsr(0.007, 0.3, 0.0, 0.05) //  .solo(),
   // Master
-).room(0.10, 8, 0.12).rlp(12500).seed(timeOfDay.mul(60*60*24))
+).roomWet(0.10, 8, 0.12).rlp(12500).seed(timeOfDay.mul(60*60*24))
  .compressor(-6, 2, 5, 0.02, 0.05)
 
 
@@ -144,7 +144,7 @@ stack(
     .superimpose(
       x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.15, 0.8).slow(32)).clip(0.79)
-    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.75).body("glass").vowel("i a e".slow(12)).vowelMix(0.2)
+    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.75).body("glass").vowel("i a e".slow(12)).vowelWet(0.2)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0)).vibrato("0.51".add(perlin.div(10))).vibmod(0.05)
         .crush("1.85".add(berlin2.mul(0.5).slow(4))).crushos(2).lpf(5.5 * 440).hpf(300).postgain(0.45)
@@ -164,7 +164,7 @@ stack(
     .orbit(0).gain(0.12).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(perlin.range(440, 440 * 4).segment(16).slow(48)).bpq(sine.range(0.25, 5.0).slow(48).early(12))
   ,
-).delay(0.2, feedback = 0.5).delaytime(pure(1/8).div(cps)).room(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
+).delayWet(0.2, feedback = 0.5).delaytime(pure(1/8).div(cps)).roomWet(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
 
 
 

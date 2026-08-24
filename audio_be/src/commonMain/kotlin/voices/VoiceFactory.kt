@@ -178,6 +178,7 @@ class VoiceFactory(
             depth = data.phaserDepth ?: 0.0,
             center = data.phaserCenter ?: 1000.0,
             sweep = data.phaserSweep ?: 1000.0,
+            floor = data.phaserFloor ?: 1.0,
         )
 
         // Tremolo

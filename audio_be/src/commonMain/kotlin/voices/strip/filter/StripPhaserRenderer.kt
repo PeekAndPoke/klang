@@ -13,13 +13,19 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 /**
  * Per-voice phaser — thin [BlockRenderer] wrapper around a single mono [PhaserCore].
  *
- * **Output**: additive — `output = dry + wet · depth`. Matches the cylinder-bus
- * Phaser and the strudel-side `phaserDepth` semantic where `depth` adds an
- * effect on top of the source. The Ignitor-DSL phaser uses crossfade with a
- * differently-named `blend` parameter; they share `PhaserCore` for the
- * per-sample math but differ in output mixing.
+ * **Output**: the shared C4 wet/dry law, correlated branch (p = 2), with a [floor]ed dry —
+ * MUST stay identical to the cylinder-bus Phaser (one knob, one law). At the default
+ * `floor = 1.0` it is purely additive (`dry + wet · sin²(depth·π/2)`), the `phaserDepth`
+ * semantic where the knob adds an effect on top of the source; `phaserFloor < 1` turns the
+ * same knob into a crossfade. The Ignitor-DSL phaser is the same law at `dryFloor = 0.0`.
  *
- * `depth = 0` bypasses entirely.
+ * ⚠ On the default `modern` pipeline this renderer is the FIRST of two phaser passes per
+ * note - the cylinder-bus [io.peekandpoke.klang.audio_be.effects.Phaser] phases the summed
+ * mix again from the same knobs, so with `phaserFloor < 1` the dry is floored twice
+ * (`dryC²`); see the bus Phaser KDoc and the C4.2 flag list. The two gates also differ
+ * (this one runs at `depth > 0`, the bus katalyst at `depth >= 0.01`) - pre-existing.
+ *
+ * `depth = 0` bypasses entirely (exact at every floor: `max(floor, cos(0)) = 1`).
  */
 class StripPhaserRenderer(
     rate: Double,
@@ -27,6 +33,7 @@ class StripPhaserRenderer(
     center: Double,
     sweep: Double,
     sampleRate: Int,
+    private val floor: Double = 1.0,
 ) : BlockRenderer {
     private val core = PhaserCore(PhaserCore.DEFAULT_STAGES, sampleRate).apply {
         this.rate = rate
@@ -40,8 +47,9 @@ class StripPhaserRenderer(
         if (depth <= 0.0) return
 
         val buf = ctx.audioBuffer
-        // C4 (filter unification): shared wet/dry law, additive floor-1 semantics, p = 2 —
-        // MUST stay identical to the cylinder-bus Phaser (one knob, one law).
+        // C4 (filter unification): shared wet/dry law, p = 2, floored dry — MUST stay
+        // identical to the cylinder-bus Phaser (one knob, one law).
+        val dryC = WetDryMix.dryCoeff(depth, floor = floor, p = 2)
         val wetC = WetDryMix.wetCoeff(depth, p = 2)
 
         // Control-rate: compute α at block boundaries once.
@@ -51,7 +59,7 @@ class StripPhaserRenderer(
             val idx = ctx.offset + i
             val dry = buf[idx]
             val wet = core.step(dry)
-            buf[idx] = dry + wet * wetC
+            buf[idx] = dry * dryC + wet * wetC
         }
     }
 }

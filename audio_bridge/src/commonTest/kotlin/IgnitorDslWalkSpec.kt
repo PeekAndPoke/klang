@@ -107,7 +107,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("OptimizerHint", IgnitorDsl.OptimizerHint(inner = m(0), on = 7), 1),
         Triple("Param", IgnitorDsl.Param("p", 1.0, description = "hard"), 0),
         Triple("PerlinNoise", IgnitorDsl.PerlinNoise(rate = m(0), octaves = m(1), persistence = m(2)), 3),
-        Triple("Phaser", IgnitorDsl.Phaser(inner = m(0), rate = m(1), blend = m(2), center = m(3), sweep = m(4)), 5),
+        Triple("Phaser", IgnitorDsl.Phaser(inner = m(0), rate = m(1), wet = m(2), center = m(3), sweep = m(4), dryFloor = m(5)), 6),
         Triple("PinkNoise", IgnitorDsl.PinkNoise(), 0),
         Triple("PitchEnvelope", IgnitorDsl.PitchEnvelope(
                 inner = m(0),
@@ -137,7 +137,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("Round", IgnitorDsl.Round(inner = m(0)), 1),
         Triple("Sawtooth", IgnitorDsl.Sawtooth(freq = m(0), analog = m(1), resetSamples = 7.5, shapeMax = 7.5), 2),
         Triple("Select", IgnitorDsl.Select(cond = m(0), whenTrue = m(1), whenFalse = m(2)), 3),
-        Triple("Shimmer", IgnitorDsl.Shimmer(inner = m(0), blend = m(1), feedback = m(2), tone = m(3), pitches = listOf(3.0, 7.0)), 4),
+        Triple("Shimmer", IgnitorDsl.Shimmer(inner = m(0), wet = m(1), feedback = m(2), tone = m(3), dryFloor = m(4), pitches = listOf(3.0, 7.0)), 5),
         Triple("Sign", IgnitorDsl.Sign(inner = m(0)), 1),
         Triple("Silence", IgnitorDsl.Silence, 0),
         Triple("Sine", IgnitorDsl.Sine(freq = m(0), analog = m(1)), 2),

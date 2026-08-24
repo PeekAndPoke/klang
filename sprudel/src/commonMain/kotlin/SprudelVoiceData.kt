@@ -541,6 +541,12 @@ data class SprudelVoiceData(
             if (v != null || phaser != null) phaserOrNew().phaserSweep = v
         }
 
+    var phaserFloor: Double?
+        get() = phaser?.phaserFloor
+        set(v) {
+            if (v != null || phaser != null) phaserOrNew().phaserFloor = v
+        }
+
     var tremoloSync: Double?
         get() = tremolo?.tremoloSync
         set(v) {
@@ -1039,6 +1045,7 @@ data class SprudelVoiceData(
             phaserDepth = phaserDepth,
             phaserCenter = phaserCenter,
             phaserSweep = phaserSweep,
+            phaserFloor = phaserFloor,
             tremoloSync = tremoloSync,
             tremoloDepth = tremoloDepth,
             tremoloSkew = tremoloSkew,

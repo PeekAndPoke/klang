@@ -99,10 +99,10 @@ All tools are registered in `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`.
 
 | DSL Function                      | Editor                       | Sequence Editor                      | Format          |
 |-----------------------------------|------------------------------|--------------------------------------|-----------------|
-| `delay()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | `time:feedback` |
+| `delayWet()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | per-param `(wet, time, feedback)` |
 | `delaytime()`                     | `SprudelDelayTimeEditor`     | `SprudelDelayTimeSequenceEditor`     | single value    |
 | `delayfeedback()` / `delayfb()`   | `SprudelDelayFeedbackEditor` | `SprudelDelayFeedbackSequenceEditor` | single value    |
-| `reverb()` / `room()`             | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
+| `reverb()` / `roomWet()`             | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
 | `roomsize()` / `rsize()` / `sz()` | `SprudelRoomSizeEditor`      | `SprudelRoomSizeSequenceEditor`      | single value    |
 
 ## Low Pass Filter

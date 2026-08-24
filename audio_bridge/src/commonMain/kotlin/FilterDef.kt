@@ -39,11 +39,12 @@ sealed class FilterDef {
     data class Formant(
         val bands: List<Band>,
         /**
-         * Dry/wet amount for the formant bank, blended the same way as [Body.mix] (additive
-         * "floor + peaks" via the shared mix component). `0` = dry source, higher = more vowel
-         * colour on top. The formant bank is level-tamed before this blend so the broadband dry
-         * stays audible between formants (a vowel is a source *shaped by* formants, not replaced
-         * by them).
+         * Wet/dry balance for the formant bank, blended the same way as [Body.mix]: the shared
+         * C4 wet/dry law, correlated branch, with a floored dry (`VOWEL_FLOOR`). The mix lives
+         * on [0, 1] (values above 1 behave as 1). `0` = dry source, `1` = formants at full
+         * level over the floored dry. The formant bank is level-tamed before this blend so the
+         * broadband dry stays audible between formants (a vowel is a source *shaped by*
+         * formants, not replaced by them).
          */
         val mix: Double,
         /**

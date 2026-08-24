@@ -1668,7 +1668,7 @@ private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").orbit(2).room(0.8).roomsize(4)  // melodic line on orbit 2 with reverb
+ * note("c3 e3").orbit(2).roomWet(0.8).roomsize(4)  // melodic line on orbit 2 with reverb
  * ```
  *
  * @param index The orbit index to route events to.
@@ -1728,7 +1728,7 @@ fun PatternMapperFn.orbit(index: PatternLike? = null, callInfo: CallInfo? = null
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").o(2).room(0.8)          // melodic line on orbit 2 with reverb
+ * note("c3 e3").o(2).roomWet(0.8)          // melodic line on orbit 2 with reverb
  * ```
  *
  * @param index The orbit index to route events to.

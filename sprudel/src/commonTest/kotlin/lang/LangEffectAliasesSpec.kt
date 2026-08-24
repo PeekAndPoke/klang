@@ -70,8 +70,8 @@ class LangEffectAliasesSpec : StringSpec({
         events[1].data.roomSize shouldBe 0.9
     }
 
-    "roomsize() aliases can be chained with room()" {
-        val p = note("c3").room("0.5").sz("0.9")
+    "roomsize() aliases can be chained with roomWet()" {
+        val p = note("c3").roomWet("0.5").sz("0.9")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -80,7 +80,7 @@ class LangEffectAliasesSpec : StringSpec({
     }
 
     "roomsize() aliases work in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").room(0.5).sz(0.9)""")
+        val p = SprudelPattern.compile("""note("c3").roomWet(0.5).sz(0.9)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

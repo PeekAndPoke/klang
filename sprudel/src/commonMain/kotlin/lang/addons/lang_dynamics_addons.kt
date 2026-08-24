@@ -26,7 +26,7 @@ import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
  * (called "orbit" in Strudel/Tidal Cycles). Each cylinder has its own effect pipeline (Katalyst).
  *
  * ```KlangScript(Playable)
- * note("c3 e3").cylinder(2).room(0.8).roomsize(4)  // melodic line on cylinder 2 with reverb
+ * note("c3 e3").cylinder(2).roomWet(0.8).roomsize(4)  // melodic line on cylinder 2 with reverb
  * ```
  *
  * @param index The cylinder index to route events to.

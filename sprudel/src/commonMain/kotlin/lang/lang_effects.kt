@@ -198,7 +198,7 @@ fun distort(amount: PatternLike? = null, shape: PatternLike? = null, oversample:
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, room(0.3).distort(0.8))  // room + distortion every 4th cycle
+ * note("c3*4").firstOf(4, roomWet(0.3).distort(0.8))  // room + distortion every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -299,7 +299,7 @@ fun dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: Pa
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, room(0.3).dist(0.8))  // room + distortion every 4th cycle
+ * note("c3*4").firstOf(4, roomWet(0.3).dist(0.8))  // room + distortion every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -923,7 +923,7 @@ fun coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null):
 fun PatternMapperFn.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.coarseOversampling(factor, callInfo) }
 
-// -- room() -----------------------------------------------------------------------------------------------------------
+// -- roomWet() -----------------------------------------------------------------------------------------------------------
 
 private val roomMutation = voiceSetter {
     room = it?.toString()?.toDoubleOrNull() ?: room
@@ -944,53 +944,56 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 }
 
 /**
- * Sets the reverb wet/dry mix for this pattern (0 = dry, 1 = full wet).
+ * Sets the reverb SEND amount for this pattern — reverb is a send, not a crossfade: the dry
+ * signal reaches the mix untouched at full level, and [wet] only scales how much of the voice
+ * feeds the orbit's shared reverb return (0 = no reverb, 1 = full send). That is why there is
+ * no `roomFloor`: a send has nothing to floor.
  *
  * Use with `roomsize` to control the reverb tail length, and `orbit` to send
  * multiple patterns to separate reverb buses.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room mix.
+ * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the send amount.
  *
- * **Compound form** — `room("mix:roomSize:roomFade:roomLp:roomDim")` sets several at once. Mind the
+ * **Compound form** — `roomWet(wet, size, fade, lowpass, dim)` sets several at once. Mind the
  * scales, they are not the same:
  *
  * | slot | param | scale |
  * |---|---|---|
- * | 1 | mix | 0..1 |
+ * | 1 | wet | 0..1 |
  * | 2 | `roomsize` | **~0..10** (3 ≈ 1 s tail, 5 ≈ 1.4 s, 10 ≈ 12.5 s) |
  * | 3 | `roomfade` | **0..1** — *overrides* slot 2; not a time |
  * | 4 | `roomlp` | Hz |
  * | 5 | `roomdim` | currently unused by the engine |
  *
- * So `room(0.3, 5, 0.1)` is mix 0.3 with a **0.1** tail — the `5` is inert, because slot 3 wins.
- * The master bus takes the same values as `MasterFx.reverb().wet(0.3).roomFade(0.1)`.
+ * So `roomWet(0.3, 5, 0.1)` is send 0.3 with a **0.1** tail — the `5` is inert, because slot 3
+ * wins. The master bus takes the same values as `MasterFx.reverb().wet(0.3).roomFade(0.1)`.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").clip(0.5).s("sine").room(0.5)   // 50% reverb
+ * note("c3 e3 g3").clip(0.5).s("sine").roomWet(0.5)   // 50% reverb send
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").clip(0.5).room("<0 0.3 0.6 0.9>").roomsize(4)   // increasing wet mix
+ * note("c3*4").clip(0.5).roomWet("<0 0.3 0.6 0.9>").roomsize(4)   // increasing send
  * ```
  *
  * ```KlangScript(Playable)
- * seq("0 0.5 1.0").room()   // reinterpret values as room mix
+ * seq("0 0.5 1.0").roomWet()   // reinterpret values as the reverb send
  * ```
  *
- * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
+ * @param wet The reverb send amount (0–1). Omit to reinterpret the pattern's values.
  * @param size Room size (~0–10). Omit to leave it unchanged.
  * @param fade Tail override (0–1), wins over size. Omit to leave it unchanged.
  * @param lowpass Lowpass on the reverb tail in Hz. Omit to leave it unchanged.
  * @param dim Currently unused by the engine.
- * @param-tool amount SprudelReverbEditor, SprudelReverbSequenceEditor
- * @return A new pattern with reverb wet/dry mix applied.
+ * @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
+ * @return A new pattern with the reverb send applied.
  * @category effects
  * @tags room, reverb, wet, mix, space
  */
 @KlangScript.Function
-fun SprudelPattern.room(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
-    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
-    var p = if (amount != null || !(size != null || fade != null || lowpass != null || dim != null)) {
-        applyRoom(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.roomWet(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch wet: reinterpret runs only on a fully bare call.
+    var p = if (wet != null || !(size != null || fade != null || lowpass != null || dim != null)) {
+        applyRoom(this, listOfNotNull(wet).asSprudelDslArgs(callInfo))
     } else {
         this
     }
@@ -1002,61 +1005,61 @@ fun SprudelPattern.room(amount: PatternLike? = null, size: PatternLike? = null, 
 }
 
 /**
- * Parses this string as a pattern and sets the reverb wet/dry mix.
+ * Parses this string as a pattern and sets the reverb send (see [SprudelPattern.roomWet]).
  *
- * When [amount] is omitted, the string's numeric values are reinterpreted as room mix.
+ * When [wet] is omitted, the string's numeric values are reinterpreted as the send amount.
  *
- * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
- * @return A new pattern with reverb wet/dry mix applied.
+ * @param wet The reverb send amount (0–1). Omit to reinterpret the pattern's values.
+ * @return A new pattern with the reverb send applied.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".room(0.5).note().clip(0.5)    // 50% reverb on bass notes
+ * "c3 e3 g3".roomWet(0.5).note().clip(0.5)    // 50% reverb send on bass notes
  * ```
  */
 @KlangScript.Function
-fun String.room(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).room(amount, size, fade, lowpass, dim, callInfo)
+fun String.roomWet(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomWet(wet, size, fade, lowpass, dim, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the reverb wet/dry mix.
+ * Returns a [PatternMapperFn] that sets the reverb send (see [SprudelPattern.roomWet]).
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room mix.
+ * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the send amount.
  *
- * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
- * @return A [PatternMapperFn] that sets the reverb wet/dry mix.
+ * @param wet The reverb send amount (0–1). Omit to reinterpret the pattern's values.
+ * @return A [PatternMapperFn] that sets the reverb send.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").apply(room(0.5)).clip(0.5)     // 50% reverb via mapper
+ * note("c3 e3 g3").apply(roomWet(0.5)).clip(0.5)     // 50% reverb send via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.9)).clip(0.5)      // heavy reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.9)).clip(0.5)      // heavy reverb every 4th cycle
  * ```
  *
  * @category effects
  * @tags room, reverb, wet, mix, space
  */
 @KlangScript.Function
-fun room(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.room(amount, size, fade, lowpass, dim, callInfo) }
+fun roomWet(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomWet(wet, size, fade, lowpass, dim, callInfo) }
 
 /**
- * Creates a chained [PatternMapperFn] that sets the reverb wet/dry mix after the previous mapper.
+ * Creates a chained [PatternMapperFn] that sets the reverb send after the previous mapper.
  *
- * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
- * @return A new [PatternMapperFn] chaining this reverb mix after the previous mapper.
+ * @param wet The reverb send amount (0–1). Omit to reinterpret the pattern's values.
+ * @return A new [PatternMapperFn] chaining this reverb send after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(roomsize(4).room(0.5))     // set room size then wet mix
+ * note("c3 e3").apply(roomsize(4).roomWet(0.5))     // set room size then the send
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, coarse(4).room(0.8))     // lo-fi with heavy reverb every 4th cycle
+ * note("c3*4").every(4, coarse(4).roomWet(0.8))     // lo-fi with heavy reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.room(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.room(amount, size, fade, lowpass, dim, callInfo) }
+fun PatternMapperFn.roomWet(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomWet(wet, size, fade, lowpass, dim, callInfo) }
 
 // -- roomsize() / rsize() / sz() / size() -----------------------------------------------------------------------------
 
@@ -1078,7 +1081,7 @@ private fun applyRoomSize(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @return A new pattern with room size applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").clip(0.5).room(0.5).roomsize(4)   // long reverb tail
+ * note("c3 e3").clip(0.5).roomWet(0.5).roomsize(4)   // long reverb tail
  * ```
  *
  * ```KlangScript(Playable)
@@ -1108,7 +1111,7 @@ fun SprudelPattern.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = n
  * @return A new pattern with room size applied.
  *
  * ```KlangScript(Playable)
- * "c3 e3".roomsize(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
+ * "c3 e3".roomsize(4).roomWet(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
 @KlangScript.Function
@@ -1147,11 +1150,11 @@ fun roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
  * @return A new [PatternMapperFn] chaining this room size after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.5).roomsize(4))   // set wet mix then room size
+ * note("c3 e3").apply(roomWet(0.5).roomsize(4))   // set wet mix then room size
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).roomsize(8))  // big reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).roomsize(8))  // big reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1165,7 +1168,7 @@ fun PatternMapperFn.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = 
  * @return A new pattern with room size applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").clip(0.5).room(0.5).rsize(4)   // long reverb tail
+ * note("c3 e3").clip(0.5).roomWet(0.5).rsize(4)   // long reverb tail
  * ```
  *
  * @param-tool amount SprudelRoomSizeEditor, SprudelRoomSizeSequenceEditor
@@ -1183,7 +1186,7 @@ fun SprudelPattern.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  *
  * ```KlangScript(Playable)
- * "c3 e3".rsize(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
+ * "c3 e3".rsize(4).roomWet(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
 @KlangScript.Function
@@ -1214,11 +1217,11 @@ fun rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * @return A new [PatternMapperFn] chaining this room size after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.5).rsize(4))   // set wet mix then room size
+ * note("c3 e3").apply(roomWet(0.5).rsize(4))   // set wet mix then room size
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).rsize(8))  // big reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).rsize(8))  // big reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1232,7 +1235,7 @@ fun PatternMapperFn.rsize(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * @return A new pattern with room size applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").clip(0.5).room(0.5).sz(4)   // long reverb tail
+ * note("c3 e3").clip(0.5).roomWet(0.5).sz(4)   // long reverb tail
  * ```
  *
  * @param-tool amount SprudelRoomSizeEditor, SprudelRoomSizeSequenceEditor
@@ -1250,7 +1253,7 @@ fun SprudelPattern.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): 
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  *
  * ```KlangScript(Playable)
- * "c3 e3".sz(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
+ * "c3 e3".sz(4).roomWet(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
 @KlangScript.Function
@@ -1281,11 +1284,11 @@ fun sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn
  * @return A new [PatternMapperFn] chaining this room size after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.5).sz(4))   // set wet mix then room size
+ * note("c3 e3").apply(roomWet(0.5).sz(4))   // set wet mix then room size
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).sz(8))  // big reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).sz(8))  // big reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1299,7 +1302,7 @@ fun PatternMapperFn.sz(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * @return A new pattern with room size applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").clip(0.5).room(0.5).size(4)   // long reverb tail
+ * note("c3 e3").clip(0.5).roomWet(0.5).size(4)   // long reverb tail
  * ```
  *
  * @alias roomsize, rsize, sz
@@ -1316,7 +1319,7 @@ fun SprudelPattern.size(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  *
  * ```KlangScript(Playable)
- * "c3 e3".size(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
+ * "c3 e3".size(4).roomWet(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
 @KlangScript.Function
@@ -1347,11 +1350,11 @@ fun size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * @return A new [PatternMapperFn] chaining this room size after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.5).size(4))   // set wet mix then room size
+ * note("c3 e3").apply(roomWet(0.5).size(4))   // set wet mix then room size
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).size(8))  // big reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).size(8))  // big reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1382,7 +1385,7 @@ private fun applyRoomFade(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @return A new pattern with the reverb fade time applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").room(0.6).roomsize(8).roomfade(0.1)   // roomfade wins: a short tail
+ * note("c3 e3").roomWet(0.6).roomsize(8).roomfade(0.1)   // roomfade wins: a short tail
  * ```
  *
  * ```KlangScript(Playable)
@@ -1411,7 +1414,7 @@ fun SprudelPattern.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nul
  *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  *
  * ```KlangScript(Playable)
- * "c3 e3".roomfade(0.1).room(0.6).note()   // short tail on string pattern
+ * "c3 e3".roomfade(0.1).roomWet(0.6).note()   // short tail on string pattern
  * ```
  */
 @KlangScript.Function
@@ -1430,7 +1433,7 @@ fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @return A [PatternMapperFn] that sets the reverb tail override (0..1).
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(roomfade(0.1)).room(0.6)   // short tail via mapper
+ * note("c3 e3").apply(roomfade(0.1)).roomWet(0.6)   // short tail via mapper
  * ```
  *
  * ```KlangScript(Playable)
@@ -1453,11 +1456,11 @@ fun roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * @return A new [PatternMapperFn] chaining this tail override after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.6).roomfade(0.1))   // wet mix then tail
+ * note("c3 e3").apply(roomWet(0.6).roomfade(0.1))   // wet mix then tail
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).roomfade(0.6))  // big reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).roomfade(0.6))  // big reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1478,7 +1481,7 @@ fun PatternMapperFn.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nu
  * @return A new pattern with the reverb fade time applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").room(0.6).rsize(8).rfade(0.1)   // rfade wins: a short tail
+ * note("c3 e3").roomWet(0.6).rsize(8).rfade(0.1)   // rfade wins: a short tail
  * ```
  *
  * ```KlangScript(Playable)
@@ -1503,7 +1506,7 @@ fun SprudelPattern.rfade(time: PatternLike? = null, callInfo: CallInfo? = null):
  *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
  *
  * ```KlangScript(Playable)
- * "c3 e3".rfade(0.1).room(0.6).note()   // short tail on string pattern
+ * "c3 e3".rfade(0.1).roomWet(0.6).note()   // short tail on string pattern
  * ```
  */
 @KlangScript.Function
@@ -1517,7 +1520,7 @@ fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @return A [PatternMapperFn] that sets the reverb tail override (0..1).
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(rfade(0.1)).room(0.6)   // 2-second fade via mapper
+ * note("c3 e3").apply(rfade(0.1)).roomWet(0.6)   // 2-second fade via mapper
  * ```
  *
  * ```KlangScript(Playable)
@@ -1540,11 +1543,11 @@ fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * @return A new [PatternMapperFn] chaining this tail override after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.6).rfade(0.1))   // wet mix then fade time
+ * note("c3 e3").apply(roomWet(0.6).rfade(0.1))   // wet mix then fade time
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).rfade(0.1))  // big reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).rfade(0.1))  // big reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1571,7 +1574,7 @@ private fun applyRoomLp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @return A new pattern with the reverb lowpass frequency applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").room(0.6).roomlp(4000)           // dark reverb tail
+ * note("c3 e3").roomWet(0.6).roomlp(4000)           // dark reverb tail
  * ```
  *
  * ```KlangScript(Playable)
@@ -1599,7 +1602,7 @@ fun SprudelPattern.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null)
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  *
  * ```KlangScript(Playable)
- * "c3 e3".roomlp(4000).room(0.6).note()   // dark reverb on string pattern
+ * "c3 e3".roomlp(4000).roomWet(0.6).note()   // dark reverb on string pattern
  * ```
  */
 @KlangScript.Function
@@ -1617,7 +1620,7 @@ fun String.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @return A [PatternMapperFn] that sets the reverb lowpass frequency.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(roomlp(4000)).room(0.6)   // dark reverb via mapper
+ * note("c3 e3").apply(roomlp(4000)).roomWet(0.6)   // dark reverb via mapper
  * ```
  *
  * ```KlangScript(Playable)
@@ -1639,11 +1642,11 @@ fun roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * @return A new [PatternMapperFn] chaining this lowpass frequency after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.6).roomlp(4000))   // wet mix then dark reverb
+ * note("c3 e3").apply(roomWet(0.6).roomlp(4000))   // wet mix then dark reverb
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).roomlp(1000))  // very dark reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).roomlp(1000))  // very dark reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1660,7 +1663,7 @@ fun PatternMapperFn.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null
  * @return A new pattern with the reverb lowpass frequency applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").room(0.6).rlp(4000)           // dark reverb tail
+ * note("c3 e3").roomWet(0.6).rlp(4000)           // dark reverb tail
  * ```
  *
  * ```KlangScript(Playable)
@@ -1684,7 +1687,7 @@ fun SprudelPattern.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): S
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  *
  * ```KlangScript(Playable)
- * "c3 e3".rlp(4000).room(0.6).note()   // dark reverb on string pattern
+ * "c3 e3".rlp(4000).roomWet(0.6).note()   // dark reverb on string pattern
  * ```
  */
 @KlangScript.Function
@@ -1701,7 +1704,7 @@ fun String.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @return A [PatternMapperFn] that sets the reverb lowpass frequency.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(rlp(4000)).room(0.6)   // dark reverb via mapper
+ * note("c3 e3").apply(rlp(4000)).roomWet(0.6)   // dark reverb via mapper
  * ```
  *
  * ```KlangScript(Playable)
@@ -1723,11 +1726,11 @@ fun rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * @return A new [PatternMapperFn] chaining this lowpass frequency after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.6).rlp(4000))   // wet mix then dark reverb
+ * note("c3 e3").apply(roomWet(0.6).rlp(4000))   // wet mix then dark reverb
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).rlp(1000))  // very dark reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).rlp(1000))  // very dark reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1753,7 +1756,7 @@ private fun applyRoomDim(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @return A new pattern with the reverb -60 dB frequency applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").room(0.6).roomdim(500)   // very dark, dim reverb
+ * note("c3 e3").roomWet(0.6).roomdim(500)   // very dark, dim reverb
  * ```
  *
  * ```KlangScript(Playable)
@@ -1780,7 +1783,7 @@ fun SprudelPattern.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  *
  * ```KlangScript(Playable)
- * "c3 e3".roomdim(500).room(0.6).note()   // very dark reverb on string pattern
+ * "c3 e3".roomdim(500).roomWet(0.6).note()   // very dark reverb on string pattern
  * ```
  */
 @KlangScript.Function
@@ -1797,7 +1800,7 @@ fun String.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @return A [PatternMapperFn] that sets the reverb -60 dB frequency.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(roomdim(500)).room(0.6)   // very dark reverb via mapper
+ * note("c3 e3").apply(roomdim(500)).roomWet(0.6)   // very dark reverb via mapper
  * ```
  *
  * ```KlangScript(Playable)
@@ -1818,11 +1821,11 @@ fun roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMappe
  * @return A new [PatternMapperFn] chaining this frequency after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.6).roomdim(500))   // wet mix then dim frequency
+ * note("c3 e3").apply(roomWet(0.6).roomdim(500))   // wet mix then dim frequency
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).roomdim(200))  // very dim reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).roomdim(200))  // very dim reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1838,7 +1841,7 @@ fun PatternMapperFn.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = nul
  * @return A new pattern with the reverb -60 dB frequency applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").room(0.6).rdim(500)   // very dark, dim reverb
+ * note("c3 e3").roomWet(0.6).rdim(500)   // very dark, dim reverb
  * ```
  *
  * ```KlangScript(Playable)
@@ -1865,7 +1868,7 @@ fun SprudelPattern.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): 
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  *
  * ```KlangScript(Playable)
- * "c3 e3".rdim(500).room(0.6).note()   // very dark reverb on string pattern
+ * "c3 e3".rdim(500).roomWet(0.6).note()   // very dark reverb on string pattern
  * ```
  */
 @KlangScript.Function
@@ -1879,7 +1882,7 @@ fun String.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @return A [PatternMapperFn] that sets the reverb -60 dB frequency.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(rdim(500)).room(0.6)   // very dark reverb via mapper
+ * note("c3 e3").apply(rdim(500)).roomWet(0.6)   // very dark reverb via mapper
  * ```
  *
  * @alias roomdim
@@ -1897,11 +1900,11 @@ fun rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn
  * @return A new [PatternMapperFn] chaining this frequency after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.6).rdim(500))   // wet mix then dim frequency
+ * note("c3 e3").apply(roomWet(0.6).rdim(500))   // wet mix then dim frequency
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).rdim(200))  // very dim reverb every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).rdim(200))  // very dim reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -1987,11 +1990,11 @@ fun iresponse(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = 
  * @return A new [PatternMapperFn] chaining this impulse response after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.5).iresponse("church"))   // room then IR reverb
+ * note("c3 e3").apply(roomWet(0.5).iresponse("church"))   // room then IR reverb
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).iresponse("hall"))   // hall IR every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).iresponse("hall"))   // hall IR every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -2056,17 +2059,17 @@ fun ir(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> 
  * @return A new [PatternMapperFn] chaining this impulse response after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(room(0.5).ir("church"))   // room then IR reverb
+ * note("c3 e3").apply(roomWet(0.5).ir("church"))   // room then IR reverb
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, room(0.8).ir("hall"))   // hall IR every 4th cycle
+ * note("c3*4").every(4, roomWet(0.8).ir("hall"))   // hall IR every 4th cycle
  * ```
  */
 @KlangScript.Function
 fun PatternMapperFn.ir(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = this.chain { p -> p.iresponse(name, callInfo) }
 
-// -- delay() ----------------------------------------------------------------------------------------------------------
+// -- delayWet() ----------------------------------------------------------------------------------------------------------
 
 private val delayMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
@@ -2078,43 +2081,46 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 }
 
 /**
- * Sets the delay effect for this pattern.
+ * Sets the delay SEND amount for this pattern — delay, like reverb, is a send, not a
+ * crossfade: the dry signal reaches the mix untouched at full level, and [wet] only scales
+ * how much of the voice feeds the orbit's shared delay line (0 = no delay, 1 = full send).
+ * That is why there is no `delayFloor`: a send has nothing to floor.
  *
- * Takes the wet/dry mix plus optional time and feedback parameters.
+ * Takes the send amount plus optional time and feedback parameters.
  * Each parameter is independent and patternable; omitted parameters keep their previous values.
  *
- * - **wet**: wet/dry mix (0–1)
+ * - **wet**: send amount (0–1)
  * - **time**: delay interval in seconds
  * - **feedback**: feedback amount (0–1), higher = more repeats
  *
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as delay mix.
+ * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the send amount.
  *
- * @param amount The delay wet/dry mix (0–1).
+ * @param wet The delay send amount (0–1).
  * @param time Delay time in seconds. Omit to leave it unchanged.
  * @param feedback Feedback amount (0–1). Omit to leave it unchanged.
  * @return A new pattern with the delay applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").delay(0.4)                         // 40% delay mix
+ * note("c3 e3").delayWet(0.4)                         // 40% delay send
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").delay(0.5, 0.25, 0.6)               // wet=0.5, time=0.25s, feedback=0.6
+ * note("c3*4").delayWet(0.5, 0.25, 0.6)               // wet=0.5, time=0.25s, feedback=0.6
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").delay("<0.3 0.6>", "<0.125 0.25>", "<~ 0.8>")   // alternating delay per cycle
+ * note("c3*4").delayWet("<0.3 0.6>", "<0.125 0.25>", "<~ 0.8>")   // alternating delay per cycle
  * ```
  *
- * @param-tool amount SprudelDelayEditor, SprudelDelaySequenceEditor
+ * @param-tool wet SprudelDelayEditor, SprudelDelaySequenceEditor
  * @category effects
  * @tags delay, echo, wet, mix, delaytime, delayfeedback
  */
 @KlangScript.Function
-fun SprudelPattern.delay(amount: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
-    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
-    var p = if (amount != null || !(time != null || feedback != null)) {
-        applyDelay(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.delayWet(wet: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch wet: reinterpret runs only on a fully bare call.
+    var p = if (wet != null || !(time != null || feedback != null)) {
+        applyDelay(this, listOfNotNull(wet).asSprudelDslArgs(callInfo))
     } else {
         this
     }
@@ -2124,66 +2130,66 @@ fun SprudelPattern.delay(amount: PatternLike? = null, time: PatternLike? = null,
 }
 
 /**
- * Parses this string as a pattern and sets the delay wet/dry mix.
+ * Parses this string as a pattern and sets the delay send (see [SprudelPattern.delayWet]).
  *
- * When [amount] is omitted, the string's numeric values are reinterpreted as delay mix.
+ * When [wet] is omitted, the string's numeric values are reinterpreted as the send amount.
  *
- * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as delay mix.
+ * @param wet The delay send amount (0–1). Omit to reinterpret the pattern's values.
  * @param time Delay time in seconds. Omit to leave it unchanged.
  * @param feedback Feedback amount (0–1). Omit to leave it unchanged.
  *
  * ```KlangScript(Playable)
- * "c3 e3".delay(0.4).note()   // 40% delay mix on string pattern
+ * "c3 e3".delayWet(0.4).note()   // 40% delay send on string pattern
  * ```
  */
 @KlangScript.Function
-fun String.delay(amount: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).delay(amount, time, feedback, callInfo)
+fun String.delayWet(wet: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delayWet(wet, time, feedback, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the delay wet/dry mix.
+ * Returns a [PatternMapperFn] that sets the delay send (see [SprudelPattern.delayWet]).
  *
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as delay mix.
+ * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the send amount.
  *
- * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as delay mix.
+ * @param wet The delay send amount (0–1). Omit to reinterpret the pattern's values.
  * @param time Delay time in seconds. Omit to leave it unchanged.
  * @param feedback Feedback amount (0–1). Omit to leave it unchanged.
- * @return A [PatternMapperFn] that sets the delay mix.
+ * @return A [PatternMapperFn] that sets the delay send.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(delay(0.4))   // 40% delay mix via mapper
+ * note("c3 e3").apply(delayWet(0.4))   // 40% delay send via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delay(0.8))   // heavy delay every 4th cycle
+ * note("c3*4").every(4, delayWet(0.8))   // heavy delay every 4th cycle
  * ```
  *
  * @category effects
  * @tags delay, echo, wet, mix
  */
 @KlangScript.Function
-fun delay(amount: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delay(amount, time, feedback, callInfo) }
+fun delayWet(wet: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delayWet(wet, time, feedback, callInfo) }
 
 /**
- * Creates a chained [PatternMapperFn] that sets the delay wet/dry mix after the previous mapper.
+ * Creates a chained [PatternMapperFn] that sets the delay send after the previous mapper.
  *
- * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as delay mix.
+ * @param wet The delay send amount (0–1). Omit to reinterpret the pattern's values.
  * @param time Delay time in seconds. Omit to leave it unchanged.
  * @param feedback Feedback amount (0–1). Omit to leave it unchanged.
- * @return A new [PatternMapperFn] chaining this delay mix after the previous mapper.
+ * @return A new [PatternMapperFn] chaining this delay send after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(delaytime(0.25).delay(0.5))   // set delay time then mix
+ * note("c3 e3").apply(delaytime(0.25).delayWet(0.5))   // set delay time then the send
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delaytime(0.25).delay(0.8))   // delay every 4th cycle
+ * note("c3*4").every(4, delaytime(0.25).delayWet(0.8))   // delay every 4th cycle
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.delay(amount: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.delay(amount, time, feedback, callInfo) }
+fun PatternMapperFn.delayWet(wet: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delayWet(wet, time, feedback, callInfo) }
 
 // -- delaytime() ------------------------------------------------------------------------------------------------------
 
@@ -2204,7 +2210,7 @@ private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @return A new pattern with the delay time applied.
  *
  * ```KlangScript(Playable)
- * note("c3").delay(0.5).delaytime(0.375)   // dotted-eighth delay
+ * note("c3").delayWet(0.5).delaytime(0.375)   // dotted-eighth delay
  * ```
  *
  * ```KlangScript(Playable)
@@ -2231,7 +2237,7 @@ fun SprudelPattern.delaytime(time: PatternLike? = null, callInfo: CallInfo? = nu
  * @param time The delay interval in seconds. Omit to reinterpret the pattern's values as delay time.
  *
  * ```KlangScript(Playable)
- * "c3 e3".delaytime(0.25).delay(0.5).note()   // quarter-note delay on string pattern
+ * "c3 e3".delaytime(0.25).delayWet(0.5).note()   // quarter-note delay on string pattern
  * ```
  */
 @KlangScript.Function
@@ -2268,11 +2274,11 @@ fun delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
  * @return A new [PatternMapperFn] chaining this delay time after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(delay(0.5).delaytime(0.25))   // delay mix then time
+ * note("c3 e3").apply(delayWet(0.5).delaytime(0.25))   // delay mix then time
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delay(0.8).delaytime(0.125))   // delay every 4th cycle
+ * note("c3*4").every(4, delayWet(0.8).delaytime(0.125))   // delay every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -2298,7 +2304,7 @@ private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<
  * @return A new pattern with the delay feedback applied.
  *
  * ```KlangScript(Playable)
- * note("c3").delay(0.4).delaytime(0.25).delayfeedback(0.6)   // 3-4 echoes
+ * note("c3").delayWet(0.4).delaytime(0.25).delayfeedback(0.6)   // 3-4 echoes
  * ```
  *
  * ```KlangScript(Playable)
@@ -2326,7 +2332,7 @@ fun SprudelPattern.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  *
  * ```KlangScript(Playable)
- * "c3 e3".delayfeedback(0.6).delay(0.4).note()   // echoing string pattern
+ * "c3 e3".delayfeedback(0.6).delayWet(0.4).note()   // echoing string pattern
  * ```
  */
 @KlangScript.Function
@@ -2365,11 +2371,11 @@ fun delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): Patt
  * @return A new [PatternMapperFn] chaining this feedback after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(delay(0.5).delayfeedback(0.6))   // mix then feedback
+ * note("c3 e3").apply(delayWet(0.5).delayfeedback(0.6))   // mix then feedback
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delay(0.8).delayfeedback(0.9))   // echoing delay every 4th cycle
+ * note("c3*4").every(4, delayWet(0.8).delayfeedback(0.9))   // echoing delay every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -2385,7 +2391,7 @@ fun PatternMapperFn.delayfeedback(amount: PatternLike? = null, callInfo: CallInf
  * @return A new pattern with the delay feedback applied.
  *
  * ```KlangScript(Playable)
- * note("c3").delay(0.4).delaytime(0.25).delayfb(0.6)   // 3-4 echoes
+ * note("c3").delayWet(0.4).delaytime(0.25).delayfb(0.6)   // 3-4 echoes
  * ```
  *
  * ```KlangScript(Playable)
@@ -2413,7 +2419,7 @@ fun SprudelPattern.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = nu
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  *
  * ```KlangScript(Playable)
- * "c3 e3".delayfb(0.6).delay(0.4).note()   // echoing string pattern
+ * "c3 e3".delayfb(0.6).delayWet(0.4).note()   // echoing string pattern
  * ```
  */
 @KlangScript.Function
@@ -2445,11 +2451,11 @@ fun delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
  * @return A new [PatternMapperFn] chaining this feedback after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(delay(0.5).delayfb(0.6))   // mix then feedback
+ * note("c3 e3").apply(delayWet(0.5).delayfb(0.6))   // mix then feedback
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delay(0.8).delayfb(0.9))   // echoing delay every 4th cycle
+ * note("c3*4").every(4, delayWet(0.8).delayfb(0.9))   // echoing delay every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -2465,7 +2471,7 @@ fun PatternMapperFn.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = n
  * @return A new pattern with the delay feedback applied.
  *
  * ```KlangScript(Playable)
- * note("c3").delay(0.4).delaytime(0.25).dfb(0.6)   // 3-4 echoes
+ * note("c3").delayWet(0.4).delaytime(0.25).dfb(0.6)   // 3-4 echoes
  * ```
  *
  * ```KlangScript(Playable)
@@ -2492,7 +2498,7 @@ fun SprudelPattern.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  *
  * ```KlangScript(Playable)
- * "c3 e3".dfb(0.6).delay(0.4).note()   // echoing string pattern
+ * "c3 e3".dfb(0.6).delayWet(0.4).note()   // echoing string pattern
  * ```
  */
 @KlangScript.Function
@@ -2524,11 +2530,11 @@ fun dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * @return A new [PatternMapperFn] chaining this feedback after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(delay(0.5).dfb(0.6))   // mix then feedback
+ * note("c3 e3").apply(delayWet(0.5).dfb(0.6))   // mix then feedback
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delay(0.8).dfb(0.9))   // echoing delay every 4th cycle
+ * note("c3*4").every(4, delayWet(0.8).dfb(0.9))   // echoing delay every 4th cycle
  * ```
  */
 @KlangScript.Function
@@ -2550,15 +2556,16 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * Sets the phaser LFO rate in Hz for this pattern.
  *
  * A phaser creates a sweeping comb-filter effect by modulating a series of all-pass filters.
- * Higher rate values produce faster sweeping. Use with `phaserdepth` and `phasercenter`.
+ * Higher rate values produce faster sweeping. Use with `phaserWet` and `phasercenter`.
  *
- * Takes the LFO rate plus optional depth, center, and sweep parameters.
+ * Takes the LFO rate plus optional wet, center, and sweep parameters.
  * Each parameter is independent and patternable; omitted parameters keep their previous values.
  *
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
  * @param rate The phaser LFO rate in Hz.
- * @param depth Depth (0–1). Omit to leave it unchanged.
+ * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
+ *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
  * @param center Centre frequency in Hz. Omit to leave it unchanged.
  * @param sweep Sweep range in Hz. Omit to leave it unchanged.
  *   Omit to reinterpret the pattern's values as phaser rate.
@@ -2578,7 +2585,7 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("sawtooth").phaser(2.0, 0.6)   // rate + depth only
+ * note("c3 e3 g3").s("sawtooth").phaser(2.0, 0.6)   // rate + wet only
  * ```
  *
  * @alias ph
@@ -2586,14 +2593,14 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @tags phaser, ph, phase, sweep, modulation
  */
 @KlangScript.Function
-fun SprudelPattern.phaser(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.phaser(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     // A tail-only call must not touch rate: reinterpret runs only on a fully bare call.
-    var p = if (rate != null || !(depth != null || center != null || sweep != null)) {
+    var p = if (rate != null || !(wet != null || center != null || sweep != null)) {
         applyPhaser(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
     } else {
         this
     }
-    if (depth != null) p = p.phaserdepth(depth, callInfo?.forParam(1))
+    if (wet != null) p = p.phaserWet(wet, callInfo?.forParam(1))
     if (center != null) p = p.phasercenter(center, callInfo?.forParam(2))
     if (sweep != null) p = p.phasersweep(sweep, callInfo?.forParam(3))
     return p
@@ -2605,7 +2612,8 @@ fun SprudelPattern.phaser(rate: PatternLike? = null, depth: PatternLike? = null,
  * When [rate] is omitted, the string's numeric values are reinterpreted as the phaser rate.
  *
  * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
- * @param depth Depth (0–1). Omit to leave it unchanged.
+ * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
+ *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
  * @param center Centre frequency in Hz. Omit to leave it unchanged.
  * @param sweep Sweep range in Hz. Omit to leave it unchanged.
  *
@@ -2614,8 +2622,8 @@ fun SprudelPattern.phaser(rate: PatternLike? = null, depth: PatternLike? = null,
  * ```
  */
 @KlangScript.Function
-fun String.phaser(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, depth, center, sweep, callInfo)
+fun String.phaser(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, wet, center, sweep, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate.
@@ -2624,7 +2632,8 @@ fun String.phaser(rate: PatternLike? = null, depth: PatternLike? = null, center:
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
  * @param rate The phaser LFO rate in Hz.
- * @param depth Depth (0–1). Omit to leave it unchanged.
+ * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
+ *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
  * @param center Centre frequency in Hz. Omit to leave it unchanged.
  * @param sweep Sweep range in Hz. Omit to leave it unchanged.
  *   Omit to reinterpret the pattern's values as phaser rate.
@@ -2644,28 +2653,29 @@ fun String.phaser(rate: PatternLike? = null, depth: PatternLike? = null, center:
  * @tags phaser, ph, phase, sweep, modulation
  */
 @KlangScript.Function
-fun phaser(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, depth, center, sweep, callInfo) }
+fun phaser(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, wet, center, sweep, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate after the previous mapper.
  *
  * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
- * @param depth Depth (0–1). Omit to leave it unchanged.
+ * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
+ *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
  * @param center Centre frequency in Hz. Omit to leave it unchanged.
  * @param sweep Sweep range in Hz. Omit to leave it unchanged.
  * @return A new [PatternMapperFn] chaining this phaser rate after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(phaserdepth(0.8).phaser(0.5))   // depth then rate
+ * note("c3 e3").apply(phaserWet(0.8).phaser(0.5))   // wet then rate
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, phaserdepth(1.0).phaser(4.0))   // full-depth fast phaser
+ * note("c3*4").every(4, phaserWet(1.0).phaser(4.0))   // full-wet fast phaser
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.phaser(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaser(rate, depth, center, sweep, callInfo) }
+fun PatternMapperFn.phaser(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaser(rate, wet, center, sweep, callInfo) }
 
 /**
  * Alias for [phaser]. Sets the phaser LFO rate in Hz for this pattern.
@@ -2673,7 +2683,8 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null, depth: PatternLike? = null
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
  * @param rate The phaser LFO rate in Hz.
- * @param depth Depth (0–1). Omit to leave it unchanged.
+ * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
+ *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
  * @param center Centre frequency in Hz. Omit to leave it unchanged.
  * @param sweep Sweep range in Hz. Omit to leave it unchanged.
  *   Omit to reinterpret the pattern's values as phaser rate.
@@ -2697,8 +2708,8 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null, depth: PatternLike? = null
  * @tags ph, phaser, phase, sweep, modulation
  */
 @KlangScript.Function
-fun SprudelPattern.ph(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.phaser(rate, depth, center, sweep, callInfo)
+fun SprudelPattern.ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.phaser(rate, wet, center, sweep, callInfo)
 
 /**
  * Alias for [phaser]. Parses this string as a pattern and sets the phaser LFO rate.
@@ -2706,7 +2717,8 @@ fun SprudelPattern.ph(rate: PatternLike? = null, depth: PatternLike? = null, cen
  * When [rate] is omitted, the string's numeric values are reinterpreted as the phaser rate.
  *
  * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
- * @param depth Depth (0–1). Omit to leave it unchanged.
+ * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
+ *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
  * @param center Centre frequency in Hz. Omit to leave it unchanged.
  * @param sweep Sweep range in Hz. Omit to leave it unchanged.
  *
@@ -2715,14 +2727,15 @@ fun SprudelPattern.ph(rate: PatternLike? = null, depth: PatternLike? = null, cen
  * ```
  */
 @KlangScript.Function
-fun String.ph(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, depth, center, sweep, callInfo)
+fun String.ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, wet, center, sweep, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate. Alias for [phaser].
  *
  * @param rate The phaser LFO rate in Hz.
- * @param depth Depth (0–1). Omit to leave it unchanged.
+ * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
+ *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
  * @param center Centre frequency in Hz. Omit to leave it unchanged.
  * @param sweep Sweep range in Hz. Omit to leave it unchanged.
  *   Omit to reinterpret the pattern's values as phaser rate.
@@ -2738,131 +2751,132 @@ fun String.ph(rate: PatternLike? = null, depth: PatternLike? = null, center: Pat
  * @tags ph, phaser, phase, sweep, modulation
  */
 @KlangScript.Function
-fun ph(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, depth, center, sweep, callInfo) }
+fun ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, wet, center, sweep, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate (alias for phaser) after the previous mapper.
  *
  * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
- * @param depth Depth (0–1). Omit to leave it unchanged.
+ * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
+ *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
  * @param center Centre frequency in Hz. Omit to leave it unchanged.
  * @param sweep Sweep range in Hz. Omit to leave it unchanged.
  * @return A new [PatternMapperFn] chaining this phaser rate after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(phaserdepth(0.8).ph(0.5))   // depth then rate
+ * note("c3 e3").apply(phaserWet(0.8).ph(0.5))   // wet then rate
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, phaserdepth(1.0).ph(4.0))   // full-depth fast phaser
+ * note("c3*4").every(4, phaserWet(1.0).ph(4.0))   // full-wet fast phaser
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.ph(rate: PatternLike? = null, depth: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaser(rate, depth, center, sweep, callInfo) }
+fun PatternMapperFn.ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaser(rate, wet, center, sweep, callInfo) }
 
-// -- phaserdepth() / phd() / phasdp() ---------------------------------------------------------------------------------
+// -- phaserWet() / phd() / phasdp() ------------------------------------------------------------------------------------
 
-private val phaserDepthMutation = voiceSetter { phaserDepth = it?.asDoubleOrNull() }
+private val phaserWetMutation = voiceSetter { phaserDepth = it?.asDoubleOrNull() }
 
-private fun applyPhaserDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args, phaserDepthMutation)
+private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, phaserWetMutation)
 }
 
 /**
- * Sets the phaser depth (modulation intensity) for this pattern.
+ * Sets the phaser wet amount for this pattern — the shared wet knob (C4). On the orbit
+ * phaser the dry stays untouched by default (`phaserFloor` = 1), so the wet ADDS the swept
+ * notch signal on top: higher values produce a more pronounced sweep. Lower [phaserFloor]
+ * to turn the same knob into a crossfade.
+ * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the wet amount.
  *
- * Controls how strongly the phaser sweeps across frequencies. Higher values produce
- * a more pronounced notch-filter sweep effect.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as phaser depth.
- *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A new pattern with the phaser depth applied.
+ * @param wet The wet amount (0–1). Omit to reinterpret the pattern's values.
+ * @return A new pattern with the phaser wet applied.
  *
  * ```KlangScript(Playable)
- * note("c3*4").phaser(0.5).phaserdepth(0.8)   // deep phaser sweep
+ * note("c3*4").phaser(0.5).phaserWet(0.8)   // deep phaser sweep
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").phaserdepth("<0.2 0.5 0.8 1.0>")   // increasing phaser depth
+ * note("c3*4").phaserWet("<0.2 0.5 0.8 1.0>")   // increasing phaser wet
  * ```
  *
  * ```KlangScript(Playable)
- * seq("0.2 0.5 0.8 1.0").phaserdepth()   // reinterpret values as phaser depth
+ * seq("0.2 0.5 0.8 1.0").phaserWet()   // reinterpret values as the phaser wet
  * ```
  *
  * @alias phd, phasdp
  * @category effects
- * @tags phaserdepth, phd, phasdp, phaser, depth, modulation
+ * @tags phaserwet, phaserdepth, phd, phasdp, phaser, depth, modulation, wet
  */
 @KlangScript.Function
-fun SprudelPattern.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPhaserDepth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPhaserWet(this, listOfNotNull(wet).asSprudelDslArgs(callInfo))
 
 /**
- * Parses this string as a pattern and sets the phaser depth.
+ * Parses this string as a pattern and sets the phaser wet amount.
  *
- * When [amount] is omitted, the string's numeric values are reinterpreted as phaser depth.
+ * When [wet] is omitted, the string's numeric values are reinterpreted as the wet amount.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
+ * @param wet The wet amount (0–1). Omit to reinterpret the pattern's values.
  *
  * ```KlangScript(Playable)
- * "c3*4".phaserdepth(0.8).phaser(0.5).note()   // deep phaser on string pattern
+ * "c3*4".phaserWet(0.8).phaser(0.5).note()   // deep phaser on string pattern
  * ```
  */
 @KlangScript.Function
-fun String.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
+fun String.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserWet(wet, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the phaser depth.
+ * Returns a [PatternMapperFn] that sets the phaser wet amount.
  *
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as phaser depth.
+ * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the wet amount.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A [PatternMapperFn] that sets the phaser depth.
+ * @param wet The wet amount (0–1). Omit to reinterpret the pattern's values.
+ * @return A [PatternMapperFn] that sets the phaser wet.
  *
  * ```KlangScript(Playable)
- * note("c3*4").apply(phaserdepth(0.8))   // deep phaser via mapper
+ * note("c3*4").apply(phaserWet(0.8))   // deep phaser via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, phaserdepth(1.0))   // max depth every 4th cycle
+ * note("c3*4").every(4, phaserWet(1.0))   // full wet every 4th cycle
  * ```
  *
  * @alias phd, phasdp
  * @category effects
- * @tags phaserdepth, phd, phasdp, phaser, depth, modulation
+ * @tags phaserwet, phaserdepth, phd, phasdp, phaser, depth, modulation, wet
  */
 @KlangScript.Function
-fun phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
+fun phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserWet(wet, callInfo) }
 
 /**
- * Creates a chained [PatternMapperFn] that sets the phaser depth after the previous mapper.
+ * Creates a chained [PatternMapperFn] that sets the phaser wet after the previous mapper.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A new [PatternMapperFn] chaining this phaser depth after the previous mapper.
+ * @param wet The wet amount (0–1). Omit to reinterpret the pattern's values.
+ * @return A new [PatternMapperFn] chaining this phaser wet after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(phaser(0.5).phaserdepth(0.8))   // rate then depth
+ * note("c3 e3").apply(phaser(0.5).phaserWet(0.8))   // rate then wet
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, phaser(4.0).phaserdepth(1.0))   // full-depth fast phaser
+ * note("c3*4").every(4, phaser(4.0).phaserWet(1.0))   // full-wet fast phaser
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaserdepth(amount, callInfo) }
+fun PatternMapperFn.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaserWet(wet, callInfo) }
 
 /**
- * Alias for [phaserdepth]. Sets the phaser depth (modulation intensity) for this pattern.
+ * Alias for [phaserWet]. Sets the phaser wet amount for this pattern.
  *
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as phaser depth.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the phaser wet.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A new pattern with the phaser depth applied.
+ * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
+ * @return A new pattern with the phaser wet applied.
  *
  * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phd(0.8)   // deep phaser sweep
@@ -2876,20 +2890,20 @@ fun PatternMapperFn.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo?
  * seq("0.2 0.5 0.8 1.0").phd()   // reinterpret values as phaser depth
  * ```
  *
- * @alias phaserdepth, phasdp
+ * @alias phaserWet, phasdp
  * @category effects
  * @tags phd, phaserdepth, phasdp, phaser, depth, modulation
  */
 @KlangScript.Function
 fun SprudelPattern.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.phaserdepth(amount, callInfo)
+    this.phaserWet(amount, callInfo)
 
 /**
- * Alias for [phaserdepth]. Parses this string as a pattern and sets the phaser depth.
+ * Alias for [phaserWet]. Parses this string as a pattern and sets the phaser wet.
  *
- * When [amount] is omitted, the string's numeric values are reinterpreted as phaser depth.
+ * When [amount] is omitted, the string's numeric values are reinterpreted as the phaser wet.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
+ * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
  *
  * ```KlangScript(Playable)
  * "c3*4".phd(0.8).phaser(0.5).note()   // deep phaser on string pattern
@@ -2897,30 +2911,30 @@ fun SprudelPattern.phd(amount: PatternLike? = null, callInfo: CallInfo? = null):
  */
 @KlangScript.Function
 fun String.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserWet(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserdepth].
+ * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserWet].
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A [PatternMapperFn] that sets the phaser depth.
+ * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
+ * @return A [PatternMapperFn] that sets the phaser wet.
  *
  * ```KlangScript(Playable)
  * note("c3*4").apply(phd(0.8))   // deep phaser via mapper
  * ```
  *
- * @alias phaserdepth, phasdp
+ * @alias phaserWet, phasdp
  * @category effects
  * @tags phd, phaserdepth, phasdp, phaser, depth, modulation
  */
 @KlangScript.Function
-fun phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
+fun phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserWet(amount, callInfo) }
 
 /**
- * Creates a chained [PatternMapperFn] that sets the phaser depth (alias for phaserdepth) after the previous mapper.
+ * Creates a chained [PatternMapperFn] that sets the phaser wet (alias for phaserWet) after the previous mapper.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A new [PatternMapperFn] chaining this phaser depth after the previous mapper.
+ * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
+ * @return A new [PatternMapperFn] chaining this phaser wet after the previous mapper.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phd(0.8))   // rate then depth
@@ -2932,15 +2946,15 @@ fun phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  */
 @KlangScript.Function
 fun PatternMapperFn.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaserdepth(amount, callInfo) }
+    this.chain { p -> p.phaserWet(amount, callInfo) }
 
 /**
- * Alias for [phaserdepth]. Sets the phaser depth (modulation intensity) for this pattern.
+ * Alias for [phaserWet]. Sets the phaser wet amount for this pattern.
  *
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as phaser depth.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the phaser wet.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A new pattern with the phaser depth applied.
+ * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
+ * @return A new pattern with the phaser wet applied.
  *
  * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phasdp(0.8)   // deep phaser sweep
@@ -2954,20 +2968,20 @@ fun PatternMapperFn.phd(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * seq("0.2 0.5 0.8 1.0").phasdp()   // reinterpret values as phaser depth
  * ```
  *
- * @alias phaserdepth, phd
+ * @alias phaserWet, phd
  * @category effects
  * @tags phasdp, phaserdepth, phd, phaser, depth, modulation
  */
 @KlangScript.Function
 fun SprudelPattern.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.phaserdepth(amount, callInfo)
+    this.phaserWet(amount, callInfo)
 
 /**
- * Alias for [phaserdepth]. Parses this string as a pattern and sets the phaser depth.
+ * Alias for [phaserWet]. Parses this string as a pattern and sets the phaser wet.
  *
- * When [amount] is omitted, the string's numeric values are reinterpreted as phaser depth.
+ * When [amount] is omitted, the string's numeric values are reinterpreted as the phaser wet.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
+ * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
  *
  * ```KlangScript(Playable)
  * "c3*4".phasdp(0.8).phaser(0.5).note()   // deep phaser on string pattern
@@ -2975,30 +2989,30 @@ fun SprudelPattern.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = nul
  */
 @KlangScript.Function
 fun String.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserWet(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserdepth].
+ * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserWet].
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A [PatternMapperFn] that sets the phaser depth.
+ * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
+ * @return A [PatternMapperFn] that sets the phaser wet.
  *
  * ```KlangScript(Playable)
  * note("c3*4").apply(phasdp(0.8))   // deep phaser via mapper
  * ```
  *
- * @alias phaserdepth, phd
+ * @alias phaserWet, phd
  * @category effects
  * @tags phasdp, phaserdepth, phd, phaser, depth, modulation
  */
 @KlangScript.Function
-fun phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
+fun phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserWet(amount, callInfo) }
 
 /**
- * Creates a chained [PatternMapperFn] that sets the phaser depth (alias for phaserdepth) after the previous mapper.
+ * Creates a chained [PatternMapperFn] that sets the phaser wet (alias for phaserWet) after the previous mapper.
  *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
- * @return A new [PatternMapperFn] chaining this phaser depth after the previous mapper.
+ * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
+ * @return A new [PatternMapperFn] chaining this phaser wet after the previous mapper.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phasdp(0.8))   // rate then depth
@@ -3010,7 +3024,55 @@ fun phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  */
 @KlangScript.Function
 fun PatternMapperFn.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaserdepth(amount, callInfo) }
+    this.chain { p -> p.phaserWet(amount, callInfo) }
+
+// -- phaserFloor() ----------------------------------------------------------------------------------------------------
+
+private val phaserFloorMutation = voiceSetter { phaserFloor = it?.asDoubleOrNull() }
+
+private fun applyPhaserFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, phaserFloorMutation)
+}
+
+/**
+ * Sets the phaser's minimum dry coefficient — the floor of the shared wet/dry law (C4).
+ *
+ * The default is `1.0`: the dry passes untouched and [phaserWet] ADDS the swept signal on
+ * top (the classic orbit-phaser behaviour). Lowering the floor lets the dry fade as the wet
+ * rises, turning the same knob into a crossfade. Two raw-engine truths to know: (1) on the
+ * default `modern` pipeline the phaser runs TWICE per note (per-voice strip pass + cylinder
+ * bus) from the same knobs, so a floor below 1 floors the dry twice — the surviving dry is
+ * about `floor²`, not `floor`; (2) patterning this knob steps the orbit's dry gain at block
+ * boundaries with no smoothing — expect zipper on fast patterns. When [floor] is omitted,
+ * the pattern's own numeric values are reinterpreted.
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("sawtooth").phaser(0.5).phaserWet(0.8).phaserFloor(0.3)   // crossfading phaser
+ * ```
+ *
+ * @param floor The minimum dry coefficient (0–1). Omit to reinterpret the pattern's values.
+ * @return A new pattern with the phaser floor applied.
+ * @category effects
+ * @tags phaserfloor, phaser, floor, dry, wet
+ */
+@KlangScript.Function
+fun SprudelPattern.phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPhaserFloor(this, listOfNotNull(floor).asSprudelDslArgs(callInfo))
+
+/** Parses this string as a pattern and sets the phaser floor (see [SprudelPattern.phaserFloor]). */
+@KlangScript.Function
+fun String.phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserFloor(floor, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the phaser floor (see [SprudelPattern.phaserFloor]). */
+@KlangScript.Function
+fun phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.phaserFloor(floor, callInfo) }
+
+/** Creates a chained [PatternMapperFn] that sets the phaser floor after the previous mapper. */
+@KlangScript.Function
+fun PatternMapperFn.phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaserFloor(floor, callInfo) }
 
 // -- phasercenter() / phc() -------------------------------------------------------------------------------------------
 
@@ -4243,7 +4305,7 @@ private fun applyDelayCap(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @return A new pattern with the delay feedback ceiling applied.
  *
  * ```KlangScript(Playable)
- * note("c3 ~ ~ ~").delay(0.6).delayfeedback(1.0).delaycap(2.0)   // endless echo, held at 2.0
+ * note("c3 ~ ~ ~").delayWet(0.6).delayfeedback(1.0).delaycap(2.0)   // endless echo, held at 2.0
  * ```
  *
  * @alias dcap
@@ -4261,7 +4323,7 @@ fun SprudelPattern.delaycap(amount: PatternLike? = null, callInfo: CallInfo? = n
  * @return A new pattern with the delay feedback ceiling applied.
  *
  * ```KlangScript(Playable)
- * "c3 ~ ~ ~".delaycap(2.0).delay(0.6).delayfeedback(1.0).note()
+ * "c3 ~ ~ ~".delaycap(2.0).delayWet(0.6).delayfeedback(1.0).note()
  * ```
  */
 @KlangScript.Function
@@ -4275,7 +4337,7 @@ fun String.delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @return A [PatternMapperFn] that sets the delay feedback ceiling.
  *
  * ```KlangScript(Playable)
- * note("c3 ~ ~ ~").apply(delaycap(2.0)).delay(0.6).delayfeedback(1.0)
+ * note("c3 ~ ~ ~").apply(delaycap(2.0)).delayWet(0.6).delayfeedback(1.0)
  * ```
  *
  * @alias dcap
@@ -4293,7 +4355,7 @@ fun delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
  * @return A new [PatternMapperFn] chaining the ceiling after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 ~ ~ ~").apply(delay(0.6).delaycap(2.0))
+ * note("c3 ~ ~ ~").apply(delayWet(0.6).delaycap(2.0))
  * ```
  */
 @KlangScript.Function
@@ -4307,7 +4369,7 @@ fun PatternMapperFn.delaycap(amount: PatternLike? = null, callInfo: CallInfo? = 
  * @return A new pattern with the delay feedback ceiling applied.
  *
  * ```KlangScript(Playable)
- * note("c3 ~ ~ ~").delay(0.6).delayfb(1.0).dcap(2.0)
+ * note("c3 ~ ~ ~").delayWet(0.6).delayfb(1.0).dcap(2.0)
  * ```
  *
  * @alias delaycap
@@ -4325,7 +4387,7 @@ fun SprudelPattern.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * @return A new pattern with the delay feedback ceiling applied.
  *
  * ```KlangScript(Playable)
- * "c3 ~ ~ ~".dcap(2.0).delay(0.6).delayfb(1.0).note()
+ * "c3 ~ ~ ~".dcap(2.0).delayWet(0.6).delayfb(1.0).note()
  * ```
  */
 @KlangScript.Function
@@ -4339,7 +4401,7 @@ fun String.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @return A [PatternMapperFn] that sets the delay feedback ceiling.
  *
  * ```KlangScript(Playable)
- * note("c3 ~ ~ ~").apply(dcap(2.0)).delay(0.6).delayfb(1.0)
+ * note("c3 ~ ~ ~").apply(dcap(2.0)).delayWet(0.6).delayfb(1.0)
  * ```
  */
 @KlangScript.Function
@@ -4353,7 +4415,7 @@ fun dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * @return A new [PatternMapperFn] chaining the ceiling after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 ~ ~ ~").apply(delay(0.6).dcap(2.0))
+ * note("c3 ~ ~ ~").apply(delayWet(0.6).dcap(2.0))
  * ```
  */
 @KlangScript.Function

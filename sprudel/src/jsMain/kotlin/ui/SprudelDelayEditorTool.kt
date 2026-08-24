@@ -43,13 +43,13 @@ import kotlin.math.exp
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param delay(amount, time, feedback) call.
+ * [KlangUiToolEmbeddable] for the per-param delayWet(wet, time, feedback) call.
  *
  * Two modes (C0.3 two-tool-tier design):
- * - Whole-call modal: when [KlangUiToolContext.call] is present, edits amount plus the optional
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the wet (send) plus the optional
  *   time/feedback params of the host call and commits the full argument list. Unset optionals
  *   stay omitted (null slots).
- * - Scalar fallback (embedded / sequence atom): edits a single wet amount value.
+ * - Scalar fallback (embedded / sequence atom): edits a single wet (send) value.
  */
 object SprudelDelayEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Delay Editor"
@@ -96,7 +96,7 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
     private fun parseNumOrNull(text: String?): Double? =
         text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
-    // Whole-call mode reads amount/time/feedback from the host call's args; scalar mode reads the single arg.
+    // Whole-call mode reads wet/time/feedback from the host call's args; scalar mode reads the single arg.
     private val parsedWet
         get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
 
@@ -230,8 +230,8 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
                         domKey("wet")
                         step(0.01)
                         label {
-                            +"Wet/Dry"
-                            paramInfoIcon("amount", props.toolCtx, infoPopup)
+                            +"Send"
+                            paramInfoIcon("wet", props.toolCtx, infoPopup)
                         }
                     }
                     if (call != null) {

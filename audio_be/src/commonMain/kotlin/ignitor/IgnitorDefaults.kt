@@ -261,7 +261,7 @@ fun IgnitorRegistry.registerDefaults() {
 //
 // ── Effects Chains ───────────────────────────────────────────────────────────
 //   SuperSaw.distort(0.4).lowpass(3000)             — heavy lead
-//   Pluck.phaser(0.3, 0.5)                          — spacey pluck
+//   Pluck.phaser(0.3).wet(0.5)                      — spacey pluck
 //   Square.crush(6.0)                               — retro / chiptune
 //   Saw.coarse(8.0)                                 — sample-rate reduced lo-fi
 //

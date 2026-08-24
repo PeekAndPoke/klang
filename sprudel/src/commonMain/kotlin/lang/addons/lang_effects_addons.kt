@@ -41,11 +41,14 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 }
 
 /**
- * Sets the reverb parameters. Each parameter is independent and patternable;
+ * Sets the reverb parameters — a convenience compound over the `roomWet`/`roomsize`/... family
+ * (alias until C6; see [io.peekandpoke.klang.sprudel.lang.roomWet]). Reverb is a SEND, not a
+ * crossfade: the dry signal reaches the mix untouched, and [wet] only scales how much of the
+ * voice feeds the orbit's shared reverb return. Each parameter is independent and patternable;
  * omitted parameters keep their previous values.
  *
  * Each field is optional — trailing fields can be omitted.
- * - **room**: wet/dry mix (0–1)
+ * - **wet**: send amount (0–1)
  * - **size**: room size, **~0..10** (larger = longer tail; 3 ≈ 1 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s)
  * - **fade**: tail override, **0..1** (NOT seconds, and NOT the *size* scale) — when present it
  *   wins over *size*, which is then inert
@@ -65,9 +68,9 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * note("c3*4").reverb("<0.3 0.8>", "<1 4>")   // alternating reverb per cycle
  * ```
  *
- * @param amount Effect amount / wet-dry mix.
+ * @param wet The reverb send amount (0–1).
  * @param dim Currently unused by the engine.
- * @param-tool amount SprudelReverbEditor, SprudelReverbSequenceEditor
+ * @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
  * @param size Room size — larger values produce longer reverb tails
  * @param fade Tail override, 0..1 (not seconds). Overrides size.
  * @param lowpass Lowpass filter frequency on reverb output in Hz
@@ -76,10 +79,10 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
 @KlangScript.Function
-fun SprudelPattern.reverb(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
-    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
-    var p = if (amount != null || !(size != null || fade != null || lowpass != null || dim != null)) {
-        applyReverb(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.reverb(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch wet: reinterpret runs only on a fully bare call.
+    var p = if (wet != null || !(size != null || fade != null || lowpass != null || dim != null)) {
+        applyReverb(this, listOfNotNull(wet).asSprudelDslArgs(callInfo))
     } else {
         this
     }
@@ -97,7 +100,7 @@ fun SprudelPattern.reverb(amount: PatternLike? = null, size: PatternLike? = null
  * "c3*4".reverb(0.5, 2, 0.3).note()   // reverb on string pattern
  * ```
  *
- * @param amount Effect amount / wet-dry mix.
+ * @param wet The reverb send amount (0–1).
  * @param size Room size (~0–10).
  * @param fade Tail override (0–1), wins over size.
  * @param lowpass Lowpass on the reverb tail in Hz.
@@ -107,15 +110,15 @@ fun SprudelPattern.reverb(amount: PatternLike? = null, size: PatternLike? = null
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
 @KlangScript.Function
-fun String.reverb(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).reverb(amount, size, fade, lowpass, dim, callInfo)
+fun String.reverb(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).reverb(wet, size, fade, lowpass, dim, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all reverb parameters.
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  *
- * @param amount Effect amount / wet-dry mix.
+ * @param wet The reverb send amount (0–1).
  * @param size Room size (~0–10).
  * @param fade Tail override (0–1), wins over size.
  * @param lowpass Lowpass on the reverb tail in Hz.
@@ -134,12 +137,12 @@ fun String.reverb(amount: PatternLike? = null, size: PatternLike? = null, fade: 
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
 @KlangScript.Function
-fun reverb(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.reverb(amount, size, fade, lowpass, dim, callInfo) }
+fun reverb(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.reverb(wet, size, fade, lowpass, dim, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all reverb parameters after the previous mapper.
  *
- * @param amount Effect amount / wet-dry mix.
+ * @param wet The reverb send amount (0–1).
  * @param size Room size (~0–10).
  * @param fade Tail override (0–1), wins over size.
  * @param lowpass Lowpass on the reverb tail in Hz.
@@ -151,12 +154,12 @@ fun reverb(amount: PatternLike? = null, size: PatternLike? = null, fade: Pattern
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delay(0.5).reverb(0.9, 4))   // delay + reverb every 4th cycle
+ * note("c3*4").every(4, delayWet(0.5).reverb(0.9, 4))   // delay + reverb every 4th cycle
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.reverb(amount: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.reverb(amount, size, fade, lowpass, dim, callInfo) }
+fun PatternMapperFn.reverb(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.reverb(wet, size, fade, lowpass, dim, callInfo) }
 
 // -- lpadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -648,7 +651,7 @@ fun tremolo(depth: PatternLike? = null, sync: PatternLike? = null, shape: Patter
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delay(0.5).tremolo(0.8, 8))   // delay + tremolo every 4th cycle
+ * note("c3*4").every(4, delayWet(0.5).tremolo(0.8, 8))   // delay + tremolo every 4th cycle
  * ```
  */
 @KlangScript.Function

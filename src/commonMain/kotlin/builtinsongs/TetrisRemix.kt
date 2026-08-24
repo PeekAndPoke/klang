@@ -37,7 +37,7 @@ import { leadPattern, bassPattern, sub as tetrisSub } from "peekandpoke/tetris"
 export lead = note(leadPattern).slow(2)
     .sound("supersquare").adsr(0.025, 0.12, 0.5, 0.2).gain(0.5).spread(0.3)
     .hpf(500).lpf(1600).lpe(12).lpq(2.5)
-    .room(0.8, 5, 0.1).pan(0.5).superimpose(x => x.sound("brown").gain(0.35))
+    .roomWet(0.8, 5, 0.1).pan(0.5).superimpose(x => x.sound("brown").gain(0.35))
     .vibrato("2.1".add(berlin2.mul(0.1))).vibmod(0.03)
     .orbit(1).postgain(0.25)  // .solo()
     .filterWhen(x => x >= 16)
@@ -53,7 +53,7 @@ export bass = note(bassPattern).slow(2).struct("[x!16]")
 // Kick on 1 only, snare on 3, hat on offbeats. Lots of space.
 export kick  = sound("[bd ~ ~ ~]!4").orbit(3).gain(0.7).hpf(100).adsr(0.02, 0.18, 0.0, 0.05) // . solo()
 export hat   = sound("[hh ~ hh ~]!4").orbit(4).gain(0.6).hpf(6000).adsr(0.01, 0.01, 0.5, 0.02) // .solo()
-export snare = sound("[~ ~ sd sd ~ ~ sd ~]!2").orbit(5).gain(0.475).hpf(200).adsr(0.02, 0.12, 0.0, 0.05).room(0.4).rsize(6)
+export snare = sound("[~ ~ sd sd ~ ~ sd ~]!2").orbit(5).gain(0.475).hpf(200).adsr(0.02, 0.12, 0.0, 0.05).roomWet(0.4).rsize(6)
 
 // ── Skank: off-beat reggae chord stab ──────────────────────────────────
 // The Bring-It-Together; off-beat = 16th-note 2 of every 4-step cycle.
@@ -63,7 +63,7 @@ export skank = chord("<Am Em F Am <Em Em Dm G#> Em Am <G E F G>>").voicing()
     .gain(0.90).adsr(0.02, 0.2, 0.0, 0.1).postgain(1.6)
     .hpf(1000).lpf(8000).lpadsr(0.02, 0.1, 0.0, 0.1).lpe(21.7).warmth(0.1)
     .pan(0.2).superimpose(pan(0.8))
-    .orbit(6).room(0.5).rsize(5)  // . solo()
+    .orbit(6).roomWet(0.5).rsize(5)  // . solo()
     .filterWhen(x => x >= 8)
 
 export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").orbit(7).clip(0.8).distort(0.3)

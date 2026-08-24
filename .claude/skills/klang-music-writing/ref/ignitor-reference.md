@@ -36,7 +36,7 @@ let pad = Osc.supersaw()
     .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
     .adsr(0.3, 0.5, 0.8, 1.5)
 
-chord("<Am C F G>").voicing().sound(pad).gain(0.2).room(0.3).rsize(6)
+chord("<Am C F G>").voicing().sound(pad).gain(0.2).roomWet(0.3).rsize(6)
 ```
 
 ### FM bell
@@ -46,7 +46,7 @@ let bell = Osc.sine()
     .fm(Osc.sine(), 2.3, 400)
     .adsr(0.001, 1.5, 0.0, 0.5)
 
-note("c5 e5 g5 c6").sound(bell).gain(0.3).room(0.2)
+note("c5 e5 g5 c6").sound(bell).gain(0.3).roomWet(0.2)
 ```
 
 ---
@@ -328,7 +328,7 @@ Put taps first unless you want that.
 | `.distort(amount, shape?, oversample?)` | Drive + clip combined                      |
 | `.crush(amount)`                        | Bit-depth reduction                        |
 | `.coarse(amount)`                       | Sample-rate reduction                      |
-| `.phaser(rate, depth, center?, sweep?)` | Allpass phaser (center/sweep default 1000) |
+| `.phaser(rate, center?, sweep?).wet(w?).dryFloor(f?)` | Allpass phaser (center/sweep default 1000; wet 0.5, dryFloor 0 — the shared C4 wet knob) |
 | `.tremolo(rate, depth)`                 | Amplitude LFO modulation                   |
 
 Distortion/clip shapes: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
@@ -776,5 +776,5 @@ stack(
   note("a1 ~ ~ ~ ~ ~ ~ ~").sound(kick).gain(0.8),
   sound("~ ~ ~ ~ cp ~ ~ ~").gain(0.4),
   sound("hh*8").gain(0.3)
-).room(0.2).rsize(5).delay(0.15).delaytime(pure(1/8).div(cps))
+).roomWet(0.2).rsize(5).delayWet(0.15).delaytime(pure(1/8).div(cps))
 ```

@@ -194,9 +194,9 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Distort (Drive+Clip chain)" { check(IgnitorDsl.Sine().distort(0.5)) }
     "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
-    "Phaser" { check(IgnitorDsl.Sine().phaser(0.5, 0.5)) }
+    "Phaser" { check(IgnitorDsl.Sine().phaser(0.5).wet(0.4).dryFloor(0.25)) }
     "Tremolo" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5)) }
-    "Shimmer (pitches list)" { check(IgnitorDsl.Square().shimmer(pitches = listOf(0.0, 7.0, 12.0))) }
+    "Shimmer (pitches list)" { check(IgnitorDsl.Square().shimmer(pitches = listOf(0.0, 7.0, 12.0)).wet(0.3).dryFloor(0.1)) }
 
     // --- pitch modulation -----------------------------------------------------------------------------------
     "Vibrato" { check(IgnitorDsl.Sine().vibrato(5.0, 0.02)) }

@@ -156,6 +156,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
         phaser.phaser.depth = voice.phaser.depth
         phaser.phaser.center = if (voice.phaser.center > 0) voice.phaser.center else 1000.0
         phaser.phaser.sweep = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
+        phaser.phaser.floor = voice.phaser.floor
         phaser.phaser.feedback = 0.5
 
         // Ducking / Sidechain — reuse instance to preserve envelope state; clear when the owner has none.
@@ -214,6 +215,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
         reverb.reverb.roomSize = 0.0
         reverb.reverb.reset() // clear the comb/allpass tail, not just the params
         phaser.phaser.depth = 0.0
+        phaser.phaser.floor = 1.0
         compressor.compressor = null
         ducking.clear()
     }

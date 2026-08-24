@@ -44,11 +44,11 @@ import kotlin.math.sin
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param phaser(rate, depth, center, sweep) call.
+ * [KlangUiToolEmbeddable] for the per-param phaser(rate, wet, center, sweep) call.
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits rate plus the optional
- *   depth/center/sweep params of the host call and commits the full argument list. Unset
+ *   wet/center/sweep params of the host call and commits the full argument list. Unset
  *   optionals stay omitted (null slots).
  * - Scalar fallback (embedded / sequence atom): edits a single rate value.
  */
@@ -242,7 +242,7 @@ private class SprudelPhaserEditorComp(ctx: Ctx<Props>) : Component<SprudelPhaser
                         }
                     }
                     if (call != null) {
-                        nullableField("depth", "Depth", 0.01, depth, subField = "depth") { depth = it; dirty += 1; liveUpdate() }
+                        nullableField("depth", "Wet", 0.01, depth, subField = "wet") { depth = it; dirty += 1; liveUpdate() }
                     }
                 }
                 if (call != null) {

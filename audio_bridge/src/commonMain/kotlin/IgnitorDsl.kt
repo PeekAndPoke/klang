@@ -1360,20 +1360,31 @@ sealed interface IgnitorDsl {
     /**
      * Phaser effect. Sweeps a series of allpass filters to create notch comb filtering.
      *
-     * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
-     *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
+     * Wet/dry follows THE shared wet/dry law (`WetDryMix`, correlated branch, p = 2):
+     * `out = max(dryFloor, cos²(wet·π/2)) · dry + sin²(wet·π/2) · phased`. The phased path is
+     * the input through the allpass chain — fully correlated with the dry — so the crossfade
+     * holds constant AMPLITUDE across the knob.
+     *
+     * @param wet Wet/dry balance in [0, 1]. 0.0 = bit-exact bypass, 1.0 = phased signal only,
+     *   0.5 = equal mix (both coefficients 0.5). Default: 0.5. Set via the typed knob:
+     *   `.phaser(rate).wet(0.3)`.
+     * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade). Raising
+     *   it keeps at least that much dry at every [wet]; at 1.0 the phaser is purely additive,
+     *   like the orbit-side phaser. (Named `dryFloor`, not `floor`: `floor()` is already the
+     *   arithmetic round-down on patterns, and one word must not mean two things.)
      */
     @WireName("phaser")
     data class Phaser(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(0.5),
-        val blend: IgnitorDsl = Constant(0.5),
+        val wet: IgnitorDsl = Constant(0.5),
         val center: IgnitorDsl = Constant(1000.0),
         val sweep: IgnitorDsl = Constant(1000.0),
+        val dryFloor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); rate.collectParams(out); blend.collectParams(out)
-            center.collectParams(out); sweep.collectParams(out)
+            inner.collectParams(out); rate.collectParams(out); wet.collectParams(out)
+            center.collectParams(out); sweep.collectParams(out); dryFloor.collectParams(out)
         }
     }
 
@@ -1396,8 +1407,15 @@ sealed interface IgnitorDsl {
      * specified by [pitches] (in semitones), and feeds the wet output back into the grain buffer
      * through a one-pole lowpass at [tone] Hz.
      *
-     * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
-     *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
+     * Wet/dry follows THE shared wet/dry law (`WetDryMix`, decorrelated branch, p = 1):
+     * `out = max(dryFloor, cos(wet·π/2)) · dry + sin(wet·π/2) · cloud`. The grain cloud is
+     * decorrelated from the dry, so this equal-POWER crossfade holds 0 dB across the knob.
+     *
+     * @param wet Wet/dry balance in [0, 1]. 0.0 = bit-exact bypass REGARDLESS of [feedback]
+     *   (the grain state is cleared on bypass entry, so a modulated wet cannot resurrect a
+     *   stale tail), 1.0 = cloud only. Default: 0.5. Set via the typed knob: `.shimmer().wet(0.3)`.
+     * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade); see
+     *   [Phaser.dryFloor] for the name.
      * @param feedback Wet → grain-buffer feedback. 0.0 = no cascade, 0.9 = long tails.
      *   Hard-clamped to 0.95 internally for stability.
      * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]` (root + fifth + octave).
@@ -1408,13 +1426,15 @@ sealed interface IgnitorDsl {
     @WireName("shimmer")
     data class Shimmer(
         val inner: IgnitorDsl,
-        val blend: IgnitorDsl = Constant(0.5),
+        val wet: IgnitorDsl = Constant(0.5),
         val feedback: IgnitorDsl = Constant(0.5),
         val pitches: List<Double> = listOf(0.0, 7.0, 12.0),
         val tone: IgnitorDsl = Constant(4000.0),
+        val dryFloor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); blend.collectParams(out); feedback.collectParams(out); tone.collectParams(out)
+            inner.collectParams(out); wet.collectParams(out); feedback.collectParams(out)
+            tone.collectParams(out); dryFloor.collectParams(out)
         }
     }
 
@@ -1778,11 +1798,13 @@ fun IgnitorDsl.coarse(amount: Double) = IgnitorDsl.Coarse(
     amount = IgnitorDsl.Constant(amount),
 )
 
-/** Applies a phaser effect. [blend]: 0.0 = dry only, 1.0 = wet only (crossfade). */
-fun IgnitorDsl.phaser(rate: Double, blend: Double = 0.5, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
+/**
+ * Applies a phaser effect. The wet/dry balance is NOT a builder parameter — it is the shared
+ * wet knob, typed onto the node: `.phaser(rate).wet(0.3).dryFloor(0.2)` (defaults 0.5 / 0.0).
+ */
+fun IgnitorDsl.phaser(rate: Double, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
-    blend = IgnitorDsl.Constant(blend),
     center = IgnitorDsl.Constant(center),
     sweep = IgnitorDsl.Constant(sweep),
 )
@@ -1796,21 +1818,46 @@ fun IgnitorDsl.tremolo(rate: Double, depth: Double) = IgnitorDsl.Tremolo(
 
 /**
  * Applies a granular shimmer (pitch-shift cloud with feedback).
- * [blend]: 0.0 = dry only, 1.0 = wet only (crossfade). [pitches]: semitone transpositions.
- * [tone]: feedback-path LPF cutoff in Hz.
+ * [pitches]: semitone transpositions. [tone]: feedback-path LPF cutoff in Hz.
+ * The wet/dry balance is the shared wet knob, typed onto the node:
+ * `.shimmer().wet(0.4).dryFloor(0.2)` (defaults 0.5 / 0.0).
  */
 fun IgnitorDsl.shimmer(
-    blend: Double = 0.5,
     feedback: Double = 0.5,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
     tone: Double = 4000.0,
 ) = IgnitorDsl.Shimmer(
     inner = this,
-    blend = IgnitorDsl.Constant(blend),
     feedback = IgnitorDsl.Constant(feedback),
     pitches = pitches,
     tone = IgnitorDsl.Constant(tone),
 )
+
+// ── The shared wet knob (C4), typed per effect node ───────────────────────────
+
+/** Sets the wet/dry balance on a phaser node — the shared wet knob (see [IgnitorDsl.Phaser]). */
+fun IgnitorDsl.Phaser.wet(value: IgnitorDsl): IgnitorDsl.Phaser = copy(wet = value)
+
+/** Scalar convenience overload of [wet]. */
+fun IgnitorDsl.Phaser.wet(value: Double): IgnitorDsl.Phaser = wet(IgnitorDsl.Constant(value))
+
+/** Sets the minimum dry coefficient on a phaser node (see [IgnitorDsl.Phaser.dryFloor]). */
+fun IgnitorDsl.Phaser.dryFloor(value: IgnitorDsl): IgnitorDsl.Phaser = copy(dryFloor = value)
+
+/** Scalar convenience overload of [dryFloor]. */
+fun IgnitorDsl.Phaser.dryFloor(value: Double): IgnitorDsl.Phaser = dryFloor(IgnitorDsl.Constant(value))
+
+/** Sets the wet/dry balance on a shimmer node — the shared wet knob (see [IgnitorDsl.Shimmer]). */
+fun IgnitorDsl.Shimmer.wet(value: IgnitorDsl): IgnitorDsl.Shimmer = copy(wet = value)
+
+/** Scalar convenience overload of [wet]. */
+fun IgnitorDsl.Shimmer.wet(value: Double): IgnitorDsl.Shimmer = wet(IgnitorDsl.Constant(value))
+
+/** Sets the minimum dry coefficient on a shimmer node (see [IgnitorDsl.Shimmer.dryFloor]). */
+fun IgnitorDsl.Shimmer.dryFloor(value: IgnitorDsl): IgnitorDsl.Shimmer = copy(dryFloor = value)
+
+/** Scalar convenience overload of [dryFloor]. */
+fun IgnitorDsl.Shimmer.dryFloor(value: Double): IgnitorDsl.Shimmer = dryFloor(IgnitorDsl.Constant(value))
 
 // Pitch modulation
 

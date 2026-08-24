@@ -20,7 +20,7 @@ import kotlin.math.sin
  * Returns the cycles per second at which playback is currently running as a continuous pattern.
  *
  * ```KlangScript(Playable)
- * sound("sd").delay(0.25).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)  // Dalay time based in CPS
+ * sound("sd").delayWet(0.25).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)  // Dalay time based in CPS
  * ```
  *
  * @category continuous
@@ -35,7 +35,7 @@ val cps: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() }
  * Returns the current revolutions per minute as a continuous pattern (RPM = CPS × 60).
  *
  * ```KlangScript(Playable)
- * sound("sd").delay(0.25).delaytime(pure(1).div(rpm)).delayfeedback(0.5)  // Delay time based in RPM
+ * sound("sd").delayWet(0.25).delaytime(pure(1).div(rpm)).delayfeedback(0.5)  // Delay time based in RPM
  * ```
  *
  * @category continuous
@@ -50,7 +50,7 @@ val rpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 }
  * Returns the current beats per minute as a continuous pattern (assuming 4/4 time, 4 beats per cycle).
  *
  * ```KlangScript(Playable)
- * sound("sd").delay(0.15).delaytime(pure(60).div(bpm)).delayfeedback(0.33)  // Dalay time based in BPM
+ * sound("sd").delayWet(0.15).delaytime(pure(60).div(bpm)).delayfeedback(0.33)  // Dalay time based in BPM
  * ```
  *
  * @category continuous

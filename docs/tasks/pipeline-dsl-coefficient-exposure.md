@@ -24,8 +24,8 @@ A coefficient exposed here may already exist on sprudel, `IgnitorDsl`, the cylin
 field:
 
 1. **Grep the other surfaces for the concept**, not for the name — the same idea often ships under a different word (see
-   S3: the phaser's mix amount is `phaserdepth` in sprudel and `blend` on
-   `IgnitorDsl`, and they are not even the same mix law).
+   S3: the phaser's wet knob — `phaserWet`/`phaserFloor` in sprudel, `.wet()`/`.dryFloor()`
+on `IgnitorDsl` — was exactly this case until C4 unified it onto one law, `WetDryMix`).
 2. **Match the name where the surface conventions allow.** They differ deliberately:
    sprudel is lowercase-jammed strudel-style (`phasercenter`, `tremolodepth`, `bodyFloor`, `distos`), the pipeline DSL /
    KlangScript is camelCase methods (`cutoffOffset`, `drivePerAnalog`, `expK`). Parity means the *stem* matches
@@ -128,16 +128,18 @@ scale (raw IIR pole) — match that name and scale, do not invent a "damping" or
 ⚠️ **This sub-task carries the worst parity situation in the codebase**, and it should be resolved before adding fields,
 not after. Three surfaces share `PhaserCore` and disagree:
 
-| surface             | mix param     | mix law                                   |
-|---------------------|---------------|-------------------------------------------|
-| sprudel             | `phaserdepth` | additive — `dry + wet·depth`              |
-| cylinder bus        | `depth`       | additive                                  |
-| `IgnitorDsl.Phaser` | `blend`       | **crossfade** — `0` = dry, `1` = wet only |
+| surface             | mix param            | mix law                                              |
+|---------------------|----------------------|------------------------------------------------------|
+| sprudel             | `phaserWet` + `phaserFloor` | shared C4 law, `floor = 1` default (additive) |
+| cylinder bus        | `depth` + `floor`    | shared C4 law (same knob, same law)                  |
+| `IgnitorDsl.Phaser` | `.wet()` + `.dryFloor()` | shared C4 law, `dryFloor = 0` default (crossfade) |
 
-Same concept, two names, two different maths. Also: `IgnitorDsl.Phaser` defaults `center = 1000.0`
-and `sweep = 1000.0` — the same two literals `FilterPipelineBuilder` hardcodes as its fallback, in a second place.
+RESOLVED by C4 (2026-08-24): one law (`WetDryMix`), one name per door; only the floor DEFAULT
+differs (additive on the orbit, crossfade on the ignitor). Still open here: `IgnitorDsl.Phaser`
+defaults `center = 1000.0` and `sweep = 1000.0` — the same two literals `FilterPipelineBuilder`
+hardcodes as its fallback, in a second place.
 
-Decide first whether `depth`/`blend` converge, then add `stages` + `feedback`, and decide whether those two also belong
+Remaining decision: add `stages` + `feedback`, and whether those two also belong
 on sprudel (`phaserfeedback`) or stay engine-only character.
 
 ---

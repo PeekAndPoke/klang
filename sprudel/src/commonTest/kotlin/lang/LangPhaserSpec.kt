@@ -77,17 +77,17 @@ class LangPhaserSpec : StringSpec({
         events[1].data.phaserRate shouldBe 2.0
     }
 
-    // -- phaserdepth() ----------------------------------------------------------------------------------------------------
+    // -- phaserWet() ----------------------------------------------------------------------------------------------------
 
-    "phaserdepth() sets VoiceData.phaserDepth correctly" {
-        val p = note("c3").phaserdepth("0.8")
+    "phaserWet() sets VoiceData.phaserDepth correctly" {
+        val p = note("c3").phaserWet("0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.phaserDepth shouldBe 0.8
     }
 
-    "phaserdepth() alias 'phd' works" {
+    "phaserWet() alias 'phd' works" {
         val p = note("c3").phd("0.5")
         val events = p.queryArc(0.0, 1.0)
 
@@ -95,7 +95,7 @@ class LangPhaserSpec : StringSpec({
         events[0].data.phaserDepth shouldBe 0.5
     }
 
-    "phaserdepth() alias 'phasdp' works" {
+    "phaserWet() alias 'phasdp' works" {
         val p = note("c3").phasdp("0.7")
         val events = p.queryArc(0.0, 1.0)
 
@@ -103,8 +103,8 @@ class LangPhaserSpec : StringSpec({
         events[0].data.phaserDepth shouldBe 0.7
     }
 
-    "phaserdepth() works with control pattern" {
-        val p = note("c3 e3").phaserdepth("0.3 0.9")
+    "phaserWet() works with control pattern" {
+        val p = note("c3 e3").phaserWet("0.3 0.9")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -169,7 +169,7 @@ class LangPhaserSpec : StringSpec({
     // -- chaining tests ---------------------------------------------------------------------------------------------------
 
     "phaser functions can be chained together" {
-        val p = note("c3").phaser("2.0").phaserdepth("0.8").phasercenter("500").phasersweep("1000")
+        val p = note("c3").phaser("2.0").phaserWet("0.8").phasercenter("500").phasersweep("1000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -180,7 +180,7 @@ class LangPhaserSpec : StringSpec({
     }
 
     "phaser functions work in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").phaser(2).phaserdepth(0.8)""")
+        val p = SprudelPattern.compile("""note("c3").phaser(2).phaserWet(0.8)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -301,7 +301,7 @@ class LangPhaserSpec : StringSpec({
     "phaser(tail-only) does not touch the head field" {
         // numeric receiver: without the tail-only guard the head apply would REINTERPRET
         // the values ("3"/"4") into the phaserRate field
-        val p = SprudelPattern.compile("""seq("3 4").phaser(depth = 0.6)""")
+        val p = SprudelPattern.compile("""seq("3 4").phaser(wet = 0.6)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

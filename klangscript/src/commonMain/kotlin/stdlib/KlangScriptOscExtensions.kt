@@ -298,18 +298,20 @@ object KlangScriptOscExtensions {
     fun coarse(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Coarse(inner = self, amount = amount.toIgnitorDsl())
 
-    /** Applies a multi-stage phaser effect. Blend: 0.0 = 100% dry (bypass), 1.0 = 100% wet (crossfade). */
+    /**
+     * Applies a multi-stage phaser effect. The wet/dry balance is not a parameter here — it is
+     * the shared wet knob, typed onto the node: `.phaser(rate).wet(0.3).dryFloor(0.2)`
+     * (defaults 0.5 / 0.0).
+     */
     @KlangScript.Method
     fun phaser(
         self: IgnitorDsl,
         rate: IgnitorDslLike,
-        blend: IgnitorDslLike = 0.5,
         center: IgnitorDslLike = 1000.0,
         sweep: IgnitorDslLike = 1000.0,
-    ): IgnitorDsl = IgnitorDsl.Phaser(
+    ): IgnitorDsl.Phaser = IgnitorDsl.Phaser(
         inner = self,
         rate = rate.toIgnitorDsl(),
-        blend = blend.toIgnitorDsl(),
         center = center.toIgnitorDsl(),
         sweep = sweep.toIgnitorDsl(),
     )
@@ -321,8 +323,9 @@ object KlangScriptOscExtensions {
 
     /**
      * Applies a granular shimmer cloud with configurable pitch transpositions and feedback.
+     * The wet/dry balance is the shared wet knob, typed onto the node:
+     * `.shimmer().wet(0.4).dryFloor(0.2)` (defaults 0.5 / 0.0).
      *
-     * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default 0.5.
      * @param feedback Cascade feedback (0..0.95). Default 0.5.
      * @param tone Feedback-path LPF cutoff in Hz. Default 4000.
      * @param pitches Array of semitone transpositions. Default [0, 7, 12]. Example: [0, 4, 7, 11] for maj7.
@@ -330,11 +333,10 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun shimmer(
         self: IgnitorDsl,
-        blend: IgnitorDslLike = 0.5,
         feedback: IgnitorDslLike = 0.5,
         tone: IgnitorDslLike = 4000.0,
         pitches: Any = listOf(0.0, 7.0, 12.0),
-    ): IgnitorDsl {
+    ): IgnitorDsl.Shimmer {
         @Suppress("UNCHECKED_CAST")
         val pitchList = when (pitches) {
             is List<*> -> pitches.map { (it as Number).toDouble() }
@@ -342,7 +344,6 @@ object KlangScriptOscExtensions {
         }
         return IgnitorDsl.Shimmer(
             inner = self,
-            blend = blend.toIgnitorDsl(),
             feedback = feedback.toIgnitorDsl(),
             pitches = pitchList,
             tone = tone.toIgnitorDsl(),

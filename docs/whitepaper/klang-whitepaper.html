@@ -1496,7 +1496,7 @@
     .pitchEnvelope(Osc.param(name = <span class="st">"punch"</span>, default = 24), 0.001, 0.04)
     .adsr(0.001, 0.2, 0.0, 0.02)
 
-note(<span class="st">"c5 e5 g5 c6"</span>).sound(glock).gain(0.3).room(0.2)
+note(<span class="st">"c5 e5 g5 c6"</span>).sound(glock).gain(0.3).roomWet(0.2)
 note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">"punch"</span>, <span class="st">"&lt;24 48&gt;"</span>)  <span
                             class="cm">// every other cycle drops harder</span></pre>
                 </div>
@@ -1658,14 +1658,14 @@ stack(
    ,note(<span class="st">"c3  f2  c3  a2  e2  gs2 c3"</span>).sound(pad).slow(14).gain(0.250).pan(0.7).hpf(280)
    ,note(<span class="st">"e3  a2  e3  c3  g2  b2  e3"</span>).sound(pad).slow(14).gain(0.250).pan(0.2).hpf(400)
    ,note(<span class="st">"a3  d3  a3  f3  c3  e3  a3"</span>).sound(pad).slow(14).gain(0.200).pan(0.8).hpf(600)
-  ).orbit(4).coarse(3).body(<span class="st">"tube"</span>).bodyMix(0.3).filterWhen(x =&gt; x &gt;= wait * 3)
+  ).orbit(4).coarse(3).body(<span class="st">"tube"</span>).bodyWet(0.3).filterWhen(x =&gt; x &gt;= wait * 3)
 
   <span class="cm">// Three noise beds, each breathing on its own slow LFO</span>
   , sound(<span class="st">"dust"</span>).gain(0.025).vel(sine.range(0.750, 1.0).slow(21)).lpf(8000)
   , sound(<span class="st">"pink"</span>).gain(0.010).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000)
   , sound(<span class="st">"brown"</span>).gain(0.015).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
 
-).room(<span class="fl">0.25</span>, <span class="fl">7</span>, <span class="fl">0.75</span>).delay(0.2).delaytime(pure(1/8).div(cps))
+).roomWet(<span class="fl">0.25</span>, <span class="fl">7</span>, <span class="fl">0.75</span>).delayWet(0.2).delaytime(pure(1/8).div(cps))
  .compressor(<span class="fl">-15</span>, <span class="fl">2</span>, <span class="fl">6</span>, <span class="fl">0.01</span>, <span class="fl">0.2</span>).analog(8)</pre>
                 </div>
                 <figcaption>Abridged — the full song is 125 lines. The <code>let wait = 14</code> at the top is the

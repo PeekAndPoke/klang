@@ -78,7 +78,7 @@ class WetZeroBypassSpec : StringSpec({
         assertBitIdenticalToSource(
             noiseSource().phaser(
                 rate = ConstantIgnitor(1.0),
-                blend = ConstantIgnitor(0.0),
+                wet = ConstantIgnitor(0.0),
                 center = ConstantIgnitor(1000.0),
                 sweep = ConstantIgnitor(500.0),
             )
@@ -88,7 +88,7 @@ class WetZeroBypassSpec : StringSpec({
     "ignitor shimmer at wet 0 is bit-identical bypass EVEN WITH feedback" {
         assertBitIdenticalToSource(
             noiseSource().shimmer(
-                blend = ConstantIgnitor(0.0),
+                wet = ConstantIgnitor(0.0),
                 feedback = ConstantIgnitor(0.5),
                 tone = ConstantIgnitor(4000.0),
             )

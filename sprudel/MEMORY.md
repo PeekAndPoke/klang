@@ -193,16 +193,16 @@ return applyCat(patterns)
 
 ### Audio Effects — Reverb
 
-- `room()`, `roomsize()` / `rsize` / `sz` / `size`
+- `roomWet()`, `roomsize()` / `rsize` / `sz` / `size`
 - `roomfade()` / `rfade`, `roomlp()` / `rlp`, `roomdim()` / `rdim`, `iresponse()` / `ir`
 
 ### Audio Effects — Delay
 
-- `delay()`, `delaytime()`, `delayfeedback()` / `delayfb` / `dfb`
+- `delayWet()`, `delaytime()`, `delayfeedback()` / `delayfb` / `dfb`
 
 ### Audio Effects — Phaser
 
-- `phaser()` / `ph`, `phaserdepth()` / `phd` / `phasdp`
+- `phaser()` / `ph`, `phaserWet()` / `phd` / `phasdp`, `phaserFloor()`
 - `phasercenter()` / `phc`, `phasersweep()` / `phs`
 
 ### Audio Effects — Duck / Sidechain

@@ -39,7 +39,7 @@ stack(
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(2).s("supersaw").unison(11).spread(saw.range(0.05, 0.35).slow(16))
     .gain(0.6).distort(0.7).postgain(0.11).adsr(0.008, 3.0, 0.5, 0.1).lpadsr(0.008, 5.0, 0.2, 0.1).clip(1.05)
-    .hpf(800).lpf(1400).lpe(perlin.range(21.7, 27.9).slow(8)).lpq(1.5).analog(15).body("violin").bodyMix(0.5)
+    .hpf(800).lpf(1400).lpe(perlin.range(21.7, 27.9).slow(8)).lpq(1.5).analog(15).body("violin").bodyWet(0.5)
     .pan(0.5).superimpose(
       x => x.hpf(800).lpf(1500).lpq(5).bpf(notch).bpq(1.0).transpose(12).postgain(0.08).pan(0.3).superimpose(pan(0.7)),
       x => x.hpf(800).lpf(1500).lpq(5).bpf(notch).bpq(1.0).transpose(24).postgain(0.04).pan(0.1).superimpose(pan(0.9))
@@ -51,7 +51,7 @@ stack(
     .superimpose(
       x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
-    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.5).body("glass").vowel("e o e i a u".slow(24)).vowelMix(0.40)
+    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.5).body("glass").vowel("e o e i a u".slow(24)).vowelWet(0.40)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2)).vibrato("0.51".add(perlin.div(20))).vibmod(0.06)
         .crush("2.0".add(berlin2.mul(0.75).slow(4))).crushos(4).lpf(7.75 * 440).hpf(300).postgain(0.45)
@@ -68,7 +68,7 @@ stack(
     sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
       .orbit(6).gain(0.6).pan(0.55).adsr(0.017, 0.3, 0.5, 1).degrade(0.01).hpf(80).lpf(7800)
       .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
-  ).room(0.20).rsize(3.0).rlp(8000).compressor(-19, 2, 6, 0.01, 0.2)
+  ).roomWet(0.20).rsize(3.0).rlp(8000).compressor(-19, 2, 6, 0.01, 0.2)
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").legato(2)
     .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
