@@ -184,7 +184,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; ⚠ runs on the per-voice strip AND the orbit bus — a floor < 1 applies twice), `compressor`, ducking |
+> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master.of(...))` with `MasterFx.gain` (make-up level), `MasterFx.limiter`, `MasterFx.reverb`, `MasterFx.delay` |
 
@@ -280,8 +280,8 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 | `voicing()`             |         | Expand chord to voiced notes  | `chord("Am").voicing()`                         |
 | `rootNotes()`           |         | Extract chord root notes      | `chord("Am C").rootNotes()`                     |
 | `freq(hz)`              |         | Set frequency in Hz           | `freq("440 880")`                               |
-| `accelerate(amt)`       |         | Pitch ramp during playback    | `s("cr").accelerate(2)`                         |
-| `vibrato(rate, depth)`  | `vib`   | Pitch vibrato (sprudel-level) | `note("c3").vibrato("5:0.01")`                  |
+| `accelerate(semitones)` |         | Pitch ramp during playback (SEMITONES over the event; 12 = one octave) | `s("cr").accelerate(24)`                        |
+| `vibrato(hz)` + `vibratoMod(semitones)` | `vib` | Pitch vibrato (sprudel-level) | `note("c3").vibrato(5).vibratoMod(0.3)`         |
 
 #### `:soundIndex:gain` suffix (universal variant picker)
 
@@ -339,7 +339,7 @@ selection — extended to ignitor variants and per-note gain.
 | `unison(n)`        | `uni`, `voices` | Voice doubling                  | `note("c3").s("saw").unison(6)`        |
 | `spread(amt)`      |                 | Frequency spread between voices | `note("c3").s("supersaw").spread(0.1)` |
 | `density(amt)`     | `d`             | Oscillator density (noise)      | `note("a").s("dust").density(40)`      |
-| `warmth(amt)`      |                 | Analog warmth amount            | `s("bd").distort(3).warmth(0.3)`       |
+| `onepole(freq)`    |                 | One-pole lowpass in Hz (warmth) | `s("bd").distort(3).onepole(17814)`    |
 | `sndPluck(params)` |                 | Karplus-Strong shorthand        | `note("c3").sndPluck(0.999, 0.8)`     |
 | `sndSuperSaw()`    |                 | Super-saw shorthand             | `note("c3").sndSuperSaw()`             |
 | `bank(name)`       |                 | Sample bank                     | `s("bd").bank("RolandTR808")`          |
@@ -713,7 +713,7 @@ stack(
 >`).scale("C1:minor")
     .sound("pluck")
     .adsr(0.01, 0.2, 0.5, 0.2)
-    .clip(0.5).distort(0.1).warmth(0.2).postgain(0.2)
+    .clip(0.5).distort(0.1).onepole(20257).postgain(0.2)
     .superimpose(x => x.sound("tri"))  // layer triangle on top
 
   // Hi-hats

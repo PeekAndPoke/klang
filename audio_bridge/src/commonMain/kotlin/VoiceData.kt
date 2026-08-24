@@ -30,7 +30,7 @@ data class VoiceData(
     /** Sound index */
     val soundIndex: Int?,
 
-    // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "warmth")
+    // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "onepole" [Hz])
     val oscParams: Map<String, Double>?,
 
     // Filters
@@ -40,6 +40,11 @@ data class VoiceData(
     val adsr: AdsrDef,
 
     // Pitch / Glisando
+    /**
+     * Pitch glide over the event's duration, in SEMITONES (P unit unification, 2026-08-24:
+     * converted from octaves — a second wire producer must send semitones; 12 = one octave,
+     * engine law `ratio = 2^((semitones/12)·progress)`).
+     */
     val accelerate: Double?,
 
     // Vibrato

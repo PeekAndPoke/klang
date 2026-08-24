@@ -125,8 +125,9 @@ class IgnitorRegistry(
             orbit = data.cylinder ?: 0,
             random = random,
         )
-        val warmth = oscParams?.get("warmth") ?: 0.0
-        return if (warmth > 0.0) raw.withWarmth(warmth) else raw
+        val onepoleHz = oscParams?.get("onepole") ?: 0.0
+        // Same kernel as the ignitor-door onepole(freq) — one filter, one law, both doors.
+        return if (onepoleHz > 0.0) raw.onePoleLowpass(onepoleHz) else raw
     }
 
     /** Create a child that delegates to this registry for keys not found locally. */

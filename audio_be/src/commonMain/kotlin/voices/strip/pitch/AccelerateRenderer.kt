@@ -27,15 +27,17 @@ class AccelerateRenderer(
 
     private val totalFrames = (endFrame - startFrame)
 
-    // Per-sample multiplicative step: ratio = 2^(amount / totalFrames)
-    private val step = 2.0.pow(accelerate.amount / totalFrames)
+    // Per-sample multiplicative step: ratio = 2^((semitones/12) / totalFrames) — the wire
+    // value is SEMITONES over the voice (unit changed from octaves, 2026-08-24)
+    private val octaves = accelerate.semitones / 12.0
+    private val step = 2.0.pow(octaves / totalFrames)
 
     override fun render(ctx: BlockContext) {
         val buf = ctx.freqModBuffer
 
         // Seed with pow() once at the block start, then multiply per sample
         val blockRelStart = (ctx.blockStart + ctx.offset) - startFrame
-        var ratio = 2.0.pow(accelerate.amount * blockRelStart / totalFrames)
+        var ratio = 2.0.pow(octaves * blockRelStart / totalFrames)
 
         if (ctx.freqModBufferWritten) {
             for (i in 0 until ctx.length) {

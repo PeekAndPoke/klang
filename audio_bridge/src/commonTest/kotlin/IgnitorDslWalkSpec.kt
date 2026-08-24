@@ -38,7 +38,7 @@ class IgnitorDslWalkSpec : StringSpec({
      */
     val corpus: List<Triple<String, IgnitorDsl, Int>> = listOf(
         Triple("Abs", IgnitorDsl.Abs(inner = m(0)), 1),
-        Triple("Accelerate", IgnitorDsl.Accelerate(inner = m(0), amount = m(1)), 2),
+        Triple("Accelerate", IgnitorDsl.Accelerate(inner = m(0), semitones = m(1)), 2),
         Triple("Adsr", IgnitorDsl.Adsr(
                 inner = m(0),
                 attackSec = m(1),
@@ -111,7 +111,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("PinkNoise", IgnitorDsl.PinkNoise(), 0),
         Triple("PitchEnvelope", IgnitorDsl.PitchEnvelope(
                 inner = m(0),
-                amount = m(1),
+                semitones = m(1),
                 attackSec = m(2),
                 decaySec = m(3),
                 releaseSec = m(4),
@@ -165,7 +165,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("Triangle", IgnitorDsl.Triangle(freq = m(0), analog = m(1)), 2),
         Triple("Unipolar", IgnitorDsl.Unipolar(inner = m(0)), 1),
         Triple("Variants", IgnitorDsl.Variants(listOf(m(0), m(1), m(2))), 3),
-        Triple("Vibrato", IgnitorDsl.Vibrato(inner = m(0), rate = m(1), depth = m(2)), 3),
+        Triple("Vibrato", IgnitorDsl.Vibrato(inner = m(0), rate = m(1), semitones = m(2)), 3),
         Triple("WhiteNoise", IgnitorDsl.WhiteNoise(color = m(0)), 1),
         Triple("Zamp", IgnitorDsl.Zamp(freq = m(0), analog = m(1)), 2),
         Triple("Zawtooth", IgnitorDsl.Zawtooth(freq = m(0), analog = m(1)), 2),

@@ -155,7 +155,7 @@ purely linear** at all `analog` values; the `analog` parameter and
 `SvfHPF` for future re-introduction.
 
 **Where the "warmth" comes from now** — and it works: upstream `.distort()` /
-`.warmth()` / `.clip()` shapers, oscillator OU drift (per-voice), per-voice
+`.onepole()` (ex-warmth) / `.clip()` shapers, oscillator OU drift (per-voice), per-voice
 cutoff offset (`FILTER_CUTOFF_OFFSET_PER_ANALOG`), and the coefficient ramp
 (`FILTER_SMOOTH_SAMPLES`) on cutoff changes. These collectively give the
 "plastic pipe → wooden warm" transformation without needing the filter itself

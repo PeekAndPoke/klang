@@ -43,10 +43,10 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").oscparam("warmth", "<0.2 0.8>")    // pattern-cycle the value
+ * note("c3 e3").oscparam("onepole", "<12000 3700>") // pattern-cycle the value
  * ```
  *
- * @param key The oscillator parameter name (e.g. "analog", "warmth", "density").
+ * @param key The oscillator parameter name (e.g. "analog", "onepole", "density").
  * @param value The parameter value.
  * @return A new pattern with the oscillator parameter set.
  * @alias oscp
@@ -259,73 +259,83 @@ fun duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
 fun PatternMapperFn.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.duty(amount, callInfo) }
 
-// -- warmth() ---------------------------------------------------------------------------------------------------------
+// -- onepole() --------------------------------------------------------------------------------------------------------
 
-private val warmthMutation = voiceSetter {
-    putOscParam("warmth", it?.asDoubleOrNull())
+private val onepoleMutation = voiceSetter {
+    putOscParam("onepole", it?.asDoubleOrNull())
 }
 
-private fun applyWarmth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args, warmthMutation)
+private fun applyOnepole(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretStringField(args, onepoleMutation)
 }
 
 /**
- * Controls the oscillator warmth (low-pass filtering amount).
+ * Puts a one-pole lowpass on the oscillator at [freq] Hz — the gentlest filter there is
+ * (6 dB/oct, no resonance). Musically it is a "warmth" knob: lower frequencies are darker.
+ * `0` (or omitting the call) means no filter.
  *
- * A value of `0.0` gives a bright, unfiltered sound; `1.0` gives a muffled, warm sound.
+ * This is deliberately a DIFFERENT thing from [lpf]: `lpf` is the resonant 12 dB/oct SVF
+ * and never secretly swaps character, `onepole` is the soft tone control. (Renamed from
+ * `warmth(0..1)` in the pitch/unit unification, 2026-08-24 — the old value was the raw
+ * filter coefficient, sample-rate dependent; sites were converted via
+ * `freq = sr/π · atan((1−w)/w)` at 48 kHz — scalar sites sound-identical; the two
+ * patterned `saw.range` sites are endpoint-exact, mid-sweep the atan curve differs
+ * inaudibly.)
  *
  * ```KlangScript(Playable)
- * note("c d e f").warmth(0.8)          // warm, muffled sawtooth
+ * note("c d e f").onepole(3700)          // warm, muffled sawtooth
  * ```
  *
  * ```KlangScript(Playable)
- * note("c d e f").warmth("<0 0.5 1>")  // cycle through warmth values
+ * note("c d e f").onepole("<12000 3700 1700>")  // stepwise darker
  * ```
  *
- * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
  *
  * @category tonal
- * @tags warmth, oscillator, filter, low-pass, addon
+ * @tags onepole, warmth, oscillator, filter, low-pass, tone, addon
  */
 @KlangScript.Function
-fun SprudelPattern.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyWarmth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyOnepole(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
 
 /**
- * Parses this string as a pattern and sets the oscillator warmth.
+ * Parses this string as a pattern and sets the oscillator one-pole lowpass (see
+ * [SprudelPattern.onepole]).
  *
  * ```KlangScript(Playable)
- * note("c d e f").s("square").warmth("<0 0.5 1>")  // cycle through warmth values
+ * note("c d e f").s("square").onepole("<12000 3700 1700>")  // stepwise darker
  * ```
  *
- * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
  */
 @KlangScript.Function
-fun String.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).warmth(amount, callInfo)
+fun String.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).onepole(freq, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the oscillator warmth.
+ * Creates a [PatternMapperFn] that sets the oscillator one-pole lowpass.
  *
  * ```KlangScript(Playable)
- * note("c d e f").apply(warmth("<0 0.5 1>"))  // cycle through warmth values
+ * note("c d e f").apply(onepole("<12000 3700 1700>"))  // stepwise darker
  * ```
  *
- * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
  */
 @KlangScript.Function
-fun warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.warmth(amount, callInfo) }
+fun onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.onepole(freq, callInfo) }
 
 /**
- * Chains a warmth-set onto this [PatternMapperFn], applying oscillator warmth after the previous step.
+ * Chains a onepole-set onto this [PatternMapperFn], applying the one-pole lowpass after the
+ * previous step.
  *
  * ```KlangScript(Playable)
- * seq("0.2 0.4").apply(mul(2).warmth())  // mul doubles values, warmth() reads them as warmth: 0.4, 0.8
+ * seq("1700 3700").apply(mul(2).onepole())  // mul doubles values, onepole() reads them as Hz
  * ```
  *
- * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
  */
 @KlangScript.Function
-fun PatternMapperFn.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.warmth(amount, callInfo) }
+fun PatternMapperFn.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.onepole(freq, callInfo) }

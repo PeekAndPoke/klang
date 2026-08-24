@@ -554,7 +554,25 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   claims in the same pass, not merely rename. Helper landed as `WetDryMix` (one name for the
   law; the exponent picks the statistic) rather than the tentative `equalPowerMix`.
 - C4.2 review flags (round 1, 2026-08-24):
-  - ⚠ USER DECISION (parked): the phaser runs TWICE per note on the default `modern`
+  - ✅ RESOLVED (maintainer, 2026-08-24, in the pitch-param session): THE BUS OWNS THE
+    PHASER — built-in pipeline presets carry no `StageDsl.Phaser`; per-voice phasing stays
+    available to custom pipelines only. `phaserFloor` is exact by default now. Guard:
+    `PipelinePresetSpec` ("built-in presets carry NO Phaser stage"). Original finding below.
+    ⚠ EAR LIST addition: single-pass HALVES the effective phaser wet on shipped songs —
+    Tetris phaserWet(0.15), IrishLamentTechno phaserWet(0.25 / saw.range 0.3..0.6) were
+    dialled against the double pass; retune by ear (values likely go UP). Also note: the
+    per-voice mono component is gone (bus is stereo) — listen for image changes.
+    Structural footgun (documented in phaserWet KDoc): orbit knobs are first-writer-wins,
+    so a non-lease voice's phaser knobs are now fully inert (no corpus instance today).
+  - 44.1 kHz note for the warmth->onepole migration: four converted values (23846, 23688,
+    23197, 22309 Hz) sit above 44.1k's Nyquist clamp (22049) and become exact bypass there;
+    at any rate they were near-transparent before. The new invariant (frequency, not raw
+    coefficient) is the point of the change — do not chase this as a bug. The two patterned
+    IrishLamentTechno `saw.range` sweeps are endpoint-exact only (atan-nonlinear interior,
+    inaudible). ⚠ OPERATIONAL: the checked-out `klang-worklet.js` bundle is stale (gitignored
+    build artifact) — rebuild the FE before any by-ear pass, or every onepole() site plays
+    as bypassed.
+  - (superseded) the phaser runs TWICE per note on the default `modern`
     pipeline — per-voice `StripPhaserRenderer` AND the cylinder-bus `Phaser`, from the SAME
     `Voice.Phaser` knobs. Pre-existing (at the additive floor-1 default the second pass only
     adds more wet; that is the shipped sound and why the goldens hold). But with the new

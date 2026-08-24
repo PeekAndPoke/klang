@@ -18,7 +18,7 @@ import io.peekandpoke.klang.audio_bridge.StageDsl
  * its [StageDsl] slots and maps each to its `BlockRenderer`. The built-in engines:
  *
  * - `modern` (default): classic subtractive `osc → waveshaper → VCF → VCA`.
- *   ADSR (VCA) runs last so the filter/phaser see steady-state amplitude.
+ *   ADSR (VCA) runs last so the filter sees steady-state amplitude.
  * - `pedal`: VCA runs first so the waveshapers respond to dynamics.
  *
  * Only ACTIVE stages are included — a waveshaper/tremolo/phaser slot is skipped when its

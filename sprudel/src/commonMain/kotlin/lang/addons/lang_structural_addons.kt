@@ -257,7 +257,7 @@ private fun applyMerge(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * ```KlangScript(Playable)
- * note("<[c3 d3] [e3 f3]>").merge(seq("<0.2 0.4 0.6 0.8>").warmth())   // notes gain warmth per event
+ * note("<[c3 d3] [e3 f3]>").merge(seq("<12000 8000 4000 2000>").onepole())   // notes darken per event (one-pole Hz)
  * ```
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
@@ -273,7 +273,7 @@ fun SprudelPattern.merge(ctrl: PatternLike, callInfo: CallInfo? = null): Sprudel
  * Parses this string as a pattern and overlays voice properties from the control pattern.
  *
  * ```KlangScript(Playable)
- * "1 2 3 4".merge("<0.2 0.4 0.6 0.8>".warmth()).scale("c3:major").n()   // value sequence gains warmth from control
+ * "1 2 3 4".merge("<12000 8000 4000 2000>".onepole()).scale("c3:major").n()   // value sequence gains warmth from control
  * ```
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
@@ -286,7 +286,7 @@ fun String.merge(ctrl: PatternLike, callInfo: CallInfo? = null): SprudelPattern 
  * Creates a [PatternMapperFn] that overlays voice properties from the control pattern.
  *
  * ```KlangScript(Playable)
- * seq("1 2").apply(merge(seq("0.3 0.7").warmth())).scale("c3:major").n()   // apply warmth overlay as a mapper
+ * seq("1 2").apply(merge(seq("8000 3000").onepole())).scale("c3:major").n()   // apply warmth overlay as a mapper
  * ```
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.

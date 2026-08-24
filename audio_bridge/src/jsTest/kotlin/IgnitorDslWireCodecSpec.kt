@@ -147,7 +147,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Detune" { check(IgnitorDsl.Sine().detune(7.0)) }
     "Lowpass" { check(IgnitorDsl.Square().lowpass(2000.0)) }
     "Highpass (custom q)" { check(IgnitorDsl.Sawtooth().highpass(500.0, 1.5)) }
-    "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onePoleLowpass(3000.0)) }
+    "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onepole(3000.0)) }
     "Bandpass" { check(IgnitorDsl.Sine().bandpass(1000.0, 2.0)) }
     "Notch" { check(IgnitorDsl.Sine().notch(1000.0, 2.0)) }
     "Eq (every section variant, all fields non-default)" {
@@ -201,7 +201,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- pitch modulation -----------------------------------------------------------------------------------
     "Vibrato" { check(IgnitorDsl.Sine().vibrato(5.0, 0.02)) }
     "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0)) }
-    "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), amount = IgnitorDsl.Constant(12.0))) }
+    "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0))) }
     "PitchMod" { check(IgnitorDsl.Sine().pitchMod(IgnitorDsl.Sine())) }
 
     // --- dispatch / deep composites -------------------------------------------------------------------------
@@ -225,7 +225,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
         check(
             (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(0.1))
                 .div(IgnitorDsl.Param("divisor", 2.0))
-                .onePoleLowpass(3000.0)
+                .onepole(3000.0)
         )
     }
 })

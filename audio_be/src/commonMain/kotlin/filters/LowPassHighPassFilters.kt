@@ -311,7 +311,10 @@ object LowPassHighPassFilters {
         // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ): AudioFilter = when (q) {
-        null -> OnePoleLPF(cutoffHz, sampleRate, cutoffOffsetMul)
+        // No secret effect swap (maintainer decision, 2026-08-24): an absent q means the
+        // DEFAULT q, not a different filter topology. The one-pole is its own named thing
+        // (`onepole(freq)`), never what `lpf` quietly becomes.
+        null -> SvfLPF(cutoffHz, 0.707, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
         else -> SvfLPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
     }
 
@@ -332,7 +335,8 @@ object LowPassHighPassFilters {
         // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
     ): AudioFilter = when (q) {
-        null -> OnePoleHPF(cutoffHz, sampleRate, cutoffOffsetMul)
+        // Same rule as createLPF: absent q = default q, never a topology swap.
+        null -> SvfHPF(cutoffHz, 0.707, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
         else -> SvfHPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
     }
 
@@ -377,6 +381,11 @@ object LowPassHighPassFilters {
      * `y[ n ] = α·x[ n ] + (1−α)·y[n-1]`. DC gain = 1, monotonic, stable.
      * Cutoff is accurate (−3 dB at `fc`) up to ~fs/4 — beyond that all bilinear
      * designs warp. See file header for review history.
+     *
+     * ⚠ TEST/BENCHMARK-ONLY since 2026-08-24 (the null-q secret swap was removed): no
+     * production path constructs this — the live one-pole is `OnePoleLowpassIgnitor`
+     * behind `onepole(freq)`. Kept for the benchmark and as reference DSP; do not "fix"
+     * behaviours documented on these classes — deliberate history on dormant code.
      */
     class OnePoleLPF(
         cutoffHz: Double,
@@ -411,6 +420,9 @@ object LowPassHighPassFilters {
      * DC gain = 0, Nyquist gain = 1, true −3 dB at `fc`, stable. See file header for
      * the review history (replaced the old `y = a·(y + x − xPrev)` topology in 2026-04
      * because that one had Nyquist droop at high cutoffs).
+     *
+     * ⚠ TEST/BENCHMARK-ONLY since 2026-08-24 — see [OnePoleLPF]; no one-pole highpass
+     * door exists.
      */
     class OnePoleHPF(
         cutoffHz: Double,

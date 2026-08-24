@@ -47,7 +47,7 @@ let kick = s("bd!4").gain(1.0).hpf(60).adsr(0.06, 0.20, 0.2, 0.02).orbit(0)
 let hat  = s("hh!8").gain(0.375).hpf(6000).adsr(0.001, 0.04, 0.0, 0.04).orbit(1)
 let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
     .sound("supersaw").spread(0.1).unison(15).legato(0.7).hpf(160).lpf(sine.range(450, 1000).slow(7)).lpe(15.9).lpq(1.5).lpadsr(0.005, 0.08, 0.7, 0.05)
-    .adsr(0.01, 0.2, 0.4, 0.05).distort(0.5, "gentle", 2).postgain(0.22).warmth(0.05).body("membrane")
+    .adsr(0.01, 0.2, 0.4, 0.05).distort(0.5, "gentle", 2).postgain(0.22).onepole(23197).body("membrane")
     .gain(0.75).orbit(2) // . solo()
 let core = stack(kick, hat, bass)
 
@@ -58,7 +58,7 @@ let oh   = s("[~ ~ ~ oh]!4").gain(0.20).hpf(4000).orbit(1)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.4).hpf(800).orbit(1)
 
 // ── Lead phrases (5 shapes of the recorder melody) ──────────────────
-let leadStyle = mel =>mel.sound("supertri").unison(3).spread(0.07).euclid(3, 8).warmth(0.02)
+let leadStyle = mel =>mel.sound("supertri").unison(3).spread(0.07).euclid(3, 8).onepole(23688)
        .hpf(400).lpf(sine.range(2600, 2700).slow(0.5)).lpe(3.9).lpq(2.5).adsr(0.03, 0.3, 0.5, 0.08)
        .clip(0.7).distort(0.1, "gentle", 2).postgain(0.3)
        .delayWet(0.18).delaytime(pure(3/16).div(cps)).delayfeedback(0.32)    
@@ -90,7 +90,7 @@ let riser = note("c").fast(3).sound("pink").superimpose(x => x.sound("brown"))
 let hitKick = s("bd:2").gain(0.95).hpf(60).adsr(0.05, 0.22, 0.5, 1.0).orbit(1)
 let hitBass = note("d2").sound("saw").distort(0.8, "hard", 4)
     .hpf(100).lpf(900).lpq(2.5).adsr(0.02, 0.3, 0.5, 10.0)
-    .gain(0.4).postgain(0.22).warmth(0.25)
+    .gain(0.4).postgain(0.22).onepole(19084)
     .orbit(0)
 let hitSub  = note("d1").sound("sine")
     .adsr(0.005, 0.3, 0.5, 10.0).lpf(120).gain(0.45)
@@ -156,7 +156,7 @@ let quietBuild = stack(
           [bb1 f2 bb2 f2 d2 f2 bb1 f2] [c2 g2 c3 g2 e2 g2 c2 g2]
           [g1 d2 g2 d2 bb1 d2 g1 d2] [f1 c2 f2 c2 a1 c2 f1 c2]
           [a1 e2 a2 e2 c2 e2 a1 e2] [d2 a2 d3 a2 f2 a2 d2 a2]>`)
-        .sound("supersaw").unison(4).warmth(0.1).gain(0.40).adsr(0.005, 0.2, 0.7, 0.15).pan(0.5)
+        .sound("supersaw").unison(4).onepole(22309).gain(0.40).adsr(0.005, 0.2, 0.7, 0.15).pan(0.5)
         .superimpose(transpose("<0 12 24 12>/8").pan(0.7).superimpose(pan(0.3)))
         .phaser(1/13).phaserWet(0.25).phasercenter(3500).phasersweep(1000)
         .spread(sine.range(0.15, 0.40).slow(64)).hpf(300).lpf(5000).lpq(1.2)
@@ -188,14 +188,14 @@ let darkBuild = stack(
         .sound("saw").legato(0.7)
         .hpf(200).lpf(saw.range(500, 900).slow(64)).adsr(0.002, 0.08, 0.5, 0.05)
         .distort(0.7, "hard", 4).postgain(0.5)
-        .warmth(saw.range(0.5, 0.1).slow(64))
+        .onepole(saw.range(12000, 22309).slow(64))
         .gain(saw.fast(4).range(0.6, 0.3))
         .orbit(4),
     // Tetris bassline — same pattern, pumps, LPF closes, more grit
     note(`<[a1 e2 a2 e2 c2 e2 a1 e2] [d2 a2 d3 a2 f2 a2 d2 a2] [bb1 f2 bb2 f2 d2 f2 bb1 f2] [c2 g2 c3 g2 e2 g2 c2 g2]
           [g1 d2 g2 d2 bb1 d2 g1 d2] [f1 c2 f2 c2 a1 c2 f1 c2] [a1  e2 a2  e2 c2 e2 a1  e2] [d2 a2 d3 a2 f2 a2 d2 a2]>`)
         .sound("supersaw").unison(12).spread(sine.range(0.10, 0.40).slow(64))
-        .warmth(saw.range(0.5, 0.2).slow(64)).gain(0.25).distort(saw.range(0.35, 0.5).slow(64)).postgain(0.7)
+        .onepole(saw.range(12000, 20257).slow(64)).gain(0.25).distort(saw.range(0.35, 0.5).slow(64)).postgain(0.7)
         .pan(0.3).superimpose(pan(0.7))
         .superimpose(transpose("<-12 0 12 0>/8").gain(0.2).pan(0.1), transpose("<0 12 24 12>/8").gain(saw.range(0.1, 0.2).slow(64)).pan(0.8))
         .phaser(1/11).phaserWet(0.25).phasercenter(3500).phasersweep(500)
@@ -205,7 +205,7 @@ let darkBuild = stack(
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.4)))
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]").transpose(0)
         .sound("superpulse").unison(2).spread(0.05).pan(0.2).superimpose(pan(0.8))
-        .hpf(400).lpf(saw.range(1500, 2500).slow(32)).lpe(24).warmth(0.5)
+        .hpf(400).lpf(saw.range(1500, 2500).slow(32)).lpe(24).onepole(12000)
         .adsr(0.005, 0.1, 0.25, 0.1).legato(0.7)
         .gain(0.11).orbit(6).roomWet(0.4).rsize(6),
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift

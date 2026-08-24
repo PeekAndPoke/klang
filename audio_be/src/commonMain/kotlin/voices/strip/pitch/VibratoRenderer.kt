@@ -24,7 +24,7 @@ class VibratoRenderer(
     override fun render(ctx: BlockContext) {
         val buf = ctx.freqModBuffer
         val phaseInc = (TWO_PI * vibrato.rate) / sampleRate
-        val depthSemitones = vibrato.depth
+        val depthSemitones = vibrato.semitones
         var phase = vibrato.phase
 
         if (ctx.freqModBufferWritten) {

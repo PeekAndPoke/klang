@@ -1446,39 +1446,45 @@ sealed interface IgnitorDsl {
      * Vibrato effect. Modulates pitch with a sinusoidal LFO.
      *
      * @param rate LFO frequency in Hz (default 5.0)
-     * @param depth modulation depth in semitones (default 0.25 ≈ quarter-semitone wobble).
-     *   Matches the sprudel `vibratoMod()` unit: both specify depth in semitones.
+     * @param semitones modulation depth in SEMITONES (default 0.25 ≈ quarter-semitone wobble).
+     *   Matches the sprudel `vibratoMod()` unit; pitch params are named by their unit.
      */
     @WireName("vibrato")
     data class Vibrato(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(5.0),
-        val depth: IgnitorDsl = Constant(0.25),
+        val semitones: IgnitorDsl = Constant(0.25),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
+            inner.collectParams(out); rate.collectParams(out); semitones.collectParams(out)
         }
     }
 
-    /** Pitch acceleration. Continuously shifts pitch over the voice's duration using an exponential curve. */
+    /**
+     * Pitch acceleration. Continuously shifts pitch over the voice's duration using an
+     * exponential curve, by [semitones] total: `accelerate(12)` ends one octave up.
+     */
     @WireName("accelerate")
     data class Accelerate(
         val inner: IgnitorDsl,
-        val amount: IgnitorDsl = Constant(0.0),
+        val semitones: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); amount.collectParams(out)
+            inner.collectParams(out); semitones.collectParams(out)
         }
     }
 
     /**
      * Pitch envelope. Applies an attack-decay-release envelope to pitch, useful for
      * kick drum sweeps, laser effects, and other transient pitch gestures.
+     *
+     * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
+     *   +12 sweeps from an octave up, -24 from two octaves down.
      */
     @WireName("pitch-envelope")
     data class PitchEnvelope(
         val inner: IgnitorDsl,
-        val amount: IgnitorDsl = Constant(0.0),
+        val semitones: IgnitorDsl = Constant(0.0),
         val attackSec: IgnitorDsl = Constant(0.01),
         val decaySec: IgnitorDsl = Constant(0.1),
         val releaseSec: IgnitorDsl = Constant(0.0),
@@ -1486,7 +1492,7 @@ sealed interface IgnitorDsl {
         val anchor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); amount.collectParams(out); attackSec.collectParams(out)
+            inner.collectParams(out); semitones.collectParams(out); attackSec.collectParams(out)
             decaySec.collectParams(out); releaseSec.collectParams(out); curve.collectParams(out); anchor.collectParams(out)
         }
     }
@@ -1710,10 +1716,14 @@ fun IgnitorDsl.Eq.tap(
 fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 0.707, gain: Double = 1.0): IgnitorDsl.Eq =
     tap(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(gain))
 
-/** Applies a lightweight one-pole lowpass filter at [cutoffHz]. */
-fun IgnitorDsl.onePoleLowpass(cutoffHz: Double) = IgnitorDsl.OnePoleLowpass(
+/**
+ * Applies a one-pole lowpass at [freq] Hz — 6 dB/oct, no resonance; musically a warmth/tone
+ * control. ONE name on every door (formerly `onePoleLowpass`; the sprudel door's `warmth`
+ * collapsed into this too).
+ */
+fun IgnitorDsl.onepole(freq: Double) = IgnitorDsl.OnePoleLowpass(
     inner = this,
-    cutoffHz = IgnitorDsl.Constant(cutoffHz),
+    cutoffHz = IgnitorDsl.Constant(freq),
 )
 
 fun IgnitorDsl.bandpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Bandpass(
@@ -1861,17 +1871,17 @@ fun IgnitorDsl.Shimmer.dryFloor(value: Double): IgnitorDsl.Shimmer = dryFloor(Ig
 
 // Pitch modulation
 
-/** Applies vibrato (pitch modulation) at the given LFO [rate] and [depth]. */
-fun IgnitorDsl.vibrato(rate: Double, depth: Double) = IgnitorDsl.Vibrato(
+/** Applies vibrato (pitch modulation) at the given LFO [rate], [semitones] deep. */
+fun IgnitorDsl.vibrato(rate: Double, semitones: Double) = IgnitorDsl.Vibrato(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
-    depth = IgnitorDsl.Constant(depth),
+    semitones = IgnitorDsl.Constant(semitones),
 )
 
 /** Applies continuous pitch acceleration over the voice's duration. */
-fun IgnitorDsl.accelerate(amount: Double) = IgnitorDsl.Accelerate(
+fun IgnitorDsl.accelerate(semitones: Double) = IgnitorDsl.Accelerate(
     inner = this,
-    amount = IgnitorDsl.Constant(amount),
+    semitones = IgnitorDsl.Constant(semitones),
 )
 
 /**

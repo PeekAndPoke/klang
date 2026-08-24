@@ -14,7 +14,7 @@ Ignitor / Master / Pipeline (they weren't on the generator's function allow-list
 Ground truth from the 14 built-in songs (full tally in session analysis, key facts):
 
 - Used by **all 14** songs: `stack`, `note`/`n`, `sound`/`s`, `gain`, `adsr`. Second tier (10+):
-  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `roomWet`, `postgain`, `distort`, `warmth`, `analog`.
+  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `roomWet`, `postgain`, `distort`, `onepole`, `analog`.
 - Signals-as-modulators is the highest-value intermediate concept: 72 `.range(` calls across 7 songs.
 - Mini-notation actually used: sequences, `~`, `[]`, `<>`, `*`, `!`, `@`, comma-chords, `|`, `` >/n `` suffix,
   `struct` gates. Never used: polymeter. `.euclid()` in one song only.
@@ -117,7 +117,7 @@ stages must not carry it.
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
 | A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: 1 voice → 9 voices → spread out → drift. *Listen for: mono vs. wide on headphones.* |
-| A7 | Space & dirt | `roomWet`/`rsize`, `delayWet` family, `distort`, `warmth`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/warmth), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
+| A7 | Space & dirt | `roomWet`/`rsize`, `delayWet` family, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
 | A8 | Body | `body()`, `bodyWet` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
 

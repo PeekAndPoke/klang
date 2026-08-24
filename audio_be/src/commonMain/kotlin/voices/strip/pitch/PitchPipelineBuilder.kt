@@ -32,11 +32,11 @@ fun buildPitchPipeline(
     endFrame: Double,
     gateEndFrame: Double,
 ): List<BlockRenderer> = buildList {
-    if (vibrato.depth > 0.0) {
+    if (vibrato.semitones > 0.0) {
         add(VibratoRenderer(vibrato, sampleRate))
     }
 
-    if (accelerate.amount != 0.0 && endFrame > startFrame) {
+    if (accelerate.semitones != 0.0 && endFrame > startFrame) {
         add(AccelerateRenderer(accelerate, startFrame, endFrame))
     }
 

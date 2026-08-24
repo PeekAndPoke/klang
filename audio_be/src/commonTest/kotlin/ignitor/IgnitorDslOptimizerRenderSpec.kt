@@ -18,7 +18,7 @@ import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.notch
-import io.peekandpoke.klang.audio_bridge.onePoleLowpass
+import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.tap
@@ -309,11 +309,11 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         )
     }
 
-    "an unfusable FILTER is a wall too (warmth, and an analog filter)" {
+    "an unfusable FILTER is a wall too (onepole, and an analog filter)" {
         // The nearest miss: `asFusibleSection` must decline these while its neighbours fuse.
-        // `.warmth()` especially — it is a one-liner people reach for constantly.
+        // `.onepole()` especially — it is a one-liner people reach for constantly.
         assertOptimizeIsInaudible(
-            IgnitorDsl.Sawtooth().lowpass(2000.0, 0.707).onePoleLowpass(800.0).lowpass(4000.0, 0.707)
+            IgnitorDsl.Sawtooth().lowpass(2000.0, 0.707).onepole(800.0).lowpass(4000.0, 0.707)
         )
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
@@ -386,12 +386,12 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         val bare = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0, 0.707),
             rate = IgnitorDsl.Constant(5.0),
-            depth = IgnitorDsl.Constant(0.3),
+            semitones = IgnitorDsl.Constant(0.3),
         )
         val marked = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0, 0.707).optimizer(on = 0),
             rate = IgnitorDsl.Constant(5.0),
-            depth = IgnitorDsl.Constant(0.3),
+            semitones = IgnitorDsl.Constant(0.3),
         )
 
         // The marked tree still fuses NOTHING (the hint disables the whole definition).

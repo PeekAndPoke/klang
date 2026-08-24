@@ -2788,6 +2788,12 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * phaser the dry stays untouched by default (`phaserFloor` = 1), so the wet ADDS the swept
  * notch signal on top: higher values produce a more pronounced sweep. Lower [phaserFloor]
  * to turn the same knob into a crossfade.
+ *
+ * The phaser is an ORBIT (bus) effect (2026-08-24: one sweep over the summed orbit, the
+ * DAW-insert model) and orbit knobs are first-writer-wins: a voice that sets phaser knobs
+ * but does not own its orbit's lease is not phased. Route to its own orbit for its own
+ * phaser.
+ *
  * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the wet amount.
  *
  * @param wet The wet amount (0–1). Omit to reinterpret the pattern's values.

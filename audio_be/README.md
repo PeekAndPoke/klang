@@ -96,11 +96,7 @@ Every voice follows this exact processing order:
     │      └─ Reacts to volume dynamics    │
     │         (loud = more distorted)      │
     │                                      │
-    │   2. Phaser                          │
-    │      └─ Needs harmonics from         │
-    │         distortion to sweep          │
-    │                                      │
-    │   3. Tremolo                         │
+    │   2. Tremolo                         │
     │      └─ Clean rhythmic volume        │
     │         modulation                   │
     │                                      │
@@ -127,6 +123,7 @@ Every voice follows this exact processing order:
     │                                      │
     │   • Delay / Echo                     │
     │   • Reverb                           │
+    │   • Phaser (bus-owned, 2026-08-24)   │
     │   • Compressor / Limiter             │
     │                                      │
     │   Processed after all voices mixed.  │
@@ -160,7 +157,7 @@ The pipeline follows professional audio standards:
 - **Source → Shape → Sculpt → Dynamics → Color**
 - All waveshaping (crush, coarse, distortion) before filters
 - Filters have final say over frequency spectrum
-- Phaser after envelope (needs harmonic content)
+- Phaser is a BUS effect (2026-08-24): one sweep over the summed orbit, not per voice
 - Tremolo last (clean volume modulation)
 
 ### 4. Efficiency

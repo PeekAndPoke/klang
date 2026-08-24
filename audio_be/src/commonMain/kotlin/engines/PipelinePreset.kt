@@ -25,10 +25,10 @@ enum class PipelinePreset(val pipelineName: String, val dsl: PipelineDsl) {
      * Default engine. Classic subtractive ordering: **osc → waveshaper → VCF → VCA**.
      *
      * ```
-     * FilterMod → Crush → Coarse → Distort → AudioFilter → Tremolo → Phaser → Envelope
+     * FilterMod → Crush → Coarse → Distort → AudioFilter → Tremolo → Envelope
      * ```
      *
-     * ADSR runs last, so the filter and phaser see a steady-amplitude signal
+     * ADSR runs last, so the filter sees a steady-amplitude signal (the phaser lives on the BUS since 2026-08-24)
      * and don't smear the attack. Waveshapers still precede the filter so
      * their harmonics get cleaned up.
      */
@@ -39,7 +39,7 @@ enum class PipelinePreset(val pipelineName: String, val dsl: PipelineDsl) {
      * responds to dynamics.
      *
      * ```
-     * FilterMod → Envelope → Crush → Coarse → Distort → AudioFilter → Tremolo → Phaser
+     * FilterMod → Envelope → Crush → Coarse → Distort → AudioFilter → Tremolo
      * ```
      *
      * Quiet attack stays clean, hot sustain saturates, release tail fades

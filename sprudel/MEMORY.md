@@ -256,7 +256,7 @@ return applyCat(patterns)
 - `vibrato()` / `vib`, `vibratoMod()` / `vibmod`
 - `accelerate()`, `unison()` / `uni`, `detune()`, `spread()`, `density()` / `d`
 - `attack()`, `decay()`, `sustain()`, `release()`, `adsr()`
-- `warmth()` (Klang extension)
+- `onepole()` (Klang extension; formerly `warmth`, now Hz)
 - `velocity()`, `postgain()`
 - FM synthesis: `fmh()`, `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`
 - Pitch envelope: `pattack`, `pdecay`, `prelease`, `penv`

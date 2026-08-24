@@ -56,6 +56,6 @@ class PitchEnvelopeRenderer(
             envLevel = 1.0 - (1.0 - pEnv.anchor) * decayProgress
         }
 
-        return 2.0.pow((pEnv.amount * envLevel) / 12.0)
+        return 2.0.pow((pEnv.semitones * envLevel) / 12.0)
     }
 }

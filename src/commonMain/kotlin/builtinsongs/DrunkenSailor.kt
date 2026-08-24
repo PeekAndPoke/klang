@@ -31,7 +31,7 @@ stack(
   // Bass
   , n(`<[8 15 13 15]!2  [7 14 10 14]!2
         [8 15 13 15]!2  [7 14 10 14] [6 7 8 9]
->`).scale("C1:minor").sound("pluck").adsr(0.01, 0.2, 0.5, 0.2).clip(0.5).distort(0.1).warmth(0.2).postgain(0.2)
+>`).scale("C1:minor").sound("pluck").adsr(0.01, 0.2, 0.5, 0.2).clip(0.5).distort(0.1).onepole(20257).postgain(0.2)
   .superimpose(x => x.sound("tri"))
   // Drums 1
   , s("hh!8").adsr(0.01, 0.1, 0.1, 1.0).gain(0.8) // .solo()

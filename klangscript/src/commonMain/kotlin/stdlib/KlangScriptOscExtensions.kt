@@ -76,15 +76,14 @@ object KlangScriptOscExtensions {
         analog = analog.toIgnitorDsl(),
     )
 
-    /** Applies a one-pole lowpass filter (gentle rolloff). Alias: onePoleLowpass. */
+    /**
+     * Applies a one-pole lowpass at [freq] Hz — the gentlest filter there is (6 dB/oct, no
+     * resonance); musically a warmth/tone control. ONE name on every door (formerly
+     * `warmth` / `onePoleLowpass`).
+     */
     @KlangScript.Method
-    fun warmth(self: IgnitorDsl, cutoffHz: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl())
-
-    /** Applies a one-pole lowpass filter (gentle rolloff). Alias for warmth. */
-    @KlangScript.Method
-    fun onePoleLowpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl())
+    fun onepole(self: IgnitorDsl, freq: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = freq.toIgnitorDsl())
 
     /**
      * SVF bandpass filter. Passes frequencies near the cutoff, attenuates others.
@@ -379,15 +378,15 @@ object KlangScriptOscExtensions {
     fun octaveDown(self: IgnitorDsl): IgnitorDsl =
         IgnitorDsl.Detune(inner = self, semitones = IgnitorDsl.Constant(-12.0))
 
-    /** Applies pitch vibrato. */
+    /** Applies pitch vibrato: [rate] Hz LFO, [semitones] deep. */
     @KlangScript.Method
-    fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, depth: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl())
+    fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, semitones: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl())
 
-    /** Applies continuous pitch acceleration over the voice duration. */
+    /** Applies continuous pitch acceleration over the voice duration, by [semitones] total. */
     @KlangScript.Method
-    fun accelerate(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Accelerate(inner = self, amount = amount.toIgnitorDsl())
+    fun accelerate(self: IgnitorDsl, semitones: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Accelerate(inner = self, semitones = semitones.toIgnitorDsl())
 
     /**
      * Applies a custom pitch modulation from any Ignitor signal.
@@ -397,17 +396,21 @@ object KlangScriptOscExtensions {
     fun pitchMod(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.PitchMod(inner = self, mod = mod.toIgnitorDsl())
 
-    /** Applies a pitch envelope (pitch sweep over time). */
+    /**
+     * Applies a pitch envelope (pitch sweep over time). [semitones] is the shift at the
+     * envelope peak: `pitchEnvelope(semitones = 24, decaySec = 0.05)` sweeps a kick from
+     * two octaves up down to the note.
+     */
     @KlangScript.Method
     fun pitchEnvelope(
         self: IgnitorDsl,
-        amount: IgnitorDslLike,
+        semitones: IgnitorDslLike,
         attackSec: IgnitorDslLike = 0.01,
         decaySec: IgnitorDslLike = 0.1,
         releaseSec: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.PitchEnvelope(
         inner = self,
-        amount = amount.toIgnitorDsl(),
+        semitones = semitones.toIgnitorDsl(),
         attackSec = attackSec.toIgnitorDsl(),
         decaySec = decaySec.toIgnitorDsl(),
         releaseSec = releaseSec.toIgnitorDsl(),

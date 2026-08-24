@@ -51,7 +51,7 @@ or reproduce the inner chain for the tap's source, which is not free.
 
 ## 3. One-pole sections
 
-`warmth()` / `onePoleLowpass()` never fuse, because `EqCore` has no one-pole section type and
+`onepole()` (the one-pole lowpass) never fuses, because `EqCore` has no one-pole section type and
 substituting an SVF would change the sound. Adding `ONEPOLE_LP` / `ONEPOLE_HP` section types is
 mechanical; note that `OnePoleHPF` carries a documented cutoff bias that is deliberate raw-engine
 character and must be reproduced exactly, not "fixed".

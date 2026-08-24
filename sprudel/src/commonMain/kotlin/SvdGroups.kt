@@ -53,6 +53,7 @@ data class SvdFilter(
 
 /** Pitch modulation: glide ([accelerate]) + vibrato. */
 data class SvdPitchMod(
+    /** Pitch glide in SEMITONES over the event (converted from octaves, 2026-08-24). */
     var accelerate: Double? = null,
     var vibrato: Double? = null,
     var vibratoMod: Double? = null,

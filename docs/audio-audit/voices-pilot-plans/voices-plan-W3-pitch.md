@@ -148,7 +148,7 @@ PitchPipelineBuilder.kt, SampleIgnitor.kt, Ignitors.kt (SineIgnitor)
 
 ### 12. "vibrato and accelerate combine correctly"
 
-- CLAIM: A voice with both vibrato (rate=5, depth=0.25) and accelerate (amount=1.0) produces output that differs from
+- CLAIM: A voice with both vibrato (rate=5, semitones=0.25) and accelerate (semitones=12.0) produces output that differs from
   vibrato-only and from accelerate-only.
 - MUTATION: `audio_be/src/commonMain/kotlin/voices/strip/pitch/AccelerateRenderer.kt:41`
     - OLD: `                buf[ctx.offset + i] *= ratio`
@@ -172,7 +172,7 @@ PitchPipelineBuilder.kt, SampleIgnitor.kt, Ignitors.kt (SineIgnitor)
 
 ### 14. "accelerate and pitch envelope combine correctly"
 
-- CLAIM: A voice with both accelerate (amount=0.5) and a pitch envelope (attack=50, decay=50, amount=1.0) produces
+- CLAIM: A voice with both accelerate (semitones=6.0) and a pitch envelope (attack=50, decay=50, semitones=1.0) produces
   output that differs from accelerate-only.
 - MUTATION: `audio_be/src/commonMain/kotlin/voices/strip/pitch/AccelerateRenderer.kt:46`
     - OLD: `                buf[ctx.offset + i] = ratio`

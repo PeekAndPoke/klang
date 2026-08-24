@@ -232,7 +232,7 @@ private fun fuseSerialFilters(
  * `EqCore` does not implement. A Param-backed analog is refused too, because an osc-param could
  * turn saturation on per note and the decision is made here, once, at registration.
  *
- * `OnePoleLowpass` (and therefore `warmth`) is absent by design: there is no one-pole section
+ * `OnePoleLowpass` (the `onepole()` door) is absent by design: there is no one-pole section
  * type, and substituting an SVF would change the sound.
  */
 private fun IgnitorDsl.asFusibleSection(): IgnitorDsl.EqSection? = when (this) {

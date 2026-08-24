@@ -206,7 +206,7 @@ object JsCompatTestSongs {
                     .sound("sine")
                     .gain(1.0)
                     .slow(4)
-                    .accelerate(1)
+                    .accelerate(12)
                     .vib(8)
                     .vmod(0.5)
             """.trimIndent()

@@ -14,10 +14,11 @@ Ground truth (from the skill ref — verify against the engine before publishing
 
 - **PER-ORBIT (bus)**, shared by all voices on the orbit: `body`/`vowel`, `roomWet`/`reverb`
   (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` family, `compressor`, ducking.
-  ⚠ CORRECTION (C4.2 engine review, 2026-08-24): the `phaser` family is NOT purely per-orbit —
-  it runs on the per-voice strip pipeline (`StripPhaserRenderer`, in the default `modern`
-  preset) AND on the cylinder bus (`KatalystPhaserEffect`), both driven by the same knobs;
-  with `phaserFloor < 1` the dry is floored in both passes. Document it as "both", not bus.
+  ⚠ UPDATED (P chunk, 2026-08-24, supersedes the C4.2 correction): THE BUS OWNS THE
+  PHASER — the built-in pipeline presets carry no per-voice phaser stage anymore, so the
+  `phaser` family IS per-orbit (one sweep over the summed mix, first-writer-wins on the
+  knobs). Only a CUSTOM pipeline that adds `StageDsl.Phaser` gets an extra per-voice pass
+  (then a floor below 1 floors the dry twice). Document it as per-orbit with that caveat.
 - **PER-VOICE**: filters (`lpf`/`hpf`/`bandf`/`notchf` + envs/qs), `distort`, `crush`,
   `coarse`, `gain`/`velocity`/`pan`/`postgain`, envelopes, `vibrato`/`tremolo`, `fm*`,
   pitch env, `unison`/`spread`, `analog`, `sound`/`n`/`note`.

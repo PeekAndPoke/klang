@@ -308,7 +308,7 @@ class FmSynthesisTest : StringSpec({
             freqHz = 440.0,
             signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 1.5, depth = 50.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25)
+            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25)
         )
         val voiceFmOnly = createSynthVoice(
             blockFrames = bf,

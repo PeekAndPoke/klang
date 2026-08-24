@@ -25,7 +25,7 @@ package io.peekandpoke.klang.audio_bridge
 fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
     return when (this) {
         is IgnitorDsl.Abs -> listOf(inner)
-        is IgnitorDsl.Accelerate -> listOf(inner, amount)
+        is IgnitorDsl.Accelerate -> listOf(inner, semitones)
         is IgnitorDsl.Adsr -> listOf(inner, attackSec, decaySec, sustainLevel, releaseSec, declickSeconds, expK)
         is IgnitorDsl.Bandpass -> listOf(inner, cutoffHz, q, analog)
         is IgnitorDsl.BerlinNoise -> listOf(rate, octaves, persistence)
@@ -66,7 +66,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.PerlinNoise -> listOf(rate, octaves, persistence)
         is IgnitorDsl.Phaser -> listOf(inner, rate, wet, center, sweep, dryFloor)
         is IgnitorDsl.PinkNoise -> emptyList()
-        is IgnitorDsl.PitchEnvelope -> listOf(inner, amount, attackSec, decaySec, releaseSec, curve, anchor)
+        is IgnitorDsl.PitchEnvelope -> listOf(inner, semitones, attackSec, decaySec, releaseSec, curve, anchor)
         is IgnitorDsl.PitchMod -> listOf(inner, mod)
         is IgnitorDsl.Pluck -> listOf(freq, decay, brightness, pickPosition, stiffness, analog)
         is IgnitorDsl.Plus -> listOf(left, right)
@@ -98,7 +98,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Triangle -> listOf(freq, analog)
         is IgnitorDsl.Unipolar -> listOf(inner)
         is IgnitorDsl.Variants -> children
-        is IgnitorDsl.Vibrato -> listOf(inner, rate, depth)
+        is IgnitorDsl.Vibrato -> listOf(inner, rate, semitones)
         is IgnitorDsl.WhiteNoise -> listOf(color)
         is IgnitorDsl.Zamp -> listOf(freq, analog)
         is IgnitorDsl.Zawtooth -> listOf(freq, analog)
@@ -129,7 +129,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
 
     return when (this) {
         is IgnitorDsl.Abs -> copy(inner = new[0])
-        is IgnitorDsl.Accelerate -> copy(inner = new[0], amount = new[1])
+        is IgnitorDsl.Accelerate -> copy(inner = new[0], semitones = new[1])
         is IgnitorDsl.Adsr -> copy(
             inner = new[0],
             attackSec = new[1],
@@ -198,7 +198,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.PinkNoise -> this
         is IgnitorDsl.PitchEnvelope -> copy(
             inner = new[0],
-            amount = new[1],
+            semitones = new[1],
             attackSec = new[2],
             decaySec = new[3],
             releaseSec = new[4],
@@ -252,7 +252,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Triangle -> copy(freq = new[0], analog = new[1])
         is IgnitorDsl.Unipolar -> copy(inner = new[0])
         is IgnitorDsl.Variants -> copy(children = new)
-        is IgnitorDsl.Vibrato -> copy(inner = new[0], rate = new[1], depth = new[2])
+        is IgnitorDsl.Vibrato -> copy(inner = new[0], rate = new[1], semitones = new[2])
         is IgnitorDsl.WhiteNoise -> copy(color = new[0])
         is IgnitorDsl.Zamp -> copy(freq = new[0], analog = new[1])
         is IgnitorDsl.Zawtooth -> copy(freq = new[0], analog = new[1])

@@ -33,7 +33,7 @@ let blockfloete =
         .plus(Osc.pinknoise().mul(1.62).lowpass(4000).highpass(800).adsr(0.003, 0.05, 0.01, 0.005))
         .plus(Osc.perlin(10).mul(0.035).lowpass(3500).highpass(1000))
         .plus(Osc.whitenoise().mul(0.28).highpass(4000).lowpass(8000).adsr(0.001, 0.03, 0.0, 0.001))
-        .lowpass(3500, 0.8).highpass(300).warmth(3500)
+        .lowpass(3500, 0.8).highpass(300).onepole(3500)
         .vibrato(1/2, 0.1)
         .analog(5)
         .pitchEnvelope(0.15, 0.01, 0.03)
@@ -59,7 +59,7 @@ let contrabass =
     .plus(Osc.brownnoise().lowpass(600).mul(0.06).adsr(0.001, 0.04, 0.0, 0.01))
     .plus(Osc.crackle(0.03).lowpass(1000).highpass(100).mul(0.008))
     .lowpass(Osc.constant(300).plus(Osc.constant(1200).adsr(0.005, 0.2, 0.0, 0.05)))
-    .highpass(30).warmth(600).analog(2)
+    .highpass(30).onepole(600).analog(2)
     .adsr(0.005, 0.5, 0.0, 0.15)
 
 // ── Part 1: Opening lament (Dm - Gm - C - F) ───────────────────────

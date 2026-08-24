@@ -41,7 +41,7 @@ let openGuitar = (() => {
     .distort(pDrive, "tube", 2)                                                      // Overdrive + oversample
     .lowpass(pBrightness, 1.0)                                                       // Post-distortion warmth
     .highpass(Osc.freq(), 1.0)                                                       // Cut muddy lows
-    .warmth(12000)
+    .onepole(12000)
     .adsr(pAttack, 0.15, pSustain, 0.03)
 })()
 
@@ -84,7 +84,7 @@ let accusticGuitar = (() => {
     // Brightness decays — string stiffness loses highs over time
     .lowpass(Osc.constant(2400).plus(Osc.constant(3000).adsr(0.001, 0.45, 0.10, 0.20)))
     .highpass(85)
-    .warmth(4200)
+    .onepole(4200)
     .pitchEnvelope(0.4, 0.001, 0.04)
     .analog(0.6)
     .adsr(0.003, 0.7, 0.35, 0.4)

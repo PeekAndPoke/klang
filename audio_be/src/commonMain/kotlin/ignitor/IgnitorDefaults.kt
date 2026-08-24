@@ -10,7 +10,7 @@ import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.lowpass
-import io.peekandpoke.klang.audio_bridge.onePoleLowpass
+import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
 
 /**
@@ -175,7 +175,7 @@ fun IgnitorRegistry.registerDefaults() {
         name = "sgpad",
         dsl = (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(semitones = 0.1))
             .div(other = IgnitorDsl.Param(name = "divisor", default = 2.0))
-            .onePoleLowpass(cutoffHz = 3000.0)
+            .onepole(freq = 3000.0)
     )
 
     // FM bell: sine carrier with sine modulator
@@ -269,7 +269,7 @@ fun IgnitorRegistry.registerDefaults() {
 //   WhiteNoise.adsr(0.001, 0.05, 0.0, 0.01)        — hi-hat
 //       .highpass(8000)
 //   Impulse.lowpass(200)                             — kick body
-//   Sine.pitchEnvelope(amount=24, decaySec=0.05)    — kick with pitch sweep
+//   Sine.pitchEnvelope(semitones=24, decaySec=0.05) — kick with pitch sweep
 //   Dust.mul(PinkNoise)                             — textured crackle
 //
 // ═════════════════════════════════════════════════════════════════════════════════

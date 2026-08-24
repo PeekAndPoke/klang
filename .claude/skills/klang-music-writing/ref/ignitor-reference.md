@@ -218,8 +218,7 @@ modulation.
 |-----------------------------|-------------------------------------|
 | `.lowpass(cutoffHz, q?)`    | Resonant lowpass (default q=0.707)  |
 | `.highpass(cutoffHz, q?)`   | Resonant highpass                   |
-| `.warmth(cutoffHz)`         | Gentle one-pole lowpass (-6 dB/oct) |
-| `.onePoleLowpass(cutoffHz)` | Same as warmth                      |
+| `.onepole(freq)`            | Gentle one-pole lowpass (-6 dB/oct) |
 | `.bandpass(cutoffHz, q?)`   | Bandpass filter                     |
 | `.notch(cutoffHz, q?)`      | Band-reject (notch) filter          |
 
@@ -241,7 +240,7 @@ filters is a wall: `.distort()`, `.drive()`, `.clip()`, `.crush()`, `.mul()`, `.
 passes, not one. Moving the distort to the end of the chain would make it one, though that is a
 different patch and a different sound, so make that choice by ear rather than for the saving.
 
-Two kinds of filter are never folded at all: `.warmth()/.onePoleLowpass()`, and any filter with a
+Two kinds of filter are never folded at all: `.onepole()`, and any filter with a
 non-zero or osc-param `analog`. On `.lowpass()/.highpass()` that analog switches on a saturating
 character the fused EQ does not reproduce; on `.bandpass()/.notch()` it produces no sound of its
 own, and the filter stays out of the fusion for a subtler reason: reading the value each block is
@@ -354,9 +353,9 @@ modulation amount in Hz.
 | `.detune(semitones)`                                | Shift pitch by semitones                   |
 | `.octaveUp()`                                       | +12 semitones                              |
 | `.octaveDown()`                                     | -12 semitones                              |
-| `.vibrato(rate, depth)`                             | Sinusoidal pitch LFO                       |
-| `.accelerate(amount)`                               | Exponential pitch ramp over voice duration |
-| `.pitchEnvelope(amount, attack?, decay?, release?)` | Pitch sweep envelope (amount in semitones) |
+| `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
+| `.accelerate(semitones)`                            | Exponential pitch ramp over the voice (12 = one octave) |
+| `.pitchEnvelope(semitones, attack?, decay?, release?)` | Pitch sweep envelope (SEMITONES at peak)  |
 
 ### Analog Drift
 
@@ -450,7 +449,7 @@ Osc.sine(Osc.freq().plus(Osc.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
 | `berlinnoise` | `berlin`                 | BerlinNoise(rate=1, octaves=1, persistence=0.5)                 |
 | `dust`        |                          | Dust(density=0.2, tail=1, bipolar=0)                            |
 | `crackle`     |                          | Crackle(chaos=1.5) — chaotic, NOT a dust alias                  |
-| `sgpad`       |                          | (Saw + Saw.detune(0.1)) / 2 -> onePoleLowpass(3000)             |
+| `sgpad`       |                          | (Saw + Saw.detune(0.1)) / 2 -> onepole(3000)             |
 | `sgbell`      |                          | Sine.fm(Sine, ratio=1.4, depth=300, decay=0.5)                  |
 | `sgbuzz`      |                          | Square.lowpass(2000)                                            |
 
@@ -481,7 +480,7 @@ let clarinet = Osc.triangle().mul(0.7)
         .plus(Osc.sine().mul(0.15))
         .plus(Osc.perlin(6).mul(0.02))
         .plus(Osc.perlin(10).mul(0.08).adsr(0.02, 0.1, 0.0, 0.01))
-        .lowpass(2800).highpass(150).warmth(4000)
+        .lowpass(2800).highpass(150).onepole(4000)
         .vibrato(5, 0.003)
         .pitchEnvelope(0.5, 0.01, 0.06)
         .adsr(0.04, 0.08, 0.9, 0.1)
@@ -588,7 +587,7 @@ let marimba = Osc.sine().mul(0.7)
         .plus(Osc.sine().detune(12).mul(0.15).adsr(0.001, 0.08, 0.0, 0.02))
         .plus(Osc.sine().detune(19.02).mul(0.08).adsr(0.001, 0.04, 0.0, 0.01))
         .plus(Osc.perlin(15).mul(0.12).lowpass(1500).highpass(200).adsr(0.001, 0.03, 0.0, 0.005))
-        .lowpass(2500).warmth(3000)
+        .lowpass(2500).onepole(3000)
         .pitchEnvelope(1, 0.001, 0.04)
         .adsr(0.005, 0.5, 0.0, 0.08)
 ```

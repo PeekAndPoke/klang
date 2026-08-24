@@ -143,7 +143,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // conservative below a wall is bit-identical. Only a shape assertion catches it.
         val dsl = IgnitorDsl.Sawtooth()
             .lowpass(2000.0, 0.707)
-            .onePoleLowpass(800.0)
+            .onepole(800.0)
             .lowpass(4000.0, 0.707)
             .optimize()
 
@@ -167,8 +167,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
         wall.inner.shouldBeInstanceOf<IgnitorDsl.Eq>().sections.size shouldBe 1
     }
 
-    "warmth / one-pole is left alone (no one-pole section type exists)" {
-        IgnitorDsl.Sine().onePoleLowpass(800.0).optimize()
+    "onepole (the one-pole lowpass) is left alone (no one-pole section type exists)" {
+        IgnitorDsl.Sine().onepole(800.0).optimize()
             .shouldBeInstanceOf<IgnitorDsl.OnePoleLowpass>()
     }
 

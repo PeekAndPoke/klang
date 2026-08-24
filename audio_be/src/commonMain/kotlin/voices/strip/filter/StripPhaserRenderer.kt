@@ -19,11 +19,12 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  * semantic where the knob adds an effect on top of the source; `phaserFloor < 1` turns the
  * same knob into a crossfade. The Ignitor-DSL phaser is the same law at `dryFloor = 0.0`.
  *
- * ⚠ On the default `modern` pipeline this renderer is the FIRST of two phaser passes per
- * note - the cylinder-bus [io.peekandpoke.klang.audio_be.effects.Phaser] phases the summed
- * mix again from the same knobs, so with `phaserFloor < 1` the dry is floored twice
- * (`dryC²`); see the bus Phaser KDoc and the C4.2 flag list. The two gates also differ
- * (this one runs at `depth > 0`, the bus katalyst at `depth >= 0.01`) - pre-existing.
+ * ⚠ NOT in any built-in preset (2026-08-24): the bus owns the phaser (see
+ * [io.peekandpoke.klang.audio_be.effects.Phaser]). This renderer only runs when a CUSTOM
+ * pipeline adds `StageDsl.Phaser` — deliberate per-voice phasing. The same knobs then drive
+ * BOTH this pass and the bus pass, so with `phaserFloor < 1` the dry is floored twice
+ * (`dryC²`). The two gates also differ (this one runs at `depth > 0`, the bus katalyst at
+ * `depth >= 0.01`) - pre-existing.
  *
  * `depth = 0` bypasses entirely (exact at every floor: `max(floor, cos(0)) = 1`).
  */

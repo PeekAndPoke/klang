@@ -451,9 +451,11 @@ class LowPassHighPassFiltersSpec : StringSpec({
     // Factory methods
     // -----------------------------------------------------------------------
 
-    "createLPF with null Q returns OnePoleLPF" {
+    "createLPF with null Q returns the SVF at the default q — NO secret one-pole swap" {
+        // Maintainer decision (2026-08-24): an absent q means the DEFAULT q (0.707), never
+        // a different filter topology. The one-pole is its own named thing (`onepole`).
         val filter = LowPassHighPassFilters.createLPF(cutoffHz = 1000.0, q = null, sampleRate = sampleRate)
-        filter.shouldBeInstanceOf<LowPassHighPassFilters.OnePoleLPF>()
+        filter.shouldBeInstanceOf<LowPassHighPassFilters.SvfLPF>()
     }
 
     "createLPF with non-null Q returns SvfLPF" {
@@ -461,9 +463,9 @@ class LowPassHighPassFiltersSpec : StringSpec({
         filter.shouldBeInstanceOf<LowPassHighPassFilters.SvfLPF>()
     }
 
-    "createHPF with null Q returns OnePoleHPF" {
+    "createHPF with null Q returns the SVF at the default q — NO secret one-pole swap" {
         val filter = LowPassHighPassFilters.createHPF(cutoffHz = 1000.0, q = null, sampleRate = sampleRate)
-        filter.shouldBeInstanceOf<LowPassHighPassFilters.OnePoleHPF>()
+        filter.shouldBeInstanceOf<LowPassHighPassFilters.SvfHPF>()
     }
 
     "createHPF with non-null Q returns SvfHPF" {

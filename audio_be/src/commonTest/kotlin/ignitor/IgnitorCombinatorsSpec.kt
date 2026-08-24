@@ -405,9 +405,9 @@ class ExciterCombinatorsSpec : StringSpec({
     // Pitch Mod: accelerate
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "accelerate(amount) - pitch changes over time" {
+    "accelerate(semitones) - pitch changes over time" {
         val blockFrames = 44100 // 1 second
-        val wet = generate(IgnitorDsl.Sine().accelerate(2.0).toExciter(), freqHz = 440.0, blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().accelerate(24.0).toExciter(), freqHz = 440.0, blockFrames = blockFrames)
 
         // Count zero crossings in first half vs second half
         fun zeroCrossingsInRange(buf: AudioBuffer, start: Int, end: Int): Int {

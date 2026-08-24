@@ -55,7 +55,7 @@ class PitchModSafetyTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "vibrato with normal depth produces ratios near 1.0" {
-        val sig = vibratoModIgnitor(rate = 5.0, depth = 1.0)
+        val sig = vibratoModIgnitor(rate = 5.0, semitones = 1.0)
         val out = render(sig)
         out.allFinite() shouldBe true
         // 1 semitone = ~5.95% pitch change; ratio in [2^(-1/12), 2^(1/12)] ≈ [0.944, 1.059]
@@ -64,14 +64,14 @@ class PitchModSafetyTest : StringSpec({
 
     "vibrato with extreme depthSemitones stays finite" {
         // depthSemitones = 10000 → 2^(±833) easily overflows Float.
-        val sig = vibratoModIgnitor(rate = 5.0, depth = 10000.0)
+        val sig = vibratoModIgnitor(rate = 5.0, semitones = 10000.0)
         val out = render(sig)
         out.allFinite() shouldBe true
         out.allInBounds() shouldBe true
     }
 
     "vibrato with zero depth outputs exactly 1.0" {
-        val sig = vibratoModIgnitor(rate = 5.0, depth = 0.0)
+        val sig = vibratoModIgnitor(rate = 5.0, semitones = 0.0)
         val out = render(sig)
         out.all { it == 1.0 } shouldBe true
     }
@@ -81,15 +81,15 @@ class PitchModSafetyTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "accelerate with small amount produces graduated ratios" {
-        val sig = accelerateModIgnitor(amount = 1.0)
+        val sig = accelerateModIgnitor(semitones = 1.0)
         val out = render(sig)
         out.allFinite() shouldBe true
         out[0] shouldBe (1.0 plusOrMinus 0.01)  // start ≈ 1
     }
 
     "accelerate with extreme amount stays finite at end of voice" {
-        // amount = 10000 → ratio reaches 2^10000 → Inf in Double, must clamp on Float cast.
-        val sig = accelerateModIgnitor(amount = 10000.0)
+        // 120000 semitones = 10000 octaves → ratio reaches 2^10000 → Inf in Double, must clamp.
+        val sig = accelerateModIgnitor(semitones = 120000.0)
         // Render block from near the end of the voice, when ratio has fully accumulated.
         val out = render(sig, c = ctx(elapsedFrames = sampleRate - blockFrames))
         out.allFinite() shouldBe true
@@ -97,7 +97,7 @@ class PitchModSafetyTest : StringSpec({
     }
 
     "accelerate with zero amount outputs exactly 1.0" {
-        val sig = accelerateModIgnitor(amount = 0.0)
+        val sig = accelerateModIgnitor(semitones = 0.0)
         val out = render(sig)
         out.all { it == 1.0 } shouldBe true
     }
@@ -111,7 +111,7 @@ class PitchModSafetyTest : StringSpec({
         val sig = pitchEnvelopeModIgnitor(
             attackSec = ParamIgnitor("att", 0.01),
             decaySec = ParamIgnitor("dec", 0.1),
-            amount = ParamIgnitor("amt", 1000.0),
+            semitones = ParamIgnitor("amt", 1000.0),
         )
         val out = render(sig)
         out.allFinite() shouldBe true
@@ -122,7 +122,7 @@ class PitchModSafetyTest : StringSpec({
         val sig = pitchEnvelopeModIgnitor(
             attackSec = ParamIgnitor("att", 0.01),
             decaySec = ParamIgnitor("dec", 0.1),
-            amount = ParamIgnitor("amt", 0.0),
+            semitones = ParamIgnitor("amt", 0.0),
         )
         val out = render(sig)
         out.all { it == 1.0 } shouldBe true
@@ -172,7 +172,7 @@ class PitchModSafetyTest : StringSpec({
     "extreme vibrato through ModApplyingIgnitor keeps oscillator alive" {
         // Without the safety clamp, an extreme depth would set phase=Inf on first sample
         // and the oscillator would output 0/NaN forever. With the clamp, output stays bounded.
-        val mod = vibratoModIgnitor(rate = 5.0, depth = 10000.0)
+        val mod = vibratoModIgnitor(rate = 5.0, semitones = 10000.0)
         val osc = ModApplyingIgnitor(Ignitors.sine(), mod)
         val out = render(osc, freqHz = 440.0)
         out.allFinite() shouldBe true

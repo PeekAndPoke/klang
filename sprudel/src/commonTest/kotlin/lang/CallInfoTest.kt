@@ -138,8 +138,8 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").analog("0.5")""")
     }
 
-    "warmth passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").warmth("0.5")""")
+    "onepole passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").onepole("12000")""")
     }
 
     "reverb passes CallInfo from KlangScript" {

@@ -256,7 +256,7 @@ class EqIgnitorSpec : StringSpec({
                 q = c(0.9),
             ),
             rate = c(5.0),
-            depth = c(0.3),
+            semitones = c(0.3),
         )
         val fused = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Eq(
@@ -264,7 +264,7 @@ class EqIgnitorSpec : StringSpec({
                 sections = listOf(EqSection.Lowpass(lfoCutoff(), c(0.9))),
             ),
             rate = c(5.0),
-            depth = c(0.3),
+            semitones = c(0.3),
         )
         assertDslParity(chained, fused)
     }

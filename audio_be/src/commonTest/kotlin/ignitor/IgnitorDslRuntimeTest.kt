@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.lowpass
-import io.peekandpoke.klang.audio_bridge.onePoleLowpass
+import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
 
 class IgnitorDslRuntimeTest : StringSpec({
@@ -116,7 +116,7 @@ class IgnitorDslRuntimeTest : StringSpec({
     "sgpad composition produces non-zero output" {
         val dsl = (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(0.1))
             .div(IgnitorDsl.Param("divisor", 2.0))
-            .onePoleLowpass(3000.0)
+            .onepole(3000.0)
         val sig = dsl.toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }

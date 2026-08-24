@@ -284,7 +284,7 @@ object TestTextPatterns {
         .sound("sine")
         .gain(1.0)
         .slow(4) 
-        .accelerate(1)
+        .accelerate(12)
         .vib(8)
         .vmod(0.5)        
     """.trimIndent()
@@ -294,11 +294,15 @@ object TestTextPatterns {
           n("1 3 5 7 8 10 12 14").scale("C4:minor")
            .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
            .orbit(0).roomWet(0.01).rsize(10.0).sound("sine")
-           .slow(8).accelerate(3 / 12),
+           .slow(8)
+           // was `3 / 12` = 0.25 octaves (KlangScript divides as doubles) - exactly 3 semitones, same sound
+           .accelerate(3),
          n("8 10 12 14 1 3 5 7").scale("C4:minor")
            .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
            .orbit(2).roomWet(0.01).rsize(10.0).sound("sine")
-           .slow(8).accelerate(3 / 12),
+           .slow(8)
+           // was `3 / 12` = 0.25 octaves (KlangScript divides as doubles) - exactly 3 semitones, same sound
+           .accelerate(3)
         )
     """.trimIndent()
 
@@ -308,7 +312,7 @@ object TestTextPatterns {
         .sound("sine")
         .gain(1.0)
         .slow(4) 
-        .accelerate(1)
+        .accelerate(12)
         .vib(8)
         .vmod(0.5)        
     """.trimIndent()

@@ -653,7 +653,7 @@ private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * negative depths are first-class (no dead zone).
  *
  * ```
- * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
+ * newCutoff = baseCutoff × 2^(semitones/12 × envelopeValue)
  * ```
  *
  * ### How cutoff, ADSR, and depth work together
@@ -662,7 +662,7 @@ private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * |-----------|------|
  * | `lpf(freq)` | Sets the **resting** cutoff — where the filter sits with no envelope |
  * | `lpadsr` | Shapes the **envelope curve** over time (0→1→sustain→0) |
- * | `lpe(depth)` | Scales **how far** the envelope moves the cutoff |
+ * | `lpe(semitones)` | Scales **how far** the envelope moves the cutoff |
  *
  * Example with `lpf(500).lpe(24).lpadsr(0.01, 0.5, 0.2, 0.3)`:
  *
@@ -681,30 +681,30 @@ private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * note("c4").lpf(300).lpe("<7 36>")        // subtle (a fifth) vs dramatic (3 octaves) per cycle
  * ```
  *
- * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
+ * @param semitones Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth SprudelLpEnvEditor, SprudelLpEnvSequenceEditor
+ * @param-tool semitones SprudelLpEnvEditor, SprudelLpEnvSequenceEditor
  * @category effects
  * @tags lpenv, lpe, low pass filter, envelope, depth, modulation
  */
 @KlangScript.Function
-fun SprudelPattern.lpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyLpenv(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
+fun SprudelPattern.lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyLpenv(this, listOfNotNull(semitones).asSprudelDslArgs(callInfo))
 
 /** Sets the LPF envelope depth/amount on a string pattern. */
 @KlangScript.Function
-fun String.lpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).lpe(depth, callInfo)
+fun String.lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lpe(semitones, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets the LPF envelope depth after the previous mapper. */
 @KlangScript.Function
-fun PatternMapperFn.lpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.lpe(depth, callInfo) }
+fun PatternMapperFn.lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.lpe(semitones, callInfo) }
 
 /** Creates a [PatternMapperFn] that sets the LPF envelope depth. */
 @KlangScript.Function
-fun lpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.lpe(depth, callInfo) }
+fun lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lpe(semitones, callInfo) }
 
 
 // -- hpe() - High Pass Filter Envelope Depth ---------------------------------------------------------------------------
@@ -724,7 +724,7 @@ private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * negative depths are first-class (no dead zone).
  *
  * ```
- * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
+ * newCutoff = baseCutoff × 2^(semitones/12 × envelopeValue)
  * ```
  *
  * ### How cutoff, ADSR, and depth work together
@@ -733,7 +733,7 @@ private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * |-----------|------|
  * | `hpf(freq)` | Sets the **resting** cutoff — where the filter sits with no envelope |
  * | `hpadsr` | Shapes the **envelope curve** over time (0→1→sustain→0) |
- * | `hpe(depth)` | Scales **how far** the envelope moves the cutoff |
+ * | `hpe(semitones)` | Scales **how far** the envelope moves the cutoff |
  *
  * Example with `hpf(500).hpe(24).hpadsr(0.01, 0.5, 0.2, 0.3)`:
  *
@@ -752,30 +752,30 @@ private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * note("c4").hpf(200).hpe("<7 36>")        // subtle (a fifth) vs dramatic (3 octaves) per cycle
  * ```
  *
- * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
+ * @param semitones Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth SprudelHpEnvEditor, SprudelHpEnvSequenceEditor
+ * @param-tool semitones SprudelHpEnvEditor, SprudelHpEnvSequenceEditor
  * @category effects
  * @tags hpenv, hpe, high pass filter, envelope, depth, modulation
  */
 @KlangScript.Function
-fun SprudelPattern.hpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyHpenv(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
+fun SprudelPattern.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyHpenv(this, listOfNotNull(semitones).asSprudelDslArgs(callInfo))
 
 /** Sets the HPF envelope depth/amount on a string pattern. */
 @KlangScript.Function
-fun String.hpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).hpe(depth, callInfo)
+fun String.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).hpe(semitones, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets the HPF envelope depth after the previous mapper. */
 @KlangScript.Function
-fun PatternMapperFn.hpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.hpe(depth, callInfo) }
+fun PatternMapperFn.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.hpe(semitones, callInfo) }
 
 /** Creates a [PatternMapperFn] that sets the HPF envelope depth. */
 @KlangScript.Function
-fun hpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.hpe(depth, callInfo) }
+fun hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.hpe(semitones, callInfo) }
 
 
 // -- bpe() - Band Pass Filter Envelope Depth ---------------------------------------------------------------------------
@@ -795,7 +795,7 @@ private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * negative depths are first-class (no dead zone).
  *
  * ```
- * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
+ * newCutoff = baseCutoff × 2^(semitones/12 × envelopeValue)
  * ```
  *
  * ### How cutoff, ADSR, and depth work together
@@ -804,7 +804,7 @@ private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * |-----------|------|
  * | `bpf(freq)` | Sets the **resting** centre frequency — where the filter sits with no envelope |
  * | `bpadsr` | Shapes the **envelope curve** over time (0→1→sustain→0) |
- * | `bpe(depth)` | Scales **how far** the envelope moves the centre frequency |
+ * | `bpe(semitones)` | Scales **how far** the envelope moves the centre frequency |
  *
  * Example with `bpf(500).bpe(24).bpadsr(0.01, 0.5, 0.2, 0.3)`:
  *
@@ -823,28 +823,28 @@ private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * note("c4").bpf(300).bpe("<7 36>")        // subtle (a fifth) vs dramatic (3 octaves) per cycle
  * ```
  *
- * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
+ * @param semitones Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the BPF envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth SprudelBpEnvEditor, SprudelBpEnvSequenceEditor
+ * @param-tool semitones SprudelBpEnvEditor, SprudelBpEnvSequenceEditor
  * @category effects
  * @tags bpenv, bpe, band pass filter, envelope, depth, modulation
  */
 @KlangScript.Function
-fun SprudelPattern.bpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyBpenv(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
+fun SprudelPattern.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyBpenv(this, listOfNotNull(semitones).asSprudelDslArgs(callInfo))
 
 /** Sets the BPF envelope depth/amount on a string pattern. */
 @KlangScript.Function
-fun String.bpe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).bpe(depth, callInfo)
+fun String.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bpe(semitones, callInfo)
 
 /** Creates a chained [PatternMapperFn] that sets the BPF envelope depth after the previous mapper. */
 @KlangScript.Function
-fun PatternMapperFn.bpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.bpe(depth, callInfo) }
+fun PatternMapperFn.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bpe(semitones, callInfo) }
 
 /** Creates a [PatternMapperFn] that sets the BPF envelope depth. */
 @KlangScript.Function
-fun bpe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bpe(depth, callInfo) }
+fun bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bpe(semitones, callInfo) }
 

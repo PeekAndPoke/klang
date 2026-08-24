@@ -243,7 +243,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 sampleRate = 48000,
             ),
             freqHz = 440.0,
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
+            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
         )
 
         val ctx = createContext()
@@ -444,8 +444,8 @@ class SampleVoiceSpecificTest : StringSpec({
                 sampleRate = 48000,
             ),
             freqHz = 440.0,
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
-            accelerate = Voice.Accelerate(amount = 1.0),
+            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
+            accelerate = Voice.Accelerate(semitones = 1.0),
             fm = Voice.Fm(ratio = 2.0, depth = 50.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
             envelope = Voice.Envelope(100.0, 0.0, 1.0, 0.0),
         )

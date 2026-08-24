@@ -71,7 +71,7 @@ class SynthVoiceTest : StringSpec({
 
         val voice = createSynthVoice(
             signal = trackingSignal,
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
+            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
         )
 
         val ctx = createContext()
@@ -95,7 +95,7 @@ class SynthVoiceTest : StringSpec({
 
         val voice = createSynthVoice(
             signal = trackingSignal,
-            vibrato = Voice.Vibrato(rate = 0.0, depth = 0.0),
+            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         )
 
         val ctx = createContext()
@@ -151,13 +151,13 @@ class SynthVoiceTest : StringSpec({
         val voice = createSynthVoice(
             signal = TestIgnitors.constant,
             freqHz = 440.0,
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
-            accelerate = Voice.Accelerate(amount = 1.0),
+            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
+            accelerate = Voice.Accelerate(semitones = 1.0),
             pitchEnvelope = Voice.PitchEnvelope(
                 attackFrames = 50.0,
                 decayFrames = 50.0,
                 releaseFrames = 0.0,
-                amount = 1.0,
+                semitones = 1.0,
                 curve = 0.0,
                 anchor = 0.0
             ),

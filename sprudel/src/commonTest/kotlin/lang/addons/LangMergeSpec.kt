@@ -62,15 +62,15 @@ class LangMergeSpec : StringSpec({
     }
 
     "merge() preserves source fields that control leaves null" {
-        // source has warmth set; control (s()) has no warmth field -> source warmth is kept
-        val p = seq("0.3 0.7").warmth().merge(s("sine supersaw"))
+        // source has onepole set; control (s()) has no onepole field -> source onepole is kept
+        val p = seq("17814 6000").onepole().merge(s("sine supersaw"))
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
             events.shouldHaveSize(2)
-            events[0].data.oscParams?.get("warmth") shouldBe (0.3 plusOrMinus EPSILON)  // source warmth preserved
+            events[0].data.oscParams?.get("onepole") shouldBe (17814.0 plusOrMinus EPSILON)  // source onepole preserved
             events[0].data.soundName shouldBe "sine"                        // sound from control
-            events[1].data.oscParams?.get("warmth") shouldBe (0.7 plusOrMinus EPSILON)
+            events[1].data.oscParams?.get("onepole") shouldBe (6000.0 plusOrMinus EPSILON)
             events[1].data.soundName shouldBe "supersaw"
         }
     }

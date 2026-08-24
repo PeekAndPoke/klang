@@ -122,13 +122,13 @@ internal fun IgnitorDsl.buildIgnitor(
         is IgnitorDsl.Vibrato -> {
             val vibMod = vibratoModIgnitor(
                 rate = this.rate.buildIgnitor(oscParams, cache),
-                depth = this.depth.buildIgnitor(oscParams, cache),
+                semitones = this.semitones.buildIgnitor(oscParams, cache),
             )
             return inner.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, vibMod))
         }
 
         is IgnitorDsl.Accelerate -> {
-            val accelMod = accelerateModIgnitor(this.amount.buildIgnitor(oscParams, cache))
+            val accelMod = accelerateModIgnitor(this.semitones.buildIgnitor(oscParams, cache))
             return inner.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, accelMod))
         }
 
@@ -137,7 +137,7 @@ internal fun IgnitorDsl.buildIgnitor(
                 attackSec = this.attackSec.buildIgnitor(oscParams, cache),
                 decaySec = this.decaySec.buildIgnitor(oscParams, cache),
                 releaseSec = this.releaseSec.buildIgnitor(oscParams, cache),
-                amount = this.amount.buildIgnitor(oscParams, cache),
+                semitones = this.semitones.buildIgnitor(oscParams, cache),
                 curve = this.curve.buildIgnitor(oscParams, cache),
                 anchor = this.anchor.buildIgnitor(oscParams, cache),
             )

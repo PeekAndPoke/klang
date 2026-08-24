@@ -257,7 +257,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared source + vibrato: s + s.vibrato() produces two independent oscillators" {
         val s = IgnitorDsl.Sine()
-        val tree = IgnitorDsl.Plus(s, IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(1.0)))
+        val tree = IgnitorDsl.Plus(s, IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0)))
 
         val cache = IgnitorBuildCache()
         val plus = tree.buildIgnitor(null, cache)
@@ -280,7 +280,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared source + same vibrato: let v = s.vibrato(); v + v shares one oscillator" {
         val s = IgnitorDsl.Sine()
-        val v = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(1.0))
+        val v = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0))
         val tree = IgnitorDsl.Plus(v, v)
 
         val ig = tree.toExciter()
@@ -297,8 +297,8 @@ class CompositionPropertiesSpec : StringSpec({
 
     "stacked mods: vibrato + accelerate combine correctly" {
         val tree = IgnitorDsl.Sine()
-            .let { IgnitorDsl.Vibrato(it, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(0.5)) }
-            .let { IgnitorDsl.Accelerate(it, amount = IgnitorDsl.Constant(2.0)) }
+            .let { IgnitorDsl.Vibrato(it, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(0.5)) }
+            .let { IgnitorDsl.Accelerate(it, semitones = IgnitorDsl.Constant(2.0)) }
 
         val ig = tree.toExciter()
         val ctx = createCtx()
@@ -337,7 +337,7 @@ class CompositionPropertiesSpec : StringSpec({
         val sumVib = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Plus(a, b),
             rate = vibRate,
-            depth = vibDepth,
+            semitones = vibDepth,
         )
 
         val ig = sumVib.toExciter()

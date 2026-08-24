@@ -31,7 +31,7 @@ internal val soundOfTheSeaSong = Song(
                  stack( //   Lean back and relax... let the waves carry you away
               // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-           note("c").fast(8).sound("brown").adsr(0.5, 1.0, 1.0, 3.5).warmth(0.1)  // . solo()
+           note("c").fast(8).sound("brown").adsr(0.5, 1.0, 1.0, 3.5).onepole(22309)  // . solo()
          .gain(wind).pan(berlin.range(0.2, 0.8).slow(34))//.lpf(1500)
         .hpf(300).bpf(perlin.range(110, 110 * 15).slow(64)).bpq(perlin.range(0.5, 5.0).slow(21))
 

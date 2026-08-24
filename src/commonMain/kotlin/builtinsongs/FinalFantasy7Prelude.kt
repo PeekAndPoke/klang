@@ -39,7 +39,7 @@ stack(
   )
   // Hover "roosewood" and click the little icon!
   .fast(2).scale("C3:major").body("rosewood").bodyWet(1.0).bodyFloor(0.2)
-  .sound("sine").hpf(100).lpf(5000).warmth(0.05).gain(0.5).clip(0.5)
+  .sound("sine").hpf(100).lpf(5000).onepole(23197).gain(0.5).clip(0.5)
   // Hover the param and click the little icon!
   .adsr(0.07, 0.2, 0.5, 0.15)
 

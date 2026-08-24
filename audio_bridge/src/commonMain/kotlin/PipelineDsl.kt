@@ -31,6 +31,12 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 @WireFormat
 data class PipelineDsl(val stages: List<StageDsl>) {
     companion object {
+        // NOTE (2026-08-24, maintainer decision): the built-in presets carry NO Phaser
+        // stage. The phaser is a BUS effect (one coherent sweep over the summed orbit —
+        // the DAW-insert model); running it per voice AND on the bus double-applied the
+        // same knobs (dry floored twice under the C4 law). StageDsl.Phaser stays available
+        // for custom pipelines that deliberately want per-voice phasing.
+
         /** Classic subtractive: osc → waveshaper → VCF → VCA. ADSR (VCA) last. */
         val modern: PipelineDsl = PipelineDsl(
             listOf(
@@ -40,7 +46,6 @@ data class PipelineDsl(val stages: List<StageDsl>) {
                 StageDsl.Distort,
                 StageDsl.Filter(),
                 StageDsl.Tremolo,
-                StageDsl.Phaser,
                 StageDsl.Vca(),
             )
         )
@@ -55,7 +60,6 @@ data class PipelineDsl(val stages: List<StageDsl>) {
                 StageDsl.Distort,
                 StageDsl.Filter(),
                 StageDsl.Tremolo,
-                StageDsl.Phaser,
             )
         )
     }

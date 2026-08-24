@@ -583,43 +583,6 @@ data class FormantBand(
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Warmth (one-pole low-pass based on alpha factor)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Wraps a [Ignitor] with a one-pole low-pass filter controlled by warmth factor.
- * One-pole LPF: `smoothed = raw + alpha * (lastSample - raw)`.
- *
- * @param warmthFactor Amount of filtering (0.0 = none/bypass, up to 0.99 = very muffled).
- */
-private class WithWarmthIgnitor(
-    private val upstream: Ignitor,
-    private val alpha: Double,
-) : Ignitor {
-    private var lastSample: Double = 0.0
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        ctx.scratchBuffers.use { input ->
-            upstream.generate(input, freqHz, ctx)
-
-            val a = alpha
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                val raw = input[i]
-                val smoothed = raw + a * (lastSample - raw)
-                buffer[i] = smoothed
-                lastSample = smoothed.flushDenormal()
-            }
-        }
-    }
-}
-
-fun Ignitor.withWarmth(warmthFactor: Double): Ignitor {
-    if (warmthFactor <= 0.0) return this
-    return WithWarmthIgnitor(this, warmthFactor.coerceIn(0.0, 0.99))
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // Internal: Filter envelope computation (control rate)
 // ═══════════════════════════════════════════════════════════════════════════════
 

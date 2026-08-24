@@ -54,17 +54,17 @@ private class DeviationToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
  * See `audio/ref/numerical-safety.md`.
  *
  * @param rate LFO frequency in Hz
- * @param depth modulation depth in semitones
+ * @param semitones modulation depth in SEMITONES
  */
 private class VibratoModIgnitor(
     private val rate: Ignitor,
-    private val depth: Ignitor,
+    private val semitones: Ignitor,
 ) : Ignitor {
     private var lfoPhase: Double = 0.0
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-        val depthSemitones = Ignitors.readParam(depth, freqHz, ctx)
+        val depthSemitones = Ignitors.readParam(semitones, freqHz, ctx)
         val end = ctx.offset + ctx.length
 
         if (depthSemitones <= 0.0) {
@@ -81,28 +81,30 @@ private class VibratoModIgnitor(
     }
 }
 
-fun vibratoModIgnitor(rate: Ignitor, depth: Ignitor): Ignitor = VibratoModIgnitor(rate, depth)
+fun vibratoModIgnitor(rate: Ignitor, semitones: Ignitor): Ignitor = VibratoModIgnitor(rate, semitones)
 
-fun vibratoModIgnitor(rate: Double, depth: Double): Ignitor =
-    vibratoModIgnitor(ParamIgnitor("rate", rate), ParamIgnitor("depth", depth))
+fun vibratoModIgnitor(rate: Double, semitones: Double): Ignitor =
+    vibratoModIgnitor(ParamIgnitor("rate", rate), ParamIgnitor("semitones", semitones))
 
 /**
  * Accelerate — exponential pitch ramp in ratio space.
  *
- * Produces `2^(amount * progress)` per sample, where progress ramps 0→1 over voice duration.
- * At progress=0: output = 1.0. At progress=1: output = `2^amount`.
+ * Produces `2^((semitones/12) * progress)` per sample, where progress ramps 0→1 over the
+ * voice duration. At progress=0: output = 1.0. At progress=1: output = `2^(semitones/12)` —
+ * `accelerate(12)` ends exactly one octave up. (Unit changed from octaves to SEMITONES in
+ * the pitch-param unification, 2026-08-24; in-repo values migrated ×12.)
  *
- * Output is passed through [safeOut] — large `amount` values can grow `ratio`
+ * Output is passed through [safeOut] — large values can grow `ratio`
  * past `Float.MAX_VALUE` (overflowing to `+Inf`); the safety clamp keeps the
  * oscillator phase accumulator finite. See `audio/ref/numerical-safety.md`.
  *
- * @param amount pitch change exponent over full voice duration. Positive = pitch rises.
+ * @param semitones pitch change in SEMITONES over the full voice duration. Positive = rises.
  */
-fun accelerateModIgnitor(amount: Ignitor): Ignitor = AccelerateModIgnitor(amount)
+fun accelerateModIgnitor(semitones: Ignitor): Ignitor = AccelerateModIgnitor(semitones)
 
-private class AccelerateModIgnitor(private val amount: Ignitor) : Ignitor {
+private class AccelerateModIgnitor(private val semitones: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val amountVal = Ignitors.readParam(amount, freqHz, ctx)
+        val amountVal = Ignitors.readParam(semitones, freqHz, ctx) / 12.0 // semitones -> octaves
         val end = ctx.offset + ctx.length
 
         if (amountVal == 0.0) {
@@ -127,8 +129,8 @@ private class AccelerateModIgnitor(private val amount: Ignitor) : Ignitor {
     }
 }
 
-fun accelerateModIgnitor(amount: Double): Ignitor =
-    accelerateModIgnitor(ParamIgnitor("amount", amount))
+fun accelerateModIgnitor(semitones: Double): Ignitor =
+    accelerateModIgnitor(ParamIgnitor("semitones", semitones))
 
 /**
  * Pitch envelope — ADSR-shaped pitch ratio.
@@ -139,7 +141,7 @@ fun accelerateModIgnitor(amount: Double): Ignitor =
  * `+Inf` ratios that would poison the oscillator phase accumulator.
  * See `audio/ref/numerical-safety.md`.
  *
- * @param amount semitones of pitch shift at peak
+ * @param semitones semitones of pitch shift at peak
  * @param attackSec attack time
  * @param decaySec decay time
  * @param releaseSec release time
@@ -150,21 +152,21 @@ fun pitchEnvelopeModIgnitor(
     attackSec: Ignitor,
     decaySec: Ignitor,
     releaseSec: Ignitor = ParamIgnitor("releaseSec", 0.0),
-    amount: Ignitor,
+    semitones: Ignitor,
     curve: Ignitor = ParamIgnitor("curve", 0.0),
     anchor: Ignitor = ParamIgnitor("anchor", 0.0),
-): Ignitor = PitchEnvelopeModIgnitor(attackSec, decaySec, releaseSec, amount, curve, anchor)
+): Ignitor = PitchEnvelopeModIgnitor(attackSec, decaySec, releaseSec, semitones, curve, anchor)
 
 private class PitchEnvelopeModIgnitor(
     private val attackSec: Ignitor,
     private val decaySec: Ignitor,
     private val releaseSec: Ignitor,
-    private val amount: Ignitor,
+    private val semitones: Ignitor,
     private val curve: Ignitor,
     private val anchor: Ignitor,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val amountVal = Ignitors.readParam(amount, freqHz, ctx)
+        val amountVal = Ignitors.readParam(semitones, freqHz, ctx)
         val end = ctx.offset + ctx.length
 
         if (amountVal == 0.0) {

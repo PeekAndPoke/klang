@@ -18,7 +18,7 @@ package io.peekandpoke.klang
  * SYNTAX-ONLY migrations are permitted when the DSL itself changes shape (renames,
  * colon-compound -> per-param), because a frozen song that no longer parses guards
  * nothing. Values must never change; each such migration keeps the sound identical.
- * Applied so far: C6a filter-alias renames, C0 per-param argument split, C3 lpe semitone re-expression, C4 wet renames (room->roomWet, delay->delayWet, phaserdepth->phaserWet).
+ * Applied so far: C6a filter-alias renames, C0 per-param argument split, C3 lpe semitone re-expression, C4 wet renames (room->roomWet, delay->delayWet, phaserdepth->phaserWet), P pitch-param unification (warmth(w) -> onepole(Hz) via fc = sr/pi*atan((1-w)/w), sound-identical at 48k).
  *
  * Source at snapshot time:
  *  - Der Schmetterling  → builtinsongs/DerSchmetterling.kt  (rpm 34.5)
@@ -125,7 +125,7 @@ stack(
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(2000).bpq(7.0).hpf(1000).analog(2)
-    .sound("pulse").warmth(0.75).crush(5).gain(0.06).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.1) // .solo()
+    .sound("pulse").onepole(4916).crush(5).gain(0.06).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.1) // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body("membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [0 -1 0 4 6 9 7 6] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
@@ -139,7 +139,7 @@ stack(
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a2]]>/4").clip(0.67).struct("x!4").slow(16)
-    .orbit(2).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).warmth(0.01) // . mute()
+    .orbit(2).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
     .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(2).coarseos(2) // solo()
     .superimpose(
       x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")

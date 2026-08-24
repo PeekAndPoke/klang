@@ -54,7 +54,7 @@ export drumsPattern = `<
 // Lead voice: triangle, mild lpf, pan-spread, tempo-locked delay,
 // octave-superimposed accents.
 export leadShape = (p) => p
-    .sound("tri").clip(0.33).hpf(800).lpf("4600").lpe(14.8).lpq(perlin.range(1, 2).slow(64)).warmth(0.05)
+    .sound("tri").clip(0.33).hpf(800).lpf("4600").lpe(14.8).lpq(perlin.range(1, 2).slow(64)).onepole(23197)
     .orbit(0).gain(0.10).adsr(0.01, 0.3, 0.5, 0.1).lpadsr(0.009, 0.2, 0.1, 0.1)
     .superimpose(x => x.transpose("<0 12 0 -12>/8").hpf("<800 1200 800 500>/8"),
                 x => x.sound("pink").gain(0.12).adsr(0.009, 0.1, 0.1, 0.1)) // TODO: separate noise with steady rhythm
@@ -64,7 +64,7 @@ export leadShape = (p) => p
 
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
-    .sound("supersaw").unison(sine.range(4, 12).slow(80)).warmth(0.05)
+    .sound("supersaw").unison(sine.range(4, 12).slow(80)).onepole(23197)
     .orbit(1).gain(0.23).adsr(0.007, 0.5, 0.7, 0.10).lpadsr(0.007, 2.0, 0.0, 0.10).pan(0.2)
     .superimpose(
       x => x.pan(0.8),

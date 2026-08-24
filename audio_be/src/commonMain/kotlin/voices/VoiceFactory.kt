@@ -130,12 +130,12 @@ class VoiceFactory(
         val cylinder = data.cylinder ?: 0
 
         // Pitch / Glissando
-        val accelerate = Voice.Accelerate(amount = data.accelerate ?: 0.0)
+        val accelerate = Voice.Accelerate(semitones = data.accelerate ?: 0.0)
 
         // Vibrato (depth in semitones — VibratoRenderer converts to ET frequency ratio)
         val vibratoDepthSemitones = data.vibratoMod ?: 0.0
         val vibrato = Voice.Vibrato(
-            depth = vibratoDepthSemitones,
+            semitones = vibratoDepthSemitones,
             rate = if (vibratoDepthSemitones > 0.0) data.vibrato ?: 5.0 else 0.0,
         )
 
@@ -146,7 +146,7 @@ class VoiceFactory(
                 attackFrames = (data.pAttack ?: 0.0) * sampleRate,
                 decayFrames = (data.pDecay ?: 0.0) * sampleRate,
                 releaseFrames = (data.pRelease ?: 0.0) * sampleRate,
-                amount = pEnvAmount,
+                semitones = pEnvAmount,
                 curve = data.pCurve ?: 1.0,
                 anchor = data.pAnchor ?: 0.0,
             )
