@@ -52,8 +52,10 @@ const val PHASE_POOL_DEFAULT_BLEND: Double = 0.0
  * Normal-mode coefficients (positional, either may be left empty — `"normal::0.9"`):
  *  - width: center tightness in rank space (σ = width · vocabulary/2). 0.1 = tight,
  *    0.5 = default, larger = looser.
- *  - blend: fraction of serves that are plain uniform-random (0..1, default 0). "Almost
- *    fully random with a slight edge in the center" = `"normal::0.9"`.
+ *  - blend: fraction of serves that instead pick a uniformly random VOCABULARY entry
+ *    (0..1, default 0) — still a band-accepted take, not the un-pooled legacy randomness.
+ *    `0` = pure bell, `1` = same as `"random"`; "almost fully random with a slight edge
+ *    in the center" = `"normal::0.9"` (≡ `"normal:0.5:0.9"` — 0.5 IS the default width).
  *
  * An unrecognized name or a bad coefficient COERCES to its default (never throws); modes
  * without coefficients ignore them silently.

@@ -75,11 +75,15 @@ object KlangScriptSuperRampExtensions {
      * @param drawTries candidate phase sets scored per draw (engine caps at 64).
      * @param poolSize vocabulary size per pool key (engine caps at 1024).
      * @param refreshEvery notes between fresh pool draws; 0 = frozen pool.
-     * @param selection `"name[:width[:blend]]"` (value-colon form): `"normal"` (default —
-     *   median-centered normal serving over the vocabulary; width `"normal:0.1"` tight /
-     *   `0.5` default / larger looser; blend mixes in plain-random serves, `"normal::0.9"` =
-     *   almost random with a slight center edge), `"random"`, `"roundrobin"` (opt-in:
-     *   cycling can gargle audibly). Unrecognized names coerce to the default.
+     * @param selection `"name[:width[:blend]]"` (value-colon form). `"normal"` (default):
+     *   median-centered normal serving over the pool's vocabulary — width sets the spread
+     *   (`0` = always the median take, `0.1` tight, `0.5` default, `1`+ near-uniform);
+     *   blend (0..1, default 0) is the fraction of serves that instead pick a uniformly
+     *   random VOCABULARY entry — still a band-accepted take, NOT the un-pooled legacy
+     *   randomness. `0` = pure bell, `1` = same as `"random"`; `"normal::0.9"` = almost
+     *   random with a slight center edge. `"random"`: uniform vocabulary pick every note.
+     *   `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly. Unrecognized
+     *   names coerce to the default.
      * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
      */
     @KlangScript.Method
