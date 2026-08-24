@@ -36,7 +36,7 @@ let guitar = (() => {
   // ADSR
   let pAttack     = Osc.param("attack",        0.004, "Attack")
   let pDecay      = Osc.param("decay",         1.500, "Decay")
-  let pSustain    = Osc.param("sustain",       0.350, "sustain")
+  let pSustain    = Osc.param("sustain",       0.250, "sustain")
   let pRelease    = Osc.param("release",       0.050, "Release")
 
   // amp params
@@ -56,7 +56,7 @@ let guitar = (() => {
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.70, kMax = 0.90, warmup = 0)
     // character knobs — plain scalars, SuperSaw-typed, must precede the filter
-    .analog(pAnalog).spreadPower(8.0).sideAtten(0.7).gainJitter(0.10).centerJitter(0.4)
+    .analog(pAnalog).spreadPower(8.0).sideAtten(0.7).gainJitter(0.10).centerJitter(0.3)
     // Simulate plucked string, add noise burst
     .pitchEnvelope(1, 0.001, 0.02)
     .plus(Osc.whitenoise().highpass(1000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.15))
@@ -74,14 +74,14 @@ let guitar = (() => {
     .eq()
       .tap(freq = pMidsHz,     q = pMidsQ,     gain = pMids)      // mids: parallel boost off the dry signal
       .tap(freq = pPresenceHz, q = pPresenceQ, gain = pPresence)  // presence: parallel boost off the dry signal
-      .highpass(100)
+      .highpass(cutoffHz = Osc.freq().mul(pHpTrack), q = pHpQ)    // follow freq to avoid low mud ... again
     // power amp
     .distort(0.30, "gentle", 4)
     // cabinet
     .eq()
       .band(freq = snareHz, q = 4.0, db   = -3)                   // let the snare cut through
-      .lowpass(5000).lowpass(5000)                                // cabinet speaker sim    
-      .highpass(cutoffHz = Osc.freq().mul(pHpTrack), q = pHpQ)    // follow freq to avoid low mud ... again
+      .lowpass(4800).lowpass(4800)                                // cabinet speaker sim    
+      .highpass(80)                                               // filter the low end
   
   return amped.mul(0.6)
 })()
