@@ -653,10 +653,12 @@ private fun applyNfenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * Sets the notch filter envelope depth (modulation amount).
  *
  * Controls how far above the base [notchf] centre frequency the notch sweeps when the ADSR envelope
- * is fully open. The depth is a multiplier applied to the base cutoff:
+ * is fully open. The depth is in SEMITONES: the sweep is pitch-linear, the way DAW
+ * filter envelopes work: +12 doubles the cutoff at full envelope, -12 halves it, and
+ * negative depths are first-class (no dead zone).
  *
  * ```
- * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
  * ```
  *
  * ### How cutoff, ADSR, and depth work together
@@ -667,24 +669,24 @@ private fun applyNfenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * | `nfattack / nfdecay / nfsustain / nfrelease` | Shapes the **envelope curve** over time (0→1→sustain→0) |
  * | `nfenv(depth)` | Scales **how far** the envelope moves the centre frequency |
  *
- * Example with `notchf(500).nfenv(3.0).nfattack(0.01).nfdecay(0.5).nfsustain(0.2).nfrelease(0.3)`:
+ * Example with `notchf(500).nfenv(24).nfattack(0.01).nfdecay(0.5).nfsustain(0.2).nfrelease(0.3)`:
  *
  * | Phase | envValue | Centre freq |
  * |-------|----------|-------------|
  * | Note start | 0.0 | 500 Hz |
- * | Attack peak | 1.0 | 500 × (1 + 3 × 1) = **2000 Hz** |
- * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
+ * | Attack peak | 1.0 | 500 × 2^(24/12 × 1.0) = **2000 Hz** (2 octaves up) |
+ * | Sustain | 0.2 | 500 × 2^(24/12 × 0.2) = **660 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
  * ```KlangScript(Playable)
- * note("c4").notchf(1000).nfenv(3.0)              // notch sweeps up to 4000 Hz at peak
+ * note("c4").notchf(1000).nfenv(24)              // notch sweeps up to 4000 Hz at peak
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd").notchf(500).nfenv("<1.0 5.0>")           // subtle vs dramatic sweep per cycle
+ * s("bd").notchf(500).nfenv("<7 36>")              // subtle (a fifth) vs dramatic (3 octaves) per cycle
  * ```
  *
- * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth SprudelNfEnvEditor, SprudelNfEnvSequenceEditor
  * @alias nfe
@@ -714,14 +716,14 @@ fun PatternMapperFn.nfenv(depth: PatternLike? = null, callInfo: CallInfo? = null
  * Alias for [nfenv]. Sets the notch filter envelope depth.
  *
  * ```KlangScript(Playable)
- * note("c4").notchf(500).nfe(3.0)   // alias for nfenv()
+ * note("c4").notchf(500).nfe(24)   // alias for nfenv()
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").apply(notchf(500).nfe(3.0))   // chained PatternMapperFn
+ * note("c4").apply(notchf(500).nfe(24))   // chained PatternMapperFn
  * ```
  *
- * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth SprudelNfEnvEditor, SprudelNfEnvSequenceEditor
  * @alias nfenv

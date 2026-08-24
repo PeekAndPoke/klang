@@ -169,7 +169,7 @@ object TestKotlinPatterns {
             .s("supersaw")
             .distort(0.7)
             .superimpose({ x -> x.spread("<0.5>") })
-//        .lpe(perlin.slow(3).range(1, 4))
+//        .lpe(perlin.slow(3).range(12, 27.9))
             .lpf(perlin.range(100, 2000).slow(4))
             .gain(0.3),
         note("<a1 e2>/8")

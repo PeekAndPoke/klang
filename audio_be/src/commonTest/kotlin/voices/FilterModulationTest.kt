@@ -130,7 +130,7 @@ class FilterModulationTest : StringSpec({
     "filter with modulator - envelope at attack peak" {
         val spyFilter = SpyFilter()
         val baseCutoff = 1000.0
-        val depth = 1.0 // 100% modulation
+        val depth = 12.0 // +12 st: doubles the cutoff at full envelope (C3 semitone law)
 
         val modulator = Voice.FilterModulator(
             filter = spyFilter,
@@ -173,7 +173,7 @@ class FilterModulationTest : StringSpec({
         voice.render(ctx)
 
         // At peak of attack (envelope = 1.0):
-        // newCutoff = baseCutoff * (1.0 + depth * 1.0) = 1000 * 2.0 = 2000
+        // newCutoff = baseCutoff * 2^(depth/12 * 1.0) = 1000 * 2.0 = 2000 (C3 semitone law)
         spyFilter.cutoffHistory.size shouldBe 1
         spyFilter.currentCutoff shouldBe (2000.0 plusOrMinus 0.1)
     }
@@ -181,7 +181,7 @@ class FilterModulationTest : StringSpec({
     "filter with modulator - envelope at start (attack beginning)" {
         val spyFilter = SpyFilter()
         val baseCutoff = 1000.0
-        val depth = 1.0
+        val depth = 12.0 // C3: semitones (+12 = 2x at full envelope)
 
         val modulator = Voice.FilterModulator(
             filter = spyFilter,
@@ -224,7 +224,7 @@ class FilterModulationTest : StringSpec({
         voice.render(ctx)
 
         // At start of attack (envelope = 0.0):
-        // newCutoff = baseCutoff * (1.0 + depth * 0.0) = 1000 * 1.0 = 1000
+        // newCutoff = baseCutoff * 2^(depth/12 * 0.0) = 1000 (C3: depth 0-exponent identity)
         spyFilter.cutoffHistory.size shouldBe 1
         spyFilter.currentCutoff shouldBe (1000.0 plusOrMinus 0.1)
     }
@@ -232,7 +232,7 @@ class FilterModulationTest : StringSpec({
     "filter with modulator - envelope at sustain" {
         val spyFilter = SpyFilter()
         val baseCutoff = 1000.0
-        val depth = 0.5 // 50% modulation
+        val depth = 12.0 // C3: at env 0.5 the sweep is 2^(0.5) = sqrt(2)
 
         val modulator = Voice.FilterModulator(
             filter = spyFilter,
@@ -275,9 +275,9 @@ class FilterModulationTest : StringSpec({
         voice.render(ctx)
 
         // At sustain (envelope = 0.5):
-        // newCutoff = baseCutoff * (1.0 + depth * 0.5) = 1000 * (1.0 + 0.25) = 1250
+        // newCutoff = baseCutoff * 2^(depth/12 * 0.5) = 1000 * 2^0.5 = 1414.21 (C3)
         spyFilter.cutoffHistory.size shouldBe 1
-        spyFilter.currentCutoff shouldBe (1250.0 plusOrMinus 0.1)
+        spyFilter.currentCutoff shouldBe (1414.2135623730951 plusOrMinus 0.1)
     }
 
     "multiple modulators apply independently" {
@@ -294,7 +294,7 @@ class FilterModulationTest : StringSpec({
                 sustainLevel = 1.0,
                 releaseFrames = 0.0
             ),
-            depth = 1.0, // 100% modulation
+            depth = 12.0, // +12 st = 2x at full envelope
             baseCutoff = baseCutoff1
         )
 
@@ -306,7 +306,7 @@ class FilterModulationTest : StringSpec({
                 sustainLevel = 1.0,
                 releaseFrames = 0.0
             ),
-            depth = 0.5, // 50% modulation
+            depth = 7.0195500086538745, // 12*log2(1.5): exactly 1.5x at full envelope
             baseCutoff = baseCutoff2
         )
 
@@ -350,7 +350,7 @@ class FilterModulationTest : StringSpec({
     "modulation works with sample signal too" {
         val spyFilter = SpyFilter()
         val baseCutoff = 500.0
-        val depth = 1.0
+        val depth = 12.0 // C3: semitones (+12 = 2x at full envelope)
 
         val modulator = Voice.FilterModulator(
             filter = spyFilter,
@@ -447,7 +447,7 @@ class FilterModulationTest : StringSpec({
     "voice starting mid-block handles envelope correctly" {
         val spyFilter = SpyFilter()
         val baseCutoff = 1000.0
-        val depth = 1.0
+        val depth = 12.0 // C3: semitones (+12 = 2x at full envelope)
 
         val modulator = Voice.FilterModulator(
             filter = spyFilter,
@@ -492,7 +492,7 @@ class FilterModulationTest : StringSpec({
         voice.render(ctx)
 
         // Envelope should be at start (position 0):
-        // newCutoff = baseCutoff * (1.0 + depth * 0.0) = 1000
+        // newCutoff = baseCutoff * 2^0 = 1000 (env 0: identity under the C3 law)
         spyFilter.cutoffHistory.size shouldBe 1
         spyFilter.currentCutoff shouldBe (1000.0 plusOrMinus 0.1)
     }
@@ -500,7 +500,7 @@ class FilterModulationTest : StringSpec({
     "envelope at release phase" {
         val spyFilter = SpyFilter()
         val baseCutoff = 1000.0
-        val depth = 1.0
+        val depth = 12.0 // C3: semitones (+12 = 2x at full envelope)
 
         val modulator = Voice.FilterModulator(
             filter = spyFilter,
@@ -546,8 +546,8 @@ class FilterModulationTest : StringSpec({
         voice.render(ctx1)
 
         // At start of release: envelope = sustainLevel = 0.5
-        // newCutoff = 1000 * (1.0 + 1.0 * 0.5) = 1500
-        spyFilter.currentCutoff shouldBe (1500.0 plusOrMinus 0.1)
+        // env 0.5 during release: 1000 * 2^(12/12 * 0.5) = sqrt(2) * 1000 (C3 semitone law)
+        spyFilter.currentCutoff shouldBe (1414.2135623730951 plusOrMinus 0.1)
 
         // Render halfway through release (frame 400 = gateEnd + 100 of 200 release)
         spyFilter.reset()
@@ -555,8 +555,8 @@ class FilterModulationTest : StringSpec({
         voice.render(ctx2)
 
         // Halfway through release: envelope = 0.5 - (100/200 * 0.5) = 0.25
-        // newCutoff = 1000 * (1.0 + 1.0 * 0.25) = 1250
-        spyFilter.currentCutoff shouldBe (1250.0 plusOrMinus 1.0)
+        // env 0.25 mid-release: 1000 * 2^(12/12 * 0.25) = 2^0.25 * 1000 (C3 semitone law)
+        spyFilter.currentCutoff shouldBe (1189.207115002721 plusOrMinus 1.0)
 
         // Render at end of release (frame 500 = gateEnd + 200 = full release done)
         spyFilter.reset()

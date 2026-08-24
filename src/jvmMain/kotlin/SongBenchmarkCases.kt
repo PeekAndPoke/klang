@@ -71,7 +71,7 @@ object SongBenchmarkCases {
         rungs = listOf(
             "0 osc+env (superramp uni5)" to "",
             "1 +filters (hpf/lpf/lpe/lpq/lpadsr)" to
-                    """.hpf(1500).lpf(1575).lpe(berlin.range(2, 2.10).fast(4)).lpq(2.3).lpadsr(0.007, 1.3, 0.0, 0.01)""",
+                    """.hpf(1500).lpf(1575).lpe(berlin.range(19.0, 19.6).fast(4)).lpq(2.3).lpadsr(0.007, 1.3, 0.0, 0.01)""",
             "2 +distort (0.62:tube:4)+clip" to
                     """.distort(0.620, "tube", 4).postgain("<0.220!48 0.110!16 0.220!48 0.330!16>").clip(0.89)""",
             "3 +pitchmod (vibrato/shuffle)" to
@@ -103,7 +103,7 @@ object SongBenchmarkCases {
         rungs = listOf(
             "0 osc+env (supersaw uni9)" to "",
             "1 +filters (lpadsr/hpf/lpf-mod/lpe/lpq)" to
-                    """.lpadsr(0.005, 1.1, 0.0, 0.015).hpf("<550!16 360!16 550!16 800!16>").lpf("3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4)).lpe(0.6).lpq(2.0)""",
+                    """.lpadsr(0.005, 1.1, 0.0, 0.015).hpf("<550!16 360!16 550!16 800!16>").lpf("3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4)).lpe(8.1).lpq(2.0)""",
             "2 +distortx2 (1:tube:4 + 0.80)+clip" to
                     """.distort(1, "tube", 4).distort(0.80).clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2))""",
             "3 +coarse(2,os4)" to """.coarse(2).coarseos(4)""",
@@ -303,7 +303,7 @@ object SongBenchmarkCases {
           .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
           .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort(1, "tube", 4).distort(0.85)
           .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpadsr(0.005, 1.0, 0.0, 0.01)
-          .hpf(120).lpf(3200).lpe(0.6).lpq(1.8)
+          .hpf(120).lpf(3200).lpe(8.1).lpq(1.8)
           .coarse(2).coarseos(4).pan(0.3).superimpose(
             x => x.pan(0.7),
             x => x.postgain(0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
@@ -317,7 +317,7 @@ object SongBenchmarkCases {
         """
         n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.98 0.99 0.98".fast(2))
           .orbit(4).scale("e1:minor").sound("saw").gain(0.5).distort(0.05, "soft", 2).postgain(0.20).clip(0.65)
-          .adsr(0.007, 5.0, 0.0, 0.015).lpadsr(0.001, 0.05, 0.0, 0.01).hpf(60).hpq(1.0).lpf(200).lpe(35).lpq(1.0)
+          .adsr(0.007, 5.0, 0.0, 0.015).lpadsr(0.001, 0.05, 0.0, 0.01).hpf(60).hpq(1.0).lpf(200).lpe(62).lpq(1.0)
           .pan(0.50)
         """.trimIndent(),
     )
@@ -352,7 +352,7 @@ object SongBenchmarkCases {
     // Distort oversample sweep on a supersaw-uni9 + filters base (isolates oversampling cost).
     private val distortBase = """
         n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(9).spread(0.08)
-          .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(3000).lpe(0.6).lpq(2.0)
+          .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(3000).lpe(8.1).lpq(2.0)
     """.trimIndent()
 
     private fun distortCase(label: String, distort: String): SongBenchmark.Case =
@@ -369,7 +369,7 @@ object SongBenchmarkCases {
 
     // Unison sweep on the FULL guitar-1 effect chain (osc-gen scales with unison; fixed effects don't).
     private val fullChainTail =
-        """.lpadsr(0.005, 1.1, 0.0, 0.015).hpf(400).lpf(3000).lpe(0.6).lpq(2.0)""" +
+        """.lpadsr(0.005, 1.1, 0.0, 0.015).hpf(400).lpf(3000).lpe(8.1).lpq(2.0)""" +
                 """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(2).coarseos(4)""" +
                 """.pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))""" +
                 """.pipeline("pedal").body("wood").bodyMix(0.3)"""
@@ -386,7 +386,7 @@ object SongBenchmarkCases {
     // Body / pipeline isolation on a fixed base — clean marginal cost of each.
     private val fxBase = """
         n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(9).spread(0.08)
-          .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(3000).lpe(0.6).lpq(2.0)
+          .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(3000).lpe(8.1).lpq(2.0)
           .distort(1, "tube", 4).clip(0.85)
     """.trimIndent()
 
@@ -406,7 +406,7 @@ object SongBenchmarkCases {
     // If the second is much larger than the first, superimpose amplifies body → multiplicative.
     private val intBase = """
         n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(9).spread(0.08)
-          .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(3000).lpe(0.6).lpq(2.0).distort(1, "tube", 4).clip(0.85)
+          .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(3000).lpe(8.1).lpq(2.0).distort(1, "tube", 4).clip(0.85)
     """.trimIndent()
 
     private val interactionSweep = listOf(

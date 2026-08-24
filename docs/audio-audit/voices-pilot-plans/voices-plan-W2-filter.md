@@ -1,3 +1,7 @@
+> ⚠ STALE CODE QUOTES (2026-08-24): C3 of the filter unification changed FilterModRenderer's
+> envelope law to `base * 2^(depth/12 * env)` (semitones). The quoted `(1.0 + depth * env)`
+> snippets and their mutant lines below predate that; refresh line refs before executing.
+
 # Mutation-Check Plan — W2: Filter render strip (FilterModulationTest, VoiceFactoryFilterOrderSpec)
 
 ## io.peekandpoke.klang.audio_be.voices.FilterModulationTest

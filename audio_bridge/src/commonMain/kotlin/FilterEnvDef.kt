@@ -10,17 +10,19 @@ package io.peekandpoke.klang.audio_bridge
  * Filter envelope for dynamic filter cutoff modulation.
  *
  * Uses ADSR envelope parameters plus a depth parameter to control the amount of modulation.
- * The depth is a dimensionless ratio (not Hz) that scales the base cutoff:
+ * The depth is in SEMITONES (C3 of the filter unification): the sweep is pitch-linear, the
+ * way DAW filter envelopes work, and negative depths sweep down with no dead zone.
  *
  * ```
- * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
  * ```
  *
- * | depth | envValue | baseCutoff=500 | Result                        |
- * |-------|----------|----------------|-------------------------------|
- * | 1.0   | 1.0      | 500 × (1+1×1)  | 1000 Hz (1 octave up)         |
- * | 3.0   | 1.0      | 500 × (1+3×1)  | 2000 Hz (~2 octaves up)       |
- * | 0.5   | 0.2      | 500 × (1+0.5×0.2) | 550 Hz (subtle)           |
+ * | depth | envValue | baseCutoff=500      | Result                  |
+ * |-------|----------|---------------------|-------------------------|
+ * | 12    | 1.0      | 500 × 2^(12/12)     | 1000 Hz (1 octave up)   |
+ * | 24    | 1.0      | 500 × 2^(24/12)     | 2000 Hz (2 octaves up)  |
+ * | 7     | 0.5      | 500 × 2^(3.5/12)    | 612 Hz (subtle)         |
+ * | -12   | 1.0      | 500 × 2^(-12/12)    | 250 Hz (1 octave down)  |
  */
 data class FilterEnvDef(
     /** Attack time in seconds - time to reach peak modulation */
@@ -31,7 +33,11 @@ data class FilterEnvDef(
     val sustain: Double? = null,
     /** Release time in seconds - time to return to baseline after note off */
     val release: Double? = null,
-    /** Modulation depth as a ratio — scales how far the envelope moves the cutoff above its base value. No upper bound. */
+    /**
+     * Modulation depth in SEMITONES (C3 of the filter unification): the sweep is pitch-linear,
+     * `cutoff = base * 2^(depth/12 * env)`. +12 doubles the cutoff at full envelope, -12
+     * halves it; negative depths are first-class (no dead zone). No upper bound.
+     */
     val depth: Double? = null,
 ) {
     /**
@@ -67,7 +73,7 @@ data class FilterEnvDef(
             decay = decay ?: 0.1,
             sustain = sustain ?: 1.0,
             release = release ?: 0.1,
-            depth = depth ?: 0.5,
+            depth = depth ?: 7.0, // C3: semitones (7 ~= the old 0.5 ratio: 12*log2(1.5))
         )
     }
 
@@ -80,7 +86,7 @@ data class FilterEnvDef(
             decay = 0.1,
             sustain = 1.0,
             release = 0.1,
-            depth = 0.5,
+            depth = 7.0, // C3: semitones (7 ~= the old 0.5 ratio at full envelope: 12*log2(1.5))
         )
     }
 }

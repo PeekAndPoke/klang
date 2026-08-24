@@ -113,7 +113,7 @@ object JsCompatTestSongs {
                     .s("supersaw")
                     .distort(0.7)
                     .superimpose((x) => x.spread("<0.5>"))
-                    //.lpe(perlin.slow(3).range(1, 4))
+                    //.lpe(perlin.slow(3).range(12, 27.9))
                     .lpf(sine.slow(2).range(100, 2000))
                     .gain(0.3)
             """.trimIndent()
@@ -126,7 +126,7 @@ object JsCompatTestSongs {
                         .s("supersaw")
                         .distort(0.7)
                         .superimpose((x) => x.spread("<0.5>"))
-                        //.lpe(perlin.slow(3).range(1, 4))
+                        //.lpe(perlin.slow(3).range(12, 27.9))
                         .lpf(sine.slow(2).range(100, 2000))
                         .gain(0.3),
                         

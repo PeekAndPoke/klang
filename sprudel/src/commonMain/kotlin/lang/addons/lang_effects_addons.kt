@@ -214,7 +214,7 @@ private fun applyLpRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * - **release**: time in seconds for the filter to close after note release
  *
  * ```KlangScript(Playable)
- * note("c3").lpf(200).lpe(4000).lpadsr(0.01, 0.3, 0.5, 0.5)
+ * note("c3").lpf(200).lpe(24).lpadsr(0.01, 0.3, 0.5, 0.5)
  * ```
  *
  * @param attack Attack time in seconds.
@@ -340,7 +340,7 @@ private fun applyHpRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * - **release**: time in seconds for the filter to close after note release
  *
  * ```KlangScript(Playable)
- * note("c3").hpf(200).hpe(4000).hpadsr(0.01, 0.3, 0.5, 0.5)
+ * note("c3").hpf(200).hpe(24).hpadsr(0.01, 0.3, 0.5, 0.5)
  * ```
  *
  * @param attack Attack time in seconds.
@@ -466,7 +466,7 @@ private fun applyBpRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * - **release**: time in seconds for the filter to close after note release
  *
  * ```KlangScript(Playable)
- * note("c3").bpf(200).bpe(4000).bpadsr(0.01, 0.3, 0.5, 0.5)
+ * note("c3").bpf(200).bpe(24).bpadsr(0.01, 0.3, 0.5, 0.5)
  * ```
  *
  * @param attack Attack time in seconds.
@@ -711,7 +711,7 @@ private fun applyNfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * - **release**: time in seconds for the filter to close after note release
  *
  * ```KlangScript(Playable)
- * note("c3").nf(200).nfenv(4000).nfadsr(0.01, 0.3, 0.5, 0.5)
+ * note("c3").nf(200).nfenv(24).nfadsr(0.01, 0.3, 0.5, 0.5)
  * ```
  *
  * @param attack Attack time in seconds.

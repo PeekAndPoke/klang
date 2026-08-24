@@ -8,8 +8,9 @@ package io.peekandpoke.klang.pages.docs.tutorials
 /**
  * Curriculum slot A4 — see docs/tasks/tutorial-curriculum.md
  *
- * lpe() depth is a RATIO of the resting cutoff, not Hz — single digits sweep
- * far (the built-in songs live in 0.25–25). Prose stays intent-level per the
+ * lpe() depth is in SEMITONES (C3): +12 doubles the cutoff at full envelope, the
+ * way DAW filter envelopes work (the built-in songs live in ~4-71). Prose stays
+ * intent-level per the
  * flux ruling; the numbers live only in the code, where retuning is cheap.
  * A/B pairs where the swept side is brighter/louder at the strike are
  * narrated in-lesson; sanctioned parity exceptions.
@@ -51,9 +52,9 @@ val theFilterEnvelopeTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    Two new settings, one idea. `lpe()` sets the depth of the travel: how far the cutoff climbs above its resting place before falling home. Small numbers already go far: the built-in songs mostly live in single digits. `lpadsr()` is the shape of that travel, and it is the same four numbers you know from ${Tut.shapeOfANote} (attack, decay, sustain, release), applied to the cutoff instead of the loudness.
+                    Two new settings, one idea. `lpe()` sets the depth of the travel in semitones: how far the cutoff climbs above its resting place before falling home, the same unit a melody moves in. +12 is one octave; the built-in songs mostly live between one and four octaves (12 to 48). `lpadsr()` is the shape of that travel, and it is the same four numbers you know from ${Tut.shapeOfANote} (attack, decay, sustain, release), applied to the cutoff instead of the loudness.
 
-                    **Try it:** swap the `//` to compare against the closed version. Then, with the first line live, set `lpe` to 1, and to 15: the same shape, a short trip and a long one.
+                    **Try it:** swap the `//` to compare against the closed version. Then, with the first line live, set `lpe` to 7, then back to 36: the same shape, a short trip (a fifth) and a long one (three octaves).
 
                     **Listen for:** the öw. Say it out loud, mouth open, then closing. That closing is the shape the filter draws across each note: bright at the strike, shutting while the note still rings. This is the classic synth pluck, and it is the same instrument as the dull one; only the colour learned to move.
                     """.trimIndent(),
@@ -61,7 +62,7 @@ val theFilterEnvelopeTutorial = Tutorial(
                 Block.Visual.Adsr("0.001:0.15:0:0.1", label = "cutoff"),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(7).lpadsr(0.001, 0.15, 0, 0.1).gain(0.5) // the öw
+                    note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(36).lpadsr(0.001, 0.15, 0, 0.1).gain(0.5) // the öw
                     // note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).gain(0.5)                                // closed, swap
                     """.trimIndent(),
                 ),
@@ -84,8 +85,8 @@ val theFilterEnvelopeTutorial = Tutorial(
                 Block.Visual.Adsr("0.2:0.2:0.8:0.2", label = "cutoff"),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("saw").adsr(0.01, 0.1, 1, 0.05).lpf(400).lpe(7).lpadsr(0.2, 0.2, 0.8, 0.2).gain(0.5)     // bloom: opens, then holds bright
-                    // note("a3 ~ c4 ~").sound("saw").adsr(0.01, 0.1, 1, 0.05).lpf(400).lpe(7).lpadsr(0.001, 0.15, 0, 0.1).gain(0.5) // strike, swap
+                    note("a3 ~ c4 ~").sound("saw").adsr(0.01, 0.1, 1, 0.05).lpf(400).lpe(36).lpadsr(0.2, 0.2, 0.8, 0.2).gain(0.5)     // bloom: opens, then holds bright
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.01, 0.1, 1, 0.05).lpf(400).lpe(36).lpadsr(0.001, 0.15, 0, 0.1).gain(0.5) // strike, swap
                     """.trimIndent(),
                 ),
             ),
@@ -104,8 +105,8 @@ val theFilterEnvelopeTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("saw").lpq(6).adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(7).lpadsr(0.001, 0.15, 0, 0.1).gain(0.4) // wah: the added lpq up front
-                    // note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(7).lpadsr(0.001, 0.15, 0, 0.1).gain(0.4)     // plain sweep, swap
+                    note("a3 ~ c4 ~").sound("saw").lpq(6).adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(36).lpadsr(0.001, 0.15, 0, 0.1).gain(0.4) // wah: the added lpq up front
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(36).lpadsr(0.001, 0.15, 0, 0.1).gain(0.4)     // plain sweep, swap
                     """.trimIndent(),
                 ),
             ),
@@ -124,9 +125,9 @@ val theFilterEnvelopeTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(7).lpadsr(0.001, 0.15, 0, 0.1).gain(0.5)           // pluck
-                    // note("a3 ~ c4 ~").sound("saw").lpq(6).adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(7).lpadsr(0.001, 0.15, 0, 0.1).gain(0.4) // wah
-                    // note("a3 ~ c4 ~").sound("saw").adsr(0.01, 0.1, 1, 0.05).lpf(400).lpe(7).lpadsr(0.2, 0.2, 0.8, 0.2).gain(0.5)         // bloom
+                    note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(36).lpadsr(0.001, 0.15, 0, 0.1).gain(0.5)           // pluck
+                    // note("a3 ~ c4 ~").sound("saw").lpq(6).adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(36).lpadsr(0.001, 0.15, 0, 0.1).gain(0.4) // wah
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.01, 0.1, 1, 0.05).lpf(400).lpe(36).lpadsr(0.2, 0.2, 0.8, 0.2).gain(0.5)         // bloom
                     """.trimIndent(),
                 ),
             ),

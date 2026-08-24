@@ -468,8 +468,8 @@ class VoiceFactory(
         }
 
         // When there's no envelope but drift is active, build a degenerate envelope
-        // with depth=0 so the per-block `1 + depth*envValue = 1` math leaves the
-        // cutoff untouched by the envelope side — only drift multiplies it.
+        // with depth=0 so the per-block `2^(0/12 * envValue) = 1` math (C3: semitone law)
+        // leaves the cutoff untouched by the envelope side — only drift multiplies it.
         val envelope: Voice.Envelope
         val depth: Double
         if (envData != null) {

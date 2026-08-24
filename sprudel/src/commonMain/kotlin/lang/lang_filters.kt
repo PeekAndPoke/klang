@@ -648,10 +648,12 @@ private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * Sets the LPF envelope depth (modulation amount).
  *
  * Controls how far above the base [lpf] cutoff the filter sweeps when the ADSR envelope
- * is fully open. The depth is a multiplier applied to the base cutoff:
+ * is fully open. The depth is in SEMITONES: the sweep is pitch-linear, the way DAW
+ * filter envelopes work: +12 doubles the cutoff at full envelope, -12 halves it, and
+ * negative depths are first-class (no dead zone).
  *
  * ```
- * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
  * ```
  *
  * ### How cutoff, ADSR, and depth work together
@@ -662,24 +664,24 @@ private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * | `lpadsr` | Shapes the **envelope curve** over time (0→1→sustain→0) |
  * | `lpe(depth)` | Scales **how far** the envelope moves the cutoff |
  *
- * Example with `lpf(500).lpe(3.0).lpadsr(0.01, 0.5, 0.2, 0.3)`:
+ * Example with `lpf(500).lpe(24).lpadsr(0.01, 0.5, 0.2, 0.3)`:
  *
  * | Phase | envValue | Cutoff |
  * |-------|----------|--------|
  * | Note start | 0.0 | 500 Hz |
- * | Attack peak | 1.0 | 500 × (1 + 3 × 1) = **2000 Hz** |
- * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
+ * | Attack peak | 1.0 | 500 × 2^(24/12 × 1.0) = **2000 Hz** (2 octaves up) |
+ * | Sustain | 0.2 | 500 × 2^(24/12 × 0.2) = **660 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
  * ```KlangScript(Playable)
- * s("bd").lpf(200).lpe(3.0)                // sweeps up to 800 Hz at peak
+ * s("bd").lpf(200).lpe(24)                 // sweeps up 2 octaves, to 800 Hz at peak
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").lpf(300).lpe("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
+ * note("c4").lpf(300).lpe("<7 36>")        // subtle (a fifth) vs dramatic (3 octaves) per cycle
  * ```
  *
- * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth SprudelLpEnvEditor, SprudelLpEnvSequenceEditor
  * @category effects
@@ -717,10 +719,12 @@ private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * Sets the HPF envelope depth (modulation amount).
  *
  * Controls how far above the base [hpf] cutoff the filter sweeps when the ADSR envelope
- * is fully open. The depth is a multiplier applied to the base cutoff:
+ * is fully open. The depth is in SEMITONES: the sweep is pitch-linear, the way DAW
+ * filter envelopes work: +12 doubles the cutoff at full envelope, -12 halves it, and
+ * negative depths are first-class (no dead zone).
  *
  * ```
- * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
  * ```
  *
  * ### How cutoff, ADSR, and depth work together
@@ -731,24 +735,24 @@ private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * | `hpadsr` | Shapes the **envelope curve** over time (0→1→sustain→0) |
  * | `hpe(depth)` | Scales **how far** the envelope moves the cutoff |
  *
- * Example with `hpf(500).hpe(3.0).hpadsr(0.01, 0.5, 0.2, 0.3)`:
+ * Example with `hpf(500).hpe(24).hpadsr(0.01, 0.5, 0.2, 0.3)`:
  *
  * | Phase | envValue | Cutoff |
  * |-------|----------|--------|
  * | Note start | 0.0 | 500 Hz |
- * | Attack peak | 1.0 | 500 × (1 + 3 × 1) = **2000 Hz** |
- * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
+ * | Attack peak | 1.0 | 500 × 2^(24/12 × 1.0) = **2000 Hz** (2 octaves up) |
+ * | Sustain | 0.2 | 500 × 2^(24/12 × 0.2) = **660 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
  * ```KlangScript(Playable)
- * s("sd").hpf(100).hpe(3.0)                // sweeps up to 400 Hz at peak
+ * s("sd").hpf(100).hpe(24)                // sweeps up to 400 Hz at peak
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").hpf(200).hpe("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
+ * note("c4").hpf(200).hpe("<7 36>")        // subtle (a fifth) vs dramatic (3 octaves) per cycle
  * ```
  *
- * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth SprudelHpEnvEditor, SprudelHpEnvSequenceEditor
  * @category effects
@@ -786,10 +790,12 @@ private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * Sets the BPF envelope depth (modulation amount).
  *
  * Controls how far above the base [bpf] centre frequency the filter sweeps when the ADSR envelope
- * is fully open. The depth is a multiplier applied to the base cutoff:
+ * is fully open. The depth is in SEMITONES: the sweep is pitch-linear, the way DAW
+ * filter envelopes work: +12 doubles the cutoff at full envelope, -12 halves it, and
+ * negative depths are first-class (no dead zone).
  *
  * ```
- * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
  * ```
  *
  * ### How cutoff, ADSR, and depth work together
@@ -800,24 +806,24 @@ private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * | `bpadsr` | Shapes the **envelope curve** over time (0→1→sustain→0) |
  * | `bpe(depth)` | Scales **how far** the envelope moves the centre frequency |
  *
- * Example with `bpf(500).bpe(3.0).bpadsr(0.01, 0.5, 0.2, 0.3)`:
+ * Example with `bpf(500).bpe(24).bpadsr(0.01, 0.5, 0.2, 0.3)`:
  *
  * | Phase | envValue | Centre freq |
  * |-------|----------|-------------|
  * | Note start | 0.0 | 500 Hz |
- * | Attack peak | 1.0 | 500 × (1 + 3 × 1) = **2000 Hz** |
- * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
+ * | Attack peak | 1.0 | 500 × 2^(24/12 × 1.0) = **2000 Hz** (2 octaves up) |
+ * | Sustain | 0.2 | 500 × 2^(24/12 × 0.2) = **660 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
  * ```KlangScript(Playable)
- * s("sd").bpf(500).bpe(3.0)                // sweeps up to 2000 Hz at peak
+ * s("sd").bpf(500).bpe(24)                // sweeps up to 2000 Hz at peak
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").bpf(300).bpe("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
+ * note("c4").bpf(300).bpe("<7 36>")        // subtle (a fifth) vs dramatic (3 octaves) per cycle
  * ```
  *
- * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the BPF envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth SprudelBpEnvEditor, SprudelBpEnvSequenceEditor
  * @category effects

@@ -180,9 +180,9 @@ object SprudelNResonanceEditorTool : KlangUiToolEmbeddable by SprudelNumericEdit
 object SprudelLpEnvEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorTool(
     title = "Low-Pass Env Depth Editor",
     iconFn = { filter },
-    fieldLabel = "Depth",
-    defaultValue = 0.5,
-    step = 0.1,
+    fieldLabel = "Depth (st)",
+    defaultValue = 7.0,
+    step = 1.0,
     centerValue = null,
 )
 
@@ -190,9 +190,9 @@ object SprudelLpEnvEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorToo
 object SprudelHpEnvEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorTool(
     title = "High-Pass Env Depth Editor",
     iconFn = { filter },
-    fieldLabel = "Depth",
-    defaultValue = 0.5,
-    step = 0.1,
+    fieldLabel = "Depth (st)",
+    defaultValue = 7.0,
+    step = 1.0,
     centerValue = null,
 )
 
@@ -200,9 +200,9 @@ object SprudelHpEnvEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorToo
 object SprudelBpEnvEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorTool(
     title = "Band-Pass Env Depth Editor",
     iconFn = { filter },
-    fieldLabel = "Depth",
-    defaultValue = 0.5,
-    step = 0.1,
+    fieldLabel = "Depth (st)",
+    defaultValue = 7.0,
+    step = 1.0,
     centerValue = null,
 )
 
@@ -210,9 +210,9 @@ object SprudelBpEnvEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorToo
 object SprudelNfEnvEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorTool(
     title = "Notch Env Depth Editor",
     iconFn = { filter },
-    fieldLabel = "Depth",
-    defaultValue = 0.5,
-    step = 0.1,
+    fieldLabel = "Depth (st)",
+    defaultValue = 7.0,
+    step = 1.0,
     centerValue = null,
 )
 

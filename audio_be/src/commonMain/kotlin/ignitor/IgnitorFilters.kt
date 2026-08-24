@@ -37,8 +37,10 @@ enum class SvfMode {
 /**
  * Optional ADSR-style envelope that modulates filter cutoff at control rate (once per block).
  *
- * When applied, the effective cutoff becomes: `baseCutoff * (1.0 + depth * envValue)`
- * where `envValue` is 0.0..1.0 from the envelope shape.
+ * When applied, the effective cutoff becomes: `baseCutoff * 2^(depth/12 * envValue)` —
+ * depth is SEMITONES (C3 of the filter unification; +12 doubles the cutoff at full
+ * envelope, negative sweeps down, no dead zone) and `envValue` is 0.0..1.0 from the
+ * envelope shape. `depth = 0.0` stays the exact no-envelope identity.
  */
 data class FilterEnvDef(
     val depth: Double = 0.0,
@@ -144,8 +146,11 @@ private class SvfIgnitor(
                     ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
                     sampleOffsetWithinBlock = length,
                 )
-                val cutoffStart = baseCutoff * (1.0 + env.depth * envStart)
-                val cutoffEnd = baseCutoff * (1.0 + env.depth * envEnd)
+                // C3 (filter unification): envelope depth is SEMITONES — the sweep is
+                // pitch-linear (cutoff = base * 2^(depth/12 * env)), negative depth sweeps
+                // down symmetrically, and there is no dead zone anywhere.
+                val cutoffStart = baseCutoff * 2.0.pow(env.depth / 12.0 * envStart)
+                val cutoffEnd = baseCutoff * 2.0.pow(env.depth / 12.0 * envEnd)
 
                 computeSvfCoeffs(cutoffStart, qVal, sr, coefs)
                 computeSvfCoeffs(cutoffEnd, qVal, sr, coefsEnd)
