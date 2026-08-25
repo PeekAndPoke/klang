@@ -11,48 +11,48 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
-class LangBxorSpec : StringSpec({
-    "bxor() calculates bitwise XOR" {
-        val p = seq("3 5").bxor("1") // 3=011, 5=101. 1=001. 3^1=2, 5^1=4
+class LangBitXorSpec : StringSpec({
+    "bitXor() calculates bitwise XOR" {
+        val p = seq("3 5").bitXor("1") // 3=011, 5=101. 1=001. 3^1=2, 5^1=4
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 2
         events[1].data.value?.asInt shouldBe 4
     }
 
-    "bxor() works as top-level PatternMapper" {
-        val p = seq("3 5").apply(bxor("1"))
+    "bitXor() works as top-level PatternMapper" {
+        val p = seq("3 5").apply(bitXor("1"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 2
         events[1].data.value?.asInt shouldBe 4
     }
 
-    "bxor() works as string extension" {
-        val p = "3 5".bxor("1")
+    "bitXor() works as string extension" {
+        val p = "3 5".bitXor("1")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 2
         events[1].data.value?.asInt shouldBe 4
     }
 
-    "bxor dsl interface" {
+    "bitXor dsl interface" {
         val pat = "12 10"
         val ctrl = "6 3"
 
         dslInterfaceTests(
-            "pattern.bxor(ctrl)" to
-                    seq(pat).bxor(ctrl),
-            "script pattern.bxor(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").bxor("$ctrl")"""),
-            "string.bxor(ctrl)" to
-                    pat.bxor(ctrl),
-            "script string.bxor(ctrl)" to
-                    SprudelPattern.compile(""""$pat".bxor("$ctrl")"""),
-            "bxor(ctrl)" to
-                    seq(pat).apply(bxor(ctrl)),
-            "script bxor(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(bxor("$ctrl"))"""),
+            "pattern.bitXor(ctrl)" to
+                    seq(pat).bitXor(ctrl),
+            "script pattern.bitXor(ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").bitXor("$ctrl")"""),
+            "string.bitXor(ctrl)" to
+                    pat.bitXor(ctrl),
+            "script string.bitXor(ctrl)" to
+                    SprudelPattern.compile(""""$pat".bitXor("$ctrl")"""),
+            "bitXor(ctrl)" to
+                    seq(pat).apply(bitXor(ctrl)),
+            "script bitXor(ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").apply(bitXor("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 10  // 12 ^ 6 = 10

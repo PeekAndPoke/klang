@@ -597,16 +597,16 @@ object JsCompatTestData {
             Example(SKIP, "Log2 #2", """n("1 2 4 8").log2()"""), // Js produce no events
 
             // Bitwise Operators
-            Example("Band (AND) #1", """seq("3 5").band("1")"""),
-            Example("Band (AND) #2", """n("3 5").band("1")"""),
-            Example("Bor (OR) #1", """seq("1 4").bor("2")"""),
-            Example("Bor (OR) #2", """n("1 4").bor("2")"""),
-            Example("Bxor (XOR) #1", """seq("3 5").bxor("1")"""),
-            Example("Bxor (XOR) #2", """n("3 5").bxor("1")"""),
-            Example("Blshift (Left Shift) #1", """seq("1 2").blshift("1")"""),
-            Example("Blshift (Left Shift) #2", """n("1 2").blshift("1")"""),
-            Example("Brshift (Right Shift) #1", """seq("2 4").brshift("1")"""),
-            Example("Brshift (Right Shift) #2", """n("2 4").brshift("1")"""),
+            Example("Band (AND) #1", """seq("3 5").bitAnd("1")"""),
+            Example("Band (AND) #2", """n("3 5").bitAnd("1")"""),
+            Example("Bor (OR) #1", """seq("1 4").bitOr("2")"""),
+            Example("Bor (OR) #2", """n("1 4").bitOr("2")"""),
+            Example("Bxor (XOR) #1", """seq("3 5").bitXor("1")"""),
+            Example("Bxor (XOR) #2", """n("3 5").bitXor("1")"""),
+            Example("Blshift (Left Shift) #1", """seq("1 2").bitShl("1")"""),
+            Example("Blshift (Left Shift) #2", """n("1 2").bitShl("1")"""),
+            Example("Brshift (Right Shift) #1", """seq("2 4").bitShr("1")"""),
+            Example("Brshift (Right Shift) #2", """n("2 4").bitShr("1")"""),
 
             // Comparison
             Example(SKIP, "Less Than #1", """seq("1 2 3").lt(2)"""),

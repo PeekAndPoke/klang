@@ -486,7 +486,7 @@ fun pow(exponent: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
 fun PatternMapperFn.pow(exponent: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.pow(exponent, callInfo) }
 
-// -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
+// -- bitAnd() (Bitwise AND) ---------------------------------------------------------------------------------------------
 
 /**
  * Applies bitwise AND of [mask] to every integer value in the pattern.
@@ -495,21 +495,21 @@ fun PatternMapperFn.pow(exponent: PatternLike, callInfo: CallInfo? = null): Patt
  * remain unchanged. Values are truncated to integers before the operation.
  *
  * ```KlangScript(Playable)
- * "12 15".band(10).scale("c3:major").n()  // 12&10=8, 15&10=10
+ * "12 15".bitAnd(10).scale("c3:major").n()  // 12&10=8, 15&10=10
  * ```
  *
  * ```KlangScript(Playable)
- * "127".band("<15 63>").scale("c3:major").n()  // mask low or high nibble alternately
+ * "127".bitAnd("<15 63>").scale("c3:major").n()  // mask low or high nibble alternately
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern where each value is replaced by `value & mask`.
  * @category arithmetic
- * @tags band, bitwise, and, arithmetic, binary
+ * @tags bitAnd, bitwise, and, arithmetic, binary
  */
 @KlangScript.Function
-fun SprudelPattern.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a band b }
+fun SprudelPattern.bitAnd(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bitAnd b }
 
 /**
  * Parses this string as a pattern, then applies bitwise AND with [mask] to every integer value.
@@ -518,14 +518,14 @@ fun SprudelPattern.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelP
  * remain unchanged.
  *
  * ```KlangScript(Playable)
- * "12 15".band(10).scale("c3:major").n()  // 12&10=8, 15&10=10
+ * "12 15".bitAnd(10).scale("c3:major").n()  // 12&10=8, 15&10=10
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun String.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).band(mask, callInfo)
+fun String.bitAnd(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bitAnd(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise AND of [mask] to every integer value in a pattern.
@@ -534,29 +534,29 @@ fun String.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * remain unchanged. Use with [SprudelPattern.apply] to apply the mask to an existing pattern.
  *
  * ```KlangScript(Playable)
- * seq("12 15").apply(band(10)).scale("c3:major").n()  // 12&10=8, 15&10=10
+ * seq("12 15").apply(bitAnd(10)).scale("c3:major").n()  // 12&10=8, 15&10=10
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun band(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.band(mask, callInfo) }
+fun bitAnd(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bitAnd(mask, callInfo) }
 
 /**
  * Chains a bitwise AND onto this [PatternMapperFn], applying [mask] to every integer value.
  *
  * ```KlangScript(Playable)
- * seq("12 15").apply(add(3).band(10)).scale("c2:major").n()  // (12+3)&10=10, (15+3)&10=2
+ * seq("12 15").apply(add(3).bitAnd(10)).scale("c2:major").n()  // (12+3)&10=10, (15+3)&10=2
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun PatternMapperFn.band(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.band(mask, callInfo) }
+fun PatternMapperFn.bitAnd(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bitAnd(mask, callInfo) }
 
-// -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
+// -- bitOr() (Bitwise OR) -----------------------------------------------------------------------------------------------
 
 /**
  * Applies bitwise OR of [mask] to every integer value in the pattern.
@@ -565,21 +565,21 @@ fun PatternMapperFn.band(mask: PatternLike, callInfo: CallInfo? = null): Pattern
  * remain unchanged. Values are truncated to integers before the operation.
  *
  * ```KlangScript(Playable)
- * "8 4".bor(2).scale("c3:major").n()  // 8|2=10, 4|2=6
+ * "8 4".bitOr(2).scale("c3:major").n()  // 8|2=10, 4|2=6
  * ```
  *
  * ```KlangScript(Playable)
- * "0".bor("<1 2 4 8>").scale("c3:major").n()  // set individual bits each cycle
+ * "0".bitOr("<1 2 4 8>").scale("c3:major").n()  // set individual bits each cycle
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern where each value is replaced by `value | mask`.
  * @category arithmetic
- * @tags bor, bitwise, or, arithmetic, binary
+ * @tags bitOr, bitwise, or, arithmetic, binary
  */
 @KlangScript.Function
-fun SprudelPattern.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bor b }
+fun SprudelPattern.bitOr(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bitOr b }
 
 /**
  * Parses this string as a pattern, then applies bitwise OR with [mask] to every integer value.
@@ -588,14 +588,14 @@ fun SprudelPattern.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPa
  * remain unchanged.
  *
  * ```KlangScript(Playable)
- * "8 4".bor(2).scale("c3:major").n()  // 8|2=10, 4|2=6
+ * "8 4".bitOr(2).scale("c3:major").n()  // 8|2=10, 4|2=6
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun String.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).bor(mask, callInfo)
+fun String.bitOr(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bitOr(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise OR of [mask] to every integer value in a pattern.
@@ -604,29 +604,29 @@ fun String.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * remain unchanged. Use with [SprudelPattern.apply] to apply the mask to an existing pattern.
  *
  * ```KlangScript(Playable)
- * seq("8 4").apply(bor(2)).scale("c3:major").n()  // 8|2=10, 4|2=6
+ * seq("8 4").apply(bitOr(2)).scale("c3:major").n()  // 8|2=10, 4|2=6
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun bor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bor(mask, callInfo) }
+fun bitOr(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bitOr(mask, callInfo) }
 
 /**
  * Chains a bitwise OR onto this [PatternMapperFn], applying [mask] to every integer value.
  *
  * ```KlangScript(Playable)
- * seq("8 4").apply(add(1).bor(2)).scale("c2:major").n()  // (8+1)|2=11, (4+1)|2=7
+ * seq("8 4").apply(add(1).bitOr(2)).scale("c2:major").n()  // (8+1)|2=11, (4+1)|2=7
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun PatternMapperFn.bor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.bor(mask, callInfo) }
+fun PatternMapperFn.bitOr(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bitOr(mask, callInfo) }
 
-// -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
+// -- bitXor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
 
 /**
  * Applies bitwise XOR of [mask] to every integer value in the pattern.
@@ -636,21 +636,21 @@ fun PatternMapperFn.bor(mask: PatternLike, callInfo: CallInfo? = null): PatternM
  * toggling specific bits.
  *
  * ```KlangScript(Playable)
- * "12 10".bxor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
+ * "12 10".bitXor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
  * ```
  *
  * ```KlangScript(Playable)
- * "5".bxor("<3 5>").scale("c3:major").n()  // toggle bits each cycle
+ * "5".bitXor("<3 5>").scale("c3:major").n()  // toggle bits each cycle
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern where each value is replaced by `value ^ mask`.
  * @category arithmetic
- * @tags bxor, bitwise, xor, arithmetic, binary
+ * @tags bitXor, bitwise, xor, arithmetic, binary
  */
 @KlangScript.Function
-fun SprudelPattern.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bxor b }
+fun SprudelPattern.bitXor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bitXor b }
 
 /**
  * Parses this string as a pattern, then applies bitwise XOR with [mask] to every integer value.
@@ -659,14 +659,14 @@ fun SprudelPattern.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelP
  * remain unchanged.
  *
  * ```KlangScript(Playable)
- * "12 10".bxor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
+ * "12 10".bitXor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun String.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).bxor(mask, callInfo)
+fun String.bitXor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bitXor(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise XOR of [mask] to every integer value in a pattern.
@@ -675,29 +675,29 @@ fun String.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * remain unchanged. Use with [SprudelPattern.apply] to apply the mask to an existing pattern.
  *
  * ```KlangScript(Playable)
- * seq("12 10").apply(bxor(6)).scale("c3:major").n()  // 12^6=10, 10^6=12
+ * seq("12 10").apply(bitXor(6)).scale("c3:major").n()  // 12^6=10, 10^6=12
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun bxor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bxor(mask, callInfo) }
+fun bitXor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bitXor(mask, callInfo) }
 
 /**
  * Chains a bitwise XOR onto this [PatternMapperFn], applying [mask] to every integer value.
  *
  * ```KlangScript(Playable)
- * seq("12 10").apply(add(2).bxor(6)).scale("c2:major").n()  // (12+2)^6=8, (10+2)^6=10
+ * seq("12 10").apply(add(2).bitXor(6)).scale("c2:major").n()  // (12+2)^6=8, (10+2)^6=10
  * ```
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun PatternMapperFn.bxor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.bxor(mask, callInfo) }
+fun PatternMapperFn.bitXor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bitXor(mask, callInfo) }
 
-// -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
+// -- bitShl() (Bitwise Left Shift) -----------------------------------------------------------------------------------
 
 /**
  * Shifts every integer value in the pattern left by [bits] bits (equivalent to multiplying by 2^n).
@@ -706,20 +706,20 @@ fun PatternMapperFn.bxor(mask: PatternLike, callInfo: CallInfo? = null): Pattern
  * remain unchanged. Values are truncated to integers before the operation.
  *
  * ```KlangScript(Playable)
- * "1 2".blshift(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
+ * "1 2".bitShl(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
  * ```
  *
  * ```KlangScript(Playable)
- * "1".blshift("<0 1 2 3>").scale("c3:major").n()  // 1, 2, 4, 8 over four cycles
+ * "1".bitShl("<0 1 2 3>").scale("c3:major").n()  // 1, 2, 4, 8 over four cycles
  * ```
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern where each value is replaced by `value << bits`.
  * @category arithmetic
- * @tags blshift, bitwise, shift, left shift, arithmetic, binary
+ * @tags bitShl, bitwise, shift, left shift, arithmetic, binary
  */
 @KlangScript.Function
-fun SprudelPattern.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.bitShl(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(bits).asSprudelDslArgs(callInfo)) { a, b -> a shl b }
 
 /**
@@ -729,14 +729,14 @@ fun SprudelPattern.blshift(bits: PatternLike, callInfo: CallInfo? = null): Sprud
  * remain unchanged.
  *
  * ```KlangScript(Playable)
- * "1 2".blshift(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
+ * "1 2".bitShl(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
  * ```
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun String.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).blshift(bits, callInfo)
+fun String.bitShl(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bitShl(bits, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that shifts every integer value in a pattern left by [bits] bits.
@@ -745,30 +745,30 @@ fun String.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * remain unchanged. Use with [SprudelPattern.apply] to apply the shift to an existing pattern.
  *
  * ```KlangScript(Playable)
- * seq("1 2").apply(blshift(2)).scale("c3:major").n()  // 1<<2=4, 2<<2=8
+ * seq("1 2").apply(bitShl(2)).scale("c3:major").n()  // 1<<2=4, 2<<2=8
  * ```
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation,
  *   or a [SprudelPattern].
  */
 @KlangScript.Function
-fun blshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.blshift(bits, callInfo) }
+fun bitShl(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bitShl(bits, callInfo) }
 
 /**
  * Chains a bitwise left-shift onto this [PatternMapperFn], shifting every integer value left by [bits] bits.
  *
  * ```KlangScript(Playable)
- * seq("1 2").apply(add(1).blshift(2)).scale("c2:major").n()  // (1+1)<<2=8, (2+1)<<2=12
+ * seq("1 2").apply(add(1).bitShl(2)).scale("c2:major").n()  // (1+1)<<2=8, (2+1)<<2=12
  * ```
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun PatternMapperFn.blshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.blshift(bits, callInfo) }
+fun PatternMapperFn.bitShl(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bitShl(bits, callInfo) }
 
-// -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
+// -- bitShr() (Bitwise Right Shift) ----------------------------------------------------------------------------------
 
 /**
  * Shifts every integer value in the pattern right by [bits] bits (equivalent to integer-dividing by 2^n).
@@ -777,20 +777,20 @@ fun PatternMapperFn.blshift(bits: PatternLike, callInfo: CallInfo? = null): Patt
  * remain unchanged. Values are truncated to integers before the operation.
  *
  * ```KlangScript(Playable)
- * "8 12".brshift(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
+ * "8 12".bitShr(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
  * ```KlangScript(Playable)
- * "16".brshift("<0 1 2 3>").scale("c3:major").n()  // 16, 8, 4, 2 over four cycles
+ * "16".bitShr("<0 1 2 3>").scale("c3:major").n()  // 16, 8, 4, 2 over four cycles
  * ```
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern where each value is replaced by `value >> bits`.
  * @category arithmetic
- * @tags brshift, bitwise, shift, right shift, arithmetic, binary
+ * @tags bitShr, bitwise, shift, right shift, arithmetic, binary
  */
 @KlangScript.Function
-fun SprudelPattern.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.bitShr(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(bits).asSprudelDslArgs(callInfo)) { a, b -> a shr b }
 
 /**
@@ -800,14 +800,14 @@ fun SprudelPattern.brshift(bits: PatternLike, callInfo: CallInfo? = null): Sprud
  * remain unchanged.
  *
  * ```KlangScript(Playable)
- * "8 12".brshift(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
+ * "8 12".bitShr(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun String.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).brshift(bits, callInfo)
+fun String.bitShr(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bitShr(bits, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that shifts every integer value in a pattern right by [bits] bits.
@@ -816,27 +816,27 @@ fun String.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * remain unchanged. Use with [SprudelPattern.apply] to apply the shift to an existing pattern.
  *
  * ```KlangScript(Playable)
- * seq("8 12").apply(brshift(2)).scale("c3:major").n()  // 8>>2=2, 12>>2=3
+ * seq("8 12").apply(bitShr(2)).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun brshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.brshift(bits, callInfo) }
+fun bitShr(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bitShr(bits, callInfo) }
 
 /**
  * Chains a bitwise right-shift onto this [PatternMapperFn], shifting every integer value right by [bits] bits.
  *
  * ```KlangScript(Playable)
- * seq("8 16").apply(mul(2).brshift(3)).scale("c3:major").n()  // (8*2)>>3=2, (16*2)>>3=4
+ * seq("8 16").apply(mul(2).bitShr(3)).scale("c3:major").n()  // (8*2)>>3=2, (16*2)>>3=4
  * ```
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @KlangScript.Function
-fun PatternMapperFn.brshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.brshift(bits, callInfo) }
+fun PatternMapperFn.bitShr(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bitShr(bits, callInfo) }
 
 // -- log2() -----------------------------------------------------------------------------------------------------------
 

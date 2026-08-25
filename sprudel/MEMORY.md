@@ -147,7 +147,7 @@ return applyCat(patterns)
 
 ### Bitwise Operators
 
-- `band()`, `bor()`, `bxor()`, `blshift()`, `brshift()`
+- `bitAnd()`, `bitOr()`, `bitXor()`, `bitShl()`, `bitShr()`
 
 ### Comparison & Logic
 

@@ -11,48 +11,48 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
-class LangBandSpec : StringSpec({
-    "band() calculates bitwise AND" {
-        val p = seq("3 5").band("1") // 3=11, 5=101. 1=001. 3&1=1, 5&1=1
+class LangBitAndSpec : StringSpec({
+    "bitAnd() calculates bitwise AND" {
+        val p = seq("3 5").bitAnd("1") // 3=11, 5=101. 1=001. 3&1=1, 5&1=1
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 1
         events[1].data.value?.asInt shouldBe 1
     }
 
-    "band() works as top-level PatternMapper" {
-        val p = seq("3 5").apply(band("1"))
+    "bitAnd() works as top-level PatternMapper" {
+        val p = seq("3 5").apply(bitAnd("1"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 1
         events[1].data.value?.asInt shouldBe 1
     }
 
-    "band() works as string extension" {
-        val p = "3 5".band("1")
+    "bitAnd() works as string extension" {
+        val p = "3 5".bitAnd("1")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 1
         events[1].data.value?.asInt shouldBe 1
     }
 
-    "band dsl interface" {
+    "bitAnd dsl interface" {
         val pat = "12 15"
         val ctrl = "10 6"
 
         dslInterfaceTests(
-            "pattern.band(ctrl)" to
-                    seq(pat).band(ctrl),
-            "script pattern.band(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").band("$ctrl")"""),
-            "string.band(ctrl)" to
-                    pat.band(ctrl),
-            "script string.band(ctrl)" to
-                    SprudelPattern.compile(""""$pat".band("$ctrl")"""),
-            "band(ctrl)" to
-                    seq(pat).apply(band(ctrl)),
-            "script band(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(band("$ctrl"))"""),
+            "pattern.bitAnd(ctrl)" to
+                    seq(pat).bitAnd(ctrl),
+            "script pattern.bitAnd(ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").bitAnd("$ctrl")"""),
+            "string.bitAnd(ctrl)" to
+                    pat.bitAnd(ctrl),
+            "script string.bitAnd(ctrl)" to
+                    SprudelPattern.compile(""""$pat".bitAnd("$ctrl")"""),
+            "bitAnd(ctrl)" to
+                    seq(pat).apply(bitAnd(ctrl)),
+            "script bitAnd(ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").apply(bitAnd("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 8   // 12 & 10 = 8
