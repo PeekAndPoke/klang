@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -274,7 +274,7 @@ internal inline fun computeSvfCoeffs(cutoffHz: Double, q: Double, sampleRate: Do
  * window (db ∈ [346, 6165) yields finite m1 up to ~9e305 — unbounded, that ducks the master
  * limiter for seconds or lands NaN → full-scale DC downstream) and the non-finite case in
  * ONE guard. It is applied to the COEFFICIENT at configure time — the per-sample path stays
- * untouched — and it does NOT shorten the limiter-duck symptom at extreme db (raw Motör:
+ * untouched — and it does NOT shorten the limiter-duck symptom at extreme db (raw Motor:
  * no musical clamp on db).
  *
  * [db] is COEFFICIENT-bearing: it moves bandwidth through `q·A`, so an LFO on db zippers

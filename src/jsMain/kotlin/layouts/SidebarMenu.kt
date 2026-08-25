@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -7,7 +7,7 @@ package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.comp.Motoer
+import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialScope
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
@@ -309,8 +309,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             }
 
             div {
-                key = "motoer-container"
-                Motoer()
+                key = "motor-container"
+                Motor()
             }
         }
     }

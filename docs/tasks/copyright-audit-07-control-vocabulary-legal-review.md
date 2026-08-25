@@ -21,7 +21,7 @@
     > `compressor → threshold:ratio:knee:attack:release`, `reverb → room:size:fade:lp:dim`,
     > `tremolo → depth:rate:shape:skew:phase`, `delay → delay:delaytime:delayfeedback`;
 > - the pitch/filter-envelope families (`penv`/`lpenv`/`*adsr`) — Strudel-era.
-    > (Motör-engine extras like `distortshape`/`*os`/`body`/`vowelMix`/`unison` are Klang-original — no issue.)
+    > (Motor-engine extras like `distortshape`/`*os`/`body`/`vowelMix`/`unison` are Klang-original — no issue.)
     > So the genuine Strudel-only residue is **the specific multi-field colon orderings + a few short forms**, not
     > the vocabulary as a whole. See `docs/tasks-archive/2026-06/20260624-copyright-audit-08-*` for the full evidence.
 

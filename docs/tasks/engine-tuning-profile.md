@@ -20,7 +20,7 @@
 
 ## Why this is the headline remaining piece
 
-The whole EngineDsl effort exists so the Motör's *voice character* can be tuned from KlangScript instead of
+The whole EngineDsl effort exists so the Motor's *voice character* can be tuned from KlangScript instead of
 "edit an `internal const val` in `OscillatorTuning.kt` → recompile → listen." The oscillator sources now expose
 **every** knob a profile would set (Phase 2 sources done), so the groundwork is in place. Phase 3 turns engines
 into complete identities (e.g. `modern`/`pedal` today, a future `c64`/`nes`): an oscillator field left at its

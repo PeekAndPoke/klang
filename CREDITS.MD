@@ -157,7 +157,7 @@ The performance and the richness of APIs available today are nothing short of am
 Visuals and editor effects are powered by these libraries (integrated via Kraft addons):
 
 - **[PixiJS](https://pixijs.com)** — WebGL-accelerated rendering of live playback highlights in the editor
-- **[Three.js](https://threejs.org)** — 3D graphics for the animated Motör background and visualizations
+- **[Three.js](https://threejs.org)** — 3D graphics for the animated Motor background and visualizations
 
 ## The Editor
 

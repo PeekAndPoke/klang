@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -603,7 +603,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Renders "KLANGMOTÖR" flat (no perspective) at the title position.
+     * Renders "KLANGMOTOR" flat (no perspective) at the title position.
      *
      * Caller is responsible for clip / blur / fillStyle setup on `tctx`.
      */
@@ -616,7 +616,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val textCy = height * 0.18
         tctx.fillStyle = fillStyle
         applyTitleTextStyle(tctx, height)
-        tctx.fillText("KLANGMOTÖR", width / 2.0, textCy)
+        tctx.fillText("KLANGMOTOR", width / 2.0, textCy)
     }
 
     /**
@@ -664,7 +664,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     /**
      * Albedo + normal map for the title overlay plane.
      *
-     * The albedo is "KLANGMOTÖR" on a TRANSPARENT background — the material's
+     * The albedo is "KLANGMOTOR" on a TRANSPARENT background — the material's
      * alpha masks the overlay down to the letters (plus a plate-colored halo
      * under the bevel ring), so the rest of this plane is invisible. The normal
      * map carries the hammered letter fill and the raised edge bevels that used
@@ -798,7 +798,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Pre-renders "KLANGMOTÖR" into a soft-edged alpha mask the size of the
+     * Pre-renders "KLANGMOTOR" into a soft-edged alpha mask the size of the
      * normal map. Returns a DoubleArray where 1.0 = deep inside text, 0.0 = plain metal.
      * The gradient of this field is used to carve engraving bevels into the plate.
      */
@@ -839,7 +839,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
      * sharp V-groove seams and per-panel micro-tilts that react crisply to
      * the wandering light.
      *
-     * The "KLANGMOTÖR" engraving lives on the separate title overlay plane —
+     * The "KLANGMOTOR" engraving lives on the separate title overlay plane —
      * see [buildTitleOverlayMaps].
      */
     private fun generateMotorNormalMap(

@@ -648,7 +648,7 @@ let rim = Osc.sine(800)
         .adsr(0.001, 0.03, 0.0, 0.005)
 ```
 
-**Vinyl crackle** — old-record texture from primitives (no dedicated generator; the Motör stays raw)
+**Vinyl crackle** — old-record texture from primitives (no dedicated generator; the Motor stays raw)
 
 Layer dust through band/high-pass for the "tick" ring, plus a quiet hiss bed. The dust authenticity knobs
 do the heavy lifting: `bipolar` gives natural ±pops, and a high `tail` makes pops mostly-tiny / rare-loud

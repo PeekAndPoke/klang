@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -253,7 +253,7 @@ stack(
 ).analog(3.0)
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing
-// Composed by: Claude, Motör, peekandpoke
+// Composed by: Claude, Motor, peekandpoke
 
 
 

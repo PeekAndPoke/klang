@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -101,7 +101,7 @@ let part3 = stack(melody3, guitar3, bass3)
 
 arrange([8, part1], [8, part2], [8, part3], [8, part2], [8, part3], [8, part2]).roomWet(0.1, 7)
 
-// Composed by: Claude, Gemini, Motör, peekandpoke
+// Composed by: Claude, Gemini, Motor, peekandpoke
             
             
              

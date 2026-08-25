@@ -1,13 +1,13 @@
 # Authors
 
 This file is the authoritative list of copyright holders — the **"Authors"** —
-of the **Klangmotör** project.
+of the **Klangmotor** project.
 
 The copyright notice in `LICENSE` and in the source files reads:
 
-> Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+> Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
 
-"The Klangmotör Authors" means the individuals and entities listed below.
+"The Klangmotor Authors" means the individuals and entities listed below.
 
 ## Copyright holders
 
@@ -16,6 +16,6 @@ The copyright notice in `LICENSE` and in the source files reads:
 
 ## Contributing
 
-Klangmotör is released under the GNU Affero General Public License v3
+Klangmotor is released under the GNU Affero General Public License v3
 (see `LICENSE`). Unless agreed otherwise in writing, contributions are accepted
 under those same terms, and the contributor is added to the list above.

@@ -6,7 +6,7 @@ Recent progress:
 
 - Distortion oversampling (`distos()`) landed — see archived
   `2026-04/20260409-distortion-oversampling.md`.
-- New "pedal" engine mode landed (commit `3c32351f`). Voice pipeline now has a Motör-branded
+- New "pedal" engine mode landed (commit `3c32351f`). Voice pipeline now has a Motor-branded
   engine DSL with `modern` and `pedal` flavors (see `engines/AudioEngine.kt`).
 - Oscillator engine unified (2026-06) — one `waveTrapezoid`/`WaveVoiceState` shape engine behind
   saw/ramp/square/pulze/triangle, control-rate reads moved onto the `Ignitor` interface

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Klangmotör — A White Paper</title>
+    <title>Klangmotor — A White Paper</title>
 </head>
 <body>
 <style>
@@ -172,10 +172,6 @@
         text-align: center;
         color: var(--mh-ink);
         margin: 0 0 0.6rem;
-    }
-
-    h1 .ou {
-        color: var(--mh-spark);
     }
 
     .deck {
@@ -750,7 +746,7 @@
                 <span>Aug 11th 2026</span>
             </p>
 
-            <h1>Klangmot<span class="ou">ö</span>r</h1>
+            <h1>Klangmotor</h1>
 
             <p class="deck">
                 A real-time audio engine, a pattern language, and a scripting language —
@@ -759,7 +755,7 @@
             </p>
 
             <svg class="trace" viewBox="0 0 900 46" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                <!-- filtered signal in → a supersaw through the Motör (centre voice + detuned
+                <!-- filtered signal in → a supersaw through the Motor (centre voice + detuned
                      sides, phase-aligned at the attack, drifting apart) → filtered signal out -->
                 <path d="M0,23 C 25,19 45,27 70,23 C 100,14 130,32 160,23 C 185,8 210,38 235,23 C 248,13 258,33 270,23"
                       fill="none" stroke="var(--mh-signal)" stroke-width="1.6"/>
@@ -820,7 +816,7 @@
                 <li><span class="n">02</span><a href="#s2">The company we keep</a></li>
                 <li><span class="n">03</span><a href="#s3">KlangScript — the language you type</a></li>
                 <li><span class="n">04</span><a href="#s4">Sprudel — patterns as functions of time</a></li>
-                <li><span class="n">05</span><a href="#s5">The Motör — the audio engine</a></li>
+                <li><span class="n">05</span><a href="#s5">The Motor — the audio engine</a></li>
                 <li><span class="n">06</span><a href="#s6">Oscillators, filters, effects</a></li>
                 <li><span class="n">07</span><a href="#s7">Three DSLs above the engine, and one to come</a></li>
                 <li><span class="n">08</span><a href="#s8">A real song, in full</a></li>
@@ -890,7 +886,7 @@
                     <tr>
                         <td><b>Engine</b></td>
                         <td><code>audio_be</code> · <code>audio_fe</code> · <code>audio_bridge</code></td>
-                        <td>The Motör. Oscillators, filters, effects, voice lifecycle, mixing. Block-based DSP with a
+                        <td>The Motor. Oscillators, filters, effects, voice lifecycle, mixing. Block-based DSP with a
                             strict frontend/backend split across a thread boundary.
                         </td>
                     </tr>
@@ -1187,7 +1183,7 @@
     <section id="s5">
         <div class="rail"><span class="num">05</span><span class="tag engine">Engine</span></div>
         <div class="body">
-            <h3>The Motör — the audio engine</h3>
+            <h3>The Motor — the audio engine</h3>
 
             <p>
                 First, vocabulary. Every sounding note is a <b>voice</b> — one running instance of an
@@ -1209,7 +1205,7 @@
                     sharing its processing.
                     <b>Orbit</b> is the Tidal / SuperDirt / Strudel word for exactly that, and sprudel keeps
                     it — <code>.orbit(n)</code> — so live coders arriving from strudel.cc feel at home.
-                    <b>Cylinder</b> is the Motör's own name for the machinery that implements one — and
+                    <b>Cylinder</b> is the Motor's own name for the machinery that implements one — and
                     <code>.cylinder(n)</code> works in a pattern too, as an alias.
                 </p>
                 <p>
@@ -1354,7 +1350,7 @@
             <div class="note">
                 <span class="lab">A house rule that shapes the code</span>
                 <p>
-                    The Motör stays raw. Parameters are not clamped "for safety" unless there is a numerical
+                    The Motor stays raw. Parameters are not clamped "for safety" unless there is a numerical
                     reason — you can absolutely make it scream. What <em>is</em> guarded is numerical sanity:
                     NaN/Inf guards, denormal handling, and explicit safe bounds in the DSP, because a single
                     NaN in a feedback delay poisons the buffer forever.
@@ -2020,7 +2016,7 @@ stack(
             <h3>Open source, and the node idea</h3>
 
             <p>
-                Klangmotör is free software under the <b>GNU AGPL v3</b>. The <code>tones</code>
+                Klangmotor is free software under the <b>GNU AGPL v3</b>. The <code>tones</code>
                 module — a Kotlin port of tonal.js — is carved out as <b>MIT</b>, matching upstream. Every
                 file carries an SPDX header; <code>AUTHORS.MD</code> is the authoritative copyright list and
                 <code>CREDITS.MD</code> the list of what this stands on — condensed in
@@ -2572,7 +2568,7 @@ stack(
                     </tr>
                     <tr>
                         <td>PixiJS &amp; Three.js</td>
-                        <td>Live playback highlights in the editor; the animated Motör background</td>
+                        <td>Live playback highlights in the editor; the animated Motor background</td>
                     </tr>
 
                     <tr class="grp">
@@ -2593,7 +2589,7 @@ stack(
 
     <footer class="colophon-end">
         <p>
-            <b>Klangmotör</b> — Copyright © 2025–2026 The Klangmotör Authors.<br/>
+            <b>Klangmotor</b> — Copyright © 2025–2026 The Klangmotor Authors.<br/>
             Licensed under the GNU Affero General Public License v3. The <code>tones</code> module: MIT.<br/>
             Built in Kotlin Multiplatform. Written August 2026, at pre-alpha.
         </p>

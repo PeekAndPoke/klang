@@ -28,7 +28,7 @@ Apply this standard whenever reviewing changes or writing tests — including wh
       `audio_fe` / `audio_jsworklet` / sprudel voice data / any DSP or wire path (prompt template below).
 3. **Triage every finding** into exactly one of:
     - **fix** — apply it;
-    - **reject** — with a stated reason (philosophy rejections must name the rule: raw-Motör no-clamping, reverb
+    - **reject** — with a stated reason (philosophy rejections must name the rule: raw-Motor no-clamping, reverb
       `ANTI_DENORMAL` exception, documented HPF bias, …);
     - **user-decision** — park it for the user (design fork, tradeoff, by-ear sound question).
 4. **Apply the fixes**; run the affected tests (Gradle sequentially — see Gotchas). New tests written here fall under

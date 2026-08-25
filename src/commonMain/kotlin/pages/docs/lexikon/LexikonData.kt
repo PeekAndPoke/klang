@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -38,7 +38,7 @@ enum class LexikonCategory(val label: String, val domain: LexikonDomain) {
 
     // Technical reference
     Abbreviations("Abbreviations", LexikonDomain.Technical),
-    MotorTerms("Motör Terms", LexikonDomain.Technical),
+    MotorTerms("Motor Terms", LexikonDomain.Technical),
 }
 
 // -- Tag --------------------------------------------------------------------------------------------------------- //
@@ -50,7 +50,7 @@ enum class LexikonTag(val label: String) {
     Envelope("Envelope"),
     Synthesis("Synthesis"),
     Abbreviation("Abbreviation"),
-    Motor("Motör"),
+    Motor("Motor"),
 }
 
 // -- Entry ------------------------------------------------------------------------------------------------------- //
@@ -603,28 +603,28 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         term = "RPM",
         category = LexikonCategory.Abbreviations,
         tags = setOf(LexikonTag.Abbreviation, LexikonTag.Motor, LexikonTag.Fundamental),
-        summary = "Revolutions Per Minute — the Motör's word for tempo.",
+        summary = "Revolutions Per Minute — the Motor's word for tempo.",
         detail = "In a combustion engine, RPM measures how fast the crankshaft spins. " +
-                "In the Motör, RPM maps to CPS (cycles per second) — how fast patterns cycle. " +
+                "In the Motor, RPM maps to CPS (cycles per second) — how fast patterns cycle. " +
                 "Higher RPM = faster music. Crank it up and the engine roars.",
         conventional = "BPM (Beats Per Minute), CPS (Cycles Per Second)",
     ),
 
     // =============================================================================================================
-    // TECHNICAL — Motör Terms
+    // TECHNICAL — Motor Terms
     //
-    // The Motör metaphor maps a combustion engine to an audio engine.
+    // The Motor metaphor maps a combustion engine to an audio engine.
     // Signal chain: Fuel → Injection → Ignitor → Katalyst → Fusion
     // Narrative: "Fuel is Injected into each Cylinder. The Ignitor transforms it into sound.
     //             The Katalyst refines it. Fusion combines all Cylinders into the final output."
     // =============================================================================================================
 
     LexikonEntry(
-        term = "Motör",
+        term = "Motor",
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "The whole audio engine — everything that turns patterns into sound.",
-        detail = "The Klangmotör is the runtime that processes your music. " +
+        detail = "The Klangmotor is the runtime that processes your music. " +
                 "It contains Cylinders, each running their own signal chain. " +
                 "The engine metaphor runs deep: Fuel is Injected, Ignitors spark the sound, " +
                 "Katalysts refine it, and Fusion produces the final output. " +
@@ -637,7 +637,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "The raw material — the pattern data that feeds the engine.",
         detail = "In a combustion engine, fuel is what enters the cylinders and gets transformed into power. " +
-                "In the Motör, Fuel is your music: the note events, timing, parameter values — " +
+                "In the Motor, Fuel is your music: the note events, timing, parameter values — " +
                 "everything that Sprudel or KlangScript generates. " +
                 "Fuel without an Ignitor is just data. An Ignitor without Fuel has nothing to burn.",
     ),
@@ -648,7 +648,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "An independent effect bus — one engine running its own signal chain.",
         detail = "In a combustion engine, each cylinder fires independently with its own fuel-air mixture. " +
-                "In the Motör, up to 16 Cylinders run in parallel, each with its own delay, reverb, " +
+                "In the Motor, up to 16 Cylinders run in parallel, each with its own delay, reverb, " +
                 "phaser, and compressor. Voices are routed to a Cylinder by their Orbit. " +
                 "Self-contained, powerful, running in parallel — like the real thing.",
     ),
@@ -659,7 +659,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor),
         summary = "Getting the right Fuel to the right Cylinder at the right time.",
         detail = "In a combustion engine, fuel injection delivers a precisely metered fuel-air mixture " +
-                "to each cylinder just before the spark. In the Motör, Injection is the event scheduler: " +
+                "to each cylinder just before the spark. In the Motor, Injection is the event scheduler: " +
                 "it takes pattern events (Fuel) and delivers them to the correct Cylinder with all " +
                 "their parameters — pitch, gain, filter settings, modulation — ready for ignition.",
     ),
@@ -670,7 +670,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor, LexikonTag.Synthesis),
         summary = "The spark that sets the music on fire — the sound source.",
         detail = "In a combustion engine, the spark plug ignites the fuel-air mixture. " +
-                "In the Motör, the Ignitor transforms Fuel (data) into actual sound. " +
+                "In the Motor, the Ignitor transforms Fuel (data) into actual sound. " +
                 "An Ignitor can be an oscillator (sine, saw, square, noise), a sample, " +
                 "or a custom exciter built from combinators. Without the Ignitor, " +
                 "there is no combustion — no sound. It's where silence becomes music.",
@@ -682,7 +682,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor, LexikonTag.Effect),
         summary = "Refines the raw sound after ignition — per-cylinder effects processing.",
         detail = "In a combustion engine, the catalytic converter refines the exhaust, " +
-                "turning harsh byproducts into cleaner output. In the Motör, the Katalyst " +
+                "turning harsh byproducts into cleaner output. In the Motor, the Katalyst " +
                 "applies per-cylinder effects — delay, reverb, phaser, compression — " +
                 "that shape the raw ignited sound into something polished. " +
                 "The K-spelling is a nod to German/Greek roots. \"Prepare, Ignite, Refine, Fuse.\"",
@@ -694,19 +694,19 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor),
         summary = "Where all Cylinders converge into the final output.",
         detail = "In a multi-cylinder engine, all cylinders feed into a common output. " +
-                "In the Motör, Fusion is the master mixing stage: all active Cylinders are summed, " +
+                "In the Motor, Fusion is the master mixing stage: all active Cylinders are summed, " +
                 "sidechain ducking is applied across Cylinders, and the result passes through " +
                 "the master limiter to produce the final audio. " +
                 "Fusion is the last step — what the audience hears.",
     ),
 
     LexikonEntry(
-        term = "RPM (Motör)",
+        term = "RPM (Motor)",
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
-        summary = "How fast the engine cycles — tempo in Motör language.",
+        summary = "How fast the engine cycles — tempo in Motor language.",
         detail = "In a combustion engine, RPM measures crankshaft rotations per minute. " +
-                "In the Motör, RPM maps to CPS (cycles per second) — how fast your patterns repeat. " +
+                "In the Motor, RPM maps to CPS (cycles per second) — how fast your patterns repeat. " +
                 "Higher RPM = faster music. \"Crank up the RPM\" = speed up the tempo. " +
                 "The direct mapping: RPM is a rate, CPS is a rate. Intuitive.",
     ),
@@ -730,6 +730,6 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         detail = "A sibling of strudel.cc that's taking its own direction. " +
                 "Write patterns as code: notes, rhythms, transformations, and effects — " +
                 "all expressed as composable functions. Sprudel is how you compose your Fuel: " +
-                "the musical data that feeds into the Motör.",
+                "the musical data that feeds into the Motor.",
     ),
 )

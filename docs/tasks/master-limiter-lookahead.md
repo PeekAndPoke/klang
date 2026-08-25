@@ -258,7 +258,7 @@ house ratio. +20 dB over threshold is a lot of drive, and the engine is delibera
 get the rail. **The bound must go in the KDoc and in
 `LimiterLookaheadSpec`**, so the limit is stated rather than discovered. Reversible later: the alternative was to raise
 `LIMITER_RATIO` toward ∞ **for the safety limiter only** (the authored `MasterFx.limiter()`
-keeps 20:1 as its musical character). Note `ratio` stays user-facing and unclamped — raw Motör — so
+keeps 20:1 as its musical character). Note `ratio` stays user-facing and unclamped — raw Motor — so
 "∞:1" would mean the house default is ∞, not that the user may not choose 20. **The bound belongs in the KDoc and in
 `LimiterLookaheadSpec`.** (The rejected alternative would also have created a *third* `MasterDefaultsSyncSpec`
 asymmetry — another reason it is not worth it.)

@@ -1,8 +1,18 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-24**
+**SINCE: 2026-08-25**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-25, klang-ai session): offline render of Der Schmetterling v51 only —
+> no source changes, no test runs. rpm 33.0, transposition back to 0 (E); `--cycles 258` as ever.
+
+> Prior action (2026-08-25, klang-ai session): offline render of Der Schmetterling v50 only —
+> no source changes, no test runs. Song is now rpm 33.0 and transposition +5 (A); still the
+> 2-cycle count-in → `--cycles 258`. Also note: the engine was renamed Klangmotör→Klangmotor
+> (ö dropped, decision in klang-ai strategy/vision/decisions.md 2026-08-25); the 1182-file
+> header sweep in THIS repo is pending as its own commit — do not start it without the
+> maintainer's go.
 
 > Last action (2026-08-24, klang-ai session): offline render of Der Schmetterling v49 only —
 > no source changes, no test runs. Song is now rpm 34.0 (was 34.5); still has the 2-cycle

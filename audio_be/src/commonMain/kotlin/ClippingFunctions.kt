@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -19,7 +19,7 @@ import kotlin.math.sin
  * sterilised here — callers in IIR contexts (e.g. anything feeding a DcBlocker or
  * the Oversampler FIR delay line) must guard before invocation. See the `// NaN-guard`
  * idiom used by [Oversampler.process] and the strip-filter direct paths. This
- * convention matches the engine's "raw Motör" philosophy: don't pay the cost of
+ * convention matches the engine's "raw Motor" philosophy: don't pay the cost of
  * defensive checks in the inner math; defend at the integration points.
  */
 @Suppress("NOTHING_TO_INLINE", "unused")

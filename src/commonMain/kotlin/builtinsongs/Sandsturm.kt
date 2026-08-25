@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -97,7 +97,7 @@ arrange(
 ).compressor(-10, 2, 6, 0.01, 0.1).roomWet(0.12).rsize(6)
 
 // Inspired by: Darude — Sandstorm
-// Composed by: Claude, Motör, peekandpoke
+// Composed by: Claude, Motor, peekandpoke
 //
 // How the "du-du-du" lead was really made (distorted saw, NOT a supersaw):
 //   https://www.musicradar.com/artists/when-you-turn-on-the-roland-jp-8080-the-first-sound-that-comes-up-is-called-sandstorm-how-darude-created-the-era-defining-trance-anthem-thats-named-after-a-synth-preset

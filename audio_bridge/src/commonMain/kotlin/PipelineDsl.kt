@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIFT_RELATIVE_TO_OSC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 
 /**
- * Declarative, data-driven voice engine (the "Motör" filter/VCA pipeline).
+ * Declarative, data-driven voice engine (the "Motor" filter/VCA pipeline).
  *
  * An engine is an ordered list of [StageDsl] slots — the topology — where each
  * stage also carries its own character constants (envelope curve, declick,

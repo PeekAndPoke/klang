@@ -196,10 +196,10 @@ Adding a bank is one line of Kotlin plus files on the mirror.
 `peekandpoke.github.io/klang/<kit-dir>/`, matching the existing convention:
 
 ```
-motoer-metal/
-  bd/00_bd_motoermetal.wav
-  bd/01_bd_motoermetal.wav
-  sd/00_sd_motoermetal.wav
+motor-metal/
+  bd/00_bd_motormetal.wav
+  bd/01_bd_motormetal.wav
+  sd/00_sd_motormetal.wav
   index.json
 ```
 
@@ -208,15 +208,15 @@ motoer-metal/
 
 ```json
 {
-  "MotoerMetal_bd": ["bd/00_bd_motoermetal.wav", "bd/01_bd_motoermetal.wav"],
-  "MotoerMetal_sd": ["sd/00_sd_motoermetal.wav"]
+  "MotorMetal_bd": ["bd/00_bd_motormetal.wav", "bd/01_bd_motormetal.wav"],
+  "MotorMetal_sd": ["sd/00_sd_motormetal.wav"]
 }
 ```
 
 **Key naming is load-bearing.** The loader splits on the *last* underscore:
 `splitBankAndSound` takes everything after the final `_` as the sound and everything before it as
-the bank. So `MotoerMetal_bd` → bank `MotoerMetal`, sound `bd`, addressable as
-`s("bd").bank("MotoerMetal")`. A bare key like `bd` lands in the **default** bank (`""`), merged
+the bank. So `MotorMetal_bd` → bank `MotorMetal`, sound `bd`, addressable as
+`s("bd").bank("MotorMetal")`. A bare key like `bd` lands in the **default** bank (`""`), merged
 with uzu-drumkit and friends — and duplicate keys are resolved `distinctBy { it.key }`, first
 source wins, ordered by `mirrorSets`. So a bare `bd` would either be shadowed by uzu's or shadow
 it, depending on list order. Use the prefix.
@@ -228,7 +228,7 @@ becomes bank `my`, sound `kick`.
 in the `mirrorSets` list:
 
 ```kotlin
-MirrorSet(name = "Motör Metal", dir = "motoer-metal"),
+MirrorSet(name = "Motor Metal", dir = "motor-metal"),
 ```
 
 That is the only code change the runtime needs. Add `hasAlias = true` only if you also ship an

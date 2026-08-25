@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -56,11 +56,11 @@ import kotlinx.html.div
 import kotlinx.html.title
 
 @Suppress("FunctionName")
-fun Tag.Motoer() = comp {
-    Motoer(it)
+fun Tag.Motor() = comp {
+    Motor(it)
 }
 
-class Motoer(ctx: NoProps) : PureComponent(ctx) {
+class Motor(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -71,7 +71,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
 
     override fun VDom.render() {
         div {
-            key = "motör"
+            key = "motor"
 
             css {
                 textAlign = TextAlign.center
@@ -154,7 +154,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
                             display = Display.inlineBlock
                             fontWeight = FontWeight.bold
                         }
-                        +"KLANGMOTÖR"
+                        +"KLANGMOTOR"
                     }
 
                     icon.music { css { transform { scaleX(-1.0) }; marginLeft = 10.px } }

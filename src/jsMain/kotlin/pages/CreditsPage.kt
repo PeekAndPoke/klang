@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -420,7 +420,7 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         Visuals and editor effects are powered by these libraries (integrated via Kraft addons):
 
                         - **[PixiJS](https://pixijs.com)** — WebGL-accelerated rendering of live playback highlights in the editor
-                        - **[Three.js](https://threejs.org)** — 3D graphics for the animated Motör background and visualizations
+                        - **[Three.js](https://threejs.org)** — 3D graphics for the animated Motor background and visualizations
                     """.trimIndent()
                 )
             }

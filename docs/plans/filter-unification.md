@@ -273,7 +273,7 @@ homonym with the receiver type disambiguating. The plan's own rule says the form
 supported raw behaviour (dry pinned at floor, resonances keep rising); under cos/sin the wet
 FOLDS BACK past 1. No song uses `> 1`, so this is a capability deletion, decided here rather
 than by accident. BUT `FilterDef.Body`'s KDoc documents `mix > 1` as "drives the resonances
-harder" and `LangBodySpec` uses `bodyMix(2.0)`, so clamping contradicts "Motör stays raw".
+harder" and `LangBodySpec` uses `bodyMix(2.0)`, so clamping contradicts "Motor stays raw".
 Decision for the C4 review: either define the helper's law for `w > 1` (e.g. the wet
 coefficient continues past 1 linearly while dry stays at floor, preserving today's raw
 behaviour) or accept the deletion and retire that KDoc + spec row. Not clamp-and-pretend.

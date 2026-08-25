@@ -19,8 +19,9 @@
   archive-not-delete, 6-drop roadmap, HN at drop #3, saved 2026-04-15
 - [Brand architecture: Klang vs Motör](project_brand_architecture_klang_motor.md) — Motör=engine/behind-glass,
   Klang=consumer; "Klang" crowded/weak in audio; klang.art registered; filing guidance, 2026-07-09
-- [Engine renamed to Klangmotör](project_klangmotor_naming_decision.md) — DECIDED 2026-08-13: "Klang Audio Motör" →
-  **Klangmotör** (ASCII `klangmotor`); why the ö stays; ruled-out variants; open clearance
+- [Engine renamed to Klangmotor](project_klangmotor_naming_decision.md) — DECIDED 2026-08-13: "Klang Audio Motör" →
+  **Klangmotor**; ⚠️ spelling superseded 2026-08-25, the ö was dropped project-wide ("too much ego") — write
+  "Klangmotor" / "Motor", never "Motör"; ruled-out variants + open clearance still valid
 - [Motörhead trademark risk](project_motorhead_trademark_risk.md) — Verified: Kilmister Trust holds MOTÖRHEAD; why
   "Motör Hits"→"Klang Hits"; app-store takedown is the acute risk, 2026-07-09
 - [Phase pool as differentiator](project_phase_pool_as_differentiator.md) — Prior-art verdict: novel combination,

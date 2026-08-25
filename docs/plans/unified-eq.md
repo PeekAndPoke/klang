@@ -74,7 +74,7 @@ exactly +120 dB peak, recomputed m1 is 34 dB off). The `safeOut` is the whole gu
 NaN (non-finite db handled upstream → 0 dB), caps the finite-but-astronomical window (db ∈
 [346, 6165) gives finite m1 up to 9e305 — unbounded it ducks the master limiter for seconds or
 lands NaN→full-scale DC in MasterStage) at SAFE_MAX per the house output-clamp contract; keeps
-db→gain monotone. NOT a musical clamp on db (Motör stays raw — none added). Peak gain at
+db→gain monotone. NOT a musical clamp on db (Motor stays raw — none added). Peak gain at
 fc = A² = 10^(db/20); cut/boost exactly reciprocal *within the unclamped region* (q clamp
 `[0.1, 200]` applies to `q·A`, so deep cuts clamp bandwidth — at q=0.707 below ≈ −34 dB; peak
 stays exact). KDoc: q is the *pre-gain* bandwidth parameter, and db is COEFFICIENT-bearing (it
@@ -381,7 +381,7 @@ house-consistent).
   shared per-core holder would otherwise carry a bell's m1 into the next configured section
   (harmless today, a trap for the future shelf sections). Honest KDoc limits (round 3): the cap closes
   Inf→NaN, it does NOT close the limiter-duck symptom (dB-domain one-pole release: capping 6120→
-  300 dB shortens the duck ~1.7×, still seconds at extreme db — raw Motör, no musical clamp
+  300 dB shortens the duck ~1.7×, still seconds at extreme db — raw Motor, no musical clamp
   added); above the cap (db ≳ 346) achieved peak becomes q-dependent (`1 + 1e15·safeQ`), so
   "peak = A²" holds only below it.
 - 0 dB skip: only for Constant/Param-backed db (adapter tells the core — decide the exact flag
@@ -767,7 +767,7 @@ this path runs for EVERY voice with filters (synth + sample voices), in every so
      SvfIgnitor share `computeSvfCoeffs` and the Cytomic form, but the pin is evidence, not
      assumption; incl. sub-block + 48 kHz rows).
   2. **NEVER fuses: `analog > 0` LPF/HPF** — the state-dependent-damping saturated branch is
-     deliberate nonlinear character EqCore does not have (raw-Motör; BPF/Notch stay linear by
+     deliberate nonlinear character EqCore does not have (raw-Motor; BPF/Notch stay linear by
      decision but carry offsetMul/drift at analog>0 — v1 keeps ALL analog>0 defs class-form
      for one simple rule; offsetMul-only fusion for BPF/Notch is a v2 refinement, it is just
      a constant cutoff multiplier).

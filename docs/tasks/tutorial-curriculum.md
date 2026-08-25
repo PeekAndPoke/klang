@@ -81,7 +81,7 @@ Strudel workshop (short path + separate reference, inline "try it" nudges), SoS 
 
 ## The three tracks, braided
 
-Track A = Sound (synthesis ear). Track B = Pattern (sprudel hand). Track C = Motör (Klang engine).
+Track A = Sound (synthesis ear). Track B = Pattern (sprudel hand). Track C = Motor (Klang engine).
 The published Prev/Next path interleaves them; each lesson lists main / touches / running example / listen-for.
 
 ### Stage 1 — Onramp (carrier kit)
@@ -121,7 +121,7 @@ stages must not carry it.
 | A8 | Body | `body()`, `bodyWet` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
 
-### Stage 4 — Track C: the Motör
+### Stage 4 — Track C: the Motor
 
 | # | Lesson | Main | Touches | Running example / Listen for |
 |---|--------|------|---------|------------------------------|
@@ -145,7 +145,7 @@ stages must not carry it.
   shaping attack/fade to "its own lesson: The Shape of a Note". A2 opens from that fact (default
   sustain is organ-like).
 - **C1 (caricature drums):** A1's noise section promises "building your own [hi-hat] from raw
-  noise comes in the Motör track" and frames drum-machine hats as "a short burst of shaped noise" —
+  noise comes in the Motor track" and frames drum-machine hats as "a short burst of shaped noise" —
   C1 must deliver exactly that recipe (noise + shaping), and may echo A1's "the hh you have been
   playing is a recording of one".
 - **A3 (filters):** A2's finale promises "loudness is only half of a note's life; the other half is
@@ -234,7 +234,7 @@ course could express is lost.
   per-track vocabulary lint then checks: every lesson's vocabulary ∈ (teaches of buildsOn tracks)
   ∪ (taught earlier in this track) ∪ (declared previews). The main track builds on nothing and
   stays the strictest check (today's global lint, unchanged).
-- The `TutorialTrack` enum (Sound/Pattern/Motör) dissolves — membership defines flavour. The
+- The `TutorialTrack` enum (Sound/Pattern/Motor) dissolves — membership defines flavour. The
   `GettingStarted` tag rule likewise retires; the tag was a proxy for track membership.
 
 **UI/state model (user-specified):**
@@ -256,7 +256,7 @@ course could express is lost.
   full ladder as it grows.
 - *Sound Design Basics*: A1 A2 A3 A4 (later + A5–A8); buildsOn: The Klang Path onramp.
 - *The Pattern Language*: B1–B3 B4 B5 (later + B6–B11).
-- *The Klangmotör*: C1–C10 when written; buildsOn: The Klang Path.
+- *The Klangmotor*: C1–C10 when written; buildsOn: The Klang Path.
 
 ## Section blocks + visuals (user design 2026-08-17 — BUILT; markdown since 2026-08-18)
 

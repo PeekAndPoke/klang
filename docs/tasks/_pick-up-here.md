@@ -45,7 +45,7 @@ Chronological digest of the final work sessions, so nothing gets lost:
    captures the built-in-synth-demo vibe.
 5. **Strategist: "Motör Hits" trademark (Jul 9–13)** — idea to finance the project via mobile apps named "Motör Hits
    #1/#2/…". Strategist verified the Kilmister Trust holds MOTÖRHEAD; app-store takedown is the acute risk →
-   **recommendation: name consumer apps "Klang Hits" instead; Motör stays the behind-glass engine brand**. Docs:
+   **recommendation: name consumer apps "Klang Hits" instead; Motor stays the behind-glass engine brand**. Docs:
    `docs/strategy/brand-trademark-checklist.md` + strategist memories (`project_brand_architecture_klang_motor`,
    `project_motorhead_trademark_risk`). Real trademark attorney clearance needed before spending money on this.
 6. **Song polish passes (Jul 16–25)** — by-ear tuning of the builtin songs using the freshly-merged DSL surface. No open

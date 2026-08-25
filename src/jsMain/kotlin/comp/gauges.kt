@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -41,7 +41,7 @@ fun Tag.renderMotorHeatGauge(
     glowIntensity = glowIntensity,
     value = { if (value != null) 1.0 - value else 0.0 },
     display = { if (value == null) "-.--" else it.toFixed(2) },
-    title = "Motör Heat",
+    title = "Motor Heat",
     range = 0.0..1.0,
     icon = { small.microchip },
     colors = KlangTheme.rangedMixer(0.0, 1.0),

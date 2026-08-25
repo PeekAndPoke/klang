@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -251,7 +251,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         val opacityEase = Ease.In.quad.timed(previous.getOpacity(), 1.0, durationMs.milliseconds)
 
         // The boot screen covers BOTH heavy jobs: loading the audio worklet and
-        // building the Motör background (row-chunked so this screen stays
+        // building the Motor background (row-chunked so this screen stays
         // animated). We advance only when both are done — prepare() also fires
         // its callback on a failed WebGL setup, so this cannot hang.
         var workletReady = false
@@ -403,7 +403,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        JoinedPageTitle { listOf("KLANGMOTÖR") }
+        JoinedPageTitle { listOf("KLANGMOTOR") }
 
         div {
             key = "start-page"
@@ -444,7 +444,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 whiteSpace = WhiteSpace.nowrap
                 fontFamily = "monospace"
                 fontSize = 11.px
-                // Same tone as the engraved KLANGMOTÖR title, full opacity for
+                // Same tone as the engraved KLANGMOTOR title, full opacity for
                 // readability
                 color = Color("#b8b8b8")
             }
@@ -588,7 +588,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Spacer where the DOM title used to sit — "KLANGMOTÖR" is engraved into
+     * Spacer where the DOM title used to sit — "KLANGMOTOR" is engraved into
      * the MotorBackground plate itself (via its normal map), not rendered as
      * text. The pre-alpha tag lives in [renderVersionStamp].
      */
@@ -612,7 +612,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { power_off },
                 color = Color(MotorBackground.lightColorHex),
                 onClick = {
-                    // Background light fade-in is deferred until after "Starting Motör"
+                    // Background light fade-in is deferred until after "Starting Motor"
                     // finishes — triggered from StateBenchmarking.init instead.
                     state.gotoNext()
                 },
@@ -692,7 +692,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     fontSize = 0.9.em
                     color = Color.white
                 }
-                +"..:: Starting Motör ::.."
+                +"..:: Starting Motor ::.."
             }
         }
     }

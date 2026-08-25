@@ -60,7 +60,7 @@ character and must be reproduced exactly, not "fixed".
 
 Permanently excluded for `Lowpass`/`Highpass`: a non-zero analog switches on the state-dependent
 saturating branch, which is character `EqCore` does not implement, and the house rule is that the
-Motör stays raw.
+Motor stays raw.
 
 `Bandpass`/`Notch` are a different case, and the reason matters because the obvious relaxation
 is a trap. At the ignitor level `saturate = analogVal > 0.0 && (mode == LOWPASS || mode ==

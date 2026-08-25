@@ -289,7 +289,7 @@ Every `.kt` source file must begin with the project license header as its very f
 
 ```kotlin
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 ```
@@ -298,7 +298,9 @@ Every `.kt` source file must begin with the project license header as its very f
   `.idea/copyright/`. When creating files outside the IDE, add the header manually.
 - **Year:** the end year tracks the current year — IntelliJ's "Update copyright" before-commit
   action keeps it current. Don't hand-edit the year per file.
-- **Brand:** always "Motör" with the ö — never "Motor".
+- **Brand:** always "Klangmotor" / "Motor" with a plain o. The old metal-umlaut spelling "Motör"
+  was retired 2026-08-25; it survives only in historical records (`DEV-DIARY.MD`, `docs/history/`,
+  `docs/tasks-archive/`), which are never "fixed".
 - **Exempt:** `.kts` build scripts, and any third-party / vendored file that carries its own
   copyright notice (never overwrite someone else's notice with ours).
 - **`tones/` module is MIT, not AGPL.** It is a Kotlin port of tonal.js (MIT) and is licensed MIT
@@ -307,7 +309,7 @@ Every `.kt` source file must begin with the project license header as its very f
 
   ```kotlin
   /*
-   * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+   * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
    * Portions derived from tonal.js — Copyright (c) 2015 danigb.
    * SPDX-License-Identifier: MIT
    * Full license: tones/LICENSE

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -79,7 +79,7 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        // "Motör online" = the player is ready — the gauges shine a faint glow.
+        // "Motor online" = the player is ready — the gauges shine a faint glow.
         // Default tint is the muted accent, matching the editor frame; the start
         // page overrides it with the background light so one lamp lights the page.
         val glow = when {

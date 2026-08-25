@@ -15,7 +15,7 @@ hero: pipeline.png
 status: draft
 references:
   - id: whitepaper
-    text: "Klang Audio Motör — A White Paper, §03 'KlangScript — the language you type' (2026)."
+    text: "Klangmotor — A White Paper, §03 'KlangScript — the language you type' (2026)."
     url: ../../whitepaper/klang-whitepaper.html
 ---
 
@@ -150,6 +150,6 @@ rot breaks the build.
 
 ## References
 
-1. <a id="whitepaper"></a>*Klang Audio Motör — A White Paper*, §03
+1. <a id="whitepaper"></a>*Klangmotor — A White Paper*, §03
    "KlangScript — the language you type" (2026).
    [docs/whitepaper](../../whitepaper/klang-whitepaper.html)
