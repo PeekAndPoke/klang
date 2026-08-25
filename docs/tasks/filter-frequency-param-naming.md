@@ -1,5 +1,23 @@
 # Unify the filter-frequency parameter name across all DSLs
 
+> ## ✅ DONE — shipped 2026-08-25, commit `5332d52d`
+>
+> Ran as its own round, as the Method section prescribes. `freq` is now the name on every DSL
+> surface and wire type; the `Hz`-suffix sub-decision below was closed in favour of the
+> recommendation (dropped). The engine's EQ layer (`EqIgnitor.Section`, `EqCore.configureSection`)
+> was renamed too, beyond the scope drawn below, because keeping it produced
+> `freqHz = readParam(s.freqHz, freqHz, ctx)` — one name, two concepts, one line. The engine's DSP
+> primitives (`createLPF`/`createHPF`, the `Svf*` constructors, `Tunable.setCutoff`) deliberately
+> keep `cutoffHz`: there the parameter genuinely is a cutoff. Known follow-up, NOT done: the
+> band-shaped engine filters still document `@param cutoffHz Center frequency`, which is the same
+> semantic wrongness one layer down.
+>
+> The `band`/`eq` collision noted below was resolved on the SPRUDEL side instead (the ignitor keeps
+> `.eq()` and `.band()`); sprudel's bitwise family is being renamed to
+> `bitAnd`/`bitOr`/`bitXor`/`bitShl`/`bitShr` in its own round.
+>
+> Everything below is the original proposal, kept as the record of what was decided and why.
+
 **Decision (maintainer, 2026-08-20):** one concept, one word. A filter's operating frequency is
 called **`freq`** on every DSL surface. Today the same concept wears three different names, and
 two of them collide inside a single DSL.

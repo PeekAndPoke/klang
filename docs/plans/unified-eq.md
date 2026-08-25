@@ -256,7 +256,7 @@ house-consistent).
   class (a mid-block voice start with an absolute-indexed copy would be an exception on JVM but
   SILENT NaN on JS: Float64Array reads undefined → permanently dead voice) rather than guarding
   it. (performance.md Rule 2 grow-on-shape-change; this REPLACES the earlier stricter "no alloc
-  post-construction" wording.) API: `configureSection(index, type, freqHz, q, db, gain,
+  post-construction" wording.) API: `configureSection(index, type, freq, q, db, gain,
   sampleRate)`, `reset()`, `process(buffer, offset, length)`.
   KDoc contract (CCC): core owns sections/coeffs/state/loop/flushDenormal/input-copy; surface owns
   param resolution, control-tick timing, smoothing policy (core is snap-only — ramp API required
