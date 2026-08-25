@@ -67,6 +67,27 @@ per concept" debt this task exists to pay down, and the docs registry merges sym
 the shared entries can take each other's category. Decide deliberately now, before songs and
 tutorials are written against the new surface.
 
+## Decisions settled 2026-08-25 (maintainer, at the start of the rename round)
+
+- **The name is `freq`, no `Hz` suffix.** (The sub-decision below is closed in favour of the
+  recommendation.)
+- **`Hz` suffix: dropped.**
+- **The `band`/`eq` collision below is fixed on the SPRUDEL side, not the ignitor side.** The
+  ignitor KEEPS `.eq()` and `.band()` — both are concise, and dispatch is by receiver type.
+  Instead sprudel's bitwise family is renamed, which is better naming on its own merits
+  (`band` for bitwise-AND is strudel heritage): `band`→`bitAnd`, `bor`→`bitOr`,
+  `bxor`→`bitXor`, `blshift`→`bitShl`, `brshift`→`bitShr` (shift names follow Kotlin's
+  `shl`/`shr` per the Kotlin-style stdlib rule). 5 functions x 4 surface forms = 20
+  declarations. **Its own commit**, separate from the `freq` rename.
+- **`DerSchmetterling.kt` gets its OWN commit** — 4 named-arg sites, in a file that carries the
+  maintainer's uncommitted by-ear tuning.
+- **Survey refresh 2026-08-25:** sprudel's filter door ALREADY says `freq` (`lpf(freq, q,
+  passes)`, `bpf`, `notchf`) — no work there. In scope: 130 `cutoffHz =` named-arg call sites,
+  and the 29 `freqHz` occurrences in `audio_bridge` (the EqSection variants). The 379 `freqHz`
+  occurrences in `audio_be` are the note-pitch meaning and stay.
+- **Method:** rename the DECLARATIONS first and let the compiler find every call site. Do not
+  run a mechanical find-and-replace on `freqHz` — that is exactly the pitch trap.
+
 ## Open sub-decision: keep the `Hz` suffix or not?
 
 Recommendation: **drop it** (`freq`, not `freqHz`). `Osc.freq()` already establishes `freq` as
