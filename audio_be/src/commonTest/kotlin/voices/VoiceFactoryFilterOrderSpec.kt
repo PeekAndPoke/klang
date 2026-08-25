@@ -82,9 +82,9 @@ class VoiceFactoryFilterOrderSpec : StringSpec({
         // and every `lpx`/`hpx` rendered a single 12 dB/oct stage.
         val chain = bakedChainOf(
             listOf(
-                FilterDef.LowPass(cutoffHz = 1000.0, q = 0.707, passes = 2),
-                FilterDef.HighPass(cutoffHz = 200.0, q = 0.707, passes = 3),
-                FilterDef.LowPass(cutoffHz = 1000.0, q = 0.707),
+                FilterDef.LowPass(freq = 1000.0, q = 0.707, passes = 2),
+                FilterDef.HighPass(freq = 200.0, q = 0.707, passes = 3),
+                FilterDef.LowPass(freq = 1000.0, q = 0.707),
             )
         )
         chain.size shouldBe 3
@@ -99,9 +99,9 @@ class VoiceFactoryFilterOrderSpec : StringSpec({
         // the canonical highpass-first/lowpass-last sort lives upstream in SprudelVoiceData.
         val chain = bakedChainOf(
             listOf(
-                FilterDef.LowPass(cutoffHz = 1000.0, q = 1.0),
-                FilterDef.HighPass(cutoffHz = 200.0, q = 1.0),
-                FilterDef.BandPass(cutoffHz = 600.0, q = 1.0),
+                FilterDef.LowPass(freq = 1000.0, q = 1.0),
+                FilterDef.HighPass(freq = 200.0, q = 1.0),
+                FilterDef.BandPass(freq = 600.0, q = 1.0),
             )
         )
 
@@ -114,8 +114,8 @@ class VoiceFactoryFilterOrderSpec : StringSpec({
     "VoiceFactory preserves an already-canonical order too" {
         val chain = bakedChainOf(
             listOf(
-                FilterDef.HighPass(cutoffHz = 200.0, q = 1.0),
-                FilterDef.LowPass(cutoffHz = 1000.0, q = 1.0),
+                FilterDef.HighPass(freq = 200.0, q = 1.0),
+                FilterDef.LowPass(freq = 1000.0, q = 1.0),
             )
         )
 

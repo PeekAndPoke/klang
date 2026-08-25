@@ -36,7 +36,7 @@ class LangPassesSpec : StringSpec({
     "tails: lpx/hpx set the count without touching the head fields" {
         val lp = firstLp(note("c").lpf(800).lpx(2))
         lp.passes shouldBe 2
-        lp.cutoffHz shouldBe 800.0
+        lp.freq shouldBe 800.0
         val viaScript = firstHp(SprudelPattern.compile("""note("c").hpf(200).hpx(2)"""))
         viaScript.passes shouldBe 2
     }

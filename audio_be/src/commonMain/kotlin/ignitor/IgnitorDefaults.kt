@@ -194,7 +194,7 @@ fun IgnitorRegistry.registerDefaults() {
     // Buzzy filtered square
     register(
         name = "sgbuzz",
-        dsl = IgnitorDsl.Square().lowpass(cutoffHz = 2000.0),
+        dsl = IgnitorDsl.Square().lowpass(freq = 2000.0),
     )
 
     // ─── Unified-EQ demo: the smallest sound that exercises the fused EqCore end to end
@@ -210,12 +210,12 @@ fun IgnitorRegistry.registerDefaults() {
             inner = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq, analog = slots.analog),
             sections = listOf(
                 IgnitorDsl.EqSection.Bell(
-                    freqHz = IgnitorDsl.Param(name = "eqhz", default = 1200.0, description = "Bell centre frequency"),
+                    freq = IgnitorDsl.Param(name = "eqhz", default = 1200.0, description = "Bell centre frequency"),
                     q = IgnitorDsl.Param(name = "eqq", default = 0.707, description = "Bell pre-gain bandwidth"),
                     db = IgnitorDsl.Param(name = "eqdb", default = 0.0, description = "Bell gain in dB (0 = transparent)"),
                 ),
                 IgnitorDsl.EqSection.Lowpass(
-                    freqHz = IgnitorDsl.Param(name = "eqlp", default = 12000.0, description = "Cabinet lowpass cutoff"),
+                    freq = IgnitorDsl.Param(name = "eqlp", default = 12000.0, description = "Cabinet lowpass cutoff"),
                     q = IgnitorDsl.Constant(0.707),
                 ),
             ),
@@ -241,14 +241,14 @@ fun IgnitorRegistry.registerDefaults() {
 //   Any.times(BerlinNoise(rate=0.3))                — random amplitude gating
 //
 // ── Noise as Modulation (in param slots) ─────────────────────────────────────
-//   Lowpass(cutoffHz = PerlinNoise(rate=0.5))       — wandering filter
+//   Lowpass(freq = PerlinNoise(rate=0.5))       — wandering filter
 //   SuperSaw(detune = BerlinNoise)              — evolving detune
 //   Tremolo(rate = PerlinNoise(rate=0.2))           — irregular tremolo speed
 //   Distort(amount = PerlinNoise(rate=2.0))         — breathing distortion
 //
 // ── Filtered Sources ─────────────────────────────────────────────────────────
-//   SuperSaw.lowpass(cutoffHz)                      — classic subtractive synth
-//   WhiteNoise.lowpass(cutoffHz)                    — wind / ocean / breath
+//   SuperSaw.lowpass(freq)                          — classic subtractive synth
+//   WhiteNoise.lowpass(freq)                        — wind / ocean / breath
 //   Square.lowpass(1000).distort(0.3)               — gritty bass
 //   Saw.highpass(200).lowpass(4000)                  — bandpass character
 //

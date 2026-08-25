@@ -258,8 +258,8 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.sine().lowpass(2000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
-        dsl.cutoffHz.shouldBeInstanceOf<IgnitorDsl.Constant>()
-        (dsl.cutoffHz as IgnitorDsl.Constant).value shouldBe 2000.0
+        dsl.freq.shouldBeInstanceOf<IgnitorDsl.Constant>()
+        (dsl.freq as IgnitorDsl.Constant).value shouldBe 2000.0
     }
 
     "lowpass chaining with explicit q" {
@@ -272,7 +272,7 @@ class StdLibOscTest : StringSpec({
     "lowpass with IgnitorDsl cutoff (audio-rate modulation)" {
         val dsl = evalIgnitorDsl("Osc.sine().lowpass(Osc.perlin())")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
-        dsl.cutoffHz.shouldBeInstanceOf<IgnitorDsl.PerlinNoise>()
+        dsl.freq.shouldBeInstanceOf<IgnitorDsl.PerlinNoise>()
     }
 
     "adsr chaining" {
@@ -378,7 +378,7 @@ class StdLibOscTest : StringSpec({
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
         // The LFO is a Plus(Times(Plus(Sine, Constant), Constant), Constant)
-        dsl.cutoffHz.shouldBeInstanceOf<IgnitorDsl.Plus>()
+        dsl.freq.shouldBeInstanceOf<IgnitorDsl.Plus>()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -467,7 +467,7 @@ class StdLibOscTest : StringSpec({
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.sections.size shouldBe 1
         val bell = dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
-        (bell.freqHz as IgnitorDsl.Constant).value shouldBe 1200.0
+        (bell.freq as IgnitorDsl.Constant).value shouldBe 1200.0
         (bell.q as IgnitorDsl.Constant).value shouldBe 0.707
         (bell.db as IgnitorDsl.Constant).value shouldBe 0.0
     }
@@ -491,10 +491,10 @@ class StdLibOscTest : StringSpec({
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.sections.size shouldBe 2
         val first = dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
-        (first.freqHz as IgnitorDsl.Constant).value shouldBe 300.0
+        (first.freq as IgnitorDsl.Constant).value shouldBe 300.0
         (first.db as IgnitorDsl.Constant).value shouldBe 6.0
         val second = dsl.sections[1].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
-        (second.freqHz as IgnitorDsl.Constant).value shouldBe 2500.0
+        (second.freq as IgnitorDsl.Constant).value shouldBe 2500.0
     }
 
     "band with all-named args skips q" {
@@ -524,7 +524,7 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.saw().eq().tap(850)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         val tap = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
-        (tap.freqHz as IgnitorDsl.Constant).value shouldBe 850.0
+        (tap.freq as IgnitorDsl.Constant).value shouldBe 850.0
         (tap.q as IgnitorDsl.Constant).value shouldBe 0.707 // C1: unified default q
         (tap.gain as IgnitorDsl.Constant).value shouldBe 1.0
     }
@@ -551,7 +551,7 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.saw().eq().band(Osc.freq().mul(2))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         val bell = dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
-        bell.freqHz.shouldBeInstanceOf<IgnitorDsl.Times>()
+        bell.freq.shouldBeInstanceOf<IgnitorDsl.Times>()
     }
 
     "drive + clip chain" {

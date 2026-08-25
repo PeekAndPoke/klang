@@ -75,7 +75,7 @@ class LangBpfSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.bandf shouldBe 1000.0
-        events[0].data.toVoiceData().filters.getByType<BandPass>()?.cutoffHz shouldBe 1000.0
+        events[0].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe 1000.0
     }
 
     "bpf() works as string extension" {
@@ -93,7 +93,7 @@ class LangBpfSpec : StringSpec({
         events[0].data.bandf shouldBe 1000.0
     }
 
-    "bpf() with continuous pattern sets cutoffHz correctly" {
+    "bpf() with continuous pattern sets freq correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
         val p = note("a b c d").bpf(sine)
         val events = p.queryArc(0.0, 1.0)
@@ -106,10 +106,10 @@ class LangBpfSpec : StringSpec({
         events[3].data.bandf shouldBe (0.0 plusOrMinus EPSILON)
 
         // Also check converted VoiceData
-        events[0].data.toVoiceData().filters.getByType<BandPass>()?.cutoffHz shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].data.toVoiceData().filters.getByType<BandPass>()?.cutoffHz shouldBe (1.0 plusOrMinus EPSILON)
-        events[2].data.toVoiceData().filters.getByType<BandPass>()?.cutoffHz shouldBe (0.5 plusOrMinus EPSILON)
-        events[3].data.toVoiceData().filters.getByType<BandPass>()?.cutoffHz shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe (1.0 plusOrMinus EPSILON)
+        events[2].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe (0.5 plusOrMinus EPSILON)
+        events[3].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe (0.0 plusOrMinus EPSILON)
     }
 
 

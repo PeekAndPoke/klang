@@ -145,7 +145,7 @@ class EqIgnitorSpec : StringSpec({
         )
         val chained = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sawtooth(),
-            cutoffHz = lfoCutoff(),
+            freq = lfoCutoff(),
             q = c(0.9),
         )
         val fused = IgnitorDsl.Eq(
@@ -167,7 +167,7 @@ class EqIgnitorSpec : StringSpec({
         )
         val chained = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sawtooth(analog = c(0.7)),
-            cutoffHz = lfoCutoff(),
+            freq = lfoCutoff(),
             q = c(0.9),
         )
         val fused = IgnitorDsl.Eq(
@@ -253,7 +253,7 @@ class EqIgnitorSpec : StringSpec({
         val chained = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.Sawtooth(),
-                cutoffHz = lfoCutoff(),
+                freq = lfoCutoff(),
                 q = c(0.9),
             ),
             rate = c(5.0),
@@ -367,7 +367,7 @@ class EqIgnitorSpec : StringSpec({
         fun trackingCutoff() = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Param("track", 4.0))
         val chained = IgnitorDsl.Highpass(
             inner = IgnitorDsl.Sawtooth(),
-            cutoffHz = trackingCutoff(),
+            freq = trackingCutoff(),
             q = c(0.9),
         )
         val fused = IgnitorDsl.Eq(
@@ -389,10 +389,10 @@ class EqIgnitorSpec : StringSpec({
         val a = IgnitorDsl.Highpass(
             inner = IgnitorDsl.Highpass(
                 inner = IgnitorDsl.Sawtooth(),
-                cutoffHz = IgnitorDsl.Freq,
+                freq = IgnitorDsl.Freq,
                 q = c(0.9),
             ),
-            cutoffHz = trackingCutoff(),
+            freq = trackingCutoff(),
             q = c(1.3),
         ).toExciter()
         val b = IgnitorDsl.Eq(
@@ -706,7 +706,7 @@ class EqIgnitorSpec : StringSpec({
         val eq = eqOf(
             IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.Sawtooth(),
-                cutoffHz = IgnitorDsl.Constant(1200.0),
+                freq = IgnitorDsl.Constant(1200.0),
                 q = IgnitorDsl.Param("res", 1.2),
                 passes = 3,
             ).optimize().toExciter()

@@ -748,8 +748,9 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     blocking C6, it is deferred with D9.
   - Canonical names genuinely missing on the sprudel door: `lowpass`, `highpass`, `bandpass`,
     `notch` (0 declarations each) and `ntf`/`ntq` (0). `notchf`/`notchq` already exist.
-  - `freq`/`cutoffHz` unification blast radius across the three DSL-surface modules:
-    57 `cutoffHz` + 51 `freqHz` occurrences. The recorded trap still applies — the render-arg
+  - `freq`/`cutoffHz` unification: ✅ **DONE 2026-08-25 as its own round**, ahead of the rest of
+    C6 (see `docs/tasks/filter-frequency-param-naming.md`). Do NOT re-budget this sweep. The
+    blast radius WAS 57 `cutoffHz` + 51 `freqHz` occurrences. The recorded trap applied — the render-arg
     `freqHz` is note pitch and is OUT of scope.
   - Aliases still to delete: `phd`, `phasdp`, `reverb`, `vibmod`.
   - **STALE NUMBER CORRECTED:** the sweep below budgets "bandf x13, bandq x11 in
@@ -762,8 +763,11 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   ten-per-filter ADSR aliases go.
 - Compat suite cut to structural cases.
 - Songs/tutorials/docs: mechanical rename sweep (`bandf` x13, `bandq` x11, `resonance` x2 in
-  songs+tutorials; plus whatever the aliases hit). The `freq`/`cutoffHz` unification
-  (`docs/tasks/filter-frequency-param-naming.md`) folds into this chunk: same sweep, same files.
+  songs+tutorials; plus whatever the aliases hit) — but see the survey refresh above: the
+  `bandf`/`bandq` half is already spent. The `freq`/`cutoffHz` unification
+  (`docs/tasks/filter-frequency-param-naming.md`) was ORIGINALLY planned to fold into this
+  chunk; it ran as its own round on 2026-08-25 instead, so only the remaining name work is
+  left here.
 
 ## Merged in
 - `docs/tasks/sprudel-sound-function-surface.md` (captured 2026-06-05, blocking `glide` since

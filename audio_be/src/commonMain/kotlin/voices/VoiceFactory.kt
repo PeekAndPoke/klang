@@ -393,9 +393,9 @@ class VoiceFactory(
         // random multiplier per filter instance. The engine's Filter stage scales it.
         val offsetMul = perVoiceCutoffOffsetMul(analog, stage.cutoffOffsetPerAnalog, rng)
         return when (this) {
-            is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog, offsetMul, stage.drivePerAnalog, passes = passes)
+            is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(freq, q, sampleRateDouble, analog, offsetMul, stage.drivePerAnalog, passes = passes)
             is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(
-                cutoffHz,
+                freq,
                 q,
                 sampleRateDouble,
                 analog,
@@ -403,8 +403,8 @@ class VoiceFactory(
                 stage.drivePerAnalog,
                 passes = passes,
             )
-            is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble, offsetMul)
-            is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble, offsetMul)
+            is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(freq, q, sampleRateDouble, offsetMul)
+            is FilterDef.Notch -> LowPassHighPassFilters.createNotch(freq, q, sampleRateDouble, offsetMul)
             // Body / vowel are orbit-level Katalyst effects (KatalystBodyEffect / KatalystFormantEffect):
             // VoiceFactory pulls them out of the per-voice chain (see voiceFilterDefs) and routes them to the
             // Cylinder, so these arms are unreachable and exist only to satisfy the sealed `when`. floor is
@@ -461,10 +461,10 @@ class VoiceFactory(
         if (envData == null && drift == null) return null
 
         val baseCutoff = when (this) {
-            is FilterDef.LowPass -> this.cutoffHz
-            is FilterDef.HighPass -> this.cutoffHz
-            is FilterDef.BandPass -> this.cutoffHz
-            is FilterDef.Notch -> this.cutoffHz
+            is FilterDef.LowPass -> this.freq
+            is FilterDef.HighPass -> this.freq
+            is FilterDef.BandPass -> this.freq
+            is FilterDef.Notch -> this.freq
             is FilterDef.Formant -> 0.0
             is FilterDef.Body -> 0.0
         }

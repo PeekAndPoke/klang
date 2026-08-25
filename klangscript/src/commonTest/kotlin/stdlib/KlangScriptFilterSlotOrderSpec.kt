@@ -35,7 +35,7 @@ class KlangScriptFilterSlotOrderSpec : StringSpec({
     "lowpass: the third positional argument is passes, and analog stays clean" {
         val lp = ks("""Osc.saw().lowpass(800, 1.8, 3)""") as IgnitorDsl.Lowpass
         lp.passes shouldBe 3
-        lp.cutoffHz shouldBe IgnitorDsl.Constant(800.0)
+        lp.freq shouldBe IgnitorDsl.Constant(800.0)
         lp.q shouldBe IgnitorDsl.Constant(1.8)
         lp.analog shouldBe IgnitorDsl.Constant(0.0)
     }
@@ -55,7 +55,7 @@ class KlangScriptFilterSlotOrderSpec : StringSpec({
     "the all-named form is the one to reach for when combining with analog" {
         // KlangScript forbids MIXING positional and named arguments, so `lowpass(800, 1.8,
         // analog = 4)` throws. All-named is the documented shape.
-        val lp = ks("""Osc.saw().lowpass(cutoffHz = 800, q = 1.8, analog = 4)""") as IgnitorDsl.Lowpass
+        val lp = ks("""Osc.saw().lowpass(freq = 800, q = 1.8, analog = 4)""") as IgnitorDsl.Lowpass
         lp.passes shouldBe 1
         lp.analog shouldBe IgnitorDsl.Constant(4.0)
         lp.q shouldBe IgnitorDsl.Constant(1.8)

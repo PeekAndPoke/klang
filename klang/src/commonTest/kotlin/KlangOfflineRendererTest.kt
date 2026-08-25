@@ -191,7 +191,7 @@ class KlangOfflineRendererTest : StringSpec({
         // A more complex DSL: sine with lowpass filter
         val composedDsl = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sine(),
-            cutoffHz = IgnitorDsl.Constant(2000.0),
+            freq = IgnitorDsl.Constant(2000.0),
         )
 
         renderer.render(

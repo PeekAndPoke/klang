@@ -67,7 +67,7 @@ let guitar = (() => {
     // Simulate plucked string
     .pitchEnvelope(1, 0.001, 0.02)
     // String brightness
-    .lowpass(cutoffHz = Osc.freq().mul(pStrFloor.plus(pStrSweep.adsr(pAttack, pStrDecay, 0.0, pRelease))), q = pStrQ)
+    .lowpass(freq = Osc.freq().mul(pStrFloor.plus(pStrSweep.adsr(pAttack, pStrDecay, 0.0, pRelease))), q = pStrQ)
       .analog(pAnalog)    
     // noise burst
     .plus(Osc.whitenoise().highpass(1000).lowpass(15000).adsr(0.0, 0.05, 0.0, 0.005).mul(0.15))
@@ -83,7 +83,7 @@ let guitar = (() => {
     .eq()
       .tap(freq = pMidsHz,     q = pMidsQ,     gain = pMids)      // mids: parallel boost off the dry signal
       .tap(freq = pPresenceHz, q = pPresenceQ, gain = pPresence)  // presence: parallel boost off the dry signal
-      .highpass(cutoffHz = Osc.freq().mul(pHpTrack), q = pHpQ)    // follow freq to avoid low mud ... again
+      .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ)    // follow freq to avoid low mud ... again
     // power amp
     .distort(0.30, "gentle", 2)
     // cabinet
@@ -117,8 +117,8 @@ let bass = (() => {
   let grind = Osc.saw()
     .pitchEnvelope(12, 0.001, 0.015)
     .distort(pDrive, "tube", 4)
-    .highpass(cutoffHz = pGrindLo, q = 0.707)
-    .lowpass(cutoffHz = pGrindHi, q = 0.707)
+    .highpass(freq = pGrindLo, q = 0.707)
+    .lowpass(freq = pGrindHi, q = 0.707)
     .mul(pGrind)
 
   let combined = sub.plus(grind) 

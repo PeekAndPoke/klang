@@ -67,7 +67,7 @@ class IgnitorRegistryTest : StringSpec({
 
     "register emits a RegisterIgnitor command with the synthetic name and original DSL" {
         val (reg, sent) = newRegistry()
-        val dsl = IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine(), cutoffHz = IgnitorDsl.Constant(2000.0))
+        val dsl = IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine(), freq = IgnitorDsl.Constant(2000.0))
 
         val name = reg.registerOrLookup(dsl)
 
@@ -88,7 +88,7 @@ class IgnitorRegistryTest : StringSpec({
         val (regA, sentA) = newRegistry()
         val (regB, sentB) = newRegistry()
         // A fresh, distinct DSL ensures this test is order-independent re: global counter.
-        val dsl = IgnitorDsl.Lowpass(inner = IgnitorDsl.Ramp(), cutoffHz = IgnitorDsl.Constant(7777.7))
+        val dsl = IgnitorDsl.Lowpass(inner = IgnitorDsl.Ramp(), freq = IgnitorDsl.Constant(7777.7))
 
         val nameA = regA.registerOrLookup(dsl)
         val nameB = regB.registerOrLookup(dsl)

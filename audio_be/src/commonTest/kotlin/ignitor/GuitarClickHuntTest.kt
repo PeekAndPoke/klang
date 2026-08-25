@@ -710,7 +710,7 @@ private fun IgnitorDsl.plusD(c: Double): IgnitorDsl = IgnitorDsl.Plus(this, Igni
 private fun IgnitorDsl.plusDsl(other: IgnitorDsl): IgnitorDsl = IgnitorDsl.Plus(this, other)
 
 private fun IgnitorDsl.lowpassMod(cutoff: IgnitorDsl, q: Double): IgnitorDsl =
-    IgnitorDsl.Lowpass(inner = this, cutoffHz = cutoff, q = IgnitorDsl.Constant(q))
+    IgnitorDsl.Lowpass(inner = this, freq = cutoff, q = IgnitorDsl.Constant(q))
 
 /** Mirrors `Osc.distort(amount, "chebyshev", 8)` — `factorToStages(8) = 3` (8x oversample). */
 private fun IgnitorDsl.distortChebyshev8(driveAmount: Double): IgnitorDsl =

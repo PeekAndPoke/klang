@@ -284,7 +284,7 @@ class KlangBenchmark(
                 // Add a filter to make it realistic load
                 filters = FilterDefs(
                     listOf(
-                        FilterDef.LowPass(cutoffHz = 1000.0, q = 1.0)
+                        FilterDef.LowPass(freq = 1000.0, q = 1.0)
                     )
                 ),
                 adsr = AdsrDef.defaultSynth,

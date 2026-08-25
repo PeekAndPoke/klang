@@ -26,7 +26,7 @@ class LangFiltersSpec : StringSpec({
 
         val expected = listOf(500.0, 1000.0, 500.0, 1000.0)
         events.map { it.data.cutoff } shouldBe expected
-        events.map { (it.data.toVoiceData().filters[0] as FilterDef.LowPass).cutoffHz } shouldBe expected
+        events.map { (it.data.toVoiceData().filters[0] as FilterDef.LowPass).freq } shouldBe expected
     }
 
     // hpf()
@@ -40,7 +40,7 @@ class LangFiltersSpec : StringSpec({
 
         val expected = listOf(300.0, 600.0, 300.0, 600.0)
         events.map { it.data.hcutoff } shouldBe expected
-        events.map { (it.data.toVoiceData().filters[0] as FilterDef.HighPass).cutoffHz } shouldBe expected
+        events.map { (it.data.toVoiceData().filters[0] as FilterDef.HighPass).freq } shouldBe expected
     }
 
     // notchf()
@@ -52,7 +52,7 @@ class LangFiltersSpec : StringSpec({
         events.size shouldBe 2
 
         events.map { it.data.notchf } shouldBe listOf(400.0, 500.0)
-        events.map { (it.data.toVoiceData().filters[0] as FilterDef.Notch).cutoffHz } shouldBe listOf(400.0, 500.0)
+        events.map { (it.data.toVoiceData().filters[0] as FilterDef.Notch).freq } shouldBe listOf(400.0, 500.0)
     }
 
     "control pattern notchf() applies Notch per event" {
@@ -64,7 +64,7 @@ class LangFiltersSpec : StringSpec({
 
         val expected = listOf(600.0, 700.0, 600.0, 700.0)
         events.map { it.data.notchf } shouldBe expected
-        events.map { (it.data.toVoiceData().filters[0] as FilterDef.Notch).cutoffHz } shouldBe expected
+        events.map { (it.data.toVoiceData().filters[0] as FilterDef.Notch).freq } shouldBe expected
     }
 
 

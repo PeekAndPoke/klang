@@ -190,7 +190,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Highpass(
                 inner = IgnitorDsl.Sawtooth(),
-                cutoffHz = IgnitorDsl.Constant(600.0),
+                freq = IgnitorDsl.Constant(600.0),
                 q = IgnitorDsl.Param("res", 1.2),
                 passes = 3,
             )
@@ -225,7 +225,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 assertOptimizeIsInaudible(
                     IgnitorDsl.Lowpass(
                         inner = IgnitorDsl.Sawtooth(),
-                        cutoffHz = IgnitorDsl.Constant(1500.0),
+                        freq = IgnitorDsl.Constant(1500.0),
                         q = IgnitorDsl.Param("res", 1.2),
                         passes = n,
                     ),
@@ -245,7 +245,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.Sawtooth(),
-                cutoffHz = IgnitorDsl.Constant(1800.0),
+                freq = IgnitorDsl.Constant(1800.0),
                 q = IgnitorDsl.Plus(
                     IgnitorDsl.Constant(1.4),
                     IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)), IgnitorDsl.Constant(0.5)),
@@ -281,7 +281,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 .let {
                     IgnitorDsl.Highpass(
                         inner = it,
-                        cutoffHz = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.0)),
+                        freq = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.0)),
                         q = IgnitorDsl.Constant(0.707),
                     )
                 }
@@ -316,7 +316,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.Sawtooth(analog = IgnitorDsl.Constant(0.7)),
-                cutoffHz = lfoCutoff(),
+                freq = lfoCutoff(),
                 q = IgnitorDsl.Constant(0.9),
             ).notch(210.0, 2.5)
         )
@@ -374,7 +374,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.PerlinNoise(),
-                cutoffHz = IgnitorDsl.Plus(
+                freq = IgnitorDsl.Plus(
                     IgnitorDsl.Constant(4000.0),
                     IgnitorDsl.Times(IgnitorDsl.PerlinNoise(), IgnitorDsl.Constant(200.0)),
                 ),
@@ -422,7 +422,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.Sawtooth().lowpass(2000.0, 0.707),
-                cutoffHz = IgnitorDsl.Constant(3000.0),
+                freq = IgnitorDsl.Constant(3000.0),
                 q = IgnitorDsl.Constant(0.707),
                 analog = IgnitorDsl.Constant(2.0),
             ).lowpass(4000.0, 0.707)
@@ -460,7 +460,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Highpass(
                 inner = IgnitorDsl.Sawtooth(),
-                cutoffHz = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.5)),
+                freq = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(1.5)),
                 q = IgnitorDsl.Constant(0.707),
             ).lowpass(5300.0, 0.707),
             freqs = listOf(110.0, 220.0, 440.0, 880.0),
@@ -524,7 +524,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(
             IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.Sawtooth(),
-                cutoffHz = IgnitorDsl.Constant(3000.0),
+                freq = IgnitorDsl.Constant(3000.0),
                 q = IgnitorDsl.Constant(0.707),
                 analog = IgnitorDsl.Constant(2.0),
             ),

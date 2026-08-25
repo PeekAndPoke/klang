@@ -33,7 +33,7 @@ Measured filter costs (JVM / Node, `docs/benchmarks/2026-08-11_103957_*`):
 ```kotlin
 signal.add(signal.bandpass(800, 0.5)).add(signal.bandpass(1500, 0.5))   // case 1 — CAN move
   ...
-  .highpass(cutoffHz = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)                     // cases 2+3 — CANNOT
+  .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)                     // cases 2+3 — CANNOT
 ```
 
 The two bandpasses are static and linear, so at 2 voices/orbit moving them halves their cost for bit-identical output.

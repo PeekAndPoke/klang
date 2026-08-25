@@ -42,7 +42,7 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
     fun noteData(): VoiceData = VoiceData.empty.copy(
         sound = "supersaw",
         oscParams = mapOf("analog" to 3.0),
-        filters = FilterDefs(listOf(FilterDef.LowPass(cutoffHz = 2000.0, q = 1.0))),
+        filters = FilterDefs(listOf(FilterDef.LowPass(freq = 2000.0, q = 1.0))),
     )
 
     val sampleSound = "seedtest"

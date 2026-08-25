@@ -109,7 +109,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val lpf = voiceData.filters[0] as FilterDef.LowPass
-        lpf.cutoffHz shouldBe 1000.0
+        lpf.freq shouldBe 1000.0
         lpf.q shouldBe 1.5
     }
 
@@ -123,7 +123,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val hpf = voiceData.filters[0] as FilterDef.HighPass
-        hpf.cutoffHz shouldBe 500.0
+        hpf.freq shouldBe 500.0
         hpf.q shouldBe 2.0
     }
 
@@ -137,7 +137,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val bpf = voiceData.filters[0] as FilterDef.BandPass
-        bpf.cutoffHz shouldBe 750.0
+        bpf.freq shouldBe 750.0
         bpf.q shouldBe 1.2
     }
 
@@ -151,7 +151,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val notch = voiceData.filters[0] as FilterDef.Notch
-        notch.cutoffHz shouldBe 600.0
+        notch.freq shouldBe 600.0
         notch.q shouldBe 0.8
     }
 
@@ -171,15 +171,15 @@ class SprudelVoiceDataSpec : StringSpec({
 
         // Canonical chain order: HighPass → BandPass → LowPass (lowpass LAST).
         val hpf = voiceData.filters[0] as FilterDef.HighPass
-        hpf.cutoffHz shouldBe 500.0
+        hpf.freq shouldBe 500.0
         hpf.q shouldBe 2.0
 
         val bpf = voiceData.filters[1] as FilterDef.BandPass
-        bpf.cutoffHz shouldBe 750.0
+        bpf.freq shouldBe 750.0
         bpf.q shouldBe 1.2
 
         val lpf = voiceData.filters[2] as FilterDef.LowPass
-        lpf.cutoffHz shouldBe 1000.0
+        lpf.freq shouldBe 1000.0
         lpf.q shouldBe 1.5
     }
 
@@ -224,7 +224,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val lpf = voiceData.filters[0] as FilterDef.LowPass
-        lpf.cutoffHz shouldBe 1000.0
+        lpf.freq shouldBe 1000.0
         lpf.q shouldBe 0.707 // C1 (filter unification): ONE default q on every surface
     }
 

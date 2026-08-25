@@ -214,7 +214,7 @@ class IgnitorBenchmark(
          * physical models, noise, and common compositions.
          */
         fun defaultCases(): List<Case> {
-            val lpf1k = FilterDefs(listOf(FilterDef.LowPass(cutoffHz = 1000.0, q = 1.0)))
+            val lpf1k = FilterDefs(listOf(FilterDef.LowPass(freq = 1000.0, q = 1.0)))
             val super8v = mapOf("voices" to 8.0)
 
             return listOf(

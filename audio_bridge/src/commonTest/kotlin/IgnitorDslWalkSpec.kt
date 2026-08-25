@@ -51,7 +51,7 @@ class IgnitorDslWalkSpec : StringSpec({
                 decayCurve = AdsrCurve.Linear,
                 releaseCurve = AdsrCurve.Linear,
             ), 7),
-        Triple("Bandpass", IgnitorDsl.Bandpass(inner = m(0), cutoffHz = m(1), q = m(2), analog = m(3)), 4),
+        Triple("Bandpass", IgnitorDsl.Bandpass(inner = m(0), freq = m(1), q = m(2), analog = m(3)), 4),
         Triple("BerlinNoise", IgnitorDsl.BerlinNoise(rate = m(0), octaves = m(1), persistence = m(2)), 3),
         Triple("Bipolar", IgnitorDsl.Bipolar(inner = m(0)), 1),
         Triple("BrownNoise", IgnitorDsl.BrownNoise(depth = m(0)), 1),
@@ -70,12 +70,12 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("Eq", IgnitorDsl.Eq(
                 inner = m(0),
                 sections = listOf(
-                    IgnitorDsl.EqSection.Bandpass(freqHz = m(1), q = m(2)),
-                    IgnitorDsl.EqSection.Bell(freqHz = m(3), q = m(4), db = m(5)),
-                    IgnitorDsl.EqSection.Highpass(freqHz = m(6), q = m(7)),
-                    IgnitorDsl.EqSection.Lowpass(freqHz = m(8), q = m(9)),
-                    IgnitorDsl.EqSection.Notch(freqHz = m(10), q = m(11)),
-                    IgnitorDsl.EqSection.RawTap(freqHz = m(12), q = m(13), gain = m(14)),
+                    IgnitorDsl.EqSection.Bandpass(freq = m(1), q = m(2)),
+                    IgnitorDsl.EqSection.Bell(freq = m(3), q = m(4), db = m(5)),
+                    IgnitorDsl.EqSection.Highpass(freq = m(6), q = m(7)),
+                    IgnitorDsl.EqSection.Lowpass(freq = m(8), q = m(9)),
+                    IgnitorDsl.EqSection.Notch(freq = m(10), q = m(11)),
+                    IgnitorDsl.EqSection.RawTap(freq = m(12), q = m(13), gain = m(14)),
                 ),
             ), 15),
         Triple("Exp", IgnitorDsl.Exp(inner = m(0)), 1),
@@ -92,18 +92,18 @@ class IgnitorDslWalkSpec : StringSpec({
             ), 8),
         Triple("Frac", IgnitorDsl.Frac(inner = m(0)), 1),
         Triple("Freq", IgnitorDsl.Freq, 0),
-        Triple("Highpass", IgnitorDsl.Highpass(inner = m(0), cutoffHz = m(1), q = m(2), analog = m(3)), 4),
+        Triple("Highpass", IgnitorDsl.Highpass(inner = m(0), freq = m(1), q = m(2), analog = m(3)), 4),
         Triple("Impulse", IgnitorDsl.Impulse(freq = m(0), analog = m(1)), 2),
         Triple("Lerp", IgnitorDsl.Lerp(left = m(0), right = m(1), t = m(2)), 3),
         Triple("Log", IgnitorDsl.Log(inner = m(0)), 1),
-        Triple("Lowpass", IgnitorDsl.Lowpass(inner = m(0), cutoffHz = m(1), q = m(2), analog = m(3)), 4),
+        Triple("Lowpass", IgnitorDsl.Lowpass(inner = m(0), freq = m(1), q = m(2), analog = m(3)), 4),
         Triple("Max", IgnitorDsl.Max(left = m(0), right = m(1)), 2),
         Triple("Min", IgnitorDsl.Min(left = m(0), right = m(1)), 2),
         Triple("Minus", IgnitorDsl.Minus(left = m(0), right = m(1)), 2),
         Triple("Mod", IgnitorDsl.Mod(left = m(0), right = m(1)), 2),
         Triple("Neg", IgnitorDsl.Neg(inner = m(0)), 1),
-        Triple("Notch", IgnitorDsl.Notch(inner = m(0), cutoffHz = m(1), q = m(2), analog = m(3)), 4),
-        Triple("OnePoleLowpass", IgnitorDsl.OnePoleLowpass(inner = m(0), cutoffHz = m(1)), 2),
+        Triple("Notch", IgnitorDsl.Notch(inner = m(0), freq = m(1), q = m(2), analog = m(3)), 4),
+        Triple("OnePoleLowpass", IgnitorDsl.OnePoleLowpass(inner = m(0), freq = m(1)), 2),
         Triple("OptimizerHint", IgnitorDsl.OptimizerHint(inner = m(0), on = 7), 1),
         Triple("Param", IgnitorDsl.Param("p", 1.0, description = "hard"), 0),
         Triple("PerlinNoise", IgnitorDsl.PerlinNoise(rate = m(0), octaves = m(1), persistence = m(2)), 3),
@@ -256,10 +256,10 @@ class IgnitorDslWalkSpec : StringSpec({
         val bell = replaced.sections[0] as IgnitorDsl.EqSection.Bell
         val tap = replaced.sections[1] as IgnitorDsl.EqSection.RawTap
         (replaced.inner as IgnitorDsl.Param).default shouldBe 600.0
-        (bell.freqHz as IgnitorDsl.Param).default shouldBe 601.0
+        (bell.freq as IgnitorDsl.Param).default shouldBe 601.0
         (bell.q as IgnitorDsl.Param).default shouldBe 602.0
         (bell.db as IgnitorDsl.Param).default shouldBe 603.0
-        (tap.freqHz as IgnitorDsl.Param).default shouldBe 604.0
+        (tap.freq as IgnitorDsl.Param).default shouldBe 604.0
         (tap.q as IgnitorDsl.Param).default shouldBe 605.0
         (tap.gain as IgnitorDsl.Param).default shouldBe 606.0
     }

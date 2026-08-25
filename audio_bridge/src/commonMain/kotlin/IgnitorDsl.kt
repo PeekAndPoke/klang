@@ -1017,7 +1017,7 @@ sealed interface IgnitorDsl {
     @WireName("lowpass")
     data class Lowpass(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(2000.0),
+        val freq: IgnitorDsl = Constant(2000.0),
         val q: IgnitorDsl = Constant(0.707),
         /**
          * Analog character amount. `0` = clean linear filter (default — bit-identical
@@ -1029,12 +1029,12 @@ sealed interface IgnitorDsl {
         /**
          * Cascade count (C5, structural): run the stage [passes] times — 2 = 24 dB/oct.
          * Per-stage q is staggered (Butterworth ladder scaled by `q/0.707`) so the cascade
-         * stays -3 dB at [cutoffHz]; a resonant q's peak compounds across stages.
+         * stays -3 dB at [freq]; a resonant q's peak compounds across stages.
          */
         val passes: Int = 1,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -1042,7 +1042,7 @@ sealed interface IgnitorDsl {
     @WireName("highpass")
     data class Highpass(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(200.0),
+        val freq: IgnitorDsl = Constant(200.0),
         val q: IgnitorDsl = Constant(0.707),
         /** See [Lowpass.analog] — same semantics for the HP tap. */
         val analog: IgnitorDsl = Constant(0.0),
@@ -1050,7 +1050,7 @@ sealed interface IgnitorDsl {
         val passes: Int = 1,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -1058,10 +1058,10 @@ sealed interface IgnitorDsl {
     @WireName("one-pole-lowpass")
     data class OnePoleLowpass(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(2000.0),
+        val freq: IgnitorDsl = Constant(2000.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out)
         }
     }
 
@@ -1069,7 +1069,7 @@ sealed interface IgnitorDsl {
     @WireName("bandpass")
     data class Bandpass(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(1000.0),
+        val freq: IgnitorDsl = Constant(1000.0),
         val q: IgnitorDsl = Constant(0.707),
         /**
          * Reserved for forward-compat — accepted but currently a no-op (BP saturation
@@ -1079,7 +1079,7 @@ sealed interface IgnitorDsl {
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -1087,13 +1087,13 @@ sealed interface IgnitorDsl {
     @WireName("notch")
     data class Notch(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(1000.0),
+        val freq: IgnitorDsl = Constant(1000.0),
         val q: IgnitorDsl = Constant(0.707),
         /** Reserved for forward-compat — accepted but currently a no-op (see [Bandpass.analog]). */
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -1129,11 +1129,11 @@ sealed interface IgnitorDsl {
          */
         @WireName("eqLowpass")
         data class Lowpass(
-            val freqHz: IgnitorDsl = Constant(2000.0),
+            val freq: IgnitorDsl = Constant(2000.0),
             val q: IgnitorDsl = Constant(0.707),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
-                freqHz.collectParams(out); q.collectParams(out)
+                freq.collectParams(out); q.collectParams(out)
             }
         }
 
@@ -1143,38 +1143,38 @@ sealed interface IgnitorDsl {
          */
         @WireName("eqHighpass")
         data class Highpass(
-            val freqHz: IgnitorDsl = Constant(200.0),
+            val freq: IgnitorDsl = Constant(200.0),
             val q: IgnitorDsl = Constant(0.707),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
-                freqHz.collectParams(out); q.collectParams(out)
+                freq.collectParams(out); q.collectParams(out)
             }
         }
 
         /** SVF band-pass section — [IgnitorDsl.Bandpass] as an Eq section; same defaults. */
         @WireName("eqBandpass")
         data class Bandpass(
-            val freqHz: IgnitorDsl = Constant(1000.0),
+            val freq: IgnitorDsl = Constant(1000.0),
             val q: IgnitorDsl = Constant(0.707),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
-                freqHz.collectParams(out); q.collectParams(out)
+                freq.collectParams(out); q.collectParams(out)
             }
         }
 
         /** SVF notch section — [IgnitorDsl.Notch] as an Eq section; same defaults. */
         @WireName("eqNotch")
         data class Notch(
-            val freqHz: IgnitorDsl = Constant(1000.0),
+            val freq: IgnitorDsl = Constant(1000.0),
             val q: IgnitorDsl = Constant(0.707),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
-                freqHz.collectParams(out); q.collectParams(out)
+                freq.collectParams(out); q.collectParams(out)
             }
         }
 
         /**
-         * Simper peaking bell: [db] decibels of gain at [freqHz], [q] the PRE-GAIN bandwidth
+         * Simper peaking bell: [db] decibels of gain at [freq], [q] the PRE-GAIN bandwidth
          * (see `computeSvfBellCoeffs` for math + limits). 0 dB is bit-transparent; db is
          * COEFFICIENT-bearing (an LFO on it zippers like an LFO on cutoff, per-block snap).
          *
@@ -1195,12 +1195,12 @@ sealed interface IgnitorDsl {
          */
         @WireName("eqBell")
         data class Bell(
-            val freqHz: IgnitorDsl = Constant(1000.0),
+            val freq: IgnitorDsl = Constant(1000.0),
             val q: IgnitorDsl = Constant(0.707),
             val db: IgnitorDsl = Constant(0.0),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
-                freqHz.collectParams(out); q.collectParams(out); db.collectParams(out)
+                freq.collectParams(out); q.collectParams(out); db.collectParams(out)
             }
         }
 
@@ -1215,12 +1215,12 @@ sealed interface IgnitorDsl {
          */
         @WireName("eqRawTap")
         data class RawTap(
-            val freqHz: IgnitorDsl = Constant(1000.0),
+            val freq: IgnitorDsl = Constant(1000.0),
             val q: IgnitorDsl = Constant(0.707),
             val gain: IgnitorDsl = Constant(1.0),
         ) : EqSection {
             override fun collectParams(out: MutableList<Param>) {
-                freqHz.collectParams(out); q.collectParams(out); gain.collectParams(out)
+                freq.collectParams(out); q.collectParams(out); gain.collectParams(out)
             }
         }
     }
@@ -1687,29 +1687,29 @@ fun IgnitorDsl.detune(semitones: Double) = IgnitorDsl.Detune(
 // Filters
 
 /**
- * Applies an SVF lowpass filter at [cutoffHz] with resonance [q].
+ * Applies an SVF lowpass filter at [freq] with resonance [q].
  *
  * @param passes Cascade count (C5): run the 12 dB/oct stage that many times — `2` = 24 dB/oct,
  * `3` = 36. The per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at the
- * default q the cascade is -3 dB AT [cutoffHz] — `lowpass(800, passes = 2)` still means 800.
+ * default q the cascade is -3 dB AT [freq] — `lowpass(800, passes = 2)` still means 800.
  * A resonant q compounds instead (`q = 1.0, passes = 2` is +3 dB at the cutoff). Coerced to
  * 1..[FILTER_MAX_PASSES]. Third slot on EVERY door: `lpf(freq, q, passes)`.
  */
-fun IgnitorDsl.lowpass(cutoffHz: Double, q: Double = 0.707, passes: Int = 1) = IgnitorDsl.Lowpass(
+fun IgnitorDsl.lowpass(freq: Double, q: Double = 0.707, passes: Int = 1) = IgnitorDsl.Lowpass(
     inner = this,
-    cutoffHz = IgnitorDsl.Constant(cutoffHz),
+    freq = IgnitorDsl.Constant(freq),
     q = IgnitorDsl.Constant(q),
     passes = passes,
 )
 
 /**
- * Applies an SVF highpass filter at [cutoffHz] with resonance [q].
+ * Applies an SVF highpass filter at [freq] with resonance [q].
  *
  * @param passes Cascade count — see [lowpass].
  */
-fun IgnitorDsl.highpass(cutoffHz: Double, q: Double = 0.707, passes: Int = 1) = IgnitorDsl.Highpass(
+fun IgnitorDsl.highpass(freq: Double, q: Double = 0.707, passes: Int = 1) = IgnitorDsl.Highpass(
     inner = this,
-    cutoffHz = IgnitorDsl.Constant(cutoffHz),
+    freq = IgnitorDsl.Constant(freq),
     q = IgnitorDsl.Constant(q),
     passes = passes,
 )
@@ -1758,7 +1758,7 @@ fun IgnitorDsl.Eq.band(
     freq: IgnitorDsl,
     q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     db: IgnitorDsl = IgnitorDsl.Constant(0.0),
-): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.Bell(freqHz = freq, q = q, db = db))
+): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.Bell(freq = freq, q = q, db = db))
 
 /** Scalar convenience overload of [band]. */
 fun IgnitorDsl.Eq.band(freq: Double, q: Double = 0.707, db: Double = 0.0): IgnitorDsl.Eq =
@@ -1792,7 +1792,7 @@ fun IgnitorDsl.Eq.tap(
     freq: IgnitorDsl,
     q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     gain: IgnitorDsl = IgnitorDsl.Constant(1.0),
-): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.RawTap(freqHz = freq, q = q, gain = gain))
+): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.RawTap(freq = freq, q = q, gain = gain))
 
 /** Scalar convenience overload of [tap]. */
 fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 0.707, gain: Double = 1.0): IgnitorDsl.Eq =
@@ -1805,15 +1805,15 @@ fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 0.707, gain: Double = 1.0): Igni
  */
 fun IgnitorDsl.onepole(freq: Double) = IgnitorDsl.OnePoleLowpass(
     inner = this,
-    cutoffHz = IgnitorDsl.Constant(freq),
+    freq = IgnitorDsl.Constant(freq),
 )
 
-fun IgnitorDsl.bandpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Bandpass(
-    this, IgnitorDsl.Constant(cutoffHz), IgnitorDsl.Constant(q),
+fun IgnitorDsl.bandpass(freq: Double, q: Double = 0.707) = IgnitorDsl.Bandpass(
+    this, IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q),
 )
 
-fun IgnitorDsl.notch(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Notch(
-    this, IgnitorDsl.Constant(cutoffHz), IgnitorDsl.Constant(q),
+fun IgnitorDsl.notch(freq: Double, q: Double = 0.707) = IgnitorDsl.Notch(
+    this, IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q),
 )
 
 fun IgnitorDsl.drive(amount: Double, driveType: String = "linear") =

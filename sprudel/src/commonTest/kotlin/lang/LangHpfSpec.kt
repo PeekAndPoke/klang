@@ -90,7 +90,7 @@ class LangHpfSpec : StringSpec({
         events[0].data.hcutoff shouldBe 1000.0
     }
 
-    "hpf() with continuous pattern sets cutoffHz correctly" {
+    "hpf() with continuous pattern sets freq correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
         val p = note("a b c d").hpf(sine)
         val events = p.queryArc(0.0, 1.0)

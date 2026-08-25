@@ -10,16 +10,6 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.bandpass
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.lerp
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.lowpass
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.minus
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.mod
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.neg
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.plus
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.pow
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.recip
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.times
 
 /**
  * Accepts [IgnitorDsl] or [Number]. Numbers are converted to [IgnitorDsl.Constant] automatically.
@@ -54,7 +44,7 @@ object KlangScriptOscExtensions {
      * filter everywhere. [analog] is fourth, and exists on this door only. KlangScript does
      * not allow MIXING positional and named arguments, so reach for [analog] either fully
      * positionally, `lowpass(800, 1.8, 1, 3)`, or all-named:
-     * `lowpass(cutoffHz = 800, q = 1.8, analog = 3)`.
+     * `lowpass(freq = 800, q = 1.8, analog = 3)`.
      *
      * The cascade's per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at
      * the DEFAULT q it stays -3 dB AT the cutoff: `lowpass(800, 0.707, 2)` still means 800.
@@ -71,12 +61,12 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun lowpass(
         self: IgnitorDsl,
-        cutoffHz: IgnitorDslLike,
+        freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         passes: Double = 1.0,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Lowpass(
-        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
         analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
     )
 
@@ -84,12 +74,12 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun highpass(
         self: IgnitorDsl,
-        cutoffHz: IgnitorDslLike,
+        freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         passes: Double = 1.0,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Highpass(
-        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
         analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
     )
 
@@ -100,7 +90,7 @@ object KlangScriptOscExtensions {
      */
     @KlangScript.Method
     fun onepole(self: IgnitorDsl, freq: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = freq.toIgnitorDsl())
+        IgnitorDsl.OnePoleLowpass(inner = self, freq = freq.toIgnitorDsl())
 
     /**
      * SVF bandpass filter. Passes frequencies near the cutoff, attenuates others.
@@ -111,11 +101,11 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun bandpass(
         self: IgnitorDsl,
-        cutoffHz: IgnitorDslLike,
+        freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Bandpass(
-        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
         analog = analog.toIgnitorDsl(),
     )
 
@@ -164,11 +154,11 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun notch(
         self: IgnitorDsl,
-        cutoffHz: IgnitorDslLike,
+        freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Notch(
-        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
         analog = analog.toIgnitorDsl(),
     )
 

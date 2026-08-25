@@ -120,7 +120,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
         adsr.release shouldBe 0.3
 
         val lpf = decoded.filters[0].shouldBeInstanceOf<FilterDef.LowPass>()
-        lpf.cutoffHz shouldBe 1000.0
+        lpf.freq shouldBe 1000.0
         lpf.q shouldBe 1.5
         lpf.envelope?.attack shouldBe 0.02
         lpf.envelope?.depth shouldBe 0.9

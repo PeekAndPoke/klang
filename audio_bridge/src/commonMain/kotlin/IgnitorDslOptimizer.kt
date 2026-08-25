@@ -295,28 +295,28 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
     // modulated q gets a Times wrapper so every stage keeps sweeping coherently.
     is IgnitorDsl.Lowpass ->
         if (analog.isLiteralZero()) {
-            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(cutoffHz, stageQ) }
+            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq, stageQ) }
         } else {
             null
         }
 
     is IgnitorDsl.Highpass ->
         if (analog.isLiteralZero()) {
-            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Highpass(cutoffHz, stageQ) }
+            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq, stageQ) }
         } else {
             null
         }
 
     is IgnitorDsl.Bandpass ->
         if (analog.isLiteralZero()) {
-            listOf(IgnitorDsl.EqSection.Bandpass(cutoffHz, q))
+            listOf(IgnitorDsl.EqSection.Bandpass(freq, q))
         } else {
             null
         }
 
     is IgnitorDsl.Notch ->
         if (analog.isLiteralZero()) {
-            listOf(IgnitorDsl.EqSection.Notch(cutoffHz, q))
+            listOf(IgnitorDsl.EqSection.Notch(freq, q))
         } else {
             null
         }

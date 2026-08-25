@@ -56,7 +56,7 @@ object KlangScriptEqExtensions {
         db: IgnitorDslLike = 0.0,
     ): IgnitorDsl.Eq = self.copy(
         sections = self.sections + IgnitorDsl.EqSection.Bell(
-            freqHz = freq.toIgnitorDsl(), q = q.toIgnitorDsl(), db = db.toIgnitorDsl(),
+            freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(), db = db.toIgnitorDsl(),
         ),
     )
 
@@ -88,7 +88,7 @@ object KlangScriptEqExtensions {
         gain: IgnitorDslLike = 1.0,
     ): IgnitorDsl.Eq = self.copy(
         sections = self.sections + IgnitorDsl.EqSection.RawTap(
-            freqHz = freq.toIgnitorDsl(), q = q.toIgnitorDsl(), gain = gain.toIgnitorDsl(),
+            freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(), gain = gain.toIgnitorDsl(),
         ),
     )
 }

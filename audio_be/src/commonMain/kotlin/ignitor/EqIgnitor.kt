@@ -43,14 +43,14 @@ internal class EqIgnitor(
      */
     internal class Section(
         val type: Int,
-        val freqHz: Ignitor,
+        val freq: Ignitor,
         val q: Ignitor,
         val db: Ignitor? = null,
         val gain: Ignitor? = null,
     ) {
         /** Per-voice-static — all params Param/Constant-backed (see the class KDoc). */
         val isStatic: Boolean =
-            isVoiceConstant(freqHz) && isVoiceConstant(q) &&
+            isVoiceConstant(freq) && isVoiceConstant(q) &&
                 (db == null || isVoiceConstant(db)) &&
                 (gain == null || isVoiceConstant(gain))
 
@@ -125,7 +125,7 @@ internal class EqIgnitor(
                 core.configureSection(
                     index = i,
                     type = s.type,
-                    freqHz = Ignitors.readParam(s.freqHz, freqHz, ctx),
+                    freq = Ignitors.readParam(s.freq, freqHz, ctx),
                     q = Ignitors.readParam(s.q, freqHz, ctx),
                     db = db,
                     gain = s.gain?.let { Ignitors.readParam(it, freqHz, ctx) } ?: 0.0,

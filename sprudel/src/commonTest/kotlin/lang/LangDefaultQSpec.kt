@@ -46,19 +46,19 @@ class LangDefaultQSpec : StringSpec({
     }
 
     "ignitor DSL door: every filter/eq default is Constant(0.707)" {
-        (IgnitorDsl.Lowpass(inner = IgnitorDsl.Constant(0.0), cutoffHz = IgnitorDsl.Constant(800.0)).q)
+        (IgnitorDsl.Lowpass(inner = IgnitorDsl.Constant(0.0), freq = IgnitorDsl.Constant(800.0)).q)
             .shouldBe(IgnitorDsl.Constant(0.707))
-        (IgnitorDsl.Highpass(inner = IgnitorDsl.Constant(0.0), cutoffHz = IgnitorDsl.Constant(200.0)).q)
+        (IgnitorDsl.Highpass(inner = IgnitorDsl.Constant(0.0), freq = IgnitorDsl.Constant(200.0)).q)
             .shouldBe(IgnitorDsl.Constant(0.707))
-        (IgnitorDsl.Bandpass(inner = IgnitorDsl.Constant(0.0), cutoffHz = IgnitorDsl.Constant(1000.0)).q)
+        (IgnitorDsl.Bandpass(inner = IgnitorDsl.Constant(0.0), freq = IgnitorDsl.Constant(1000.0)).q)
             .shouldBe(IgnitorDsl.Constant(0.707))
-        (IgnitorDsl.Notch(inner = IgnitorDsl.Constant(0.0), cutoffHz = IgnitorDsl.Constant(1000.0)).q)
+        (IgnitorDsl.Notch(inner = IgnitorDsl.Constant(0.0), freq = IgnitorDsl.Constant(1000.0)).q)
             .shouldBe(IgnitorDsl.Constant(0.707))
-        (IgnitorDsl.EqSection.Bandpass(freqHz = IgnitorDsl.Constant(1000.0)).q)
+        (IgnitorDsl.EqSection.Bandpass(freq = IgnitorDsl.Constant(1000.0)).q)
             .shouldBe(IgnitorDsl.Constant(0.707))
-        (IgnitorDsl.EqSection.Notch(freqHz = IgnitorDsl.Constant(1000.0)).q)
+        (IgnitorDsl.EqSection.Notch(freq = IgnitorDsl.Constant(1000.0)).q)
             .shouldBe(IgnitorDsl.Constant(0.707))
-        (IgnitorDsl.EqSection.RawTap(freqHz = IgnitorDsl.Constant(1000.0)).q)
+        (IgnitorDsl.EqSection.RawTap(freq = IgnitorDsl.Constant(1000.0)).q)
             .shouldBe(IgnitorDsl.Constant(0.707))
     }
 

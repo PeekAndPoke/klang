@@ -69,7 +69,7 @@ class ExpressionTypeInferrerTest : StringSpec({
                     KlangCallable(
                         name = "lowpass",
                         receiver = KlangType("IgnitorDsl"),
-                        params = listOf(KlangParam(name = "cutoffHz", type = KlangType("Number"))),
+                        params = listOf(KlangParam(name = "freq", type = KlangType("Number"))),
                         returnType = KlangType("IgnitorDsl"),
                     )
                 )

@@ -185,7 +185,7 @@ class EqCore(
     fun configureSection(
         index: Int,
         type: Int,
-        freqHz: Double,
+        freq: Double,
         q: Double,
         db: Double,
         gain: Double,
@@ -199,9 +199,9 @@ class EqCore(
         this.gain[index] = gain
 
         if (type == BELL) {
-            computeSvfBellCoeffs(freqHz, q, db, sampleRate, coefs)
+            computeSvfBellCoeffs(freq, q, db, sampleRate, coefs)
         } else {
-            computeSvfCoeffs(freqHz, q, sampleRate, coefs)
+            computeSvfCoeffs(freq, q, sampleRate, coefs)
         }
 
         a1[index] = coefs.a1

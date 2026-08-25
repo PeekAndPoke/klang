@@ -86,9 +86,9 @@ class WireCodecRoundTripSpec : StringSpec({
             ),
             filters = FilterDefs(
                 listOf(
-                    FilterDef.HighPass(cutoffHz = 500.0, q = 2.0, envelope = null, passes = 3),
+                    FilterDef.HighPass(freq = 500.0, q = 2.0, envelope = null, passes = 3),
                     FilterDef.LowPass(
-                        cutoffHz = 1000.0, q = 1.5,
+                        freq = 1000.0, q = 1.5,
                         envelope = FilterEnvDef(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2, depth = 0.9),
                         passes = 2,
                     ),

@@ -55,7 +55,7 @@ class LangPitchParamNamesSpec : StringSpec({
         acc.semitones shouldBe IgnitorDsl.Constant(12.0)
 
         val op = eval("""Osc.saw().onepole(freq = 3743)""") as IgnitorDsl.OnePoleLowpass
-        op.cutoffHz shouldBe IgnitorDsl.Constant(3743.0)
+        op.freq shouldBe IgnitorDsl.Constant(3743.0)
 
         // old names are gone
         shouldThrowAny { engine.execute("""Osc.saw().pitchEnvelope(amount = 24)""") }

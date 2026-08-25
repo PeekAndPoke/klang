@@ -167,10 +167,10 @@ data class FilterDefs(val filters: List<FilterDef>)
 
 sealed class FilterDef {
     // Cutoff filters — q + optional dynamic envelope. Applied PER VOICE.
-    data class LowPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
-    data class HighPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
-    data class BandPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
-    data class Notch(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class LowPass(val freq: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class HighPass(val freq: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class BandPass(val freq: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class Notch(val freq: Double, val q: Double?, val envelope: FilterEnvDef?)
 
     // Resonators — parallel modal BPF banks blended over the dry via ParallelMixFilter(mix, floor).
     // Applied at the ORBIT level (KatalystFormantEffect / KatalystBodyEffect), NOT per voice.

@@ -53,7 +53,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         val lfoQ = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.5))
         val node = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sine(),
-            cutoffHz = IgnitorDsl.Constant(2000.0),
+            freq = IgnitorDsl.Constant(2000.0),
             q = lfoQ,
             passes = 2,
         )
@@ -83,7 +83,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "section params are carried across unchanged" {
         val eq = IgnitorDsl.Sine().lowpass(5300.0, 0.9).optimize() as IgnitorDsl.Eq
         val lp = eq.sections.single() as IgnitorDsl.EqSection.Lowpass
-        (lp.freqHz as IgnitorDsl.Constant).value shouldBe 5300.0
+        (lp.freq as IgnitorDsl.Constant).value shouldBe 5300.0
         (lp.q as IgnitorDsl.Constant).value shouldBe 0.9
     }
 
@@ -100,7 +100,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
             .let {
                 IgnitorDsl.Highpass(
                     inner = it,
-                    cutoffHz = IgnitorDsl.Times(IgnitorDsl.Freq, c(1.0)),
+                    freq = IgnitorDsl.Times(IgnitorDsl.Freq, c(1.0)),
                     q = c(0.707),
                 )
             }
@@ -144,7 +144,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "analog > 0 never fuses (the saturating branch is deliberate character)" {
         val dsl = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sine(),
-            cutoffHz = c(2000.0),
+            freq = c(2000.0),
             q = c(0.707),
             analog = c(2.0),
         ).optimize()
@@ -157,7 +157,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
         // here, so only a structural literal zero is safe.
         val dsl = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sine(),
-            cutoffHz = c(2000.0),
+            freq = c(2000.0),
             q = c(0.707),
             analog = IgnitorDsl.Param("analog", 0.0),
         ).optimize()
@@ -183,7 +183,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     "an analog filter between two fusible ones splits them the same way" {
         val dsl = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sawtooth().lowpass(2000.0, 0.707),
-            cutoffHz = IgnitorDsl.Constant(3000.0),
+            freq = IgnitorDsl.Constant(3000.0),
             q = IgnitorDsl.Constant(0.707),
             analog = IgnitorDsl.Constant(2.0),
         ).lowpass(4000.0, 0.707).optimize()
@@ -266,10 +266,10 @@ class IgnitorDslOptimizerSpec : StringSpec({
         val chained = IgnitorDsl.Notch(
             inner = IgnitorDsl.Lowpass(
                 inner = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Param("f", 220.0)),
-                cutoffHz = IgnitorDsl.Param("lf", 5300.0),
+                freq = IgnitorDsl.Param("lf", 5300.0),
                 q = c(0.707),
             ),
-            cutoffHz = IgnitorDsl.Param("nf", 210.0),
+            freq = IgnitorDsl.Param("nf", 210.0),
             q = c(2.5),
         )
 
@@ -309,7 +309,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
             .let {
                 IgnitorDsl.Lowpass(
                     inner = it,
-                    cutoffHz = IgnitorDsl.Sine(freq = c(2.0)).optimizer(on = 0),
+                    freq = IgnitorDsl.Sine(freq = c(2.0)).optimizer(on = 0),
                     q = c(0.707),
                 )
             }

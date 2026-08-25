@@ -11,15 +11,15 @@ import kotlin.math.roundToInt
 sealed class FilterDef {
     @WireName("low-pass")
     data class LowPass(
-        val cutoffHz: Double,
+        val freq: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
         /**
          * Cascade count (C5): run the 12 dB/oct stage [passes] times — 2 = 24 dB/oct,
          * 3 = 36. Structural, coerced `>= 1` at the engine. The per-stage q is STAGGERED
-         * (Butterworth ladder scaled by `q/0.707`) so the cascade stays -3 dB AT [cutoffHz]
+         * (Butterworth ladder scaled by `q/0.707`) so the cascade stays -3 dB AT [freq]
          * — `lpf(800, passes = 2)` still means 800, it does not go darker-with-a-moved-knee.
-         * A resonant q's peak compounds across stages: gain at [cutoffHz] is
+         * A resonant q's peak compounds across stages: gain at [freq] is
          * `(q*sqrt(2))^passes / sqrt(2)`, so `q = 1.0, passes = 2` is +3 dB and `q = 10,
          * passes = 4` is about +89 dB (documented, raw engine, no clamp). So does `analog`,
          * which every stage receives in full.
@@ -29,7 +29,7 @@ sealed class FilterDef {
 
     @WireName("high-pass")
     data class HighPass(
-        val cutoffHz: Double,
+        val freq: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
         /** Cascade count — see [LowPass.passes]. */
@@ -38,14 +38,14 @@ sealed class FilterDef {
 
     @WireName("band-pass")
     data class BandPass(
-        val cutoffHz: Double,
+        val freq: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
     @WireName("notch")
     data class Notch(
-        val cutoffHz: Double,
+        val freq: Double,
         val q: Double?,
         val envelope: FilterEnvDef? = null,
     ) : FilterDef()

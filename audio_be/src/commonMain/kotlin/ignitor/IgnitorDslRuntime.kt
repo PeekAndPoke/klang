@@ -375,12 +375,12 @@ private fun IgnitorDsl.buildRaw(
             // so its drive character compounds with the slope (documented, not a bug).
             val n = coercePasses(passes)
             if (n == 1) {
-                inner.withMod().lowpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+                inner.withMod().lowpass(freq.noMod(), q.noMod(), analog = analog.noMod())
             } else {
                 val rel = butterworthQLadder(n, 1.0)
                 var chain = inner.withMod()
                 for (k in 0 until n) {
-                    chain = chain.lowpass(cutoffHz.noMod(), q.noMod().scaledBy(rel[k]), analog = analog.noMod())
+                    chain = chain.lowpass(freq.noMod(), q.noMod().scaledBy(rel[k]), analog = analog.noMod())
                 }
                 chain
             }
@@ -390,19 +390,19 @@ private fun IgnitorDsl.buildRaw(
             // See Lowpass above: same ladder, same analog-compounding note.
             val n = coercePasses(passes)
             if (n == 1) {
-                inner.withMod().highpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+                inner.withMod().highpass(freq.noMod(), q.noMod(), analog = analog.noMod())
             } else {
                 val rel = butterworthQLadder(n, 1.0)
                 var chain = inner.withMod()
                 for (k in 0 until n) {
-                    chain = chain.highpass(cutoffHz.noMod(), q.noMod().scaledBy(rel[k]), analog = analog.noMod())
+                    chain = chain.highpass(freq.noMod(), q.noMod().scaledBy(rel[k]), analog = analog.noMod())
                 }
                 chain
             }
         }
-        is IgnitorDsl.OnePoleLowpass -> inner.withMod().onePoleLowpass(cutoffHz.noMod())
-        is IgnitorDsl.Bandpass -> inner.withMod().bandpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
-        is IgnitorDsl.Notch -> inner.withMod().notch(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+        is IgnitorDsl.OnePoleLowpass -> inner.withMod().onePoleLowpass(freq.noMod())
+        is IgnitorDsl.Bandpass -> inner.withMod().bandpass(freq.noMod(), q.noMod(), analog = analog.noMod())
+        is IgnitorDsl.Notch -> inner.withMod().notch(freq.noMod(), q.noMod(), analog = analog.noMod())
 
         // Eq: withMod ONLY on inner; noMod on all section params — mirrors the filter arms
         // above (a withMod param subtree would change the freqHz the params see and break
@@ -413,17 +413,17 @@ private fun IgnitorDsl.buildRaw(
             sections = sections.map { s ->
                 when (s) {
                     is IgnitorDsl.EqSection.Lowpass ->
-                        EqIgnitor.Section(EqCore.LOWPASS, s.freqHz.noMod(), s.q.noMod())
+                        EqIgnitor.Section(EqCore.LOWPASS, s.freq.noMod(), s.q.noMod())
                     is IgnitorDsl.EqSection.Highpass ->
-                        EqIgnitor.Section(EqCore.HIGHPASS, s.freqHz.noMod(), s.q.noMod())
+                        EqIgnitor.Section(EqCore.HIGHPASS, s.freq.noMod(), s.q.noMod())
                     is IgnitorDsl.EqSection.Bandpass ->
-                        EqIgnitor.Section(EqCore.BANDPASS, s.freqHz.noMod(), s.q.noMod())
+                        EqIgnitor.Section(EqCore.BANDPASS, s.freq.noMod(), s.q.noMod())
                     is IgnitorDsl.EqSection.Notch ->
-                        EqIgnitor.Section(EqCore.NOTCH, s.freqHz.noMod(), s.q.noMod())
+                        EqIgnitor.Section(EqCore.NOTCH, s.freq.noMod(), s.q.noMod())
                     is IgnitorDsl.EqSection.Bell ->
-                        EqIgnitor.Section(EqCore.BELL, s.freqHz.noMod(), s.q.noMod(), db = s.db.noMod())
+                        EqIgnitor.Section(EqCore.BELL, s.freq.noMod(), s.q.noMod(), db = s.db.noMod())
                     is IgnitorDsl.EqSection.RawTap ->
-                        EqIgnitor.Section(EqCore.RAW_TAP, s.freqHz.noMod(), s.q.noMod(), gain = s.gain.noMod())
+                        EqIgnitor.Section(EqCore.RAW_TAP, s.freq.noMod(), s.q.noMod(), gain = s.gain.noMod())
                 }
             },
         )

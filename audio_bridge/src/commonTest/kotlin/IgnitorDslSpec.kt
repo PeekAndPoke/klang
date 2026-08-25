@@ -41,7 +41,7 @@ class IgnitorDslSpec : StringSpec({
         // Kotlin code building EqSection.Bell(...) directly and a song writing .band(...)
         // would have produced two different bandwidths from identical-looking source.
         // The Kotlin and script surfaces are pinned to each other by StdLibOscTest.
-        val fromWireDefault = IgnitorDsl.EqSection.Bell(freqHz = IgnitorDsl.Constant(1200.0))
+        val fromWireDefault = IgnitorDsl.EqSection.Bell(freq = IgnitorDsl.Constant(1200.0))
         val fromSurface = IgnitorDsl.Sine().eq().band(1200.0).sections.single()
 
         (fromWireDefault.q as IgnitorDsl.Constant).value shouldBe
@@ -50,7 +50,7 @@ class IgnitorDslSpec : StringSpec({
 
     "the RawTap wire defaults and the tap() surface defaults are the SAME" {
         // Same bug class as the Bell row above, pinned before it can happen.
-        val fromWireDefault = IgnitorDsl.EqSection.RawTap(freqHz = IgnitorDsl.Constant(850.0))
+        val fromWireDefault = IgnitorDsl.EqSection.RawTap(freq = IgnitorDsl.Constant(850.0))
         val fromSurface = IgnitorDsl.Sine().eq().tap(850.0).sections.single()
                 as IgnitorDsl.EqSection.RawTap
 
@@ -84,7 +84,7 @@ class IgnitorDslSpec : StringSpec({
         // oscillator has no .band() (compile error, the supersaw config-method pattern).
         val dsl = IgnitorDsl.Sine().eq().band(1200.0)
         val bell = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
-        (bell.freqHz as IgnitorDsl.Constant).value shouldBe 1200.0
+        (bell.freq as IgnitorDsl.Constant).value shouldBe 1200.0
         (bell.q as IgnitorDsl.Constant).value shouldBe 0.707
         (bell.db as IgnitorDsl.Constant).value shouldBe 0.0
     }
@@ -92,15 +92,15 @@ class IgnitorDslSpec : StringSpec({
     "band extension appends in list order" {
         val dsl = IgnitorDsl.Sine().eq().band(300.0, q = 1.0, db = 6.0).band(2500.0)
         dsl.sections.size shouldBe 2
-        ((dsl.sections[0] as IgnitorDsl.EqSection.Bell).freqHz as IgnitorDsl.Constant).value shouldBe 300.0
+        ((dsl.sections[0] as IgnitorDsl.EqSection.Bell).freq as IgnitorDsl.Constant).value shouldBe 300.0
         ((dsl.sections[0] as IgnitorDsl.EqSection.Bell).db as IgnitorDsl.Constant).value shouldBe 6.0
-        ((dsl.sections[1] as IgnitorDsl.EqSection.Bell).freqHz as IgnitorDsl.Constant).value shouldBe 2500.0
+        ((dsl.sections[1] as IgnitorDsl.EqSection.Bell).freq as IgnitorDsl.Constant).value shouldBe 2500.0
     }
 
     "tap extension adds a RawTap with stdlib-matching defaults" {
         val dsl = IgnitorDsl.Sawtooth().eq().tap(850.0)
         val tap = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
-        (tap.freqHz as IgnitorDsl.Constant).value shouldBe 850.0
+        (tap.freq as IgnitorDsl.Constant).value shouldBe 850.0
         // C1 (filter unification): ONE default q = 0.707 on every surface, tap included.
         (tap.q as IgnitorDsl.Constant).value shouldBe 0.707
         (tap.gain as IgnitorDsl.Constant).value shouldBe 1.0
@@ -115,7 +115,7 @@ class IgnitorDslSpec : StringSpec({
 
     "band extension accepts IgnitorDsl params (note tracking)" {
         val dsl = IgnitorDsl.Sawtooth().eq().band(freq = IgnitorDsl.Freq)
-        (dsl.sections.single() as IgnitorDsl.EqSection.Bell).freqHz.shouldBeInstanceOf<IgnitorDsl.Freq>()
+        (dsl.sections.single() as IgnitorDsl.EqSection.Bell).freq.shouldBeInstanceOf<IgnitorDsl.Freq>()
     }
 
     "Variants.collectParams unions over children" {

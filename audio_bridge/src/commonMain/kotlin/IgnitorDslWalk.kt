@@ -27,7 +27,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Abs -> listOf(inner)
         is IgnitorDsl.Accelerate -> listOf(inner, semitones)
         is IgnitorDsl.Adsr -> listOf(inner, attackSec, decaySec, sustainLevel, releaseSec, declickSeconds, expK)
-        is IgnitorDsl.Bandpass -> listOf(inner, cutoffHz, q, analog)
+        is IgnitorDsl.Bandpass -> listOf(inner, freq, q, analog)
         is IgnitorDsl.BerlinNoise -> listOf(rate, octaves, persistence)
         is IgnitorDsl.Bipolar -> listOf(inner)
         is IgnitorDsl.BrownNoise -> listOf(depth)
@@ -49,18 +49,18 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Fm -> listOf(carrier, modulator, ratio, depth, envAttackSec, envDecaySec, envSustainLevel, envReleaseSec)
         is IgnitorDsl.Frac -> listOf(inner)
         is IgnitorDsl.Freq -> emptyList()
-        is IgnitorDsl.Highpass -> listOf(inner, cutoffHz, q, analog)
+        is IgnitorDsl.Highpass -> listOf(inner, freq, q, analog)
         is IgnitorDsl.Impulse -> listOf(freq, analog)
         is IgnitorDsl.Lerp -> listOf(left, right, t)
         is IgnitorDsl.Log -> listOf(inner)
-        is IgnitorDsl.Lowpass -> listOf(inner, cutoffHz, q, analog)
+        is IgnitorDsl.Lowpass -> listOf(inner, freq, q, analog)
         is IgnitorDsl.Max -> listOf(left, right)
         is IgnitorDsl.Min -> listOf(left, right)
         is IgnitorDsl.Minus -> listOf(left, right)
         is IgnitorDsl.Mod -> listOf(left, right)
         is IgnitorDsl.Neg -> listOf(inner)
-        is IgnitorDsl.Notch -> listOf(inner, cutoffHz, q, analog)
-        is IgnitorDsl.OnePoleLowpass -> listOf(inner, cutoffHz)
+        is IgnitorDsl.Notch -> listOf(inner, freq, q, analog)
+        is IgnitorDsl.OnePoleLowpass -> listOf(inner, freq)
         is IgnitorDsl.OptimizerHint -> listOf(inner)
         is IgnitorDsl.Param -> emptyList()
         is IgnitorDsl.PerlinNoise -> listOf(rate, octaves, persistence)
@@ -139,7 +139,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             declickSeconds = new[5],
             expK = new[6],
         )
-        is IgnitorDsl.Bandpass -> copy(inner = new[0], cutoffHz = new[1], q = new[2], analog = new[3])
+        is IgnitorDsl.Bandpass -> copy(inner = new[0], freq = new[1], q = new[2], analog = new[3])
         is IgnitorDsl.BerlinNoise -> copy(rate = new[0], octaves = new[1], persistence = new[2])
         is IgnitorDsl.Bipolar -> copy(inner = new[0])
         is IgnitorDsl.BrownNoise -> copy(depth = new[0])
@@ -179,18 +179,18 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         )
         is IgnitorDsl.Frac -> copy(inner = new[0])
         is IgnitorDsl.Freq -> this
-        is IgnitorDsl.Highpass -> copy(inner = new[0], cutoffHz = new[1], q = new[2], analog = new[3])
+        is IgnitorDsl.Highpass -> copy(inner = new[0], freq = new[1], q = new[2], analog = new[3])
         is IgnitorDsl.Impulse -> copy(freq = new[0], analog = new[1])
         is IgnitorDsl.Lerp -> copy(left = new[0], right = new[1], t = new[2])
         is IgnitorDsl.Log -> copy(inner = new[0])
-        is IgnitorDsl.Lowpass -> copy(inner = new[0], cutoffHz = new[1], q = new[2], analog = new[3])
+        is IgnitorDsl.Lowpass -> copy(inner = new[0], freq = new[1], q = new[2], analog = new[3])
         is IgnitorDsl.Max -> copy(left = new[0], right = new[1])
         is IgnitorDsl.Min -> copy(left = new[0], right = new[1])
         is IgnitorDsl.Minus -> copy(left = new[0], right = new[1])
         is IgnitorDsl.Mod -> copy(left = new[0], right = new[1])
         is IgnitorDsl.Neg -> copy(inner = new[0])
-        is IgnitorDsl.Notch -> copy(inner = new[0], cutoffHz = new[1], q = new[2], analog = new[3])
-        is IgnitorDsl.OnePoleLowpass -> copy(inner = new[0], cutoffHz = new[1])
+        is IgnitorDsl.Notch -> copy(inner = new[0], freq = new[1], q = new[2], analog = new[3])
+        is IgnitorDsl.OnePoleLowpass -> copy(inner = new[0], freq = new[1])
         is IgnitorDsl.OptimizerHint -> copy(inner = new[0])
         is IgnitorDsl.Param -> this
         is IgnitorDsl.PerlinNoise -> copy(rate = new[0], octaves = new[1], persistence = new[2])
@@ -262,12 +262,12 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
 /** Child enumeration for one EQ section. See [childNodes] for the ordering contract. */
 fun IgnitorDsl.EqSection.childNodes(): List<IgnitorDsl> {
     return when (this) {
-        is IgnitorDsl.EqSection.Bandpass -> listOf(freqHz, q)
-        is IgnitorDsl.EqSection.Bell -> listOf(freqHz, q, db)
-        is IgnitorDsl.EqSection.Highpass -> listOf(freqHz, q)
-        is IgnitorDsl.EqSection.Lowpass -> listOf(freqHz, q)
-        is IgnitorDsl.EqSection.Notch -> listOf(freqHz, q)
-        is IgnitorDsl.EqSection.RawTap -> listOf(freqHz, q, gain)
+        is IgnitorDsl.EqSection.Bandpass -> listOf(freq, q)
+        is IgnitorDsl.EqSection.Bell -> listOf(freq, q, db)
+        is IgnitorDsl.EqSection.Highpass -> listOf(freq, q)
+        is IgnitorDsl.EqSection.Lowpass -> listOf(freq, q)
+        is IgnitorDsl.EqSection.Notch -> listOf(freq, q)
+        is IgnitorDsl.EqSection.RawTap -> listOf(freq, q, gain)
     }
 }
 
@@ -278,11 +278,11 @@ fun IgnitorDsl.EqSection.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl.EqSec
     }
 
     return when (this) {
-        is IgnitorDsl.EqSection.Bandpass -> copy(freqHz = new[0], q = new[1])
-        is IgnitorDsl.EqSection.Bell -> copy(freqHz = new[0], q = new[1], db = new[2])
-        is IgnitorDsl.EqSection.Highpass -> copy(freqHz = new[0], q = new[1])
-        is IgnitorDsl.EqSection.Lowpass -> copy(freqHz = new[0], q = new[1])
-        is IgnitorDsl.EqSection.Notch -> copy(freqHz = new[0], q = new[1])
-        is IgnitorDsl.EqSection.RawTap -> copy(freqHz = new[0], q = new[1], gain = new[2])
+        is IgnitorDsl.EqSection.Bandpass -> copy(freq = new[0], q = new[1])
+        is IgnitorDsl.EqSection.Bell -> copy(freq = new[0], q = new[1], db = new[2])
+        is IgnitorDsl.EqSection.Highpass -> copy(freq = new[0], q = new[1])
+        is IgnitorDsl.EqSection.Lowpass -> copy(freq = new[0], q = new[1])
+        is IgnitorDsl.EqSection.Notch -> copy(freq = new[0], q = new[1])
+        is IgnitorDsl.EqSection.RawTap -> copy(freq = new[0], q = new[1], gain = new[2])
     }
 }
