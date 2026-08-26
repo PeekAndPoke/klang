@@ -4,6 +4,9 @@
 **SINCE: 2026-08-25**
 **STATE: FREE — take the lock before building.**
 
+> Last action (2026-08-25, klang-ai session): offline render of Der Schmetterling v52 only —
+> no source changes, no test runs. rpm 33.0, transposition 0; `--cycles 258` as ever.
+
 > Last action (2026-08-25, klang-ai session): offline render of Der Schmetterling v51 only —
 > no source changes, no test runs. rpm 33.0, transposition back to 0 (E); `--cycles 258` as ever.
 
