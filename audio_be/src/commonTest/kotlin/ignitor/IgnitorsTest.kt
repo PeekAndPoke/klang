@@ -1176,7 +1176,7 @@ class ExcitersTest : StringSpec({
         // signals lifts peaks toward ±2 — the IgniteRenderer wrap is what bounds
         // them to ±1 in the live engine. See `clip via IgniteRenderer wrap …`
         // below for the bound-to-±1 invariant.
-        val buf = generate(Ignitors.sine().drive(1.0).clip("soft"), freqHz = 440.0)
+        val buf = generate(Ignitors.sine().drive(1.0).shape("soft"), freqHz = 440.0)
         buf.peakAmplitude() shouldBeLessThan 2.5
         buf.any { it != 0.0 } shouldBe true
         buf.none { it.isNaN() || it.isInfinite() } shouldBe true
@@ -1184,7 +1184,7 @@ class ExcitersTest : StringSpec({
 
     "clip hard direct output is finite and stays in the documented envelope" {
         // Same reasoning as `clip soft direct …` above.
-        val buf = generate(Ignitors.sine().drive(1.0).clip("hard"), freqHz = 440.0)
+        val buf = generate(Ignitors.sine().drive(1.0).shape("hard"), freqHz = 440.0)
         buf.peakAmplitude() shouldBeLessThan 2.5
         buf.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
@@ -1193,7 +1193,7 @@ class ExcitersTest : StringSpec({
         // The IgniteRenderer applies a single fastTanh wrap to the entire ignitor
         // output. This is what bounds heavy-distort/clip chains to ±1 in the live
         // engine (per-stage clip/distort no longer caps — see IgnitorEffects.kt).
-        val signal = Ignitors.sine().drive(1.0).clip("soft")
+        val signal = Ignitors.sine().drive(1.0).shape("soft")
         val ctx = io.peekandpoke.klang.audio_be.voices.strip.BlockContext(
             audioBuffer = AudioBuffer(defaultBlockFrames),
             freqModBuffer = DoubleArray(defaultBlockFrames),
@@ -1249,7 +1249,7 @@ class ExcitersTest : StringSpec({
     }
 
     "clip fold produces non-zero output" {
-        val buf = generate(Ignitors.sine().clip("fold"), freqHz = 440.0)
+        val buf = generate(Ignitors.sine().shape("fold"), freqHz = 440.0)
         buf.any { it != 0.0 } shouldBe true
     }
 

@@ -83,9 +83,9 @@ a.generate(buffer, freqHz, ctx)
 - **Utility file names must be unique and descriptive.** Generic names like `_utils.kt` make it
   impossible to tell what's inside without opening the file.
 
-**Wrong:** `ClippingFunctions.kt` (class inside is `ClippingFuncs` — name mismatch)
+**Wrong:** `ShapingFunctions.kt` (class inside is `ShapingFuncs` — name mismatch)
 **Wrong:** `_utils.kt` (not unique, not descriptive)
-**Correct:** `ClippingFuncs.kt` (matches class)
+**Correct:** `ShapingFuncs.kt` (matches class — this pair was the real offender, fixed 2026-08-26)
 **Correct:** `_staff_pos_helpers.kt` (utility file alongside class files — `_` groups it at top)
 **Correct:** `math.kt`, `chain_rendering.kt` (utility-only folder — no `_` prefix needed)
 
@@ -252,7 +252,7 @@ avoiding call overhead is intentional. The suppression is accepted.
 
 ### 14. `@Suppress("unused")` Is Accepted on API Surface Libraries
 
-Collections of utility functions (e.g., `ClippingFuncs`) may have members that aren't all
+Collections of utility functions (e.g., `ShapingFuncs`) may have members that aren't all
 currently referenced but form a coherent API. The suppression is accepted.
 
 ---

@@ -28,11 +28,11 @@ import kotlin.math.pow
  * - Optional oversampling to reduce aliasing from nonlinear processing.
  *
  * Shape dispatch goes through the `inline` [applyDistortionShape] — the per-
- * sample `when` is expanded at the call site and each `ClippingFuncs.foo(x)`
+ * sample `when` is expanded at the call site and each `ShapingFuncs.foo(x)`
  * inlines. No `(Double) -> Double` function reference is held.
  *
  * Note: this renderer does NOT apply `softCap` after the DC blocker, unlike
- * `Ignitor.distort()` and `Ignitor.clip()`. The voice-strip pipeline has its
+ * `Ignitor.distort()` and `Ignitor.shape()`. The voice-strip pipeline has its
  * own downstream bounding stages.
  */
 class DistortionRenderer(

@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.WetDryMix
-import io.peekandpoke.klang.audio_be.ClippingFuncs
+import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
@@ -39,7 +39,7 @@ import kotlin.math.sin
  * for symmetric shapes at extreme drive where any input asymmetry causes the
  * output to rail-lock toward `±1` and produce a DC bias that can damage speakers.
  *
- * **Output is bounded to ±1 by a C¹-piecewise soft cap** ([ClippingFuncs.softCap]).
+ * **Output is bounded to ±1 by a C¹-piecewise soft cap** ([ShapingFuncs.softCap]).
  * Below the linear-region threshold the cap is identity (clean signals
  * untouched); above, the rail-edge transients from the DC blocker's 2× HF gain
  * are smoothly compressed toward ±1 with continuous value + slope at the
@@ -107,7 +107,7 @@ private class DistortIgnitor(
             dcBlocker.process(work, ctx.offset, ctx.length)
 
             for (i in ctx.offset until end) {
-                buffer[i] = ClippingFuncs.softCap(work[i])
+                buffer[i] = ShapingFuncs.softCap(work[i])
             }
         }
     }
@@ -188,7 +188,7 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  *
  * **DC blocker is always applied** to guard against rail-lock when the input is
  * already heavily saturated (e.g. after `drive`). See [distort] for the rationale.
- * Output is bounded to ±1 by a C¹-piecewise soft cap ([ClippingFuncs.softCap])
+ * Output is bounded to ±1 by a C¹-piecewise soft cap ([ShapingFuncs.softCap])
  * — identity in the linear region, smooth saturation above. See [distort].
  *
  * @param shape Waveshaper function. Default: "soft" (tanh). See [distort] for the full
@@ -196,10 +196,10 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  *   "zerosquare", "chebyshev", "fold", "linearfold", "diode", "tube", "asym", "stompbox",
  *   "rectify").
  */
-fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
-    ClipIgnitor(this, shape, oversampleStages)
+fun Ignitor.shape(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
+    ShapeIgnitor(this, shape, oversampleStages)
 
-private class ClipIgnitor(
+private class ShapeIgnitor(
     private val upstream: Ignitor,
     shape: String,
     oversampleStages: Int,
@@ -235,7 +235,7 @@ private class ClipIgnitor(
             dcBlocker.process(work, ctx.offset, ctx.length)
 
             for (i in ctx.offset until end) {
-                buffer[i] = ClippingFuncs.softCap(work[i])
+                buffer[i] = ShapingFuncs.softCap(work[i])
             }
         }
     }

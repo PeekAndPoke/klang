@@ -24,15 +24,15 @@ know which of its 943 tests would fail if the thing they name were broken.
 ## 2. Why this is NOT automated
 
 Investigated and rejected **with evidence**, not preference. Disassembling all 251 compiled classes in
-`audio_be/build/classes/kotlin/jvm/main` found **zero bytecode invokes** to `ClippingFuncs.*` or
+`audio_be/build/classes/kotlin/jvm/main` found **zero bytecode invokes** to `ShapingFuncs.*` or
 `PhaserCore.step`. The entire DSP hot path is inlined — 71 `inline` sites, plus 19 `@PublishedApi`
 constants that exist *solely* to serve inlining. `DistortionRenderer` holds 32 references to
-`ClippingFuncs` and every one is a vestigial `getstatic INSTANCE`; the arithmetic is inlined in place.
+`ShapingFuncs` and every one is a vestigial `getstatic INSTANCE`; the arithmetic is inlined in place.
 
 So a bytecode mutator (pitest is the only realistic candidate) would:
 
-1. mutate `ClippingFuncs.fastTanh` and friends — **dead bytecode nothing calls** — and report a wall of surviving "no
-   coverage" mutants on exactly the code we care about most (`ClippingFuncsBoundsSpec`, 44 tests, would score 0% on its
+1. mutate `ShapingFuncs.fastTanh` and friends — **dead bytecode nothing calls** — and report a wall of surviving "no
+   coverage" mutants on exactly the code we care about most (`ShapingFuncsBoundsSpec`, 44 tests, would score 0% on its
    own subject);
 2. attribute the mutations that *do* execute to the **caller** class at SMAP-shifted line numbers that match no real
    line in the caller's source.

@@ -52,12 +52,12 @@ import kotlin.math.tan
 // (no input-scaling `b0`). Cheaper than `OnePoleHPF` by 1 mul/sample, parameterized
 // by the raw IIR pole `a` instead of cutoffHz (kept this way for back-compat with
 // the public `Ignitor.dcBlock(coefficient)` API). Replaced 9 open-coded inline copies
-// of the same recurrence in `IgnitorEffects.distort()`, `Ignitor.clip()`, and
+// of the same recurrence in `IgnitorEffects.distort()`, `Ignitor.shape()`, and
 // `voices/strip/filter/DistortionRenderer` with a single source of truth.
 //
 // **2× edge transient**: rail-to-rail input produces a ~2× peak transient through
 // the raw-pole topology (railed input − railed previous + nearly-railed feedback).
-// `Ignitor.distort()` and `Ignitor.clip()` pair `DcBlocker` with `ClippingFuncs.softCap()`
+// `Ignitor.distort()` and `Ignitor.shape()` pair `DcBlocker` with `ShapingFuncs.softCap()`
 // downstream to bound output to ±1. The master-out DcBlocker in `KlangAudioRenderer`
 // runs on post-limiter samples (already ±1-bounded), so no softCap needed there.
 //
@@ -158,7 +158,7 @@ internal const val SAT_STATE_SCALE: Double = 0.0876
 
 /**
  * Default raw IIR pole for [LowPassHighPassFilters.DcBlocker]. `≈ 35 Hz @ 44.1k, 38 Hz @ 48k`.
- * Used by `Ignitor.distort()` and `Ignitor.clip()` to suppress DC accumulation from
+ * Used by `Ignitor.distort()` and `Ignitor.shape()` to suppress DC accumulation from
  * asymmetric waveshapers. Matches the historic `0.995` literal that lived inline.
  */
 internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
@@ -540,7 +540,7 @@ object LowPassHighPassFilters {
      * Lightweight DC blocker — degenerate first-order HPF with raw pole and
      * no input scaling: `y[ n ] = x[ n ] − x[n-1] + a·y[n-1]`. One mul/sample cheaper than
      * [OnePoleHPF]. Produces a ~2× edge transient on rail-to-rail input — call sites
-     * post-distort/post-clip pair this with `ClippingFuncs.softCap()` to bound output to ±1.
+     * post-distort/post-clip pair this with `ShapingFuncs.softCap()` to bound output to ±1.
      *
      * Coefficient is the raw IIR pole: `a ≈ 1 − 2π·fc/fs`. At `a = 0.995, fs = 44.1k`
      * the −3 dB knee is ~35 Hz; at `a = 0.999`, ~7 Hz. NaN/Inf and out-of-range values

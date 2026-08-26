@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.ClippingFuncs
+import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine.Companion.MIN_DELAY_SECONDS
 import kotlin.math.abs
@@ -31,7 +31,7 @@ import kotlin.math.min
  *   flanger/comb regimes. Note: linear interpolation introduces a mild HF
  *   roll-off (~−3 dB at Nyquist) that's only audible in short-delay use cases.
  * - **Feedback** path with smooth saturation safety: rather than a hard clip,
- *   the recirculated sample is passed through [ClippingFuncs.softCap] to
+ *   the recirculated sample is passed through [ShapingFuncs.softCap] to
  *   prevent runaway accumulation when `feedback ≥ 1.0` while keeping the
  *   character musical (smooth tanh-style knee). The ring buffer is therefore
  *   always bounded to ±1, which together with the non-finite-rejecting
@@ -78,7 +78,7 @@ class DelayLine(
         }
 
     /**
-     * Ceiling the feedback path saturates toward ([ClippingFuncs.softCapTo]).
+     * Ceiling the feedback path saturates toward ([ShapingFuncs.softCapTo]).
      *
      * The engine is raw: any [feedback] is allowed, including ≥ 1.0, which self-oscillates. This
      * decides *how loud* that runaway settles rather than whether it is permitted — and keeps the
@@ -197,9 +197,9 @@ class DelayLine(
             // cap is pre-sanitised (finite, > 0) so this reduces to the scaled softCap; at the
             // default 1.0 it is the exact pre-change `softCap(newSample)`.
             buffer[pos] = if (cap == 1.0) {
-                ClippingFuncs.softCap(newSample)
+                ShapingFuncs.softCap(newSample)
             } else {
-                cap * ClippingFuncs.softCap(newSample / cap)
+                cap * ShapingFuncs.softCap(newSample / cap)
             }
 
             // --- 3. Wet output, additive. Caller owns the dry mix.

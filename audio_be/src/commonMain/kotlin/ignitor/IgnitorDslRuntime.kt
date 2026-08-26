@@ -445,10 +445,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Distort -> inner.withMod().distort(amount.noMod(), shape, Oversampler.factorToStages(oversample))
         is IgnitorDsl.Drive -> inner.withMod().drive(amount.noMod(), driveType)
-        // DSL `shape` -> engine `clip`: deliberate. The DSL word is the curve (`fold`,
-        // `tube` and `rectify` are not clipping); the engine's own vocabulary here is
-        // ClippingFuncs/softCap, so `clip` is accurate at that layer.
-        is IgnitorDsl.Shape -> inner.withMod().clip(shape, Oversampler.factorToStages(oversample))
+        is IgnitorDsl.Shape -> inner.withMod().shape(shape, Oversampler.factorToStages(oversample))
         is IgnitorDsl.Crush -> inner.withMod().crush(amount.noMod())
         is IgnitorDsl.Coarse -> inner.withMod().coarse(amount.noMod())
         is IgnitorDsl.Phaser -> inner.withMod().phaser(rate.noMod(), wet.noMod(), center.noMod(), sweep.noMod(), dryFloor.noMod())

@@ -23,7 +23,7 @@ import kotlin.math.sin
  * defensive checks in the inner math; defend at the integration points.
  */
 @Suppress("NOTHING_TO_INLINE", "unused")
-object ClippingFuncs {
+object ShapingFuncs {
 
     /**
      * Fast approximation of `tanh` using a Padé approximant.

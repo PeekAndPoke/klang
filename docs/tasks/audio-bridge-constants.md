@@ -288,8 +288,8 @@ weighted `.mul()` sums ≤ 1 or by a hard-bounded waveshaper:
 - `Sakura.kt:57` (pad) — the one tap the super-osc gain renormalisation (`Ignitors.kt:742`, Σ|gain| = 1) actually
   bounds.
 - `ATruthWorthLyingFor.kt:48,49` — bounded by `.distort(≈3.6–4.0, "tube", 8)` sitting immediately upstream of the
-  filter; `ClippingFuncs.tube` ≤ 1.0 plus the `softCap` at `IgnitorEffects.kt:109` (guarded by
-  `ClippingFuncsBoundsSpec.kt:148`). Voice-gain renormalisation is a waveshaper away and contributes nothing here.
+  filter; `ShapingFuncs.tube` ≤ 1.0 plus the `softCap` at `IgnitorEffects.kt:109` (guarded by
+  `ShapingFuncsBoundsSpec.kt:148`). Voice-gain renormalisation is a waveshaper away and contributes nothing here.
 
 ⚠️ **Nothing in the engine enforces any of this.** An added `.mul(3)` or `.drive()` ahead of an ignitor lowpass walks
 straight into the +0.3…+0.7 dB region while leaving every sentence above still true. An earlier draft credited the
