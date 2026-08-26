@@ -596,17 +596,23 @@ object JsCompatTestData {
             Example(SKIP, "Log2 #1", """seq("1 2 4 8").log2()"""), // Js produce no events
             Example(SKIP, "Log2 #2", """n("1 2 4 8").log2()"""), // Js produce no events
 
-            // Bitwise Operators
-            Example("Band (AND) #1", """seq("3 5").bitAnd("1")"""),
-            Example("Band (AND) #2", """n("3 5").bitAnd("1")"""),
-            Example("Bor (OR) #1", """seq("1 4").bitOr("2")"""),
-            Example("Bor (OR) #2", """n("1 4").bitOr("2")"""),
-            Example("Bxor (XOR) #1", """seq("3 5").bitXor("1")"""),
-            Example("Bxor (XOR) #2", """n("3 5").bitXor("1")"""),
-            Example("Blshift (Left Shift) #1", """seq("1 2").bitShl("1")"""),
-            Example("Blshift (Left Shift) #2", """n("1 2").bitShl("1")"""),
-            Example("Brshift (Right Shift) #1", """seq("2 4").bitShr("1")"""),
-            Example("Brshift (Right Shift) #2", """n("2 4").bitShr("1")"""),
+            // Bitwise Operators — SKIPPED because the NAMES deliberately diverged (2026-08-26).
+            // These strings are compiled twice: once by sprudel and once by the vendored Strudel
+            // bundle, which still exports band/bor/bxor/blshift/brshift and knows nothing about
+            // bitAnd/bitOr/bitXor/bitShl/bitShr. Left unskipped they fail hard on a GraalVM
+            // runtime and skip silently everywhere else — dead coverage that looks alive.
+            // `Example` has no per-side spelling override, and this oracle is scheduled to be
+            // cut anyway, so skip is the honest state rather than a new jsCode field.
+            Example(SKIP, "BitAnd #1", """seq("3 5").bitAnd("1")"""),
+            Example(SKIP, "BitAnd #2", """n("3 5").bitAnd("1")"""),
+            Example(SKIP, "BitOr #1", """seq("1 4").bitOr("2")"""),
+            Example(SKIP, "BitOr #2", """n("1 4").bitOr("2")"""),
+            Example(SKIP, "BitXor #1", """seq("3 5").bitXor("1")"""),
+            Example(SKIP, "BitXor #2", """n("3 5").bitXor("1")"""),
+            Example(SKIP, "BitShl (Left Shift) #1", """seq("1 2").bitShl("1")"""),
+            Example(SKIP, "BitShl (Left Shift) #2", """n("1 2").bitShl("1")"""),
+            Example(SKIP, "BitShr (Right Shift) #1", """seq("2 4").bitShr("1")"""),
+            Example(SKIP, "BitShr (Right Shift) #2", """n("2 4").bitShr("1")"""),
 
             // Comparison
             Example(SKIP, "Less Than #1", """seq("1 2 3").lt(2)"""),

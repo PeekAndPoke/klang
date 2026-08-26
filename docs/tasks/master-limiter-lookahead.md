@@ -375,7 +375,7 @@ only unconditional one:
 | `MasterStage.kt:61-62`              | master out, post-limiter, pre-clip | 0.999 (~7 Hz) | **unconditional**          |
 | `DistortionRenderer.kt:47`          | voice-strip distortion             | 0.995         | only when `amount > 0`     |
 | `IgnitorEffects.kt:73` (`distort`)  | per-voice                          | 0.995         | only on the driven path    |
-| `IgnitorEffects.kt:211` (`clip`)    | per-voice                          | 0.995         | whenever `.clip()` is used |
+| `IgnitorEffects.kt:211` (`shape`)    | per-voice                          | 0.995         | whenever `.shape()` is used |
 | `IgnitorEffects.kt:728` (`dcBlock`) | per-voice, explicit                | user          | whenever used              |
 
 **Recommendation: keep the master pair unconditional in `MasterStage`, and move it BEFORE the limiter.** DC removal is a

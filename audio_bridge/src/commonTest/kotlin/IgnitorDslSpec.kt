@@ -21,7 +21,7 @@ class IgnitorDslSpec : StringSpec({
         IgnitorDsl.Sine().mul(IgnitorDsl.Param("factor", 0.5)).shouldBeInstanceOf<IgnitorDsl.Times>()
     }
 
-    "distort builder produces Clip(Drive(...))" {
+    "distort builder produces Shape(Drive(...))" {
         val dsl = IgnitorDsl.Sine().distort(0.5)
         val clip = dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         clip.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()

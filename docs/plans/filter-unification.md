@@ -28,7 +28,7 @@ enough complexity.
 | `highpass(freq, q, passes)` | `hpf` | `hpq` `hpx` `hpe` `hpadsr` | |
 | `bandpass(freq, q)` | `bpf` | `bpq` `bpe` `bpadsr` | no passes: cascading only narrows, q does that |
 | `notch(freq, q)` | `ntf` | `ntq` | no passes, **no envelope** (see below) |
-| `band(freq, q, db)` | — | — | NEW on sprudel; serial bell, dB gain. **COLLISION:** sprudel already has `band(mask)` = bitwise AND (`lang_arithmetic.kt`, pinned by `LangBandSpec`); an overload on the same receiver is unresolvable in the docs registry. One must be renamed; decide in the C6 review (the bitwise family `band/bor/bxor` is the likelier candidate, it is rarely used in music) |
+| `band(freq, q, db)` | — | — | NEW on sprudel; serial bell, dB gain. **COLLISION — RESOLVED 2026-08-26** (commit `1b763c0e`): sprudel's `band(mask)` = bitwise AND was renamed to `bitAnd` (with `bitOr`/`bitXor`/`bitShl`/`bitShr`), exactly the candidate this row predicted. `band` is free for the EQ bell; the ignitor's `.band()` and `.eq()` kept their names. Guard is now `LangBitAndSpec` |
 | `tap(freq, q, gain)` | — | — | NEW on sprudel; parallel boost, linear gain |
 
 Parameter ORDER is `freq, q, passes` (and `freq, q` where passes does not apply), positional or

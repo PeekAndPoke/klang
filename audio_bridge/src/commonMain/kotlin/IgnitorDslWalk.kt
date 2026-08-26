@@ -33,7 +33,6 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.BrownNoise -> listOf(depth)
         is IgnitorDsl.Ceil -> listOf(inner)
         is IgnitorDsl.Clamp -> listOf(inner, lo, hi)
-        is IgnitorDsl.Shape -> listOf(inner)
         is IgnitorDsl.Coarse -> listOf(inner, amount)
         is IgnitorDsl.Constant -> emptyList()
         is IgnitorDsl.Crackle -> listOf(chaos)
@@ -79,6 +78,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Round -> listOf(inner)
         is IgnitorDsl.Sawtooth -> listOf(freq, analog)
         is IgnitorDsl.Select -> listOf(cond, whenTrue, whenFalse)
+        is IgnitorDsl.Shape -> listOf(inner)
         is IgnitorDsl.Shimmer -> listOf(inner, wet, feedback, tone, dryFloor)
         is IgnitorDsl.Sign -> listOf(inner)
         is IgnitorDsl.Silence -> emptyList()
@@ -145,7 +145,6 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.BrownNoise -> copy(depth = new[0])
         is IgnitorDsl.Ceil -> copy(inner = new[0])
         is IgnitorDsl.Clamp -> copy(inner = new[0], lo = new[1], hi = new[2])
-        is IgnitorDsl.Shape -> copy(inner = new[0])
         is IgnitorDsl.Coarse -> copy(inner = new[0], amount = new[1])
         is IgnitorDsl.Constant -> this
         is IgnitorDsl.Crackle -> copy(chaos = new[0])
@@ -224,6 +223,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Round -> copy(inner = new[0])
         is IgnitorDsl.Sawtooth -> copy(freq = new[0], analog = new[1])
         is IgnitorDsl.Select -> copy(cond = new[0], whenTrue = new[1], whenFalse = new[2])
+        is IgnitorDsl.Shape -> copy(inner = new[0])
         is IgnitorDsl.Shimmer -> copy(inner = new[0], wet = new[1], feedback = new[2], tone = new[3], dryFloor = new[4])
         is IgnitorDsl.Sign -> copy(inner = new[0])
         is IgnitorDsl.Silence -> this

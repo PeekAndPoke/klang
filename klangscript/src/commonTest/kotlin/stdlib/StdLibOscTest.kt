@@ -281,7 +281,7 @@ class StdLibOscTest : StringSpec({
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
-    "distort chaining produces Clip(Drive(...))" {
+    "distort chaining produces Shape(Drive(...))" {
         val dsl = evalIgnitorDsl("Osc.saw().distort(0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.oversample shouldBe 0
@@ -410,21 +410,21 @@ class StdLibOscTest : StringSpec({
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
-    "clip chaining" {
+    "shape chaining" {
         val dsl = evalIgnitorDsl("""Osc.sine().shape("hard")""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.shape shouldBe "hard"
     }
 
-    "clip with default shape" {
+    "shape with default curve" {
         val dsl = evalIgnitorDsl("Osc.sine().shape()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe "soft"
         dsl.oversample shouldBe 0
     }
 
-    "clip with oversample factor" {
+    "shape with oversample factor" {
         val dsl = evalIgnitorDsl("""Osc.sine().shape("hard", 2)""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe "hard"
@@ -554,7 +554,7 @@ class StdLibOscTest : StringSpec({
         bell.freq.shouldBeInstanceOf<IgnitorDsl.Times>()
     }
 
-    "drive + clip chain" {
+    "drive + shape chain" {
         val dsl = evalIgnitorDsl("""Osc.saw().drive(0.3).shape("fold")""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe "fold"

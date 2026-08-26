@@ -128,7 +128,7 @@ fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: In
 /**
  * Pre-amplification stage. Boosts signal level without waveshaping.
  *
- * Use before a clip() or distort() to control how hard the signal hits the shaper.
+ * Use before a shape() or distort() to control how hard the signal hits the shaper.
  * Amount is read once per block (control rate). Bypasses when amount <= 0.
  *
  * @param amount Gain boost intensity. 0.0 = bypass, 0.5 = moderate boost, 1.0 = loud,
@@ -184,7 +184,7 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
  *
  * Unlike [distort], this does not boost the signal before shaping — it only clips
- * whatever amplitude is already there. Use [drive] before clip() for a two-stage chain.
+ * whatever amplitude is already there. Use [drive] before shape() for a two-stage chain.
  *
  * **DC blocker is always applied** to guard against rail-lock when the input is
  * already heavily saturated (e.g. after `drive`). See [distort] for the rationale.

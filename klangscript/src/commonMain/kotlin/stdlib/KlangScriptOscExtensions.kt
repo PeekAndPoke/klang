@@ -283,7 +283,7 @@ object KlangScriptOscExtensions {
         IgnitorDsl.Shape(inner = self, shape = shape, oversample = oversample)
 
     /**
-     * Waveshaping distortion. Convenience for drive(amount) + clip(shape).
+     * Waveshaping distortion. Convenience for drive(amount) + shape(shape).
      *
      * Shapes:
      *  - **Symmetric soft:** "soft" (tanh), "gentle", "softsat", "cubic", "exp", "sineshaper".

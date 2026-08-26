@@ -1170,7 +1170,7 @@ class ExcitersTest : StringSpec({
         dry.zip(driven).all { (a, b) -> a == b } shouldBe true
     }
 
-    "clip soft direct output is finite and stays in the documented envelope" {
+    "shape soft direct output is finite and stays in the documented envelope" {
         // Direct call (no IgniteRenderer wrapper): the clip stage itself does
         // shape + DC-block. The DC-blocker's 2× edge transient on rail-to-rail
         // signals lifts peaks toward ±2 — the IgniteRenderer wrap is what bounds
@@ -1182,14 +1182,14 @@ class ExcitersTest : StringSpec({
         buf.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
-    "clip hard direct output is finite and stays in the documented envelope" {
+    "shape hard direct output is finite and stays in the documented envelope" {
         // Same reasoning as `clip soft direct …` above.
         val buf = generate(Ignitors.sine().drive(1.0).shape("hard"), freqHz = 440.0)
         buf.peakAmplitude() shouldBeLessThan 2.5
         buf.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
-    "clip via IgniteRenderer wrap bounds output to within ±1 (the in-engine invariant)" {
+    "shape via IgniteRenderer wrap bounds output to within ±1 (the in-engine invariant)" {
         // The IgniteRenderer applies a single fastTanh wrap to the entire ignitor
         // output. This is what bounds heavy-distort/clip chains to ±1 in the live
         // engine (per-stage clip/distort no longer caps — see IgnitorEffects.kt).

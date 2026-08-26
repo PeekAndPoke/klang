@@ -325,7 +325,7 @@ The module carries a large body of **deliberate** decisions. An auditor who "fix
 Full list: `audio/MEMORY.md` + `docs/tasks-archive/`.
 
 - **Raw Motor** — no defensive checks in the inner math, no safety clamps on user-facing params; defend at integration
-  points (`ClippingFunctions.kt:14-23`).
+  points (`ShapingFuncs.kt:14-23`).
 - **Reverb's `+ ANTI_DENORMAL` is a deliberate exception** to the engine-wide `flushDenormal()`
   convention; the consistent version cost ~+11%/sample and was reverted 2026-05-19.
 - **The SVF is purely linear by design.** Two saturation attempts failed and were reverted; the

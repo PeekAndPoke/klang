@@ -11,7 +11,7 @@ package io.peekandpoke.klang.audio_be
  *
  * Dispatch at the audio-rate per-sample loop uses [applyDistortionShape], which
  * is `inline` so each `when` case expands to a literal `ShapingFuncs.foo(x)`
- * call — letting the inline shape functions in `ClippingFunctions.kt` actually
+ * call — letting the inline shape functions in `ShapingFuncs.kt` actually
  * inline. Storing a `(Double) -> Double` function reference would defeat that.
  */
 internal enum class DistortionShape {
