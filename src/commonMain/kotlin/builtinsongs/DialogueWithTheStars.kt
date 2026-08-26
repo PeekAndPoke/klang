@@ -86,7 +86,7 @@ let accusticGuitar = (() => {
     .highpass(85)
     .onepole(4200)
     .pitchEnvelope(0.4, 0.001, 0.04)
-    .analog(0.6)
+    // NOTE: `.analog(0.6)` was here and INERT (receiver was the PitchEnvelope wrapper).
     .adsr(0.003, 0.7, 0.35, 0.4)
 })()
 

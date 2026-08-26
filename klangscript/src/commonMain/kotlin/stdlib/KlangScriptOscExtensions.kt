@@ -431,28 +431,6 @@ object KlangScriptOscExtensions {
 
     // ── Analog Drift ────────────────────────────────────────────────────────
 
-    /** Sets the analog drift amount (Perlin noise pitch jitter). */
-    @KlangScript.Method
-    fun analog(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl = when (self) {
-        is IgnitorDsl.Sine -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Sawtooth -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Square -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Triangle -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Ramp -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Zawtooth -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Zamp -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Impulse -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Pulze -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.RawPulze -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperSaw -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperSine -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperSquare -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperTri -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperRamp -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Pluck -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperPluck -> self.copy(analog = amount.toIgnitorDsl())
-        else -> self // no-op for types without analog drift (noise sources, wrappers, etc.)
-    }
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 

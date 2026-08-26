@@ -32,7 +32,9 @@ let shaku = Osc.sine().mul(0.6)
       .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
       .highpass(freq = 300, analog = Osc.slot.analog)
       .lowpass(freq = 3800, q = 1.0, analog = Osc.slot.analog)
-      .analog(0.2).vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
+      // NOTE: `.analog(0.2)` was here and INERT (receiver was the Lowpass wrapper). The
+      // filters above still get their own `analog = Osc.slot.analog` saturation.
+      .vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
 

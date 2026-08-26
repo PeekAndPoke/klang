@@ -35,7 +35,7 @@ let blockfloete =
         .plus(Osc.whitenoise().mul(0.28).highpass(4000).lowpass(8000).adsr(0.001, 0.03, 0.0, 0.001))
         .lowpass(3500, 0.8).highpass(300).onepole(3500)
         .vibrato(1/2, 0.1)
-        .analog(5)
+        // NOTE: `.analog(5)` was here and INERT (receiver was the Vibrato wrapper).
         .pitchEnvelope(0.15, 0.01, 0.03)
         .adsr(0.01, 0.08, 0.5, 0.1)
 
@@ -46,7 +46,9 @@ let fingerpick =
         .plus(Osc.sine().detune(-12).mul(0.1))
         .lowpass(2800)
         .highpass(120)
-        .analog(3)
+        // NOTE: `.analog(3)` sat here and was INERT — the receiver was the Highpass
+        // wrapper, and the old generic analog() silently returned it unchanged. Removed
+        // rather than moved: putting it on Osc.pluck(...) would ADD drift never heard.
         .adsr(0.003, 0.5, 0.5, 0.5)
 
 // Pizzicato contrabass
@@ -59,7 +61,8 @@ let contrabass =
     .plus(Osc.brownnoise().lowpass(600).mul(0.06).adsr(0.001, 0.04, 0.0, 0.01))
     .plus(Osc.crackle(0.03).lowpass(1000).highpass(100).mul(0.008))
     .lowpass(Osc.constant(300).plus(Osc.constant(1200).adsr(0.005, 0.2, 0.0, 0.05)))
-    .highpass(30).onepole(600).analog(2)
+    // NOTE: `.analog(2)` was here and INERT (receiver was the OnePoleLowpass wrapper).
+    .highpass(30).onepole(600)
     .adsr(0.005, 0.5, 0.0, 0.15)
 
 // ── Part 1: Opening lament (Dm - Gm - C - F) ───────────────────────

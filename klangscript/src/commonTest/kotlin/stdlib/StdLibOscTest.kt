@@ -392,12 +392,21 @@ class StdLibOscTest : StringSpec({
         (dsl.analog as IgnitorDsl.Constant).value shouldBe 0.3
     }
 
-    "analog is no-op on noise" {
+    "analog on a type without drift FAILS LOUDLY (it used to be a silent no-op)" {
+        // `analog` used to be one `when` over 17 oscillator types with `else -> self`, so
+        // asking a noise source or a wrapper for drift silently returned it unchanged — the
+        // knob did nothing and said nothing. It now lives on each oscillator type that HAS
+        // the field, so an unsupported receiver is a type error at compile time.
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
-        val result = engine.execute("Osc.whitenoise().analog(0.5)")
-        result.shouldBeInstanceOf<NativeObjectValue<*>>()
-        result.value.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
+        shouldThrow<KlangScriptTypeError> {
+            engine.execute("Osc.whitenoise().analog(0.5)")
+        }
+        // ...and a wrapper is equally unsupported: drift belongs to the oscillator, and by
+        // the time a filter has wrapped it there is no oscillator left to configure.
+        shouldThrow<KlangScriptTypeError> {
+            engine.execute("Osc.sine().onepole(600).analog(2)")
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
