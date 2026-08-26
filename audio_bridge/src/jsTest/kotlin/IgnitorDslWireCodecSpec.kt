@@ -191,7 +191,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- effects --------------------------------------------------------------------------------------------
     "Drive" { check(IgnitorDsl.Sine().drive(0.5)) }
-    "Clip" { check(IgnitorDsl.Sine().clip("hard")) }
+    "Shape" { check(IgnitorDsl.Sine().shape("hard")) }
     "Distort (Drive+Clip chain)" { check(IgnitorDsl.Sine().distort(0.5)) }
     "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }

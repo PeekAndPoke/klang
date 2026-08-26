@@ -241,7 +241,7 @@ You write `.band()` and `.tap()` sections yourself, and plain `.lowpass()/.highp
 rewrite them as bands.
 
 **Only NEIGHBOURING filters merge, and nothing is ever reordered.** Anything else between two
-filters is a wall: `.distort()`, `.drive()`, `.clip()`, `.crush()`, `.mul()`, `.shimmer()`,
+filters is a wall: `.distort()`, `.drive()`, `.shape()`, `.crush()`, `.mul()`, `.shimmer()`,
 `.tremolo()`, `.vibrato()` and friends. So `.lowpass(5000).distort(0.4).lowpass(3000)` is two
 passes, not one. Moving the distort to the end of the chain would make it one, though that is a
 different patch and a different sound, so make that choice by ear rather than for the saving.
@@ -329,17 +329,23 @@ Put taps first unless you want that.
 | Method                                  | Description                                |
 |-----------------------------------------|--------------------------------------------|
 | `.drive(amount, driveType?)`            | Pre-amplification (type: "linear")         |
-| `.clip(shape?, oversample?)`            | Pure waveshaping without drive             |
-| `.distort(amount, shape?, oversample?)` | Drive + clip combined                      |
+| `.shape(shape?, oversample?)`           | The waveshaper curve alone, no gain        |
+| `.distort(amount, shape?, oversample?)` | `.drive()` + `.shape()` in one node        |
 | `.crush(amount)`                        | Bit-depth reduction                        |
 | `.coarse(amount)`                       | Sample-rate reduction                      |
 | `.phaser(rate, center?, sweep?).wet(w?).dryFloor(f?)` | Allpass phaser (center/sweep default 1000; wet 0.5, dryFloor 0 — the shared C4 wet knob) |
 | `.tremolo(rate, depth)`                 | Amplitude LFO modulation                   |
 
-Distortion/clip shapes: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
+`.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,
+`shape` is the curve with no gain, and `distort(amount, shape)` is exactly `drive(amount).shape(shape)`.
+Reach for the pair instead of the bundle only when something must sit BETWEEN them, e.g.
+`.drive(3).lowpass(800, 1.0, 1, 3).shape("tube")` — drive into a saturating filter, then shape.
+Sprudel has only `distort()`; its voice model cannot express a node between the two.
+
+Distort / shape curves: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
 `"rectify"`, `"exp"`
 
-Oversample factor (on `.distort` / `.clip`): user-facing factor, floored to power of 2. `0` or `1` = off,
+Oversample factor (on `.distort` / `.shape`): user-facing factor, floored to power of 2. `0` or `1` = off,
 `2` = 2x, `4` = 4x, `8` = 8x. Suppresses aliasing for heavy / bright distortion (e.g. `"exp"`, `"fold"`,
 `"hard"`). Example: `Osc.saw().distort(0.8, "exp", 4)`.
 

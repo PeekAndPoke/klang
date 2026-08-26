@@ -57,7 +57,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("BrownNoise", IgnitorDsl.BrownNoise(depth = m(0)), 1),
         Triple("Ceil", IgnitorDsl.Ceil(inner = m(0)), 1),
         Triple("Clamp", IgnitorDsl.Clamp(inner = m(0), lo = m(1), hi = m(2)), 3),
-        Triple("Clip", IgnitorDsl.Clip(inner = m(0), shape = "fold", oversample = 3), 1),
+        Triple("Shape", IgnitorDsl.Shape(inner = m(0), shape = "fold", oversample = 3), 1),
         Triple("Coarse", IgnitorDsl.Coarse(inner = m(0), amount = m(1)), 2),
         Triple("Constant", IgnitorDsl.Constant(0.5), 0),
         Triple("Crackle", IgnitorDsl.Crackle(chaos = m(0)), 1),

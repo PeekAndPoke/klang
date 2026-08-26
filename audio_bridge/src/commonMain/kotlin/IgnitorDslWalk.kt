@@ -33,7 +33,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.BrownNoise -> listOf(depth)
         is IgnitorDsl.Ceil -> listOf(inner)
         is IgnitorDsl.Clamp -> listOf(inner, lo, hi)
-        is IgnitorDsl.Clip -> listOf(inner)
+        is IgnitorDsl.Shape -> listOf(inner)
         is IgnitorDsl.Coarse -> listOf(inner, amount)
         is IgnitorDsl.Constant -> emptyList()
         is IgnitorDsl.Crackle -> listOf(chaos)
@@ -145,7 +145,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.BrownNoise -> copy(depth = new[0])
         is IgnitorDsl.Ceil -> copy(inner = new[0])
         is IgnitorDsl.Clamp -> copy(inner = new[0], lo = new[1], hi = new[2])
-        is IgnitorDsl.Clip -> copy(inner = new[0])
+        is IgnitorDsl.Shape -> copy(inner = new[0])
         is IgnitorDsl.Coarse -> copy(inner = new[0], amount = new[1])
         is IgnitorDsl.Constant -> this
         is IgnitorDsl.Crackle -> copy(chaos = new[0])

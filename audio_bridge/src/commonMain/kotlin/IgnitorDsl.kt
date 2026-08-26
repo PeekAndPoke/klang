@@ -1349,7 +1349,7 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Pre-amplification stage. Boosts signal level before clipping.
+     * Pre-amplification stage. Boosts signal level before the waveshaper ([Shape]).
      * Types: "linear" (current gain curve).
      */
     @WireName("drive")
@@ -1375,8 +1375,8 @@ sealed interface IgnitorDsl {
      *  - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly),
      *    "stompbox" (diode pedal), "rectify" (full-wave).
      */
-    @WireName("clip")
-    data class Clip(
+    @WireName("shape")
+    data class Shape(
         val inner: IgnitorDsl,
         val shape: String = "soft",
         val oversample: Int = 0,
@@ -1388,8 +1388,8 @@ sealed interface IgnitorDsl {
 
     /**
      * Legacy distortion node. Kept for backward compatibility with serialized trees.
-     * New code should use [Drive] + [Clip] instead. The builder extension [IgnitorDsl.distort]
-     * creates a Clip(Drive(...)) chain.
+     * New code should use [Drive] + [Shape] instead. The builder extension [IgnitorDsl.distort]
+     * creates a Shape(Drive(...)) chain.
      */
     @WireName("distort")
     data class Distort(
@@ -1820,14 +1820,14 @@ fun IgnitorDsl.drive(amount: Double, driveType: String = "linear") =
     IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount), driveType)
 
 /**
- * Pure waveshaping without drive. See [IgnitorDsl.Clip] for the full list of supported [shape] values.
+ * Pure waveshaping without drive. See [IgnitorDsl.Shape] for the full list of supported [shape] values.
  *
  * Quick reference:
  *  - soft / gentle / softsat / cubic / exp / sineshaper — symmetric soft
  *  - hard / zerosquare / chebyshev / fold / linearfold — symmetric hard / wavefolding
  *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
  */
-fun IgnitorDsl.clip(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Clip(this, shape, oversample)
+fun IgnitorDsl.shape(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Shape(this, shape, oversample)
 
 // Envelope
 
@@ -1865,9 +1865,9 @@ fun IgnitorDsl.fm(
 // Effects
 
 /**
- * Applies waveshaping distortion with the given [amount] and clipping [shape].
+ * Applies waveshaping distortion with the given [amount] and waveshaper [shape].
  *
- * Equivalent to `this.drive(amount).clip(shape, oversample)`. See [IgnitorDsl.Clip] for the
+ * Equivalent to `this.drive(amount).shape(shape, oversample)`. See [IgnitorDsl.Shape] for the
  * full list of supported [shape] values.
  *
  * Quick reference:
@@ -1876,7 +1876,7 @@ fun IgnitorDsl.fm(
  *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
  */
 fun IgnitorDsl.distort(amount: Double, shape: String = "soft", oversample: Int = 0) =
-    IgnitorDsl.Clip(inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)), shape = shape, oversample = oversample)
+    IgnitorDsl.Shape(inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)), shape = shape, oversample = oversample)
 
 /** Applies bit-crush quantization at the given bit [amount]. */
 fun IgnitorDsl.crush(amount: Double) = IgnitorDsl.Crush(
@@ -2012,7 +2012,7 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     is IgnitorDsl.OnePoleLowpass -> inner.maxReleaseSec()
     is IgnitorDsl.Distort -> inner.maxReleaseSec()
     is IgnitorDsl.Drive -> inner.maxReleaseSec()
-    is IgnitorDsl.Clip -> inner.maxReleaseSec()
+    is IgnitorDsl.Shape -> inner.maxReleaseSec()
     is IgnitorDsl.Crush -> inner.maxReleaseSec()
     is IgnitorDsl.Coarse -> inner.maxReleaseSec()
     is IgnitorDsl.Phaser -> inner.maxReleaseSec()

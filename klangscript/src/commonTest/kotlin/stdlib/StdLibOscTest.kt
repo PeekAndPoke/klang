@@ -283,7 +283,7 @@ class StdLibOscTest : StringSpec({
 
     "distort chaining produces Clip(Drive(...))" {
         val dsl = evalIgnitorDsl("Osc.saw().distort(0.5)")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.oversample shouldBe 0
         val drive = dsl.inner
         drive.shouldBeInstanceOf<IgnitorDsl.Drive>()
@@ -292,7 +292,7 @@ class StdLibOscTest : StringSpec({
 
     "distort with oversample factor" {
         val dsl = evalIgnitorDsl("""Osc.saw().distort(0.8, "exp", 4)""")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe "exp"
         dsl.oversample shouldBe 4
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
@@ -411,22 +411,22 @@ class StdLibOscTest : StringSpec({
     }
 
     "clip chaining" {
-        val dsl = evalIgnitorDsl("""Osc.sine().clip("hard")""")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        val dsl = evalIgnitorDsl("""Osc.sine().shape("hard")""")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.shape shouldBe "hard"
     }
 
     "clip with default shape" {
-        val dsl = evalIgnitorDsl("Osc.sine().clip()")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        val dsl = evalIgnitorDsl("Osc.sine().shape()")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe "soft"
         dsl.oversample shouldBe 0
     }
 
     "clip with oversample factor" {
-        val dsl = evalIgnitorDsl("""Osc.sine().clip("hard", 2)""")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        val dsl = evalIgnitorDsl("""Osc.sine().shape("hard", 2)""")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe "hard"
         dsl.oversample shouldBe 2
     }
@@ -555,8 +555,8 @@ class StdLibOscTest : StringSpec({
     }
 
     "drive + clip chain" {
-        val dsl = evalIgnitorDsl("""Osc.saw().drive(0.3).clip("fold")""")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        val dsl = evalIgnitorDsl("""Osc.saw().drive(0.3).shape("fold")""")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe "fold"
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
     }

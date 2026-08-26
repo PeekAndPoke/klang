@@ -255,7 +255,7 @@ class GuitarClickHuntTest : StringSpec({
     fun chainWithSources(sourceMix: IgnitorDsl, distortShape: String = "chebyshev"): IgnitorDsl {
         val withBp = sourceMix.bandpass(1000.0, 0.1).plusDsl(lowEndBranch())
         val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-        val distorted = IgnitorDsl.Clip(
+        val distorted = IgnitorDsl.Shape(
             inner = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)),
             shape = distortShape, oversample = 8,
         )
@@ -372,7 +372,7 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(1000.0, 0.1).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val distorted = IgnitorDsl.Clip(
+            val distorted = IgnitorDsl.Shape(
                 inner = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)),
                 shape = shape, oversample = 4,
             )
@@ -407,7 +407,7 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(1000.0, 0.1).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val distorted = IgnitorDsl.Clip(
+            val distorted = IgnitorDsl.Shape(
                 inner = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(d)),
                 shape = "chebyshev", oversample = 8,
             )
@@ -714,7 +714,7 @@ private fun IgnitorDsl.lowpassMod(cutoff: IgnitorDsl, q: Double): IgnitorDsl =
 
 /** Mirrors `Osc.distort(amount, "chebyshev", 8)` — `factorToStages(8) = 3` (8x oversample). */
 private fun IgnitorDsl.distortChebyshev8(driveAmount: Double): IgnitorDsl =
-    IgnitorDsl.Clip(
+    IgnitorDsl.Shape(
         inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(driveAmount)),
         shape = "chebyshev",
         oversample = 8,
