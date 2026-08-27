@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import kotlin.random.Random
 
 /**
