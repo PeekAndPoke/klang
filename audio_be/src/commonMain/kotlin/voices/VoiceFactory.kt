@@ -31,7 +31,6 @@ import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.maxReleaseSec
 import kotlin.random.Random
 
 /**
@@ -259,21 +258,26 @@ class VoiceFactory(
             isOsci -> {
                 val resolvedAdsr = data.adsr.resolve(AdsrDef.defaultSynth)
 
-                // Extend voice lifetime to accommodate ignitor-level ADSR release if needed
-                val ignitorDsl = ignitorRegistry.get(sound ?: IgnitorRegistry.DEFAULT_SOUND)
-                val ignitorMaxRelease = ignitorDsl?.maxReleaseSec() ?: 0.0
-                val effectiveAdsr = if (ignitorMaxRelease > resolvedAdsr.release) {
-                    resolvedAdsr.copy(release = ignitorMaxRelease)
-                } else {
-                    resolvedAdsr
-                }
-
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-                val signal = playbackCtx.ignitorRegistry.createExciter(
+                // Build FIRST: the ignitor's release tail is a finding of the build, not a separate
+                // analysis of the DSL tree, so `effectiveAdsr` has to come after it.
+                val built = playbackCtx.ignitorRegistry.createExciter(
                     sound, data, freqHz ?: 0.0,
                     phasePools = playbackCtx.phasePools,
                     random = voiceRandom,
                 ) ?: return null
+                val signal = built.ignitor
+
+                // Extend voice lifetime to cover an ignitor-level release tail. Because the tail
+                // falls out of the build, `.oscp("release", ...)` overrides and folded release
+                // expressions are already resolved in it. null = nothing tail-bearing, or a release
+                // time that is itself modulated (no static answer): the voice's own release governs.
+                val ignitorTailSec = built.releaseTailSec ?: 0.0
+                val effectiveAdsr = if (ignitorTailSec > resolvedAdsr.release) {
+                    resolvedAdsr.copy(release = ignitorTailSec)
+                } else {
+                    resolvedAdsr
+                }
 
                 buildVoice(
                     data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,

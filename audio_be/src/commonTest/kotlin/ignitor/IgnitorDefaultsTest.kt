@@ -34,7 +34,7 @@ class IgnitorDefaultsTest : StringSpec({
     ): AudioBuffer {
         val data = VoiceData.empty.copy(sound = soundName, oscParams = oscParams)
         val exciter = registry.createExciter(soundName, data, freqHz)
-            ?: error("Unknown sound: $soundName")
+            ?.ignitor ?: error("Unknown sound: $soundName")
         val buffer = AudioBuffer(blockFrames)
         val ctx = IgniteContext(
             sampleRate = sampleRate,

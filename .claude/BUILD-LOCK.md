@@ -1,8 +1,22 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-26**
+**SINCE: 2026-08-27**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-27, claude-code session): Phases 0 and 1 of the ignitor envelope-ownership
+> plan, COMMITTED as two commits. Phase 0 drops the `IgniteContext` parameter from
+> `Ignitor.controlRateValueOrNull` (nothing read it); Phase 1 has the build report the release tail
+> in `BuiltIgnitor`, so `.oscp("release", …)` overrides and release expressions reach voice
+> lifetime, and deletes `maxReleaseSec()`. Green at both: :audio_be:jvmTest (1252) +
+> :audio_bridge:jvmTest (53), plus compileKotlinJs/Jvm across the project. Phase 2 (the
+> `.adsrOff()` / `Vca(on = false)` model) is NOT started — the maintainer owns that default.
+
+> Last action (2026-08-27, klang-ai session): two more probe renders (double-envelope A/B) —
+> NO source changes, no test runs. Confirmed: an ignitor-level ADSR is MULTIPLIED by the voice's
+> own (default) ADSR, so the authored curve comes out with exactly 2× the dB slope. Findings
+> written to `docs/tasks/ignitor-envelope-ownership.md`. No fix attempted — the maintainer owns
+> the design decision.
 
 > Last action (2026-08-26, klang-ai session): offline renders of five tiny A/B probe patches
 > (release-truncation investigation) — NO source changes, no test runs. Finding: `maxReleaseSec()`

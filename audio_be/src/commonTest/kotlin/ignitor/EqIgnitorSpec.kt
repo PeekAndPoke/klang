@@ -16,7 +16,6 @@ import io.peekandpoke.klang.audio_bridge.eq
 import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
-import io.peekandpoke.klang.audio_bridge.maxReleaseSec
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.optimize
 import kotlin.math.abs
@@ -720,14 +719,6 @@ class EqIgnitorSpec : StringSpec({
 
         // Block 0 configures all three cascade sections; block 1 skips all three.
         eq.staticConfigureSkips shouldBe 3
-    }
-
-    "Eq maxReleaseSec delegates to inner" {
-        val dsl = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = c(0.5)),
-            sections = listOf(EqSection.Lowpass(c(1000.0), c(1.0))),
-        )
-        dsl.maxReleaseSec() shouldBe 0.5
     }
 
     "Eq collectParams walks inner first, then sections in list order" {

@@ -29,9 +29,10 @@ class IgnitorRegistry(
 
     /**
      * Optimized twin of [defs] — what voices actually render. Kept separate so [get] can keep
-     * returning the AUTHORED tree, which `VoiceFactory` reads for `maxReleaseSec` (voice
-     * lifetime must follow what the user wrote) and which keeps the two trees comparable for
-     * debugging. The by-ear A/B does NOT go through here: `.optimizer(0)` travels in the tree
+     * returning the AUTHORED tree, which live coding re-registers under new names and which keeps
+     * the two trees comparable for debugging. (Until 2026-08-27 `VoiceFactory` also read [get] for
+     * `maxReleaseSec`, so authored-vs-optimized could diverge on voice lifetime; the tail now comes
+     * out of the build of the OPTIMIZED tree, so there is one source and that hazard is gone.) The by-ear A/B does NOT go through here: `.optimizer(0)` travels in the tree
      * itself, so `optimized()` simply returns it untouched.
      */
     private val optimizedDefs = mutableMapOf<String, IgnitorDsl>()
@@ -75,7 +76,7 @@ class IgnitorRegistry(
     internal var optimizerFailures: Int = 0
         private set
 
-    /** The tree AS AUTHORED (VoiceFactory's `maxReleaseSec` source). See [optimized] for what renders. */
+    /** The tree AS AUTHORED. See [optimized] for what renders. */
     fun get(name: String): IgnitorDsl? = defs[name.lowercase()] ?: parent?.get(name)
 
     /**
@@ -109,7 +110,7 @@ class IgnitorRegistry(
         phasePools: PhasePools? = null,
         /** The voice's random stream (seeded-voice-rng; see IgniteContext.random). */
         random: Random = Random,
-    ): Ignitor? {
+    ): BuiltIgnitor? {
         val key = (name ?: DEFAULT_SOUND).lowercase()
         val oscParams = data.oscParams
 
@@ -118,16 +119,17 @@ class IgnitorRegistry(
         // silently rendering unoptimized instead of failing a test.
         val dsl = optimized(key) ?: return null
 
-        val raw = dsl.toExciter(
+        val raw = dsl.buildExciter(
             oscParams,
             soundIndex = data.soundIndex ?: 0,
             phasePools = phasePools,
             orbit = data.cylinder ?: 0,
             random = random,
+            freqHz = freqHz,
         )
         val onepoleHz = oscParams?.get("onepole") ?: 0.0
         // Same kernel as the ignitor-door onepole(freq) — one filter, one law, both doors.
-        return if (onepoleHz > 0.0) raw.onePoleLowpass(onepoleHz) else raw
+        return if (onepoleHz > 0.0) raw.copy(ignitor = raw.ignitor.onePoleLowpass(onepoleHz)) else raw
     }
 
     /** Create a child that delegates to this registry for keys not found locally. */

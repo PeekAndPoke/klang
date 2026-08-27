@@ -27,9 +27,9 @@ class IgnitorRegistryTest : StringSpec({
     // ── The optimizer seam ────────────────────────────────────────────────────
 
     "register optimizes once, and get() still returns the AUTHORED tree" {
-        // get() must stay authored: VoiceFactory reads it for maxReleaseSec, so voice lifetime
-        // follows what the user wrote. (The by-ear A/B does NOT go through here — .optimizer(0)
-        // travels inside the tree and comes back out of optimized() untouched.)
+        // get() must stay authored: live coding re-registers trees under new names from it, and it
+        // keeps the two trees comparable for debugging. (The by-ear A/B does NOT go through here —
+        // .optimizer(0) travels inside the tree and comes back out of optimized() untouched.)
         val registry = IgnitorRegistry()
         val authored = IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0)
         registry.register("gtr", authored)
@@ -64,7 +64,7 @@ class IgnitorRegistryTest : StringSpec({
             it.sections.size shouldBe 2
         }
         // BOTH maps: a getOrPut on defs alone would keep serving the stale authored tree to
-        // VoiceFactory's maxReleaseSec, with optimized() looking perfectly fine.
+        // every get() caller, with optimized() looking perfectly fine.
         registry.get("s").shouldBeInstanceOf<IgnitorDsl.Notch>()
             .inner.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
             .inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
@@ -78,7 +78,7 @@ class IgnitorRegistryTest : StringSpec({
         val registry = IgnitorRegistry()
         registry.register("gtr", IgnitorDsl.Sawtooth().notch(210.0, 2.5).lowpass(5300.0))
 
-        val exciter = registry.createExciter("gtr", VoiceData.empty.copy(sound = "gtr"), 440.0)!!
+        val exciter = registry.createExciter("gtr", VoiceData.empty.copy(sound = "gtr"), 440.0)!!.ignitor
 
         exciter.shouldBeInstanceOf<MemoizingIgnitor>()
             .inner.shouldBeInstanceOf<EqIgnitor>()
@@ -182,7 +182,7 @@ class IgnitorRegistryTest : StringSpec({
         registry.register("sine", IgnitorDsl.Sine())
 
         val data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0)
-        val signal = registry.createExciter("sine", data, 440.0)
+        val signal = registry.createExciter("sine", data, 440.0)?.ignitor
 
         signal shouldNotBe null
 
@@ -214,8 +214,8 @@ class IgnitorRegistryTest : StringSpec({
 
         val data = VoiceData.empty.copy(sound = "test", freqHz = 440.0)
 
-        val sig1 = registry.createExciter("test", data, 440.0)
-        val sig2 = registry.createExciter("test", data, 440.0)
+        val sig1 = registry.createExciter("test", data, 440.0)?.ignitor
+        val sig2 = registry.createExciter("test", data, 440.0)?.ignitor
 
         sig1 shouldNotBe null
         sig2 shouldNotBe null
@@ -272,7 +272,7 @@ class IgnitorRegistryTest : StringSpec({
 
         fun render(soundIndex: Int?): AudioBuffer {
             val data = VoiceData.empty.copy(sound = "v", freqHz = 440.0, soundIndex = soundIndex)
-            val sig = registry.createExciter("v", data, 440.0)!!
+            val sig = registry.createExciter("v", data, 440.0)!!.ignitor
             val buffer = AudioBuffer(blockFrames)
             sig.generate(buffer, 440.0, ctx())
             return buffer

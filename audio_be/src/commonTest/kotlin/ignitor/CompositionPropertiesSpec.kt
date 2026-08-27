@@ -260,7 +260,7 @@ class CompositionPropertiesSpec : StringSpec({
         val tree = IgnitorDsl.Plus(s, IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0)))
 
         val cache = IgnitorBuildCache()
-        val plus = tree.buildIgnitor(null, cache)
+        val plus = tree.buildIgnitor(null, cache).ignitor
 
         // The two arms should be independent (different cache entries due to different mods).
         // Verify by rendering over multiple blocks: if both were the same oscillator,

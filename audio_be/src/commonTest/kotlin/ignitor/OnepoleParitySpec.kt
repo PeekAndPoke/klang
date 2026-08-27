@@ -72,7 +72,7 @@ class OnepoleParitySpec : StringSpec({
         fun exciter(params: Map<String, Double>?): Ignitor {
             val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", oscParams = params)
             return registry.createExciter("sine", data, freqHz = 220.0, random = Random(7))
-                ?: error("no exciter")
+                ?.ignitor ?: error("no exciter")
         }
         val viaOscParam = render(exciter(mapOf("onepole" to 800.0)))
         val manual = render(exciter(null).onePoleLowpass(800.0))

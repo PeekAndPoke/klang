@@ -280,21 +280,12 @@ class IgnitorDslOptimizerSpec : StringSpec({
         after.map { it.name }.distinct() shouldBe before.map { it.name }.distinct()
     }
 
-    "maxReleaseSec is unchanged by optimization" {
-        val chained = IgnitorDsl.Sawtooth()
-            .adsr(0.01, 0.2, 0.5, 1.5)
-            .lowpass(5300.0)
-            .notch(210.0, 2.5)
-
-        chained.optimize().maxReleaseSec() shouldBe chained.maxReleaseSec()
-
-        // With the kill switch on the tree too: VoiceFactory reads the AUTHORED tree, which
-        // always still contains the hint, so a wrong passthrough arm truncates voice lifetime
-        // and cuts the release tail of any sound carrying .optimizer(...) — for BOTH on values.
-        val marked = chained.optimizer(on = 0)
-        marked.maxReleaseSec() shouldBe chained.maxReleaseSec()
-        marked.optimize().maxReleaseSec() shouldBe chained.maxReleaseSec()
-    }
+    // NOTE: "maxReleaseSec is unchanged by optimization" lived here until 2026-08-27. It existed
+    // only because ONE question (how long is the release tail?) was answered on TWO structures that
+    // could drift: VoiceFactory analysed the AUTHORED tree while voices rendered the OPTIMIZED one.
+    // The tail now falls out of the build of the tree that actually renders, so there is one source
+    // and the drift is unrepresentable — the guard has no equivalent. See
+    // `docs/tasks/ignitor-envelope-ownership.md`.
 
     // ── Kill switch ───────────────────────────────────────────────────────────
 

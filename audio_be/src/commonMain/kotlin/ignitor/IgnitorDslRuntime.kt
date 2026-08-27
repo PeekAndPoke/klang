@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import kotlin.random.Random
 
@@ -34,16 +35,30 @@ import kotlin.random.Random
  * 1.0 = no change) that is accumulated and passed down to the source oscillator via
  * [ModApplyingIgnitor]. Insert effects and binary ops pass the mod through transparently.
  */
+fun IgnitorDsl.buildExciter(
+    oscParams: Map<String, Double>? = null,
+    soundIndex: Int = 0,
+    phasePools: PhasePools? = null,
+    orbit: Int = 0,
+    random: Random = Random,
+    freqHz: Double = 0.0,
+): BuiltIgnitor {
+    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit, random, freqHz)
+    return buildIgnitor(oscParams, cache)
+}
+
+/**
+ * Signal-only convenience over [buildExciter], for callers that do not need the build's findings
+ * (see [BuiltIgnitor]). The production path goes through [buildExciter], because voice lifetime
+ * needs the release tail.
+ */
 fun IgnitorDsl.toExciter(
     oscParams: Map<String, Double>? = null,
     soundIndex: Int = 0,
     phasePools: PhasePools? = null,
     orbit: Int = 0,
     random: Random = Random,
-): Ignitor {
-    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit, random)
-    return buildIgnitor(oscParams, cache)
-}
+): Ignitor = buildExciter(oscParams, soundIndex, phasePools, orbit, random).ignitor
 
 /**
  * Identity-based cache for DSL → Ignitor conversion, keyed on `(DSL node identity, mod identity)`.
@@ -67,16 +82,22 @@ internal class IgnitorBuildCache(
      *  instance from the context. Carried like [soundIndex] to reach the source branches
      *  without threading a parameter through every recursive call. */
     val random: Random = Random,
+    /** The note's base frequency. Build-time control-rate reads need it ([FreqIgnitor] answers with
+     *  it), which is how a pitch-relative release such as `Osc.freq().recip().mul(200)` resolves for
+     *  voice lifetime. Carried here like [soundIndex] rather than threaded through every arm. */
+    val freqHz: Double = 0.0,
 ) {
     private val dslKeys = ArrayList<IgnitorDsl>()
     private val modKeys = ArrayList<Ignitor?>()
-    private val values = ArrayList<Ignitor>()
+    private val values = ArrayList<BuiltIgnitor>()
 
-    inline fun getOrPut(key: IgnitorDsl, mod: Ignitor?, compute: () -> Ignitor): Ignitor {
+    inline fun getOrPut(key: IgnitorDsl, mod: Ignitor?, compute: () -> BuiltIgnitor): BuiltIgnitor {
         for (i in dslKeys.indices) {
             if (dslKeys[i] === key && modKeys[i] === mod) {
                 val existing = values[i]
-                if (existing is MemoizingIgnitor) existing.incConsumers()
+                val ignitor = existing.ignitor
+                if (ignitor is MemoizingIgnitor) ignitor.incConsumers()
+                // The tail rides along with the cached value on purpose — see [BuiltIgnitor].
                 return existing
             }
         }
@@ -97,12 +118,14 @@ internal fun IgnitorDsl.buildIgnitor(
     oscParams: Map<String, Double>?,
     cache: IgnitorBuildCache,
     accumulatedMod: Ignitor? = null,
-): Ignitor {
-    // ── Leaves: direct return, no cache. ──
+): BuiltIgnitor {
+    // ── Leaves: direct return, no cache. Note the oscParams lookup: an `.oscp(...)` override is
+    //    folded into the leaf HERE, so any later read of this node (including the build-time
+    //    release read in the Adsr arm) sees the overridden value with no second lookup rule. ──
     when (this) {
-        is IgnitorDsl.Param -> return ParamIgnitor(name, oscParams?.get(name) ?: default)
-        is IgnitorDsl.Constant -> return ConstantIgnitor(value)
-        is IgnitorDsl.Freq -> return FreqIgnitor
+        is IgnitorDsl.Param -> return BuiltIgnitor(ParamIgnitor(name, oscParams?.get(name) ?: default))
+        is IgnitorDsl.Constant -> return BuiltIgnitor(ConstantIgnitor(value))
+        is IgnitorDsl.Freq -> return BuiltIgnitor(FreqIgnitor)
         else -> { /* fall through */
         }
     }
@@ -123,47 +146,53 @@ internal fun IgnitorDsl.buildIgnitor(
     when (this) {
         is IgnitorDsl.Vibrato -> {
             val vibMod = vibratoModIgnitor(
-                rate = this.rate.buildIgnitor(oscParams, cache),
-                semitones = this.semitones.buildIgnitor(oscParams, cache),
+                rate = this.rate.buildIgnitor(oscParams, cache).ignitor,
+                semitones = this.semitones.buildIgnitor(oscParams, cache).ignitor,
             )
             return inner.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, vibMod))
         }
 
         is IgnitorDsl.Accelerate -> {
-            val accelMod = accelerateModIgnitor(this.semitones.buildIgnitor(oscParams, cache))
+            val accelMod = accelerateModIgnitor(this.semitones.buildIgnitor(oscParams, cache).ignitor)
             return inner.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, accelMod))
         }
 
         is IgnitorDsl.PitchEnvelope -> {
             val peMod = pitchEnvelopeModIgnitor(
-                attackSec = this.attackSec.buildIgnitor(oscParams, cache),
-                decaySec = this.decaySec.buildIgnitor(oscParams, cache),
-                releaseSec = this.releaseSec.buildIgnitor(oscParams, cache),
-                semitones = this.semitones.buildIgnitor(oscParams, cache),
-                curve = this.curve.buildIgnitor(oscParams, cache),
-                anchor = this.anchor.buildIgnitor(oscParams, cache),
+                attackSec = this.attackSec.buildIgnitor(oscParams, cache).ignitor,
+                decaySec = this.decaySec.buildIgnitor(oscParams, cache).ignitor,
+                releaseSec = this.releaseSec.buildIgnitor(oscParams, cache).ignitor,
+                semitones = this.semitones.buildIgnitor(oscParams, cache).ignitor,
+                curve = this.curve.buildIgnitor(oscParams, cache).ignitor,
+                anchor = this.anchor.buildIgnitor(oscParams, cache).ignitor,
             )
             return inner.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, peMod))
         }
 
         is IgnitorDsl.PitchMod -> {
-            val userMod = this.mod.buildIgnitor(oscParams, cache)
+            val userMod = this.mod.buildIgnitor(oscParams, cache).ignitor
             val ratioMod = deviationToRatioIgnitor(userMod)
             return inner.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, ratioMod))
         }
 
         is IgnitorDsl.Fm -> {
-            val modulatorIgnitor = modulator.buildIgnitor(oscParams, cache)
+            val modulatorBuilt = modulator.buildIgnitor(oscParams, cache)
             val fmMod = fmModIgnitor(
-                modulator = modulatorIgnitor,
-                ratio = this.ratio.buildIgnitor(oscParams, cache),
-                depth = this.depth.buildIgnitor(oscParams, cache),
-                envAttackSec = this.envAttackSec.buildIgnitor(oscParams, cache),
-                envDecaySec = this.envDecaySec.buildIgnitor(oscParams, cache),
-                envSustainLevel = this.envSustainLevel.buildIgnitor(oscParams, cache),
-                envReleaseSec = this.envReleaseSec.buildIgnitor(oscParams, cache),
+                modulator = modulatorBuilt.ignitor,
+                ratio = this.ratio.buildIgnitor(oscParams, cache).ignitor,
+                depth = this.depth.buildIgnitor(oscParams, cache).ignitor,
+                envAttackSec = this.envAttackSec.buildIgnitor(oscParams, cache).ignitor,
+                envDecaySec = this.envDecaySec.buildIgnitor(oscParams, cache).ignitor,
+                envSustainLevel = this.envSustainLevel.buildIgnitor(oscParams, cache).ignitor,
+                envReleaseSec = this.envReleaseSec.buildIgnitor(oscParams, cache).ignitor,
             )
-            return carrier.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, fmMod))
+            val carrierBuilt = carrier.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, fmMod))
+            // The modulator is not on the amplitude spine, but the old `maxReleaseSec` counted it
+            // (`maxOf(carrier, modulator)`). Keep counting it: over-counting only over-allocates
+            // lifetime, whereas dropping it would silently shorten voices that render fine today.
+            return carrierBuilt.copy(
+                releaseTailSec = maxTail(carrierBuilt.releaseTailSec, modulatorBuilt.releaseTailSec),
+            )
         }
 
         else -> { /* fall through to cache+memoize path */
@@ -172,7 +201,8 @@ internal fun IgnitorDsl.buildIgnitor(
 
     // ── Everything else: identity-cache + MemoizingIgnitor wrap. ──
     return cache.getOrPut(this, accumulatedMod) {
-        MemoizingIgnitor(buildRaw(oscParams, cache, accumulatedMod))
+        val raw = buildRaw(oscParams, cache, accumulatedMod)
+        raw.copy(ignitor = MemoizingIgnitor(raw.ignitor))
     }
 }
 
@@ -187,16 +217,33 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
  *
  * Source nodes apply [accumulatedMod] via [ModApplyingIgnitor].
  * Insert effects, binary ops, and other wrappers pass [accumulatedMod] through to their children.
+ *
+ * Also reports the subtree's release tail (see [BuiltIgnitor]), absorbed from signal-path children
+ * only. The absorb happens inside the local `withMod` helper, not per arm.
  */
 private fun IgnitorDsl.buildRaw(
     oscParams: Map<String, Double>?,
     cache: IgnitorBuildCache,
     accumulatedMod: Ignitor?,
-): Ignitor {
-    fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor = buildIgnitor(oscParams, cache, mod)
-    fun IgnitorDsl.noMod(): Ignitor = buildIgnitor(oscParams, cache)
+): BuiltIgnitor {
+    // Release tails are absorbed from the SIGNAL SPINE only, and the split already exists in every
+    // arm below: `withMod()` marks a signal-carrying edge (pitch mod propagates along it), `noMod()`
+    // a parameter position. Doing the absorb HERE, once, means no arm has to remember and a new node
+    // type cannot forget. Accepted rough edge: seven arms treat a parameter operand as signal for
+    // pitch-mod reasons (Pow.exp, Div/Mod.right, Clamp/Range bounds, Lerp.t, Select.cond), so their
+    // tails are absorbed too. That over-counts, which only over-allocates lifetime — harmless, and
+    // the opposite direction (under-counting) is what truncates.
+    var spineTail: Double? = null
 
-    return when (this) {
+    fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor {
+        val built = buildIgnitor(oscParams, cache, mod)
+        spineTail = maxTail(spineTail, built.releaseTailSec)
+        return built.ignitor
+    }
+
+    fun IgnitorDsl.noMod(): Ignitor = buildIgnitor(oscParams, cache).ignitor
+
+    val ignitor = when (this) {
         is IgnitorDsl.Param, is IgnitorDsl.Constant, is IgnitorDsl.Freq ->
             error("Leaf DSL nodes must be built in buildIgnitor, not buildRaw")
 
@@ -430,16 +477,33 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Envelope: pass mod through ──
 
-        is IgnitorDsl.Adsr -> inner.withMod().adsr(
-            attackSec.noMod(), decaySec.noMod(), sustainLevel.noMod(), releaseSec.noMod(),
-            // Unset curve = "exp" on EVERY stage and EVERY door (maintainer decision,
-            // 2026-08-24) — the strip path's AdsrDef.Resolved already defaults Exponential.
-            attackCurve ?: AdsrCurve.Default,
-            decayCurve ?: AdsrCurve.Default,
-            releaseCurve ?: AdsrCurve.Default,
-            declickSeconds = declickSeconds.noMod(),
-            expK = expK.noMod(),
-        )
+        is IgnitorDsl.Adsr -> {
+            // Order matters and is unchanged: build order IS rng draw order (IgniteContext.random),
+            // so inner / attack / decay / sustain / release / declick / expK stay in sequence.
+            val innerIgnitor = inner.withMod()
+            val attack = attackSec.noMod()
+            val decay = decaySec.noMod()
+            val sustain = sustainLevel.noMod()
+            val release = releaseSec.noMod()
+
+            // This node's own tail. controlRateValueOrNull folds Constant/Param leaves AND pointwise
+            // expressions over them, so `pRel.mul(2)` and `Osc.freq().recip().mul(200)` resolve
+            // exactly, and an `.oscp("release", ...)` override is already baked into the ParamIgnitor
+            // (see the Param leaf in buildIgnitor). null = the release time is itself modulated, so
+            // no static answer exists: contribute nothing rather than guess.
+            spineTail = maxTail(spineTail, release.controlRateValueOrNull(cache.freqHz))
+
+            innerIgnitor.adsr(
+                attack, decay, sustain, release,
+                // Unset curve = "exp" on EVERY stage and EVERY door (maintainer decision,
+                // 2026-08-24) — the strip path's AdsrDef.Resolved already defaults Exponential.
+                attackCurve ?: AdsrCurve.Default,
+                decayCurve ?: AdsrCurve.Default,
+                releaseCurve ?: AdsrCurve.Default,
+                declickSeconds = declickSeconds.noMod(),
+                expK = expK.noMod(),
+            )
+        }
 
         // ── Effects: pass mod through to inner ──
 
@@ -452,4 +516,6 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Tremolo -> inner.withMod().tremolo(rate.noMod(), depth.noMod())
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, dryFloor.noMod())
     }
+
+    return BuiltIgnitor(ignitor, spineTail)
 }

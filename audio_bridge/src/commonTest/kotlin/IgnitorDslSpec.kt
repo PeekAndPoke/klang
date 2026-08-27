@@ -10,7 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Platform-agnostic `IgnitorDsl` logic: builder factory shapes + tree walks (`collectParams`, `maxReleaseSec`).
+ * Platform-agnostic `IgnitorDsl` logic: builder factory shapes + tree walks (`collectParams`).
  *
  * Wire round-trips live in the JS-only `IgnitorDslWireCodecSpec` (the worklet codec uses `dynamic`); these are
  * pure data/logic and stay in commonTest.
@@ -130,21 +130,6 @@ class IgnitorDslSpec : StringSpec({
         val params = mutableListOf<IgnitorDsl.Param>()
         dsl.collectParams(params)
         params.map { it.name } shouldBe listOf("a", "b")
-    }
-
-    "Variants.maxReleaseSec takes the max across children" {
-        val dsl = IgnitorDsl.Variants(
-            listOf(
-                IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2),
-                IgnitorDsl.Sawtooth().adsr(0.01, 0.1, 0.5, 1.5),
-                IgnitorDsl.Square().adsr(0.01, 0.1, 0.5, 0.8),
-            )
-        )
-        dsl.maxReleaseSec() shouldBe 1.5
-    }
-
-    "Variants.maxReleaseSec returns 0 for empty children" {
-        IgnitorDsl.Variants(emptyList()).maxReleaseSec() shouldBe 0.0
     }
 
     "getParamSlots returns exactly the Params collectParams gathers" {
