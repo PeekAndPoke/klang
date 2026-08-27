@@ -1,14 +1,16 @@
 # Ignitor envelope ownership — the double-ADSR problem
 
-> **Status (2026-08-27): PLAN AGREED, implementation not started.** Found by the maintainer by ear
+> **Status (2026-08-27): Phases 0+1 SHIPPED, Phase 3 planned.** Found by the maintainer by ear
 > ("the release tail is cut off, causing these ugly cracks"), then reproduced and measured with
 > offline probe renders. The design was settled in a review round on 2026-08-27: build from
 > **[THE PLAN](#-the-plan-agreed-2026-08-27)** below, which supersedes the earlier direction
 > sections. Everything from "Design conversation" onward is kept as the reasoning record so it is
 > not re-derived; where it conflicts with THE PLAN, THE PLAN wins.
 >
-> **Scope of the agreed work: voice LIFETIME only.** Whether the sprudel / pipeline VCA envelope
-> applies at all stays explicit and user-controlled, and is a separate pass.
+> **Phases 0 and 1 (voice LIFETIME) are DONE and committed**, 2026-08-27: `controlRateValueOrNull`
+> lost its render context, and the build now reports the release tail in `BuiltIgnitor`, so `oscp`
+> overrides and release expressions reach lifetime. **Phase 3 (the VCA on/off model) is decided and
+> not started** — explicit `.adsrOff()` / `Vca(on = false)`, nothing inferred.
 
 ## The short version
 
@@ -212,14 +214,103 @@ Checked while designing this; useful if the tail question is ever escalated to r
   `KlangScriptOscExtensions.kt:386`/`:391` are a DIFFERENT pair that build `IgnitorDsl.Detune`, so
   they do not cover these. Add specs (do not delete them) before the workstream closes.
 
-### Still open (not blocking this work)
+### ✅ PHASE 3 (decided 2026-08-27): explicit only, nothing inferred
 
-With nothing inferred, an ignitor that declares its own envelope still **compounds** with the voice
-envelope until someone turns the VCA off. The explicit surfaces for that are `.adsrOff()` on the
-sprudel door and `Vca(on = false)` as a pipeline default (see "Three states, expressed as a flag" and
-"`Vca(on = false)` is a soft default" below, both still current). Open question for that pass:
-**should the pipeline default flip**, so engines built around self-enveloping ignitors get
-`Vca(on = false)` as their norm? Nothing in the lifetime work presumes an answer.
+Phases 0 and 1 shipped voice LIFETIME. Phase 3 is the other half: stopping the two envelopes from
+compounding. **Decision: the VCA is switched off explicitly, never inferred.**
+
+Maintainer, 2026-08-27, after re-opening and closing the question: *"engine stays raw is correct
+then. So we go for explicit `.adsrOff()` -> `Vca(on = false)`."*
+
+**What was reconsidered and rejected again.** The tempting rule is row 1 of the old table: *ignitor
+has an envelope + `on == null` -> VCA off*, so the common case needs no ceremony. It was re-proposed
+and dropped, because the engine has no signal that can answer "does the ignitor own amplitude", and
+the one it does have cannot be repurposed:
+
+- **`releaseTailSec != null` is not that signal.** It reports non-null for an FM modulator's envelope
+  (deliberately, see the `Fm` arm and `IgnitorTailSpec`), for `Osc.sine().adsr(...).plus(noise)` where
+  only one summand is enveloped, and for the seven parameter slots that are absorbed as signal
+  (`Pow.exp`, `Div`/`Mod.right`, `Clamp`/`Range` bounds, `Lerp.t`, `Select.cond`).
+- **The error direction inverts.** `releaseTailSec` is tuned to err LARGE on purpose, because
+  over-counting only keeps a silent voice alive slightly too long. Wire the same number to an on/off
+  switch and every over-count becomes a bare gate, which has 1 ms of declick against a 24 ms period
+  at E1. That is an audible click regression, strictly worse than the compounding it would replace.
+- A correct signal would need its own conservative test (an `Adsr` on the unbranched chain from the
+  root, `else -> false` so it fails safe). Buildable, ~20 lines, and deliberately not built: it is
+  inference, and inference is what the maintainer ruled out twice.
+
+So: an ignitor with its own envelope still compounds until someone says otherwise. That is the raw
+behaviour, and the author has one obvious lever.
+
+#### Resolution order
+
+One resolved value, three layers: **sprudel per-voice, then the pipeline's `Vca` stage, then `true`.**
+
+| resolved `on` | what the VCA stage does |
+|---|---|
+| `true` (or nothing set anywhere) | renders the ADSR as today; an ignitor envelope compounds |
+| `false` | renders a unity gate through the declick smoother; the ignitor owns amplitude |
+
+Voice lifetime is unaffected either way: Phase 1 already covers the ignitor's tail.
+
+#### Work items
+
+**A. `AdsrDef.Std` gains `on: Boolean? = null`.** `mergeWith`: `on = on ?: other.on`. `resolve`:
+`on = on ?: d.on ?: true`, and `AdsrDef.Resolved` gains a non-null `on: Boolean`.
+
+> **It must be `Boolean? = null`, not `= true`.** A non-null default makes the inherit shape
+> (`AdsrDef.empty`) carry an explicit `true`, so `on ?: other.on` could never reach a pipeline-level
+> `Vca(on = false)` and the whole layer would be dead. There is a spec for exactly this below.
+
+Wire: `kotlin.Boolean` is already in the codec's scalar set (`WireCodecProcessor.kt:66`) and is
+pass-through, so this is a KSP regen and no codec work. It happens to be the first Boolean on the
+wire, which is why none appears in the generated file today.
+
+**B. Both doors get `.adsrOff()` / `.adsrOn()`** (see the dual-surface rule: every surface function
+lands on the script stdlib AND the Kotlin extensions). Sprudel side: `SvdAdsr.on`, `mergeSvdAdsr`,
+the three receiver forms `adsr` already has in `lang_dynamics.kt` (`:1372`, `:1400`, `:1638`), and
+the parser mapping at `MnPatternToSprudelPattern.kt:225`.
+
+**C. `StageDsl.Vca` gains `on: Boolean = true`**, alongside `expK` and `declickSeconds`. Non-null
+here on purpose: `Vca` IS the fallback layer, so it has no "unset" state to express. This is a soft
+default, not a structural switch: the structural switch already exists, since `PipelineDsl` is an
+ordered list and a pipeline may simply omit the stage.
+
+> **The built-in engines keep `on = true`.** Flipping `modern` / `pedal` would change how every
+> existing song sounds. `Vca(on = false)` is there for engines built around self-enveloping ignitors.
+
+**D. `on = false` renders a GATE, not a bypass.** `EnvelopeRenderer.kt:100-143` does three things per
+sample: evaluate the curve, run the one-pole declick smoother, multiply into the buffer. Feed a
+constant 1.0 through the same smoother and skip only the curve evaluation. That keeps nearly all the
+CPU saving (the branch table is the expensive part) and all of the safety, because the declick is the
+only thing rounding the note-off corner, and an envelope-less voice is exactly where a discontinuity
+is guaranteed. Mirror in `EnvelopeCalc.kt`.
+
+**E. Specs.**
+- merge reaches the pipeline: an all-null voice ADSR plus `Vca(on = false)` resolves to off. This is
+  the guard for the `Boolean? = null` requirement above; make it red under `on: Boolean = true`.
+- render: `on = false` gives unity gain (not zero, not a bypass) and still rounds the note-off corner.
+- `.adsrOff()` keeps its numbers and `.adsrOn()` restores them. This is the property that chose a
+  flag over an `AdsrDef.None` variant: in a live-coding language you flip it back for an A/B.
+
+#### ⚠️ Expect a re-tune
+
+Every ignitor with an internal ADSR was authored against the squared curve. Switching the VCA off
+makes those envelopes longer and louder in their tails than they were tuned to be. Der Schmetterling's
+guitar (`decay 1.5, sustain 0.05, release 0.013`) currently compensates for the bug and will not sound
+the same afterwards. Land with a version note so the change is attributable.
+
+### Still open (nothing blocking)
+
+- **`AdsrDef`'s sealed hierarchy has exactly one implementor and always has.** Checked across all
+  eleven revisions of the file: it was a plain `data class` until `77b3fdf0`, became
+  `sealed interface { data class Std }` at `9c540a52`, and gained `@WireName("std")` at `b7b31bbf`.
+  No second variant was ever written and removed. Cost: every ADSR on the wire carries a `"#t": "std"`
+  discriminator with one possible value, plus dispatch on both sides. Kept anyway, because it is the
+  wire convention (sealed `@WireName` hierarchies over enums) and because the AD / one-shot envelope
+  that ignores the gate is a real candidate that `Std` values cannot express. Do not flatten it as a
+  side effect of envelope work; if the tax is ever worth removing, that is its own decision.
+
 
 ## Measurement 1 — the curves compound (2× dB slope)
 
