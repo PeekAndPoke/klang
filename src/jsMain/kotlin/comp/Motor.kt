@@ -16,7 +16,6 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -29,6 +28,7 @@ import kotlinx.css.WhiteSpace
 import kotlinx.css.bottom
 import kotlinx.css.color
 import kotlinx.css.display
+import kotlinx.css.em
 import kotlinx.css.flexDirection
 import kotlinx.css.fontFamily
 import kotlinx.css.fontWeight
@@ -36,15 +36,11 @@ import kotlinx.css.height
 import kotlinx.css.left
 import kotlinx.css.lineHeight
 import kotlinx.css.marginBottom
-import kotlinx.css.marginLeft
-import kotlinx.css.marginRight
 import kotlinx.css.opacity
 import kotlinx.css.pct
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.properties.LineHeight
-import kotlinx.css.properties.scaleX
-import kotlinx.css.properties.transform
 import kotlinx.css.px
 import kotlinx.css.right
 import kotlinx.css.textAlign
@@ -56,7 +52,7 @@ import kotlinx.html.div
 import kotlinx.html.title
 
 @Suppress("FunctionName")
-fun Tag.Motor() = comp {
+fun Tag.Motoer() = comp {
     Motor(it)
 }
 
@@ -144,10 +140,9 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
 
                     onClick { router.navToUri(Nav.start()) }
 
-                    icon.music { css { marginRight = 10.px } }
-
                     ui.big.text {
                         css {
+                            height = 2.0.em
                             fontFamily = "monospace"
                             lineHeight = LineHeight("2.0em")
                             color = Color.white
@@ -156,8 +151,6 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                         }
                         +"KLANGMOTOR"
                     }
-
-                    icon.music { css { transform { scaleX(-1.0) }; marginLeft = 10.px } }
                 }
             }
         }

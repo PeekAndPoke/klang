@@ -7,7 +7,7 @@ package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.comp.Motor
+import io.peekandpoke.klang.comp.Motoer
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialScope
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
@@ -310,7 +310,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
             div {
                 key = "motor-container"
-                Motor()
+                Motoer()
             }
         }
     }

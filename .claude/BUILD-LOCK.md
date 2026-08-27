@@ -1,8 +1,14 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-25**
+**SINCE: 2026-08-26**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-26, klang-ai session): offline renders of five tiny A/B probe patches
+> (release-truncation investigation) — NO source changes, no test runs. Finding: `maxReleaseSec()`
+> reads Param DEFAULTS only, so an `.oscp("release", …)` override is invisible to voice lifetime;
+> a 1.5 s release requested via oscp is delivered as ~0.05 s. Not yet written up as a task doc —
+> the maintainer is thinking about the right fix. Do not "fix" it without them.
 
 > Last action (2026-08-25, klang-ai session): offline render of Der Schmetterling v52 only —
 > no source changes, no test runs. rpm 33.0, transposition 0; `--cycles 258` as ever.

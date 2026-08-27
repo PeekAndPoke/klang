@@ -20,11 +20,16 @@ in the same deliverable.
     all-Double), while the script door takes `IgnitorDslLike` per parameter — so the mixed
     `band(someDsl, 0.7, 6.0)` shape compiles in script but not in Kotlin, where the scalars
     need `IgnitorDsl.Constant(...)`. Names/defaults match (the rule holds in the letter);
-    expressiveness does not. **The older filter extensions are WORSE, not the same**:
-    `.lowpass()/.highpass()/.bandpass()/.notch()` have ONLY the all-`Double` form, with no
-    `IgnitorDsl` overload at all — so a tracking cutoff (`Osc.freq().mul(k)`, which the script
-    door supports and Der Schmetterling uses) is unreachable from Kotlin without hand-building
-    `IgnitorDsl.Highpass(...)`. Size the task from that, not from the Eq methods.
+    expressiveness does not.
+  - ✅ **The filter doors are DONE (2026-08-27).** They used to be the worst offenders:
+    `.lowpass()/.highpass()/.bandpass()/.notch()` had ONLY the all-`Double` form and no
+    `analog` parameter at all, so a tracking cutoff (`Osc.freq().mul(k)`, which the script
+    door supports and Der Schmetterling uses) was unreachable from Kotlin without hand-building
+    `IgnitorDsl.Highpass(...)`. All five (those four plus `onepole`) now ship an `IgnitorDsl`
+    primary plus a scalar convenience overload, the same shape `band`/`tap` already used, and
+    `analog` is in the same fourth slot on both doors. Pinned by
+    `KlangScriptFilterDoorParitySpec`, which compares the two doors node-for-node.
+    Behaviour-preserving: node and script door both defaulted `analog` to `Constant(0.0)`.
   - A full audit of script-stdlib functions vs Kotlin extensions has not been done; unknown
     smaller gaps likely (phasePool/analog/spreadPower/gainJitter etc. — check which exist as
     Kotlin extensions vs script-only).

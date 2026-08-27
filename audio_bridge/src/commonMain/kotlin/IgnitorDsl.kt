@@ -1695,11 +1695,27 @@ fun IgnitorDsl.detune(semitones: Double) = IgnitorDsl.Detune(
  * A resonant q compounds instead (`q = 1.0, passes = 2` is +3 dB at the cutoff). Coerced to
  * 1..[FILTER_MAX_PASSES]. Third slot on EVERY door: `lpf(freq, q, passes)`.
  */
-fun IgnitorDsl.lowpass(freq: Double, q: Double = 0.707, passes: Int = 1) = IgnitorDsl.Lowpass(
+fun IgnitorDsl.lowpass(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    passes: Int = 1,
+    analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Lowpass = IgnitorDsl.Lowpass(
     inner = this,
-    freq = IgnitorDsl.Constant(freq),
-    q = IgnitorDsl.Constant(q),
+    freq = freq,
+    q = q,
+    analog = analog,
     passes = passes,
+)
+
+/** Scalar convenience overload of [lowpass]. */
+fun IgnitorDsl.lowpass(
+    freq: Double,
+    q: Double = 0.707,
+    passes: Int = 1,
+    analog: Double = 0.0,
+): IgnitorDsl.Lowpass = lowpass(
+    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
 )
 
 /**
@@ -1707,11 +1723,27 @@ fun IgnitorDsl.lowpass(freq: Double, q: Double = 0.707, passes: Int = 1) = Ignit
  *
  * @param passes Cascade count — see [lowpass].
  */
-fun IgnitorDsl.highpass(freq: Double, q: Double = 0.707, passes: Int = 1) = IgnitorDsl.Highpass(
+fun IgnitorDsl.highpass(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    passes: Int = 1,
+    analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Highpass = IgnitorDsl.Highpass(
     inner = this,
-    freq = IgnitorDsl.Constant(freq),
-    q = IgnitorDsl.Constant(q),
+    freq = freq,
+    q = q,
+    analog = analog,
     passes = passes,
+)
+
+/** Scalar convenience overload of [highpass]. */
+fun IgnitorDsl.highpass(
+    freq: Double,
+    q: Double = 0.707,
+    passes: Int = 1,
+    analog: Double = 0.0,
+): IgnitorDsl.Highpass = highpass(
+    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
 )
 
 /**
@@ -1803,18 +1835,33 @@ fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 0.707, gain: Double = 1.0): Igni
  * control. ONE name on every door (formerly `onePoleLowpass`; the sprudel door's `warmth`
  * collapsed into this too).
  */
-fun IgnitorDsl.onepole(freq: Double) = IgnitorDsl.OnePoleLowpass(
+fun IgnitorDsl.onepole(freq: IgnitorDsl): IgnitorDsl.OnePoleLowpass = IgnitorDsl.OnePoleLowpass(
     inner = this,
-    freq = IgnitorDsl.Constant(freq),
+    freq = freq,
 )
 
-fun IgnitorDsl.bandpass(freq: Double, q: Double = 0.707) = IgnitorDsl.Bandpass(
-    this, IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q),
-)
+/** Scalar convenience overload of [onepole]. */
+fun IgnitorDsl.onepole(freq: Double): IgnitorDsl.OnePoleLowpass = onepole(IgnitorDsl.Constant(freq))
 
-fun IgnitorDsl.notch(freq: Double, q: Double = 0.707) = IgnitorDsl.Notch(
-    this, IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q),
-)
+fun IgnitorDsl.bandpass(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Bandpass = IgnitorDsl.Bandpass(inner = this, freq = freq, q = q, analog = analog)
+
+/** Scalar convenience overload of [bandpass]. */
+fun IgnitorDsl.bandpass(freq: Double, q: Double = 0.707, analog: Double = 0.0): IgnitorDsl.Bandpass =
+    bandpass(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog))
+
+fun IgnitorDsl.notch(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Notch = IgnitorDsl.Notch(inner = this, freq = freq, q = q, analog = analog)
+
+/** Scalar convenience overload of [notch]. */
+fun IgnitorDsl.notch(freq: Double, q: Double = 0.707, analog: Double = 0.0): IgnitorDsl.Notch =
+    notch(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog))
 
 fun IgnitorDsl.drive(amount: Double, driveType: String = "linear") =
     IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount), driveType)
