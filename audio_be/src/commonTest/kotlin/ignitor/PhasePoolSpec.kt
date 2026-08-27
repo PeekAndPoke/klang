@@ -295,7 +295,7 @@ class PhasePoolSpec : StringSpec({
 
     "phasePool on - mid-note voice-count change keeps ringing voices' phases (no re-selection click)" {
         class VoicesParam(var value: Double) : Ignitor {
-            override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double = value
+            override fun controlRateValueOrNull(freqHz: Double): Double = value
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 buffer.fill(value, ctx.offset, ctx.offset + ctx.length)
             }

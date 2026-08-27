@@ -32,8 +32,8 @@ internal class RenderCountProbe(private val inner: Ignitor) : Ignitor {
 
     override val isBlockConstant: Boolean get() = inner.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? =
-        inner.controlRateValueOrNull(freqHz, ctx)
+    override fun controlRateValueOrNull(freqHz: Double): Double? =
+        inner.controlRateValueOrNull(freqHz)
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         generateCalls++

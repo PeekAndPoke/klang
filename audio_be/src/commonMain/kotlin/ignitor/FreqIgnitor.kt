@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 object FreqIgnitor : Ignitor {
     override val isBlockConstant: Boolean get() = true
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double = freqHz
+    override fun controlRateValueOrNull(freqHz: Double): Double = freqHz
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         buffer.fill(freqHz, ctx.offset, ctx.offset + ctx.length)

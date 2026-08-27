@@ -42,35 +42,35 @@ class ControlRateValueSpec : StringSpec({
     // ── leaves report their scalar ──────────────────────────────────────────────
 
     "ConstantIgnitor returns its value" {
-        ConstantIgnitor(2.0).controlRateValueOrNull(0.0, ctx()) shouldBe 2.0
+        ConstantIgnitor(2.0).controlRateValueOrNull(0.0) shouldBe 2.0
     }
 
     "ParamIgnitor returns its default" {
-        ParamIgnitor("x", 3.0).controlRateValueOrNull(0.0, ctx()) shouldBe 3.0
+        ParamIgnitor("x", 3.0).controlRateValueOrNull(0.0) shouldBe 3.0
     }
 
     "FreqIgnitor returns the voice frequency" {
-        FreqIgnitor.controlRateValueOrNull(440.0, ctx()) shouldBe 440.0
+        FreqIgnitor.controlRateValueOrNull(440.0) shouldBe 440.0
     }
 
     // ── pointwise combinators fold over block-constant children ──────────────────
 
     "times folds two constants" {
-        (ConstantIgnitor(2.0) * ConstantIgnitor(3.0)).controlRateValueOrNull(0.0, ctx()) shouldBe 6.0
+        (ConstantIgnitor(2.0) * ConstantIgnitor(3.0)).controlRateValueOrNull(0.0) shouldBe 6.0
     }
 
     "plus folds two constants" {
-        (ConstantIgnitor(2.0) + ConstantIgnitor(3.0)).controlRateValueOrNull(0.0, ctx()) shouldBe 5.0
+        (ConstantIgnitor(2.0) + ConstantIgnitor(3.0)).controlRateValueOrNull(0.0) shouldBe 5.0
     }
 
     "freq-derived expression stays control-rate" {
         // FreqIgnitor * 2 → an octave up, resolvable without a buffer
-        (FreqIgnitor * ConstantIgnitor(2.0)).controlRateValueOrNull(220.0, ctx()) shouldBe 440.0
+        (FreqIgnitor * ConstantIgnitor(2.0)).controlRateValueOrNull(220.0) shouldBe 440.0
     }
 
     "folded value matches the rendered first sample" {
         val sig = (FreqIgnitor * ConstantIgnitor(2.0)) + ConstantIgnitor(10.0)
-        val cv = sig.controlRateValueOrNull(220.0, ctx())
+        val cv = sig.controlRateValueOrNull(220.0)
         cv.shouldNotBeNull()
         cv shouldBe (firstSample(sig, 220.0) plusOrMinus 1e-9)
     }
@@ -78,11 +78,11 @@ class ControlRateValueSpec : StringSpec({
     // ── stateful nodes are not control-rate ──────────────────────────────────────
 
     "an oscillator reports null" {
-        Ignitors.sine().controlRateValueOrNull(440.0, ctx()) shouldBe null
+        Ignitors.sine().controlRateValueOrNull(440.0) shouldBe null
     }
 
     "a combinator over a stateful child reports null" {
-        (Ignitors.sine() * ConstantIgnitor(2.0)).controlRateValueOrNull(440.0, ctx()) shouldBe null
+        (Ignitors.sine() * ConstantIgnitor(2.0)).controlRateValueOrNull(440.0) shouldBe null
     }
 
     // ── blockStartValue falls back to a one-sample render for stateful nodes ──────

@@ -27,7 +27,7 @@ class ParamIgnitor(
 
     override val isBlockConstant: Boolean get() = true
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double = defaultF
+    override fun controlRateValueOrNull(freqHz: Double): Double = defaultF
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         buffer.fill(defaultF, ctx.offset, ctx.offset + ctx.length)

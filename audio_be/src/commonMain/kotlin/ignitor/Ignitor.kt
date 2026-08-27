@@ -6,11 +6,8 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.AudioSample
-import io.peekandpoke.klang.audio_be.SAFE_MAX
 import io.peekandpoke.klang.audio_be.safeDiv
 import io.peekandpoke.klang.audio_be.safeOut
-
 import kotlin.math.ceil
 import kotlin.math.exp
 import kotlin.math.floor
@@ -50,16 +47,26 @@ interface Ignitor {
      * take the scalar directly instead of rendering a scratch buffer, and lets the pulse `duty` path pick
      * the bake-once render over per-sample PWM.
      *
+     * NO RENDER CONTEXT ON PURPOSE — the query is a pure function of the graph and [freqHz]. Every
+     * implementation either ignores the block or forwards to its children, so the [IgniteContext]
+     * parameter this used to carry was dead weight on all 34 overrides (audited 2026-08-27).
+     * Dropping it is what lets the ignitor BUILD ask a node its value at note-on, where no context
+     * exists yet (voice-lifetime resolution — see `docs/tasks/ignitor-envelope-ownership.md`). The
+     * per-block variation this interface does support arrives through [freqHz] (e.g. [FreqIgnitor]
+     * under detune), not through the block. If a node ever needs the block itself, add the
+     * parameter back as REQUIRED: that breaks every override and forces a decision at each one,
+     * which is the safe direction — a nullable one would fail silently.
+     *
      * CONTRACT (load-bearing since the constant-fold in `plus`/`times` consumes this on the
      * AUDIO path, not just for control-rate reads): an override MUST
-     *  1. be pure — no state advanced, no side effects, no `ctx` mutation; callable any number
-     *     of times per block, including zero;
+     *  1. be pure — no state advanced, no side effects; callable any number of times per block,
+     *     including zero;
      *  2. be bit-identical to the node's own [generate] output for every sample in
      *     `[offset, offset+length)` of the same block.
      * A node that is merely *slowly varying* must return `null` — a non-null value here turns
      * `x * node` into a stepped per-block multiply with no spec failing loudly.
      */
-    fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? = null
+    fun controlRateValueOrNull(freqHz: Double): Double? = null
 
     /**
      * Structural block-constancy: `true` iff [controlRateValueOrNull] returns non-null for every
@@ -80,7 +87,7 @@ interface Ignitor {
      * fallback). Not meant to be overridden.
      */
     fun blockStartValue(freqHz: Double, ctx: IgniteContext): Double =
-        controlRateValueOrNull(freqHz, ctx)
+        controlRateValueOrNull(freqHz)
             ?: ctx.scratchBuffers.use { tmp -> generate(tmp, freqHz, ctx); tmp[ctx.offset] }
 }
 
@@ -150,8 +157,8 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
         // path below, which is correct for every operand — degrade, never throw on the render
         // thread (an exception here kills the whole worklet processor, not one voice).
         if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
                 // Both constant: one add, one fill — bit-identical to the per-sample paths,
                 // which compute the same op on the same operands at every index.
@@ -165,7 +172,7 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
         }
 
         if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
                 addConstInPlace(buffer, ctx, kb)
@@ -174,7 +181,7 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
         }
 
         if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 addConstInPlace(buffer, ctx, ka)
@@ -193,9 +200,9 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = a.controlRateValueOrNull(freqHz) ?: return null
+        val y = b.controlRateValueOrNull(freqHz) ?: return null
         return x + y
     }
 }
@@ -223,8 +230,8 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
         // is bit-identical to `safeOut(v * tmp[i])` with `tmp[i] == k`, IEEE `*` is bitwise
         // commutative for non-NaN operands, and a block-constant operand is stateless.
         if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
                 // Both constant: one multiply, one safeOut, one fill — bit-identical to the
                 // per-sample paths, which compute the same op on the same operands per index.
@@ -234,7 +241,7 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
         }
 
         if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
                 mulConstInPlace(buffer, ctx, kb)
@@ -243,7 +250,7 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
         }
 
         if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 mulConstInPlace(buffer, ctx, ka)
@@ -262,9 +269,9 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = a.controlRateValueOrNull(freqHz) ?: return null
+        val y = b.controlRateValueOrNull(freqHz) ?: return null
         return safeOut(x * y)
     }
 }
@@ -286,8 +293,8 @@ private class MulConstIgnitor(private val upstream: Ignitor, private val factor:
         mulConstInPlace(buffer, ctx, factor)
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = upstream.controlRateValueOrNull(freqHz) ?: return null
         return safeOut(x * factor)
     }
 }
@@ -313,8 +320,8 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         // safeDiv on the divisor (hoisted once when the divisor is the constant side), safeOut
         // on the output.
         if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
                 buffer.fill(safeOut(ka / safeDiv(kb)), ctx.offset, ctx.offset + ctx.length)
                 return
@@ -322,7 +329,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
 
         if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 val d = safeDiv(kb)
                 a.generate(buffer, freqHz, ctx)
@@ -335,7 +342,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
 
         if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -357,9 +364,9 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = a.controlRateValueOrNull(freqHz) ?: return null
+        val y = b.controlRateValueOrNull(freqHz) ?: return null
         return safeOut(x / safeDiv(y))
     }
 }
@@ -386,8 +393,8 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
         // Constant-fold ladder — same contract and breach policy as PlusIgnitor. Minus is
         // NON-commutative: each arm keeps its side of the subtraction. Bare op (safety table).
         if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
                 buffer.fill(ka - kb, ctx.offset, ctx.offset + ctx.length)
                 return
@@ -395,7 +402,7 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
         }
 
         if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -407,7 +414,7 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
         }
 
         if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -429,9 +436,9 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = a.controlRateValueOrNull(freqHz) ?: return null
+        val y = b.controlRateValueOrNull(freqHz) ?: return null
         return x - y
     }
 }
@@ -450,8 +457,8 @@ private class NegIgnitor(private val upstream: Ignitor) : Ignitor {
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = upstream.controlRateValueOrNull(freqHz) ?: return null
         return -x
     }
 }
@@ -471,8 +478,8 @@ private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return if (v < 0.0) -v else v
     }
 }
@@ -495,8 +502,8 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
         // Constant-fold ladder — same contract and breach policy as PlusIgnitor. NON-commutative:
         // each arm keeps base/exp in their roles, signed-magnitude expr and safeOut verbatim.
         if (baseConst && expConst) {
-            val kb = base.controlRateValueOrNull(freqHz, ctx)
-            val ke = exp.controlRateValueOrNull(freqHz, ctx)
+            val kb = base.controlRateValueOrNull(freqHz)
+            val ke = exp.controlRateValueOrNull(freqHz)
             if (kb != null && ke != null) {
                 val raw = if (kb >= 0.0) kb.pow(ke) else -((-kb).pow(ke))
                 buffer.fill(safeOut(raw), ctx.offset, ctx.offset + ctx.length)
@@ -505,7 +512,7 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
         }
 
         if (expConst) {
-            val ke = exp.controlRateValueOrNull(freqHz, ctx)
+            val ke = exp.controlRateValueOrNull(freqHz)
             if (ke != null) {
                 base.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -519,7 +526,7 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
         }
 
         if (baseConst) {
-            val kb = base.controlRateValueOrNull(freqHz, ctx)
+            val kb = base.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 exp.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -546,9 +553,9 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val b = base.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val e = exp.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val b = base.controlRateValueOrNull(freqHz) ?: return null
+        val e = exp.controlRateValueOrNull(freqHz) ?: return null
         val raw = if (b >= 0.0) b.pow(e) else -((-b).pow(e))
         return safeOut(raw)
     }
@@ -568,8 +575,8 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         // value-commutative under NaN (`if (x < y) x else y` returns y when x is NaN), so both
         // arms keep `a` as the FIRST comparison operand exactly like the scratch loop.
         if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
                 buffer.fill(if (ka < kb) ka else kb, ctx.offset, ctx.offset + ctx.length)
                 return
@@ -577,7 +584,7 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
 
         if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -590,7 +597,7 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
 
         if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -614,9 +621,9 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = a.controlRateValueOrNull(freqHz) ?: return null
+        val y = b.controlRateValueOrNull(freqHz) ?: return null
         return if (x < y) x else y
     }
 }
@@ -633,8 +640,8 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         // See MinIgnitor — same ladder, same NaN-ordering care, with `>`.
         if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
                 buffer.fill(if (ka > kb) ka else kb, ctx.offset, ctx.offset + ctx.length)
                 return
@@ -642,7 +649,7 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
 
         if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -655,7 +662,7 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
 
         if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -679,9 +686,9 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = a.controlRateValueOrNull(freqHz) ?: return null
+        val y = b.controlRateValueOrNull(freqHz) ?: return null
         return if (x > y) x else y
     }
 }
@@ -702,8 +709,8 @@ private class ClampIgnitor(
         // Partial fold: block-constant bounds (the dominant `clamp(-1, 1)` shape) skip BOTH
         // scratch renders. Same breach policy as PlusIgnitor (null despite flag -> scratch path).
         if (boundsConst) {
-            val kl = lo.controlRateValueOrNull(freqHz, ctx)
-            val kh = hi.controlRateValueOrNull(freqHz, ctx)
+            val kl = lo.controlRateValueOrNull(freqHz)
+            val kh = hi.controlRateValueOrNull(freqHz)
             if (kl != null && kh != null) {
                 upstream.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -739,10 +746,10 @@ private class ClampIgnitor(
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val l = lo.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val h = hi.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+        val l = lo.controlRateValueOrNull(freqHz) ?: return null
+        val h = hi.controlRateValueOrNull(freqHz) ?: return null
         return when {
             v < l -> l
             v > h -> h
@@ -765,8 +772,8 @@ private class ExpIgnitor(private val upstream: Ignitor) : Ignitor {
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return safeOut(exp(v))
     }
 }
@@ -795,8 +802,8 @@ private class LogIgnitor(private val upstream: Ignitor) : Ignitor {
         }
     }
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return when {
             v > 0.0 -> ln(v)
             v < 0.0 -> -ln((-v))
@@ -811,8 +818,8 @@ fun Ignitor.sqrt(): Ignitor = SqrtIgnitor(this)
 private class SqrtIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return if (v >= 0.0) sqrt(v) else -sqrt((-v))
     }
 
@@ -832,8 +839,8 @@ fun Ignitor.sign(): Ignitor = SignIgnitor(this)
 private class SignIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return when {
             v > 0.0 -> 1.0
             v < 0.0 -> -1.0
@@ -861,8 +868,8 @@ fun Ignitor.tanh(): Ignitor = TanhIgnitor(this)
 private class TanhIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return tanh(v)
     }
 
@@ -888,10 +895,10 @@ private class LerpIgnitor(
     override val isBlockConstant: Boolean =
         a.isBlockConstant && b.isBlockConstant && tConst
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val tv = t.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = a.controlRateValueOrNull(freqHz) ?: return null
+        val y = b.controlRateValueOrNull(freqHz) ?: return null
+        val tv = t.controlRateValueOrNull(freqHz) ?: return null
         return x * (1.0 - tv) + y * tv
     }
 
@@ -902,7 +909,7 @@ private class LerpIgnitor(
         // overrides above (non-folding slots still run this loop — reachable, just rare).
         // Same breach policy as PlusIgnitor (null despite flag -> scratch path below).
         if (tConst) {
-            val kt = t.controlRateValueOrNull(freqHz, ctx)
+            val kt = t.controlRateValueOrNull(freqHz)
             if (kt != null) {
                 a.generate(buffer, freqHz, ctx)
                 ctx.scratchBuffers.use { otherBuf ->
@@ -943,10 +950,10 @@ private class RangeIgnitor(
 
     override val isBlockConstant: Boolean = upstream.isBlockConstant && boundsConst
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val l = lo.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val h = hi.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+        val l = lo.controlRateValueOrNull(freqHz) ?: return null
+        val h = hi.controlRateValueOrNull(freqHz) ?: return null
         return l + (v + 1.0) * 0.5 * (h - l)
     }
 
@@ -955,8 +962,8 @@ private class RangeIgnitor(
         // scratch renders. Single-const-bound combinatorics deliberately not done — rare shape.
         // Same breach policy as PlusIgnitor (null despite flag -> scratch path below).
         if (boundsConst) {
-            val kl = lo.controlRateValueOrNull(freqHz, ctx)
-            val kh = hi.controlRateValueOrNull(freqHz, ctx)
+            val kl = lo.controlRateValueOrNull(freqHz)
+            val kh = hi.controlRateValueOrNull(freqHz)
             if (kl != null && kh != null) {
                 upstream.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -989,8 +996,8 @@ fun Ignitor.bipolar(): Ignitor = BipolarIgnitor(this)
 private class BipolarIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return v * 2.0 - 1.0
     }
 
@@ -1009,8 +1016,8 @@ fun Ignitor.unipolar(): Ignitor = UnipolarIgnitor(this)
 private class UnipolarIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return (v + 1.0) * 0.5
     }
 
@@ -1029,8 +1036,8 @@ fun Ignitor.floor(): Ignitor = FloorIgnitor(this)
 private class FloorIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return floor(v)
     }
 
@@ -1049,8 +1056,8 @@ fun Ignitor.ceil(): Ignitor = CeilIgnitor(this)
 private class CeilIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return ceil(v)
     }
 
@@ -1069,8 +1076,8 @@ fun Ignitor.round(): Ignitor = RoundIgnitor(this)
 private class RoundIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return round(v)
     }
 
@@ -1089,8 +1096,8 @@ fun Ignitor.frac(): Ignitor = FracIgnitor(this)
 private class FracIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return (v - floor(v))
     }
 
@@ -1118,9 +1125,9 @@ private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
 
     override val isBlockConstant: Boolean = aConst && bConst
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val x = a.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val y = b.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = a.controlRateValueOrNull(freqHz) ?: return null
+        val y = b.controlRateValueOrNull(freqHz) ?: return null
         return x % safeDiv(y)
     }
 
@@ -1129,8 +1136,8 @@ private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         // NON-commutative; safeDiv on the divisor, NO safeOut (matches the scratch loop:
         // rem's magnitude is bounded by the divisor's).
         if (aConst && bConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
                 buffer.fill(ka % safeDiv(kb), ctx.offset, ctx.offset + ctx.length)
                 return
@@ -1138,7 +1145,7 @@ private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
 
         if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
+            val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 val d = safeDiv(kb)
                 a.generate(buffer, freqHz, ctx)
@@ -1151,7 +1158,7 @@ private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         }
 
         if (aConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
+            val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 val end = ctx.offset + ctx.length
@@ -1184,8 +1191,8 @@ fun Ignitor.recip(): Ignitor = RecipIgnitor(this)
 private class RecipIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return safeOut(1.0 / safeDiv(v))
     }
 
@@ -1204,8 +1211,8 @@ fun Ignitor.sq(): Ignitor = SqIgnitor(this)
 private class SqIgnitor(private val upstream: Ignitor) : Ignitor {
     override val isBlockConstant: Boolean = upstream.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
-        val v = upstream.controlRateValueOrNull(freqHz, ctx) ?: return null
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         return safeOut(v * v)
     }
 
@@ -1236,13 +1243,13 @@ private class SelectIgnitor(
     override val isBlockConstant: Boolean =
         cond.isBlockConstant && whenTrue.isBlockConstant && whenFalse.isBlockConstant
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? {
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
         // Resolve ALL THREE children before returning (the MinIgnitor pattern) — generate
         // renders both branches unconditionally so their state advances; a short-circuit on
         // the condition would let an untaken stateful branch fall behind the render path.
-        val c = cond.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val tv = whenTrue.controlRateValueOrNull(freqHz, ctx) ?: return null
-        val fv = whenFalse.controlRateValueOrNull(freqHz, ctx) ?: return null
+        val c = cond.controlRateValueOrNull(freqHz) ?: return null
+        val tv = whenTrue.controlRateValueOrNull(freqHz) ?: return null
+        val fv = whenFalse.controlRateValueOrNull(freqHz) ?: return null
         return if (c > 0.0) tv else fv
     }
 

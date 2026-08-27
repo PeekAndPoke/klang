@@ -171,7 +171,7 @@ object Ignitors {
             // sample. Gated on the structural flag first so the PWM path pays one boolean read
             // instead of a boxed Double? query per block; a null scalar despite a true flag
             // (contract breach) falls through to PWM — the always-correct branch.
-            val dutyConst = if (duty.isBlockConstant) duty.controlRateValueOrNull(actualFreq, ctx) else null
+            val dutyConst = if (duty.isBlockConstant) duty.controlRateValueOrNull(actualFreq) else null
             if (dutyConst != null) {
                 val d = dutyConst
                 if (d != lastDuty || dt != lastDt) {

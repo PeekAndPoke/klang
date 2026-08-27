@@ -42,8 +42,8 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
      * forced composite constant subtrees (e.g. `Times(Freq, Param)`) onto the scratch-render
      * fallback in [Ignitor.blockStartValue].
      */
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? =
-        inner.controlRateValueOrNull(freqHz, ctx)
+    override fun controlRateValueOrNull(freqHz: Double): Double? =
+        inner.controlRateValueOrNull(freqHz)
 
     override val isBlockConstant: Boolean = inner.isBlockConstant
 

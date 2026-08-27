@@ -61,7 +61,7 @@ class ControlRateScalarParitySpec : StringSpec({
      * (for the folding ops — all binary ops since D1b — that means every operand).
      */
     fun assertScalarBitEqualsScratchRender(sig: Ignitor, reference: Ignitor, freqHz: Double = 220.0) {
-        val scalar = sig.controlRateValueOrNull(freqHz, ctx())
+        val scalar = sig.controlRateValueOrNull(freqHz)
         scalar.shouldNotBeNull()
         val buf = AudioBuffer(blockFrames)
         reference.generate(buf, freqHz, ctx())
@@ -223,16 +223,16 @@ class ControlRateScalarParitySpec : StringSpec({
 
     "times scalar clamps at SAFE_MAX" {
         (ConstantIgnitor(1e10) * ParamIgnitor("p", 1e10))
-            .controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+            .controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 
     "mul-by-constant scalar clamps at SAFE_MAX" {
-        ParamIgnitor("p", 1e10).mul(1e10).controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+        ParamIgnitor("p", 1e10).mul(1e10).controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 
     "div scalar clamps at SAFE_MAX" {
         ConstantIgnitor(1e10).div(ParamIgnitor("p", 1e-10))
-            .controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+            .controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 
     "div by NaN divisor takes the safeDiv substitution" {
@@ -240,16 +240,16 @@ class ControlRateScalarParitySpec : StringSpec({
         // -> 1e10/1e-15 clamps to SAFE_MAX; WITHOUT it, 1e10/NaN = NaN -> safeOut scrubs to 0.0.
         // (A zero divisor cannot discriminate: +Inf also clamps to SAFE_MAX.)
         ConstantIgnitor(1e10).div(ParamIgnitor("p", Double.NaN))
-            .controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+            .controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 
     "pow scalar clamps at SAFE_MAX" {
         ParamIgnitor("p", 1e10).pow(ConstantIgnitor(3.0))
-            .controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+            .controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 
     "exp scalar clamps at SAFE_MAX" {
-        ParamIgnitor("p", 50.0).exp().controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+        ParamIgnitor("p", 50.0).exp().controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 
     "recip scalar takes the safeDiv substitution" {
@@ -257,24 +257,24 @@ class ControlRateScalarParitySpec : StringSpec({
         // |1/safeDiv(x)| <= 1/SAFE_MIN ~= 9.9999...e14, just BELOW SAFE_MAX (the KDoc identity
         // "1/SAFE_MIN = SAFE_MAX" is design intent, not an FP bit-fact). The observable guard is
         // the substitution: without safeDiv, 1/1e-20 = 1e20.
-        ParamIgnitor("p", 1e-20).recip().controlRateValueOrNull(0.0, ctx()) shouldBe (1.0 / SAFE_MIN)
+        ParamIgnitor("p", 1e-20).recip().controlRateValueOrNull(0.0) shouldBe (1.0 / SAFE_MIN)
     }
 
     "sq scalar clamps at SAFE_MAX" {
-        ParamIgnitor("p", 1e10).sq().controlRateValueOrNull(0.0, ctx()) shouldBe SAFE_MAX
+        ParamIgnitor("p", 1e10).sq().controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 
     "mod scalar by NaN divisor takes the safeDiv substitution" {
         // With safeDiv: x % SAFE_MIN, tiny but finite; without: x % NaN = NaN.
         val v = ParamIgnitor("p", 0.37).mod(ConstantIgnitor(Double.NaN))
-            .controlRateValueOrNull(0.0, ctx())
+            .controlRateValueOrNull(0.0)
         v.shouldNotBeNull()
         v.isNaN().shouldBeFalse()
     }
 
     "log scalar positive and zero arms" {
-        ParamIgnitor("p", 2.0).log().controlRateValueOrNull(0.0, ctx()) shouldBe ln(2.0)
-        ParamIgnitor("p", 0.0).log().controlRateValueOrNull(0.0, ctx()) shouldBe 0.0
+        ParamIgnitor("p", 2.0).log().controlRateValueOrNull(0.0) shouldBe ln(2.0)
+        ParamIgnitor("p", 0.0).log().controlRateValueOrNull(0.0) shouldBe 0.0
     }
 
     // ── 3. MemoizingIgnitor ───────────────────────────────────────────────────────
@@ -283,7 +283,7 @@ class ControlRateScalarParitySpec : StringSpec({
         val wrapped = MemoizingIgnitor(FreqIgnitor * ParamIgnitor("track", 1.9))
         // Absolute value (not wrapped.crv == inner.crv, which is the delegation compared with
         // itself and cannot fail), plus the fully-opacified scratch oracle.
-        wrapped.controlRateValueOrNull(220.0, ctx()) shouldBe 220.0 * 1.9
+        wrapped.controlRateValueOrNull(220.0) shouldBe 220.0 * 1.9
         assertScalarBitEqualsScratchRender(
             sig = wrapped,
             reference = OpaqueIgnitor(FreqIgnitor) * OpaqueIgnitor(ParamIgnitor("track", 1.9)),
@@ -291,7 +291,7 @@ class ControlRateScalarParitySpec : StringSpec({
     }
 
     "MemoizingIgnitor stays null for a stateful inner" {
-        MemoizingIgnitor(Ignitors.sine()).controlRateValueOrNull(440.0, ctx()).shouldBeNull()
+        MemoizingIgnitor(Ignitors.sine()).controlRateValueOrNull(440.0).shouldBeNull()
     }
 
     "a shared MemoizingIgnitor skipped by a fold still serves later consumers bit-exactly" {
@@ -384,11 +384,11 @@ class ControlRateScalarParitySpec : StringSpec({
             withClue(name) {
                 val constant = build(ConstantIgnitor(0.5))
                 constant.isBlockConstant.shouldBeTrue()
-                constant.controlRateValueOrNull(220.0, c).shouldNotBeNull()
+                constant.controlRateValueOrNull(220.0).shouldNotBeNull()
 
                 val stateful = build(Ignitors.sine())
                 stateful.isBlockConstant.shouldBeFalse()
-                stateful.controlRateValueOrNull(220.0, c).shouldBeNull()
+                stateful.controlRateValueOrNull(220.0).shouldBeNull()
             }
         }
     }
