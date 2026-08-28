@@ -270,11 +270,17 @@ for Track B.
 
 **Track A (DSP, under the assumed contract):**
 
-**P0. Harness + the four invariants**, run over a hand-picked critical few: `Adsr`, one oscillator,
-one noise source, one delay-line node. MUST sweep onset, gate end, an interior breakpoint, and block
-sizes {128, 64, 37, ragged} from the first commit (ledger E9), with the E7 tolerance rule baked in.
-The envelope-class findings E1/E3 are the acceptance test: the harness must reproduce both red
-before any fix.
+**P0. Harness + the four invariants** — **BUILT 2026-08-28: `BlockFramingInvarianceSpec`.**
+Two drivers (the real `VoiceFactory` -> `Voice.render` framing, and a raw `IgniteContext` loop for
+ragged sequences and runtime-only chains); non-round durations so gate end and breakpoints land
+mid-block everywhere; sweeps onset {1,37,76,127}, sizes {64,37} and a ragged sequence.
+Results: `Adsr`, `Sine`, `WhiteNoise`, `Pluck` are **bit-identical** across all of it (maxDiff
+exactly 0.0 — the Class 1 claim holds with no tolerance at all for these four). Acceptance met:
+E1 and E3 both reproduce RED under their correct assertions; they are committed as PINNED defect
+tripwires that go red the moment the defect is fixed, forcing the flip to the correct form (written
+above each pin). Mutation-checked: re-introducing instance 1 (the `IgniteRenderer` offset bug) turns
+the harness red, i.e. it would have caught the guitar-knocks bug; a wrong-pid vacuousness mutation is
+also caught.
 
 **P1. Triage the three siblings still on the 2026-08-07 deferred list** (two are audible), so this
 sweep starts from a known board rather than rediscovering them a third time.

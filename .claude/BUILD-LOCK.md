@@ -1,8 +1,14 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-27**
+**SINCE: 2026-08-28**
 **STATE: FREE — take the lock before building.**
+
+> Last action (2026-08-28, claude-code session): P0 block-framing harness built
+> (BlockFramingInvarianceSpec, 11 tests). Adsr/Sine/WhiteNoise/Pluck bit-identical across
+> alignment, block sizes and ragged splits; ledger defects E1 (FM env) + E3 (SVF chord) pinned as
+> tripwires and shown RED under correct assertions. Full :audio_be:jvmTest green (1307).
+> UNCOMMITTED — maintainer reviews first.
 
 > Last action (2026-08-27, claude-code session): 5-round review loop over the uncommitted Phase 3 /
 > teardown-fade / release-endpoint work. ~50 findings; loop STOPPED on "user decision needed", not
