@@ -253,8 +253,8 @@ Clean with no findings: `AdsrIgnitor` framing (Class 1), `pitchEnvelopeModIgnito
 
 | # | finding | severity | disposition |
 |---|---|---|---|
-| E1 | FM depth envelope held flat per block, no interpolation (`PitchModFactories:262-267`); LIVE on the registered `sgbell` preset: first block of every FM note has zero FM, peak depth never produced, per-hit head length 1..blockFrames | CRITICAL | **FIX** (per-sample evaluation; the env is analytic and sample-addressable) |
-| E2 | `fmModIgnitor` early returns skip `modulator.generate`, freezing its phase for whole blocks; `VibratoModIgnitor` same shape | MINOR | **FIX**, fold into the E1 commit |
+| E1 | FM depth envelope held flat per block, no interpolation (`PitchModFactories:262-267`); LIVE on the registered `sgbell` preset: first block of every FM note has zero FM, peak depth never produced, per-hit head length 1..blockFrames | CRITICAL | **FIXED 2026-08-28** on the IGNITOR door: per-sample evaluation via `sampleOffsetWithinBlock`; "fm with envelope" graduated to the harness's bit-identical green list. **The STRIP fm door still block-holds the same envelope — E11 (P4).** Per-sample cost accepted; if profiling ever objects, the agreed shape is a per-block precompute + thin `at(absPos)` body, ONE law, two entry points |
+| E2 | `fmModIgnitor` early returns skip `modulator.generate`, freezing its phase for whole blocks; `VibratoModIgnitor` same shape | MINOR | **FIXED 2026-08-28**: modulator/LFO advance unconditionally; phase-continuity guards in `PitchModFactoriesSpec` (a depth gap no longer freezes the phase). **Accepted costs (round-2 review, own record on request):** a structurally constant `depth = 0` fm now renders its discarded modulator every block, and the modulator's drift init consumes 2 per-voice rng draws it previously never took (within-voice draw-order shift only; `AnalogDrift.init` draws unconditionally even at analog 0). A safe skip would need a LITERAL-constant test — `isBlockConstant` is NOT sufficient, its value may legally change between blocks. **Accepted residual:** a nested fm whose OUTER ratio is modulated to <= 0 sends `freqHz * ratio <= 0` to the inner node, which then takes the note-less bypass and freezes its modulator for those blocks — exotic by construction, recorded at the bypass comment |
 | E3 | SVF cutoff-env chord straightens knees; segment shorter than a block erased; peak height alignment- and block-size-dependent (`IgnitorFilters:140-171`) | MAJOR (latent: no production door passes an env here; benchmarks/tests only) | **PIN with a spec, decide before any door wires an env**. Fix shape if taken: split the chord at breakpoints in `(E, E+length)` |
 | E4 | `AdsrIgnitor` takes `releaseStartLevel` from history; first rendered sample past gate end renders the note silent (`IgnitorEnvelopes:104-108`) + identical latent twin in strip `EnvelopeRenderer:95` | MAJOR | **CLOSED BY PROBLEM B** (unreachable once no-late-voices lands); no DSP edit |
 | E5 | `blockStartValue` reads stale scratch when `ctx.length == 0` (`Ignitor.kt:89-91`); reachable via small `legato` | MINOR | **FIX small** (guard the fallback) |
@@ -262,6 +262,8 @@ Clean with no findings: `AdsrIgnitor` framing (Class 1), `pitchEnvelopeModIgnito
 | E7 | `accelerateModIgnitor`: per-block-anchored multiplicative recurrence differs by 1-2 ulp between block sizes | note | **HARNESS RULE**: recurrence-based Class 1 nodes get a relative tolerance (~1e-12) + an endpoint pin, never raw bit-identity |
 | E8 | `MemoizingIgnitor` re-runs a stateful shared inner when two consumers use different `freqHz` in one block (fm, detune); double-advance distance = `length` | MINOR | **RECORD**, assess in the P2 sweep (exposure in this class: only opt-in `declickSeconds`) |
 | E9 | Harness lesson from E1/E3: an onset-only sweep sees NONE of this | rule | **P0 must sweep `gateEndFrame mod blockFrames` and an interior breakpoint (`attackFrames mod blockFrames`) from the first commit** |
+| E10 | FM env `release = 0` collapses the modulation depth in ONE sample at gate end (a ±depth·level Hz frequency step at full amplitude). The E1 fix EXPOSED it: block-held, the collapse landed at a random modulator phase per alignment (a per-note click lottery, often small); sample-exact, it is deterministic and consistent | found by ear (maintainer, sgbell A/B) | **RAW BY DESIGN** (maintainer 2026-08-28: attribute to the envelope, 0 means 0). `sgbell` given `envReleaseSec = 0.05` (it is a test sound); guards in `PitchModFactoriesSpec` pin that a nonzero release ramps instead of stepping AND that a release-ONLY envelope is honoured (the `hasEnv` gate now counts `envReleaseSec` — it used to drop a release-only env silently, the exact remedy shape this row points users at). **On the STRIP door the collapse is UN-ESCAPABLE today — E11** |
+| E11 | The STRIP fm door (sprudel `fmh`/`fmEnv`/`fmAttack`/`fmDecay`/`fmSustain` via `FmRenderer:43` + `calculateControlRateEnvelope`) carries BOTH defects this class just fixed on the ignitor door: the depth envelope is block-held (the E1 shape, and clocked from `blockStart` without `ctx.offset`), and `VoiceFactory:244` hardcodes the FM env's `releaseFrames = 0` with **no `fmRelease` control on any surface** — so the E10 note-off collapse cannot be ramped there at all | MAJOR (live on every `fmh` voice in every song) | **P4 scope, do not fix piecemeal**: per-sample (or lerped) env with the strip-renderer pass, plus a surface decision on adding `fmrelease` — maintainer input needed at P4 |
 
 ## Order of work — one thing at a time
 
@@ -274,11 +276,12 @@ for Track B.
 Two drivers (the real `VoiceFactory` -> `Voice.render` framing, and a raw `IgniteContext` loop for
 ragged sequences and runtime-only chains); non-round durations so gate end and breakpoints land
 mid-block everywhere; sweeps onset {1,37,76,127}, sizes {64,37} and a ragged sequence.
-Results: `Adsr`, `Sine`, `WhiteNoise`, `Pluck` are **bit-identical** across all of it (maxDiff
-exactly 0.0 — the Class 1 claim holds with no tolerance at all for these four). Acceptance met:
-E1 and E3 both reproduce RED under their correct assertions; they are committed as PINNED defect
-tripwires that go red the moment the defect is fixed, forcing the flip to the correct form (written
-above each pin). Mutation-checked: re-introducing instance 1 (the `IgniteRenderer` offset bug) turns
+Results: `Adsr`, `Sine`, `WhiteNoise`, `Pluck` and (since the E1 fix, 2026-08-28) `fm with
+envelope` are **bit-identical** across all of it (maxDiff exactly 0.0 — the Class 1 claim holds
+with no tolerance at all for these five). Acceptance met at build time: E1 and E3 both reproduced
+RED under their correct assertions. E3 remains a PINNED defect tripwire that goes red the moment
+the defect is fixed, forcing the flip to the correct form written above the pin; E1's pin was
+flipped and graduated when E1 was fixed. Mutation-checked: re-introducing instance 1 (the `IgniteRenderer` offset bug) turns
 the harness red, i.e. it would have caught the guitar-knocks bug; a wrong-pid vacuousness mutation is
 also caught.
 

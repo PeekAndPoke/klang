@@ -188,6 +188,11 @@ fun IgnitorRegistry.registerDefaults() {
             envAttackSec = 0.001,
             envDecaySec = 0.5,
             envSustainLevel = 0.0,
+            // Non-zero on purpose: with release 0 the depth collapses to zero in ONE sample at
+            // gate end — a hard frequency step that ticks on every note-off. Release 0 is raw
+            // engine semantics (maintainer, 2026-08-28: "0 means 0"), so the PRESET carries the
+            // ramp. Found when the per-sample depth envelope made the collapse deterministic.
+            envReleaseSec = 0.05,
         )
     )
 

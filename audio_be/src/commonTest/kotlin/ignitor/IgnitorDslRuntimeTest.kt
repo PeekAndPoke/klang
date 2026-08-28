@@ -129,6 +129,7 @@ class IgnitorDslRuntimeTest : StringSpec({
             envAttackSec = 0.001,
             envDecaySec = 0.5,
             envSustainLevel = 0.0,
+            envReleaseSec = 0.05,   // kept in sync with IgnitorDefaults (ledger E10)
         )
         val sig = dsl.toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
