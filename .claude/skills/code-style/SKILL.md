@@ -36,12 +36,41 @@ if (condition) {
 }
 ```
 
+**Exception — expression form (decided 2026-08-28):** an `if`/`else` used as an EXPRESSION (its
+value is consumed) may stay brace-free on one line. The same applies to `when` arms in expression
+position (`X -> value`).
+
+```kotlin
+val x = if (a) b else c
+phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+```
+
+Two limits: statement-position `if`s (value discarded) always get braces, even one-liners; and the
+moment ANY branch of an expression `if` needs braces or multiple lines, brace ALL its branches —
+no `} else 0.0` mixing.
+
 ### 2. Blank Lines Around `if` Blocks
 
 Leave a blank line before and after an `if` statement (and other block statements like `for`/
 `when`) when it is not the first or last statement in its enclosing block. Especially in
 early-return ladders (e.g. fast-path branches falling through to a general case), the blank
 lines make each branch read as its own step.
+
+The same spacing applies to variable declarations (added 2026-08-28): leave a blank line after a
+block of `val`/`var` declarations, and before a declaration that follows other statements.
+Consecutive declarations stay together as one group.
+
+```kotlin
+val step = readParam(rate, freqHz, ctx) * PERLIN_STEP
+val end = ctx.offset + ctx.length
+
+for (i in ctx.offset until end) {
+    val white = rng.nextDouble() * 2.0 - 1.0
+
+    out = (out + k * white) / denom
+    buffer[i] = out
+}
+```
 
 **Wrong:**
 
