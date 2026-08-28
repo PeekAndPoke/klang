@@ -603,7 +603,7 @@ data class FormantBand(
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Internal: Filter envelope computation (control rate)
+// Internal: filter/FM envelope computation — the ONE shared envelope law
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -634,7 +634,14 @@ private fun envelopeLevelAtPosition(
 
 /**
  * Computes a simple ADSR envelope value at the current block position.
- * Called once per block (control rate), not per sample.
+ * Sample-addressable via [sampleOffsetWithinBlock]. Two calling patterns exist and BOTH are
+ * load-bearing: `SvfIgnitor` evaluates it at a block's endpoints (its control-rate coefficient
+ * chord), and `FmModIgnitor` calls it PER SAMPLE (block-framing ledger E1). Do NOT memoize the
+ * result per block or hoist a call out of a per-sample loop — that reintroduces the zero-FM-head
+ * defect, and `BlockFramingInvarianceSpec`'s "fm with envelope" case goes red. If per-sample cost
+ * ever shows in a profile, the agreed shape is a per-block precompute (frames, rates,
+ * levelAtGateEnd) plus a thin `at(absPos)` body — ONE law with two entry points, never a second
+ * copy of this math.
  *
  * Release phase decays from the **actual level at gate-end**, not from sustainLevel.
  * This prevents discontinuous jumps (clicks) when gate-off occurs during attack or decay.

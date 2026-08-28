@@ -66,13 +66,22 @@ private class VibratoModIgnitor(
         val rateVal = Ignitors.readParam(rate, freqHz, ctx)
         val depthSemitones = Ignitors.readParam(semitones, freqHz, ctx)
         val end = ctx.offset + ctx.length
+        val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
 
         if (depthSemitones <= 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0
+            // The LFO still ADVANCES: state moves once per rendered sample, whatever the output
+            // (block-framing contract). The old early return froze the phase for the whole block,
+            // so a modulated depth passing through zero resumed the LFO from a phase stale by a
+            // block-size-dependent amount (block-framing ledger E2).
+            for (i in ctx.offset until end) {
+                buffer[i] = 1.0
+                lfoPhase += lfoInc
+                if (lfoPhase >= TWO_PI) {
+                    lfoPhase -= TWO_PI
+                }
+            }
             return
         }
-
-        val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         for (i in ctx.offset until end) {
             buffer[i] = safeOut(2.0.pow(sin(lfoPhase) * depthSemitones / 12.0))
             lfoPhase += lfoInc
@@ -241,38 +250,80 @@ private class FmModIgnitor(
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val end = ctx.offset + ctx.length
 
+        // freqHz's SIGN is stable for the voice's life — that is what licenses this bypass. The
+        // top-level value is a per-voice val (IgniteRenderer), and detune rescales by 2^(s/12),
+        // strictly positive, so the MAGNITUDE may change per block under a modulated detune but a
+        // note-less voice (freqHz <= 0, e.g. an fm sound triggered via s() without a note) stays
+        // note-less forever: no later block where modulator state could matter, the E2
+        // always-advance rationale does not apply, and rendering the graph here would both waste a
+        // full modulator render per block and shift the voice's per-voice rng draw order against
+        // pre-change content. Bypass entirely, as the old code did.
+        // Known accepted residual: fm itself hands `freqHz * ratio` to its modulator and `ratio`
+        // is raw (may be <= 0) — a NESTED fm under an outer ratio modulated to <= 0 takes this
+        // bypass and freezes for those blocks. Recorded in the block-framing ledger (E2 row).
         if (freqHz <= 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0
+            for (i in ctx.offset until end) {
+                buffer[i] = 1.0
+            }
             return
         }
 
         val ratioVal = Ignitors.readParam(ratio, freqHz, ctx)
         val depthVal = Ignitors.readParam(depth, freqHz, ctx)
-
-        if (depthVal == 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0
-            return
-        }
-
+        // Read — and thereby advance — the env subtrees BEFORE the depth gate below: state moves
+        // once per rendered block whatever the output, or a depth passing through zero would
+        // freeze a modulated envelope time. The same E2 shape, one level down.
         val envAttackSecVal = Ignitors.readParam(envAttackSec, freqHz, ctx)
         val envDecaySecVal = Ignitors.readParam(envDecaySec, freqHz, ctx)
         val envSustainLevelVal = Ignitors.readParam(envSustainLevel, freqHz, ctx)
         val envReleaseSecVal = Ignitors.readParam(envReleaseSec, freqHz, ctx)
 
-        val envLevel = if (envAttackSecVal > 0.0 || envDecaySecVal > 0.0 || envSustainLevelVal < 1.0) {
-            computeFilterEnvelope(ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal)
-        } else {
-            1.0
-        }
-        val effectiveDepth = depthVal * envLevel
-
         ctx.scratchBuffers.use { modBuf ->
-            val modFreq = freqHz * ratioVal
-            modulator.generate(modBuf, modFreq, ctx)
+            // The modulator advances FIRST, unconditionally: its state moves once per rendered
+            // sample, whatever the output (block-framing contract). The old early return for
+            // `depth == 0` skipped it, freezing its phase for whole blocks — a modulated depth
+            // passing through zero resumed the modulator from a phase stale by a block-size-
+            // dependent amount (block-framing ledger E2).
+            modulator.generate(modBuf, freqHz * ratioVal, ctx)
+
+            if (depthVal == 0.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = 1.0
+                }
+                return
+            }
+
+            // envReleaseSec COUNTS: a release-ONLY envelope (attack 0, decay 0, sustain 1) is
+            // exactly the E10 remedy shape, and a gate that ignores it drops the release silently
+            // — the depth then holds full through the tail and collapses at teardown instead.
+            val hasEnv = envAttackSecVal > 0.0 || envDecaySecVal > 0.0 ||
+                envSustainLevelVal < 1.0 || envReleaseSecVal > 0.0
 
             // Sub-Hz freqHz (from heavy detune) would otherwise blow up `effectiveDepth / freqHz`.
             val safeFreq = safeDiv(freqHz)
+
+            if (!hasEnv) {
+                // Op order kept bit-identical to the old code (`mod * depth / freq`).
+                for (i in ctx.offset until end) {
+                    buffer[i] = safeOut((1.0 + modBuf[i] * depthVal / safeFreq))
+                }
+                return
+            }
+
+            // The depth envelope is evaluated PER SAMPLE (block-framing ledger E1). It used to be
+            // evaluated once at the block's first sample and held flat, which snapped every
+            // envelope breakpoint to a block boundary: with sgbell's 1 ms attack the first block
+            // of every note had ZERO FM, and the peak depth was never produced at any block size
+            // unless the attack happened to be a multiple of the block length. The envelope is
+            // analytic and sample-addressable via `sampleOffsetWithinBlock`, so the hold bought
+            // nothing but the bug. Cost: computeFilterEnvelope per sample, on FM-with-envelope
+            // voices only.
             for (i in ctx.offset until end) {
+                val envLevel = computeFilterEnvelope(
+                    ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal,
+                    sampleOffsetWithinBlock = i - ctx.offset,
+                )
+                val effectiveDepth = depthVal * envLevel
                 buffer[i] = safeOut((1.0 + modBuf[i] * effectiveDepth / safeFreq))
             }
         }

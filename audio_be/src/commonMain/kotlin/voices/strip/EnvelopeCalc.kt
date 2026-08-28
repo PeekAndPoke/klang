@@ -43,10 +43,12 @@ fun calculateControlRateEnvelope(
         //    releaseFrames the way EnvelopeRenderer does: this envelope's release is the FILTER's,
         //    independent of the voice's rendered span, so there is no last-rendered-frame for it to
         //    land on and nothing to floor against.
-        //  - the OFFSET is amplitude-only. It exists to stop a step when a release is too short to
-        //    ramp, and a step matters for a gain, not for a cutoff or an FM depth. VoiceFactory
-        //    always builds the FM envelope with releaseFrames = 0, so applying it here would drop
-        //    FM depth to zero at gate end for every FM voice in every song.
+        //  - the OFFSET is amplitude-only. It exists to stop a step when a release is too short
+        //    to ramp. NOT because modulation steps are inaudible — a depth step ticks audibly
+        //    (ledger E10, heard on sgbell). The real reason is compatibility: VoiceFactory always
+        //    builds the FM envelope with releaseFrames = 0, so applying the offset here would drop
+        //    FM depth to zero at gate end for every fmh voice in every song. That door's own
+        //    block-held envelope and missing release knob are tracked as ledger E11 (P4).
         // `EnvelopeCalcNoOffsetSpec` guards that second bullet.
         val p = (relPos / releaseProgressDenom(env.releaseFrames)).coerceAtMost(1.0)
         val omp = 1.0 - p

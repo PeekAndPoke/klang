@@ -43,9 +43,10 @@ import kotlin.random.Random
  * Class 1 nodes are asserted BIT-IDENTICAL. Recurrence-anchored nodes would need the E7 relative
  * tolerance instead; none of the P0 picks does.
  *
- * The two `KNOWN DEFECT` cases at the bottom PIN ledger defects E1 and E3 in their current wrong
- * shape, so this suite stays green while the defects are open, and goes RED the moment someone
- * fixes them, forcing the flip to the correct assertion written above each pin.
+ * The `KNOWN DEFECT` case at the bottom PINS ledger defect E3 in its current wrong shape, so this
+ * suite stays green while the defect is open, and goes RED the moment someone fixes it, forcing the
+ * flip to the correct assertion written above the pin. (E1, the FM depth envelope, was pinned the
+ * same way and was fixed 2026-08-28: "fm with envelope" now sits in the green node list.)
  */
 class BlockFramingInvarianceSpec : StringSpec({
 
@@ -175,6 +176,16 @@ class BlockFramingInvarianceSpec : StringSpec({
             releaseSec = IgnitorDsl.Constant(0.033),
         ),
         "sine" to IgnitorDsl.Sine(),
+        // Ledger E1, fixed 2026-08-28: the depth envelope is per-sample now. Attack 220 frames and
+        // decay both land mid-block everywhere, so this red-flags any regression to a block hold.
+        "fm with envelope" to IgnitorDsl.Sine().fm(
+            modulator = IgnitorDsl.Sine(),
+            ratio = 1.4,
+            depth = 300.0,
+            envAttackSec = 0.005,
+            envDecaySec = 0.5,
+            envSustainLevel = 0.0,
+        ),
         "white noise" to IgnitorDsl.WhiteNoise(),
         "pluck" to IgnitorDsl.Pluck(),
     )
@@ -214,28 +225,6 @@ class BlockFramingInvarianceSpec : StringSpec({
     }
 
     // ── Pinned defects (findings ledger). These go RED when the defect is fixed. ──
-
-    "E1 KNOWN DEFECT: the FM depth envelope snaps to block boundaries (ledger E1)" {
-        // CORRECT assertion, flip to this when fixing E1:
-        //   maxDiff(over the first 600 note frames) shouldBe (0.0 plusOrMinus 1e-9)
-        // Today the zero-FM head is `blockFrames - offset` long (128 aligned vs 52 at start=76),
-        // so the same note diverges hard depending on where it landed in the block.
-        val dsl = IgnitorDsl.Sine().fm(
-            modulator = IgnitorDsl.Sine(),
-            ratio = 1.4,
-            depth = 300.0,
-            envAttackSec = 0.005,
-            envDecaySec = 0.5,
-            envSustainLevel = 0.0,
-        )
-        val ref = renderVoice(dsl, 0, 128)
-        val shifted = renderVoice(dsl, 76, 128)
-        var m = 0.0
-        for (i in 0 until 600) m = maxOf(m, abs(shifted[i] - ref[i]))
-        withClue("E1 pin: expected the DEFECT's divergence; red here means E1 was fixed — flip this case to the equality above") {
-            (m > 1e-3) shouldBe true
-        }
-    }
 
     "E3 KNOWN DEFECT: the SVF cutoff-envelope chord erases a sub-block attack (ledger E3)" {
         // CORRECT assertion, flip to this when fixing (or formally accepting) E3:
