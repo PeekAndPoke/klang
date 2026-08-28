@@ -58,6 +58,21 @@ sealed interface AdsrDef {
         val attackCurve: AdsrCurve? = null,
         val decayCurve: AdsrCurve? = null,
         val releaseCurve: AdsrCurve? = null,
+        /**
+         * Whether the VCA stage shapes this voice at all. `null` = unset, so the pipeline's
+         * [StageDsl.Vca][io.peekandpoke.klang.audio_bridge.StageDsl.Vca] answers instead.
+         *
+         * A FLAG rather than an `AdsrDef.None` variant, deliberately: `.adsr(0.005, 1.0, 1.0, 0.05)`
+         * followed by `.adsrOff()` keeps the numbers, so it can be flipped back for an A/B. A variant
+         * throws them away, and in a live-coding language that is the deciding property. The cost is
+         * that `Std(attack = 0.5, on = false)` is representable nonsense: mild, the values simply lie
+         * dormant, the same way `decay` already does when `sustain = 1.0`.
+         *
+         * **Must default to `null`, never `true`.** A non-null default would make every inherit-shaped
+         * `Std` carry an explicit `true`, so `on ?: other.on` could never reach a pipeline-level
+         * `Vca(on = false)` and that whole layer would be dead. `AdsrOnFlagSpec` guards this.
+         */
+        val on: Boolean? = null,
     ) : AdsrDef {
 
         override fun mergeWith(other: AdsrDef?): AdsrDef = when (other) {
@@ -70,6 +85,7 @@ sealed interface AdsrDef {
                 attackCurve = attackCurve ?: other.attackCurve,
                 decayCurve = decayCurve ?: other.decayCurve,
                 releaseCurve = releaseCurve ?: other.releaseCurve,
+                on = on ?: other.on,
             )
         }
 
@@ -83,6 +99,8 @@ sealed interface AdsrDef {
                 attackCurve = attackCurve ?: d.attackCurve ?: AdsrCurve.Default,
                 decayCurve = decayCurve ?: d.decayCurve ?: AdsrCurve.Default,
                 releaseCurve = releaseCurve ?: d.releaseCurve ?: AdsrCurve.Default,
+                // No `?: true` here on purpose — see [Resolved.on].
+                on = on ?: d.on,
             )
         }
 
@@ -113,6 +131,13 @@ sealed interface AdsrDef {
         val attackCurve: AdsrCurve,
         val decayCurve: AdsrCurve,
         val releaseCurve: AdsrCurve,
+        /**
+         * THE ONE NULLABLE FIELD HERE, and not an oversight: `on` has one more layer to fall
+         * through. Voice-level resolution (sprudel over the defaults) happens here; `null` means
+         * neither said anything, so the pipeline's `Vca` stage answers, and only then does the hard
+         * `true` apply. Filling it with `true` at this point would make `Vca(on = false)` unreachable.
+         */
+        val on: Boolean? = null,
     )
 
     companion object {

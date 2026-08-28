@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -99,19 +100,24 @@ class EnvelopeShapeTest : StringSpec({
     // ── Release via calculateControlRateEnvelope ──────────────────────────────
 
     "release midpoint via calculateControlRateEnvelope — Square = 0.25 of startLevel" {
-        // gateEnd = 0; at blockStart = 50.0, p = 50/100 = 0.5; Square gives 0.25.
+        // A release of N frames renders relPos 0..N-1, so p divides by N-1 (see
+        // releaseProgressDenom). With N = 101 the midpoint is exactly p = 50/100 = 0.5.
         val e = env(
             attackFrames = 0.0,
             decayFrames = 0.0,
             sustainLevel = 1.0,
-            releaseFrames = 100.0,
+            releaseFrames = 101.0,
             releaseCurve = AdsrCurve.Square,
         )
         calculateControlRateEnvelope(e, blockStart = 50.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
                 (0.25 plusOrMinus 0.001)
     }
 
-    "release endpoint reaches 0 for all curves" {
+    "release endpoint reaches 0 for all curves — ON THE LAST RENDERED FRAME" {
+        // This used to sample relPos = N, which the voice NEVER renders: it ends at N-1, and
+        // Voice.render stops at endFrame. So the old assertion passed while the real last frame
+        // still carried the envelope (exp at N=100: 3.4e-3, and 5.9e-2 at a 0.1 ms release) and
+        // teardown stepped that to zero. relPos = N-1 is the frame that matters.
         for (curve in AdsrCurve.entries) {
             val e = env(
                 attackFrames = 0.0,
@@ -120,8 +126,14 @@ class EnvelopeShapeTest : StringSpec({
                 releaseFrames = 100.0,
                 releaseCurve = curve,
             )
-            calculateControlRateEnvelope(e, blockStart = 100.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
-                    (0.0 plusOrMinus 0.001)
+            withClue("curve=$curve at the last rendered frame (relPos = N-1)") {
+                calculateControlRateEnvelope(e, blockStart = 99.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
+                        (0.0 plusOrMinus 1e-9)
+            }
+            withClue("curve=$curve past the end stays clamped at 0") {
+                calculateControlRateEnvelope(e, blockStart = 100.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
+                        (0.0 plusOrMinus 1e-9)
+            }
         }
     }
 })

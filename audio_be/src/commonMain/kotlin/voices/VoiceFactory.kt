@@ -580,6 +580,7 @@ class VoiceFactory(
             tremolo = tremolo,
             phaser = phaser,
             sampleRate = sampleRate,
+            vcaOn = resolvedAdsr.on,
         )
 
         val blockCtx = BlockContext(

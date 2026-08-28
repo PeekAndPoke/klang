@@ -14,6 +14,19 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * Config methods on the VCA stage (`Stage.vca()`). Each returns a new `StageDsl.Vca`, so chain
  * them right after `Stage.vca()` and before adding the next stage.
  */
+/**
+ * Truthiness for a script-supplied on/off flag: `true`/`false`, or any non-zero number.
+ *
+ * The runtime hands numeric literals through as `Double`, so a `Boolean` parameter would throw a
+ * raw ClassCastException on `on(1)` — and numeric flags are the established idiom on the sprudel
+ * side (`adsrOn(0)`). Coerce rather than throw, per the project's user-facing-param rule.
+ */
+private fun coerceFlag(flag: Any): Boolean = when (flag) {
+    is Boolean -> flag
+    is Number -> flag.toDouble() != 0.0
+    else -> true
+}
+
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(StageDsl.Vca::class)
 object KlangScriptVcaStageExtensions {
@@ -25,6 +38,18 @@ object KlangScriptVcaStageExtensions {
     /** Gain de-click time constant in seconds (default 0.001). Rounds ADSR segment-join clicks. */
     @KlangScript.Method
     fun declick(self: StageDsl.Vca, seconds: Double): StageDsl.Vca = self.copy(declickSeconds = seconds)
+
+    /**
+     * Whether voices in this pipeline get an amp envelope by default (default `true`). Set `false`
+     * on an engine built around instruments that carry their own envelope, so the two do not
+     * compound. A voice overrides it per note with `.adsrOn()` / `.adsrOff()`.
+     *
+     * Accepts `true`/`false` or a truthy number, so `on(0)` works the way the sibling sprudel door
+     * `adsrOn(0)` does. A `Boolean` parameter would throw a raw ClassCastException on `on(0)`,
+     * because the runtime hands numbers through as `Double`.
+     */
+    @KlangScript.Method
+    fun on(self: StageDsl.Vca, flag: Any): StageDsl.Vca = self.copy(on = coerceFlag(flag))
 }
 
 /**
@@ -78,4 +103,8 @@ object KlangScriptPipelineExtensions {
     /** Sugar for the engine's VCA `declick` seconds. */
     @KlangScript.Method
     fun declick(self: PipelineDsl, seconds: Double): PipelineDsl = self.tweakVca { it.copy(declickSeconds = seconds) }
+
+    /** Sugar for the engine's VCA `on` flag — see [KlangScriptVcaStageExtensions.on]. */
+    @KlangScript.Method
+    fun vcaOn(self: PipelineDsl, flag: Any): PipelineDsl = self.tweakVca { it.copy(on = coerceFlag(flag)) }
 }

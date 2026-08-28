@@ -118,5 +118,17 @@ sealed interface StageDsl {
     data class Vca(
         val expK: Double = ADSR_EXP_K,
         val declickSeconds: Double = ENV_DECLICK_SECONDS,
+        /**
+         * Whether voices in this pipeline get an amp envelope by default. A SOFT default, the same
+         * status as [expK] and [declickSeconds]: a voice overrides it with `.adsrOn()` / `.adsrOff()`.
+         * The structural switch is a different mechanism and already exists, since [PipelineDsl] is an
+         * ordered list and a pipeline may simply omit this stage.
+         *
+         * Non-null unlike [AdsrDef.Std.on][io.peekandpoke.klang.audio_bridge.AdsrDef.Std.on], because
+         * this IS the fallback layer and has no "unset" to express. The built-in engines keep `true`:
+         * flipping them would change how every existing song sounds. Set `false` on an engine built
+         * around ignitors that carry their own envelope, so the two do not compound.
+         */
+        val on: Boolean = true,
     ) : StageDsl
 }

@@ -330,6 +330,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         oscParams = mapOf("k$seed" to b + 7)
         attack = b + 8; decay = b + 9; sustain = b + 10; release = b + 11
         attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
+            adsrOn = false
         accelerate = b + 12; vibrato = b + 13; vibratoMod = b + 14
         pAttack = b + 15; pDecay = b + 16; pRelease = b + 17; pEnv = b + 18; pCurve = b + 19; pAnchor = b + 20
         fmh = b + 21; fmAttack = b + 22; fmDecay = b + 23; fmSustain = b + 24; fmEnv = b + 25

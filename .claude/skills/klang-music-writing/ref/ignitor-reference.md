@@ -25,8 +25,17 @@ let myPluck = Osc.saw()
     .lowpass(Osc.constant(2000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.1)))
     .adsr(0.005, 0.3, 0.0, 0.05)
 
-note("c3 e3 g3 c4").sound(myPluck).gain(0.5)
+note("c3 e3 g3 c4").sound(myPluck).adsrOff().gain(0.5)
 ```
+
+> ⚠️ **`.adsrOff()` is not decoration.** An `.adsr(...)` inside an ignitor shapes amplitude, and the
+> VOICE applies its own amplitude envelope on top — the two multiply, so every curve comes out with
+> twice the dB slope and the note dies faster and quieter than the numbers say. Add `.adsrOff()` on
+> the pattern whenever the instrument carries its own `.adsr(...)`, and the instrument owns
+> amplitude alone. Leave it off (i.e. keep the voice envelope) when the ignitor's `.adsr(...)` is
+> only modulating something, e.g. a filter cutoff.
+>
+> The examples below all follow this rule.
 
 ### Lush pad
 
@@ -36,7 +45,7 @@ let pad = Osc.supersaw()
     .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
     .adsr(0.3, 0.5, 0.8, 1.5)
 
-chord("<Am C F G>").voicing().sound(pad).gain(0.2).roomWet(0.3).rsize(6)
+chord("<Am C F G>").voicing().sound(pad).adsrOff().gain(0.2).roomWet(0.3).rsize(6)
 ```
 
 ### FM bell
@@ -46,7 +55,7 @@ let bell = Osc.sine()
     .fm(Osc.sine(), 2.3, 400)
     .adsr(0.001, 1.5, 0.0, 0.5)
 
-note("c5 e5 g5 c6").sound(bell).gain(0.3).roomWet(0.2)
+note("c5 e5 g5 c6").sound(bell).adsrOff().gain(0.3).roomWet(0.2)
 ```
 
 ---

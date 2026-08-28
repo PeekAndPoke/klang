@@ -252,6 +252,11 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || adsr != null) adsrOrNew().release = v
         }
+    var adsrOn: Boolean?
+        get() = adsr?.on
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().on = v
+        }
     var attackCurve: AdsrCurve?
         get() = adsr?.attackCurve
         set(v) {
@@ -1032,6 +1037,7 @@ data class SprudelVoiceData(
                 attackCurve = attackCurve,
                 decayCurve = decayCurve,
                 releaseCurve = releaseCurve,
+                on = adsrOn,
             ),
             accelerate = accelerate,
             vibrato = vibrato,

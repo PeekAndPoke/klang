@@ -658,6 +658,11 @@ internal fun computeFilterEnvelope(
     val envValue = if (absPos >= gateEndPos) {
         val levelAtGateEnd = envelopeLevelAtPosition(gateEndPos, attackFrames, decayFrames, clampedSustain)
         val relPos = absPos - gateEndPos
+        // Divides by N, not N-1 like the CURVE evaluators (releaseProgressDenom), so this ramp
+        // ends at levelAtGateEnd/N rather than 0 on the last rendered frame. Deliberate: this is a
+        // straight LINEAR ramp with no curve endpoint to land on, and it drives a filter cutoff, so
+        // the residual ends a sweep a hair above its floor rather than leaving a gain step.
+        // Changing it would move filter-sweep sound in existing songs for no click benefit.
         val relRate = if (releaseFrames > 0) levelAtGateEnd / releaseFrames else 1.0
         levelAtGateEnd - (relPos * relRate)
     } else {

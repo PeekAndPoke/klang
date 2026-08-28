@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.voices.strip
 
 import io.peekandpoke.klang.audio_be.adsrExpShape
+import io.peekandpoke.klang.audio_be.releaseProgressDenom
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
@@ -34,8 +35,20 @@ fun calculateControlRateEnvelope(
     val envValue = if (absPos >= gateEndPos) {
         val levelAtGateEnd = envelopeLevelAtPosition(env, gateEndPos)
         val relPos = absPos - gateEndPos
-        val relDenom = if (env.releaseFrames > 0) env.releaseFrames else 1.0
-        val p = (relPos / relDenom).coerceAtMost(1.0)
+        // The split between the two helpers is by DESTINATION, not by evaluator:
+        //  - the DENOMINATOR is unified everywhere a curve is evaluated, because it is a time-base
+        //    correction (a release of N frames spans relPos 0..N-1) and applies whatever the value
+        //    drives. `IgnitorFilters.computeFilterEnvelope` is exempt only because it is a straight
+        //    LINEAR ramp with no curve endpoint to land on. Note this site does NOT floor
+        //    releaseFrames the way EnvelopeRenderer does: this envelope's release is the FILTER's,
+        //    independent of the voice's rendered span, so there is no last-rendered-frame for it to
+        //    land on and nothing to floor against.
+        //  - the OFFSET is amplitude-only. It exists to stop a step when a release is too short to
+        //    ramp, and a step matters for a gain, not for a cutoff or an FM depth. VoiceFactory
+        //    always builds the FM envelope with releaseFrames = 0, so applying it here would drop
+        //    FM depth to zero at gate end for every FM voice in every song.
+        // `EnvelopeCalcNoOffsetSpec` guards that second bullet.
+        val p = (relPos / releaseProgressDenom(env.releaseFrames)).coerceAtMost(1.0)
         val omp = 1.0 - p
         val shape = when (env.releaseCurve) {
             AdsrCurve.Linear -> omp

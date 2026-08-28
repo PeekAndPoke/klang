@@ -508,7 +508,10 @@ class FilterModulationTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 100.0,
                 sustainLevel = 0.5,
-                releaseFrames = 200.0,
+                // 201, not 200: a release of N frames renders relPos 0..N-1, so p divides by
+                // N-1 (releaseProgressDenom). N = 201 keeps relPos 100 at exactly p = 0.5 and
+                // relPos 200 at exactly p = 1.0, so every expectation below stays exact.
+                releaseFrames = 201.0,
                 attackCurve = AdsrCurve.Linear,
                 decayCurve = AdsrCurve.Linear,
                 releaseCurve = AdsrCurve.Linear,

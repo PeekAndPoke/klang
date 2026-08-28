@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.voices.strip.filter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.StageDsl
 
@@ -38,6 +39,8 @@ fun buildFilterPipeline(
     tremolo: Voice.Tremolo,
     phaser: Voice.Phaser,
     sampleRate: Int,
+    /** The voice's resolved [AdsrDef.Resolved.on]. `null` = unset, so the `Vca` stage decides. */
+    vcaOn: Boolean? = null,
 ): List<BlockRenderer> = buildList {
     for (stage in pipeline.stages) {
         when (stage) {
@@ -89,6 +92,17 @@ fun buildFilterPipeline(
                         envelope, startFrame, gateEndFrame,
                         expK = stage.expK,
                         declickSeconds = stage.declickSeconds,
+                        // Last layer of the resolution: voice, then pipeline. The hard `true`
+                        // already lives in `StageDsl.Vca.on`.
+                        //
+                        // NOTE this applies the voice's flag to EVERY Vca stage. A pipeline that
+                        // deliberately mixes them (`vca().on(false) -> distort -> vca()`, the
+                        // double-VCA sandwich) is therefore flattened by a per-note `.adsrOn()` /
+                        // `.adsrOff()`: the note-level switch wins over the whole pipeline, by
+                        // design, because "the instrument owns amplitude" is a property of the
+                        // NOTE. There is currently no way to say "off, but only the amp VCA" —
+                        // if that is ever wanted it needs a per-stage address, not a per-voice one.
+                        on = vcaOn ?: stage.on,
                     )
                 )
         }

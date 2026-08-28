@@ -33,6 +33,8 @@ data class SvdAdsr(
     var attackCurve: AdsrCurve? = null,
     var decayCurve: AdsrCurve? = null,
     var releaseCurve: AdsrCurve? = null,
+    /** Whether the VCA stage shapes this voice at all; `null` = unset, the pipeline's `Vca` decides. */
+    var on: Boolean? = null,
 )
 
 /**
@@ -175,6 +177,7 @@ fun mergeSvdAdsr(base: SvdAdsr?, over: SvdAdsr?): SvdAdsr? {
         attackCurve = over.attackCurve ?: base.attackCurve,
         decayCurve = over.decayCurve ?: base.decayCurve,
         releaseCurve = over.releaseCurve ?: base.releaseCurve,
+        on = over.on ?: base.on,
     )
 }
 

@@ -38,7 +38,9 @@ class WireCodecRoundTripSpec : StringSpec({
                 listOf(
                     StageDsl.FilterMod,
                     StageDsl.Filter(cutoffOffsetPerAnalog = 0.01, drivePerAnalog = 0.7, driftRelToOsc = 4.0),
-                    StageDsl.Vca(expK = 2.5, declickSeconds = 0.002),
+                    // on = false, not the default true: with the default, this case passes even
+                    // if the codec drops the field entirely.
+                    StageDsl.Vca(expK = 2.5, declickSeconds = 0.002, on = false),
                 )
             ),
         ).forEach { decode_PipelineDsl(encode_PipelineDsl(it)) shouldBe it }
@@ -83,6 +85,9 @@ class WireCodecRoundTripSpec : StringSpec({
             adsr = AdsrDef.Std(
                 attack = 0.005, decay = 0.2, sustain = 0.6, release = 0.05,
                 attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
+                // Non-default on purpose (default is null): `Boolean?` through a `dynamic` codec is
+                // exactly the shape where `false` and `undefined` can be confused.
+                on = false,
             ),
             filters = FilterDefs(
                 listOf(

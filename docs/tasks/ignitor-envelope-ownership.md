@@ -268,8 +268,13 @@ wire, which is why none appears in the generated file today.
 
 **B. Both doors get `.adsrOff()` / `.adsrOn()`** (see the dual-surface rule: every surface function
 lands on the script stdlib AND the Kotlin extensions). Sprudel side: `SvdAdsr.on`, `mergeSvdAdsr`,
-the three receiver forms `adsr` already has in `lang_dynamics.kt` (`:1372`, `:1400`, `:1638`), and
-the parser mapping at `MnPatternToSprudelPattern.kt:225`.
+and the FOUR-door surface (pattern / string / standalone factory / chained mapper). They live in
+`lang/addons/lang_dynamics_addons.kt`, not `lang_dynamics.kt`, and carry `addon` in `@tags`: neither
+exists in Strudel, and `sprudel/ref/dsl-conventions.md` puts non-Strudel functions in `lang/addons/`.
+
+**NOT** the mini-notation attribute map (`MnPatternToSprudelPattern.kt`) — an earlier draft of this
+plan listed it. `loop`, the existing Boolean control, is not in that map either, so the precedent is
+that `{adsr=…}` sets the numbers while the switch stays a method call.
 
 **C. `StageDsl.Vca` gains `on: Boolean = true`**, alongside `expK` and `declickSeconds`. Non-null
 here on purpose: `Vca` IS the fallback layer, so it has no "unset" state to express. This is a soft
@@ -279,12 +284,50 @@ ordered list and a pipeline may simply omit the stage.
 > **The built-in engines keep `on = true`.** Flipping `modern` / `pedal` would change how every
 > existing song sounds. `Vca(on = false)` is there for engines built around self-enveloping ignitors.
 
-**D. `on = false` renders a GATE, not a bypass.** `EnvelopeRenderer.kt:100-143` does three things per
+**D. `on = false` renders a GATE, not a bypass, AND fades at teardown.**
+
+> **⚠️ SUPERSEDED IN PART — read the callout below before the prose that follows it.** The original
+> prose prescribed "feed a constant 1.0 through the same smoother". The shipped `renderGate` has NO
+> smoother, deliberately: inside the fade window the target ramps 1.0 -> 0, so a one-pole would lag
+> and leave a non-zero final sample, destroying the exact-zero endpoint. Restoring the smoother
+> would bring the guitar click back. The prose is kept for the reasoning that led here, not as an
+> instruction. Likewise "ending exactly at the voice's end frame" is wrong: it ends on
+> `floor(endFrame) - 1`, the last frame `Voice.render` actually produces, and getting that wrong was
+> the first bug the review found.
+
+> **⚠️ FOUND BY EAR AFTER SHIPPING, 2026-08-27 — the fade is the load-bearing half.** The first
+> implementation kept only the de-click smoother and clicked on every guitar note. The smoother was
+> never the protection: it smooths the GAIN, and a constant gain has nothing to smooth. What
+> actually guaranteed silence at teardown was that **the VCA sits LAST in the strip**, so with a
+> curve it drove the fully amplified signal to zero before `Voice.render` dropped the voice.
+>
+> An ignitor's own envelope cannot replace that, because it sits **before** the instrument's amp.
+> Measured on Der Schmetterling's guitar topology (`adsr → distort("tube") → highpass`):
+>
+> | topology | peak | last sample before teardown |
+> |---|---|---|
+> | envelope only | 0.995 | 0.00002 |
+> | **envelope → amp** (the guitar) | 1.270 | **0.01510** |
+> | amp → envelope (what the VCA did) | 1.267 | 0.00002 |
+>
+> The amp lifts the near-zero tail by ~20 dB and teardown steps it to zero in one sample. Fix:
+> `VCA_OFF_TEARDOWN_FADE_SECONDS` (0.004), a linear ramp to zero ending exactly on `Voice.endFrame`.
+> On the real guitar that halved max second-difference (0.0110 → 0.0057) and cut corners above
+> 0.005 by 65% (77 → 27), with peak and RMS unchanged. Guard: `VcaOffTeardownSpec`, which is red
+> without the fade and red at 0.5/1/2 ms. **This is a fade guard, not an envelope** — resist growing
+> it, that invites the second ADSR back in through the safety door.
+
+ `EnvelopeRenderer.kt:100-143` does three things per
 sample: evaluate the curve, run the one-pole declick smoother, multiply into the buffer. Feed a
 constant 1.0 through the same smoother and skip only the curve evaluation. That keeps nearly all the
 CPU saving (the branch table is the expensive part) and all of the safety, because the declick is the
 only thing rounding the note-off corner, and an envelope-less voice is exactly where a discontinuity
-is guaranteed. Mirror in `EnvelopeCalc.kt`.
+is guaranteed.
+
+> **Do NOT touch `EnvelopeCalc.kt`.** An earlier draft of this plan said to mirror the change there.
+> That is wrong: `calculateControlRateEnvelope` serves `FilterModRenderer` and `FmRenderer`, which
+> pass their OWN `Voice.Envelope` instances. Switching the amp envelope off must not switch off the
+> filter envelope. `EnvelopeRenderer` is the only VCA site.
 
 **E. Specs.**
 - merge reaches the pipeline: an all-null voice ADSR plus `Vca(on = false)` resolves to off. This is

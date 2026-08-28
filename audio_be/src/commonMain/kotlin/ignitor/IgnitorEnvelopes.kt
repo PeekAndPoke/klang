@@ -9,6 +9,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.adsrExpNorm
 import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
+import io.peekandpoke.klang.audio_be.releaseProgressOffset
+import io.peekandpoke.klang.audio_be.releaseProgressDenom
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 
@@ -88,7 +90,8 @@ private class AdsrIgnitor(
             val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
             val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
             val releaseFrames = (releaseSecVal * ctx.sampleRate).toInt()
-            val relDenom = if (releaseFrames > 0) releaseFrames.toDouble() else 1.0
+            val relDenom = releaseProgressDenom(releaseFrames.toDouble())
+            val relOffset = releaseProgressOffset(releaseFrames.toDouble())
 
             val attCurve = attackCurve
             val decCurve = decayCurve
@@ -104,7 +107,7 @@ private class AdsrIgnitor(
                         releaseStarted = true
                     }
                     val relPos = absPos - gateEndPos
-                    val p = (relPos / relDenom).coerceAtMost(1.0)
+                    val p = ((relPos + relOffset) / relDenom).coerceAtMost(1.0)
                     val omp = 1.0 - p
                     val shape = when (relCurve) {
                         AdsrCurve.Linear -> omp

@@ -326,6 +326,8 @@ selection — extended to ignitor variants and per-note gain.
 | `decay(sec)`     |            | Envelope decay                 | `note("c3").decay(0.2)`               |
 | `sustain(level)` |            | Envelope sustain level         | `note("c3").sustain(0.7)`             |
 | `release(sec)`   |            | Envelope release               | `note("c3").release(0.5)`             |
+| `adsrOff()`      |            | Voice envelope OFF — the instrument owns amplitude | `note("c3").sound(gtr).adsrOff()` |
+| `adsrOn(flag?)`  |            | Voice envelope ON (the default) | `note("c3").adsrOn()`                |
 | `legato(amt)`    | `clip`     | Note duration scaling          | `note("c3").legato(1.5)`              |
 | `postgain(amt)`  |            | Post-processing gain           | `s("bd").distort(3).postgain(0.1)`    |
 | `spread(value)`  |            | Distribute value across events | `s("bd sd").spread(1.0)`              |

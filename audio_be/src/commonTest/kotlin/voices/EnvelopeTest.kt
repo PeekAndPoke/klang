@@ -222,7 +222,13 @@ class EnvelopeTest : StringSpec({
 
         // releaseFrames=0 is de-clicked: instead of a 1-sample cutoff (a click) the gain
         // fades over ~ENV_DECLICK_SECONDS, then settles at silence.
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.02)        // still at sustain at relPos 0
+        // A release too short to ramp targets 0 from its FIRST frame (releaseProgressOffset), so
+        // relPos 0 is already one de-click step down rather than still sitting at sustain.
+        // Tight on purpose: 1 - envDeclickCoeff(0.001, 44100) = 0.97758 — this helper's sample
+        // rate, not 48k. A band that still contained the OLD value (1.0) would stay green with
+        // releaseProgressOffset reverted. Note this state is stage-level only: with release = 0,
+        // endFrame == gateEndFrame, so a real Voice never renders it.
+        ctx.voiceBuffer[0] shouldBe (0.97758 plusOrMinus 0.002)
         (ctx.voiceBuffer[1] < ctx.voiceBuffer[0]) shouldBe true   // fading (declining), not a hard cut
         (ctx.voiceBuffer[1] > 0.5) shouldBe true                  // ...nowhere near gone in one sample
         ctx.voiceBuffer[550] shouldBe (0.0 plusOrMinus 0.02)      // settled at silence
