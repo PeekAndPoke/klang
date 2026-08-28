@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.WireFormat
 import io.peekandpoke.klang.audio_bridge.WireName
 import io.peekandpoke.klang.common.infra.KlangMessageReceiver
@@ -71,6 +72,17 @@ class KlangCommLink(capacity: Int = 8192) {
         data class ScheduleVoices(
             override val playbackId: String,
             val voices: List<ScheduledVoice>,
+        ) : Cmd
+
+        /**
+         * Starts a realtime voice immediately — see [RealtimeVoice]. Unlike [ScheduleVoice] there
+         * is no start time on the wire: the backend stamps "now" at receipt and promotes the voice
+         * straight to active, bypassing the scheduled heap and epoch anchoring entirely.
+         */
+        @WireName("start-realtime-voice")
+        data class StartRealtimeVoice(
+            override val playbackId: String,
+            val voice: RealtimeVoice,
         ) : Cmd
 
         /** Registers a custom IgnitorDsl in the backend's exciter registry. */

@@ -67,6 +67,9 @@ class PlaybackEngineDispatcher(
         is KlangCommLink.Cmd.ScheduleVoices ->
             scheduleVoices(cmd.playbackId, cmd.voices)
 
+        is KlangCommLink.Cmd.StartRealtimeVoice ->
+            engineFor(cmd.playbackId).scheduler.startRealtimeVoice(cmd.playbackId, cmd.voice)
+
         is KlangCommLink.Cmd.ReplaceVoices ->
             replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
 

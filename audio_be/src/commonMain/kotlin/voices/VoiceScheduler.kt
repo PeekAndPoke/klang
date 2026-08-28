@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
+import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -25,6 +26,15 @@ import kotlin.random.Random
 class VoiceScheduler(
     val options: Options,
 ) {
+    companion object {
+        /**
+         * Gate horizon for held realtime voices ([RealtimeVoice.gateDurSec] == null): far enough
+         * to outlast any session, small enough that the gate duration in FRAMES stays well inside
+         * Int (VoiceFactory computes `gateEndFrame - startFrame` as Int; 10 h @ 48 kHz ≈ 1.7e9 < 2^31).
+         */
+        const val REALTIME_HELD_GATE_SEC: Double = 36_000.0
+    }
+
     /** A scheduler is per-playback now; the shared backend state arrives via [context]. */
     class Options(
         val context: AudioBackendContext,
@@ -44,15 +54,33 @@ class VoiceScheduler(
     // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
 
+    /**
+     * Where an active voice came from — a voice is EITHER a timeline voice or a realtime voice,
+     * never both, and each variant carries exactly the identity its path needs.
+     */
+    private sealed interface VoiceOrigin {
+        /**
+         * Promoted from the scheduled timeline. [source] is the original (relative) event, kept so
+         * the replace path can dedup a resent duplicate of a voice that has already been promoted
+         * (see dedupAgainstActive).
+         */
+        data class Timeline(val source: ScheduledVoice) : VoiceOrigin
+
+        /**
+         * Started by [startRealtimeVoice]. [liveId] ([RealtimeVoice.liveId]) is the handle a stop
+         * command releases. Realtime voices have no resendable source event — the replace-dedup
+         * can never (and must never) match them.
+         */
+        data class Realtime(val liveId: Int) : VoiceOrigin
+    }
+
     // Wrapper to track playbackId and solo state alongside Voice
     private data class ActiveVoice(
         val voice: Voice,
         val playbackId: String,
         val soloAmount: Double,
         val sourceId: String?,
-        // The original (relative) scheduled voice, kept so the replace path can dedup a resent
-        // duplicate of a voice that has already been promoted here (see dedupAgainstActive).
-        val source: ScheduledVoice,
+        val origin: VoiceOrigin,
     )
 
     // State with active voices
@@ -219,7 +247,9 @@ class VoiceScheduler(
         if (voices.isEmpty() || active.isEmpty()) return voices
         val claimed = BooleanArray(active.size)
         return voices.filter { incoming ->
-            val match = active.indices.firstOrNull { i -> !claimed[i] && active[i].source.isDuplicate(incoming) }
+            val match = active.indices.firstOrNull { i ->
+                !claimed[i] && (active[i].origin as? VoiceOrigin.Timeline)?.source?.isDuplicate(incoming) == true
+            }
             if (match != null) {
                 claimed[match] = true
                 false // already playing → drop the duplicate
@@ -235,6 +265,36 @@ class VoiceScheduler(
         val cursor = context.clock.cursorFrame
         promoteScheduled(cursor, cursor + context.blockFrames)
         prefetchSampleSound(voice)
+    }
+
+    /**
+     * Starts a [RealtimeVoice] immediately — promoted straight to active, never entering the
+     * scheduled heap or the epoch machinery. The backend stamps "now" as the start time; a null
+     * gate duration means "held" (released by a later stop command; until then the gate ends at
+     * a far-but-finite horizon, see [REALTIME_HELD_GATE_SEC]).
+     */
+    fun startRealtimeVoice(playbackId: String, voice: RealtimeVoice) {
+        // Invariant: control-only events never reach voice creation (same rule as the timeline path).
+        if (voice.data.control == true) return
+
+        val nowSec = context.clock.nowSec()
+        val pCtx = ensureRealtimeCtx(playbackId, nowSec)
+
+        val absolute = ScheduledVoice(
+            playbackId = playbackId,
+            data = voice.data,
+            startTime = nowSec,
+            gateEndTime = nowSec + (voice.gateDurSec ?: REALTIME_HELD_GATE_SEC),
+            playbackStartTime = nowSec,
+        )
+
+        prefetchSampleSound(absolute)
+        activateVoice(
+            absoluteVoice = absolute,
+            origin = VoiceOrigin.Realtime(voice.liveId),
+            nowFrame = context.clock.cursorFrame,
+            pCtx = pCtx,
+        )
     }
 
     /**
@@ -322,28 +382,37 @@ class VoiceScheduler(
             // and the first voice is not judged in the past. (A fresh engine has no per-scheduler cursor.)
             val nowSec = context.clock.nowSec()
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
-            playbackContexts[pid] = PlaybackCtx(
-                playbackId = pid,
-                ignitorRegistry = ignitorFork,
-                // The pool gets its OWN rng stream (deliberately voice-SHARED vocabulary —
-                // distinct from the per-voice streams dealt from PlaybackCtx.coreRandom, the
-                // seeded-voice-rng derivation tree), and creating it must not consume from
-                // coreRandom (a draw here would shift every voice's seed). Live seeds from the
-                // clock ("takes vary"); offline passes a fixed seed so pool vocabularies
-                // reproduce.
-                // ⚠️ nowSec is UNIX-EPOCH-scale live (~1.8e9): a naive `* 1e6 → toInt()` SATURATES
-                // to Int.MAX_VALUE — a constant seed for every playback. Fold to sub-Int range and
-                // mix in the playback id (two playbacks can share a render block's nowSec).
-                phasePools = PhasePools(
-                    Random(
-                        context.phasePoolSeed
-                            ?: (((nowSec % 4096.0) * 1e5).toInt() xor pid.hashCode()),
-                    ),
-                ),
-                epoch = voice.playbackStartTime + latency,
-            )
+            playbackContexts[pid] = createPlaybackCtx(pid, nowSec, epoch = voice.playbackStartTime + latency)
         }
     }
+
+    /**
+     * PlaybackCtx for a realtime playback — there is no FE timeline to anchor against, so the
+     * epoch is simply "now". Idempotent per playbackId (mirror of [ensureEpoch]).
+     */
+    private fun ensureRealtimeCtx(playbackId: String, nowSec: Double): PlaybackCtx =
+        playbackContexts.getOrPut(playbackId) { createPlaybackCtx(playbackId, nowSec, epoch = nowSec) }
+
+    private fun createPlaybackCtx(pid: String, nowSec: Double, epoch: Double): PlaybackCtx = PlaybackCtx(
+        playbackId = pid,
+        ignitorRegistry = ignitorFork,
+        // The pool gets its OWN rng stream (deliberately voice-SHARED vocabulary —
+        // distinct from the per-voice streams dealt from PlaybackCtx.coreRandom, the
+        // seeded-voice-rng derivation tree), and creating it must not consume from
+        // coreRandom (a draw here would shift every voice's seed). Live seeds from the
+        // clock ("takes vary"); offline passes a fixed seed so pool vocabularies
+        // reproduce.
+        // ⚠️ nowSec is UNIX-EPOCH-scale live (~1.8e9): a naive `* 1e6 → toInt()` SATURATES
+        // to Int.MAX_VALUE — a constant seed for every playback. Fold to sub-Int range and
+        // mix in the playback id (two playbacks can share a render block's nowSec).
+        phasePools = PhasePools(
+            Random(
+                context.phasePoolSeed
+                    ?: (((nowSec % 4096.0) * 1e5).toInt() xor pid.hashCode()),
+            ),
+        ),
+        epoch = epoch,
+    )
 
     private fun prefetchSampleSound(voice: ScheduledVoice) {
         if (!ignitorFork.contains(voice.data.sound)) {
@@ -399,30 +468,44 @@ class VoiceScheduler(
                 gateEndTime = epoch + head.gateEndTime,
             )
 
-            // Handle Cut / Choke Groups before creating the new voice
-            val cut = head.data.cut
-            if (cut != null) {
-                val iterator = active.iterator()
-                while (iterator.hasNext()) {
-                    val activeVoice = iterator.next()
-                    if (activeVoice.voice.cut == cut) {
-                        // TODO: Use a fade out / release phase instead of hard cut?
-                        iterator.remove()
-                    }
+            activateVoice(absoluteVoice, origin = VoiceOrigin.Timeline(head), nowFrame = nowFrame, pCtx = pCtx)
+        }
+    }
+
+    /**
+     * Promotes ONE voice with ABSOLUTE times into the active list: applies cut/choke groups,
+     * builds the Voice, and registers it. The shared tail of the timeline path
+     * ([promoteScheduled]) and the realtime path ([startRealtimeVoice]).
+     */
+    private fun activateVoice(
+        absoluteVoice: ScheduledVoice,
+        origin: VoiceOrigin,
+        nowFrame: Double,
+        pCtx: PlaybackCtx,
+    ) {
+        // Handle Cut / Choke Groups before creating the new voice
+        val cut = absoluteVoice.data.cut
+        if (cut != null) {
+            val iterator = active.iterator()
+            while (iterator.hasNext()) {
+                val activeVoice = iterator.next()
+                if (activeVoice.voice.cut == cut) {
+                    // TODO: Use a fade out / release phase instead of hard cut?
+                    iterator.remove()
                 }
             }
+        }
 
-            voiceFactory.makeVoice(
-                scheduled = absoluteVoice,
-                nowFrame = nowFrame,
-                backendStartTimeSec = clock.startTimeSec,
-                playbackCtx = pCtx,
-                getSample = ::getCompleteSample,
-            )?.let { voice ->
-                val soloAmount = head.data.solo ?: 0.0
-                val sourceId = head.data.sourceId
-                active.add(ActiveVoice(voice, head.playbackId, soloAmount, sourceId, source = head))
-            }
+        voiceFactory.makeVoice(
+            scheduled = absoluteVoice,
+            nowFrame = nowFrame,
+            backendStartTimeSec = context.clock.startTimeSec,
+            playbackCtx = pCtx,
+            getSample = ::getCompleteSample,
+        )?.let { voice ->
+            val soloAmount = absoluteVoice.data.solo ?: 0.0
+            val sourceId = absoluteVoice.data.sourceId
+            active.add(ActiveVoice(voice, absoluteVoice.playbackId, soloAmount, sourceId, origin = origin))
         }
     }
 }

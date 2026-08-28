@@ -145,6 +145,9 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Cmd.ScheduleVoice("pb", voice),
             KlangCommLink.Cmd.ScheduleVoices("pb", listOf(voice, voice)),
             KlangCommLink.Cmd.ReplaceVoices("pb", listOf(voice), afterTimeSec = 2.0),
+            // Both gateDurSec variants: fixed length AND the held case (null must survive the trip)
+            KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 7, data = voice.data, gateDurSec = 0.4)),
+            KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 8, data = voice.data, gateDurSec = null)),
             KlangCommLink.Cmd.RegisterIgnitor("pb", "mysynth", dsl),
             KlangCommLink.Cmd.RegisterMaster("pb", "master-0", MasterDsl.of(MasterStageDsl.Gain(2.0))),
             KlangCommLink.Cmd.Sample.NotFound(SampleRequest("b", "s", 1, "c3")),

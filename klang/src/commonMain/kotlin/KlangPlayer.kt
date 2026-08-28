@@ -218,6 +218,27 @@ class KlangPlayer(
     }
 
     /**
+     * Gets or creates the realtime voice playback for [name] — an always-on playback that plays
+     * voices "now" (MIDI keyboard & friends; see docs/tasks/midi-keyboard-playground.md).
+     *
+     * The id is mangled to `"custom-$name"` so caller-supplied names can never collide with the
+     * generated `"playback-N"` ids. Idempotent per name: a page remount reuses the existing
+     * instance instead of leaking engines.
+     */
+    fun createRealtimePlayback(name: String): KlangRealtimeVoicePlayback {
+        val playbackId = "custom-$name"
+
+        lock.withLock {
+            _activePlaybacks.filterIsInstance<KlangRealtimeVoicePlayback>()
+                .firstOrNull { it.playbackId == playbackId }
+                ?.let { return it }
+
+            return KlangRealtimeVoicePlayback(player = this, playbackId = playbackId)
+                .also { _activePlaybacks.add(it) }
+        }
+    }
+
+    /**
      * Generate a unique playback ID.
      */
     fun generatePlaybackId(): String = Companion.generatePlaybackId()

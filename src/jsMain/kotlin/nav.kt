@@ -11,6 +11,7 @@ import io.peekandpoke.klang.layouts.MotorBackgroundLayout
 import io.peekandpoke.klang.pages.CodeSongPage
 import io.peekandpoke.klang.pages.CreditsPage
 import io.peekandpoke.klang.pages.DashboardPage
+import io.peekandpoke.klang.pages.MidiPlaygroundPage
 import io.peekandpoke.klang.pages.NotFoundPage
 import io.peekandpoke.klang.pages.SamplesLibraryPage
 import io.peekandpoke.klang.pages.StartPage
@@ -65,6 +66,8 @@ object Nav {
         if (trackSlug == null) tutorial(slug)
         else tutorial(slug).withQueryParams(TutorialPage.PARAM_TRACK to trackSlug)
 
+    val midiPlayground = Static("/midi-playground")
+
     val credits = Static("/credits")
 
     val tour = Static("/tour")
@@ -98,6 +101,8 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.tutorials) { TutorialsListPage() }
         mount(Nav.tutorialTrack) { TutorialTrackPage() }
         mount(Nav.tutorial) { TutorialPage() }
+
+        mount(Nav.midiPlayground) { MidiPlaygroundPage() }
 
         mount(Nav.credits) { CreditsPage() }
     }

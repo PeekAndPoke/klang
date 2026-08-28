@@ -7,7 +7,6 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
@@ -45,7 +44,6 @@ import kotlinx.css.Flex
 import kotlinx.css.FlexBasis
 import kotlinx.css.FlexDirection
 import kotlinx.css.JustifyContent
-import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
 import kotlinx.css.alignItems
@@ -67,7 +65,6 @@ import kotlinx.html.DIV
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.p
 import kotlinx.html.title
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
