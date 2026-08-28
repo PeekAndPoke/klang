@@ -1,9 +1,11 @@
 # Block-framing invariance — every voice must sound the same wherever the blocks fall
 
-> **Status (2026-08-28): PLAN, not started.** Opened after the second instance of the same bug class
-> (`IgniteRenderer.kt:36`, found 2026-08-27 via `.adsrOff()`; the maintainer recalls an earlier one in
-> the sample path). This is an audit workstream, deliberately incremental: build the harness, run it,
-> then fix one node at a time.
+> **Status (2026-08-28): PLAN, not started. Scope settled with the maintainer.** Opened after the
+> SECOND instance of the same bug class in three weeks (`IgniteRenderer.kt:36` 2026-08-27, surfaced by
+> `.adsrOff()`; sample-voice onset quantisation 2026-08-07). An audit workstream, deliberately
+> incremental: build the harness, run it, fix one node per commit.
+>
+> **Target: A, structurally correct at any block size — NOT B, bit-identical.** See that section.
 
 ## The one-sentence property
 
@@ -71,11 +73,73 @@ Guard: `IgniteOnsetOffsetSpec`.
 de-clicked attack, attenuating the step 10–20×. `.adsrOff()` replaced that with unity and exposed it.
 A masking layer is not a fix, and this whole plan exists because we cannot rely on one.
 
-### Confirmed instance 2 — the sample path
+### Confirmed instance 2 — the sample path (fixed 2026-08-07)
 
-The maintainer recalls an equivalent bug already fixed in the sample renderer. **I could not locate it
-in `git log`** — whoever picks this up should find it first and record the commit here, because its
-shape tells us which other paths to suspect and whether a guard was left behind.
+`docs/tasks-archive/2026-08/20260807-sample-voice-onset-quantization.md`. Sample voices started at the
+render block boundary, because `VoiceFactory` passed `nowFrame` instead of the scheduled `startFrame`
+— up to `blockFrames-1` frames of per-hit onset jitter. Fix: `maxOf(startFrame, nowFrame)`. Sub-block
+`late()` values on samples were previously swallowed entirely.
+
+### And instance 1 was already on the deferred list
+
+The same 2026-08-07 write-up records, under *known follow-ups, deliberately NOT done*:
+**"`IgniteRenderer.voiceElapsedFrames` misses `+ ctx.offset` (pre-existing, osc-only)"**. Found, judged
+low-priority, deferred — and it took three weeks and an unrelated feature (`.adsrOff()`, which removed
+the masking layer) to surface it audibly as the guitar knocks.
+
+That is the argument for this workstream in one line: **this class of bug does not announce itself, so
+it will not be prioritised correctly by ear.** It needs a mechanical sweep.
+
+Three siblings are still on that deferred list and want triage here; two are audible:
+
+- oscillator voices never receive `data.cut` — choke groups are sample-only;
+- a `cut`-tagged hit on an unloaded sample silences its group with nothing to replace it;
+- `SongBenchmark`'s peak window cannot cover `filterWhen`-gated orbit allocation (wants a percentile peak).
+
+## The target: structurally correct at ANY block size — NOT bit-identical
+
+Settled with the maintainer, 2026-08-28.
+
+Block size is 128 in the browser because the Web Audio render quantum is handed to the worklet, but
+**other platforms may choose it, so nothing may be implemented against 128.** At the same time, block
+size remains a TONE parameter (`docs/tasks-archive/2026-08/20260807-block-size-parity.md`): several
+things derive their RATE from it, and the consequences are understood and accepted.
+
+| derives its rate from `blockFrames` | shifts when block size changes |
+|---|---|
+| `driftUpdateRate = sampleRate / blockFrames` (`VoiceFactory:61`) | analog drift time constants (tuned by ear at 128) |
+| SVF cutoff smoothing | filter movement speed |
+| `oldestAllowedSec` = 5 blocks | late-voice drop window |
+| MasterBus crossfade granularity | crossfade rate |
+| every `readParam` / `blockStartValue` | control-rate modulation step rate |
+
+So the goal is **A, not B**:
+
+- **A (the target).** Structure is correct at any block size: onsets land on the right sample, state
+  transitions land on the right sample, nothing renders silent, no step is introduced, no state is
+  corrupted.
+- **B (explicitly NOT the target).** Bit-identical output at any block size. That would mean
+  re-deriving every row of the table above from `sampleRate`, and re-tuning analog drift by ear.
+  Rejected: the tone dependence is deliberate.
+
+**Accepted quantisation, by design:** a LATE voice floors to the block start
+(`maxOf(startFrame, nowFrame)`). A voice cannot start in the past, and `nowFrame` is the floor. This
+is the one place block-quantised onset is correct.
+
+## Classifying every node — the thing that makes "structurally correct" testable
+
+Without bit-identity the assertions get vague, so the sweep classifies each node type instead. The
+classification is the deliverable of P2, and it is compiler-checked (`when` with no `else`).
+
+**Class 1 — sample-deterministic.** No block-rate internal state. With `analog = 0` and block-constant
+parameters these must be **bit-identical across block sizes and alignments**. Expected to be the large
+majority: oscillators, envelopes, arithmetic, waveshapers, delay lines. A Class 1 node that is not
+bit-identical is a bug, full stop.
+
+**Class 2 — block-rate by design.** Something inside ticks once per block: analog drift, SVF
+smoothing, a control-rate read of a varying signal. Not bit-identical, and must not be made so. For
+these the assertions are the structural ones below, plus: **the block-rate dependence must be NAMED**
+(which knob, which rate) rather than merely observed.
 
 ## The invariants
 
@@ -83,44 +147,36 @@ These are mechanical and apply to every node without case-by-case reasoning. Tha
 catalogue is 78 DSL node types over 33 runtime classes, and hand-auditing them is exactly how the
 first two got missed.
 
-**I1 — Onset alignment.** For a voice starting at frame `S`, the samples relative to its own start
-must be identical for every `S mod blockFrames`. Sweep `S` over `0..blockFrames-1`.
+**I1 — Onset placement.** The note's first sample lands at exactly `startFrame`, for every
+`S mod blockFrames` and every block size. Class 1 additionally: the samples relative to the note's own
+start are bit-identical.
 
-**I2 — Block-split invariance.** The same voice rendered with different block sizes (128, 64, 37,
-ragged) must be **bit-identical**. This is the strongest of the three and subsumes most of I1.
+**I2 — Block-size independence.** Render the same voice at 128, 64, 37 and a ragged split. Class 1
+must be bit-identical. Class 2 must satisfy I1/I3/I4 and introduce **no discontinuity that the
+block-aligned 128 reference does not have** — changing block size may change tone, never structure.
 
-**I3 — Teardown alignment.** Same as I1 for the end frame: sweep `endFrame mod blockFrames`.
+**I3 — Teardown placement.** Same as I1 for the end frame: sweep `endFrame mod blockFrames` and block
+size. The last rendered sample is `floor(endFrame) - 1` and the envelope has reached its endpoint
+there.
 
 **I4 — Transition placement.** For any node with a gate-relative state change, sweep the gate end
 across every offset in a block and assert the transition lands at the same sample relative to the
 note. This is the one that catches failure mode (b), and I1/I2 catch it only by luck — a transition
 that snaps to a block boundary is invisible if the test never places one mid-block.
 
-## The exemption that makes this tractable
+## Second-order effects — classify, do not chase
 
-**Control-rate parameter reads are block-rate BY DESIGN.** `Ignitors.readParam` /
-`Ignitor.blockStartValue` sample a parameter once per block and hold it. So under I2, a node whose
-parameter is a *varying signal* legitimately produces different output at a different block size.
-That is a feature (see the `controlRateValueOrNull` contract), not a bug.
+Expect these and put them in Class 2 with a name, rather than treating them as failures:
 
-Without this distinction the sweep drowns in false positives. So:
-
-- **The exhaustive sweep uses BLOCK-CONSTANT parameters.** Every node must pass I1–I4 there, with no
-  exceptions. A failure is a real bug.
-- **Varying parameters are a separate, smaller pass** with a weaker property: the difference between
-  framings must be bounded by the parameter's own per-block step, not zero. Document the block-rate
-  behaviour per node rather than "fixing" it.
-- Anything that turns out to be genuinely block-quantised and *audible* is a design question for the
-  maintainer, not something to silently smooth.
-
-Second-order effects to expect and classify rather than chase:
-
-- **`MemoizingIgnitor`** keys on `(voiceElapsedFrames, offset, length, freqHz)`, so a block split
-  changes the key and forces recompute. Correct, and invisible if the node is otherwise sound.
+- **`MemoizingIgnitor`** keys on `(voiceElapsedFrames, offset, length, freqHz)`, so a different block
+  size changes the key and forces recompute. Correct, and invisible if the node is otherwise sound.
 - **Stateful RNG** (whitenoise, dust, crackle, supersaw jitter): draw order must depend only on the
-  number of samples produced. I2 catches a node that draws `buffer.size` instead of `length` — which
-  is exactly the kind of slip worth finding.
+  number of samples produced. A node drawing `buffer.size` instead of `length` is a Class 1 failure
+  and exactly the slip worth finding.
 - **Delay-line nodes** (shimmer, phaser, pluck): write/read positions must advance by `length`.
+- **`IgnitorFilters` already lerps** its envelope between `sampleOffsetWithinBlock = 0` and `= length`
+  (`:141-147`), so it degrades gracefully rather than stepping. Good precedent for what a Class 2 node
+  should do when it cannot be sample-exact.
 
 ## Harness design
 
@@ -148,7 +204,8 @@ a framing that never occurs.
 one noise source, one delay-line node. Proves the harness discriminates before scaling it. Expect it
 to find something.
 
-**P1. Locate the earlier sample-path fix** and record it above.
+**P1. Triage the three siblings still on the 2026-08-07 deferred list** (two are audible), so this
+sweep starts from a known board rather than rediscovering them a third time.
 
 **P2. Exhaustive sweep** over all 78 node types with block-constant parameters. Triage into
 fix / block-rate-by-design / maintainer decision. Do not fix during triage; produce the list first.
@@ -162,16 +219,14 @@ mutation-checked. Gradual is the point.
 
 **P5. The sample path** end to end, given instance 2.
 
-## Two things to decide before P2
+## Settled (2026-08-28), recorded so they are not re-opened
 
-- **Is `blockFrames` allowed to vary at runtime?** Today it is pinned at 128 everywhere (see the
-  block-size parity note in the project memory). If it can never vary in production, I2 is a
-  *design* property we test rather than a shipping risk, and I1/I3/I4 carry the real weight. Worth
-  settling, because it changes how loudly a pure-I2 failure should be treated.
-- **How much onset jitter is acceptable at all?** `VoiceFactory:88` floors `startFrame`, so onsets are
-  already quantised to whole samples. If sub-sample onset accuracy is ever wanted, several exactness
-  arguments in the envelope code (`renderGate`'s endpoint, `releaseProgressDenom`) rest on integral
-  frames and would need revisiting together.
+- **Block size must be treated as non-constant.** It is 128 in the browser only because the render
+  quantum is handed to the worklet; other platforms may choose it. Nothing may be implemented against
+  128. The tone consequences of changing it are understood and accepted — target A, not B.
+- **Sub-sample onset accuracy is NOT required.** Flooring the start position to a SAMPLE is fine
+  (`VoiceFactory:88` already does exactly that); flooring it to a BLOCK is the bug. The one accepted
+  exception is a late voice, which floors to the block start because it cannot start in the past.
 
 ## Related
 
