@@ -109,7 +109,7 @@ things derive their RATE from it, and the consequences are understood and accept
 |---|---|
 | `driftUpdateRate = sampleRate / blockFrames` (`VoiceFactory:61`) | analog drift time constants (tuned by ear at 128) |
 | SVF cutoff smoothing | filter movement speed |
-| `oldestAllowedSec` = 5 blocks | late-voice drop window |
+| `oldestAllowedSec` = 5 blocks | late-voice drop window (RETIRED by the no-late-voices rule below) |
 | MasterBus crossfade granularity | crossfade rate |
 | every `readParam` / `blockStartValue` | control-rate modulation step rate |
 
@@ -122,9 +122,51 @@ So the goal is **A, not B**:
   re-deriving every row of the table above from `sampleRate`, and re-tuning analog drift by ear.
   Rejected: the tone dependence is deliberate.
 
-**Accepted quantisation, by design:** a LATE voice floors to the block start
-(`maxOf(startFrame, nowFrame)`). A voice cannot start in the past, and `nowFrame` is the floor. This
-is the one place block-quantised onset is correct.
+**SUPERSEDED (2026-08-28): there is no late-voice quantisation any more, because there are no late
+voices.** An earlier revision accepted "a late voice floors to the block start" as the one exception.
+The maintainer replaced that with a hard rule: see "Enforced at ONE place" below. The sample-path
+floor (`maxOf(startFrame, nowFrame)`) becomes dead code once that lands.
+
+## Enforced at ONE place: the scheduler (decided 2026-08-28)
+
+The audit exposed that we were mixing two problems, and the maintainer split them:
+
+**Problem A (DSP):** every node may ASSUME the contract below and must be correct under it.
+**Problem B (scheduler):** the scheduler GUARANTEES the contract, at the admission check.
+
+**The contract:** a voice's first `generate` call has `voiceElapsedFrames == 0`, and rendering is
+contiguous thereafter (each block advances state by exactly `ctx.length`). Everything a voice does is
+a function of its note-relative sample position; the scheduler owns where `startFrame` falls.
+
+**The guarantee: no late voices, ever.** Admission becomes `startFrame >= blockStart` of the block
+being scheduled; anything older is DROPPED and counted on a per-playback dropped-voice counter
+(observability, not a clamp). This replaces the 5-block `oldestAllowedSec` window.
+
+What the hard rule erases, verified 2026-08-28:
+
+- The `AdsrIgnitor` release-level silent-note finding AND its identical latent twin in the strip VCA
+  (`EnvelopeRenderer:95`, `releaseStartLevel = currentEnv` from an initial `level = 0.0`) both become
+  unreachable. Two bugs closed with zero DSP edits.
+- The sample floor `maxOf(startFrame, nowFrame)` and the "ADSR ahead of the sample playhead"
+  divergence class it guarded: dead.
+- `oldestAllowedSec`: deleted, including its row in the tone table above.
+- The harness loses the whole "arbitrary first `absPos`" sweep dimension.
+- Nothing musically real is lost: a late oscillator voice today renders an incoherent hybrid anyway
+  (phase starts fresh while the envelope evaluates mid-note; neither "on time" nor "shifted").
+
+**Accepted trade:** arrival jitter becomes cleanly dropped notes instead of smeared ones. An FE stall
+produces a diagnosable gap plus a counter increment, not a 15 ms smear.
+
+**Sequencing is FIXED: the startup fix lands before (or with) the admission flip, never after.**
+Flipping first would eat the first notes of every playback.
+
+**Startup direction (ROUGH SKETCH, maintainer 2026-08-28, deliberately not designed yet):** send the
+first batch of voices, and only then send a "start playback" command; the arrival of the start
+command is the playback's true zero point, and note start times are expressed relative to it. The
+epoch mechanism is already most of this (`VoiceScheduler.ensureEpoch`, `:317-343`, snaps the epoch to
+"now" when the first voice arrives); what remains is that the anchor lands exactly ON the boundary
+(fractionally late by render time) instead of strictly in the future. Do not implement from this
+sketch; it gets its own design pass.
 
 ## Classifying every node — the thing that makes "structurally correct" testable
 
@@ -174,9 +216,11 @@ Expect these and put them in Class 2 with a name, rather than treating them as f
   number of samples produced. A node drawing `buffer.size` instead of `length` is a Class 1 failure
   and exactly the slip worth finding.
 - **Delay-line nodes** (shimmer, phaser, pluck): write/read positions must advance by `length`.
-- **`IgnitorFilters` already lerps** its envelope between `sampleOffsetWithinBlock = 0` and `= length`
-  (`:141-147`), so it degrades gracefully rather than stepping. Good precedent for what a Class 2 node
-  should do when it cannot be sample-exact.
+- **`IgnitorFilters` lerps** its envelope between `sampleOffsetWithinBlock = 0` and `= length`
+  (`:141-147`). An earlier revision called this the good Class 2 precedent. **Half right:** the lerp
+  is continuous across seams, but a chord across a block STRAIGHTENS any envelope knee inside it, so
+  a segment shorter than a block is erased and the peak height depends on alignment and block size.
+  See the findings ledger. Seam continuity is necessary, not sufficient.
 
 ## Harness design
 
@@ -198,11 +242,39 @@ Drive it through the real `Voice.render` where possible, so the framing under te
 framing rather than a hand-built `BlockContext`. Hand-built contexts are how a spec ends up asserting
 a framing that never occurs.
 
+## Findings ledger
+
+### Envelope class — audited 2026-08-28 (two lenses: clock/indexing + state transitions)
+
+Scope: `IgnitorEnvelopes.kt`, `IgnitorFilters.computeFilterEnvelope` + callers, `PitchModFactories.kt`.
+Clean with no findings: `AdsrIgnitor` framing (Class 1), `pitchEnvelopeModIgnitor` (Class 1),
+`computeFilterEnvelope` itself (Class 1, pure; the quantisation is entirely in its callers),
+`SvfIgnitor` non-env path (Class 1).
+
+| # | finding | severity | disposition |
+|---|---|---|---|
+| E1 | FM depth envelope held flat per block, no interpolation (`PitchModFactories:262-267`); LIVE on the registered `sgbell` preset: first block of every FM note has zero FM, peak depth never produced, per-hit head length 1..blockFrames | CRITICAL | **FIX** (per-sample evaluation; the env is analytic and sample-addressable) |
+| E2 | `fmModIgnitor` early returns skip `modulator.generate`, freezing its phase for whole blocks; `VibratoModIgnitor` same shape | MINOR | **FIX**, fold into the E1 commit |
+| E3 | SVF cutoff-env chord straightens knees; segment shorter than a block erased; peak height alignment- and block-size-dependent (`IgnitorFilters:140-171`) | MAJOR (latent: no production door passes an env here; benchmarks/tests only) | **PIN with a spec, decide before any door wires an env**. Fix shape if taken: split the chord at breakpoints in `(E, E+length)` |
+| E4 | `AdsrIgnitor` takes `releaseStartLevel` from history; first rendered sample past gate end renders the note silent (`IgnitorEnvelopes:104-108`) + identical latent twin in strip `EnvelopeRenderer:95` | MAJOR | **CLOSED BY PROBLEM B** (unreachable once no-late-voices lands); no DSP edit |
+| E5 | `blockStartValue` reads stale scratch when `ctx.length == 0` (`Ignitor.kt:89-91`); reachable via small `legato` | MINOR | **FIX small** (guard the fallback) |
+| E6 | Five dead block-start-only accessors on `IgniteContext` (`voiceProgress`, `isInRelease`, `releaseProgress`, ...), zero callers, shaped exactly like instance 1 | MINOR | **DELETE** (compiler-enforced) |
+| E7 | `accelerateModIgnitor`: per-block-anchored multiplicative recurrence differs by 1-2 ulp between block sizes | note | **HARNESS RULE**: recurrence-based Class 1 nodes get a relative tolerance (~1e-12) + an endpoint pin, never raw bit-identity |
+| E8 | `MemoizingIgnitor` re-runs a stateful shared inner when two consumers use different `freqHz` in one block (fm, detune); double-advance distance = `length` | MINOR | **RECORD**, assess in the P2 sweep (exposure in this class: only opt-in `declickSeconds`) |
+| E9 | Harness lesson from E1/E3: an onset-only sweep sees NONE of this | rule | **P0 must sweep `gateEndFrame mod blockFrames` and an interior breakpoint (`attackFrames mod blockFrames`) from the first commit** |
+
 ## Order of work — one thing at a time
 
+Two tracks, independent by construction (that is the point of the A/B split). Track A never waits
+for Track B.
+
+**Track A (DSP, under the assumed contract):**
+
 **P0. Harness + the four invariants**, run over a hand-picked critical few: `Adsr`, one oscillator,
-one noise source, one delay-line node. Proves the harness discriminates before scaling it. Expect it
-to find something.
+one noise source, one delay-line node. MUST sweep onset, gate end, an interior breakpoint, and block
+sizes {128, 64, 37, ragged} from the first commit (ledger E9), with the E7 tolerance rule baked in.
+The envelope-class findings E1/E3 are the acceptance test: the harness must reproduce both red
+before any fix.
 
 **P1. Triage the three siblings still on the 2026-08-07 deferred list** (two are audible), so this
 sweep starts from a known board rather than rediscovering them a third time.
@@ -212,6 +284,14 @@ fix / block-rate-by-design / maintainer decision. Do not fix during triage; prod
 
 **P3. Fix, one node per commit**, each with the failing case turned into a permanent guard and
 mutation-checked. Gradual is the point.
+
+**Track B (scheduler, delivers the guarantee):**
+
+**B1. Startup protocol** so the first notes are never late (rough sketch above; own design pass).
+**B2. Flip admission to hard-drop** + per-playback dropped-voice counter; delete `oldestAllowedSec`,
+the sample floor, and the two E4 code paths' reachability concern. B2 never lands before B1.
+
+**Track A continued:**
 
 **P4. The strip renderers**, which have their own copy of the same arithmetic: `EnvelopeRenderer:86`,
 `PitchEnvelopeRenderer:30` (both already use `blockStart + offset`), `FilterModRenderer`, `FmRenderer`,
@@ -225,8 +305,11 @@ mutation-checked. Gradual is the point.
   quantum is handed to the worklet; other platforms may choose it. Nothing may be implemented against
   128. The tone consequences of changing it are understood and accepted — target A, not B.
 - **Sub-sample onset accuracy is NOT required.** Flooring the start position to a SAMPLE is fine
-  (`VoiceFactory:88` already does exactly that); flooring it to a BLOCK is the bug. The one accepted
-  exception is a late voice, which floors to the block start because it cannot start in the past.
+  (`VoiceFactory:88` already does exactly that); flooring it to a BLOCK is the bug. (An earlier
+  revision accepted a late-voice exception here; superseded 2026-08-28 by the no-late-voices rule.)
+- **No late voices, ever (2026-08-28).** The two problems are split: the scheduler guarantees the
+  contract, the DSP assumes it. Late voices are dropped and counted per playback; the startup race is
+  fixed on the scheduler side first. See "Enforced at ONE place".
 
 ## Related
 
