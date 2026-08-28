@@ -22,32 +22,56 @@ Apply this standard whenever reviewing changes or writing tests — including wh
 ### The loop
 
 1. **Collect the change set** — the current diff (vs branch base, or the files just edited).
-2. **Review round** — spawn **FRESH** reviewer agents (general-purpose), in parallel:
+2. **Review round** — spawn **FRESH** reviewer agents (general-purpose), in parallel.
+   **Round 1 is BLIND**: the task description, the change set, and the constraints list — nothing
+   else.
+   **Every consecutive round runs in TWO PHASES with the same fresh agent** (maintainer,
+   2026-08-28: review FIRST, previous results AFTER):
+   - *Phase 1 — review.* The agent gets the full current diff, the constraints, and the fix delta
+     marked as the primary target — and deliberately NOT the previous round's findings. Pure fresh
+     eyes on the current state.
+   - *Phase 2 — reconcile.* Send the SAME agent the previous round's findings verbatim plus the
+     triage of each (fix / reject+reason / parked). For every phase-1 finding that overlaps a
+     settled one, the agent must either WITHDRAW it (the rejection reason stands) or STICK TO IT by
+     naming what is factually wrong in the rejection reason. It also states, per previously-FIXED
+     finding, whether the fix actually holds in the current diff.
+   The coordinator triages the reconciled result. Fresh-eyes value and settled-stays-settled,
+   without anchoring the review itself.
     - **Coding reviewer** — ALWAYS (prompt template below).
     - **Audio-engineer reviewer** — when the change touches `audio_be` / `audio_bridge` /
       `audio_fe` / `audio_jsworklet` / sprudel voice data / any DSP or wire path (prompt template below).
 3. **Triage every finding** into exactly one of:
-    - **fix** — apply it;
+    - **fix** — apply it. **Only CRITICAL and MAJOR findings feed the loop.** MINORs are collected
+      and either applied once as a single batch WITHOUT a re-review round, or handed to the user
+      as a list — they never trigger another round on their own;
     - **reject** — with a stated reason (philosophy rejections must name the rule: raw-Motor no-clamping, reverb
       `ANTI_DENORMAL` exception, documented HPF bias, …);
     - **user-decision** — park it for the user (design fork, tradeoff, by-ear sound question).
 4. **Apply the fixes**; run the affected tests (Gradle sequentially — see Gotchas). New tests written here fall under
    Standard 2.
-5. **If any fix was applied → go to 2.** The next round reviews the *current* state — fixes from the previous round are
-   unreviewed changes. Tell reviewers the round number and where the latest delta is, but give them the full current
-   diff.
+5. **If a CRITICAL/MAJOR fix was applied → go to 2** in the two-phase shape. MINOR-only rounds do
+   not loop.
 
 ### Termination — the loop stops ONLY on
 
-- **Clean round** — a round returns zero actionable findings → done, report.
+- **Clean round** — a round returns zero CRITICAL/MAJOR findings → done, report (remaining
+  MINORs go to the user as a batch list with a recommendation each).
 - **User decision needed** — STOP, present the parked decision (s) crisply, wait. Do not guess.
 - **Wall** — no progress: a finding oscillates between rounds, reviewers contradict each other, or a fix is impossible
   without breaking something else → STOP, present the state honestly.
-- **Safety valve** — 5 rounds without a clean round counts as a wall.
+- **Safety valve** — **2 rounds** without a clean round: STOP and consult the maintainer with the
+  open findings (maintainer instruction, 2026-08-28; was 5, which let fix-churn feed itself).
 
 ### Rules
 
 - **Fresh agents every round.** A reviewer that saw round N is anchored for round N+1 — never reuse one across rounds.
+  (Fresh AGENT, informed PROMPT: the round-context pack of step 2 travels to the new agent.)
+- **Comment/KDoc findings only when the text is factually WRONG** (would mislead the next reader) —
+  never for completeness or style. Prose churn is the documented failure mode of this loop: each
+  round's fixes write new text, the next round critiques the new text, and the loop feeds itself.
+- **Scope by risk.** The full two-reviewer loop is for changes touching DSP/production code.
+  Test-only or doc-only portions get ONE reviewer or none — mutation checks (Standard 2) already
+  guard tests harder than a reviewer can.
 - **Never silently drop a finding.** Every finding ends as fix / reject+reason / user-decision.
 - **Final report** lists: rounds run; per round the findings and their outcomes; the parked user decisions on top.
 
@@ -55,8 +79,9 @@ Apply this standard whenever reviewing changes or writing tests — including wh
 
 Coding reviewer (fill the brackets, attach the diff):
 
-> You are a fresh-eyes code reviewer for the Klang project — round [N]; prior rounds fixed
-> [summary]; focus especially on [latest delta]. Review the attached diff for: correctness,
+> You are a fresh-eyes code reviewer for the Klang project — round [N]; focus especially on
+> [the fix delta since the previous round]. (Prior-round findings are deliberately withheld until
+> the reconcile phase.) Review the attached diff for: correctness,
 > hidden regressions, API consistency, missing test coverage, convention adherence (project
 > code-style: braces always, no FQCN, no `Long`/boxed types in audio paths, exhaustive `when`,
 > NaN-guard comments). Return a numbered findings list — severity (CRITICAL/MAJOR/MINOR),
@@ -65,7 +90,7 @@ Coding reviewer (fill the brackets, attach the diff):
 Audio-engineer reviewer:
 
 > You are a fresh-eyes audio/DSP reviewer for the Klang project — round [N]; focus on
-> [latest delta]. Review the attached diff for: numerical stability (NaN guards, denormal
+> [the fix delta since the previous round]. (Prior-round findings arrive in the reconcile phase.) Review the attached diff for: numerical stability (NaN guards, denormal
 > handling per house convention), per-sample cost in hot paths (no allocation, no boxing),
 > sound preservation (defaults must be behavior-identical), click/zipper risk on parameter
 > changes (ramps/crossfades), cycle-boundary correctness. House philosophy: the engine is
@@ -90,11 +115,38 @@ A green test proves nothing until it has been RED for the right reason.
    remains. NEVER leave a mutation behind.**
 5. **REPORT** one line per test: `mutation-checked: <what was mutated> → red ✓`
 
-### Scope
+### Scope — two tiers (maintainer, 2026-08-28)
 
-- **Mandatory** for: new specs, regression guards, and tests written as review-loop fixes.
-- **Not** a retrofit mandate for the existing suite — mutation-check old tests opportunistically when a change touches
-  them.
+Mutation checking pays where the test's ORACLE IS INDIRECT (you cannot tell from reading the test
+whether the assertion binds the behaviour) or where production failure is SILENT. Where the
+assertion IS the specification, readable one-to-one, the check is near-tautological.
+
+- **MANDATORY** (full protocol): tests in `audio_be`, `audio_bridge`, the wire codecs and their
+  round-trips, the sprudel pattern/timing core (queryArc, event structure, CycleTime, scheduling),
+  and **all KSP processors** (`klangscript-ksp`, `sprudel-ksp`, `audio-wire-codec-ksp` — a wrong
+  processor emits silently wrong GENERATED code). Plus, regardless of module: every regression
+  guard born from a real bug, and every threshold/metric-based assertion (rms, d2, tolerance
+  bands) — thresholds are where self-deception hides.
+- **LIGHT** (one targeted mutation, or none, at judgment): direct-oracle surface tests
+  (value-in → field-out DSL plumbing, klangscript registration/intel), UI, docs, tooling.
+  The one exception worth keeping: when a surface test claims to cover a SPECIFIC door among
+  several, do the single deletion-mutation of that door (this caught a test asserting the right
+  value through the wrong door while the claimed door was deletable).
+- **Universal, both tiers:** a test must never derive its expected value or threshold from the
+  same constant or expression it guards (self-reference produced the worst survivor: a bound that
+  followed a 60× widening of the constant under test). The restore discipline is unchanged.
+- **Not** a retrofit mandate for the existing suite — mutation-check old tests opportunistically
+  when a change touches them.
+
+### What deserves a test at all (maintainer, 2026-08-28)
+
+- **No value-echo tests.** A test that restates a constant (`preset.x shouldBe 0.05`) is a
+  change-detector, not a guard: it fails only on intentional edits and cannot tell a good one from
+  a bad one. Where a value matters, guard the BEHAVIOUR it buys (render the thing, assert the
+  audible property) — and only where the stakes warrant it.
+- **Coverage findings are judged case by case.** Sometimes the code is expressive enough that a
+  test adds nothing. A reviewer finding of the form "X is untested" must name a failure the test
+  would catch that READING THE CODE cannot; otherwise it is rejected without ceremony.
 
 ### Why this exists
 
@@ -111,3 +163,25 @@ Mutation checking is the antidote: it tests the test.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards
   (quoted/wildcard filters match nothing).
 - Don't fuss over whitespace/blank-line findings — codefactor.io auto-fixes formatting.
+
+## Changelog
+
+- **2026-08-28** — Loop tightened after the envelope-ownership review ran 5 rounds. Evidence both
+  ways, recorded honestly: the loop's catches were decisive (the IgniteRenderer onset bug behind
+  the guitar knocks, the teardown-fade off-by-one, the shared-envelope leak — all reviewer finds),
+  but rounds 3-5 were largely prose churn on text the previous round's fixes had just written, plus
+  re-litigation of settled rejections. Changes, per the maintainer: round 1 blind; every later
+  round carries the previous findings + triage + fix delta; only CRITICAL/MAJOR loop (MINORs batch
+  or go to the user); comment findings only when factually wrong; scope by risk; safety valve cut
+  from 5 rounds to 2, then consult. Order refined same day: consecutive rounds are TWO-PHASE —
+  the agent reviews first WITHOUT the previous findings, then reconciles against them (withdraw, or
+  stick to its judgement by naming what is factually wrong in the rejection reason). Review first,
+  context after: fresh eyes stay fresh, and settled findings still stay settled.
+- **2026-08-28** — Standard 2 scope split into MANDATORY (core: audio_be/audio_bridge/wire/sprudel
+  timing core/KSP processors, regression guards and threshold assertions anywhere) and LIGHT
+  (direct-oracle surface, UI/docs), per the maintainer; plus two testing principles: no value-echo
+  tests, and coverage findings judged case by case ("sometimes the code is expressive enough that
+  a test will not add any value"). First loop run under the tightened rules (the E1/E2/E10 change
+  set) converged in exactly 2 rounds with zero CRITICAL/MAJOR in round 2 — the two-phase reconcile
+  produced clean withdraw/stick verdicts and no re-litigation.
+

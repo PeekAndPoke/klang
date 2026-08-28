@@ -4,6 +4,21 @@
 **SINCE: 2026-08-28**
 **STATE: FREE — take the lock before building.**
 
+> Last action (2026-08-28, claude-code session): E1/E2/E10 review loop CLOSED under the tightened
+> 2-round standard — round 2 clean (zero CRITICAL/MAJOR, both reconciles), MINOR batch applied
+> once, phase-free E10 guard mutation-checked. audio_be 1312 green, JS+JVM clean. UNCOMMITTED —
+> the maintainer gives the commit go.
+
+> Last action (2026-08-28, claude-code session): sgbell given envReleaseSec = 0.05 (ledger E10:
+> FM env release = 0 collapses depth in one sample at gate end — RAW BY DESIGN per maintainer;
+> the E1 fix exposed the click lottery). Guard in PitchModFactoriesSpec, mutation-checked.
+> audio_be 1311 green. UNCOMMITTED with the E1/E2 fix — maintainer listens first.
+
+> Last action (2026-08-28, claude-code session): ledger E1+E2 fixed in PitchModFactories (FM depth
+> envelope per-sample; modulator/LFO advance unconditionally). Harness graduated fm-with-envelope
+> to the bit-identical green list; phase-continuity guards added; 3 mutations killed; audio_be
+> 1310 green; JS+JVM compile clean. UNCOMMITTED — maintainer listens to the sgbell A/B first.
+
 > Last action (2026-08-28, claude-code session): P0 block-framing harness built
 > (BlockFramingInvarianceSpec, 11 tests). Adsr/Sine/WhiteNoise/Pluck bit-identical across
 > alignment, block sizes and ragged splits; ledger defects E1 (FM env) + E3 (SVF chord) pinned as
