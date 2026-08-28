@@ -27,6 +27,11 @@ internal class WaveVoiceState {
     /** Output gain (used by the unison super stack; mono ignitors leave it unused). */
     var gain: Double = 0.0
 
+    /** The voice's gain-jitter draw (uniform 0..1), captured ONCE when the voice is added, so a
+     *  mid-note voice-count change recomputes gains WITHOUT re-jittering survivors (block-framing
+     *  ledger O4). 0.5 = neutral (jitter multiplier exactly 1.0). Super stack only. */
+    var jitDraw: Double = 0.5
+
     /** Per-voice analog drift, or `null`/inactive for none. */
     var drift: AnalogDrift? = null
 

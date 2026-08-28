@@ -150,4 +150,25 @@ class MemoizingIgnitorSpec : StringSpec({
         b[0] shouldBe 1.0
         c[0] shouldBe 1.0
     }
+
+    "a node shared between a NOISE PARAM and the spine runs once per block (ledger O6)" {
+        // The noise family used to hardcode freqHz = 0.0 into its param reads while the spine
+        // passes the voice's real freqHz. freqHz is part of this cache's key, so the shared node
+        // got two keys and ran TWICE per block: double state advance, disjoint sample windows —
+        // the E8 shape, family-wide. All reads now share the voice freqHz.
+        val counter = CountingIgnitor()
+        val shared = MemoizingIgnitor(counter).also { it.incConsumers() }
+        val sig = Ignitors.whiteNoise(kotlin.random.Random(1), color = shared) + shared
+
+        val ctx = createCtx()
+        val buf = AudioBuffer(blockFrames)
+        val blocks = 8
+        for (b in 0 until blocks) {
+            ctx.offset = 0
+            ctx.length = blockFrames
+            ctx.voiceElapsedFrames = b * blockFrames
+            sig.generate(buf, 220.0, ctx)
+        }
+        counter.calls shouldBeExactly blocks
+    }
 })

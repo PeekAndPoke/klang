@@ -15,9 +15,13 @@ import io.peekandpoke.klang.script.stdlib.KlangScriptSuperSawExtensions.gainJitt
  * [IgnitorDsl.SuperSaw], so they chain — put these *before* the base wrappers (`.lowpass()`/`.adsr()`),
  * which return the base [IgnitorDsl] and so come last (config-first ordering).
  *
- * `voices`/`spread`/`analog`/`freq` accept an [IgnitorDslLike] (a number → [IgnitorDsl.Constant], or an
- * `Osc.*` graph for audio-rate modulation). The character knobs (`spreadPower`/`sideAtten`/`gainJitter`/
- * `centerJitter`) are plain scalars read once per voice — they mirror the `SUPERSAW_*` engine constants.
+ * `voices`/`spread`/`freq` accept an [IgnitorDslLike] (a number → [IgnitorDsl.Constant], or an
+ * `Osc.*` graph) read at CONTROL RATE — once per block. A voice-count change therefore lands on the
+ * block grid; that is the decided semantics (block-framing ledger O3), and surviving voices keep
+ * their phase, drift and gain-jitter across it. `analog` also accepts a graph but its value LATCHES
+ * at note-on (drift character is built on the first block). The character knobs
+ * (`spreadPower`/`sideAtten`/`gainJitter`/`centerJitter`) are plain scalars read once per voice —
+ * they mirror the `SUPERSAW_*` engine constants.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(IgnitorDsl.SuperSaw::class)

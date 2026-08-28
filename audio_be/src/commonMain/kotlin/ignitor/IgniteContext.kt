@@ -65,23 +65,10 @@ class IgniteContext(
     /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */
     val voiceDurationFramesD: Double = voiceDurationFrames.toDouble()
 
-    /** Seconds since voice start */
-    val voiceElapsedSecs: Double get() = voiceElapsedFrames.toDouble() / sampleRate
-
-    /** Total gate duration in seconds */
-    val voiceDurationSecs: Double get() = voiceDurationFrames.toDouble() / sampleRate
-
-    /** Voice progress 0.0 → 1.0 relative to gate duration. Can exceed 1.0 during release. */
-    val voiceProgress: Double get() = voiceElapsedFrames.toDouble() / voiceDurationFrames
-
-    /** True when past gate end (in ADSR release phase) */
-    val isInRelease: Boolean get() = voiceElapsedFrames >= gateEndFrame
-
-    /** Release progress 0.0 → 1.0 (only meaningful when isInRelease is true) */
-    val releaseProgress: Double
-        get() {
-            if (!isInRelease) return 0.0
-            if (releaseFrames <= 0) return 1.0
-            return ((voiceElapsedFrames - gateEndFrame).toDouble() / releaseFrames).coerceIn(0.0, 1.0)
-        }
+    // Five block-start-only convenience accessors (voiceElapsedSecs, voiceDurationSecs,
+    // voiceProgress, isInRelease, releaseProgress) were DELETED here 2026-08-28 with zero callers
+    // (block-framing ledger E6). They were shaped exactly like the bug class this file's clock got
+    // burned by: a time value that silently means "at ctx.offset" but reads like "now". If a
+    // per-sample variant is ever needed, it must take the sample offset explicitly — name it
+    // `...At(sampleOffset)` — never a bare property.
 }

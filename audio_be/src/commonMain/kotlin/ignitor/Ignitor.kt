@@ -85,10 +85,19 @@ interface Ignitor {
      * Uses [controlRateValueOrNull] when available; otherwise renders a scratch buffer and reads one
      * sample, which for stateful nodes advances their phase by one block (the original `readParam`
      * fallback). Not meant to be overridden.
+     *
+     * A ZERO-LENGTH window (reachable: `legato` can clip a gate to 0 frames and `Voice.render`
+     * still runs the pipeline) returns 0.0 deterministically: `generate` writes nothing there, so
+     * the scratch read would otherwise hand back whatever a previous node left in the pool — an
+     * arbitrary, run-to-run nondeterministic value (block-framing ledger E5).
      */
     fun blockStartValue(freqHz: Double, ctx: IgniteContext): Double =
         controlRateValueOrNull(freqHz)
-            ?: ctx.scratchBuffers.use { tmp -> generate(tmp, freqHz, ctx); tmp[ctx.offset] }
+            ?: if (ctx.length == 0) {
+                0.0
+            } else {
+                ctx.scratchBuffers.use { tmp -> generate(tmp, freqHz, ctx); tmp[ctx.offset] }
+            }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

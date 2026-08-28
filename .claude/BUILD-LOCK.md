@@ -1,8 +1,21 @@
 # BUILD LOCK — one agent builds this worktree at a time
 
 **HOLDER: none**
-**SINCE: 2026-08-28**
-**STATE: FREE — take the lock before building.**
+**SINCE: —**
+**STATE: FREE.**
+
+> Last action (2026-08-28, claude-code session): oscillator O-batch DONE — O1/O2 (superpluck
+> `voices` via readParam + hoists), O3 DECIDED (block-start voice-count semantics, comments at
+> both stack sites), O4 (stack transitions preserve survivors' drift + gain jitter), O5
+> documented, O6/O7 (noise family real freqHz + readParam), O8 tripwire (`ZeroLengthWindowSpec`
+> — must stay green through B1). Four guard mutations killed (O1 needed a shared-rng + deep-poison
+> formulation — see the ledger row). audio_be 1319 green, JS+JVM clean. UNCOMMITTED together with
+> E5+E6 — the maintainer gives the commit go.
+
+> Last action (2026-08-28, claude-code session): ledger E5 fixed (zero-length blockStartValue is
+> deterministic 0.0, guard mutation-checked) + E6 done (five dead block-start accessors deleted,
+> tombstone). audio_be green, JS+JVM clean. UNCOMMITTED. Oscillator-class audit agents launching
+> (read-only, no Gradle).
 
 > Last action (2026-08-28, claude-code session): E1/E2/E10 review loop CLOSED under the tightened
 > 2-round standard — round 2 clean (zero CRITICAL/MAJOR, both reconciles), MINOR batch applied
