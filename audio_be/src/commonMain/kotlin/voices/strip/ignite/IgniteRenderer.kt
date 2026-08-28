@@ -33,7 +33,15 @@ class IgniteRenderer(
     override fun render(ctx: BlockContext) {
         signalCtx.offset = ctx.offset
         signalCtx.length = ctx.length
-        signalCtx.voiceElapsedFrames = (ctx.blockStart - startFrame).toInt()
+        // + ctx.offset: voiceElapsedFrames is the elapsed count AT buffer index ctx.offset, which is
+        // where every consumer starts counting (AdsrIgnitor seeds absPos from it and loops from
+        // ctx.offset; IgnitorFilters adds sampleOffsetWithinBlock; PitchModFactories uses i - offset).
+        // Without it, a voice whose first block starts mid-block gets a NEGATIVE clock: the exp
+        // shape goes negative, clamps to 0, and the note's first `offset` samples render silent and
+        // then step. Measured at 44.1k/128 with a 10 ms attack and startFrame 76: 52 silent frames
+        // then a jump to 0.0222 in one sample. offset is non-zero ONLY on a voice's first block, so
+        // this term changes nothing anywhere else. Matches EnvelopeRenderer:86 / PitchEnvelopeRenderer:30.
+        signalCtx.voiceElapsedFrames = (ctx.blockStart + ctx.offset - startFrame).toInt()
         signalCtx.phaseMod = if (ctx.freqModBufferWritten) ctx.freqModBuffer else null
 
         signal.generate(ctx.audioBuffer, freqHz, signalCtx)
