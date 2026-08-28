@@ -376,7 +376,10 @@ fun Ignitor.coarse(amount: Double): Ignitor {
  *
  * Sweeps a series of notch filters through the spectrum, creating the classic
  * "whooshing" or "jet" effect. All params read once per block (control rate).
- * Bypasses when depth <= 0.
+ * Bypasses when wet <= 0 — the LFO clock keeps running through a bypass, so a wet gap never
+ * displaces the sweep. The LFO itself is evaluated at block boundaries (see PhaserCore), so its
+ * effective Nyquist is `sampleRate / (2 * blockFrames)` (~187 Hz at 48 kHz / 128); above that the
+ * sweep aliases at the block rate. `rate` is deliberately unclamped (raw engine).
  *
  * @param rate LFO speed in Hz. 0.0 = static, 0.5 = slow sweep, 2.0 = moderate,
  *   5.0+ = fast. Typical range: 0.1–5.0. Default: no default (required).
@@ -409,35 +412,64 @@ private class PhaserIgnitor(
     // ctx.sampleRate on the first generate() call.
     private var core: PhaserCore? = null
 
+    // True while the cascade holds post-bypass state — cleared on bypass entry (ledger D5).
+    private var stateDirty = false
+
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val phaser = core ?: PhaserCore(PhaserCore.DEFAULT_STAGES, ctx.sampleRate).also { core = it }
 
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
 
+            // Read every param and advance the LFO clock UNCONDITIONALLY (ledger D1): the sweep
+            // is a function of note-relative time, not of how many blocks happened to observe
+            // wet > 0, and a stateful param ignitor ticks through its per-block read. The read
+            // ORDER (wet, rate, center, sweep, dryFloor) is the pre-D1 order on purpose: a
+            // hand-built Kotlin graph may share one stateful instance across two slots, and the
+            // slot assignment of its per-block draws is observable (review round 3). The
+            // ctx.length guard on the kernel WRITES is defensive, currently unreachable: today a
+            // zero-length 0.0 could never reach alphaAt anyway (prepareBlock early-returns at
+            // frames <= 0, and the next real block rewrites all three first) — the guard removes
+            // the reliance on those two cross-file facts, it does not fix a live bug. A param
+            // cannot tick on a window with no samples, so skipping the reads there loses nothing.
             val wetVal = Ignitors.readParam(wet, freqHz, ctx).coerceIn(0.0, 1.0)
+
+            if (ctx.length > 0) {
+                phaser.rate = Ignitors.readParam(rate, freqHz, ctx)
+                phaser.center = Ignitors.readParam(center, freqHz, ctx)
+                phaser.sweep = Ignitors.readParam(sweep, freqHz, ctx)
+            }
+
+            phaser.prepareBlock(ctx.length)
+
+            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
             val end = ctx.offset + ctx.length
 
             if (wetVal <= 0.0) {
+                // Allpass state is CLEARED on bypass entry (the shimmer's C4.1 policy, ledger D5):
+                // resuming on a stale cascade + feedback sample would click at an alignment-
+                // dependent boundary. The LFO phase survives — PhaserCore.reset() keeps it. The
+                // ctx.length guard is ledger D7: a zero-length window reads a modulated wet as 0.0
+                // (deterministic E5 value) and must not get to DECIDE a bypass.
+                if (stateDirty && ctx.length > 0) {
+                    phaser.reset()
+                    stateDirty = false
+                }
+
                 for (i in ctx.offset until end) {
                     buffer[i] = input[i]
                 }
                 return@use
             }
 
-            // Push current control-rate values into the kernel once per block.
-            phaser.rate = Ignitors.readParam(rate, freqHz, ctx)
-            phaser.center = Ignitors.readParam(center, freqHz, ctx)
-            phaser.sweep = Ignitors.readParam(sweep, freqHz, ctx)
-
-            // Precompute α at block boundaries — see PhaserCore KDoc.
-            phaser.prepareBlock(ctx.length)
+            if (ctx.length > 0) {
+                stateDirty = true
+            }
 
             // C4 (filter unification): the shared wet/dry law, correlated branch (p = 2) —
             // an allpass cascade is unit-magnitude and fully correlated, so amplitudes add.
             // floor passed RAW: WetDryMix owns the domain coercion (incl. non-finite -> 0.0),
             // so every door resolves a bad floor the SAME way (bus/strip store raw too)
-            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
             val dryC = WetDryMix.dryCoeff(wetVal, floor = floorVal, p = 2)
             val wetC = WetDryMix.wetCoeff(wetVal, p = 2)
             for (i in ctx.offset until end) {
@@ -554,6 +586,11 @@ fun Ignitor.tremolo(
  * Granular shimmer effect — short overlapping grains read back from a ring buffer at
  * pitched rates, with a feedback loop through a tone lowpass.
  *
+ * `wet`, `feedback`, `tone` and `dryFloor` are read once per block (control rate) with no
+ * smoothing: a fast-modulated wet steps the mix gain at the block rate, and a modulated tone
+ * switches the feedback-LPF coefficient at block boundaries — raw engine, no hidden ramps. The
+ * grain machinery itself is sample-anchored (the first grain fires on the note's first sample).
+ *
  * @param wet Wet/dry balance. 0.0 = bit-exact bypass regardless of feedback, 1.0 = cloud only.
  * Mix: the shared wet/dry law, equal-POWER branch (p = 1) — the pitch-shifted tail is
  * decorrelated from the dry, so powers add and the level holds across the knob.
@@ -614,6 +651,8 @@ private class ShimmerIgnitor(
             val wetVal = Ignitors.readParam(wet, freqHz, ctx).coerceIn(0.0, 1.0)
             val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
             val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
+            // Read (tick) dryFloor unconditionally too — the D1 rule, all four slots.
+            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
             val end = ctx.offset + ctx.length
 
             // C4: wet == 0 IS bypass, regardless of feedback — bit-identical passthrough is
@@ -621,9 +660,21 @@ private class ShimmerIgnitor(
             // review): a modulated wet dipping to 0 must not freeze a stale tail and
             // resurrect it later, detached from wall time.
             if (wetVal <= 0.0) {
-                if (stateDirty) {
+                // The ctx.length guard is ledger D7: a zero-length window reads a modulated wet
+                // as 0.0 (the deterministic E5 value) and must not get to DECIDE a bypass.
+                if (stateDirty && ctx.length > 0) {
                     ring.fill(0.0)
                     for (g in 0 until maxGrains) grainActive[g] = false
+                    // Ledger D6: the grain SCHEDULER resets with the grain state — a resume must
+                    // not keep a framing-dependent countdown remainder or round-robin position,
+                    // which would shift every later grain onset (and possibly the pitch order)
+                    // by where the bypass happened to land in a block. writePos resets too: a
+                    // grain's lookback WRAPS around the ring seam, and after the wrap the read
+                    // index is absolute — a surviving write head (itself block-quantised at
+                    // bypass entry) would misalign the resumed cloud's warmup against the seam.
+                    samplesUntilNextGrain = 0
+                    nextIntervalIdx = 0
+                    writePos = 0
                     feedbackTap = 0.0
                     lpfState = 0.0
                     stateDirty = false
@@ -634,7 +685,10 @@ private class ShimmerIgnitor(
                 return@use
             }
 
-            stateDirty = true
+            if (ctx.length > 0) {
+                stateDirty = true
+            }
+
             val sampleRate = ctx.sampleRate
             val grainPeriodSamples = (sampleRate / grainsPerSecond).toInt().coerceAtLeast(1)
             val grainTotalSamples = (sampleRate * grainSizeSec).toInt().coerceAtLeast(1)
@@ -646,7 +700,6 @@ private class ShimmerIgnitor(
             // C4 (filter unification): shared wet/dry law, DEcorrelated branch (p = 1) — the
             // pitch-shifted grain tail carries no phase relation to the dry, powers add.
             // floor passed RAW: WetDryMix owns the domain coercion (see the phaser above)
-            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
             val dryC = WetDryMix.dryCoeff(wetVal, floor = floorVal, p = 1)
             val wetC = WetDryMix.wetCoeff(wetVal, p = 1)
 

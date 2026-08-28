@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import kotlin.math.abs
+import kotlin.math.sin
 
 /**
  * Tests for the refactored Cylinder bus pipeline integration.
@@ -226,6 +227,131 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Should be unchanged
         cylinder.mixBuffer.left[0] shouldBe 0.5
+    }
+
+    "a reused orbit starts the phaser from a clean slate: cascade cleared AND sweep zeroed" {
+        // Review round 2: the leaf resets were guarded but the resetBusEffects WIRING was an
+        // unkilled mutation, and the LFO phase deliberately surviving Phaser.reset() (right for
+        // the bypass path) is wrong across a full teardown — the carried phase would be "blocks
+        // the previous life stayed active x rate", a cleanup-schedule artifact.
+        fun phaserVoice() = VoiceTestHelpers.createSynthVoice(
+            phaser = Voice.Phaser(rate = 1.7, depth = 0.8, center = 1200.0, sweep = 900.0),
+        )
+
+        fun fillTone(cylinder: Cylinder) {
+            for (i in 0 until blockFrames) {
+                val v = sin(0.07 * i)
+                cylinder.mixBuffer.left[i] = v
+                cylinder.mixBuffer.right[i] = v
+            }
+        }
+
+        // Life 1: engaged phaser, several blocks of signal — cascade and LFO both move.
+        val reused = createOrbit()
+        reused.updateFromVoice(phaserVoice(), blockStart = 0.0)
+
+        repeat(6) {
+            reused.clear()
+            fillTone(reused)
+            reused.processEffects()
+        }
+
+        reused.clear()
+        reused.tryDeactivate()
+        reused.isActive shouldBe false
+
+        // Life 2 opens with a PHASER-LESS stretch before a phaser voice engages. Review round 3:
+        // the first clean-slate fix zeroed the phase but kept the dead owner's RATE, so this
+        // stretch free-ran the sweep at 1.7 Hz and the engagement landed mid-sweep, offset by a
+        // cleanup-schedule artifact. The interlude is what makes that observable.
+        reused.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 20.0 * blockFrames)
+
+        repeat(10) {
+            reused.clear()
+            fillTone(reused)
+            reused.processEffects()
+        }
+
+        reused.updateFromVoice(phaserVoice(), blockStart = 23.0 * blockFrames)
+        reused.clear()
+        fillTone(reused)
+        reused.processEffects()
+
+        // Reference: a genuinely fresh orbit, same phaser-less prelude, same voice, same tone.
+        val fresh = createOrbit()
+        fresh.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
+
+        repeat(10) {
+            fresh.clear()
+            fillTone(fresh)
+            fresh.processEffects()
+        }
+
+        fresh.updateFromVoice(phaserVoice(), blockStart = 3.0 * blockFrames)
+        fresh.clear()
+        fillTone(fresh)
+        fresh.processEffects()
+
+        var m = 0.0
+        for (i in 0 until blockFrames) {
+            m = maxOf(
+                m,
+                abs(reused.mixBuffer.left[i] - fresh.mixBuffer.left[i]),
+                abs(reused.mixBuffer.right[i] - fresh.mixBuffer.right[i]),
+            )
+        }
+        m shouldBe 0.0
+    }
+
+    "a non-finite depth cannot desync the two phaser gates" {
+        val cylinder = createOrbit()
+
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                phaser = Voice.Phaser(rate = 2.0, depth = 0.8, center = 1200.0, sweep = 900.0),
+            ),
+            blockStart = 0.0,
+        )
+
+        // New owner with a NaN depth: the setter rejects the write (stored depth stays 0.8), and
+        // the kernel gate must follow the STORED value so both gates agree — the new owner's
+        // kernel params land (review round 2; gating on the raw NaN left the previous owner's
+        // ENTIRE phaser in charge).
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                phaser = Voice.Phaser(rate = 3.0, depth = Double.NaN, center = 800.0, sweep = 700.0),
+            ),
+            blockStart = 2.0 * blockFrames,
+        )
+
+        cylinder.phaser.phaser.depth shouldBe 0.8
+        cylinder.phaser.phaser.rate shouldBe 3.0
+        cylinder.phaser.phaser.center shouldBe 800.0
+    }
+
+    "a no-phaser owner keeps the sweep clock: kernel params retained, only depth drops" {
+        val cylinder = createOrbit()
+
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                phaser = Voice.Phaser(rate = 2.0, depth = 0.8, center = 1200.0, sweep = 900.0),
+            ),
+            blockStart = 0.0,
+        )
+        cylinder.phaser.phaser.rate shouldBe 2.0
+        cylinder.phaser.phaser.depth shouldBe 0.8
+
+        // Owner lapses; a plain voice takes over (VoiceFactory-default phaser: rate 0, depth 0).
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(),
+            blockStart = 2.0 * blockFrames,
+        )
+
+        // Depth is the new owner's, but the CLOCK params are retained (ledger D2, completed in
+        // review round 1: writing rate 0 froze the LFO as surely as the old skipped prepareBlock).
+        cylinder.phaser.phaser.depth shouldBe 0.0
+        cylinder.phaser.phaser.rate shouldBe 2.0
+        cylinder.phaser.phaser.center shouldBe 1200.0
     }
 
     "updateFromVoice configures delay parameters" {

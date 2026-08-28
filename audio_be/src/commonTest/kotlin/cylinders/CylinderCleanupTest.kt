@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 
 /**
@@ -201,5 +202,63 @@ class OrbitCleanupTest : StringSpec({
 
         // Should remain active
         cylinder.isActive shouldBe true
+    }
+
+    "an inaudibly-charged delay ring is cleared LITERALLY on deactivation" {
+        // hasTail() scans the WHOLE ring, so a charged drain keeps the orbit alive until the
+        // countdown\'s own terminal reset (old copies sit in the ring at full amplitude until the
+        // head wraps). The reachable case for the resetBusEffects wiring is therefore an ACTIVE
+        // delay whose ring only ever held sub-threshold content: the scan frees the orbit while
+        // literal nonzeros remain, and only resetBusEffects cleans those. Review round 2 found
+        // that wiring line unguarded.
+        val cylinder = createTestOrbit()
+
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                delay = Voice.Delay(amount = 1.0, time = 0.02, feedback = 0.4),
+            ),
+            blockStart = 0.0,
+        )
+
+        // Charge QUIETLY: everything in the ring stays below the 1e-5 audibility scan, yet > 0.
+        repeat(4) {
+            cylinder.clear()
+            cylinder.delaySendBuffer.left.fill(0.000005)
+            cylinder.delaySendBuffer.right.fill(0.000005)
+            cylinder.processEffects()
+        }
+
+        cylinder.clear()
+        cylinder.tryDeactivate()
+
+        cylinder.isActive shouldBe false
+        // Literally zero: any residue trips the strict > comparison.
+        cylinder.delay.delayLine.hasTail(0.0) shouldBe false
+    }
+
+    "a draining self-oscillating delay with an EMPTY ring does not pin the orbit" {
+        val cylinder = createTestOrbit()
+
+        // Owner A configures a self-oscillating delay but never sends into it (amount 0).
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                delay = Voice.Delay(amount = 0.0, time = 0.5, feedback = 1.2),
+            ),
+            blockStart = 0.0,
+        )
+
+        // A lapses; a no-delay owner takes over. The ring never held anything, so the off-config
+        // lands in Off directly (the silent-window check outranks the |fb| >= 1 sentinel).
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(),
+            blockStart = 2.0 * blockFrames,
+        )
+
+        // Ring empty, mix silent: the orbit must free itself. Review round 1 found this shape
+        // pinning the cylinder forever (and through anyActive -> hasOwnSound -> isIdle leaking
+        // one whole PlaybackEngine per stop); the configure-door peak check is what closes it.
+        cylinder.tryDeactivate()
+
+        cylinder.isActive shouldBe false
     }
 })

@@ -117,7 +117,9 @@ internal class MasterChain private constructor(
         /** At or below this send level the effect is inaudible and is dropped from the chain. */
         private const val MIN_WET = 0.0001
 
-        /** Matches the Katalyst short-circuits (`roomSize < 0.01` / `delayTimeSeconds < 0.01`). */
+        /** Matches the Katalyst off-thresholds (`KatalystReverbEffect`'s `roomSize < 0.01` and
+         *  `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS`) — one contract, kept in prose sync
+         *  because importing a katalyst constant here would invert the layering. */
         private const val MIN_TIME_FX = 0.01
 
         /**
@@ -259,9 +261,10 @@ internal class MasterChain private constructor(
         }
 
         /**
-         * Delay as an *insert* — same send-copy trick as [buildReverb], same short-circuit as
-         * `KatalystDelayEffect` (`delayTimeSeconds < 0.01`). Without the skip, a "zero" time would
-         * be coerced up to the DSP's ~5-sample minimum and ring as a metallic comb.
+         * Delay as an *insert* — same send-copy trick as [buildReverb], same off-threshold as
+         * `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS` (decided at BUILD time here, at configure
+         * time there). Without the skip, a "zero" time would be coerced up to the DSP's ~5-sample
+         * minimum and ring as a metallic comb.
          *
          * The ring is sized to the declared time (fixed per chain), not to a blanket maximum — a
          * 0.25 s master delay costs ~190 KB instead of ~3 MB.

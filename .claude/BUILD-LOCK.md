@@ -4,6 +4,22 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-29, claude-code session): block-framing DELAY-LINE class DONE (ledger
+> D1-D14; only D13 still open, maintainer decision). Centerpiece: KatalystDelayEffect
+> Active/Draining/Off drain lifecycle (maintainer-designed in-session) — off-configs never reach
+> the DSP, audible drain under retained params, countdown from the measured tap-window peak,
+> terminal reset, |fb| >= 1 never auto-drains. Phaser LFO is a clock on both doors
+> (bypass clears cascade / preserves phase; teardown resetForReuse = full factory);
+> shimmer bypass clear takes scheduler + writePos. Review loop ran FIVE rounds (2 fresh
+> reviewers each, ~2 MAJORs per round 1-4, round 5 zero MAJOR, stopped at the safety valve with
+> all round-5 MINORs applied); 36 mutations killed across 22 new/updated guards. audio_be
+> jvmTest 1350 green except the maintainer's own in-flight RealtimeVoiceSpec (3 reds, theirs);
+> :audio_be:compileKotlinJs green. COMMITTED on the maintainer's go (2026-08-29); the tree is
+> quiet from this side. Decisions taken at the close: the charged self-osc orbit pin is
+> INTENTIONAL (guitar feedback, released by a tame-feedback note — no post-stop bound), and D13
+> resolves to dropping freqHz from the effect-node memo key (next batch, together with the
+> reverb drain adoption); tremolo LFO freeze filed for the modulation round.
+
 > Last action (2026-08-28, claude-code session): oscillator O-batch DONE — O1/O2 (superpluck
 > `voices` via readParam + hoists), O3 DECIDED (block-start voice-count semantics, comments at
 > both stack sites), O4 (stack transitions preserve survivors' drift + gain jitter), O5

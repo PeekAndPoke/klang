@@ -10,6 +10,8 @@ import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine.Companion.MIN_DELAY_SECONDS
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.ln
 import kotlin.math.min
 
 /**
@@ -23,9 +25,12 @@ import kotlin.math.min
  *
  * **Key features:**
  * - **Fractional read** via linear interpolation between adjacent ring-buffer
- *   samples. Enables smooth modulation of `delayTimeSeconds` (no zipper noise)
- *   and accurate tuning for pitch-based effects (flanger, chorus, comb filter,
- *   Karplus-Strong). Interpolation direction: `alpha=0` reads `s1` (newer
+ *   samples. Gives sub-sample tap accuracy (kills the integer-quantisation
+ *   zipper) and accurate tuning for pitch-based effects (flanger, chorus, comb
+ *   filter, Karplus-Strong). NOTE: the tap position is resolved once per
+ *   [process] call — a `delayTimeSeconds` change moves the read tap
+ *   instantaneously at the next block boundary, with no crossfade/ramp.
+ *   Interpolation direction: `alpha=0` reads `s1` (newer
  *   sample, at `pos - delayInt`); `alpha=1` reads `s2` (one sample older).
  * - **Short-delay support** down to [MIN_DELAY_SECONDS] (~0.1 ms), enabling
  *   flanger/comb regimes. Note: linear interpolation introduces a mild HF
@@ -47,8 +52,8 @@ import kotlin.math.min
  *
  * **Performance:**
  * - Block processing: the inner sample loop has no ring-buffer wrap check.
- *   `process()` splits the block at the wrap boundary and calls the inner
- *   loop with two contiguous ranges instead.
+ *   `process()` splits the block at wrap boundaries and feeds the inner loop
+ *   contiguous chunks instead (a loop, so any `length` wraps correctly).
  * - Per-block constants (`delayInt`, `alpha`, etc.) are computed once per
  *   `process()`, not per channel/chunk.
  */
@@ -113,6 +118,87 @@ class DelayLine(
     }
 
     /**
+     * The loudest sample the drain's tap can still REACH: the `delayInt + 2` samples immediately
+     * behind the write head (one delay period plus the interpolation neighbor). Everything older
+     * is overwritten by the head before the tap arrives, so it can never be emitted — scanning
+     * the whole ring (review round 4) both cost most of a block budget on the audio thread at
+     * every off-transition and over-estimated the drain by whatever was loud up to
+     * [bufferSize] samples ago. O(delayInt), transition use only. Always finite:
+     * [ShapingFuncs.softCap] bounds every store.
+     */
+    fun tapWindowPeakAbs(): Double {
+        val window = currentDelaySamples().toInt() + 2
+        var peak = 0.0
+        var pos = writePos - 1
+
+        for (i in 0 until window) {
+            if (pos < 0) {
+                pos += bufferSize
+            }
+
+            val l = abs(buffer.left[pos])
+            val r = abs(buffer.right[pos])
+
+            if (l > peak) {
+                peak = l
+            }
+
+            if (r > peak) {
+                peak = r
+            }
+
+            pos--
+        }
+
+        return peak
+    }
+
+    /**
+     * How many samples of zero-input processing until everything the tap can reach is provably
+     * below [threshold] — the closed form of the [hasTail] argument, run forward in time, from
+     * the MEASURED content [peak] (usually [tapWindowPeakAbs] at the off-transition; review
+     * round 3 replaced the static worst-case cap bound with this, so a barely-used delay drains
+     * in proportion to what it actually holds instead of paying the saturated-ring worst case).
+     *
+     * With silent input each delay period multiplies the content ceiling by |[feedback]| (the
+     * interpolated tap is a convex combination, [ShapingFuncs.softCap] never expands). After
+     * `k = ceil(ln(threshold / peak) / ln(|fb|))` periods the tap window is below [threshold]
+     * and (for |fb| < 1, the same argument [hasTail] makes) can never come back up. One slack
+     * period is added on top — it also covers the tap's extra interpolation sample.
+     *
+     * A [peak] at or below [threshold] returns 0.0: already silent, nothing to drain — this
+     * outranks the self-oscillation sentinel on purpose (an EMPTY self-osc ring must not drain
+     * forever). Otherwise `|feedback| >= 1.0` returns [Double.POSITIVE_INFINITY]: the line
+     * self-oscillates by design (raw engine) and never drains on its own.
+     */
+    fun drainSamplesUntilSilent(peak: Double, threshold: Double = 0.00001): Double {
+        if (peak <= threshold) {
+            return 0.0
+        }
+
+        val fbAbs = abs(feedback)
+
+        if (fbAbs >= 1.0) {
+            return Double.POSITIVE_INFINITY
+        }
+
+        val delaySamples = currentDelaySamples()
+
+        if (fbAbs <= 0.0) {
+            // One period overwrites the entire tap window with exact zeros; keep the slack period.
+            return 2.0 * delaySamples
+        }
+
+        val periods = ceil(ln(threshold / peak) / ln(fbAbs))
+
+        return (periods + 1.0) * delaySamples
+    }
+
+    /** The effective tap distance in samples — [delayTimeSeconds] under the same coercion [process] applies. */
+    private fun currentDelaySamples(): Double =
+        (delayTimeSeconds * sampleRate).coerceIn(MIN_DELAY_SECONDS * sampleRate, bufferSize - 2.0)
+
+    /**
      * Clears the ring buffer and resets the write head so a reused delay line does not replay a previous
      * owner's tail. Parameter values (delay time / feedback) are preserved. Used by cylinder cleanup.
      */
@@ -125,8 +211,7 @@ class DelayLine(
         // Per-block constants — channel- and chunk-independent. Hoisted out of
         // the inner loop so they're computed once per process() call rather
         // than once per channel × chunk (4×).
-        val delaySamples = (delayTimeSeconds * sampleRate)
-            .coerceIn(MIN_DELAY_SECONDS * sampleRate, bufferSize - 2.0)
+        val delaySamples = currentDelaySamples()
         val delayInt = delaySamples.toInt()
         val alpha = delaySamples - delayInt
         val fb = feedback
@@ -136,20 +221,25 @@ class DelayLine(
         val rawCap = feedbackCap
         val cap = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
 
-        // Split loop at the ring-buffer wrap boundary so the inner loop has no
-        // 'if (pos >= bufferSize)' check.
-        val firstChunkLen = min(length, bufferSize - writePos)
+        // Split the block at ring-buffer wrap boundaries so the inner loop has no
+        // 'if (pos >= bufferSize)' check. A while loop rather than a single split:
+        // block size is a tone parameter, so 'length > bufferSize' must wrap more
+        // than once instead of writing past the ring (the smallest master ring is
+        // only ~0.06 s).
+        var done = 0
+        var pos = writePos
 
-        processInternal(buffer.left, input.left, output.left, 0, firstChunkLen, writePos, delayInt, alpha, fb, cap)
-        processInternal(buffer.right, input.right, output.right, 0, firstChunkLen, writePos, delayInt, alpha, fb, cap)
+        while (done < length) {
+            val chunk = min(length - done, bufferSize - pos)
 
-        if (firstChunkLen < length) {
-            val secondChunkLen = length - firstChunkLen
-            processInternal(buffer.left, input.left, output.left, firstChunkLen, secondChunkLen, 0, delayInt, alpha, fb, cap)
-            processInternal(buffer.right, input.right, output.right, firstChunkLen, secondChunkLen, 0, delayInt, alpha, fb, cap)
+            processInternal(buffer.left, input.left, output.left, done, chunk, pos, delayInt, alpha, fb, cap)
+            processInternal(buffer.right, input.right, output.right, done, chunk, pos, delayInt, alpha, fb, cap)
+
+            done += chunk
+            pos = (pos + chunk) % bufferSize
         }
 
-        writePos = (writePos + length) % bufferSize
+        writePos = pos
     }
 
     private fun processInternal(

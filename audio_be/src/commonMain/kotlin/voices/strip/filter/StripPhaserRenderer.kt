@@ -23,8 +23,9 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  * [io.peekandpoke.klang.audio_be.effects.Phaser]). This renderer only runs when a CUSTOM
  * pipeline adds `StageDsl.Phaser` — deliberate per-voice phasing. The same knobs then drive
  * BOTH this pass and the bus pass, so with `phaserFloor < 1` the dry is floored twice
- * (`dryC²`). The two gates also differ (this one runs at `depth > 0`, the bus katalyst at
- * `depth >= 0.01`) - pre-existing.
+ * (`dryC²`). The two gates also differ (this one runs at `depth > 0`, the bus at
+ * `Phaser.MIN_ACTIVE_DEPTH` = 0.01, inside `Phaser.process` since the katalyst gate moved
+ * there) - pre-existing.
  *
  * `depth = 0` bypasses entirely (exact at every floor: `max(floor, cos(0)) = 1`).
  */

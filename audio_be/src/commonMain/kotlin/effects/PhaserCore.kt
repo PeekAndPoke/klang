@@ -36,7 +36,12 @@ import kotlin.math.tan
  * (collectively ~50–150 ns/sample on Kotlin/JS). For typical LFO rates (≤10 Hz)
  * and block sizes (≤512 samples) the per-sample α error vs. sample-accurate
  * recomputation is < 10⁻⁵ relative — inaudible. **Callers MUST call
- * [prepareBlock] before each block of [step] calls.**
+ * [prepareBlock] before each block of [step] calls.** Because the LFO waveform
+ * itself is only sampled at block boundaries, the sweep's effective Nyquist is
+ * `sampleRate / (2 · blockFrames)` (~187 Hz at 48 kHz / 128) — above that the
+ * LFO aliases at the block rate and the aliased sweep depends on the block
+ * size. `rate` is deliberately unclamped (raw engine); the bound is named here
+ * and at the user-facing doors instead.
  *
  * **Inlining**: [step] is `inline` so the per-sample filter math expands at the
  * call site. Without this, the previous (non-inline) method-call boundary cost
@@ -149,6 +154,16 @@ internal class PhaserCore(
         lastOutput = signal.flushDenormal()
         alpha = a + alphaIncrement
         return signal
+    }
+
+    /**
+     * Zero the LFO phase — for ORBIT REUSE only ([reset] deliberately preserves it). A torn-down
+     * orbit's phase is "blocks the orbit happened to stay active x rate", which depends on the
+     * cleanup schedule (block size x allocated-cylinder count) — carrying it into the orbit's
+     * next life would make the reused orbit's sweep position framing-dependent (review round 2).
+     */
+    fun zeroPhase() {
+        lfoPhase = 0.0
     }
 
     /** Clear allpass state and `lastOutput`. LFO phase is preserved for cross-note continuity. */
