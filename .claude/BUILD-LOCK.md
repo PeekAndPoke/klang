@@ -4,6 +4,12 @@
 **SINCE: 2026-08-27**
 **STATE: FREE — take the lock before building.**
 
+> Last action (2026-08-27, claude-code session): 5-round review loop over the uncommitted Phase 3 /
+> teardown-fade / release-endpoint work. ~50 findings; loop STOPPED on "user decision needed", not
+> on a clean round. Open: a PRE-EXISTING onset bug at IgniteRenderer.kt:36 (missing ctx.offset,
+> verified) that .adsrOff() makes audible; smoothstep on the teardown ramp; the adsrOn/vcaOn/on
+> naming. Suites green: audio_be 1293 / audio_bridge 62 / sprudel 3974 / klangscript 1690.
+
 > Last action (2026-08-27, claude-code session): Phases 0 and 1 of the ignitor envelope-ownership
 > plan, COMMITTED as two commits. Phase 0 drops the `IgniteContext` parameter from
 > `Ignitor.controlRateValueOrNull` (nothing read it); Phase 1 has the build report the release tail
