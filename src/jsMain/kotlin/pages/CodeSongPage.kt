@@ -257,7 +257,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             if (!state.isPlaying) {
                                 ui.circular.white.button {
                                     onClick { onPlay() }
-                                    if (state.isPlayerLoading) {
+                                    if (state.isPlayerFailed) {
+                                        // The engine did not start. Clicking retries: Player.ensure()
+                                        // drops its memoized deferred on failure.
+                                        icon.black.exclamation_triangle()
+                                        +"Retry"
+                                    } else if (state.isPlayerLoading) {
                                         icon.black.loading.spinner()
                                         +"Loading"
                                     } else {

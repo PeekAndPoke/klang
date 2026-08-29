@@ -32,27 +32,34 @@ class KlangRealtimeVoicePlayback internal constructor(
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
     override val signals: Stream<KlangPlaybackSignal> = _signals.readonly
 
-    private var nextLiveId = 1
+    private var liveIdCounter = 1
 
     /**
-     * Starts a voice immediately.
+     * Starts a voice immediately under a caller-supplied [liveId].
+     *
+     * The explicit-id form exists because a note source generally has to know the id BEFORE the
+     * voice exists — a MIDI connector maps (channel, note) to the id it will later stop, and that
+     * mapping has to be in place before the note-on is even sent.
      *
      * @param data The synthesis payload.
-     * @param gateDurSec Gate length in seconds; null = held until a later stop command (v2).
-     * @return The liveId identifying this voice while it is alive.
+     * @param gateDurSec Gate length in seconds; null = held until [stopVoice].
      */
-    fun startVoice(data: VoiceData, gateDurSec: Double? = null): Int {
-        val liveId = nextLiveId++
-
+    fun startVoice(liveId: Int, data: VoiceData, gateDurSec: Double? = null) {
         player.sendControl(
             KlangCommLink.Cmd.StartRealtimeVoice(
                 playbackId = playbackId,
                 voice = RealtimeVoice(liveId = liveId, data = data, gateDurSec = gateDurSec),
             )
         )
-
-        return liveId
     }
+
+    /**
+     * Starts a voice immediately, minting the id here.
+     *
+     * @return The liveId identifying this voice while it is alive.
+     */
+    fun startVoice(data: VoiceData, gateDurSec: Double? = null): Int =
+        (liveIdCounter++).also { startVoice(liveId = it, data = data, gateDurSec = gateDurSec) }
 
     /**
      * Announces an inline [IgnitorDsl] to this playback's backend engine and returns the

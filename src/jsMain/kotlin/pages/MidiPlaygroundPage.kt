@@ -7,18 +7,13 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_engine.KlangRealtimeVoicePlayback
-import io.peekandpoke.klang.midi.MidiAccess
-import io.peekandpoke.klang.midi.MidiInput
-import io.peekandpoke.klang.midi.MidiMessageEvent
-import io.peekandpoke.klang.midi.byteAt
-import io.peekandpoke.klang.midi.isWebMidiSupported
-import io.peekandpoke.klang.midi.requestMidiAccess
+import io.peekandpoke.klang.comp.RealtimePlaybackCtrl
+import io.peekandpoke.klang.midi.MidiConnector
+import io.peekandpoke.klang.midi.NoteKey
 import io.peekandpoke.klang.tones.midi.Midi
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
-import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -41,51 +36,27 @@ fun Tag.MidiPlaygroundPage() = comp {
 }
 
 /**
- * Midi Playground — v0 of the MIDI keyboard workstream (docs/tasks/midi-keyboard-playground.md).
+ * Midi Playground — play the engine live from a MIDI keyboard.
  *
- * This first step only listens: connect a MIDI device, show what is plugged in, and display
- * the keys as they are pressed. Making sound comes next.
+ * The page owns only two things: **the translation** ([voiceFor] — what a note sounds like) and
+ * the wiring ([handle]). Engine lifecycle lives in [RealtimePlaybackCtrl]; devices, byte parsing,
+ * liveIds and note bookkeeping live in [MidiConnector]. See
+ * docs/tasks/realtime-playback-controller.md.
  */
 class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
-    //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
+    //  STATE  //////////////////////////////////////////////////////////////////////////////////
 
-    private sealed interface MidiState {
-        data object Unsupported : MidiState
-        data object Requesting : MidiState
-        data class Failed(val message: String) : MidiState
-        data class Ready(val access: MidiAccess) : MidiState
-    }
+    private val ctrl = RealtimePlaybackCtrl(playbackName = "midi-playground")
 
-    private var midi: MidiState by value(MidiState.Requesting)
+    private val midi = MidiConnector(nextLiveId = ctrl::nextLiveId)
 
-    /** Names of the currently connected MIDI inputs */
-    private var devices: List<String> by value(emptyList())
+    private val ctrlState by subscribingTo(ctrl.state)
 
-    /** Currently held keys: midi note number -> velocity (1..127) */
-    private var pressed: Map<Int, Int> by value(emptyMap())
+    private val midiState by subscribingTo(midi.state)
 
-    /** Last events, newest first */
+    /** Last events, newest first — pure UI, so it lives here. */
     private var eventLog: List<String> by value(emptyList())
-
-    /** The always-on realtime playback — null until the player is loaded */
-    private var realtime: KlangRealtimeVoicePlayback? by value(null)
-
-    /**
-     * Voices currently held on the keyboard: heldKey(channel, note) -> liveId. Keyed by channel
-     * AND note — the same note on two channels is two distinct voices. Plain field, not component
-     * state — the UI renders [pressed]; this is bookkeeping for note-off.
-     */
-    private val heldVoices = mutableMapOf<Int, Int>()
-
-    private fun heldKey(channel: Int, note: Int): Int = channel * 128 + note
-
-    /** Releases every held voice — unmount, device unplug, and the MIDI panic CCs land here. */
-    private fun releaseAllHeld() {
-        realtime?.let { rt -> heldVoices.values.forEach { rt.stopVoice(it) } }
-        heldVoices.clear()
-        pressed = emptyMap()
-    }
 
     companion object {
         private const val EVENT_LOG_SIZE = 16
@@ -94,145 +65,47 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     init {
         lifecycle {
             onMount {
-                launch {
-                    val player = Player.ensure().await()
-                    realtime = player.createRealtimePlayback("midi-playground")
-                    console.log("[MidiPlayground] realtime playback ready:", realtime?.playbackId)
-                }
-
-                if (!isWebMidiSupported()) {
-                    console.warn("[MidiPlayground] Web MIDI API not available on navigator")
-                    midi = MidiState.Unsupported
-                } else {
-                    console.log("[MidiPlayground] requesting MIDI access ...")
-                    requestMidiAccess()
-                        .then { access ->
-                            console.log("[MidiPlayground] MIDI access GRANTED", access)
-                            midi = MidiState.Ready(access)
-                            hookInputs(access)
-                            access.onstatechange = { evt ->
-                                console.log(
-                                    "[MidiPlayground] state change:", evt.port.name, evt.port.type, evt.port.state
-                                )
-                                // An unplugged device can never send its note-offs — release
-                                // everything rather than leaking held voices to the horizon.
-                                if (evt.port.type == "input" && evt.port.state == "disconnected") {
-                                    releaseAllHeld()
-                                }
-                                hookInputs(access)
-                            }
-                        }
-                        .catch { err ->
-                            // NB this also catches exceptions thrown inside the then-handler above,
-                            // not only permission rejections — the message tells them apart.
-                            console.error("[MidiPlayground] MIDI setup failed:", err)
-                            midi = MidiState.Failed(err.message ?: err.toString())
-                        }
-                }
+                midi.start()
+                midi.events.subscribeToStream { evt -> evt?.let { handle(it) } }
             }
 
             onUnmount {
-                // Keys held while navigating away would otherwise sustain to the held-gate
-                // horizon — and a remount gets a fresh map, so the old liveIds would be
-                // unreachable for the rest of the session.
-                releaseAllHeld()
-
-                (midi as? MidiState.Ready)?.access?.let { access ->
-                    access.onstatechange = null
-                    access.inputs.forEach { input, _ -> input.onmidimessage = null }
-                }
+                midi.tearDown() // releases held notes first, then unhooks
+                ctrl.tearDown()
             }
         }
     }
 
-    //  MIDI  ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //  THE TRANSLATION — voice shape, sound and params live here  //////////////////////////////
 
-    /** (Re-)hooks all inputs. Runs on every state change, so hot-plugged devices just work. */
-    private fun hookInputs(access: MidiAccess) {
-        val names = mutableListOf<String>()
+    private fun voiceFor(evt: MidiConnector.Event.NoteOn): VoiceData = VoiceData.empty.copy(
+        sound = "supersaw",
+        freqHz = Midi.midiToFreq(evt.key.note.toDouble()),
+        velocity = evt.velocity / 127.0,
+    )
 
-        access.inputs.forEach { input, _ ->
-            console.log("[MidiPlayground] hooking input:", input.name, "state:", input.state)
-            names.add(input.name ?: input.id)
-            input.onmidimessage = { evt -> onMidiMessage(input, evt) }
+    /** Exhaustive by design: a new connector event fails the build until this page decides. */
+    private fun handle(evt: MidiConnector.Event): Unit = when (evt) {
+        is MidiConnector.Event.NoteOn -> {
+            logEvent(evt.tsMs, "ON  ${noteLabel(evt.key)} vel ${evt.velocity} ch ${evt.key.channel}")
+            ctrl.startVoice(liveId = evt.liveId, data = voiceFor(evt), gateDurSec = null)
         }
 
-        console.log("[MidiPlayground] ${names.size} input(s) hooked")
-        devices = names
-    }
-
-    private fun onMidiMessage(input: MidiInput, evt: MidiMessageEvent) {
-        val status = evt.byteAt(0)
-        val kind = status and 0xF0
-        val channel = (status and 0x0F) + 1
-
-        // Log everything except the high-frequency system-realtime spam (clock 0xF8, active sensing 0xFE)
-        if (status < 0xF8) {
-            console.log(
-                "[MidiPlayground] t=${formatTs(evt.timeStamp)} msg status=$status kind=$kind ch=$channel " +
-                        "data1=${evt.byteAt(1)} data2=${evt.byteAt(2)} len=${evt.data.length}"
-            )
+        is MidiConnector.Event.NoteOff -> {
+            logEvent(evt.tsMs, "OFF ${noteLabel(evt.key)} ch ${evt.key.channel}")
+            ctrl.stopVoice(evt.liveId)
         }
 
-        // A throw inside the state setters would otherwise die silently in the MIDI callback
-        try {
-            when (kind) {
-                // Note-on with velocity 0 is a note-off by convention
-                0x90 -> {
-                    val note = evt.byteAt(1)
-                    val velocity = evt.byteAt(2)
-                    if (velocity > 0) {
-                        noteOn(input, channel, note, velocity, evt.timeStamp)
-                    } else {
-                        noteOff(input, channel, note, evt.timeStamp)
-                    }
-                }
-
-                0x80 -> noteOff(input, channel, evt.byteAt(1), evt.timeStamp)
-
-                0xB0 -> {
-                    val cc = evt.byteAt(1)
-                    // CC 123 All Notes Off / CC 120 All Sound Off — the hardware panic buttons
-                    if (cc == 120 || cc == 123) {
-                        logEvent(evt.timeStamp, "PANIC CC $cc ch $channel [${input.name ?: input.id}]")
-                        releaseAllHeld()
-                    }
-                }
-
-                // Everything else (pitch bend, aftertouch, clock, ...) is out of scope for now
-                else -> {}
-            }
-        } catch (e: Throwable) {
-            console.error("[MidiPlayground] message handling failed:", e)
+        is MidiConnector.Event.AllNotesOff -> {
+            logEvent(0.0, "PANIC (${evt.reason}) — releasing ${evt.liveIds.size} voice(s)")
+            evt.liveIds.forEach { ctrl.stopVoice(it) }
         }
+
+        // v1 will map these onto oscparams.
+        is MidiConnector.Event.ControlChange -> Unit
     }
 
-    private fun noteOn(input: MidiInput, channel: Int, note: Int, velocity: Int, tsMs: Double) {
-        logEvent(tsMs, "ON  ${noteLabel(note)} vel $velocity ch $channel [${input.name ?: input.id}]")
-        pressed = pressed + (note to velocity)
-
-        realtime?.let { rt ->
-            // Retrigger of a still-held note: release the old voice first, or it would stay
-            // gated until the held-gate horizon.
-            heldVoices.remove(heldKey(channel, note))?.let { rt.stopVoice(it) }
-
-            heldVoices[heldKey(channel, note)] = rt.startVoice(
-                data = VoiceData.empty.copy(
-                    sound = "supersaw",
-                    freqHz = Midi.midiToFreq(note.toDouble()),
-                    velocity = velocity / 127.0,
-                ),
-                gateDurSec = null, // held until noteOff
-            )
-        }
-    }
-
-    private fun noteOff(input: MidiInput, channel: Int, note: Int, tsMs: Double) {
-        logEvent(tsMs, "OFF ${noteLabel(note)} ch $channel [${input.name ?: input.id}]")
-        pressed = pressed - note
-
-        heldVoices.remove(heldKey(channel, note))?.let { realtime?.stopVoice(it) }
-    }
+    //  HELPERS  ////////////////////////////////////////////////////////////////////////////////
 
     private fun logEvent(tsMs: Double, entry: String) {
         eventLog = (listOf("${formatTs(tsMs)}  $entry") + eventLog).take(EVENT_LOG_SIZE)
@@ -241,9 +114,10 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     /** DOMHighResTimeStamp ms with one decimal, e.g. "12345.7" */
     private fun formatTs(tsMs: Double): String = tsMs.asDynamic().toFixed(1).unsafeCast<String>()
 
-    private fun noteLabel(note: Int): String = "${Midi.midiToNoteName(note.toDouble())} ($note)"
+    private fun noteLabel(key: NoteKey): String =
+        "${Midi.midiToNoteName(key.note.toDouble())} (${key.note})"
 
-    //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
+    //  RENDER  /////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
         ui.fluid.container {
@@ -252,53 +126,88 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             ui.basic.segment {
                 ui.header H1 { +"Midi Playground" }
 
-                renderStatus()
-
-                when (midi) {
-                    is MidiState.Ready -> {
-                        renderPressedKeys()
-                        renderEventLog()
-                    }
-
-                    else -> {}
+                when {
+                    ctrlState.isReady -> renderPlayground()
+                    else -> renderStartEngine()
                 }
             }
         }
     }
 
-    private fun FlowContent.renderStatus() {
-        when (val state = midi) {
-            MidiState.Unsupported -> ui.warning.message {
+    /**
+     * The engine gate. Browsers only start an AudioContext from a user gesture, so this button IS
+     * the gesture — an honest state rather than a silently suspended context.
+     */
+    private fun FlowContent.renderStartEngine() {
+        ui.basic.segment {
+            key = "start-engine"
+
+            ui.big.primary.button {
+                onClick { ctrl.start() }
+
+                when {
+                    // Clicking retries: Player.ensure() drops its memoized deferred on failure.
+                    ctrlState.isFailed -> {
+                        icon.exclamation_triangle()
+                        +"Retry"
+                    }
+
+                    ctrlState.isLoading -> {
+                        icon.loading.spinner()
+                        +"Starting the Motör ..."
+                    }
+
+                    else -> {
+                        icon.power_off()
+                        +"Start Engine"
+                    }
+                }
+            }
+
+            if (ctrlState.isFailed) {
+                ui.negative.message {
+                    ui.header { +"The engine did not start" }
+                    +(ctrlState.error ?: "Unknown error, see the browser console.")
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.renderPlayground() {
+        renderDevices()
+        renderPressedKeys()
+        renderEventLog()
+    }
+
+    private fun FlowContent.renderDevices() {
+        when (midiState.status) {
+            MidiConnector.Status.Unsupported -> ui.warning.message {
                 ui.header { +"Web MIDI is not supported in this browser" }
                 +"Chrome and Edge support it out of the box. Safari does not; Firefox only via a site-permission add-on."
             }
 
-            MidiState.Requesting -> ui.info.message {
+            MidiConnector.Status.Requesting -> ui.info.message {
                 +"Requesting MIDI access ... the browser may ask for permission."
             }
 
-            is MidiState.Failed -> ui.negative.message {
+            MidiConnector.Status.Denied -> ui.negative.message {
                 ui.header { +"MIDI setup failed" }
-                +state.message
+                +(midiState.error ?: "")
                 ui.divider()
-                +"If access was denied: allow MIDI for this page in the browser settings and reload. "
                 +"Known walls: snap-packaged browsers (e.g. Ubuntu's Chromium snap) cannot reach MIDI devices at all, "
-                +"and Firefox gates MIDI behind a site-permission add-on that is usually unavailable on localhost — "
-                +"use Chrome or another unconfined Chromium build."
+                +"and Firefox gates MIDI behind a site-permission add-on that is usually unavailable on localhost."
             }
 
-            is MidiState.Ready -> {
-                if (devices.isEmpty()) {
-                    ui.info.message {
-                        +"No MIDI devices found. Plug in a keyboard — it will show up here automatically."
-                    }
-                } else {
-                    ui.list {
-                        devices.forEach { name ->
-                            noui.item {
-                                icon.keyboard()
-                                noui.content { +name }
-                            }
+            MidiConnector.Status.Ready -> if (midiState.devices.isEmpty()) {
+                ui.info.message {
+                    +"No MIDI devices found. Plug in a keyboard — it will show up here automatically."
+                }
+            } else {
+                ui.list {
+                    midiState.devices.forEach { name ->
+                        noui.item {
+                            icon.keyboard()
+                            noui.content { +name }
                         }
                     }
                 }
@@ -309,23 +218,23 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     private fun FlowContent.renderPressedKeys() {
         ui.segment {
             key = "pressed-keys"
-            css {
-                minHeight = 90.px
-            }
+            css { minHeight = 90.px }
 
-            if (pressed.isEmpty()) {
+            val held = midiState.held
+
+            if (held.isEmpty()) {
                 ui.header H3 {
                     css { fontWeight = FontWeight.normal }
                     +"Play something on your keyboard ..."
                 }
             } else {
                 ui.labels {
-                    pressed.keys.sorted().forEach { note ->
+                    held.values.sortedBy { it.key.note }.forEach { note ->
                         ui.big.label {
-                            key = "note-$note"
+                            key = "note-${note.key.channel}-${note.key.note}"
                             css { fontSize = 24.px }
-                            +noteLabel(note)
-                            noui.detail { +"vel ${pressed[note]}" }
+                            +noteLabel(note.key)
+                            noui.detail { +"vel ${note.velocity}" }
                         }
                     }
                 }

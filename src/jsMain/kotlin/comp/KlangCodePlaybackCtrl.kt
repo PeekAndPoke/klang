@@ -65,8 +65,10 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
      * The full scalar UI state of the controller. Consumers subscribe to [state] and destructure
      * whichever fields they care about.
      *
-     * [isPlayerLoading] mirrors [Player.status] == [Player.Status.LOADING] — the controller
-     * publishes it here as a convenience so a button bar only needs one subscription.
+     * [playerStatus] mirrors [Player.status] — the controller publishes it here as a convenience
+     * so a button bar only needs one subscription. It carries the ENUM, not a
+     * `isPlayerLoading` boolean: collapsing it loses FAILED, and a Play button that cannot say
+     * "the engine did not start" just spins.
      */
     data class State(
         val code: String,
@@ -75,8 +77,11 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
         val isPlaying: Boolean,
         val isCodeModified: Boolean,
         val currentCycle: Int,
-        val isPlayerLoading: Boolean,
-    )
+        val playerStatus: Player.Status,
+    ) {
+        val isPlayerLoading: Boolean get() = playerStatus == Player.Status.LOADING
+        val isPlayerFailed: Boolean get() = playerStatus == Player.Status.FAILED
+    }
 
     // ── Scalar UI state (combined) ───────────────────────────────────────────
 
@@ -88,7 +93,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
             isPlaying = false,
             isCodeModified = false,
             currentCycle = 0,
-            isPlayerLoading = Player.status() == Player.Status.LOADING,
+            playerStatus = Player.status(),
         )
     )
     val state: Stream<State> = _state.readonly
@@ -120,7 +125,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
 
         // Mirror the global player loading state into our combined state.
         Player.status.subscribeToStream { status ->
-            _state { it.copy(isPlayerLoading = status == Player.Status.LOADING) }
+            _state { it.copy(playerStatus = status) }
         }
     }
 

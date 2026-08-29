@@ -190,7 +190,7 @@ class KlangBenchmark(
 
         while (currentVoices < maxVoicesCap) {
             // Calculate current time in seconds for scheduling
-            val currentTimeSec = cursorFrame.toDouble() / sampleRate
+            val currentTimeSec = cursorFrame / sampleRate
 
             // Clear scheduled voices and add ALL voices starting at current time
             scheduler.clearScheduled("benchmark")
