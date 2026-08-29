@@ -8,8 +8,6 @@ package io.peekandpoke.klang.audio_engine
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -58,11 +56,11 @@ internal class KlangPatternScheduler(
     private val callbackDispatcher = context.callbackDispatcher
     private val backendReady = context.backendReady
 
-    /** Announce an inline pipeline DSL to this playback's backend (awaiting the `.pipeline(dsl)` app path). */
-    fun registerPipeline(dsl: PipelineDsl): String = registrar.pipelines.registerOrLookup(dsl)
-
-    /** Announce an inline master DSL to this playback's backend. */
-    fun registerMaster(dsl: MasterDsl): String = registrar.masters.registerOrLookup(dsl)
+    // NB there are deliberately no register*() pass-throughs here any more. They were dormant
+    // hooks whose only caller was this class's own event sweep, which now lives on the
+    // playback's InlineDslRegistrar. If an app path ever wants to announce an inline
+    // pipeline/master directly, it belongs on the PLAYBACK — see
+    // KlangRealtimeVoicePlayback.registerIgnitor — not on the scheduler.
 
     companion object {
         /**
@@ -282,7 +280,7 @@ internal class KlangPatternScheduler(
         // Completes immediately if the backend already signalled ready earlier in the session.
         try {
             withTimeout(2000.milliseconds) { backendReady.await() }
-        } catch (e: TimeoutCancellationException) {
+        } catch (_: TimeoutCancellationException) {
             // Proceed anyway — warmup never arrived, but we'd rather play late than not at all.
             println("KlangPatternScheduler: backendReady timed out after 2s — proceeding cold")
         }
