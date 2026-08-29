@@ -5,17 +5,13 @@
 
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
@@ -31,6 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Core scheduling controller for pattern playback.
@@ -39,11 +36,16 @@ import kotlin.math.floor
  *
  * This is an internal implementation detail. Users should interact with [KlangCyclicPlayback] interface.
  */
-internal class KlangPlaybackController(
+internal class KlangPatternScheduler(
     private val playbackId: String,
     private var pattern: KlangPattern,
     context: KlangPlaybackContext,
     private val signals: StreamSource<KlangPlaybackSignal>,
+    /**
+     * Per-playback inline-DSL bookkeeping, owned by the PLAYBACK and handed down — the realtime
+     * path needs the same object, and the scheduler is not its natural home.
+     */
+    private val registrar: InlineDslRegistrar,
     private val onStarted: () -> Unit = {},
     private val onStopped: () -> Unit = {},
 ) {
@@ -56,19 +58,11 @@ internal class KlangPlaybackController(
     private val callbackDispatcher = context.callbackDispatcher
     private val backendReady = context.backendReady
 
-    // Per-playback (playbackId-bound) inline-DSL trackers — announce custom oscs/pipelines to THIS
-    // playback's backend engine once per unique DSL, and are freed with the controller. Global state
-    // lives on KlangPlayer; this mirrors the BE's per-PlaybackEngine registry forks.
-    private val ignitors = IgnitorRegistry(sendControl = sendControl, playbackId = playbackId)
-    private val pipelines = PipelineRegistry(sendControl = sendControl, playbackId = playbackId)
-    private val masters = MasterRegistry(sendControl = sendControl, playbackId = playbackId)
-    private val registerIgnitor: (IgnitorDsl) -> String = ignitors::registerOrLookup
-
     /** Announce an inline pipeline DSL to this playback's backend (awaiting the `.pipeline(dsl)` app path). */
-    fun registerPipeline(dsl: PipelineDsl): String = pipelines.registerOrLookup(dsl)
+    fun registerPipeline(dsl: PipelineDsl): String = registrar.pipelines.registerOrLookup(dsl)
 
     /** Announce an inline master DSL to this playback's backend. */
-    fun registerMaster(dsl: MasterDsl): String = masters.registerOrLookup(dsl)
+    fun registerMaster(dsl: MasterDsl): String = registrar.masters.registerOrLookup(dsl)
 
     companion object {
         /**
@@ -268,7 +262,7 @@ internal class KlangPlaybackController(
 
         // Wait for backend acknowledgement (with timeout to prevent hanging)
         try {
-            withTimeout(5000) {
+            withTimeout(5000.milliseconds) {
                 deferred.await()
             }
         } catch (e: Exception) {
@@ -287,10 +281,10 @@ internal class KlangPlaybackController(
         // Ensures the audio thread's hot path is JIT'd before the first real voice hits.
         // Completes immediately if the backend already signalled ready earlier in the session.
         try {
-            withTimeout(2000) { backendReady.await() }
+            withTimeout(2000.milliseconds) { backendReady.await() }
         } catch (e: TimeoutCancellationException) {
             // Proceed anyway — warmup never arrived, but we'd rather play late than not at all.
-            println("KlangPlaybackController: backendReady timed out after 2s — proceeding cold")
+            println("KlangPatternScheduler: backendReady timed out after 2s — proceeding cold")
         }
 
         // ===== PRELOAD PHASE =====
@@ -327,10 +321,10 @@ internal class KlangPlaybackController(
             // Request the next cycles from the source
             requestNextCyclesAndAdvanceCursor()
             // roughly 60 FPS
-            delay(16)
+            delay(16.milliseconds)
         }
 
-        println("KlangPlaybackController stopped")
+        println("KlangPatternScheduler stopped")
     }
 
     private fun updateLocalFrameCounter() {
@@ -382,28 +376,11 @@ internal class KlangPlaybackController(
     private fun queryEvents(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
         val events = pattern.queryEvents(fromCycles = from, toCycles = to, cps = cyclesPerSecond)
 
-        // Pre-register inline ignitors with the backend so their synthetic names are
-        // known before the voice events referencing them are scheduled. The name itself
-        // comes from IgnitorDsl.uniqueId() (process-wide); registerIgnitor only takes
-        // care of the per-player RegisterIgnitor wire command on first sighting.
-        events.asSequence()
-            .map { it.sound }
-            .filterIsInstance<SoundValue.Osc>()
-            .forEach { registerIgnitor(it.osc) }
-
-        // Same for inline pipelines: announce each unique PipelineDsl so its synthetic name
-        // (from PipelineDsl.uniqueId(), resolved in toVoiceData) is known before scheduling.
-        events.asSequence()
-            .map { it.pipeline }
-            .filterIsInstance<PipelineValue.Dsl>()
-            .forEach { registerPipeline(it.pipeline) }
-
-        // Same for inline masters: a `master(…)` event re-emits every cycle, but the registry only
-        // announces each structurally-unique chain once (see MasterRegistry).
-        events.asSequence()
-            .map { it.master }
-            .filterIsInstance<MasterValue.Dsl>()
-            .forEach { registerMaster(it.master) }
+        // Announce every inline DSL these events reference BEFORE they are scheduled, so the
+        // synthetic names resolve on the backend by the time voices referencing them arrive.
+        // The registrar belongs to the playback (it is shared with the realtime path); the
+        // announce-once gate and the sweep itself live there.
+        registrar.announceAll(events)
 
         // Transform to ScheduledVoice using absolute time from KlangTime epoch
         val secPerCycle = 1.0 / cyclesPerSecond

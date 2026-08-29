@@ -15,7 +15,7 @@
 - **Live-change declick**: `KatalystFilterSwap` crossfades the bank on any material/mix/floor rebuild.
 - **Live-update double-voice fix**: `VoiceScheduler.replaceVoices` now dedups incoming voices vs
   already-active ones (`ScheduledVoice.isDuplicate` = startTime+data); grace window 50→200 ms in
-  `KlangPlaybackController`. Root cause + the per-playback engine model: `ref/architecture.md`.
+  `KlangPatternScheduler`. Root cause + the per-playback engine model: `ref/architecture.md`.
 - **Benchmarks**: isolated `Body`/`Vowel` cases in `EffectBenchmark`; a `+vowel(a)` case in the song
   benchmark. Body (8-band) is the priciest single filter (~= reverb), vowel ~62% of it. **The old
   "superimpose × body = super-additive" finding is now OBSOLETE** — body moved to orbit-level, so

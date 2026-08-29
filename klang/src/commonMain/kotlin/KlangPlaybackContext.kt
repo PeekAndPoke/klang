@@ -45,4 +45,14 @@ class KlangPlaybackContext internal constructor(
 
     /** The single FE↔BE clock offset — GLOBAL, owned by [KlangPlayer]; controllers read it. */
     internal val clockSync: BackendClockSync,
-)
+) {
+    /**
+     * A fresh per-playback inline-DSL registrar wired to the live backend.
+     *
+     * Everything else on this context is player-scoped and shared; this is the one thing that
+     * must be minted PER playback (it is stamped with [playbackId] and dies with the playback),
+     * so it is a factory rather than a field.
+     */
+    internal fun registrarFor(playbackId: String): InlineDslRegistrar =
+        InlineDslRegistrar.overWire(playbackId = playbackId, sendControl = sendControl)
+}

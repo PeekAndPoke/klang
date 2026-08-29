@@ -4,6 +4,24 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-29, claude-code MIDI-workstream session): P1 of the playback-layer
+> decomposition (docs/tasks/playback-layer-decomposition.md) — inline-DSL bookkeeping moved OUT
+> of the scheduler and ONTO the playback. `IgnitorRegistry`/`PipelineRegistry`/`MasterRegistry`
+> (three byte-identical classes) DELETED, replaced by one generic `AnnounceOnceRegistry<T>` +
+> `InlineDslRegistrar` (holds the three, owns the sweep that was hand-written per call site).
+> `KlangPlaybackContext.registrarFor(playbackId)` is the single construction site; Continuous/
+> OneShot create it and hand it to the controller. **Payoff: `KlangRealtimeVoicePlayback` gained
+> `registerIgnitor(dsl): String`** — inline DSLs were silently unsupported on the realtime path,
+> which is exactly what MIDI v1's ignitor editor needs. Shared by COMPOSITION (a swappable
+> announce sink), because the offline renderer needs the same and is not a `KlangPlayback`.
+> `IgnitorRegistryTest` ported to `InlineDslRegistrarTest` (10 rows: announce-once through the
+> generic, per-kind Cmd types, the sweep, playbackId stamping, concurrency). 3 mutations killed
+> (gate removed, sweep drops masters, sweep drops pipelines), restored byte-exact. Green:
+> :klang:jvmTest, :audio_be:jvmTest, :audio_bridge:jvmTest, :klang:compileKotlinJs,
+> :audio_benchmark:compileKotlinJvm, :compileKotlinJs (no watcher was running). UNCOMMITTED.
+> NOT done here: the offline renderer still has its own hand-rolled sweep (it wants the local
+> sink; maintainer plans to rewrite that path anyway) — that is the remaining half of P1.
+
 > Last action (2026-08-29, claude-code MIDI-workstream session): note-off v2 REVIEW LOOP CLOSED —
 > round 3 CLEAN (2 fresh Opus reviewers, two-phase: zero CRITICAL/MAJOR; all 12 round-2 fixes
 > re-derived as holding). MINOR batch applied once, no re-review: `VoiceOrigin.Realtime` gained

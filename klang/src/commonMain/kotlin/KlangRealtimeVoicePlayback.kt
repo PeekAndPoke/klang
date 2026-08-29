@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -24,6 +25,8 @@ import io.peekandpoke.ultra.streams.StreamSource
 class KlangRealtimeVoicePlayback internal constructor(
     private val player: KlangPlayer,
     override val playbackId: String,
+    /** Inline-DSL bookkeeping — the same object the cyclic path uses (see [InlineDslRegistrar]). */
+    private val registrar: InlineDslRegistrar,
 ) : KlangPlayback {
 
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
@@ -50,6 +53,17 @@ class KlangRealtimeVoicePlayback internal constructor(
 
         return liveId
     }
+
+    /**
+     * Announces an inline [IgnitorDsl] to this playback's backend engine and returns the
+     * synthetic name to put in [VoiceData.sound].
+     *
+     * This is how a user-authored instrument reaches the realtime path (the MIDI playground's
+     * ignitor editor): compile to a DSL, register it, play notes with the returned name.
+     * Announce-once and naming are shared with the cyclic path — the same DSL tree yields the
+     * same name and is sent to the backend only the first time this playback sees it.
+     */
+    fun registerIgnitor(dsl: IgnitorDsl): String = registrar.ignitors.registerOrLookup(dsl)
 
     /**
      * Releases the voice(s) started under [liveId] — they enter their ADSR release from the

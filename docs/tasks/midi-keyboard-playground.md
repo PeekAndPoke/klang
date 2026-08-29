@@ -91,7 +91,7 @@ implicit creation). So:
   mangles the id, sends `ConfigurePlayback`, calls `registerPlayback(...)` (so feedback routing
   by playbackId works), and returns a new **`KlangRealtimePlayback : KlangPlayback`** — the
   realtime sibling of `KlangCyclicPlayback` (which is what `CodeSongPage` uses via
-  `KlangCodePlaybackCtrl`; `KlangPlaybackController` is internal). Surface: `scheduleVoice(...)`
+  `KlangCodePlaybackCtrl`; `KlangPatternScheduler` is internal). Surface: `scheduleVoice(...)`
   for v0, `noteOn`/`noteOff` with internal `liveId` bookkeeping for v2, `stop()` sends `Cleanup`.
 - Calling the factory twice with the same name: decide reuse-or-error when implementing (lean
   reuse — page remounts shouldn't leak engines).

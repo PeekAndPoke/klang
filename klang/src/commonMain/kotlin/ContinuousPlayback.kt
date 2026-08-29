@@ -27,11 +27,15 @@ internal class ContinuousPlayback internal constructor(
 
     override val signals: Stream<KlangPlaybackSignal> = _signals.readonly
 
-    private val controller = KlangPlaybackController(
+    /** Inline-DSL bookkeeping belongs to the playback; the scheduler just uses it. */
+    private val registrar = context.registrarFor(playbackId)
+
+    private val controller = KlangPatternScheduler(
         playbackId = playbackId,
         pattern = pattern,
         context = context,
         signals = _signals,
+        registrar = registrar,
         onStarted = onStarted,
         onStopped = onStopped,
     )

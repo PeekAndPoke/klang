@@ -847,7 +847,7 @@ by `MasterStageSpec`, mutation-checked against both a lying `latencyFrames` and 
 
 *Context, as it stood before:* there was **no delay-compensation concept anywhere in the DSP path** (confirmed — the
 only
-"latency compensation" in the tree is FE↔BE *clock* sync in `KlangPlaybackController.kt:107`, a different thing). A
+"latency compensation" in the tree is FE↔BE *clock* sync in `KlangPatternScheduler.kt:107`, a different thing). A
 lookahead limiter is the first deliberate signal-path latency. Decide whether it must be:
 
 - reported to the FE for scheduling/visual alignment (probably yes — it shifts audio vs. the playhead), and

@@ -43,7 +43,7 @@ original plan:
 - **FE/BE state-placement review** (own thread; memory `project_fe_be_state_placement`): the frontend now
   mirrors the backend's granularity. Shipped — FE↔BE **clock offset → `KlangPlayer`** (`BackendClockSync`; it
   was dead per-controller → UI drift); **custom oscs/engines → per-playback** (BE registry forks + FE
-  registries on `KlangPlaybackController` — fixes a registry leak); dead-message cleanup
+  registries on `KlangPatternScheduler` — fixes a registry leak); dead-message cleanup
   (`ScheduleVoice.clearScheduled` removed; `Cmd.ScheduleVoice`/`ClearScheduled` kept + documented); the
   `SampleRequest` universal-key invariant KDoc.
 
@@ -322,7 +322,7 @@ distinct startTimes).
   carrier (mirrors `PipelineValue`).
 - `sprudel` — new `lang_master`: top-level `master(dsl)` rest-carrier + `.master()` mapper;
   `SprudelVoiceData.master: MasterValue?` (2026-08-02 revision).
-- `klang/.../KlangPlaybackController.kt` — pre-register masters in `queryEvents` (like pipelines); no play choreography.
+- `klang/.../KlangPatternScheduler.kt` — pre-register masters in `queryEvents` (like pipelines); no play choreography.
   `Song.kt` unchanged (2026-08-02 revision).
 - `audio_be/src/jvmMain/.../JvmAudioBackend.kt`, `audio_jsworklet/.../KlangAudioWorklet.kt` — thin pumps;
   remove the duplicated `when(cmd)`.

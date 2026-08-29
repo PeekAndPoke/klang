@@ -89,7 +89,7 @@ class KlangPlayer(
     val backendReady = CompletableDeferred<Unit>()
 
     // The single FE↔BE clock offset (GLOBAL) — corrected from the SYSTEM Diagnostics, read by controllers.
-    // (Inline-osc/engine registries are playbackId-bound — they live on each KlangPlaybackController.)
+    // (Inline-osc/engine registries are playbackId-bound — they live on each playback now (InlineDslRegistrar), not the scheduler.)
     private val clockSync = BackendClockSync()
 
     // Context bundle for playback implementations (reduces constructor parameter lists)
@@ -233,8 +233,11 @@ class KlangPlayer(
                 .firstOrNull { it.playbackId == playbackId }
                 ?.let { return it }
 
-            return KlangRealtimeVoicePlayback(player = this, playbackId = playbackId)
-                .also { _activePlaybacks.add(it) }
+            return KlangRealtimeVoicePlayback(
+                player = this,
+                playbackId = playbackId,
+                registrar = playbackContext.registrarFor(playbackId),
+            ).also { _activePlaybacks.add(it) }
         }
     }
 

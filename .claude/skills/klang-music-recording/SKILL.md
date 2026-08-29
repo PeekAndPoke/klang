@@ -74,7 +74,7 @@ Sprudel code (String)
 5. Renders blocks in a tight loop — no delays, no real-time pacing
 6. Calls `onBlock(ShortArray, count)` for each block (caller decides what to do with the audio)
 
-This bypasses the real-time infrastructure entirely (`KlangPlaybackController`, `JvmAudioBackend`, `KlangCommLink` IPC).
+This bypasses the real-time infrastructure entirely (`KlangPatternScheduler`, `JvmAudioBackend`, `KlangCommLink` IPC).
 The `KlangCommLink` instance is created but its feedback is never consumed — harmless.
 
 ## Pattern Compilation
