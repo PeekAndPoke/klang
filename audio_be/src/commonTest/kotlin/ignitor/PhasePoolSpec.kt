@@ -5,6 +5,37 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
+
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue

@@ -5,6 +5,12 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_bridge.constants.BROWN_LEAK_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_CHAOS_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.DUST_BIPOLAR_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.DUST_TAIL_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.NOISE_TILT_DEFAULT
+
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl

@@ -43,7 +43,8 @@ class JsAudioBackend(
         // This provides more headroom to prevent buffer starvation during CPU spikes or GC pauses
         val contextOpts = jsObject<AudioContextOptions> {
             sampleRate = config.sampleRate
-            latencyHint = "playback"  // Prioritize stable, glitch-free playback over minimal latency
+//            latencyHint = "playback"  // Prioritize stable, glitch-free playback over minimal latency
+            latencyHint = "interactive"  // Prioritize stable, glitch-free playback over minimal latency
         }
         val ctx = AudioContext(contextOpts)
 

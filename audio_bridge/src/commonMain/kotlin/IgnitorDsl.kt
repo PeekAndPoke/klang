@@ -5,6 +5,74 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.audio_bridge.constants.PULSE_FALL_FLANK
+import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
+import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
+import io.peekandpoke.klang.audio_bridge.constants.RAMP_RESET_SAMPLES
+import io.peekandpoke.klang.audio_bridge.constants.RAMP_SHAPE_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SAW_RESET_SAMPLES
+import io.peekandpoke.klang.audio_bridge.constants.SAW_SHAPE_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
+
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 
 
@@ -145,9 +213,9 @@ sealed interface IgnitorDsl {
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
         /** Analog flyback time in samples — lower = brighter/sharper reset, higher = softer (default 2.0). */
-        val resetSamples: Double = 2.0,
+        val resetSamples: Double = SAW_RESET_SAMPLES,
         /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps very high notes sane. */
-        val shapeMax: Double = 0.5,
+        val shapeMax: Double = SAW_SHAPE_MAX,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -245,11 +313,11 @@ sealed interface IgnitorDsl {
         val duty: IgnitorDsl = Slots.duty,
         val analog: IgnitorDsl = Slots.analog,
         /** Minimum flank length in samples (a floor on every edge → softens with pitch). Default 2.0. */
-        val flankSamples: Double = 2.0,
+        val flankSamples: Double = PULSE_MIN_FLANK_SAMPLES,
         /** Rising-edge flank fraction of the plateau (0 = sharpest/min floor, 1 = full ramp). Default 0.0. */
-        val riseFlank: Double = 0.0,
+        val riseFlank: Double = PULSE_RISE_FLANK,
         /** Falling-edge flank fraction of the plateau (0 = sharpest/min floor, 1 = full ramp). Default 0.0. */
-        val fallFlank: Double = 0.0,
+        val fallFlank: Double = PULSE_FALL_FLANK,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); duty.collectParams(out); analog.collectParams(out)
@@ -360,9 +428,9 @@ sealed interface IgnitorDsl {
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
         /** Analog flyback time in samples — lower = brighter/sharper reset, higher = softer (default 2.0). */
-        val resetSamples: Double = 2.0,
+        val resetSamples: Double = RAMP_RESET_SAMPLES,
         /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps high notes sane. */
-        val shapeMax: Double = 0.5,
+        val shapeMax: Double = RAMP_SHAPE_MAX,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -384,25 +452,25 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERSAW_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERSAW_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERSAW_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERSAW_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERSAW_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
-        val drawTries: Double = 5.0,
+        val drawTries: Double = SUPERSAW_DRAW_TRIES,
         /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
-        val kMin: Double = 0.30,
+        val kMin: Double = SUPERSAW_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.55,
+        val kMax: Double = SUPERSAW_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERSAW_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
+        val refreshEvery: Double = SUPERSAW_REFRESH_EVERY,
         /**
          * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
@@ -416,9 +484,9 @@ sealed interface IgnitorDsl {
          * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
          * Unrecognized names coerce to the default.
          */
-        val selection: String = "normal",
+        val selection: String = SUPERSAW_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERSAW_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -434,27 +502,27 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERSINE_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERSINE_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERSINE_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERSINE_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERSINE_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64).
          *  Deeper than the saw's 5: the high band is rare per draw, and a missed band degrades to
          *  closest-candidate (= coherence maximization). */
-        val drawTries: Double = 40.0,
+        val drawTries: Double = SUPERSINE_DRAW_TRIES,
         /** Band lower edge — the supersine's K IS the note (no other harmonics), so it sits high. */
-        val kMin: Double = 0.50,
+        val kMin: Double = SUPERSINE_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.80,
+        val kMax: Double = SUPERSINE_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERSINE_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
+        val refreshEvery: Double = SUPERSINE_REFRESH_EVERY,
         /**
          * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
@@ -468,9 +536,9 @@ sealed interface IgnitorDsl {
          * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
          * Unrecognized names coerce to the default.
          */
-        val selection: String = "normal",
+        val selection: String = SUPERSINE_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERSINE_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -486,25 +554,25 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERSQUARE_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERSQUARE_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERSQUARE_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERSQUARE_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERSQUARE_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
-        val drawTries: Double = 5.0,
+        val drawTries: Double = SUPERSQUARE_DRAW_TRIES,
         /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
-        val kMin: Double = 0.30,
+        val kMin: Double = SUPERSQUARE_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.55,
+        val kMax: Double = SUPERSQUARE_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERSQUARE_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
+        val refreshEvery: Double = SUPERSQUARE_REFRESH_EVERY,
         /**
          * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
@@ -518,9 +586,9 @@ sealed interface IgnitorDsl {
          * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
          * Unrecognized names coerce to the default.
          */
-        val selection: String = "normal",
+        val selection: String = SUPERSQUARE_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERSQUARE_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -536,26 +604,26 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERTRI_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERTRI_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERTRI_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERTRI_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERTRI_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64).
          *  Deeper than the saw's 5 — the higher band is rarer per draw. */
-        val drawTries: Double = 16.0,
+        val drawTries: Double = SUPERTRI_DRAW_TRIES,
         /** Band lower edge — 1/k² harmonics put most of the note in the fundamental, so it sits high-ish. */
-        val kMin: Double = 0.40,
+        val kMin: Double = SUPERTRI_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.65,
+        val kMax: Double = SUPERTRI_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERTRI_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
+        val refreshEvery: Double = SUPERTRI_REFRESH_EVERY,
         /**
          * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
@@ -569,9 +637,9 @@ sealed interface IgnitorDsl {
          * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
          * Unrecognized names coerce to the default.
          */
-        val selection: String = "normal",
+        val selection: String = SUPERTRI_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERTRI_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -587,25 +655,25 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERRAMP_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERRAMP_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERRAMP_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERRAMP_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERRAMP_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
-        val drawTries: Double = 5.0,
+        val drawTries: Double = SUPERRAMP_DRAW_TRIES,
         /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
-        val kMin: Double = 0.30,
+        val kMin: Double = SUPERRAMP_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.55,
+        val kMax: Double = SUPERRAMP_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERRAMP_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
+        val refreshEvery: Double = SUPERRAMP_REFRESH_EVERY,
         /**
          * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
          * (default): normal-distribution serving over the vocabulary's rank order, median-
@@ -619,9 +687,9 @@ sealed interface IgnitorDsl {
          * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
          * Unrecognized names coerce to the default.
          */
-        val selection: String = "normal",
+        val selection: String = SUPERRAMP_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERRAMP_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
