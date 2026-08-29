@@ -47,6 +47,14 @@ internal class KlangPatternScheduler(
     private val onStarted: () -> Unit = {},
     private val onStopped: () -> Unit = {},
 ) {
+    companion object {
+        /**
+         * Minimum allowed RPM. Values below this are clamped — a near-zero cps would make
+         * `secPerCycle` explode and time effectively stand still (or compute NaN anchors).
+         */
+        const val MIN_RPM: Double = 1.0
+    }
+
     // Extract dependencies from context for convenience
     private val playerOptions = context.playerOptions
     private val samplePreloader = context.samplePreloader
@@ -55,20 +63,6 @@ internal class KlangPatternScheduler(
     private val fetcherDispatcher = context.fetcherDispatcher
     private val callbackDispatcher = context.callbackDispatcher
     private val backendReady = context.backendReady
-
-    // NB there are deliberately no register*() pass-throughs here any more. They were dormant
-    // hooks whose only caller was this class's own event sweep, which now lives on the
-    // playback's InlineDslRegistrar. If an app path ever wants to announce an inline
-    // pipeline/master directly, it belongs on the PLAYBACK — see
-    // KlangRealtimeVoicePlayback.registerIgnitor — not on the scheduler.
-
-    companion object {
-        /**
-         * Minimum allowed RPM. Values below this are clamped — a near-zero cps would make
-         * `secPerCycle` explode and time effectively stand still (or compute NaN anchors).
-         */
-        const val MIN_RPM: Double = 1.0
-    }
 
     // ===== State Management =====
     private val running = KlangAtomicBool(false)
