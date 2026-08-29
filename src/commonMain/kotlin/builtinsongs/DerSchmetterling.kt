@@ -59,7 +59,7 @@ let guitar = (() => {
   let pHpQ        = Osc.param("hpq",           0.707, "Highpass resonance")
   // --------------------------------------------------------------------------------------------------------------
   
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = 15, spread = 0.10)
+  let signal = Osc.supersaw(freq = Osc.freq(), voices = 15, spread = 0.11)
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.70, kMax = 0.90, warmup = 0, selection = "normal")
     // character knobs — plain scalars, SuperSaw-typed, must precede the filter
@@ -89,9 +89,9 @@ let guitar = (() => {
     // cabinet
     .eq()
       .band(freq = snareHz, q = 5.0, db   = -1)                   // let the snare cut through
-      .lowpass(5100).lowpass(5100)                                // cabinet speaker sim    
+      .lowpass(5000).lowpass(5000)                                // cabinet speaker sim    
   
-  return amped.mul(0.50)
+  return amped.mul(0.55)
 })()
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
@@ -203,7 +203,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 6 2 -1]!1 [0 0 3 -1  0 0 [0 2 4 6] 9]!1>/8`
 
 export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.15) //. mute()
-    .oscp("drive", 0.50).oscp("grindlo", 100).oscp("grindhi", 2000).oscp("grind", 0.80).oscp("sub", 0.80).hpf(25) // . solo()
+    .oscp("drive", 0.30).oscp("grindlo", 100).oscp("grindhi", 400).oscp("grind", 0.60).oscp("sub", 0.80).hpf(25) // . solo()
     .adsr(0.005, 0.6, 0.2, 0.010)
 
 export bass_arrange = x => x.orbit(3).clip(0.8).pan(0.55) // .solo()
