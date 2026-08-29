@@ -193,7 +193,6 @@ class IgnitorRegistryTest : StringSpec({
             voiceDurationFrames = 44100,
             gateEndFrame = 44100,
             releaseFrames = 4410,
-            voiceEndFrame = 48510,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
 
@@ -233,7 +232,6 @@ class IgnitorRegistryTest : StringSpec({
             voiceDurationFrames = 44100,
             gateEndFrame = 44100,
             releaseFrames = 4410,
-            voiceEndFrame = 48510,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             offset = 0
@@ -266,7 +264,6 @@ class IgnitorRegistryTest : StringSpec({
             voiceDurationFrames = 44100,
             gateEndFrame = 44100,
             releaseFrames = 4410,
-            voiceEndFrame = 48510,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
 

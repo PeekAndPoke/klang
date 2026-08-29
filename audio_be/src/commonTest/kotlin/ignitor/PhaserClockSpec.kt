@@ -28,7 +28,7 @@ class PhaserClockSpec : StringSpec({
 
     fun ctx() = IgniteContext(
         sampleRate = sampleRate, voiceDurationFrames = 100_000, gateEndFrame = 100_000,
-        releaseFrames = 0, voiceEndFrame = 100_000, scratchBuffers = ScratchBuffers(blockFrames),
+        releaseFrames = 0,  scratchBuffers = ScratchBuffers(blockFrames),
     )
 
     // Deterministic, stateless tone — depends only on the note-relative sample position.

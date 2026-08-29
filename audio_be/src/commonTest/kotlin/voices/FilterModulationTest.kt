@@ -45,7 +45,6 @@ class FilterModulationTest : StringSpec({
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
             releaseFrames = releaseFrames,
-            voiceEndFrame = voiceDurationFrames + releaseFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
     }

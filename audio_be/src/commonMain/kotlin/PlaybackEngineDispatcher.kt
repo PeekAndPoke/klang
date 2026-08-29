@@ -70,6 +70,10 @@ class PlaybackEngineDispatcher(
         is KlangCommLink.Cmd.StartRealtimeVoice ->
             engineFor(cmd.playbackId).scheduler.startRealtimeVoice(cmd.playbackId, cmd.voice)
 
+        // Targets an EXISTING playback — a stop must never create (or revive) an engine.
+        is KlangCommLink.Cmd.StopRealtimeVoice ->
+            engines[cmd.playbackId]?.scheduler?.stopRealtimeVoice(cmd.playbackId, cmd.liveId) ?: Unit
+
         is KlangCommLink.Cmd.ReplaceVoices ->
             replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
 

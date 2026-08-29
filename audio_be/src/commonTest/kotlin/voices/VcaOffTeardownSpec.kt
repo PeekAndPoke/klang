@@ -74,13 +74,13 @@ class VcaOffTeardownSpec : StringSpec({
         val signal: Ignitor = dsl.toExciter()
         val signalCtx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
-            releaseFrames = rel, voiceEndFrame = total, scratchBuffers = ScratchBuffers(blockFrames),
+            releaseFrames = rel,  scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = AudioBuffer(total)
         val block = AudioBuffer(blockFrames)
         val renderer = EnvelopeRenderer(
             Voice.Envelope(attackFrames = 1.0, decayFrames = 1.0, sustainLevel = 1.0, releaseFrames = rel.toDouble()),
-            startFrame = 0.0, gateEndFrame = gate.toDouble(), on = false,
+            startFrame = 0.0, on = false,
         )
         val ctx = BlockContext(
             audioBuffer = block, freqModBuffer = DoubleArray(blockFrames),
@@ -110,7 +110,6 @@ class VcaOffTeardownSpec : StringSpec({
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             releaseFrames = releaseFrames,
-            voiceEndFrame = totalFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = AudioBuffer(totalFrames)
@@ -118,7 +117,6 @@ class VcaOffTeardownSpec : StringSpec({
         val renderer = EnvelopeRenderer(
             Voice.Envelope(attackFrames = 480.0, decayFrames = 480.0, sustainLevel = 1.0, releaseFrames = 2400.0),
             startFrame = 0.0,
-            gateEndFrame = gateFrames.toDouble(),
             on = false,
         )
         val ctx = BlockContext(
@@ -158,7 +156,6 @@ class VcaOffTeardownSpec : StringSpec({
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             releaseFrames = releaseFrames,
-            voiceEndFrame = totalFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val out = AudioBuffer(totalFrames)

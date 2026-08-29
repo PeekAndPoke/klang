@@ -59,7 +59,6 @@ class VcaOnFlagRenderSpec : StringSpec({
             voiceDurationFrames = 50_000,
             gateEndFrame = 50_000,
             releaseFrames = 100,
-            voiceEndFrame = 50_100,
             scratchBuffers = ScratchBuffers(blockFrames),
         ),
         cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
@@ -72,7 +71,7 @@ class VcaOnFlagRenderSpec : StringSpec({
     fun renderDc(on: Boolean): AudioBuffer {
         val buf = AudioBuffer(blockFrames)
         for (i in 0 until blockFrames) buf[i] = 1.0
-        EnvelopeRenderer(envelope(), startFrame = 0.0, gateEndFrame = 50_000.0, on = on)
+        EnvelopeRenderer(envelope(), startFrame = 0.0, on = on)
             .render(ctxWith(buf))
         return buf
     }
@@ -105,7 +104,7 @@ class VcaOnFlagRenderSpec : StringSpec({
         val buf = AudioBuffer(blockFrames)
         for (i in 0 until blockFrames) buf[i] = 1.0
 
-        EnvelopeRenderer(env, startFrame = 0.0, gateEndFrame = 50_000.0, on = false)
+        EnvelopeRenderer(env, startFrame = 0.0, on = false)
             .render(ctxWith(buf))
 
         buf[0] shouldBe (1.0 plusOrMinus 1e-12)
@@ -117,7 +116,7 @@ class VcaOnFlagRenderSpec : StringSpec({
         val buf = AudioBuffer(blockFrames)
         for (i in 0 until blockFrames) buf[i] = 1.0
         val ctx = ctxWith(buf).apply { blockStart = 100_000.0 - blockFrames }
-        EnvelopeRenderer(envelope(), startFrame = 0.0, gateEndFrame = 50_000.0, on = false)
+        EnvelopeRenderer(envelope(), startFrame = 0.0, on = false)
             .render(ctx)
 
         buf[blockFrames - 1] shouldBe 0.0
@@ -129,7 +128,6 @@ class VcaOnFlagRenderSpec : StringSpec({
         pipeline = PipelineDsl(listOf(StageDsl.Vca(on = vcaOn))),
         modulators = emptyList(),
         startFrame = 0.0,
-        gateEndFrame = 50_000.0,
         crush = Voice.Crush(amount = 0.0),
         coarse = Voice.Coarse(amount = 0.0),
         mainFilter = NoOpAudioFilter,
@@ -171,8 +169,8 @@ class VcaOnFlagRenderSpec : StringSpec({
         val ctx = ctxWith(buf)
 
         // Gate first, ADSR second — both sharing `env`.
-        EnvelopeRenderer(env, startFrame = 0.0, gateEndFrame = 50_000.0, on = false).render(ctx)
-        EnvelopeRenderer(env, startFrame = 0.0, gateEndFrame = 50_000.0, on = true).render(ctx)
+        EnvelopeRenderer(env, startFrame = 0.0, on = false).render(ctx)
+        EnvelopeRenderer(env, startFrame = 0.0, on = true).render(ctx)
 
         // Early in a 100 ms attack the envelope is far below unity. If the gate had primed the
         // smoother, the ADSR stage would start at 1.0 and lag down instead.

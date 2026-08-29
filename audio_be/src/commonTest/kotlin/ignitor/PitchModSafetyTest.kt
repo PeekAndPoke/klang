@@ -32,7 +32,6 @@ class PitchModSafetyTest : StringSpec({
         voiceDurationFrames = durationFrames,
         gateEndFrame = durationFrames,
         releaseFrames = 0,
-        voiceEndFrame = durationFrames,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
         offset = 0

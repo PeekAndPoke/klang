@@ -1,6 +1,12 @@
 # MIDI Keyboard Playground
 
-**Status:** DRAFT (2026-08-28) — approach agreed, not started.
+**Status: v0 + v2 SHIPPED** (2026-08-29, uncommitted pending the maintainer's commit go).
+**NEXT: v1 — the ignitor editor pane.**
+
+> ⚠️ Sections below marked ~~superseded~~ are the ORIGINAL 2026-08-28 plan, kept for the
+> reasoning trail. What actually shipped is in "Frontend steps" — read that first. The v2
+> note-off design, its 3-round review loop and the decided semantics are archived at
+> `docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md`.
 
 ## Goal
 
@@ -20,7 +26,12 @@ Already in place:
 - Per-playback engines (`PlaybackEngineDispatcher`) — the playground gets its own
   `playbackId`, scheduler, and cylinders
 
-## Agreed design decisions
+## ~~Agreed design decisions~~ — SUPERSEDED (see "Frontend steps")
+
+> Point 1 was REJECTED during implementation: `ScheduledVoice` was never made nullable. Immediacy
+> is the ABSENCE of a start time, so the realtime path got its own wire type (`RealtimeVoice` +
+> `Cmd.StartRealtimeVoice`). Point 2 was DROPPED: no idle reaper exists, so keep-alive is free
+> and `ConfigurePlayback`/`autoCleanup` were never built.
 
 1. **`startTime: Double?` — null means "play immediately".** The BE stamps the actual start
    at receipt (next block). No FE/BE clock comparison on the realtime path at all (sidesteps
@@ -58,7 +69,12 @@ Already in place:
 - Polyphony limits / voice stealing → voice-takeover design (`docs/tasks/voice-takeover.md`).
 - Computer-keyboard fallback input for users without MIDI hardware.
 
-## Engine creation on the fly (decided 2026-08-28)
+## ~~Engine creation on the fly~~ — PARTLY SUPERSEDED (decided 2026-08-28)
+
+> What SHIPPED from this section: the playbackId mangling (`"custom-$name"`), the
+> `KlangPlayer.createRealtimePlayback(name)` factory (idempotent per name — reuse won), and
+> `KlangRealtimeVoicePlayback : KlangPlayback`. What did NOT: `Cmd.ConfigurePlayback` /
+> `PlaybackConfig` / `autoCleanup` (unnecessary — nothing reaps idle engines).
 
 There is no explicit "create playback" command — every `Cmd` implicitly creates its engine
 (`PlaybackEngineDispatcher.engineFor` → `getOrPut`). Engine params don't exist yet; the
@@ -99,11 +115,30 @@ implicit creation). So:
    - FE: `KlangRealtimeVoicePlayback : KlangPlayback` via `KlangPlayer.createRealtimePlayback(name)`
      (mangles `"custom-$name"`, idempotent per name); page fires `sound = "supersaw"` per note-on
      (freq via `Midi.midiToFreq`, velocity/127, fixed 0.5 s gate).
-5. NEXT: run `:audio_be:jvmTest` + `:audio_bridge:jsTest`, then by-ear in Chrome; then v2
-   (`StopRealtimeVoice` gate-off) and v1 (ignitor editor).
+5. ✅ v0 verified by ear in Chrome (2026-08-29); browser support notes: snap Chromium can NEVER
+   do Web MIDI (no alsa interface), Firefox gates behind a site-permission add-on.
+6. ✅ v2 note-off SHIPPED 2026-08-29 — `Cmd.StopRealtimeVoice` + `Voice.releaseGate` (the gate
+   moves on BOTH doors, so ignitor-internal `.adsr()` envelopes obey note-off). FE:
+   `stopVoice(liveId)`, page holds (channel,note)→liveId (retrigger stops the old voice first),
+   voices start held (`gateDurSec = null`), CC 120/123 panic + unmount/unplug release-all.
+   Review loop CLOSED on a clean round 3; design, findings and decided semantics archived at
+   `docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md`.
+7. **NEXT — v1, the ignitor editor pane:** a KlangScript editor on the page (existing editor
+   infra) → compile → `Cmd.RegisterIgnitor` on the playground playback → notes play the user's
+   ignitor instead of the built-in supersaw. Open design points to settle when starting:
+   re-register on every edit vs. on an explicit apply; what happens to voices already sounding
+   when the ignitor changes (the registry fork is per-playback, so a rebuild affects only new
+   voices); where the editor sits in the page layout.
+8. Then: deep-link cold start (AudioContext needs a user gesture — a resume kick on the page's
+   first click closes it; reachable only by loading `/midi-playground` directly in a fresh tab);
+   later velocity curves, CC→oscparam, voice takeover, computer-keyboard fallback.
 
-## Open questions
-- Does the playground share the master chain (limiter) with normal playbacks? (It should —
-  raw supersaw + no limiter is ear-unsafe.)
-- `isDuplicate` uses `startTime` — realtime voices with `startTime = null` must bypass the
-  live-update dedup path (they never go through `ReplaceVoices`, so likely a non-issue; verify).
+## Open questions — ANSWERED
+
+- ~~Does the playground share the master chain (limiter) with normal playbacks?~~ YES — the
+  house master (limiter + its 5 ms lookahead) is global, post-sum, and always in the path.
+  Consequence worth remembering: all output is delayed ~220 frames (~1.7 blocks at 44.1k), which
+  is why the realtime specs pin block indices rather than "the very next block".
+- ~~`isDuplicate` / `ReplaceVoices` dedup vs realtime voices~~ MOOT and structurally closed:
+  there is no nullable `startTime`, and `VoiceOrigin.Timeline`/`Realtime` means the replace-dedup
+  can only ever match timeline voices.

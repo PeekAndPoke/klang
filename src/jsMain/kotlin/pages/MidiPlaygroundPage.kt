@@ -71,11 +71,24 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     /** The always-on realtime playback — null until the player is loaded */
     private var realtime: KlangRealtimeVoicePlayback? by value(null)
 
+    /**
+     * Voices currently held on the keyboard: heldKey(channel, note) -> liveId. Keyed by channel
+     * AND note — the same note on two channels is two distinct voices. Plain field, not component
+     * state — the UI renders [pressed]; this is bookkeeping for note-off.
+     */
+    private val heldVoices = mutableMapOf<Int, Int>()
+
+    private fun heldKey(channel: Int, note: Int): Int = channel * 128 + note
+
+    /** Releases every held voice — unmount, device unplug, and the MIDI panic CCs land here. */
+    private fun releaseAllHeld() {
+        realtime?.let { rt -> heldVoices.values.forEach { rt.stopVoice(it) } }
+        heldVoices.clear()
+        pressed = emptyMap()
+    }
+
     companion object {
         private const val EVENT_LOG_SIZE = 16
-
-        /** v0: fixed note length; real note-off (held gates) comes with the stop command (v2) */
-        private const val NOTE_LENGTH_SEC = 1.0
     }
 
     init {
@@ -101,6 +114,11 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                                 console.log(
                                     "[MidiPlayground] state change:", evt.port.name, evt.port.type, evt.port.state
                                 )
+                                // An unplugged device can never send its note-offs — release
+                                // everything rather than leaking held voices to the horizon.
+                                if (evt.port.type == "input" && evt.port.state == "disconnected") {
+                                    releaseAllHeld()
+                                }
                                 hookInputs(access)
                             }
                         }
@@ -114,6 +132,11 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             onUnmount {
+                // Keys held while navigating away would otherwise sustain to the held-gate
+                // horizon — and a remount gets a fresh map, so the old liveIds would be
+                // unreachable for the rest of the session.
+                releaseAllHeld()
+
                 (midi as? MidiState.Ready)?.access?.let { access ->
                     access.onstatechange = null
                     access.inputs.forEach { input, _ -> input.onmidimessage = null }
@@ -167,7 +190,16 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
                 0x80 -> noteOff(input, channel, evt.byteAt(1), evt.timeStamp)
 
-                // Everything else (CC, pitch bend, clock, ...) is out of scope for this step
+                0xB0 -> {
+                    val cc = evt.byteAt(1)
+                    // CC 123 All Notes Off / CC 120 All Sound Off — the hardware panic buttons
+                    if (cc == 120 || cc == 123) {
+                        logEvent(evt.timeStamp, "PANIC CC $cc ch $channel [${input.name ?: input.id}]")
+                        releaseAllHeld()
+                    }
+                }
+
+                // Everything else (pitch bend, aftertouch, clock, ...) is out of scope for now
                 else -> {}
             }
         } catch (e: Throwable) {
@@ -179,19 +211,27 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         logEvent(tsMs, "ON  ${noteLabel(note)} vel $velocity ch $channel [${input.name ?: input.id}]")
         pressed = pressed + (note to velocity)
 
-        realtime?.startVoice(
-            data = VoiceData.empty.copy(
-                sound = "supersaw",
-                freqHz = Midi.midiToFreq(note.toDouble()),
-                velocity = velocity / 127.0,
-            ),
-            gateDurSec = NOTE_LENGTH_SEC,
-        )
+        realtime?.let { rt ->
+            // Retrigger of a still-held note: release the old voice first, or it would stay
+            // gated until the held-gate horizon.
+            heldVoices.remove(heldKey(channel, note))?.let { rt.stopVoice(it) }
+
+            heldVoices[heldKey(channel, note)] = rt.startVoice(
+                data = VoiceData.empty.copy(
+                    sound = "supersaw",
+                    freqHz = Midi.midiToFreq(note.toDouble()),
+                    velocity = velocity / 127.0,
+                ),
+                gateDurSec = null, // held until noteOff
+            )
+        }
     }
 
     private fun noteOff(input: MidiInput, channel: Int, note: Int, tsMs: Double) {
         logEvent(tsMs, "OFF ${noteLabel(note)} ch $channel [${input.name ?: input.id}]")
         pressed = pressed - note
+
+        heldVoices.remove(heldKey(channel, note))?.let { realtime?.stopVoice(it) }
     }
 
     private fun logEvent(tsMs: Double, entry: String) {

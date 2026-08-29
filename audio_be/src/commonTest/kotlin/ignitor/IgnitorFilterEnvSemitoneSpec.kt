@@ -33,7 +33,6 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         voiceDurationFrames = blocks * blockFrames * 2,
         gateEndFrame = blocks * blockFrames * 2,
         releaseFrames = 0,
-        voiceEndFrame = blocks * blockFrames * 2,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
     )

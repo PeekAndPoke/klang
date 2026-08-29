@@ -54,7 +54,6 @@ class FilterEnvSemitoneSpec : StringSpec({
         val renderer = FilterModRenderer(
             modulators = listOf(mod),
             startFrame = 0.0,
-            gateEndFrame = 100000.0,
         )
         renderer.renderInPlace(AudioBuffer(128))
         return filter.lastCutoff
@@ -89,7 +88,7 @@ class FilterEnvSemitoneSpec : StringSpec({
             baseCutoff = 15000.0,
             drift = null,
         )
-        val renderer = FilterModRenderer(modulators = listOf(mod), startFrame = 0.0, gateEndFrame = 1e9)
+        val renderer = FilterModRenderer(modulators = listOf(mod), startFrame = 0.0)
         val rng = Random(99)
         var peakTail = 0.0
         repeat(40) { blk ->
@@ -123,7 +122,7 @@ class FilterEnvSemitoneSpec : StringSpec({
                 baseCutoff = 800.0,
                 drift = drift,
             )
-            FilterModRenderer(modulators = listOf(mod), startFrame = 0.0, gateEndFrame = 1e9)
+            FilterModRenderer(modulators = listOf(mod), startFrame = 0.0)
                 .renderInPlace(AudioBuffer(128))
             return filter.lastCutoff
         }

@@ -540,14 +540,12 @@ class VoiceFactory(
         val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
         val endFrame = gateEndFrame + resolvedAdsr.release * sampleRate
         val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
-        val voiceEndFrame = voiceDurationFrames + releaseFrames
 
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
             releaseFrames = releaseFrames,
-            voiceEndFrame = voiceEndFrame,
             scratchBuffers = scratchBuffers,
             random = voiceRandom,
         )
@@ -561,7 +559,6 @@ class VoiceFactory(
             sampleRate = sampleRate,
             startFrame = startFrame,
             endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
         ) + IgniteRenderer(
             signal = signal,
             signalCtx = signalCtx,
@@ -571,7 +568,6 @@ class VoiceFactory(
             pipeline = pipelineRegistry.get(data.pipeline),
             modulators = modulators,
             startFrame = startFrame,
-            gateEndFrame = gateEndFrame,
             crush = crush,
             coarse = coarse,
             mainFilter = bakedFilters,

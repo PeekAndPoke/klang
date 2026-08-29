@@ -25,7 +25,6 @@ class ControlRateValueSpec : StringSpec({
         voiceDurationFrames = blockFrames * 4,
         gateEndFrame = blockFrames * 4,
         releaseFrames = 0,
-        voiceEndFrame = blockFrames * 4,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
         offset = 0

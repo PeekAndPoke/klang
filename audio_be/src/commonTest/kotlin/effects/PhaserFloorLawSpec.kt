@@ -145,7 +145,6 @@ class PhaserFloorLawSpec : StringSpec({
                 pipeline = PipelineDsl(stages = listOf(StageDsl.Phaser)),
                 modulators = emptyList(),
                 startFrame = 0.0,
-                gateEndFrame = 1e9,
                 crush = Voice.Crush(amount = 0.0),
                 coarse = Voice.Coarse(amount = 0.0),
                 mainFilter = NoOpAudioFilter,

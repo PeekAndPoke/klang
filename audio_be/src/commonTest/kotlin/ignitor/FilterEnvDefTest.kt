@@ -28,7 +28,6 @@ class FilterEnvelopeTest : StringSpec({
         voiceDurationFrames = voiceDurationFrames,
         gateEndFrame = gateEndFrame,
         releaseFrames = voiceDurationFrames - gateEndFrame,
-        voiceEndFrame = voiceDurationFrames,
         scratchBuffers = ScratchBuffers(blockFrames = 256),
         voiceElapsedFrames = voiceElapsedFrames,
     )

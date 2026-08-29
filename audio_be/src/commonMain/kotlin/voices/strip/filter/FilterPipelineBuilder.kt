@@ -30,7 +30,6 @@ fun buildFilterPipeline(
     modulators: List<Voice.FilterModulator>,
     // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
     startFrame: Double,
-    gateEndFrame: Double,
     crush: Voice.Crush,
     coarse: Voice.Coarse,
     mainFilter: AudioFilter,
@@ -46,7 +45,7 @@ fun buildFilterPipeline(
         when (stage) {
             StageDsl.FilterMod ->
                 if (modulators.isNotEmpty()) {
-                    add(FilterModRenderer(modulators, startFrame, gateEndFrame))
+                    add(FilterModRenderer(modulators, startFrame))
                 }
 
             StageDsl.Crush ->
@@ -89,7 +88,7 @@ fun buildFilterPipeline(
             is StageDsl.Vca ->
                 add(
                     EnvelopeRenderer(
-                        envelope, startFrame, gateEndFrame,
+                        envelope, startFrame,
                         expK = stage.expK,
                         declickSeconds = stage.declickSeconds,
                         // Last layer of the resolution: voice, then pipeline. The hard `true`

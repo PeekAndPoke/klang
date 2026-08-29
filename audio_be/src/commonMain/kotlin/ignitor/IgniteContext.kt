@@ -19,14 +19,25 @@ class IgniteContext(
     // ── Static per voice (set at creation, never changes) ──────────────────────
     /** Audio sample rate in Hz */
     val sampleRate: Int,
-    /** Total gate duration in frames (scheduled, before release) */
+    /**
+     * Total gate duration in frames (scheduled, before release).
+     *
+     * Deliberately NOT moved by [io.peekandpoke.klang.audio_be.voices.Voice.releaseGate]: it is
+     * the `accelerate` glide base, and retro-shrinking it would jump the glide progress and leap
+     * the pitch. On held realtime voices `accelerate` is inert by decision
+     * (docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
+     */
     val voiceDurationFrames: Int,
-    /** Frame (relative to voice start) when gate ends and release begins */
-    val gateEndFrame: Int,
+    // ── Moved by Voice.releaseGate on a realtime note-off — do NOT bake copies ─
+    /**
+     * Frame (relative to voice start) when gate ends and release begins.
+     * `var`: a realtime note-off ([io.peekandpoke.klang.audio_be.voices.Voice.releaseGate])
+     * moves the gate earlier.
+     */
+    var gateEndFrame: Int,
+    // ── Static per voice (set at creation, never changes) ──────────────────────
     /** Release duration in frames */
     val releaseFrames: Int,
-    /** Frame (relative to voice start) when voice should be terminated */
-    val voiceEndFrame: Int,
     /** Shared scratch buffer pool for binary composition operators */
     val scratchBuffers: ScratchBuffers,
     /**

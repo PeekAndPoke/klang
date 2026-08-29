@@ -38,7 +38,6 @@ fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100) {
             voiceDurationFrames = buffer.size,
             gateEndFrame = buffer.size,
             releaseFrames = 0,
-            voiceEndFrame = buffer.size,
             scratchBuffers = ScratchBuffers(buffer.size),
         ),
         cylinders = Cylinders(blockFrames = buffer.size, sampleRate = sampleRate),

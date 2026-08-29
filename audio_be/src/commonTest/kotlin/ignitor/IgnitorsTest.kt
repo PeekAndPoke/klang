@@ -45,7 +45,6 @@ class ExcitersTest : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             releaseFrames = 4410,
-            voiceEndFrame = sampleRate + 4410,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             offset = 0
@@ -1209,7 +1208,6 @@ class ExcitersTest : StringSpec({
                 voiceDurationFrames = defaultBlockFrames,
                 gateEndFrame = defaultBlockFrames,
                 releaseFrames = 0,
-                voiceEndFrame = defaultBlockFrames,
                 scratchBuffers = ScratchBuffers(defaultBlockFrames),
             ),
             cylinders = Cylinders(

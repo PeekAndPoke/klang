@@ -36,7 +36,6 @@ class SeededVoiceRngSpec : StringSpec({
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
         releaseFrames = 0,
-        voiceEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
         random = random,
     ).apply {

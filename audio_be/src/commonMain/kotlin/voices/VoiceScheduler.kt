@@ -28,9 +28,9 @@ class VoiceScheduler(
 ) {
     companion object {
         /**
-         * Gate horizon for held realtime voices ([RealtimeVoice.gateDurSec] == null): far enough
-         * to outlast any session, small enough that the gate duration in FRAMES stays well inside
-         * Int (VoiceFactory computes `gateEndFrame - startFrame` as Int; 10 h @ 48 kHz ≈ 1.7e9 < 2^31).
+         * Upper bound of the held-voice gate horizon ([RealtimeVoice.gateDurSec] == null) — 10 h,
+         * far longer than any session. The EFFECTIVE horizon is [heldGateHorizonSec], which caps
+         * this by sample rate so Int frame counts cannot overflow.
          */
         const val REALTIME_HELD_GATE_SEC: Double = 36_000.0
     }
@@ -70,8 +70,12 @@ class VoiceScheduler(
          * Started by [startRealtimeVoice]. [liveId] ([RealtimeVoice.liveId]) is the handle a stop
          * command releases. Realtime voices have no resendable source event — the replace-dedup
          * can never (and must never) match them.
+         *
+         * [held] = the voice was started with `gateDurSec == null` (gate open until a stop).
+         * Fixed-gate realtime voices ([held] = false) end on their own and are NOT released by
+         * [cleanup] — only an explicit [stopRealtimeVoice] may cut them short.
          */
-        data class Realtime(val liveId: Int) : VoiceOrigin
+        data class Realtime(val liveId: Int, val held: Boolean) : VoiceOrigin
     }
 
     // Wrapper to track playbackId and solo state alongside Voice
@@ -196,6 +200,17 @@ class VoiceScheduler(
     internal fun resolvePipeline(name: String?): PipelineDsl = pipelineFork.get(name)
 
     fun cleanup(playbackId: String) {
+        // HELD realtime voices would otherwise ring at full sustain to the held-gate horizon —
+        // hours — and keep the engine un-drainable forever. Release them into their tails.
+        // Fixed-gate realtime voices and timeline voices keep their natural ring-out, as before.
+        for (activeVoice in active) {
+            val origin = activeVoice.origin
+
+            if (activeVoice.playbackId == playbackId && origin is VoiceOrigin.Realtime && origin.held) {
+                releaseRealtimeVoice(activeVoice)
+            }
+        }
+
         playbackContexts.remove(playbackId)
         clearScheduled(playbackId)
     }
@@ -277,25 +292,75 @@ class VoiceScheduler(
         // Invariant: control-only events never reach voice creation (same rule as the timeline path).
         if (voice.data.control == true) return
 
-        val nowSec = context.clock.nowSec()
+        // The cursor still points at the block ALREADY rendered — commands drain BETWEEN blocks
+        // (see the promotion convention comment in VoiceFactory). The first frame that can
+        // actually be rendered is one block later; stamping "now" there lets the attack enter
+        // its curve at position 0 instead of silently losing its first block (audit R1).
+        val nowFrame = context.clock.cursorFrame + context.blockFrames
+        val nowSec = context.clock.secAt(nowFrame)
         val pCtx = ensureRealtimeCtx(playbackId, nowSec)
 
         val absolute = ScheduledVoice(
             playbackId = playbackId,
             data = voice.data,
             startTime = nowSec,
-            gateEndTime = nowSec + (voice.gateDurSec ?: REALTIME_HELD_GATE_SEC),
+            gateEndTime = nowSec + (voice.gateDurSec ?: heldGateHorizonSec()),
             playbackStartTime = nowSec,
         )
 
         prefetchSampleSound(absolute)
         activateVoice(
             absoluteVoice = absolute,
-            origin = VoiceOrigin.Realtime(voice.liveId),
-            nowFrame = context.clock.cursorFrame,
+            origin = VoiceOrigin.Realtime(liveId = voice.liveId, held = voice.gateDurSec == null),
+            nowFrame = nowFrame,
             pCtx = pCtx,
         )
     }
+
+    /**
+     * Releases the gate of EVERY active realtime voice of [playbackId] carrying [liveId] (not
+     * just the first — future layered instruments may start several voices per key). The voice
+     * enters its ADSR release from the current level and dies right after the tail. Unknown
+     * liveId is a no-op.
+     */
+    fun stopRealtimeVoice(playbackId: String, liveId: Int) {
+        for (activeVoice in active) {
+            val origin = activeVoice.origin
+
+            if (activeVoice.playbackId == playbackId && origin is VoiceOrigin.Realtime && origin.liveId == liveId) {
+                releaseRealtimeVoice(activeVoice)
+            }
+        }
+    }
+
+    /**
+     * Releases one realtime voice with the two stamping rules of the realtime path:
+     *
+     * - Same one-block-stale cursor as the start path (audit R1): the release begins on the
+     *   first frame that will actually render, so the tail enters its curve at position 0.
+     *   Block-quantised by decision: live-input jitter dwarfs one block (<= 3 ms). See the
+     *   "Decided semantics" in docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md.
+     * - Floored one block after the voice's start: a note-on and note-off arriving in the SAME
+     *   command drain stamp identical frames, and a gate exactly on startFrame would make the
+     *   first rendered sample enter release from level 0 — the tap would be pure silence. With
+     *   the floor, a zero-length tap renders one block of attack, then releases from there.
+     */
+    private fun releaseRealtimeVoice(activeVoice: ActiveVoice) {
+        val releaseFrame = context.clock.cursorFrame + context.blockFrames
+        val floor = activeVoice.voice.startFrame + context.blockFrames
+
+        activeVoice.voice.releaseGate(maxOf(releaseFrame, floor))
+    }
+
+    /**
+     * Gate horizon for held realtime voices, derived from the sample rate: far enough to outlast
+     * any session, small enough that every voice-relative Int frame count
+     * (`voiceDurationFrames`, `IgniteContext.gateEndFrame`) stays well inside Int at ANY sample
+     * rate — 36 000 s is fine at 48 kHz but overflows at 96 kHz. Sample rate is a platform
+     * variable, like block size.
+     */
+    private fun heldGateHorizonSec(): Double =
+        minOf(REALTIME_HELD_GATE_SEC, (Int.MAX_VALUE / 2).toDouble() / context.sampleRate)
 
     /**
      * Batched schedule. All voices share a single nowSec snapshot for [ensureEpoch] / [promoteScheduled],

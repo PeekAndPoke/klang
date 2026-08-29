@@ -39,8 +39,9 @@ class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
     val startFrame: Double,
-    val endFrame: Double,
-    private val gateEndFrame: Double,
+    // Mutable via [releaseGate] only (realtime note-off).
+    endFrame: Double,
+    gateEndFrame: Double,
     val cylinderId: Int,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -78,6 +79,17 @@ class Voice(
     // (the pipeline drives audio). Null when the voice has no main filter.
     internal val mainFilter: AudioFilter? = null,
 ) {
+    /**
+     * Voice death frame (gate end + release tail). Rewritten by a realtime note-off
+     * ([releaseGate]) — earlier in every real case; an authored NEGATIVE release (raw-Motor,
+     * passes through unclamped) can nudge it later by under a block, with no audible effect.
+     */
+    var endFrame: Double = endFrame
+        private set
+
+    /** Frame where release begins. Moves earlier on a realtime note-off ([releaseGate]). */
+    private var gateEndFrame: Double = gateEndFrame
+
     // Full pipeline: Pitch → Ignite → Filter → Send
     private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
 
@@ -88,6 +100,45 @@ class Voice(
 
     fun setGainMultiplier(multiplier: Double) {
         _gainMultiplier = multiplier
+    }
+
+    /**
+     * Releases the gate NOW (realtime note-off): every gate consumer sees the moved gate through
+     * [BlockContext] / [io.peekandpoke.klang.audio_be.ignitor.IgniteContext] and the envelopes
+     * enter their release from the current level (the release-from-history latch in the amp VCA
+     * and the ignitor door). The release SPAN is untouched — only WHEN it begins moves.
+     *
+     * Deliberately untouched: `IgniteContext.voiceDurationFrames` (the `accelerate` glide base) —
+     * see its KDoc; on held realtime voices `accelerate` is inert by decision.
+     *
+     * PRECONDITION: `atFrame >= startFrame` — the caller owns it (the scheduler floors at
+     * `startFrame + blockFrames`, see `VoiceScheduler.releaseRealtimeVoice`). An earlier frame
+     * would write a NEGATIVE ignitor-door gate and the ignitor envelope would release from
+     * level 0 on its first sample: a silent voice, no exception, no error.
+     */
+    fun releaseGate(atFrame: Double) {
+        // Natural gate is earlier — no-op (also makes a double-stop idempotent).
+        if (atFrame >= gateEndFrame) {
+            return
+        }
+
+        // Raw-Motor: an authored NEGATIVE release passes through resolve() unclamped, making
+        // endFrame < gateEndFrame. A note-off must still STOP such a voice (ignoring it would
+        // strand it at the held horizon — audit R5), so the span clamps to 0 and it hard-stops
+        // exactly like release-0: endFrame lands on atFrame and the voice is dropped between
+        // blocks WITHOUT rendering another sample — the same outcome a timeline release-0 note
+        // gets at its gate (audit R9: no de-click runs on this path; none is needed, nothing
+        // renders).
+        val releaseSpan = (endFrame - gateEndFrame).coerceAtLeast(0.0)
+        gateEndFrame = atFrame
+        endFrame = atFrame + releaseSpan
+
+        blockCtx.gateEndFrame = gateEndFrame
+        blockCtx.endFrame = endFrame
+
+        // The ignitor door reads the gate voice-relative (Int) — move it too, or vca(on = false)
+        // instruments would sustain through the tail and hit the teardown fade (amendment A1).
+        blockCtx.signalCtx.gateEndFrame = (atFrame - startFrame).toInt()
     }
 
     /**

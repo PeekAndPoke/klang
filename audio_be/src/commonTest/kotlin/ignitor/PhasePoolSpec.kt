@@ -66,7 +66,6 @@ class PhasePoolSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             releaseFrames = blockFrames,
-            voiceEndFrame = sampleRate + blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         var sumSq = 0.0
@@ -132,7 +131,6 @@ class PhasePoolSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             releaseFrames = blockFrames,
-            voiceEndFrame = sampleRate + blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         var re = 0.0
@@ -280,7 +278,6 @@ class PhasePoolSpec : StringSpec({
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
                 releaseFrames = blockFrames,
-                voiceEndFrame = sampleRate + blockFrames,
                 scratchBuffers = ScratchBuffers(blockFrames),
             ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
             sig.generate(buffer, freqHz, ctx)
@@ -320,7 +317,6 @@ class PhasePoolSpec : StringSpec({
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
                 releaseFrames = blockFrames,
-                voiceEndFrame = sampleRate + blockFrames,
                 scratchBuffers = ScratchBuffers(blockFrames),
             )
             var maxDelta = 0.0

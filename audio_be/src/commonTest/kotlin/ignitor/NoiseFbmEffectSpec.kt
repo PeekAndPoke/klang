@@ -31,7 +31,6 @@ class NoiseFbmEffectSpec : StringSpec({
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
         releaseFrames = (0.1 * sampleRate).toInt(),
-        voiceEndFrame = sampleRate + (0.1 * sampleRate).toInt(),
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
         offset = 0

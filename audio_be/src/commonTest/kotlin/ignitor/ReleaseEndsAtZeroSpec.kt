@@ -66,7 +66,7 @@ class ReleaseEndsAtZeroSpec : StringSpec({
         val total = gateFrames + relFrames
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = gateFrames, gateEndFrame = gateFrames,
-            releaseFrames = relFrames, voiceEndFrame = total,
+            releaseFrames = relFrames,  
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val ig = envDsl(relSec, curve).toExciter()
@@ -123,7 +123,6 @@ class ReleaseEndsAtZeroSpec : StringSpec({
                     releaseCurve = curve,
                 ),
                 startFrame = 0.0,
-                gateEndFrame = gateFrames.toDouble(),
                 declickSeconds = 0.0,
             )
             val ctx = BlockContext(
@@ -138,7 +137,7 @@ class ReleaseEndsAtZeroSpec : StringSpec({
                 signal = Ignitors.silence(),
                 signalCtx = IgniteContext(
                     sampleRate = sampleRate, voiceDurationFrames = gateFrames,
-                    gateEndFrame = gateFrames, releaseFrames = relFrames, voiceEndFrame = total,
+                    gateEndFrame = gateFrames, releaseFrames = relFrames,  
                     scratchBuffers = ScratchBuffers(total),
                 ),
                 cylinders = Cylinders(blockFrames = total, sampleRate = sampleRate),
@@ -168,7 +167,6 @@ class ReleaseEndsAtZeroSpec : StringSpec({
                 releaseFrames = relFrames, releaseCurve = AdsrCurve.Exponential,
             ),
             startFrame = 0.0,
-            gateEndFrame = gateFrames.toDouble(),
             declickSeconds = 0.0,
         )
         val ctx = BlockContext(
@@ -183,7 +181,7 @@ class ReleaseEndsAtZeroSpec : StringSpec({
             signal = Ignitors.silence(),
             signalCtx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gateFrames,
-                gateEndFrame = gateFrames, releaseFrames = 240, voiceEndFrame = rendered,
+                gateEndFrame = gateFrames, releaseFrames = 240,  
                 scratchBuffers = ScratchBuffers(rendered),
             ),
             cylinders = Cylinders(blockFrames = rendered, sampleRate = sampleRate),

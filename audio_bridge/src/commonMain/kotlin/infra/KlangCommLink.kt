@@ -85,6 +85,17 @@ class KlangCommLink(capacity: Int = 8192) {
             val voice: RealtimeVoice,
         ) : Cmd
 
+        /**
+         * Releases the gate of every realtime voice with [liveId] — the voice enters its ADSR
+         * release from the current level (a note-off, NOT a cut). Unknown liveId is a no-op:
+         * releasing a key after a fixed-length voice already ended is normal.
+         */
+        @WireName("stop-realtime-voice")
+        data class StopRealtimeVoice(
+            override val playbackId: String,
+            val liveId: Int,
+        ) : Cmd
+
         /** Registers a custom IgnitorDsl in the backend's exciter registry. */
         @WireName("register-ignitor")
         data class RegisterIgnitor(

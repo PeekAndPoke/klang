@@ -56,7 +56,7 @@ class SuperStackTransitionSpec : StringSpec({
         )
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = 4096, gateEndFrame = 4096,
-            releaseFrames = 0, voiceEndFrame = 4096, scratchBuffers = ScratchBuffers(blockFrames),
+            releaseFrames = 0,  scratchBuffers = ScratchBuffers(blockFrames),
         )
         val tmp = AudioBuffer(blockFrames)
         fun renderBlock(pos: Int) {

@@ -111,7 +111,6 @@ object VoiceTestHelpers {
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
             releaseFrames = releaseFrames,
-            voiceEndFrame = voiceDurationFrames + releaseFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 
@@ -125,7 +124,6 @@ object VoiceTestHelpers {
             sampleRate = sampleRate,
             startFrame = startFrame,
             endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
         ) + IgniteRenderer(
             signal = signal,
             signalCtx = signalCtx,
@@ -135,7 +133,6 @@ object VoiceTestHelpers {
             pipeline = PipelinePreset.Modern.dsl,
             modulators = filterModulators,
             startFrame = startFrame,
-            gateEndFrame = gateEndFrame,
             crush = crush,
             coarse = coarse,
             mainFilter = filter,

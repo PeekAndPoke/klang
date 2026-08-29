@@ -51,6 +51,16 @@ class KlangRealtimeVoicePlayback internal constructor(
         return liveId
     }
 
+    /**
+     * Releases the voice(s) started under [liveId] — they enter their ADSR release from the
+     * current level (a note-off, not a cut). Releasing an already-ended liveId is a no-op.
+     */
+    fun stopVoice(liveId: Int) {
+        player.sendControl(
+            KlangCommLink.Cmd.StopRealtimeVoice(playbackId = playbackId, liveId = liveId)
+        )
+    }
+
     override fun handleFeedback(feedback: KlangCommLink.Feedback) {
         // No feedback consumed yet — diagnostics are handled at player level.
     }

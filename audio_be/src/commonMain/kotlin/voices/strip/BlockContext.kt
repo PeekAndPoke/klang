@@ -49,10 +49,18 @@ class BlockContext(
     // (Contrast IgniteContext.gateEndFrame, which is voice-RELATIVE and stays Int.)
     /** Voice start frame (absolute) */
     val startFrame: Double,
-    /** Voice end frame including release (absolute) */
-    val endFrame: Double,
-    /** Frame when gate ends / release begins (absolute) */
-    val gateEndFrame: Double,
+    /**
+     * Voice end frame including release (absolute).
+     * `var`: a realtime note-off ([Voice.releaseGate]) moves it together with [gateEndFrame].
+     * THE single source of truth — renderers must read it per render call, never bake copies.
+     */
+    var endFrame: Double,
+    /**
+     * Frame when gate ends / release begins (absolute).
+     * `var`: a realtime note-off ([Voice.releaseGate]) moves the gate earlier. Single source of
+     * truth for the strip — see [endFrame].
+     */
+    var gateEndFrame: Double,
     /** Base frequency in Hz */
     val freqHz: Double,
 

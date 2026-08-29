@@ -35,7 +35,6 @@ class EnvelopeRenderer(
     private val envelope: Voice.Envelope,
     // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
     private val startFrame: Double,
-    private val gateEndFrame: Double,
     // Per-engine VCA character (the PipelineDsl Vca stage). Defaults == the globals,
     // so the built-in engines render byte-for-byte as before.
     private val expK: Double = ADSR_EXP_K,
@@ -46,9 +45,6 @@ class EnvelopeRenderer(
      */
     private val on: Boolean = true,
 ) : BlockRenderer {
-
-    // Voice-relative gate end position (Int, avoids Long in per-sample loop)
-    private val gateEndPos: Int = (gateEndFrame - startFrame).toInt()
 
     // Exp-curve normalisation for this engine's curvature (precomputed once per voice).
     private val expNorm: Double = adsrExpNorm(expK)
@@ -81,6 +77,11 @@ class EnvelopeRenderer(
         val norm = expNorm
         // One-pole de-click coefficient for the VCA gain (rounds segment-join corners).
         val declick = envDeclickCoeff(declickSeconds, ctx.sampleRateD)
+
+        // Voice-relative gate end position (Int, avoids Long in the per-sample loop). Read from
+        // the ctx PER RENDER CALL — a realtime note-off may move the gate between blocks
+        // (Voice.releaseGate); never bake this at construction.
+        val gateEndPos = (ctx.gateEndFrame - startFrame).toInt()
 
         // Compute voice-relative position as Int (once per block, not per sample)
         var absPos = (ctx.blockStart + ctx.offset - startFrame).toInt()
@@ -195,7 +196,15 @@ class EnvelopeRenderer(
         // renders a REAL Voice to pin the coupling; if sub-sample onsets ever arrive, revisit here.
         val lastFrame = floor(ctx.endFrame) - 1.0
         val fadeFrames = VCA_OFF_TEARDOWN_FADE_SECONDS * ctx.sampleRateD
-        // The guard always gets its full window. An earlier version preferred to start at gate end
+        // The guard always gets its full window ON THE TIMELINE PATH, where endFrame is known
+        // before the window is rendered. A realtime note-off rewrites endFrame between blocks
+        // (Voice.releaseGate), so an authored release SHORTER than this window enters the ramp
+        // mid-way — a step of up to ~50% at release 2 ms, 100% at release 0. Known, unfixed:
+        // scoping a fix needs the release-vs-window comparison at releaseGate time, and whether
+        // to extend the voice by the window is a maintainer call (see the round-3 parked item in
+        // docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
+        //
+        // An earlier version preferred to start at gate end
         // so it could not touch the note body, but that collapsed the window for a SHORT non-zero
         // release: at 0.1 ms the ramp got 4 frames and the last sample came out at 0.21 of full
         // scale — a step, i.e. the click this exists to remove, and worse than release = 0 got.

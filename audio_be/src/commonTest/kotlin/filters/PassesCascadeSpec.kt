@@ -66,7 +66,6 @@ class PassesCascadeSpec : StringSpec({
             voiceDurationFrames = frames,
             gateEndFrame = frames,
             releaseFrames = 0,
-            voiceEndFrame = frames,
             scratchBuffers = ScratchBuffers(blockFrames = block),
         )
         ctx.offset = 0

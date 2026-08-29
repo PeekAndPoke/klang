@@ -4,6 +4,76 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-29, claude-code MIDI-workstream session): note-off v2 REVIEW LOOP CLOSED —
+> round 3 CLEAN (2 fresh Opus reviewers, two-phase: zero CRITICAL/MAJOR; all 12 round-2 fixes
+> re-derived as holding). MINOR batch applied once, no re-review: `VoiceOrigin.Realtime` gained
+> `held` (Cleanup releases ONLY held voices — fixed-gate one-shots and timeline voices ring out;
+> 2 new guard rows, both predicate directions mutation-killed), releaseGate KDoc precondition
+> (`atFrame >= startFrame`, caller-owned floor), IgniteContext dead KDoc links qualified,
+> renderGate comment corrected (full-window claim holds only on the timeline path). PARKED for
+> the maintainer: vca-off + authored release < 4 ms teardown-fade window on realtime note-off
+> (mid-ramp step; needs a semantics call — extend the voice by the window or accept). WITHDRAWN
+> by round 3 itself: panic-CC channel scoping (R4's release-all is settled). Totals: 11 mutations
+> across the loop, each killed by a designated row, all restored byte-exact. Green:
+> :audio_be:jvmTest full (26-row RealtimeVoiceSpec), :klang:jvmTest, :audio_be:compileKotlinJs,
+> :audio_bridge:jsTest, :audio_benchmark:compileKotlinJvm. UNCOMMITTED — the maintainer inspects
+> the diff and gives the commit go.
+
+> Last action (2026-08-29, claude-code MIDI-workstream session): review-loop ROUND 2 done
+> in-session (2 fresh Opus reviewers, two-phase blind+reconcile) + ALL findings fixed: production
+> — zero-length-tap floor (`releaseRealtimeVoice`: same-drain note-on/off no longer collapses to
+> silence; one block of attack then release) and `cleanup()` now releases held realtime voices
+> (engine was un-drainable for hours). Spec teeth: onset/release R1-stamp guards (empirically
+> calibrated: block-1 < 3% steady; post-stop block-2 > 0.8x held), endFrame-mirror step guard
+> (bare-sine vca-off, max adjacent-sample step < amp/4), scheduler-level playbackId row
+> (dispatcher-level row CANNOT kill that mutation — per-playback engines already isolate; row
+> renamed), Cleanup row, dispatcher no-create row, frozen-gate strip units for
+> FilterModRenderer+FmRenderer. NINE mutations, each killed by its designated row, restored
+> byte-exact. Green: :audio_be:jvmTest full (24-row RealtimeVoiceSpec), :klang:jvmTest,
+> :audio_be:compileKotlinJs, :audio_bridge:jsTest, :audio_benchmark:compileKotlinJvm (was
+> outside every dependency path). UNCOMMITTED. Round 3 (fresh reviewers) in flight — maintainer
+> bound: if round 3 is not clean, STOP and report.
+
+> Last action (2026-08-29, claude-code MIDI-workstream session): note-off v2 AUDIT ROUND-1 FIXES
+> applied, ALL findings (R1-R11): stop AND v0 onset stamps now `cursorFrame + blockFrames` (R1);
+> discriminating tail row with the AUDIBLE threshold — a bare `> 0` was satisfied by 1-2 LSB of
+> DC-blocker residue, exactly the R2 class (R2); I4 replaced by a Voice-level off-grid row
+> (start 37, gate 549, grid B starts BEFORE the voice at -50 — the de-click smoother is causal
+> state, so both grids must render every note frame) (R3); FE releases heldVoices on
+> unmount/unplug, keys by (channel,note), CC 120/123 panic (R4); negative-release note-off now
+> STOPS via span-clamp, strict guard dropped (R5+R9 comment fixed); `IgniteContext.voiceEndFrame`
+> DELETED repo-wide, ~50 files (R6); every-match row (R7); stopRealtimeVoice takes playbackId
+> (R8); onset row pins heard[0]=false/heard[2]=true (R10); header/braces/endFrame-unit-row
+> (R11 b/c/d). Named mutations re-run: hard cut, first-match, alignment slip — each killed by
+> its designated row, restored byte-exact (grep MUTATION clean). Green: :audio_be:jvmTest full,
+> :klang:jvmTest, :audio_be:compileKotlinJs, :audio_bridge:jsTest. UNCOMMITTED — handed back
+> for audit round 2.
+
+> Last action (2026-08-29, claude-code audit session): note-off v2 AUDIT ROUND 1 done — report
+> with 4 MAJOR + 7 MINOR findings written into docs/tasks/realtime-note-off-gate-release.md
+> (findings only, per the maintainer; the MIDI agent fixes, audit round 2 after). Headlines:
+> the stop cursor is one block STALE (release enters mid-curve; a <= 1-block release renders NO
+> tail; same skew truncates v0 onsets — fix: cursorFrame + blockFrames), the hard-cut mutation
+> SURVIVES all 11 spec rows (the pipe delay masks the tail assertion), the I4 row cannot
+> discriminate (wide property covered by VoiceLifecycleTest/FmSynthesisTest), FE leaks held
+> voices on unmount/remount/unplug. 8 audit mutations run, ALL restored byte-exact (grep
+> MUTATION is clean); suites left green as handed over. Tree remains the MIDI agent's
+> uncommitted cut + the maintainer's DerSchmetterling edit.
+
+> Last action (2026-08-29, claude-code MIDI-workstream session): realtime note-off v2 CUT —
+> `Cmd.StopRealtimeVoice` + `Voice.releaseGate` per the reviewed plan
+> (docs/tasks/realtime-note-off-gate-release.md) incl. amendments A1 (IgniteContext gate moves,
+> mutation-checked: exactly the vca-off spec went red) and A3 (held horizon derived from sample
+> rate). **A2 implemented STRICT (`<`), diverging from the review's `<=`** — see the
+> implementation note in the doc: `endFrame < gateEndFrame` is unconstructible today and `<=`
+> would break release-0 note-offs (spec covers rel-0). BlockContext/IgniteContext gates are now
+> `var` single-sources; EnvelopeRenderer/FilterModRenderer/FmRenderer read per render call
+> (baked copies deleted, incl. 10 test fixtures). The old RealtimeVoiceSpec 3-reds were the
+> HOUSE MASTER'S 5 ms LOOKAHEAD (~1.7 blocks pipe delay) — onset assertions now allow it.
+> Green: :audio_be:jvmTest FULL forced re-run 0 failed (incl. RealtimeVoiceSpec 11),
+> :audio_bridge:jsTest, :klang:jvmTest, :audio_be:compileKotlinJs. UNCOMMITTED — next step is
+> the audit agent's review-loop over the diff, then the maintainer's commit go.
+
 > Last action (2026-08-29, claude-code session): block-framing DELAY-LINE class DONE (ledger
 > D1-D14; only D13 still open, maintainer decision). Centerpiece: KatalystDelayEffect
 > Active/Draining/Off drain lifecycle (maintainer-designed in-session) — off-configs never reach

@@ -34,7 +34,6 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
         voiceDurationFrames = frames,
         gateEndFrame = frames / 2,      // 1024 frames: attack (240) + decay (240) + sustain fit
         releaseFrames = 480,            // completes inside the 1024-frame tail
-        voiceEndFrame = frames,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
     )

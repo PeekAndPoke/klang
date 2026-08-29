@@ -24,7 +24,6 @@ class PitchModFactoriesSpec : StringSpec({
         voiceDurationFrames = sampleRate, // 1 second
         gateEndFrame = sampleRate,
         releaseFrames = 0,
-        voiceEndFrame = sampleRate,
         scratchBuffers = ScratchBuffers(frames),
     ).apply {
         offset = 0
@@ -213,7 +212,6 @@ class PitchModFactoriesSpec : StringSpec({
             voiceDurationFrames = totalFrames * 4,
             gateEndFrame = totalFrames * 4,   // gate far away: the env release never engages
             releaseFrames = 0,
-            voiceEndFrame = totalFrames * 4,
             scratchBuffers = ScratchBuffers(128),
         )
         val out = DoubleArray(totalFrames)
@@ -285,7 +283,7 @@ class PitchModFactoriesSpec : StringSpec({
             )
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
-                releaseFrames = 2400, voiceEndFrame = total, scratchBuffers = ScratchBuffers(128),
+                releaseFrames = 2400,  scratchBuffers = ScratchBuffers(128),
             )
             val out = DoubleArray(total)
             val tmp = AudioBuffer(128)
@@ -338,7 +336,7 @@ class PitchModFactoriesSpec : StringSpec({
             )
             val ctx = IgniteContext(
                 sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
-                releaseFrames = rel, voiceEndFrame = total, scratchBuffers = ScratchBuffers(128),
+                releaseFrames = rel,  scratchBuffers = ScratchBuffers(128),
             )
             val out = DoubleArray(total)
             val tmp = AudioBuffer(128)

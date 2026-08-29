@@ -50,7 +50,6 @@ class AccelerateSemitoneLawSpec : StringSpec({
                 voiceDurationFrames = frames,
                 gateEndFrame = frames,
                 releaseFrames = 0,
-                voiceEndFrame = frames,
                 scratchBuffers = ScratchBuffers(frames),
             ),
             cylinders = Cylinders(blockFrames = frames, sampleRate = 48000),

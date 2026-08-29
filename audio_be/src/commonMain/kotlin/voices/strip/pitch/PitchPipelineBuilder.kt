@@ -29,8 +29,9 @@ fun buildPitchPipeline(
     sampleRate: Int,
     // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
     startFrame: Double,
+    // Baked deliberately: the accelerate glide base must NOT move on a realtime note-off
+    // (decided semantics, docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
     endFrame: Double,
-    gateEndFrame: Double,
 ): List<BlockRenderer> = buildList {
     if (vibrato.semitones > 0.0) {
         add(VibratoRenderer(vibrato, sampleRate))
@@ -45,6 +46,6 @@ fun buildPitchPipeline(
     }
 
     if (fm != null && fm.depth != 0.0) {
-        add(FmRenderer(fm, freqHz, sampleRate, startFrame, gateEndFrame))
+        add(FmRenderer(fm, freqHz, sampleRate, startFrame))
     }
 }

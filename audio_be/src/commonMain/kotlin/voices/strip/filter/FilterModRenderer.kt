@@ -25,11 +25,11 @@ class FilterModRenderer(
     private val modulators: List<Voice.FilterModulator>,
         // Absolute backend frame — Double, see RenderClock.cursorFrame.
     private val startFrame: Double,
-    private val gateEndFrame: Double,
 ) : BlockRenderer {
     override fun render(ctx: BlockContext) {
         for (mod in modulators) {
-            val envValue = calculateControlRateEnvelope(mod.envelope, ctx.blockStart, startFrame, gateEndFrame)
+            // Gate read from the ctx per call — a realtime note-off may move it (Voice.releaseGate)
+            val envValue = calculateControlRateEnvelope(mod.envelope, ctx.blockStart, startFrame, ctx.gateEndFrame)
             val drift = mod.drift
             val driftMul = if (drift != null && drift.active) drift.nextMultiplier() else 1.0
             // C3 (filter unification): depth is SEMITONES (cutoff = base * 2^(depth/12 * env)).

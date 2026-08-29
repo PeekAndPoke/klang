@@ -29,7 +29,6 @@ class IgnitorDslRuntimeTest : StringSpec({
             voiceDurationFrames = sampleRate, // 1 second
             gateEndFrame = sampleRate,
             releaseFrames = (0.1 * sampleRate).toInt(),
-            voiceEndFrame = sampleRate + (0.1 * sampleRate).toInt(),
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             offset = 0
@@ -150,7 +149,6 @@ class IgnitorDslRuntimeTest : StringSpec({
             voiceDurationFrames = sr,
             gateEndFrame = sr,
             releaseFrames = (0.1 * sr).toInt(),
-            voiceEndFrame = sr + (0.1 * sr).toInt(),
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             offset = 0

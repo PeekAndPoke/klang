@@ -106,7 +106,6 @@ class GuitarClickHuntTest : StringSpec({
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             releaseFrames = releaseFrames,
-            voiceEndFrame = totalFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 

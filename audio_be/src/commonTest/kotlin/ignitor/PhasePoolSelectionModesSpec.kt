@@ -185,7 +185,6 @@ class PhasePoolSelectionModesSpec : StringSpec({
                     voiceDurationFrames = 128,
                     gateEndFrame = 128,
                     releaseFrames = 0,
-                    voiceEndFrame = 128,
                     scratchBuffers = ScratchBuffers(blockFrames = 128),
                 )
                 ctx.offset = 0

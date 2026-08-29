@@ -37,7 +37,6 @@ class OnepoleParitySpec : StringSpec({
         voiceDurationFrames = frames * 2,
         gateEndFrame = frames * 2,
         releaseFrames = 0,
-        voiceEndFrame = frames * 2,
         scratchBuffers = ScratchBuffers(blockFrames = blockFrames),
         voiceElapsedFrames = 0,
     )
