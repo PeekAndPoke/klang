@@ -73,6 +73,24 @@ class MidiConnector(
             val value: Int,
             val tsMs: Double,
         ) : Event
+
+        /**
+         * Any other channel message — pitch bend, aftertouch, program change, …
+         *
+         * A deliberate escape hatch rather than a gap: a controller's knobs, wheels and pads are
+         * only discoverable by watching what it actually emits (the same hardware sends different
+         * maps in different modes, so published charts are unreliable). Promote a message to its
+         * own variant once something acts on it. System-realtime bytes (clock, active sensing)
+         * are dropped before they get here — they would drown everything else.
+         */
+        data class Other(
+            val status: Int,
+            val kind: Int,
+            val channel: Int,
+            val data1: Int,
+            val data2: Int,
+            val tsMs: Double,
+        ) : Event
     }
 
     enum class Reason { PanicCc, DeviceDisconnected, TearDown }
@@ -139,18 +157,33 @@ class MidiConnector(
         val names = mutableListOf<String>()
 
         access.inputs.forEach { input, _ ->
-            names.add(input.name ?: input.id)
-            input.onmidimessage = { evt -> onMidiMessage(evt) }
+            val portName = input.name ?: input.id
+            names.add(portName)
+            // The port is passed through because a controller usually exposes SEVERAL: a main
+            // port, a DAW-protocol port (MCU/HUI, which encodes buttons as NOTES and would
+            // otherwise play voices), a DIN-thru, and on Linux an ALSA loopback. Without
+            // attribution, messages from all of them are indistinguishable.
+            input.onmidimessage = { evt -> onMidiMessage(portName, evt) }
         }
 
         console.log("[MidiConnector] ${names.size} input(s) hooked")
         _state { it.copy(status = Status.Ready, devices = names) }
     }
 
-    private fun onMidiMessage(evt: MidiMessageEvent) {
+    private fun onMidiMessage(port: String, evt: MidiMessageEvent) {
         val status = evt.byteAt(0)
         val kind = status and 0xF0
         val channel = (status and 0x0F) + 1
+
+        // Raw log of everything that reaches us, so "the device sends nothing for this button" is
+        // a checkable claim rather than an assumption. System realtime (>= 0xF8: clock at 24ppq,
+        // active sensing) is dropped — it would bury everything else.
+        if (status < 0xF8) {
+            console.log(
+                "[MidiConnector] <$port> status=0x${status.toString(16)} kind=0x${kind.toString(16)} " +
+                        "ch=$channel d1=${evt.byteAt(1)} d2=${evt.byteAt(2)} len=${evt.data.length}"
+            )
+        }
 
         // A throw here would die silently inside the MIDI callback.
         try {
@@ -186,8 +219,20 @@ class MidiConnector(
                     }
                 }
 
-                // Pitch bend, aftertouch, clock, ... — not our business yet.
-                else -> {}
+                // Everything else surfaces raw so a device's controls can be discovered. System
+                // realtime (>= 0xF8: clock, active sensing) is dropped — pure spam at 24 ppq.
+                else -> if (status < 0xF8) {
+                    _events(
+                        Event.Other(
+                            status = status,
+                            kind = kind,
+                            channel = channel,
+                            data1 = evt.byteAt(1),
+                            data2 = evt.byteAt(2),
+                            tsMs = evt.timeStamp,
+                        )
+                    )
+                }
             }
         } catch (e: Throwable) {
             console.error("[MidiConnector] message handling failed:", e)
