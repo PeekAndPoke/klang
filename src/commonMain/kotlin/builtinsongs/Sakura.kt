@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val sakuraSong = Song(
     id = "${BuiltInSongs.PREFIX}-synthkura",
     title = "Die Kirschblüte",
-    rpm = 30.0,
+    rpm = 28.0,
     icon = "globe asia",
     code = """
 import * from "stdlib"
@@ -24,17 +24,17 @@ let wait = 14
 let koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(freq = Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
+      .lowpass(freq = Osc.constant(2800).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
 
 let shaku = Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
-      .highpass(freq = 300, analog = Osc.slot.analog)
-      .lowpass(freq = 3800, q = 1.0, analog = Osc.slot.analog)
+      .lowpass(freq = 3500, q = 1.0, analog = Osc.slot.analog)
+      .highpass(freq = 600, analog = Osc.slot.analog)
       // NOTE: `.analog(0.2)` was here and INERT (receiver was the Lowpass wrapper). The
       // filters above still get their own `analog = Osc.slot.analog` saturation.
-      .vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
+      .vibrato(2, Osc.perlin(1).mul(0.15).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
 
@@ -49,7 +49,7 @@ let rim = Osc.sine(800)
 
 let brush = Osc.perlin(30).mul(0.5)
       .plus(Osc.whitenoise().mul(0.3))
-      .highpass(2000).lowpass(8000)
+      .highpass(2000).lowpass(12000)
       .adsr(0.01, 0.08, 0.0, 0.02)
 
 let sub = Osc.sine().lowpass(200)
@@ -67,7 +67,7 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body("mahogany")
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body("mahogany") // .struct()
     .superimpose(fast(2).velocity(0.1).pan(0.3).superimpose(pan(0.7)))
 
   // Shakuhachi
@@ -79,7 +79,7 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).orbit(1).sound(shaku).slow(14).gain(0.23).pan(perlin.range(0.3, 0.7).slow(8))
+  `).orbit(1).sound(shaku).slow(14).gain(0.20).pan(perlin.range(0.3, 0.7).slow(8))
     .lpf(perlin.range(3600, 3800).slow(2)).body("rosewood")
     .filterWhen(x => x >= wait * 2) // . solo()
 
@@ -108,11 +108,11 @@ stack(
   ).orbit(4).coarse(3).filterWhen(x => x >= wait * 3).body("tube").bodyWet(0.3)
 
   // Noise
-  , sound("dust").gain(0.0200).vel(sine.range(0.500, 1.0).slow(21)).lpf(8000)
-  , sound("pink").gain(0.0050).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000)
-  , sound("brown").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
+  , sound("dust!2").gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).lpf(8000).clip(1.1)
+  , sound("pink!3").gain(0.0050).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000).clip(1.1)
+  , sound("brown!4").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000).clip(1.1)
  
-).roomWet(0.25, 7, 0.75).delayWet(0.2).delaytime(pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
+).roomWet(0.35, 7, 0.75).delayWet(0.3).delaytime(pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
 
 
 
