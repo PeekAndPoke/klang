@@ -34,8 +34,10 @@ review (2026-08-17, verified in audio_be):
   (`SendRenderer.kt`: only voices with `room > 0` are summed into the orbit's reverb send
   buffer). "Shared by all voices on the orbit" is wrong for the send — a dry voice on a
   wet orbit stays dry.
-- A bare `.roomWet(x)` is **silent**: the reverb gates on `roomFade == null && roomSize < 0.01`
-  (`KatalystReverbEffect.kt`), and `roomSize` defaults to 0.0. Every real song pairs `roomWet`
+- A bare `.roomWet(x)` is **silent**: the reverb reads that config as OFF
+  (`KatalystReverbEffect.configure`'s active test against `MIN_ACTIVE_ROOM_SIZE` — since the
+  drain lifecycle it drains a leftover tail instead of freezing it), and `roomSize` defaults
+  to 0.0. Every real song pairs `roomWet`
   with `rsize`/`roomfade` (the colon form is gone since C0).
 - Orbit bus **settings** are first-writer-wins (`Cylinder.kt`: "ONE owner per orbit … route
   to a different orbit if you want different bus settings"). The skill ref's scope box says

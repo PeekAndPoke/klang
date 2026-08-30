@@ -117,7 +117,7 @@ internal class MasterChain private constructor(
         /** At or below this send level the effect is inaudible and is dropped from the chain. */
         private const val MIN_WET = 0.0001
 
-        /** Matches the Katalyst off-thresholds (`KatalystReverbEffect`'s `roomSize < 0.01` and
+        /** Matches the Katalyst off-thresholds (`KatalystReverbEffect.MIN_ACTIVE_ROOM_SIZE` and
          *  `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS`) — one contract, kept in prose sync
          *  because importing a katalyst constant here would invert the layering. */
         private const val MIN_TIME_FX = 0.01
@@ -217,9 +217,11 @@ internal class MasterChain private constructor(
          * and adds its wet output to a target), so the shell owns the send buffer, fills it with the
          * bus scaled by `wet`, and lets the unchanged DSP mix the tail back in.
          *
-         * Skipped entirely when inaudible — mirrors `KatalystReverbEffect`'s `roomSize < 0.01`
-         * short-circuit, so an "off" master reverb costs nothing (Freeverb is the heaviest single
-         * DSP unit in the engine).
+         * Skipped entirely when inaudible — the same off-test as
+         * `KatalystReverbEffect.MIN_ACTIVE_ROOM_SIZE` (there an off-config starts a drain of the
+         * live tail; here the stage is decided at build time, so no tail exists to drain), so an
+         * "off" master reverb costs nothing (Freeverb is the heaviest single DSP unit in the
+         * engine).
          */
         private fun buildReverb(stage: MasterStageDsl.Reverb, sampleRate: Int, blockFrames: Int): BuiltReverb? {
             val wet = finite(stage.wet, 0.0)
@@ -246,8 +248,8 @@ internal class MasterChain private constructor(
             val reverb = Reverb(sampleRate = sampleRate).also {
                 it.roomSize = roomSize
                 it.damp = finite(stage.damp, 0.5).coerceIn(0.0, 1.0)
-                it.roomFade = stage.roomFade?.coerceIn(0.0, 1.0)
-                it.roomLp = stage.roomLp
+                it.roomFade = stage.roomFade?.takeIf { fade -> fade.isFinite() }?.coerceIn(0.0, 1.0)
+                it.roomLp = stage.roomLp?.takeIf { lp -> lp.isFinite() }
             }
             val send = StereoBuffer(blockFrames)
 

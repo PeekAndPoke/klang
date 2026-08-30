@@ -79,4 +79,56 @@ class ReverbStabilitySpec : StringSpec({
         // The failure this bound prevents: a constant offset instead of a decaying tail.
         abs(sum / count) shouldBeLessThan 0.01
     }
+
+    // ── The drain countdown (block-framing ledger D3, adopted for the reverb) ────────────────
+
+    "drainSamplesUntilSilent: revolutions from the measured peak plus one slack revolution, in samples" {
+        val rev = Reverb(sampleRate)
+
+        // fb = roomSize x 0.28 + 0.7 = 0.84; ceil(ln(1e-5 / 1.0) / ln(0.84)) + 1 = 68 revolutions
+        // of the longest comb (1617 + 23 stereo spread = 1640 samples at 44.1 kHz).
+        rev.roomSize = 0.5
+        rev.drainSamplesUntilSilent(peak = 1.0) shouldBe (68.0 * 1640.0)
+
+        // roomFade OVERRIDES roomSize — the same override process() applies (fb 0.728 -> 38).
+        rev.roomFade = 0.1
+        rev.roomSize = 0.9
+        rev.drainSamplesUntilSilent(peak = 1.0) shouldBe (38.0 * 1640.0)
+        rev.roomFade = null
+
+        // Proportional to content: a -60 dB peak needs 28 revolutions, not 68.
+        rev.roomSize = 0.5
+        rev.drainSamplesUntilSilent(peak = 0.001) shouldBe (28.0 * 1640.0)
+
+        // At or below the threshold there is nothing to drain.
+        rev.drainSamplesUntilSilent(peak = 0.00001) shouldBe 0.0
+        rev.drainSamplesUntilSilent(peak = 0.0) shouldBe 0.0
+
+        // Production-unreachable (normalizeRoomSize clamps to <= 1.0, so fb <= 0.98), but the
+        // formula must never claim a supra-unity network drains.
+        rev.roomSize = 2.0
+        rev.drainSamplesUntilSilent(peak = 1.0) shouldBe Double.POSITIVE_INFINITY
+    }
+
+    "combPeakAbs measures the loudest comb cell on either channel" {
+        val fresh = Reverb(sampleRate)
+        fresh.combPeakAbs() shouldBe 0.0
+
+        // A one-sample impulse writes exactly 1.0 into cell 0 of every LEFT comb (the feedback
+        // contribution at that instant is the ~1e-18 anti-denormal bias, below double precision).
+        val left = Reverb(sampleRate)
+        val input = StereoBuffer(blockFrames)
+        val output = StereoBuffer(blockFrames)
+        input.left[0] = 1.0
+        left.process(input, output, blockFrames)
+        left.combPeakAbs() shouldBe 1.0
+
+        // Right-only NEGATIVE content is seen too: both channels share the countdown, and the
+        // scan measures magnitude.
+        val right = Reverb(sampleRate)
+        input.clear()
+        input.right[0] = -1.0
+        right.process(input, output, blockFrames)
+        right.combPeakAbs() shouldBe 1.0
+    }
 })

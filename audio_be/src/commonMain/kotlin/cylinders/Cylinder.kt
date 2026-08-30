@@ -59,6 +59,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
     val reverb = KatalystReverbEffect(
         reverb = Reverb(sampleRate),
+        blockFrames = blockFrames,
     )
 
     val phaser = KatalystPhaserEffect(
@@ -158,16 +159,20 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
             cap = voice.delay.cap,
         )
 
-        // Reverb (reverb.room is used by SendRenderer for send amount)
-        // Already normalized (and clamped) by `Reverb.normalizeRoomSize` in VoiceFactory — a comb
-        // network above unity has no steady state, it runs away to Inf/NaN.
-        reverb.reverb.roomSize = voice.reverb.roomSize
-        // roomFade overrides roomSize for the comb feedback, so it lives on the same axis and
-        // needs the same bound (it is authored 0..1 directly, not on the /10 scale).
-        reverb.reverb.roomFade = voice.reverb.roomFade?.coerceIn(0.0, 1.0)
-        reverb.reverb.roomLp = voice.reverb.roomLp
-        reverb.reverb.roomDim = voice.reverb.roomDim
-        reverb.reverb.iResponse = voice.reverb.iResponse
+        // Reverb (reverb.room is used by SendRenderer for send amount) — routed through the
+        // effect's lifecycle like the delay: an off-config drains the tail out on its own
+        // timeline instead of freezing the combs (see KatalystReverbEffect).
+        // roomSize is already normalized (and clamped) by `Reverb.normalizeRoomSize` in
+        // VoiceFactory — a comb network above unity has no steady state, it runs away to
+        // Inf/NaN. roomFade lives on the same axis and gets the same bound INSIDE configure
+        // (review round 1 moved it to the door, so every caller shares one conversion).
+        reverb.configure(
+            roomSize = voice.reverb.roomSize,
+            roomFade = voice.reverb.roomFade,
+            roomLp = voice.reverb.roomLp,
+            roomDim = voice.reverb.roomDim,
+            iResponse = voice.reverb.iResponse,
+        )
 
         // Phaser — depth (the on/off + amount knob) is always the owner's; the KERNEL params are
         // written only by an owner whose phaser is engaged. A no-phaser owner must not zero the
@@ -240,8 +245,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
         body.reset()
         vowel.reset()
         delay.reset() // clears the delay ring AND its drain lifecycle, not just the params
-        reverb.reverb.roomSize = 0.0
-        reverb.reverb.reset() // clear the comb/allpass tail, not just the params
+        reverb.reset() // clears the comb/allpass tail AND its drain lifecycle, not just the params
         phaser.phaser.resetForReuse() // cascade + latch + LFO phase + kernel params — full clean slate
         compressor.compressor = null
         ducking.clear()
@@ -305,10 +309,10 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
         fun delayHasTail() = delay.hasTail()
 
-        // Same effective-size question as the render gate — a roomfade-only orbit has roomSize 0.0
-        // and would otherwise report "no tail" while its combs still hold energy.
-        fun reverbHasTail() =
-            (reverb.reverb.roomFade != null || reverb.reverb.roomSize > 0.001) && reverb.reverb.hasTail()
+        // State-aware like the delay's: a draining reverb reports its tail BY CONSTRUCTION, so
+        // the orbit stays alive until the countdown's terminal reset — the old param-gated scan
+        // hid a still-charged network the moment a no-reverb owner zeroed roomSize.
+        fun reverbHasTail() = reverb.hasTail()
 
         if (reverbHasTail() || delayHasTail()) {
             silentBlockCount = 0

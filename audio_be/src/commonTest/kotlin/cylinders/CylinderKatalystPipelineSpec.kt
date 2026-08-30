@@ -114,13 +114,16 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.reverb.reverb.roomSize shouldBe 0.2 // new owner's
     }
 
-    "deactivating clears the reverb tail even after the owner switched reverb off (no stale-tail leak on reuse)" {
+    "switching reverb off starts the drain: the orbit rings out, stays alive, then deactivates clean" {
+        // The drain-lifecycle rewrite of the old stale-tail-leak row: an off-takeover used to
+        // FREEZE the comb network (invisible to the param-gated tail check, cut by the next
+        // deactivation); now the tail mixes out on its own timeline and cleanup waits for it.
         val cylinder = createOrbit() // silentBlocksBeforeTailCheck = 0
         val bf = blockFrames
 
-        // Owner A: reverb on — build up a comb-filter tail.
+        // Owner A: reverb on — build up a comb-filter tail (small room = a drain the test can afford).
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.8, roomSize = 0.8)), blockStart = 0.0,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.8, roomSize = 0.05)), blockStart = 0.0,
         )
         repeat(20) {
             cylinder.reverbSendBuffer.left.fill(0.5)
@@ -128,22 +131,47 @@ class OrbitBusPipelineSpec : StringSpec({
             cylinder.mixBuffer.clear()
             cylinder.processEffects()
         }
-        cylinder.reverb.reverb.hasTail() shouldBe true
+        cylinder.reverb.hasTail() shouldBe true
 
-        // Owner A ends; a no-reverb voice takes over → roomSize 0 (but the comb buffers are still full).
+        // Owner A ends; a no-reverb voice takes over → the off-config starts the DRAIN under the
+        // RETAINED params (the countdown decays at owner A's room, not the new owner's 0.0).
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.0, roomSize = 0.0)), blockStart = 2.0 * bf,
         )
-        cylinder.reverb.reverb.roomSize shouldBe 0.0
-        cylinder.reverb.reverb.hasTail() shouldBe true // params don't clear the buffers
+        cylinder.reverb.reverb.roomSize shouldBe 0.05 // retained
+        cylinder.reverb.hasTail() shouldBe true // draining — VISIBLE to cleanup now
 
-        // Orbit goes silent → tryDeactivate (roomSize 0 short-circuits its tail check) → resetBusEffects.
-        cylinder.mixBuffer.left.fill(0.0)
-        cylinder.mixBuffer.right.fill(0.0)
+        // The tail CHECK itself must hold the orbit, not just the mix-silence gate: with the mix
+        // cleared, only the reverbHasTail() wiring stands between a charged drain and
+        // deactivation (mutation campaign: `reverbHasTail() = false` survived without this).
+        cylinder.mixBuffer.clear()
+        cylinder.tryDeactivate()
+        cylinder.isActive shouldBe true
+
+        // The tail keeps SOUNDING while it drains, and the orbit must not deactivate under it
+        // (the old param-gated check cut exactly here).
+        cylinder.clear()
+        cylinder.processEffects()
+        cylinder.mixBuffer.left.any { it > 0.001 || it < -0.001 } shouldBe true
+        cylinder.tryDeactivate()
+        cylinder.isActive shouldBe true
+
+        // Run the production block loop until the countdown's terminal reset flips the tail off.
+        var blocks = 0
+        while (cylinder.reverb.hasTail() && blocks < 1200) {
+            cylinder.clear()
+            cylinder.processEffects()
+            cylinder.tryDeactivate()
+            blocks++
+        }
+        (blocks < 1200) shouldBe true // the drain terminated on its own schedule
+
+        // One silent round finishes deactivation if the final drain block was still audible.
+        cylinder.mixBuffer.clear()
         cylinder.tryDeactivate()
 
         cylinder.isActive shouldBe false
-        cylinder.reverb.reverb.hasTail() shouldBe false // FIX A: tail cleared on lease free
+        cylinder.reverb.reverb.hasTail(0.0) shouldBe false // literally zero on lease free
     }
 
     "cylinder bus context shares buffers with cylinder" {
