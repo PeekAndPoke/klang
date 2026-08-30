@@ -310,12 +310,18 @@ class Voice(
 
     class Distort(val amount: Double, val shape: String = "soft", val oversample: Int = 0)
     class Crush(val amount: Double, val oversample: Int = 0)
-    class Coarse(val amount: Double, val oversample: Int = 0, var lastCoarseValue: Double = 0.0, var coarseCounter: Double = 0.0)
+    class Coarse(val amount: Double, val oversample: Int = 0)
     /** [floor] = minimum dry coefficient of the C4 wet/dry law; 1.0 (default) = purely additive. */
     class Phaser(val rate: Double, val depth: Double, val center: Double, val sweep: Double, val floor: Double = 1.0)
+    /**
+     * Per-voice tremolo, carried RAW: [rate] in Hz, [phase] as an authored cycle offset
+     * (`0..1`), [skew] in `-1..+1` with 0 symmetric, [shape] a house waveform name (null =
+     * sine). The unit conversions and the unknown-name fallback live in one place,
+     * `TremoloRenderer`.
+     */
     class Tremolo(
         val rate: Double, val depth: Double, val skew: Double, val phase: Double,
-        val shape: String?, var currentPhase: Double = 0.0,
+        val shape: String?,
     )
 
     class Delay(val amount: Double, val time: Double, val feedback: Double, val cap: Double = 1.0)

@@ -4,6 +4,35 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-30, claude-code block-framing session): W10 TREMOLO LFO done — the six
+> shipped sprudel functions (`tremoloskew`/`tremolophase`/`tremoloshape` + `trem*` aliases) are
+> live end-to-end. New `audio_be/LfoShape.kt`: five waveforms in the OSCILLATOR vocabulary
+> (sine/triangle/square/sawtooth/ramp + the registry's aliases; maintainer's call: NO LFO-only
+> names, so `rampup`/`rampdown` came out of the docs) plus a duty-cycle skew warp.
+> `TremoloRenderer` takes skew/startPhase/shape with NO defaults (a default is how W10 happened);
+> `FilterPipelineBuilder` forwards them; the `* TWO_PI` moved to the renderer (one conversion
+> site); `Voice.Tremolo.currentPhase` + the dead `Voice.Coarse.lastCoarseValue`/`coarseCounter`
+> deleted. THREE doc/engine contradictions resolved by maintainer decision: phase is in CYCLES
+> not radians, skew is -1..+1 with 0 symmetric (the KDoc said 0.5 while the default was 0.0),
+> and SAWTOOTH's duty is FLIPPED so "+skew = sits higher" holds on all five shapes.
+> BIT-IDENTICAL at neutral settings by construction (unskewed sine runs on the RADIAN
+> accumulator, never the normalize round trip) — DrunkenSailor does not move. 2-round loop
+> (4 fresh Opus reviewers): round 1 = 15 findings incl. the sawtooth inversion and three dead
+> spec seams; round 2 = zero CRITICAL/MAJOR in compiling code, MINOR batch applied once under
+> the tightened standard. 18/18 mutations killed, restores byte-exact (sha256). Suites:
+> audio_be 1436, audio_bridge 62, sprudel 3974, klang 27, root 25, :compileKotlinJs green.
+> ALSO FIXED (all review-found): every documented tremolo example was INAUDIBLE (54 of them —
+> rate and depth both default to 0), the combined `tremolo(...)` addon door said `skew (0-1)`
+> and called rate "cycles per pattern cycle" (it is Hz), `SprudelTremoloEditorTool` had a stale
+> shape list + a triangle preview a quarter cycle out of phase + no alias normalisation, and
+> `IgnitorDsl.Ramp` said "ramp up" while the engine builds it at polarity -1.0.
+> UNCOMMITTED — awaiting the maintainer's BY-EAR round, then the commit go. Tree also carries
+> THEIR own Sakura.kt + DerSchmetterling.kt song edits and docs/tasks/mini-notation-tweaks.md
+> (untouched, theirs — stage only the W10 files). OPEN follow-ups filed in the ledger W10 row:
+> the ignitor door keeps rate+depth (dual-surface parity, maintainer-scoped out); the shared
+> `SprudelWaveformEditor` bound to `tremoloshape` offers `noise` (silently sine) and lacks
+> `ramp`; the tremolo editor commits skew but does not draw it.
+
 > Last action (2026-08-30, claude-code block-framing session): W-BATCH done (modulation-class
 > fixes, all maintainer-decided): W1 coarse counter=1.0 bootstrap both doors (latch deleted),
 > W2 tremolo clock through depth gaps + wrapPhase both doors, W3 narrowed coarse guard with

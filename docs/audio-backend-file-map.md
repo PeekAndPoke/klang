@@ -87,8 +87,8 @@ Cmd → PlaybackEngineDispatcher.handle
 ## Engines / primitives / math
 
 - `engines/AudioEngine.kt`, `engines/EngineRegistry.kt` — `modern`/`pedal` engine (pipeline) registry.
-- `StereoBuffer.kt`, `AudioSample.kt`, `Oversampler.kt`, `ShapingFuncs.kt`, `DistortionShape.kt`, `DspUtil.kt`,
-  `AdsrCurveMath.kt`, `AudioAnalyzer.kt`, `IndexCommon.kt`.
+- `StereoBuffer.kt`, `AudioSample.kt`, `Oversampler.kt`, `ShapingFuncs.kt`, `DistortionShape.kt`, `LfoShape.kt`,
+  `DspUtil.kt`, `AdsrCurveMath.kt`, `AudioAnalyzer.kt`, `IndexCommon.kt`.
 
 ## Platform entrypoints (thin pumps — not shared)
 

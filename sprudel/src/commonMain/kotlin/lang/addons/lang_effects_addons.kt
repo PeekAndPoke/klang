@@ -558,9 +558,9 @@ private fun applyTremolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *
  * Each field is optional — trailing fields can be omitted.
  * - **depth**: modulation intensity (0–1)
- * - **rate**: LFO speed in cycles per pattern cycle
- * - **shape**: LFO waveform (`sine`, `triangle`, `square`, `saw`)
- * - **skew**: waveform skew (0–1)
+ * - **rate**: LFO speed in Hz
+ * - **shape**: LFO waveform (`sine`, `triangle`, `square`, `sawtooth`, `ramp`)
+ * - **skew**: waveform asymmetry (-1..+1, 0 = symmetric)
  * - **phase**: LFO start phase offset in cycles
  *
  * ```KlangScript(Playable)
@@ -575,11 +575,11 @@ private fun applyTremolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * note("c3*4").tremolo("<0.3 0.8>", "<2 8>")   // alternating tremolo per cycle
  * ```
  *
- * @param sync Rate in cycles per cycle.
+ * @param sync Rate in Hz.
  * @param-tool depth SprudelTremoloEditor, SprudelTremoloSequenceEditor
  * @param depth Modulation intensity (0 = no effect, 1 = full tremolo)
- * @param shape LFO waveform: sine, triangle, square, saw
- * @param skew Waveform skew (0–1)
+ * @param shape LFO waveform: sine, triangle, square, sawtooth or ramp
+ * @param skew Waveform asymmetry (-1..+1, 0 = symmetric)
  * @param phase LFO start phase offset in cycles
  * @return A new pattern with all specified tremolo parameters applied.
  * @category effects
@@ -608,9 +608,9 @@ fun SprudelPattern.tremolo(depth: PatternLike? = null, sync: PatternLike? = null
  * ```
  *
  * @param depth Depth (0–1).
- * @param sync Rate in cycles per cycle.
- * @param shape Shape name.
- * @param skew Skew (0–1).
+ * @param sync Rate in Hz.
+ * @param shape LFO waveform: sine, triangle, square, sawtooth or ramp.
+ * @param skew Waveform asymmetry (-1..+1, 0 = symmetric).
  * @param phase Phase offset in cycles.
  * @return A new pattern with all specified tremolo parameters applied.
  * @category effects
@@ -632,9 +632,9 @@ fun String.tremolo(depth: PatternLike? = null, sync: PatternLike? = null, shape:
  * ```
  *
  * @param depth Depth (0–1).
- * @param sync Rate in cycles per cycle.
- * @param shape Shape name.
- * @param skew Skew (0–1).
+ * @param sync Rate in Hz.
+ * @param shape LFO waveform: sine, triangle, square, sawtooth or ramp.
+ * @param skew Waveform asymmetry (-1..+1, 0 = symmetric).
  * @param phase Phase offset in cycles.
  * @return A [PatternMapperFn] that sets tremolo parameters.
  * @category effects

@@ -422,7 +422,8 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Ramp oscillator. Reverse sawtooth (ramp up, opposite slope of [Sawtooth]). */
+    /** Ramp oscillator. Reverse sawtooth — FALLING, the negated [Sawtooth] (`Ignitors.ramp`
+     *  builds it at `polarity = -1.0`). */
     @WireName("ramp")
     data class Ramp(
         val freq: IgnitorDsl = Freq,

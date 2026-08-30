@@ -85,7 +85,23 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
     companion object {
-        private val shapes = listOf("sine", "triangle", "square", "saw")
+        private val shapes = listOf("sine", "triangle", "square", "sawtooth", "ramp")
+
+        /**
+         * The engine's aliases (LfoShape.parseLfoShape) folded onto the canonical entries, so
+         * a document written as `"saw"` — which is what this editor itself emitted before the
+         * list was corrected — still opens with its shape selected.
+         */
+        private val shapeAliases = mapOf(
+            "sin" to "sine",
+            "tri" to "triangle",
+            "sqr" to "square",
+            "pulse" to "square",
+            "saw" to "sawtooth",
+        )
+
+        private fun canonicalShape(raw: String?): String? =
+            raw?.lowercase()?.let { shapeAliases[it] ?: it }?.takeIf { it in shapes }
     }
 
     // ── Parse current value from raw source text ──────────────────────────────
@@ -118,7 +134,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
         get() = parseNumOrNull(call?.args?.getOrNull(1))
 
     private val parsedShape
-        get() = parseStr(call?.args?.getOrNull(2))?.takeIf { it in shapes }
+        get() = canonicalShape(parseStr(call?.args?.getOrNull(2)))
 
     private val parsedSkew
         get() = parseNumOrNull(call?.args?.getOrNull(3))
@@ -137,7 +153,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
     private val parseable: List<Boolean> = listOf(
         parseNumOrNull(call?.args?.getOrNull(0)) != null,
         parseNumOrNull(call?.args?.getOrNull(1)) != null,
-        parseStr(call?.args?.getOrNull(2))?.let { it in shapes } == true,
+        canonicalShape(parseStr(call?.args?.getOrNull(2))) != null,
         parseNumOrNull(call?.args?.getOrNull(3)) != null,
         parseNumOrNull(call?.args?.getOrNull(4)) != null,
     )
@@ -372,10 +388,23 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
                 // Generate LFO waveform based on shape
                 val lfoPhase = (t * clampedRate + clampedPhase) % 1.0
+                // Matches the engine's LfoShape: sine, triangle and square all spend the
+                // first half of the cycle high (sine and triangle enter it at the midpoint
+                // rising, the square already at its top), sawtooth rises and ramp mirrors it.
+                // NOT yet drawn: skew, which the editor commits but the preview ignores.
                 val lfoRaw = when (shape) {
                     "square" -> if (lfoPhase < 0.5) 1.0 else -1.0
-                    "triangle" -> if (lfoPhase < 0.5) (4.0 * lfoPhase - 1.0) else (3.0 - 4.0 * lfoPhase)
-                    "saw" -> 2.0 * lfoPhase - 1.0
+
+                    "triangle" -> when {
+                        lfoPhase < 0.25 -> 4.0 * lfoPhase
+                        lfoPhase < 0.75 -> 2.0 - 4.0 * lfoPhase
+                        else -> 4.0 * lfoPhase - 4.0
+                    }
+
+                    "sawtooth" -> 2.0 * lfoPhase - 1.0
+
+                    "ramp" -> 1.0 - 2.0 * lfoPhase
+
                     else -> sin(lfoPhase * 2.0 * PI) // sine (default)
                 }
 

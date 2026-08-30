@@ -68,7 +68,16 @@ fun buildFilterPipeline(
 
             StageDsl.Tremolo ->
                 if (tremolo.depth > 0.0) {
-                    add(TremoloRenderer(tremolo.rate, tremolo.depth, sampleRate))
+                    add(
+                        TremoloRenderer(
+                            rate = tremolo.rate,
+                            depth = tremolo.depth,
+                            skew = tremolo.skew,
+                            startPhase = tremolo.phase,
+                            shape = tremolo.shape,
+                            sampleRate = sampleRate,
+                        )
+                    )
                 }
 
             StageDsl.Phaser ->

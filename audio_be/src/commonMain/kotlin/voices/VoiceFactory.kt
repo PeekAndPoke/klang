@@ -8,7 +8,6 @@ package io.peekandpoke.klang.audio_be.voices
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.SampleStore
-import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
@@ -187,7 +186,6 @@ class VoiceFactory(
             skew = data.tremoloSkew ?: 0.0,
             phase = data.tremoloPhase ?: 0.0,
             shape = data.tremoloShape,
-            currentPhase = (data.tremoloPhase ?: 0.0) * TWO_PI,
         )
 
         // Ducking / Sidechain

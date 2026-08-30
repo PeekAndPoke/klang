@@ -3447,11 +3447,11 @@ private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<An
  * @return A new pattern with the tremolo rate applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("sine").tremolosync(4)   // 4 Hz tremolo
+ * note("c3 e3").s("sine").tremolosync(4).tremolodepth(0.6)   // 4 Hz tremolo
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremolosync("<1 2 4 8>")   // accelerating tremolo rate
+ * note("c3*4").tremolosync("<1 2 4 8>").tremolodepth(0.6)   // accelerating tremolo rate
  * ```
  *
  * ```KlangScript(Playable)
@@ -3474,7 +3474,7 @@ fun SprudelPattern.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = 
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  *
  * ```KlangScript(Playable)
- * "c3 e3".tremolosync(4).note().s("sine")   // 4 Hz tremolo on string pattern
+ * "c3 e3".tremolosync(4).tremolodepth(0.6).note().s("sine")   // 4 Hz tremolo on string pattern
  * ```
  */
 @KlangScript.Function
@@ -3491,11 +3491,11 @@ fun String.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): S
  * @return A [PatternMapperFn] that sets the tremolo rate.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(4))   // 4 Hz tremolo via mapper
+ * note("c3 e3").apply(tremolosync(4).tremolodepth(0.6))   // 4 Hz tremolo via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(8))   // fast tremolo every 4th cycle
+ * note("c3*4").every(4, tremolosync(8).tremolodepth(0.6))   // fast tremolo every 4th cycle
  * ```
  *
  * @alias tremsync
@@ -3532,11 +3532,11 @@ fun PatternMapperFn.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? =
  * @return A new pattern with the tremolo rate applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("sine").tremsync(4)   // 4 Hz tremolo
+ * note("c3 e3").s("sine").tremsync(4).tremolodepth(0.6)   // 4 Hz tremolo
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremsync("<1 2 4 8>")   // accelerating tremolo rate
+ * note("c3*4").tremsync("<1 2 4 8>").tremolodepth(0.6)   // accelerating tremolo rate
  * ```
  *
  * ```KlangScript(Playable)
@@ -3559,7 +3559,7 @@ fun SprudelPattern.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = nul
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  *
  * ```KlangScript(Playable)
- * "c3 e3".tremsync(4).note().s("sine")   // 4 Hz tremolo on string pattern
+ * "c3 e3".tremsync(4).tremolodepth(0.6).note().s("sine")   // 4 Hz tremolo on string pattern
  * ```
  */
 @KlangScript.Function
@@ -3573,7 +3573,7 @@ fun String.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @return A [PatternMapperFn] that sets the tremolo rate.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremsync(4))   // 4 Hz tremolo via mapper
+ * note("c3 e3").apply(tremsync(4).tremolodepth(0.6))   // 4 Hz tremolo via mapper
  * ```
  *
  * @alias tremolosync
@@ -3625,7 +3625,7 @@ private fun applyTremoloDepth(source: SprudelPattern, args: List<SprudelDslArg<A
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremolodepth("<0.2 0.5 0.8 1.0>")             // increasing depth
+ * note("c3*4").tremolosync(4).tremolodepth("<0.2 0.5 0.8 1.0>")             // increasing depth
  * ```
  *
  * ```KlangScript(Playable)
@@ -3665,11 +3665,11 @@ fun String.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * @return A [PatternMapperFn] that sets the tremolo depth.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolodepth(0.8))   // strong tremolo via mapper
+ * note("c3 e3").apply(tremolosync(4).tremolodepth(0.8))   // strong tremolo via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolodepth(1.0))   // max depth every 4th cycle
+ * note("c3*4").every(4, tremolosync(4).tremolodepth(1.0))   // max depth every 4th cycle
  * ```
  *
  * @alias tremdepth
@@ -3710,7 +3710,7 @@ fun PatternMapperFn.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremdepth("<0.2 0.5 0.8 1.0>")             // increasing depth
+ * note("c3*4").tremolosync(4).tremdepth("<0.2 0.5 0.8 1.0>")             // increasing depth
  * ```
  *
  * ```KlangScript(Playable)
@@ -3747,7 +3747,7 @@ fun String.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): S
  * @return A [PatternMapperFn] that sets the tremolo depth.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremdepth(0.8))   // strong tremolo via mapper
+ * note("c3 e3").apply(tremolosync(4).tremdepth(0.8))   // strong tremolo via mapper
  * ```
  *
  * @alias tremolodepth
@@ -3786,23 +3786,23 @@ private fun applyTremoloSkew(source: SprudelPattern, args: List<SprudelDslArg<An
 /**
  * Sets the tremolo LFO skew (asymmetry) value for this pattern.
  *
- * Adjusts the asymmetry of the tremolo waveform. A value of `0.5` is symmetric;
- * values above or below shift the waveform to spend more time at the top or bottom.
+ * Adjusts the asymmetry of the tremolo waveform. `0.0` is symmetric; positive values keep
+ * the LFO longer at the top, negative values longer at the bottom.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the skew.
  *
- * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
+ * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
  * @return A new pattern with the tremolo skew applied.
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremolosync(2).tremoloskew(0.8)   // skewed toward peak
+ * note("c3*4").tremolosync(2).tremolodepth(0.6).tremoloskew(0.8)   // skewed toward peak
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremoloskew("<0.2 0.5 0.8>")      // varying asymmetry
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).tremoloskew("<-0.6 0 0.6>")      // varying asymmetry
  * ```
  *
  * ```KlangScript(Playable)
- * seq("0.2 0.5 0.8").tremoloskew()   // reinterpret values as tremolo skew
+ * seq("-0.6 0 0.6").tremoloskew()   // reinterpret values as tremolo skew
  * ```
  *
  * @alias tremskew
@@ -3818,10 +3818,10 @@ fun SprudelPattern.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? 
  *
  * When [amount] is omitted, the string's numeric values are reinterpreted as the skew.
  *
- * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
+ * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
  *
  * ```KlangScript(Playable)
- * "c3*4".tremoloskew(0.8).tremolosync(2).note()   // skewed tremolo on string pattern
+ * "c3*4".tremoloskew(0.8).tremolosync(2).tremolodepth(0.6).note()   // skewed tremolo on string pattern
  * ```
  */
 @KlangScript.Function
@@ -3834,15 +3834,15 @@ fun String.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the skew.
  *
- * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
+ * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
  * @return A [PatternMapperFn] that sets the tremolo skew.
  *
  * ```KlangScript(Playable)
- * note("c3*4").apply(tremoloskew(0.8))   // skewed tremolo via mapper
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).apply(tremoloskew(0.8))   // skewed tremolo via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremoloskew(0.2))   // inverted skew every 4th cycle
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).every(4, tremoloskew(-0.6))   // trough-heavy skew every 4th cycle
  * ```
  *
  * @alias tremskew
@@ -3855,15 +3855,15 @@ fun tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): Patter
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO skew after the previous mapper.
  *
- * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
+ * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
  * @return A new [PatternMapperFn] chaining this tremolo skew after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(2).tremoloskew(0.8))   // rate then skew
+ * note("c3 e3").apply(tremolosync(2).tremolodepth(0.6).tremoloskew(0.8))   // rate then skew
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(4).tremoloskew(0.2))   // inverted skew fast tremolo
+ * note("c3*4").every(4, tremolosync(4).tremolodepth(0.6).tremoloskew(-0.6))   // trough-heavy fast tremolo
  * ```
  */
 @KlangScript.Function
@@ -3875,19 +3875,19 @@ fun PatternMapperFn.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo?
  *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the skew.
  *
- * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
+ * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
  * @return A new pattern with the tremolo skew applied.
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremolosync(2).tremskew(0.8)   // skewed toward peak
+ * note("c3*4").tremolosync(2).tremolodepth(0.6).tremskew(0.8)   // skewed toward peak
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremskew("<0.2 0.5 0.8>")      // varying asymmetry
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).tremskew("<-0.6 0 0.6>")      // varying asymmetry
  * ```
  *
  * ```KlangScript(Playable)
- * seq("0.2 0.5 0.8").tremskew()   // reinterpret values as tremolo skew
+ * seq("-0.6 0 0.6").tremskew()   // reinterpret values as tremolo skew
  * ```
  *
  * @alias tremoloskew
@@ -3903,10 +3903,10 @@ fun SprudelPattern.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = n
  *
  * When [amount] is omitted, the string's numeric values are reinterpreted as the skew.
  *
- * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
+ * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
  *
  * ```KlangScript(Playable)
- * "c3*4".tremskew(0.8).tremolosync(2).note()   // skewed tremolo on string pattern
+ * "c3*4".tremskew(0.8).tremolosync(2).tremolodepth(0.6).note()   // skewed tremolo on string pattern
  * ```
  */
 @KlangScript.Function
@@ -3916,11 +3916,11 @@ fun String.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO skew. Alias for [tremoloskew].
  *
- * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
+ * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
  * @return A [PatternMapperFn] that sets the tremolo skew.
  *
  * ```KlangScript(Playable)
- * note("c3*4").apply(tremskew(0.8))   // skewed tremolo via mapper
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).apply(tremskew(0.8))   // skewed tremolo via mapper
  * ```
  *
  * @alias tremoloskew
@@ -3934,15 +3934,15 @@ fun tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO skew (alias for tremoloskew) after the previous
  * mapper.
  *
- * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
+ * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
  * @return A new [PatternMapperFn] chaining this tremolo skew after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(2).tremskew(0.8))   // rate then skew
+ * note("c3 e3").apply(tremolosync(2).tremolodepth(0.6).tremskew(0.8))   // rate then skew
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(4).tremskew(0.2))   // inverted skew fast tremolo
+ * note("c3*4").every(4, tremolosync(4).tremolodepth(0.6).tremskew(-0.6))   // trough-heavy fast tremolo
  * ```
  */
 @KlangScript.Function
@@ -3958,28 +3958,28 @@ private fun applyTremoloPhase(source: SprudelPattern, args: List<SprudelDslArg<A
 }
 
 /**
- * Sets the tremolo LFO starting phase in radians for this pattern.
+ * Sets the tremolo LFO starting phase in cycles for this pattern.
  *
  * Controls where in its cycle the tremolo LFO begins. Use to offset the tremolo
  * relative to the beat or other patterns playing simultaneously.
  * When [phase] is omitted, the pattern's own numeric values are reinterpreted as the phase.
  *
- * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
+ * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
  * @return A new pattern with the tremolo phase applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").tremolosync(2).tremolophase(1.57)   // start at 90°
+ * note("c3 e3").tremolosync(2).tremolodepth(0.6).tremolophase(0.25)   // start at 90°
  * ```
  *
  * ```KlangScript(Playable)
  * stack(
- *   note("c3").tremolosync(2).tremolophase(0),
- *   note("e3").tremolosync(2).tremolophase(3.14),   // 180° offset
+ *   note("c3").tremolosync(2).tremolodepth(0.6).tremolophase(0),
+ *   note("e3").tremolosync(2).tremolodepth(0.6).tremolophase(0.5),   // 180° offset
  * )
  * ```
  *
  * ```KlangScript(Playable)
- * seq("0 1.57 3.14 4.71").tremolophase()   // reinterpret values as tremolo phase
+ * seq("0 0.25 0.5 0.75").tremolophase()   // reinterpret values as tremolo phase
  * ```
  *
  * @alias tremphase
@@ -3995,10 +3995,10 @@ fun SprudelPattern.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? 
  *
  * When [phase] is omitted, the string's numeric values are reinterpreted as the phase.
  *
- * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
+ * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
  *
  * ```KlangScript(Playable)
- * "c3 e3".tremolophase(1.57).tremolosync(2).note()   // 90° tremolo on string pattern
+ * "c3 e3".tremolophase(0.25).tremolosync(2).tremolodepth(0.6).note()   // 90° tremolo on string pattern
  * ```
  */
 @KlangScript.Function
@@ -4011,15 +4011,15 @@ fun String.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null):
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
  * When [phase] is omitted, the pattern's own numeric values are reinterpreted as the phase.
  *
- * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
+ * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
  * @return A [PatternMapperFn] that sets the tremolo phase.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolophase(1.57))   // 90° start via mapper
+ * note("c3 e3").tremolosync(4).tremolodepth(0.6).apply(tremolophase(0.25))   // 90° start via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolophase(3.14))   // 180° start every 4th cycle
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).every(4, tremolophase(0.5))   // 180° start every 4th cycle
  * ```
  *
  * @alias tremphase
@@ -4032,15 +4032,15 @@ fun tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): Patter
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO starting phase after the previous mapper.
  *
- * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
+ * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
  * @return A new [PatternMapperFn] chaining this tremolo phase after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(2).tremolophase(1.57))   // rate then phase
+ * note("c3 e3").apply(tremolosync(2).tremolodepth(0.6).tremolophase(0.25))   // rate then phase
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(4).tremolophase(3.14))   // fast tremolo at 180°
+ * note("c3*4").every(4, tremolosync(4).tremolodepth(0.6).tremolophase(0.5))   // fast tremolo at 180°
  * ```
  */
 @KlangScript.Function
@@ -4048,23 +4048,23 @@ fun PatternMapperFn.tremolophase(phase: PatternLike? = null, callInfo: CallInfo?
     this.chain { p -> p.tremolophase(phase, callInfo) }
 
 /**
- * Alias for [tremolophase]. Sets the tremolo LFO starting phase in radians for this pattern.
+ * Alias for [tremolophase]. Sets the tremolo LFO starting phase in cycles for this pattern.
  *
  * When [phase] is omitted, the pattern's own numeric values are reinterpreted as the phase.
  *
- * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
+ * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
  * @return A new pattern with the tremolo phase applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").tremolosync(2).tremphase(1.57)   // start at 90°
+ * note("c3 e3").tremolosync(2).tremolodepth(0.6).tremphase(0.25)   // start at 90°
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremphase("<0 1.57 3.14 4.71>")   // quarter-turn offsets
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).tremphase("<0 0.25 0.5 0.75>")   // quarter-turn offsets
  * ```
  *
  * ```KlangScript(Playable)
- * seq("0 1.57 3.14 4.71").tremphase()   // reinterpret values as tremolo phase
+ * seq("0 0.25 0.5 0.75").tremphase()   // reinterpret values as tremolo phase
  * ```
  *
  * @alias tremolophase
@@ -4080,10 +4080,10 @@ fun SprudelPattern.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = n
  *
  * When [phase] is omitted, the string's numeric values are reinterpreted as the phase.
  *
- * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
+ * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
  *
  * ```KlangScript(Playable)
- * "c3 e3".tremphase(1.57).tremolosync(2).note()   // 90° tremolo on string pattern
+ * "c3 e3".tremphase(0.25).tremolosync(2).tremolodepth(0.6).note()   // 90° tremolo on string pattern
  * ```
  */
 @KlangScript.Function
@@ -4093,11 +4093,11 @@ fun String.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): Sp
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase. Alias for [tremolophase].
  *
- * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
+ * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
  * @return A [PatternMapperFn] that sets the tremolo phase.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremphase(1.57))   // 90° start via mapper
+ * note("c3 e3").tremolosync(4).tremolodepth(0.6).apply(tremphase(0.25))   // 90° start via mapper
  * ```
  *
  * @alias tremolophase
@@ -4111,15 +4111,15 @@ fun tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO starting phase (alias for tremolophase) after the
  * previous mapper.
  *
- * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
+ * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
  * @return A new [PatternMapperFn] chaining this tremolo phase after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(2).tremphase(1.57))   // rate then phase
+ * note("c3 e3").apply(tremolosync(2).tremolodepth(0.6).tremphase(0.25))   // rate then phase
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(4).tremphase(3.14))   // fast tremolo at 180°
+ * note("c3*4").every(4, tremolosync(4).tremolodepth(0.6).tremphase(0.5))   // fast tremolo at 180°
  * ```
  */
 @KlangScript.Function
@@ -4140,19 +4140,21 @@ private fun applyTremoloShape(source: SprudelPattern, args: List<SprudelDslArg<A
 /**
  * Sets the tremolo LFO waveform shape for this pattern.
  *
- * Accepted values: `"sine"`, `"triangle"`, `"square"`, `"sawtooth"`, `"rampup"`, `"rampdown"`.
+ * Accepted values: `"sine"`, `"triangle"`, `"square"`, `"sawtooth"` (rising) and `"ramp"`
+ * (falling) — the same waveform names `s(...)` uses, aliases included (`sin`, `tri`, `sqr`,
+ * `pulse`, `saw`). An unknown name falls back to `"sine"`.
  * Different shapes produce different tremolo characters — sine is smooth, square is choppy.
  *
- * @param shape The LFO waveform shape name.
+ * @param shape The LFO waveform: sine, triangle, square, sawtooth or ramp.
  * @param-tool shape SprudelWaveformEditor, SprudelWaveformSequenceEditor
  * @return A new pattern with the tremolo shape applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").tremolosync(4).tremoloshape("square")   // choppy on/off tremolo
+ * note("c3 e3").tremolosync(4).tremolodepth(0.6).tremoloshape("square")   // choppy on/off tremolo
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremoloshape("<sine triangle square>")   // cycle through shapes
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).tremoloshape("<sine triangle square>")   // cycle through shapes
  * ```
  *
  * @alias tremshape
@@ -4166,10 +4168,10 @@ fun SprudelPattern.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null):
 /**
  * Parses this string as a pattern and sets the tremolo LFO waveform shape.
  *
- * @param shape The LFO waveform shape name.
+ * @param shape The LFO waveform: sine, triangle, square, sawtooth or ramp.
  *
  * ```KlangScript(Playable)
- * "c3 e3".tremoloshape("square").tremolosync(4).note()   // choppy tremolo on string pattern
+ * "c3 e3".tremoloshape("square").tremolosync(4).tremolodepth(0.6).note()   // choppy tremolo on string pattern
  * ```
  */
 @KlangScript.Function
@@ -4181,15 +4183,15 @@ fun String.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): Sprudel
  *
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
  *
- * @param shape The LFO waveform shape name.
+ * @param shape The LFO waveform: sine, triangle, square, sawtooth or ramp.
  * @return A [PatternMapperFn] that sets the tremolo shape.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremoloshape("square"))   // choppy tremolo via mapper
+ * note("c3 e3").tremolosync(4).tremolodepth(0.6).apply(tremoloshape("square"))   // choppy tremolo via mapper
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremoloshape("triangle"))   // triangle tremolo every 4th cycle
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).every(4, tremoloshape("triangle"))   // triangle tremolo every 4th cycle
  * ```
  *
  * @alias tremshape
@@ -4202,15 +4204,15 @@ fun tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperF
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO waveform shape after the previous mapper.
  *
- * @param shape The LFO waveform shape name.
+ * @param shape The LFO waveform: sine, triangle, square, sawtooth or ramp.
  * @return A new [PatternMapperFn] chaining this tremolo shape after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(4).tremoloshape("square"))   // rate then shape
+ * note("c3 e3").apply(tremolosync(4).tremolodepth(0.6).tremoloshape("square"))   // rate then shape
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(8).tremoloshape("triangle"))   // shaped fast tremolo
+ * note("c3*4").every(4, tremolosync(8).tremolodepth(0.6).tremoloshape("triangle"))   // shaped fast tremolo
  * ```
  */
 @KlangScript.Function
@@ -4220,16 +4222,16 @@ fun PatternMapperFn.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null)
 /**
  * Alias for [tremoloshape]. Sets the tremolo LFO waveform shape for this pattern.
  *
- * @param shape The LFO waveform shape name.
+ * @param shape The LFO waveform: sine, triangle, square, sawtooth or ramp.
  * @param-tool shape SprudelWaveformEditor, SprudelWaveformSequenceEditor
  * @return A new pattern with the tremolo shape applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").tremolosync(4).tremshape("square")   // choppy on/off tremolo
+ * note("c3 e3").tremolosync(4).tremolodepth(0.6).tremshape("square")   // choppy on/off tremolo
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").tremshape("<sine triangle square>")   // cycle through shapes
+ * note("c3*4").tremolosync(4).tremolodepth(0.6).tremshape("<sine triangle square>")   // cycle through shapes
  * ```
  *
  * @alias tremoloshape
@@ -4242,10 +4244,10 @@ fun SprudelPattern.tremshape(shape: PatternLike, callInfo: CallInfo? = null): Sp
 /**
  * Alias for [tremoloshape]. Parses this string as a pattern and sets the tremolo LFO waveform shape.
  *
- * @param shape The LFO waveform shape name.
+ * @param shape The LFO waveform: sine, triangle, square, sawtooth or ramp.
  *
  * ```KlangScript(Playable)
- * "c3 e3".tremshape("square").tremolosync(4).note()   // choppy tremolo on string pattern
+ * "c3 e3".tremshape("square").tremolosync(4).tremolodepth(0.6).note()   // choppy tremolo on string pattern
  * ```
  */
 @KlangScript.Function
@@ -4255,11 +4257,11 @@ fun String.tremshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPat
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO waveform shape. Alias for [tremoloshape].
  *
- * @param shape The LFO waveform shape name.
+ * @param shape The LFO waveform: sine, triangle, square, sawtooth or ramp.
  * @return A [PatternMapperFn] that sets the tremolo shape.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremshape("square"))   // choppy tremolo via mapper
+ * note("c3 e3").tremolosync(4).tremolodepth(0.6).apply(tremshape("square"))   // choppy tremolo via mapper
  * ```
  *
  * @alias tremoloshape
@@ -4273,15 +4275,15 @@ fun tremshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO waveform shape (alias for tremoloshape) after the
  * previous mapper.
  *
- * @param shape The LFO waveform shape name.
+ * @param shape The LFO waveform: sine, triangle, square, sawtooth or ramp.
  * @return A new [PatternMapperFn] chaining this tremolo shape after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(4).tremshape("square"))   // rate then shape
+ * note("c3 e3").apply(tremolosync(4).tremolodepth(0.6).tremshape("square"))   // rate then shape
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(8).tremshape("triangle"))   // shaped fast tremolo
+ * note("c3*4").every(4, tremolosync(8).tremolodepth(0.6).tremshape("triangle"))   // shaped fast tremolo
  * ```
  */
 @KlangScript.Function
