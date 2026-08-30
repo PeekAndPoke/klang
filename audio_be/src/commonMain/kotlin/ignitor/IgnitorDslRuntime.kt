@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import kotlin.random.Random
 
@@ -23,10 +24,16 @@ import kotlin.random.Random
  * **Memoisation contract:**
  *
  * During a single `toExciter` call, every signal-producing DSL node is converted to a runtime
- * Ignitor exactly once, keyed by `(object identity, accumulated pitch mod)`. Two references to
- * the same DSL node with the same mod chain share one [MemoizingIgnitor]. Two references with
- * different mod chains (e.g., `s + s.vibrato(...)`) produce independent Ignitors — each with
- * its own phase accumulator.
+ * Ignitor exactly once, keyed by `(object identity, accumulated pitch mod, detune context)`.
+ * Two references to the same DSL node with the same mod chain share one [MemoizingIgnitor].
+ * Two references with different mod chains (e.g., `s + s.vibrato(...)`) produce independent
+ * Ignitors — each with its own phase accumulator. The DETUNE CONTEXT (ledger D13, redesigned
+ * 2026-08-30) makes sharing never cross a `detune` boundary: `s + s.detune(12)` builds two
+ * honest instances (the overlay semantics — the instrument transposed), because one shared
+ * stateful instance called at two frequencies per window double-advances its state. The
+ * identity FOLD is the flip side: a pitch-free subtree (no [IgnitorDsl.Freq] consumer) folds
+ * the detune away and STAYS shared — forking noise would decorrelate it (two instances draw
+ * different rng), and detune is a pitch op on a signal that has no pitch.
  *
  * **Pitch-mod bubbling:**
  *
@@ -61,13 +68,16 @@ fun IgnitorDsl.toExciter(
 ): Ignitor = buildExciter(oscParams, soundIndex, phasePools, orbit, random).ignitor
 
 /**
- * Identity-based cache for DSL → Ignitor conversion, keyed on `(DSL node identity, mod identity)`.
+ * Identity-based cache for DSL → Ignitor conversion, keyed on `(DSL node identity, mod
+ * identity, detune context)`.
  *
- * Two references to the same DSL node with the same accumulated mod share one Ignitor.
- * Two references with different mods (or one with mod, one without) produce independent entries.
+ * Two references to the same DSL node with the same accumulated mod AND the same enclosing
+ * detune chain share one Ignitor. Different mods, or different detune contexts (ledger D13),
+ * produce independent entries — each with its own state.
  *
  * Also carries the per-call [soundIndex] so `IgnitorDsl.Variants` nodes can dispatch
- * without threading the value through every recursive call.
+ * without threading the value through every recursive call, and the current [detuneContext]
+ * for the same reason (the Detune arm pushes/pops it around its inner build).
  */
 internal class IgnitorBuildCache(
     val soundIndex: Int = 0,
@@ -87,13 +97,22 @@ internal class IgnitorBuildCache(
      *  voice lifetime. Carried here like [soundIndex] rather than threaded through every arm. */
     val freqHz: Double = 0.0,
 ) {
+    /** The detune scope at the current recursion point — null at the root.
+     *  Identity-compared as part of the cache key (pushed/popped by the Detune build arm). */
+    var detuneContext: DetuneContext? = null
+
     private val dslKeys = ArrayList<IgnitorDsl>()
     private val modKeys = ArrayList<Ignitor?>()
+    private val ctxKeys = ArrayList<DetuneContext?>()
     private val values = ArrayList<BuiltIgnitor>()
 
     inline fun getOrPut(key: IgnitorDsl, mod: Ignitor?, compute: () -> BuiltIgnitor): BuiltIgnitor {
+        // Snapshot: the entry must be FILED under the context it was looked up in, even if
+        // compute() misbehaves with the mutable field (review round 1 hardening).
+        val ctx = detuneContext
+
         for (i in dslKeys.indices) {
-            if (dslKeys[i] === key && modKeys[i] === mod) {
+            if (dslKeys[i] === key && modKeys[i] === mod && ctxKeys[i] === ctx) {
                 val existing = values[i]
                 val ignitor = existing.ignitor
                 if (ignitor is MemoizingIgnitor) ignitor.incConsumers()
@@ -104,9 +123,91 @@ internal class IgnitorBuildCache(
         val v = compute()
         dslKeys.add(key)
         modKeys.add(mod)
+        ctxKeys.add(ctx)
         values.add(v)
         return v
     }
+
+    // ── The D13 fold predicate, identity-memoized per build ─────────────────────────────────
+
+    private val freqWalkKeys = ArrayList<IgnitorDsl>()
+    private val freqWalkAnswers = ArrayList<Boolean>()
+
+    /**
+     * True when the subtree contains a consumer of the MUSICAL frequency — the freq ARGUMENT
+     * every ignitor receives. Two consumer shapes exist: the [IgnitorDsl.Freq] leaf (every
+     * note-pitched oscillator's freq param DEFAULTS to that leaf, so `Osc.sine()` is caught
+     * while `Osc.sine(5)`'s `Constant(5.0)` is not), and [IgnitorDsl.Fm], whose runtime
+     * normalizes the FM index by the freq argument (`depth / freqHz`) and drives the modulator
+     * at `freqHz x ratio` with no leaf in the tree (review round 1 — the one such node,
+     * verified by sweeping every freqHz-argument consumer in the ignitor package).
+     *
+     * [IgnitorDsl.Variants] resolves through the SAME pick as the build, so the decision
+     * matches the subtree actually built. A nested [IgnitorDsl.Detune] answers with its INNER
+     * only: if that folds, the nested semitones is never built and its Freq could never be
+     * consumed; if it forks, the answer is true regardless.
+     *
+     * Answers are memoized by node identity for the build's lifetime — a shared-`let` diamond
+     * would otherwise be walked exponentially (the optimizer guards the same hazard with a
+     * seen-set; the build itself is immune via the identity cache).
+     *
+     * Known-conservative direction (recorded, accepted): wave/super oscillators re-anchor
+     * their OWN param reads to `actualFreq`, so a `Freq` leaf inside e.g. an absolute-freq
+     * sine's analog slot resolves to the constant, not the note — the predicate still answers
+     * true and forks a subtree the detune provably cannot reach. A detune is never LOST in
+     * that direction. The reverse direction is the dangerous one: a NEW node whose runtime
+     * consumes the freq ARGUMENT without a Freq leaf must be added to the if-chain above, or
+     * its detune folds away silently (the round-1 Fm bug; the consumer sweep and the pointer
+     * in `childNodes`' KDoc are the tripwires, and `DetuneForkSpec`'s Fm row pins the known
+     * set).
+     */
+    fun usesMusicalFreq(node: IgnitorDsl): Boolean {
+        if (node is IgnitorDsl.Freq) {
+            return true
+        }
+
+        if (node is IgnitorDsl.Fm) {
+            return true
+        }
+
+        if (node is IgnitorDsl.Detune) {
+            return usesMusicalFreq(node.inner)
+        }
+
+        if (node is IgnitorDsl.Variants) {
+            return usesMusicalFreq(node.pick(soundIndex))
+        }
+
+        for (i in freqWalkKeys.indices) {
+            if (freqWalkKeys[i] === node) {
+                return freqWalkAnswers[i]
+            }
+        }
+
+        val answer = node.childNodes().any { usesMusicalFreq(it) }
+        freqWalkKeys.add(node)
+        freqWalkAnswers.add(answer)
+        return answer
+    }
+}
+
+/**
+ * Identity token for one detune scope (ledger D13). The Detune build arm mints one per visit
+ * and [IgnitorBuildCache.getOrPut] compares it by IDENTITY as part of the key; the chain
+ * structure is implicit in the minting discipline (a nested detune mints inside its parent's
+ * scope), nothing ever walks it, so the token carries no fields. A re-visit of the same
+ * Detune node mints a fresh token only when the cache let the visit through: same
+ * (node, mod, outer context) re-visits are stopped there, while a different MOD chain
+ * legitimately mints a second scope (`d + d.vibrato(...)` was two instances before D13 too,
+ * keyed by mod identity).
+ */
+internal class DetuneContext
+
+/** The one Variants pick rule, shared by the build dispatch and the D13 fold predicate so the
+ *  two can never judge different subtrees (review round 1). */
+private fun IgnitorDsl.Variants.pick(soundIndex: Int): IgnitorDsl {
+    require(children.isNotEmpty()) { "Osc.variants(...) must have at least one child" }
+    return children[soundIndex.mod(children.size)]
 }
 
 /**
@@ -137,9 +238,7 @@ internal fun IgnitorDsl.buildIgnitor(
 
     // ── Variants: dispatch on cache.soundIndex, no cache entry for this node itself. ──
     if (this is IgnitorDsl.Variants) {
-        require(children.isNotEmpty()) { "Osc.variants(...) must have at least one child" }
-        val pick = cache.soundIndex.mod(children.size)
-        return children[pick].buildIgnitor(oscParams, cache, accumulatedMod)
+        return pick(cache.soundIndex).buildIgnitor(oscParams, cache, accumulatedMod)
     }
 
     // ── Pitch-mod nodes: absorb into mod, descend. No cache/Memoized for this node itself. ──
@@ -202,7 +301,14 @@ internal fun IgnitorDsl.buildIgnitor(
     // ── Everything else: identity-cache + MemoizingIgnitor wrap. ──
     return cache.getOrPut(this, accumulatedMod) {
         val raw = buildRaw(oscParams, cache, accumulatedMod)
-        raw.copy(ignitor = MemoizingIgnitor(raw.ignitor))
+        val ignitor = raw.ignitor
+        // A FOLDED Detune hands back its child's already-memoized ignitor — wrapping it again
+        // would stack a second per-block cache on the same node (double delegation, one more
+        // allocation per note-on). Aliasing the child's memo is correct because it behaves
+        // exactly like sharing the child directly: a later reference to either node
+        // incConsumers() the ONE memo, and if a caller ever presents a different freq (the fm
+        // MODULATOR door can — E8), the memo's freq key keeps it honest, same as any share.
+        raw.copy(ignitor = if (ignitor is MemoizingIgnitor) ignitor else MemoizingIgnitor(ignitor))
     }
 }
 
@@ -411,7 +517,32 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Frequency: pass mod through ──
 
-        is IgnitorDsl.Detune -> inner.withMod().detune(semitones.noMod())
+        is IgnitorDsl.Detune -> {
+            // Ledger D13 (redesigned 2026-08-30): sharing never crosses a detune boundary — the
+            // inner subtree builds under a CHILD detune context, so `s + s.detune(12)` becomes
+            // two honest instances (the overlay: the instrument transposed) instead of one
+            // instance double-advanced at two freqs per window. The runtime wrapper is
+            // unchanged: multiplying the freq ARGUMENT is what scopes detune to musical
+            // frequencies (Freq-derived pitches move; an `Osc.sine(5)` LFO ignores the
+            // argument and stays put).
+            if (cache.usesMusicalFreq(inner)) {
+                val outer = cache.detuneContext
+                cache.detuneContext = DetuneContext()
+                val forked = inner.withMod()
+                cache.detuneContext = outer
+
+                // Semitones is built OUTSIDE the child context — it controls the detune, it is
+                // not detuned by it.
+                forked.detune(semitones.noMod())
+            } else {
+                // The identity fold — semantically load-bearing, not perf: this subtree has no
+                // musical-frequency consumer, so a pitch shift of it IS it, and forking would
+                // DECORRELATE noise (a second instance draws different rng). Build shared, in
+                // the unchanged context, no DetuneIgnitor — the wrap site below reuses the
+                // child's own memo instead of stacking a second one.
+                inner.withMod()
+            }
+        }
 
         // ── Filters: pass mod through to inner ──
 

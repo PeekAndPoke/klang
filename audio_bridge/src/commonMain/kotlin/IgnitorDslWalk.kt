@@ -14,6 +14,11 @@ package io.peekandpoke.klang.audio_bridge
  * so optimizations would quietly stop firing under it with nothing failing to compile. Adding a
  * node type must break this file.
  *
+ * One more duty rides on adding a node here: if the new node's RUNTIME consumes the freq
+ * ARGUMENT itself (not through an `IgnitorDsl.Freq` leaf — `Fm` is the existing example), it
+ * must also be classified in `IgnitorBuildCache.usesMusicalFreq` (audio_be), or a detune above
+ * it folds away silently.
+ *
  * **Child order is part of the contract** — [withChildNodes] re-reads the list positionally, so
  * the order here must match constructor order for every node, and both functions must agree.
  * `IgnitorDslWalkSpec` pins round-tripping for every type, sections included.

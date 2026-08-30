@@ -195,18 +195,13 @@ class CompositionPropertiesSpec : StringSpec({
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Detune path should invalidate the memo cache for shared sources.
-    // Without this, `let s = sine; s.detune(0) + s.detune(7)` would yield `2·s.detune(0)`.
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // Independence of constructions — two distinct DSL instances of a stochastic
     // source produce two independent Ignitors that sum incoherently.
     //
-    // Uses Dust (a data class) rather than WhiteNoise (a data object singleton).
-    // Singleton DSL nodes are necessarily identity-equal and therefore collapse
-    // to a single Ignitor under memoisation — documented as a known consequence
-    // of the data-object choice; see the plan's decisions-locked-in section.
+    // Historical note: this row predates WhiteNoise growing a per-instance uid — it
+    // is a data CLASS now, and two WhiteNoise() calls are distinct nodes exactly like
+    // Dust (DetuneForkSpec relies on that). The old "data object singleton" caveat
+    // that used to live here no longer applies to any noise kind.
     // ═══════════════════════════════════════════════════════════════════════════
 
     "two separate Dust DSL instances yield independent Ignitors (identity check)" {
@@ -353,6 +348,9 @@ class CompositionPropertiesSpec : StringSpec({
         (diffs > 0) shouldBe true
     }
 
+    // Detuned references are independent INSTANCES since the D13 fork (the build-time
+    // detune context in IgnitorBuildCache); the memo's freqHz component is defensive
+    // against a regression here, not the mechanism. The full guard set is DetuneForkSpec.
     "detuned shared source: two detunes with different semitones do NOT collapse" {
         val s = IgnitorDsl.Sine()
         val tree = IgnitorDsl.Plus(

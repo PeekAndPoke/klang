@@ -24,7 +24,16 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * causes of invalidation:
  * - New block (`voiceElapsedFrames` advanced by previous block's length).
  * - Sub-block render (different `offset` / `length` within one block).
- * - Caller applied pitch modulation that alters `freqHz` (e.g. `detune`).
+ * - Caller applied pitch modulation that alters `freqHz`.
+ *
+ * Since the D13 redesign a `detune` can no longer hand one shared instance two `freqHz`
+ * values in the same window (the subtree forks at BUILD time — see the detune context in
+ * `IgnitorBuildCache`; `ModApplyingIgnitor` modulates via `ctx.phaseMod`, never the freq
+ * argument). The freq component stays LOAD-BEARING regardless (review round 1 — do not drop
+ * it): two doors still rewrite the freq argument for a subtree shareable with the spine — the
+ * fm MODULATOR runs at `freqHz x ratio` (`let m = ...; x.fm(m, ...) + m` splits the key on m),
+ * and the wave/super oscillators read their own params at `actualFreq` — the E8 record, plus
+ * hand-built Kotlin graphs, which own their sharing.
  *
  * The cache buffer grows lazily to match the largest `output.size` seen.
  */
