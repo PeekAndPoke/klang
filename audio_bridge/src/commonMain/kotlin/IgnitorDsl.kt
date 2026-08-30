@@ -1403,12 +1403,23 @@ sealed interface IgnitorDsl {
         val envDecaySec: IgnitorDsl = Constant(0.0),
         val envSustainLevel: IgnitorDsl = Constant(1.0),
         val envReleaseSec: IgnitorDsl = Constant(0.0),
+        /** The frequency the FM machinery runs on: the modulator is driven at `freq x ratio`
+         *  and the index is `depth / freq`. Defaults to [Freq] (the note), which makes FM
+         *  transpose under `detune` like any note-pitched oscillator; authored absolute
+         *  (`Constant(...)`) the patch is immune, like `Osc.sine(5)` — the same
+         *  musical/absolute separation every oscillator has (D13's Fm special case retired).
+         *  DELIBERATELY not exposed on the `fm(...)` builder or the script door (maintainer
+         *  decision 2026-08-30): a hidden internal of the pitch machinery, raw-door-only —
+         *  the default IS the semantics; absolute authoring stays a power-user construction. */
+        val freq: IgnitorDsl = Freq,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             carrier.collectParams(out); modulator.collectParams(out); ratio.collectParams(out); depth.collectParams(out)
+            freq.collectParams(out)
             envAttackSec.collectParams(out); envDecaySec.collectParams(out); envSustainLevel.collectParams(out); envReleaseSec.collectParams(
                 out
             )
+            freq.collectParams(out)
         }
     }
 

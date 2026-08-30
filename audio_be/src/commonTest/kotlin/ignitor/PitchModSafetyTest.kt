@@ -160,8 +160,50 @@ class PitchModSafetyTest : StringSpec({
             depth = ParamIgnitor("depth", 100.0),
         )
         val out = render(sig, freqHz = 0.0)
-        // freqHz <= 0 short-circuits to all-1.0 output.
+        // The resolved fm freq <= 0 short-circuits to all-1.0 output.
         out.all { it == 1.0 } shouldBe true
+    }
+
+    "the bypass gates on the RESOLVED fm freq, not the argument: absolute zero bypasses a live note" {
+        // Pins the freq-param anchor of the bypass (review round 1: with the default the two
+        // values coincide and no row could tell them apart). The modulator is ABSOLUTE for the
+        // same reason as the NaN row: a default-freq modulator driven at fm freq 0 outputs
+        // silence and would mask an engaged mutant behind an all-1.0 render.
+        val sig = fmModIgnitor(
+            modulator = Ignitors.sine(ConstantIgnitor(300.0)),
+            ratio = ParamIgnitor("ratio", 1.0),
+            depth = ParamIgnitor("depth", 100.0),
+            freq = ConstantIgnitor(0.0),
+        )
+        val out = render(sig, freqHz = 440.0)
+        out.all { it == 1.0 } shouldBe true
+    }
+
+    "a NaN fm freq reads as note-less silence, never as an engaged poisoned divisor" {
+        // The `!(f > 0.0)` NaN-guard form of the bypass: NaN must land in the all-1.0 arm.
+        // The modulator is ABSOLUTE so an engaged mutant is loud (a default-freq modulator
+        // would wrap the NaN drive to silence and mask the difference).
+        val sig = fmModIgnitor(
+            modulator = Ignitors.sine(ConstantIgnitor(300.0)),
+            ratio = ParamIgnitor("ratio", 1.0),
+            depth = ParamIgnitor("depth", 100.0),
+            freq = ConstantIgnitor(Double.NaN),
+        )
+        val out = render(sig, freqHz = 440.0)
+        out.all { it == 1.0 } shouldBe true
+    }
+
+    "the bypass gates on the RESOLVED fm freq: absolute positive engages on a note-less voice" {
+        val sig = fmModIgnitor(
+            modulator = Ignitors.sine(),
+            ratio = ParamIgnitor("ratio", 1.0),
+            depth = ParamIgnitor("depth", 100.0),
+            freq = ConstantIgnitor(440.0),
+        )
+        val out = render(sig, freqHz = 0.0)
+        // Real FM output: not the all-1.0 bypass.
+        out.any { it != 1.0 } shouldBe true
+        out.allFinite() shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

@@ -4,6 +4,20 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-30, claude-code block-framing session): FM FREQ PARAM done
+> (maintainer-designed de-special-casing): `IgnitorDsl.Fm` gained `freq: IgnitorDsl = Freq`
+> (appended, wire-safe via the schema hash); `FmModIgnitor` reads the RESOLVED value everywhere
+> (bypass in the `!(f > 0.0)` NaN-guard form, six param anchors, modulator drive, safeDiv);
+> the D13 walker Fm special case DELETED — freq-dependence is structural now, convention +
+> exception list in IgnitorDslWalk's KDoc. SEMANTIC FLIP by design: absolute-freq FM under
+> detune is IMMUNE (was shifted). Bit-identical for all existing content (default = the note,
+> same Double bits — both reviewers verified). 1-round loop (2 Opus reviewers: zero production
+> defects; both MAJORs were a tautological row + stale ledger, fixed) + 7/7 mutations.
+> Suites: audio_be 1406, bridge jvm+js, klang green; JS compiles. UNCOMMITTED — own commit on
+> the maintainer's go. OPEN maintainer decisions: expose `freq` on the fm()/script doors
+> (dual-surface) or record raw-door-only; the W1-W13 modulation-class table; parity note filed:
+> the sprudel strip FmRenderer still divides by the note freq.
+
 > Last action (2026-08-30, claude-code block-framing session): D13 DETUNE FORK+FOLD done —
 > redesigned in-session with the maintainer (keyOnFreq DEAD; semantics anchored: overlay for
 > any s, detune moves only Freq-derived pitches, runtime untouched). Build: IgnitorBuildCache

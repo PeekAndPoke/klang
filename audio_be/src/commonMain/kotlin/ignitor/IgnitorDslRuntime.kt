@@ -134,13 +134,12 @@ internal class IgnitorBuildCache(
     private val freqWalkAnswers = ArrayList<Boolean>()
 
     /**
-     * True when the subtree contains a consumer of the MUSICAL frequency — the freq ARGUMENT
-     * every ignitor receives. Two consumer shapes exist: the [IgnitorDsl.Freq] leaf (every
-     * note-pitched oscillator's freq param DEFAULTS to that leaf, so `Osc.sine()` is caught
-     * while `Osc.sine(5)`'s `Constant(5.0)` is not), and [IgnitorDsl.Fm], whose runtime
-     * normalizes the FM index by the freq argument (`depth / freqHz`) and drives the modulator
-     * at `freqHz x ratio` with no leaf in the tree (review round 1 — the one such node,
-     * verified by sweeping every freqHz-argument consumer in the ignitor package).
+     * True when the subtree contains a consumer of the MUSICAL frequency — the [IgnitorDsl.Freq]
+     * leaf. Every note-pitched consumer defaults its freq param to that leaf (`Osc.sine()` is
+     * caught while `Osc.sine(5)`'s `Constant(5.0)` is not — and since `Fm.freq` joined that
+     * convention there is NO special case left: the house rule is that runtime code never
+     * consumes the freq argument except to forward it, so freq-dependence is always visible
+     * structurally; see `IgnitorDslWalk`'s KDoc).
      *
      * [IgnitorDsl.Variants] resolves through the SAME pick as the build, so the decision
      * matches the subtree actually built. A nested [IgnitorDsl.Detune] answers with its INNER
@@ -151,22 +150,18 @@ internal class IgnitorBuildCache(
      * would otherwise be walked exponentially (the optimizer guards the same hazard with a
      * seen-set; the build itself is immune via the identity cache).
      *
-     * Known-conservative direction (recorded, accepted): wave/super oscillators re-anchor
-     * their OWN param reads to `actualFreq`, so a `Freq` leaf inside e.g. an absolute-freq
-     * sine's analog slot resolves to the constant, not the note — the predicate still answers
+     * Known-conservative direction (recorded, accepted): wave/super oscillators — and since
+     * the freq-param change, `Fm` — re-anchor their OWN param reads to the RESOLVED frequency,
+     * so a `Freq` leaf inside e.g. an absolute-freq sine's analog slot (or an absolute-freq
+     * fm's depth) resolves to the constant, not the note — the predicate still answers
      * true and forks a subtree the detune provably cannot reach. A detune is never LOST in
      * that direction. The reverse direction is the dangerous one: a NEW node whose runtime
-     * consumes the freq ARGUMENT without a Freq leaf must be added to the if-chain above, or
-     * its detune folds away silently (the round-1 Fm bug; the consumer sweep and the pointer
-     * in `childNodes`' KDoc are the tripwires, and `DetuneForkSpec`'s Fm row pins the known
-     * set).
+     * consumed the freq ARGUMENT without a Freq leaf would fold its detune away silently — the
+     * round-1 Fm bug, retired by giving Fm a `freq = Freq` param and stating the convention in
+     * `childNodes`' KDoc; `DetuneForkSpec`'s FM rows pin it.
      */
     fun usesMusicalFreq(node: IgnitorDsl): Boolean {
         if (node is IgnitorDsl.Freq) {
-            return true
-        }
-
-        if (node is IgnitorDsl.Fm) {
             return true
         }
 
@@ -284,6 +279,7 @@ internal fun IgnitorDsl.buildIgnitor(
                 envDecaySec = this.envDecaySec.buildIgnitor(oscParams, cache).ignitor,
                 envSustainLevel = this.envSustainLevel.buildIgnitor(oscParams, cache).ignitor,
                 envReleaseSec = this.envReleaseSec.buildIgnitor(oscParams, cache).ignitor,
+                freq = this.freq.buildIgnitor(oscParams, cache).ignitor,
             )
             val carrierBuilt = carrier.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, fmMod))
             // The modulator is not on the amplitude spine, but the old `maxReleaseSec` counted it

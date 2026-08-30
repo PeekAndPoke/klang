@@ -217,16 +217,22 @@ private class PitchEnvelopeModIgnitor(
 /**
  * FM — frequency modulation in ratio space.
  *
- * Generates the [modulator] at `freqHz * ratio`, scales by `depth / freqHz`, applies
- * an optional ADSR envelope to the depth. Output: `1.0 + modOutput * effectiveDepth / freqHz`.
+ * Generates the [modulator] at `fmFreq * ratio`, scales by `depth / fmFreq`, applies
+ * an optional ADSR envelope to the depth. Output: `1.0 + modOutput * effectiveDepth / fmFreq`,
+ * where `fmFreq` is the [freq] param — DEFAULTING to the note ([FreqIgnitor] answers the freq
+ * argument), so default-authored FM behaves exactly as before, while an absolute [freq] makes
+ * the patch immune to `detune` like any absolute oscillator (the D13 anchor; the runtime no
+ * longer consumes the freq ARGUMENT except to anchor the [freq] read — house convention, see
+ * `IgnitorDslWalk`).
  *
- * The `freqHz` divisor goes through [safeDiv] to handle sub-Hz pitches (e.g. heavy
+ * The `fmFreq` divisor goes through [safeDiv] to handle sub-Hz pitches (e.g. heavy
  * detune toward zero) without producing huge phase-mod ratios. Final output goes
  * through [safeOut]. See `audio/ref/numerical-safety.md`.
  *
  * @param modulator the modulation signal source (any Ignitor subtree)
  * @param ratio frequency ratio between modulator and carrier
  * @param depth modulation depth in Hz
+ * @param freq the FM machinery's frequency; default = the note
  */
 fun fmModIgnitor(
     modulator: Ignitor,
@@ -236,7 +242,8 @@ fun fmModIgnitor(
     envDecaySec: Ignitor = ParamIgnitor("envDecaySec", 0.0),
     envSustainLevel: Ignitor = ParamIgnitor("envSustainLevel", 1.0),
     envReleaseSec: Ignitor = ParamIgnitor("envReleaseSec", 0.0),
-): Ignitor = FmModIgnitor(modulator, ratio, depth, envAttackSec, envDecaySec, envSustainLevel, envReleaseSec)
+    freq: Ignitor = FreqIgnitor,
+): Ignitor = FmModIgnitor(modulator, ratio, depth, envAttackSec, envDecaySec, envSustainLevel, envReleaseSec, freq)
 
 private class FmModIgnitor(
     private val modulator: Ignitor,
@@ -246,37 +253,50 @@ private class FmModIgnitor(
     private val envDecaySec: Ignitor,
     private val envSustainLevel: Ignitor,
     private val envReleaseSec: Ignitor,
+    private val freq: Ignitor,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val end = ctx.offset + ctx.length
 
-        // freqHz's SIGN is stable for the voice's life — that is what licenses this bypass. The
-        // top-level value is a per-voice val (IgniteRenderer), and detune rescales by 2^(s/12),
-        // strictly positive, so the MAGNITUDE may change per block under a modulated detune but a
-        // note-less voice (freqHz <= 0, e.g. an fm sound triggered via s() without a note) stays
-        // note-less forever: no later block where modulator state could matter, the E2
-        // always-advance rationale does not apply, and rendering the graph here would both waste a
-        // full modulator render per block and shift the voice's per-voice rng draw order against
-        // pre-change content. Bypass entirely, as the old code did.
-        // Known accepted residual: fm itself hands `freqHz * ratio` to its modulator and `ratio`
-        // is raw (may be <= 0) — a NESTED fm under an outer ratio modulated to <= 0 takes this
-        // bypass and freezes for those blocks. Recorded in the block-framing ledger (E2 row).
-        if (freqHz <= 0.0) {
+        // The freq param is anchored on the incoming argument (FreqIgnitor answers it), read
+        // FIRST because it is the bypass condition below.
+        val fmFreqVal = Ignitors.readParam(freq, freqHz, ctx)
+
+        // fmFreq's SIGN is stable for the voice's life in the constant-valued forms — the
+        // default (FreqIgnitor inherits the argument's per-voice stability: a per-voice val in
+        // IgniteRenderer, detune rescales by 2^(s/12), strictly positive), a Constant, and a
+        // Param (build-time-folded) — and that is what licenses this bypass: a note-less voice
+        // (fmFreq <= 0, e.g. an fm sound triggered via s() without a note) stays note-less
+        // forever, no later block where modulator state could matter, the E2 always-advance
+        // rationale does not apply, and rendering the graph here would both waste a full
+        // modulator render per block and shift the voice's per-voice rng draw order against
+        // pre-change content. Bypass entirely, as the old code did. Note the ONE subtree that
+        // does advance on a note-less voice is the freq expression itself (read above — it IS
+        // the gate input), while modulator/ratio/depth/envs stay frozen: an E2-shaped asymmetry
+        // inside this node, accepted with the residuals below.
+        // Known accepted residuals (the E2 row's frozen-for-those-blocks shape): a NESTED fm
+        // under an outer ratio modulated to <= 0, and a general MODULATED freq expression
+        // crossing <= 0 — sign stability does NOT hold for arbitrary expressions.
+        // NaN-guard: `!(x > 0.0)` (not `x <= 0.0`) so a NaN freq reads as note-less silence
+        // instead of engaging the machinery with a poisoned divisor.
+        if (!(fmFreqVal > 0.0)) {
             for (i in ctx.offset until end) {
                 buffer[i] = 1.0
             }
             return
         }
 
-        val ratioVal = Ignitors.readParam(ratio, freqHz, ctx)
-        val depthVal = Ignitors.readParam(depth, freqHz, ctx)
+        // Every other param reads at the RESOLVED fm frequency — the same actualFreq convention
+        // the wave/super oscillators use for their own params.
+        val ratioVal = Ignitors.readParam(ratio, fmFreqVal, ctx)
+        val depthVal = Ignitors.readParam(depth, fmFreqVal, ctx)
         // Read — and thereby advance — the env subtrees BEFORE the depth gate below: state moves
         // once per rendered block whatever the output, or a depth passing through zero would
         // freeze a modulated envelope time. The same E2 shape, one level down.
-        val envAttackSecVal = Ignitors.readParam(envAttackSec, freqHz, ctx)
-        val envDecaySecVal = Ignitors.readParam(envDecaySec, freqHz, ctx)
-        val envSustainLevelVal = Ignitors.readParam(envSustainLevel, freqHz, ctx)
-        val envReleaseSecVal = Ignitors.readParam(envReleaseSec, freqHz, ctx)
+        val envAttackSecVal = Ignitors.readParam(envAttackSec, fmFreqVal, ctx)
+        val envDecaySecVal = Ignitors.readParam(envDecaySec, fmFreqVal, ctx)
+        val envSustainLevelVal = Ignitors.readParam(envSustainLevel, fmFreqVal, ctx)
+        val envReleaseSecVal = Ignitors.readParam(envReleaseSec, fmFreqVal, ctx)
 
         ctx.scratchBuffers.use { modBuf ->
             // The modulator advances FIRST, unconditionally: its state moves once per rendered
@@ -284,7 +304,7 @@ private class FmModIgnitor(
             // `depth == 0` skipped it, freezing its phase for whole blocks — a modulated depth
             // passing through zero resumed the modulator from a phase stale by a block-size-
             // dependent amount (block-framing ledger E2).
-            modulator.generate(modBuf, freqHz * ratioVal, ctx)
+            modulator.generate(modBuf, fmFreqVal * ratioVal, ctx)
 
             if (depthVal == 0.0) {
                 for (i in ctx.offset until end) {
@@ -299,8 +319,8 @@ private class FmModIgnitor(
             val hasEnv = envAttackSecVal > 0.0 || envDecaySecVal > 0.0 ||
                 envSustainLevelVal < 1.0 || envReleaseSecVal > 0.0
 
-            // Sub-Hz freqHz (from heavy detune) would otherwise blow up `effectiveDepth / freqHz`.
-            val safeFreq = safeDiv(freqHz)
+            // Sub-Hz fmFreq (from heavy detune) would otherwise blow up `effectiveDepth / fmFreq`.
+            val safeFreq = safeDiv(fmFreqVal)
 
             if (!hasEnv) {
                 // Op order kept bit-identical to the old code (`mod * depth / freq`).

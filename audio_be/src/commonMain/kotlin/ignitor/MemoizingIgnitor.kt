@@ -31,7 +31,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * `IgnitorBuildCache`; `ModApplyingIgnitor` modulates via `ctx.phaseMod`, never the freq
  * argument). The freq component stays LOAD-BEARING regardless (review round 1 — do not drop
  * it): two doors still rewrite the freq argument for a subtree shareable with the spine — the
- * fm MODULATOR runs at `freqHz x ratio` (`let m = ...; x.fm(m, ...) + m` splits the key on m),
+ * fm MODULATOR runs at `fmFreq x ratio` (default: the note — `let m = ...; x.fm(m, ...) + m` splits the key on m),
  * and the wave/super oscillators read their own params at `actualFreq` — the E8 record, plus
  * hand-built Kotlin graphs, which own their sharing.
  *

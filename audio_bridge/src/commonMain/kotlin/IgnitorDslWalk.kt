@@ -14,10 +14,14 @@ package io.peekandpoke.klang.audio_bridge
  * so optimizations would quietly stop firing under it with nothing failing to compile. Adding a
  * node type must break this file.
  *
- * One more duty rides on adding a node here: if the new node's RUNTIME consumes the freq
- * ARGUMENT itself (not through an `IgnitorDsl.Freq` leaf — `Fm` is the existing example), it
- * must also be classified in `IgnitorBuildCache.usesMusicalFreq` (audio_be), or a detune above
- * it folds away silently.
+ * One more duty rides on adding a node here, stated as the house convention: runtime code must
+ * never consume the freq ARGUMENT except to forward it — freq-dependence is expressed as a
+ * param defaulting to [IgnitorDsl.Freq], so the D13 fold predicate can see it structurally
+ * (`Fm.freq` is the precedent; it used to be a special case in `usesMusicalFreq` and a node
+ * that breaks the convention re-creates that bug: a detune above it folds away silently).
+ * The complete, deliberate exception list (the baseline for the next sweep): `FreqIgnitor`
+ * EMITS the argument (it is the leaf), the two detune ignitors MULTIPLY it (that is detune's
+ * whole mechanism), and `MemoizingIgnitor` KEYS on it (defensive + the fm-modulator door).
  *
  * **Child order is part of the contract** — [withChildNodes] re-reads the list positionally, so
  * the order here must match constructor order for every node, and both functions must agree.
@@ -50,7 +54,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Eq -> listOf(inner) + sections.flatMap { it.childNodes() }
         is IgnitorDsl.Exp -> listOf(inner)
         is IgnitorDsl.Floor -> listOf(inner)
-        is IgnitorDsl.Fm -> listOf(carrier, modulator, ratio, depth, envAttackSec, envDecaySec, envSustainLevel, envReleaseSec)
+        is IgnitorDsl.Fm -> listOf(carrier, modulator, ratio, depth, envAttackSec, envDecaySec, envSustainLevel, envReleaseSec, freq)
         is IgnitorDsl.Frac -> listOf(inner)
         is IgnitorDsl.Freq -> emptyList()
         is IgnitorDsl.Highpass -> listOf(inner, freq, q, analog)
@@ -180,6 +184,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             envDecaySec = new[5],
             envSustainLevel = new[6],
             envReleaseSec = new[7],
+            freq = new[8],
         )
         is IgnitorDsl.Frac -> copy(inner = new[0])
         is IgnitorDsl.Freq -> this

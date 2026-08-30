@@ -187,6 +187,14 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
     }
     "Fm" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0, envDecaySec = 0.5)) }
+    "Fm with absolute freq" {
+        // freq NON-default per the file rule: a dropped emitted field would otherwise be
+        // filled by the Kotlin default and round-trip green (review round 1).
+        check(
+            IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0)
+                .let { it as IgnitorDsl.Fm }.copy(freq = IgnitorDsl.Constant(220.0))
+        )
+    }
     "Fm with Adsr" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0).adsr(0.01, 0.3, 0.5, 0.5)) }
 
     // --- effects --------------------------------------------------------------------------------------------

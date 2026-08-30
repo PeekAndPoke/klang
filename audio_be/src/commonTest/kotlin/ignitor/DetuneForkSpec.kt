@@ -180,11 +180,12 @@ class DetuneForkSpec : StringSpec({
         maxDiff(detuned, plain) shouldBe 0.0
     }
 
-    "the Fm arm of the fold predicate: an absolute-carrier FM patch under detune still transposes" {
-        // fmModIgnitor consumes the freq ARGUMENT directly (FM index = depth/freqHz, modulator
-        // driven at freqHz x ratio) with no Freq leaf anywhere in the tree — the one such node.
-        // Without the predicate's unconditional Fm arm this patch would FOLD and `.detune()`
-        // would be silently inert on it (review round 2 found the arm unguarded).
+    "FM defaults to the note: detune moves the index — the default freq param is this tree's only Freq leaf" {
+        // Fm.freq defaults to the Freq leaf (the maintainer's de-special-casing: the runtime no
+        // longer consumes the freq ARGUMENT; freq-dependence is structural). Even with an
+        // absolute carrier and modulator, the DEFAULT freq param carries the Freq leaf — the
+        // only one in this tree — so the fold predicate must fork on it alone: a childNodes
+        // enumeration that misses the appended freq field folds this and detune goes inert.
         fun fm() = IgnitorDsl.Fm(
             carrier = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(200.0)),
             modulator = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(300.0)),
@@ -192,13 +193,61 @@ class DetuneForkSpec : StringSpec({
             depth = IgnitorDsl.Constant(60.0),
         )
 
-        // Detune multiplies the freq argument, so the detuned render at 220 must equal the
-        // plain render at 440 — index halved, modulator an octave up, exactly as authored.
         val detuned = render(IgnitorDsl.Detune(fm(), IgnitorDsl.Constant(12.0)), freqHz = 220.0)
         val plain = render(fm(), freqHz = 440.0)
 
         detuned.any { it != 0.0 } shouldBe true
         maxDiff(detuned, plain) shouldBe 0.0
+    }
+
+    "absolute-freq FM is ARGUMENT-independent — immune to detune and to the note itself" {
+        // The flip side of the default: an authored-absolute freq means the patch has no
+        // musical pitch. The oracle renders the SAME patch at two different note frequencies
+        // (review round 1: a detuned-vs-plain comparison was a tautology here — fold and fork
+        // render identically for a fully absolute subtree; argument-independence is the real
+        // claim, and it kills the machinery-reads-the-argument mutants directly).
+        fun fmAbs() = IgnitorDsl.Fm(
+            carrier = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(200.0)),
+            modulator = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(300.0)),
+            ratio = IgnitorDsl.Constant(2.0),
+            depth = IgnitorDsl.Constant(60.0),
+            freq = IgnitorDsl.Constant(220.0),
+        )
+
+        val atLow = render(fmAbs(), freqHz = 220.0)
+        val atHigh = render(fmAbs(), freqHz = 440.0)
+
+        atLow.any { it != 0.0 } shouldBe true
+        maxDiff(atLow, atHigh) shouldBe 0.0
+    }
+
+    "inside a FORKED subtree, absolute FM keeps its own pitch — the machinery reads the param, not the argument" {
+        // The discriminator for reading the resolved freq instead of the raw argument: the sine
+        // forces the fork, so the fm receives argument 440 while its param says 220. Compare
+        // against the semantically equal tree where only the sine is detuned — a machinery that
+        // reads the ARGUMENT renders the left fm at 440 and diverges. The modulator is DEFAULT
+        // freq (it resolves the drive frequency the fm hands it — pins the modulator anchor:
+        // an argument-driven mutant plays it an octave up on the left only), and depth is
+        // Freq-bearing (pins the six param-read anchors at the resolved fm frequency).
+        fun fmAbs() = IgnitorDsl.Fm(
+            carrier = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(200.0)),
+            modulator = IgnitorDsl.Sine(),
+            ratio = IgnitorDsl.Constant(2.0),
+            depth = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(0.25)),
+            freq = IgnitorDsl.Constant(220.0),
+        )
+
+        val wholeDetuned = render(
+            IgnitorDsl.Detune(IgnitorDsl.Times(fmAbs(), IgnitorDsl.Sine()), IgnitorDsl.Constant(12.0)),
+            freqHz = 220.0,
+        )
+        val sineDetuned = render(
+            IgnitorDsl.Times(fmAbs(), IgnitorDsl.Detune(IgnitorDsl.Sine(), IgnitorDsl.Constant(12.0))),
+            freqHz = 220.0,
+        )
+
+        wholeDetuned.any { it != 0.0 } shouldBe true
+        maxDiff(wholeDetuned, sineDetuned) shouldBe 0.0
     }
 
     "a shared Detune node dedups at its own wrapper: d + d is the one detuned instance doubled" {
