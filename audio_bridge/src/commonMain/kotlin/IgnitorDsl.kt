@@ -1468,7 +1468,11 @@ sealed interface IgnitorDsl {
     /**
      * Legacy distortion node. Kept for backward compatibility with serialized trees.
      * New code should use [Drive] + [Shape] instead. The builder extension [IgnitorDsl.distort]
-     * creates a Shape(Drive(...)) chain.
+     * creates a Shape(Drive(...)) chain — and since the W5 decision (2026-08-30) the RUNTIME
+     * builds this node as that exact chain too: the fused DistortIgnitor is deleted, so a
+     * legacy tree renders through the modern Drive+Shape path (the shaper stays engaged at
+     * unity drive where the fused node's gate bypassed everything — the one nuance, recorded
+     * in the ledger).
      */
     @WireName("distort")
     data class Distort(

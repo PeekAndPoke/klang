@@ -18,7 +18,8 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
  *
  * Filter state persists across `process()` calls for inter-block continuity.
  * Scratch buffer is borrowed from [ScratchBuffers.oversample] — no per-voice
- * allocation. Call [reset] to clear filter state (e.g. on voice retrigger).
+ * allocation. [reset] exists for a future pooled-instance world; today every instance is
+ * per-voice and nothing calls it (ledger W11).
  *
  * **Filter quality (honest characterisation):**
  * The half-band FIR has the canonical half-band null at fs/4 (|H(π/2)| = 0.5)
@@ -108,8 +109,12 @@ class Oversampler(stages: Int) {
 
     /**
      * Clears all internal filter state — every [HalfBandState] delay line and
-     * the upsampler's `lastSample`. Used by cylinder cleanup / voice
-     * retrigger so a stale tail doesn't carry into a new note.
+     * the upsampler's `lastSample`. NO callers today, and that is fine: every
+     * instance is per-voice (fresh per note-on on both the ignitor and strip
+     * doors), so there is no reuse path and no stale tail to clear. Kept for
+     * the planned warehouse-pool world, where pooled instances WILL need it
+     * (ledger W11 — the old KDoc claimed a cleanup/retrigger lifecycle that
+     * never existed).
      */
     fun reset() {
         for (d in decimators) {

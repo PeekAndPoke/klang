@@ -30,12 +30,21 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
         if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     /**
-     * Bootstrap counter init:
-     * - Direct path: `0.0` — first sample fires via the `i == 0 && counter == 0.0` branch.
-     * - Oversampled path: `1.0` — first sample fires via the `counter >= 1.0` branch
-     *   (the direct-path bootstrap doesn't exist here).
+     * Bootstrap counter init: `1.0` on BOTH paths — "take a sample NOW" via the
+     * `counter >= 1.0` branch. The old direct-path `0.0` + `i == 0` block latch re-armed at
+     * note-relative sample `amount` for every power-of-two amount, so a block boundary landing
+     * there displaced the hold grid for the rest of the note (ledger W1, live in
+     * ATruthWorthLyingFor's `coarse(2)`); it also made the first hold `2 x amount` long where
+     * the oversampled path held `amount` from sample 0. One bootstrap, one grid, both paths.
+     * (Hold lengths are exact for dyadic amounts; non-dyadic ones drift by up to one sample as
+     * `1/amount` accumulates — pre-existing float behavior on every path.)
+     *
+     * OPEN (ledger W4, strip half): a NON-finite constructor amount still latches this
+     * renderer permanently (`NaN <= 1.0` is false -> engaged -> NaN increment). The ignitor
+     * door heals since W3; the strip door awaits its own call — constructor amounts come from
+     * voice params, so the reach is a NaN pattern value.
      */
-    private var counter: Double = if (oversampler != null) 1.0 else 0.0
+    private var counter: Double = 1.0
 
     /**
      * Counter increment: when running at the oversampled rate, the hold period
@@ -70,7 +79,7 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
 
-            if (counter >= 1.0 || (i == 0 && counter == 0.0)) {
+            if (counter >= 1.0) {
                 lastValue = buf[idx].nanGuard()
                 counter -= 1.0
             }

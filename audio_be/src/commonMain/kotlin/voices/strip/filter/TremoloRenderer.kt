@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import kotlin.math.sin
@@ -29,8 +30,9 @@ class TremoloRenderer(
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
 
-            phase += phaseIncrement
-            if (phase > TWO_PI) phase -= TWO_PI
+            // wrapPhase over the bare subtract (ledger W2): identical in range; a non-finite
+            // or negative rate can no longer kill the phase for the voice's life.
+            phase = (phase + phaseIncrement).wrapPhase(TWO_PI)
 
             val lfoNorm = (sin(phase) + 1.0) * 0.5
             val gain = 1.0 - (depth * (1.0 - lfoNorm))

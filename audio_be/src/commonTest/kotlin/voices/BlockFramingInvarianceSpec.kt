@@ -22,6 +22,8 @@ import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.ignitor.toExciter
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.coarse
+import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.fm
@@ -187,6 +189,12 @@ class BlockFramingInvarianceSpec : StringSpec({
         ),
         "white noise" to IgnitorDsl.WhiteNoise(),
         "pluck" to IgnitorDsl.Pluck(),
+        // Graduated after the W-batch (ledger W1/W2): with constant params both are per-sample
+        // loops over contiguous state and belong on the bit-identical list. A MODULATED tremolo
+        // depth stays off it — the gap's bulk phase advance reassociates the float sum
+        // (~4e-15 class, see ModulationClockSpec).
+        "coarse" to IgnitorDsl.Sine().coarse(4.0),
+        "tremolo" to IgnitorDsl.Sine().tremolo(rate = 5.0, depth = 0.5),
     )
 
     nodes.forEach { (name, dsl) ->

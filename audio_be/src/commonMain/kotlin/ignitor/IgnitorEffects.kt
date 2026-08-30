@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.parseDistortionShape
 import kotlin.math.cos
@@ -55,63 +56,24 @@ import kotlin.math.sin
  *   - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly), "stompbox" (diode pedal), "rectify" (full-wave).
  */
 fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: Int = 0): Ignitor =
-    DistortIgnitor(this, amount, shape, oversampleStages)
-
-private class DistortIgnitor(
-    private val upstream: Ignitor,
-    private val amount: Ignitor,
-    shape: String,
-    oversampleStages: Int,
-) : Ignitor {
-    private val shape: DistortionShape = parseDistortionShape(shape)
-    private val oversampler: Oversampler? =
-        if (oversampleStages > 0) Oversampler(oversampleStages) else null
-
-    // DC blocker — always applied to guard against rail-lock at extreme drive.
-    // Runs at base rate after oversampler decimation (or directly when no oversampler).
-    // The block-based class keeps state in registers across the inner loop.
-    // The downstream `softCap` bounds the raw-pole 2× edge transient to ±1.
-    private val dcBlocker = LowPassHighPassFilters.DcBlocker()
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        ctx.scratchBuffers.use { work ->
-            upstream.generate(work, freqHz, ctx)
-
-            val amt = Ignitors.readParam(amount, freqHz, ctx)
-            val end = ctx.offset + ctx.length
-
-            if (amt <= 0.0) {
-                for (i in ctx.offset until end) {
-                    buffer[i] = work[i]
-                }
-                return@use
-            }
-
-            val s = shape
-            val drive = 10.0.pow(amt * 1.2)
-            val os = oversampler
-
-            if (os != null) {
-                // NaN-guard fused into the per-sample loop — see Oversampler.process KDoc.
-                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
-                    for (i in 0 until count) {
-                        w[i] = applyDistortionShape(s, w[i] * drive).nanGuard()
-                    }
-                }
-            } else {
-                for (i in ctx.offset until end) {
-                    work[i] = applyDistortionShape(s, work[i] * drive).nanGuard()
-                }
-            }
-
-            dcBlocker.process(work, ctx.offset, ctx.length)
-
-            for (i in ctx.offset until end) {
-                buffer[i] = ShapingFuncs.softCap(work[i])
-            }
-        }
-    }
-}
+    drive(amount).shape(shape, oversampleStages)
+// NOTE for this Ignitor-amount door: only the DRIVE half bypasses at amount <= 0 — the shaper
+// keeps shaping at unity gain (tanh(1.0) = 0.76, a -2.4 dB peak squash with odd harmonics for
+// full-scale input; identity only well below |x| ~ 0.3). A CONSTANT 0 through the Double
+// overload below still short-circuits to a true bypass; the DSL door has always behaved like
+// this chain. (Ledger W5.)
+// ^ The fused legacy DistortIgnitor is DELETED (ledger W5, maintainer decision): every live
+// authoring door already built this exact Drive+Shape chain, the fused node was the file's
+// third bypass policy (stale DC blocker + oversampler across its gate, plus a group-delay pop
+// at every gate flip), and wire trees are never persisted, so nothing can miss it. The chain
+// is the documented equivalence ("Equivalent to this.drive(amount).shape(shape, oversample)")
+// — same gain, same shaper, same DC blocker and softCap, applied by ShapeIgnitor, which has
+// NO bypass and therefore no policy to disagree about. One audible nuance vs the fused node:
+// an amount at or crossing 0 (modulated, or a CONSTANT 0 in a legacy wire tree — the Double
+// convenience below still short-circuits) now bypasses only the DRIVE; the shaper keeps
+// shaping at unity gain. For the default soft shape that is a real squash at full scale
+// (tanh(1.0) = 0.76, -2.4 dB + odd harmonics; identity only below |x| ~ 0.3) — the DSL door
+// has ALWAYS behaved this way, and the shaper state staying contiguous is the point.
 
 /**
  * Distortion / waveshaping combinator (convenience overload with fixed amount).
@@ -141,7 +103,10 @@ fun Ignitor.drive(amount: Ignitor, type: String = "linear"): Ignitor =
 private class DriveIgnitor(
     private val upstream: Ignitor,
     private val amount: Ignitor,
-    private val type: String,
+    // Reserved for the future tube/fet/tape dispatch; "linear" is the only implemented type,
+    // so nothing stores or reads it today (ledger W12 hoisted the old per-block lowercase()
+    // out of generate; storing a lowercased copy per note-on would just move the allocation).
+    @Suppress("UNUSED_PARAMETER") type: String,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
@@ -157,10 +122,7 @@ private class DriveIgnitor(
                 return@use
             }
 
-            val driveGain = when (type.lowercase()) {
-                "linear" -> 10.0.pow(amt * 1.2)
-                else -> 10.0.pow(amt * 1.2) // default to linear, future: tube, fet, tape
-            }
+            val driveGain = 10.0.pow(amt * 1.2)
 
             for (i in ctx.offset until end) {
                 buffer[i] = (work[i] * driveGain)
@@ -314,9 +276,13 @@ fun Ignitor.crush(amount: Double): Ignitor {
  * Sample-rate reducer (coarse). Holds a sample value for multiple frames. Processes per-sample.
  *
  * Creates aliased, metallic artifacts by reducing the effective sample rate.
- * Amount is read once per block (control rate). Bypasses when amount <= 1.0.
+ * Amount is read once per block (control rate). Amounts in (0, 1] are audibly inactive but the
+ * hold clock keeps running (an exact take-every-sample copy — ledger W3: contiguity through a
+ * modulated crossing); only `amount <= 0` and non-finite values take the true bypass arm, and
+ * they HEAL when the amount returns. The first hold is `amount` samples (give or take one for
+ * non-dyadic amounts — 1/amount accumulates in floats), like every later hold.
  *
- * @param amount Sample-hold factor. Values <= 1.0 are inactive (bypass).
+ * @param amount Sample-hold factor. Values <= 1.0 are audibly inactive (see above).
  *   2.0 = every 2nd sample held, 4.0 = every 4th (strong aliasing), 10.0+ = extreme lo-fi.
  *   Typical range: 2.0–8.0. Default: 0.0 (inactive).
  */
@@ -325,7 +291,14 @@ private class CoarseIgnitor(
     private val amount: Ignitor,
 ) : Ignitor {
     private var lastValue: Double = 0.0
-    private var counter: Double = 0.0
+
+    // Bootstrapped at 1.0 — "take a sample NOW", the oversampled strip path's shape (ledger
+    // W1): the old 0.0 start + `idx == 0` block latch re-armed at note-relative sample
+    // `amount` for every power-of-two amount, so a block boundary landing there displaced the
+    // hold grid for the REST of the note (live in ATruthWorthLyingFor's coarse(2)); it also
+    // made the first hold 2x long. Both die with this bootstrap, and every coarse path in the
+    // engine now anchors its grid the same way.
+    private var counter: Double = 1.0
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
@@ -334,18 +307,30 @@ private class CoarseIgnitor(
             val amt = Ignitors.readParam(amount, freqHz, ctx)
             val end = ctx.offset + ctx.length
 
-            if (amt <= 1.0) {
+            // Ledger W3: the guard is load-bearing only for amt <= 0 (a negative increment
+            // would walk the counter down and hold forever) and for non-finite amounts (a NaN
+            // would poison the counter and latch DC for the note's life, an Inf would hold
+            // forever — both now read as bypass and HEAL when the amount returns). For amt in
+            // (0, 1] the engaged loop below already degenerates to an exact copy, so the S&H
+            // clock stays contiguous through the whole authorable range and a modulated amount
+            // crossing 1.0 no longer freezes the grid or replays a stale held sample.
+            // NaN-guard: the !(x > 0) form is what catches NaN.
+            if (!(amt > 0.0) || amt.isInfinite()) {
                 for (i in ctx.offset until end) {
                     buffer[i] = work[i]
                 }
                 return@use
             }
 
-            val invAmt = 1.0 / amt
+            // coerceAtLeast(1.0): amounts in (0, 1] mean "take every sample" — without the
+            // floor the counter would grow unboundedly at increments > 1.
+            val invAmt = 1.0 / amt.coerceAtLeast(1.0)
+
             for (i in ctx.offset until end) {
-                val idx = i - ctx.offset
-                if (counter >= 1.0 || (idx == 0 && counter == 0.0)) {
-                    lastValue = work[i]
+                if (counter >= 1.0) {
+                    // nanGuard mirrors the strip door: a NaN input must not latch into the
+                    // held value for `amount` frames.
+                    lastValue = work[i].nanGuard()
                     counter -= 1.0
                 }
                 buffer[i] = lastValue
@@ -542,19 +527,27 @@ private class TremoloIgnitor(
             val rateVal = Ignitors.readParam(rate, freqHz, ctx)
             val depthVal = Ignitors.readParam(depth, freqHz, ctx)
             val end = ctx.offset + ctx.length
+            val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
 
             if (depthVal <= 0.0) {
+                // The LFO is a clock (ledger W2, the D1/D2 shape one file over): it advances
+                // through a depth gap by the whole window, so a modulated depth dipping to 0
+                // resumes exactly where an ungated LFO would be — not at a block-quantised
+                // stale phase. A zero-length window advances nothing by construction.
+                phase = (phase + phaseInc * ctx.length).wrapPhase(TWO_PI)
+
                 for (i in ctx.offset until end) {
                     buffer[i] = input[i]
                 }
                 return@use
             }
 
-            val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
-
             for (i in ctx.offset until end) {
-                phase += phaseInc
-                if (phase > TWO_PI) phase -= TWO_PI
+                // wrapPhase over the bare subtract (ledger W2): identical in range, and a
+                // non-finite or negative rate can no longer kill the phase for the note's life.
+                // A non-finite rate reads as phase 0 every sample = a steady 1 - depth/2 gain
+                // (a level change, not silence), healing the moment the rate returns.
+                phase = (phase + phaseInc).wrapPhase(TWO_PI)
 
                 val lfoNorm = (sin(phase) + 1.0) * 0.5
                 val gain = 1.0 - (depthVal * (1.0 - lfoNorm))

@@ -4,6 +4,21 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-30, claude-code block-framing session): W-BATCH done (modulation-class
+> fixes, all maintainer-decided): W1 coarse counter=1.0 bootstrap both doors (latch deleted),
+> W2 tremolo clock through depth gaps + wrapPhase both doors, W3 narrowed coarse guard with
+> healing non-finite arm (+W4 ignitor half; strip half OPEN, documented), W5 DistortIgnitor
+> DELETED (raw door + wire node delegate to drive().shape(); wire trees never persisted,
+> verified), W11 KDocs honest, W12 lowercase off the render path; coarse+tremolo graduated
+> into BlockFramingInvarianceSpec; TremoloRendererSpec is the strip door's first spec.
+> 1-round loop (2 reviewers, exact IEEE sims; both MAJORs = the zero-start probe blindness,
+> fixed) + 14-mutation campaign (13 killed, 1 inert-by-construction recorded). Suites: audio_be
+> 1422, klang green, JS clean, restores byte-exact. UNCOMMITTED — awaiting the maintainer's
+> SAKURA EAR CALL: `.coarse(3)` rotates its hold grid for the whole note (permanent 1-sample
+> sampling-phase shift on the 6-voice pad; character preserved, waveform globally different) —
+> then the commit go. Ledger W-table dispositions all updated. NEXT after commit: the W10
+> tremolo skew/phase/shape feature round (by-ear), then filter class / phaseMod part 2 /
+> master round per the plan.
 > Last action (2026-08-30, claude-code block-framing session): FM FREQ PARAM done
 > (maintainer-designed de-special-casing): `IgnitorDsl.Fm` gained `freq: IgnitorDsl = Freq`
 > (appended, wire-safe via the schema hash); `FmModIgnitor` reads the RESOLVED value everywhere
