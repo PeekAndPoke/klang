@@ -4,6 +4,42 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-30, claude-code block-framing session): D13 DETUNE FORK+FOLD done —
+> redesigned in-session with the maintainer (keyOnFreq DEAD; semantics anchored: overlay for
+> any s, detune moves only Freq-derived pitches, runtime untouched). Build: IgnitorBuildCache
+> key = (node, mod, detune context), fieldless identity token pushed/popped by the Detune arm;
+> fold predicate usesMusicalFreq ON the cache (identity-memoized, Fm unconditionally true —
+> round 1's hole: fmModIgnitor consumes the freq ARGUMENT with no Freq leaf; Variants through
+> the one shared pick(); nested Detune answers from inner). 2-round loop (round 1: 3 MAJORs
+> fixed — Fm hole, unpinned pop, missing headline rows; round 2: zero code defects, one test
+> gap closed by the campaign itself). 12/12 mutations killed (11-row DetuneForkSpec; the
+> twin-oracle lesson: self-similar mutants need asymmetric references). Suites:
+> :audio_be:jvmTest 1401 green, :klang:jvmTest green, :audio_be:compileKotlinJs green, no
+> watcher, restores byte-exact. UNCOMMITTED, files disjoint from the reverb batch —
+> TWO clean commits await the maintainer's inspection: (1) reverb drain adoption
+> (cylinders/katalyst + effects/Reverb + master), (2) D13 (ignitor/ + IgnitorDslWalk KDoc).
+> Ledger records both fully. Next per the continuation plan: the modulation/waveshaper
+> analyzer round (findings to the maintainer BEFORE fixes).
+
+> Last action (2026-08-30, claude-code block-framing session): REVERB DRAIN ADOPTION done —
+> `KatalystReverbEffect` owns the delay's Active/Draining/Off lifecycle (configure door,
+> retained-param drain, `Reverb.drainSamplesUntilSilent(combPeakAbs())` countdown, terminal
+> reset, factory-param reset). Review loop ran THREE rounds (2 fresh Opus reviewers each):
+> round 1 flipped hasTail's Draining arm to a network scan on a ~20x damping claim, round 2
+> DISPROVED the number (comb damping LPF has unity DC gain — LF tail decays at fb/revolution
+> regardless of roomLp) and REVERTED to the delay's true-by-construction arm; round 2 also
+> found the NaN-blind peak scan (combPeakAbs now reports any non-finite cell as +Inf → instant
+> heal) and the master door's non-finite roomFade incoherence (gated isFinite, wrote coerceIn —
+> both doors now read non-finite fade as unset, parity row added); round 3 zero CRITICAL/MAJOR
+> (clean), polish batch applied once. 29 mutations, 29 killed (one survivor forced a
+> cleared-mix probe into the orbit drain row — the silence gate had shielded the tail-check
+> wiring from every assertion). Suites: :audio_be:jvmTest 1390 green, :audio_be:compileKotlinJs
+> green, no watcher during any build, all mutation restores byte-exact (grep MUTATION = 0).
+> UNCOMMITTED — the maintainer inspects and gives the commit go (own commit, then D13 as its
+> own next). INTENDED audible change to listen for: orbits alternating reverb/dry voices now
+> ring the tail out instead of freezing/cutting it. Tree also carries the maintainer's own
+> Sakura/DerSchmetterling edits (untouched, theirs).
+
 > Last action (2026-08-29, claude-code MIDI-workstream session): P1 of the playback-layer
 > decomposition (docs/tasks/playback-layer-decomposition.md) — inline-DSL bookkeeping moved OUT
 > of the scheduler and ONTO the playback. `IgnitorRegistry`/`PipelineRegistry`/`MasterRegistry`
