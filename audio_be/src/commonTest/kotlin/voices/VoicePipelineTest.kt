@@ -182,10 +182,18 @@ class VoicePipelineTest : StringSpec({
     }
 
     "voice renders correct number of samples" {
+        // Audit finding F15(a): this named a countable property and counted nothing — it rendered
+        // and asserted absolutely zero. A voice spanning exactly one block must fill exactly that
+        // block, so the sentinel makes "how many samples" literally countable.
         val voice = createSynthVoice(startFrame = 0.0, endFrame = 100.0)
 
         val ctx = createContext(blockStart = 0.0, blockFrames = 100)
+        val sentinel = 7.0
+        ctx.voiceBuffer.fill(sentinel)
+
         voice.render(ctx)
+
+        ctx.voiceBuffer.count { it != sentinel } shouldBe 100
     }
 
     "voice starting mid-block renders partial buffer" {

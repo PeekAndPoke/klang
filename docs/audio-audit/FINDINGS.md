@@ -622,10 +622,15 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
 Extends [F6](#f6) from the `voices/` pilot to the whole `audio_be` tree. The classification matters — only the first
 class is a defect:
 
-**(a) Named for a behaviour, checks nothing — ~~10~~ 1 test. Defects.**
-~~The 9 from [F6](#f6)~~ — **fixed 2026-08-31, see [F6](#f6)** — leaving only
-`VoicePipelineTest` *"voice renders correct number of samples"*, which still names a measurable
-property and measures nothing.
+**(a) Named for a behaviour, checks nothing — ~~10~~ 0 tests. ✅ ALL FIXED 2026-08-31.**
+~~The 9 from [F6](#f6)~~ — fixed, see [F6](#f6) — and ~~`VoicePipelineTest` *"voice renders correct
+number of samples"*~~, which rendered and asserted absolutely nothing. It now fills the buffer with a
+sentinel first and counts what changed, so "how many samples" is literally countable; shortening the
+render window by one sample turns it red.
+
+> Classes **(b)** and **(c)** are unchanged and are NOT defects: (b) is five honestly-named smoke
+> tests, and (c) is the `GuitarClickHuntTest` diagnostic harness, whose only open question is whether
+> it belongs in the default `jvmTest` run — **a maintainer decision, not a fix.**
 
 > **Three former members of this class are WITHDRAWN 2026-08-31 — they do assert:**
 > `ShapingFuncsBoundsSpec` *"rectify output is always non-negative"* (renamed from
