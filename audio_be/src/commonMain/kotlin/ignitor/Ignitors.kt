@@ -85,7 +85,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.waveTrapezoid
 import io.peekandpoke.klang.audio_be.wrapPhase
@@ -1460,15 +1460,15 @@ object Ignitors {
                 val nextIdx = (readIdx + 1) % maxDelay
                 val sample = delayLine[readIdx] + (delayLine[nextIdx] - delayLine[readIdx]) * frac
 
-                lpState = (lpState + lpAlpha * (sample - lpState)).flushDenormal()
+                lpState = (lpState + lpAlpha * (sample - lpState)).flushState()
 
                 var filtered = lpState
 
                 if (hasStiffness) {
                     val apOut = apCoeff * (filtered - apPrevOut) + apPrevIn
 
-                    apPrevIn = filtered.flushDenormal()
-                    apPrevOut = apOut.flushDenormal()
+                    apPrevIn = filtered.flushState()
+                    apPrevOut = apOut.flushState()
                     filtered = apOut
                 }
 
@@ -1633,7 +1633,7 @@ object Ignitors {
 
                     // One-pole lowpass (brightness)
                     s.lpState = s.lpState + lpAlpha * (sample - s.lpState)
-                    s.lpState = s.lpState.flushDenormal()
+                    s.lpState = s.lpState.flushState()
 
                     var filtered = s.lpState
 
@@ -1641,8 +1641,8 @@ object Ignitors {
                     if (hasStiffness) {
                         val apOut = apCoeff * (filtered - s.apPrevOut) + s.apPrevIn
 
-                        s.apPrevIn = filtered.flushDenormal()
-                        s.apPrevOut = apOut.flushDenormal()
+                        s.apPrevIn = filtered.flushState()
+                        s.apPrevOut = apOut.flushState()
                         filtered = apOut
                     }
 

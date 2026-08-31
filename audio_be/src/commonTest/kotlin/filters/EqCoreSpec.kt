@@ -44,7 +44,7 @@ import kotlin.random.Random
  * window-arithmetic bugs), CONTINUE with a full block on the same core (the production
  * voice-onset sequence), and finish with a DOUBLE-length call that proves the input-copy
  * capacity GROWS (the onset round-up makes the full block fit without growing); the
- * denormal-tail case gives `flushDenormal` a discriminating input (tiny impulse decaying
+ * denormal-tail case gives `flushState` a discriminating input (tiny impulse decaying
  * through the flush threshold).
  *
  * RAW_TAP (D2b) parity oracle: `Plus(chainSoFar, Times(Bandpass(input), Constant(gain)))` —
@@ -389,13 +389,20 @@ class EqCoreSpec : StringSpec({
         }
     }
 
-    "BELL boost propagates Inf/NaN bare (no output clamp — legacy parity)" {
-        // The gained tap is v0 + m1·v1 BARE (m1 clamped at configure; the per-sample path
-        // adds nothing): an Inf input sample blows the output non-finite and the NaN'd
-        // state stays non-finite — a well-meant safeOut/NaN scrub on the bell output
-        // produces finite samples here and reddens. (The bell is excluded from the
-        // pathological PARITY row because the relation oracle's MulConst DOES scrub — this
-        // row is the bell's own pathology pin.)
+    "BELL boost propagates Inf bare on the sample, and the state HEALS after it" {
+        // Two properties, and they are deliberately different:
+        //
+        // 1. NO OUTPUT CLAMP. The gained tap is v0 + m1·v1 BARE (m1 clamped at configure; the
+        //    per-sample path adds nothing), so the poisoned sample leaves non-finite. A
+        //    well-meant safeOut/NaN scrub on the bell OUTPUT makes sample 40 finite and
+        //    reddens this row. (The bell is excluded from the pathological PARITY row because
+        //    the relation oracle's MulConst DOES scrub — this is the bell's own pathology pin.)
+        //
+        // 2. THE STATE DOES NOT LATCH. Until the master round this row asserted the opposite
+        //    — "block 2 is entirely non-finite" — pinning a permanent latch as legacy parity.
+        //    `flushState` now rejects a non-finite carry as well as a denormal one (ledger W7:
+        //    an IIR whose state goes NaN can never return, and one Inf sample used to silence
+        //    the whole backend). The output stays honest, the filter recovers.
         val data = DoubleArray(blockFrames * 2) { i -> input[i] }.also {
             it[40] = Double.POSITIVE_INFINITY
         }
@@ -403,13 +410,17 @@ class EqCoreSpec : StringSpec({
         val buf = AudioBuffer(blockFrames)
         data.copyInto(buf, 0, 0, blockFrames)
         core.process(buf, 0, blockFrames)
-        buf[40].isFinite() shouldBe false
 
-        // Block 2: state is NaN — every sample must come out non-finite.
+        // (1) the poisoned sample is not scrubbed …
+        buf[40].isFinite() shouldBe false
+        // … and (2) the very next one is already clean: recovery is ONE sample.
+        buf[41].isFinite() shouldBe true
+
+        // Block 2: the carry was flushed, so nothing survives into it.
         data.copyInto(buf, 0, blockFrames, 2 * blockFrames)
         core.process(buf, 0, blockFrames)
         for (i in 0 until blockFrames) {
-            buf[i].isFinite() shouldBe false
+            buf[i].isFinite() shouldBe true
         }
     }
 
@@ -647,7 +658,7 @@ class EqCoreSpec : StringSpec({
 
     "denormal tail flushes bit-identically" {
         // Tiny impulse then silence: state decays through the flush threshold within the
-        // first block — the discriminating input for flushDenormal. Parameterized over
+        // first block — the discriminating input for flushState. Parameterized over
         // EVERY type: each type's loop duplicates the state update, and the recurrence
         // (where the flush lives) is tap-independent.
         val tiny = DoubleArray(blockFrames * (blocks + 1)).also { it[0] = 1e-14 }

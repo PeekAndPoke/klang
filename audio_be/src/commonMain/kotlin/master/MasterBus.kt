@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.master
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import kotlin.math.abs
 import io.peekandpoke.klang.audio_be.master.MasterBus.Companion.MAX_CACHED_CHAINS
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 
@@ -103,6 +104,27 @@ class MasterBus(
 
     /** Name of the currently active master — a repeat request for the same name is a no-op. */
     private var currentName: String? = null
+
+    /**
+     * True once the owning engine has rendered at least one block. Gates the first-master
+     * adoption in [requestSwap] (master round M1): before the first block nothing audible
+     * exists, so a chain is adopted at full weight; afterwards a swap must crossfade.
+     *
+     * Set by [markRendered] rather than inside [process], because [process] is exactly what
+     * does NOT run in the unmastered case — `PlaybackEngine.renderInto` takes a fast path
+     * while `isActive` is false, so a flag maintained here would still read false when a
+     * MID-SONG first master arrived and would wrongly hard-cut it over live audio.
+     */
+    private var hasRendered: Boolean = false
+
+    /**
+     * Called once per rendered block by the owning engine, after the scheduler has run and
+     * before any audio is produced — so a master arriving in the engine's FIRST block still
+     * sees `false`, and one arriving later sees `true`.
+     */
+    fun markRendered() {
+        hasRendered = true
+    }
 
     /** At most one queued swap: a request arriving mid-fade waits instead of cutting the fade. */
     private var pendingName: String? = null
@@ -210,6 +232,27 @@ class MasterBus(
 
         if (previous != null) {
             pendingName = key
+            return
+        }
+
+        // Ledger master round M1: adopt the FIRST master at full weight instead of fading up
+        // from unity. The crossfade exists to avoid a click when swapping between two AUDIBLE
+        // chains; before this bus has rendered a single block there is nothing to fade from
+        // and nothing that could click, while the fade itself was audible — it ramped the
+        // song's opening 60 ms up from unmastered, putting the first downbeat of every
+        // mastered song up to 8.3 dB down and swelling (DerSchmetterling's gain(2.6); also
+        // Tetris, StrangerThings, ATruthWorthLyingFor, IrishLamentTechno). MasterBusTest had
+        // already loosened an assertion to accommodate it.
+        //
+        // The discriminator is "this bus has never rendered" and NOT "no master yet": a
+        // mid-song first master arrives over audible signal and genuinely wants the fade.
+        if (!hasRendered) {
+            if (chain !== current) {
+                chain.reset()
+            }
+
+            current = chain
+            currentName = key
             return
         }
 
@@ -348,8 +391,19 @@ class MasterBus(
             val t = if (pos >= fadeFrames) 1.0 else pos / total
             val u = 1.0 - t
 
-            busL[i] = busL[i] * u + wetL[i] * t
-            busR[i] = busR[i] * u + wetR[i] * t
+            // Sterilised taps: at the fade's endpoints one weight is exactly 0.0, and
+            // `Inf * 0.0` is NaN — so a chain contributing NOTHING yet could still inject
+            // NaN into the bus, which used to latch the master DC blocker downstream. A
+            // large-but-finite chain output is untouched (that is the raw engine's business).
+            val bl = busL[i]
+            val br = busR[i]
+            val wl = wetL[i]
+            val wr = wetR[i]
+
+            busL[i] = (if (abs(bl) <= Double.MAX_VALUE) bl else 0.0) * u +
+                (if (abs(wl) <= Double.MAX_VALUE) wl else 0.0) * t
+            busR[i] = (if (abs(br) <= Double.MAX_VALUE) br else 0.0) * u +
+                (if (abs(wr) <= Double.MAX_VALUE) wr else 0.0) * t
 
             pos++
         }

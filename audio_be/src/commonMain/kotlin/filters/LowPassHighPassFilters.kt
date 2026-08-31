@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.coercePasses
@@ -61,9 +61,12 @@ import kotlin.math.tan
 // downstream to bound output to ±1. The master-out DcBlocker in `KlangAudioRenderer`
 // runs on post-limiter samples (already ±1-bounded), so no softCap needed there.
 //
-// **NaN/Inf guard**: `Double.coerceIn` returns NaN if input is NaN, which would corrupt
-// IIR state forever (`flushDenormal` only catches sub-denormal magnitudes). Guarded
-// explicitly in both `bilinearK` and `DcBlocker` constructor.
+// **NaN/Inf guard**: `Double.coerceIn` returns NaN if input is NaN, which would give the
+// filter a NaN COEFFICIENT — guarded explicitly in both `bilinearK` and the `DcBlocker`
+// constructor, because a poisoned coefficient re-poisons the state every sample and so is
+// not something a state guard can heal. (A poisoned STATE is a different problem and is
+// handled: `flushState` rejects non-finite carries as well as sub-denormal ones since the
+// master round, so no IIR here can latch on a hostile SAMPLE.)
 //
 // **Block-based API**: all filters use `process(buffer, offset, length)` so JIT keeps
 // state in registers across the loop. State load/store happens at function entry/exit,
@@ -106,7 +109,7 @@ import kotlin.math.tan
 // finite Q (`The Art of VA Filter Design` ch. 5.3), so widening the clamp is safe.
 // The pole gets very close to the unit circle at extreme Q (e.g. Q=130, fc=600,
 // fs=48k → |p|≈0.99996, settling time ~Q/(π·fc) ≈ 70 ms) but never on/outside it.
-// `flushDenormal` threshold (1e-15) won't false-trigger because legitimate state
+// `flushState` threshold (1e-15) won't false-trigger because legitimate state
 // stays well above that for many seconds at musical fc/Q ranges.
 // ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -487,7 +490,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 val x = buffer[i]
                 y += a * (x - y)
-                y = y.flushDenormal()
+                y = y.flushState()
                 buffer[i] = y
             }
         }
@@ -529,7 +532,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 val x = buffer[i]
                 y = b0 * (x - xPrev) + a1 * y
-                y = y.flushDenormal()
+                y = y.flushState()
                 xPrev = x
                 buffer[i] = y
             }
@@ -568,7 +571,7 @@ object LowPassHighPassFilters {
                 val x = buffer[i]
                 val out = x - xp + a * yc
                 xp = x
-                yc = out.flushDenormal()
+                yc = out.flushState()
                 buffer[i] = out
             }
             xPrev = xp
@@ -585,7 +588,7 @@ object LowPassHighPassFilters {
                 val x = input[i]
                 val out = x - xp + a * yc
                 xp = x
-                yc = out.flushDenormal()
+                yc = out.flushState()
                 output[i] = out
             }
             xPrev = xp
@@ -775,8 +778,8 @@ object LowPassHighPassFilters {
                     val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                     val vBp = g * vHp + ic1eq
                     val vLp = g * vBp + ic2eq
-                    ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                    ic1eq = (2.0 * vBp - ic1eq).flushState()
+                    ic2eq = (2.0 * vLp - ic2eq).flushState()
                     // OB-X-style filters output a morph `mc = (1−mm)·vLp + mm·vHp` (LP↔HP blend).
                     // With `mm = 0` (pure LP) this collapses to `vLp`.
                     buffer[i] = vLp
@@ -793,8 +796,8 @@ object LowPassHighPassFilters {
                     val v3 = v0 - ic2eq
                     val v1 = a1 * ic1eq + a2 * v3
                     val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                    ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                    ic1eq = (2.0 * v1 - ic1eq).flushState()
+                    ic2eq = (2.0 * v2 - ic2eq).flushState()
                     buffer[i] = v2
                 }
             }
@@ -851,8 +854,8 @@ object LowPassHighPassFilters {
                     val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                     val vBp = g * vHp + ic1eq
                     val vLp = g * vBp + ic2eq
-                    ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                    ic1eq = (2.0 * vBp - ic1eq).flushState()
+                    ic2eq = (2.0 * vLp - ic2eq).flushState()
                     buffer[i] = vHp
                 }
             } else {
@@ -867,8 +870,8 @@ object LowPassHighPassFilters {
                     val v3 = v0 - ic2eq
                     val v1 = a1 * ic1eq + a2 * v3
                     val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                    ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                    ic1eq = (2.0 * v1 - ic1eq).flushState()
+                    ic2eq = (2.0 * v2 - ic2eq).flushState()
                     buffer[i] = (v0 - k * v1 - v2)
                 }
             }
@@ -895,8 +898,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                ic1eq = (2.0 * v1 - ic1eq).flushState()
+                ic2eq = (2.0 * v2 - ic2eq).flushState()
                 // C2 (filter unification): k * v1 normalises the peak at fc to unity, so q is
                 // a pure width control. k belongs to the ramped coefficient set; q is fixed per
                 // instance, so kInc is structurally 0 — no mid-ramp k/a mismatch can occur.
@@ -925,8 +928,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                ic1eq = (2.0 * v1 - ic1eq).flushState()
+                ic2eq = (2.0 * v2 - ic2eq).flushState()
                 buffer[i] = (v0 - k * v1)
             }
             transitionSamples = trans

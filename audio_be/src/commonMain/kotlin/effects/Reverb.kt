@@ -48,9 +48,9 @@ import kotlin.math.ln
  *   decaying into subnormal range during silence (which would cause FPU
  *   stalls at ~50–100 cycles each). The bias is well below audibility and
  *   matches the canonical Freeverb approach. With 24 IIR stores per sample,
- *   the per-sample `+ 1e-18` is dramatically cheaper than `flushDenormal()`
+ *   the per-sample `+ 1e-18` is dramatically cheaper than `flushState()`
  *   (24× ABS + compare + branch) — the rest of the engine uses
- *   `flushDenormal` because those components have only 1–2 IIR stages.
+ *   `flushState` because those components have only 1–2 IIR stages.
  *
  * **Parameter mapping — note the two different scales.** Everything a user authors goes through
  * [normalizeRoomSize] or lands here raw; both buses (per-orbit and master) MUST agree:
@@ -323,8 +323,20 @@ class Reverb(
         // --- 2. Audio-rate processing ---
 
         for (i in 0 until length) {
-            val inpL = inL[i]
-            val inpR = inR[i]
+            // Non-finite guard on the two INPUT taps rather than the 24 state stores. The
+            // stores keep `+ ANTI_DENORMAL` (converting them to `flushState` was measured at
+            // ~+11%/sample and reverted 2026-05-19), so they have no per-store guard of their
+            // own — but they do not need one: the comb/allpass network is a stable linear
+            // system (|feedback| < 1 via normalizeRoomSize, damping in [0,1], coefficients
+            // guarded at configure), so a FINITE input can never drive the state non-finite.
+            // Guarding the input is therefore equivalent and 12x cheaper. Without it, one Inf
+            // sample latched every comb and allpass for the life of the orbit.
+            // `abs(x) <= MAX_VALUE` rejects Inf AND NaN in one compare (NaN fails every
+            // comparison) and leaves no branch on the data — see `flushState`.
+            val rawL = inL[i]
+            val rawR = inR[i]
+            val inpL = if (abs(rawL) <= Double.MAX_VALUE) rawL else 0.0
+            val inpR = if (abs(rawR) <= Double.MAX_VALUE) rawR else 0.0
 
             var sumL = 0.0
             var sumR = 0.0
@@ -334,12 +346,12 @@ class Reverb(
             //
             // Denormal protection via `+ ANTI_DENORMAL` (1e-18) on every state
             // store — the canonical Freeverb approach. A previous revision
-            // (2026-05-08, Round 9) replaced this with `flushDenormal()` for
+            // (2026-05-08, Round 9) replaced this with `flushState()` for
             // engine-wide consistency, but that cost ~+11% per-sample because
             // Reverb has 24 IIR stores/sample (8 combs + 4 allpass × 2 ch),
             // vs 1–2 for other components. The ANTI_DENORMAL bias is well
             // below audibility (~250 dB below the noise floor); the engine's
-            // `flushDenormal` pattern remains canonical for low-state-count
+            // `flushState` pattern remains canonical for low-state-count
             // components. Reverted 2026-05-19.
             for (c in 0 until numCombs) {
                 // Left

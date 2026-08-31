@@ -9,7 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
@@ -622,7 +622,7 @@ internal fun Ignitor.distortVariant(
                         val xi = work[i]
                         val po = xi - px1 + a * py1
                         px1 = xi
-                        py1 = po.flushDenormal()
+                        py1 = po.flushState()
                         work[i] = po
                     }
                 }
@@ -645,7 +645,7 @@ internal fun Ignitor.distortVariant(
                         for (i in ctx.offset until end) {
                             val y = work[i]
                             val out = y - x1 + a * y1
-                            x1 = y; y1 = out.flushDenormal()
+                            x1 = y; y1 = out.flushState()
                             buffer[i] = out
                         }
                     }
@@ -654,7 +654,7 @@ internal fun Ignitor.distortVariant(
                         for (i in ctx.offset until end) {
                             val y = work[i]
                             val out = y - x1 + a * y1
-                            x1 = y; y1 = out.flushDenormal()
+                            x1 = y; y1 = out.flushState()
                             // Soft-cap at ±1: tanh of the DC-blocked signal. Bounds the
                             // 2× overshoot back to ~1, smooth knee → no aliasing introduced.
                             buffer[i] = tanh(out)
@@ -682,7 +682,7 @@ internal fun Ignitor.distortVariant(
                             val xi = work[i]
                             val out = b0 * xi + b1 * bx1 + b2 * bx2 - ar1 * by1 - ar2 * by2
                             bx2 = bx1; bx1 = xi
-                            by2 = by1; by1 = out.flushDenormal()
+                            by2 = by1; by1 = out.flushState()
                             buffer[i] = out
                         }
                     }

@@ -124,7 +124,7 @@ a.generate(buffer, freqHz, ctx)
 
 ### 3. No Duplicated Utility Functions
 
-Shared DSP utilities (`flushDenormal`, shape resolution, etc.) must live in exactly one place
+Shared DSP utilities (`flushState`, shape resolution, etc.) must live in exactly one place
 and be imported. Never copy a utility function into another file as a `private` copy.
 
 **Canonical location:** `DspUtil.kt` in the module root package.
@@ -231,17 +231,25 @@ These allocate strings and can kill the AudioWorklet thread.
 
 ## DSP Rules
 
-### 8. Flush Denormals in All IIR Filter State
+### 8. Flush IIR Filter State
 
-Every IIR filter (SVF, one-pole, allpass, DC blocker) must flush denormals from its
-state variables after each update. Use the shared `flushDenormal()` from `DspUtil.kt`.
+Every IIR filter (SVF, one-pole, allpass, DC blocker) must flush its state variables after
+each update. Use the shared `flushState()` from `DspUtil.kt`.
 
-**Why:** Denormal floats can cause 10-100x CPU spikes on some platforms.
+**Why, two reasons:** denormal floats cause 10-100x CPU spikes on some platforms, and a
+NON-FINITE carry latches the filter permanently — an IIR whose state goes NaN can never
+recover, and one `Inf` is enough (the next sample computes `-Inf + Inf`). The master round
+measured where that ends: one such sample silenced the whole backend until a page reload.
+`flushState` rejects both, so following this rule is what makes a filter unable to latch.
 
 ```kotlin
-ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+ic1eq = (2.0 * v1 - ic1eq).flushState()
+ic2eq = (2.0 * v2 - ic2eq).flushState()
 ```
+
+**Exception:** `Reverb` uses `+ ANTI_DENORMAL` instead (deliberate, documented at the class —
+its comb/allpass count makes the per-sample add cheaper). That exception is about DENORMALS
+only; it does not protect against a non-finite carry.
 
 ### 9. Band-Limit Discontinuous Waveforms
 

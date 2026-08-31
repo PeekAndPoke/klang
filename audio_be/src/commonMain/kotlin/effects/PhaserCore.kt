@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.wrapPhase
 import kotlin.math.PI
 import kotlin.math.sin
@@ -148,10 +148,10 @@ internal class PhaserCore(
         var signal = safeX + lastOutput * feedback
         for (s in 0 until stages) {
             val y = a * signal + z1[s]
-            z1[s] = (signal - a * y).flushDenormal()
+            z1[s] = (signal - a * y).flushState()
             signal = y
         }
-        lastOutput = signal.flushDenormal()
+        lastOutput = signal.flushState()
         alpha = a + alphaIncrement
         return signal
     }

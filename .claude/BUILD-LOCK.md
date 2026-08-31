@@ -4,6 +4,30 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-31, claude-code block-framing session): MASTER ROUND done, and the fix is
+> NOT at the master. The maintainer redirected mid-round ("the fix in the master seems to be a
+> patch not a full solution") and that was right: `flushDenormal` was already called at 58 IIR
+> carry sites by house rule and only rejected denormals, so widening it to reject NON-FINITE too
+> makes every IIR in the engine structurally unable to latch. **Renamed `flushState`** (one
+> concept, one word). Bit-identical for finite audio (20k-sample verification, both topologies);
+> measured cost **+0.4%** by interleaved A/B on runSongBenchmark — my first attempt ran all-A
+> then all-B and reported +2-3%, which was machine drift, not the change.
+> Exceptions closed on their own terms: reverb guarded at its two INPUT taps (its 24 stores keep
+> ANTI_DENORMAL — flushState there was measured at +11% and reverted in 2026); Compressor's
+> classic path got the guard its lookahead twin already had (one +Inf used to make the limiter
+> return exactly 1.0 FOREVER — a brickwall degraded to a pass-through, silently); MasterBus
+> blendInto's `Inf * 0.0`. **OPEN, needs your call:** the delay ring's `softCap(NaN)` — a
+> per-sample isFinite there was measured at +33%/+30% and removed, so nanGuard (one compare) is
+> probably affordable but that site has earned a measurement.
+> ALSO FIXED, live on five shipped songs and unrelated to NaN: the FIRST master application
+> crossfaded a song's opening 60 ms up from UNMASTERED (DerSchmetterling opened 8.3 dB down and
+> swelled). Already worked around in MasterBusTest with a loosened assertion, never decided; that
+> assertion is back to nominal and is the guard.
+> 2 analyzers + 5-of-6 mutations killed (the survivor is recorded UNGUARDED and the placement
+> made structural instead). Green: audio_be, audio_bridge, klang, root, :compileKotlinJs.
+> UNCOMMITTED — the maintainer inspects. Ledger has the full record incl. ~10 master findings
+> NOT addressed. ⏳ STILL OWED: the W10 tremolo by-ear round (committed 9cb896ff unheard).
+
 > Last action (2026-08-31, claude-code mini-notation-tweaks session): **phases 0-4 of
 > `docs/tasks/mini-notation-tweaks.md` are DONE.** Tweaks work end to end:
 > `note("c3 e3{swell}").tweaks({ swell: x => x.gain(0.5) })` on both doors.

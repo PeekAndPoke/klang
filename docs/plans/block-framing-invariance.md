@@ -564,3 +564,119 @@ and the Sakura `.coarse(3)` whole-note grid rotation (recorded at W1, awaiting t
 **Harness graduation queue (largely DONE by the batch):** `coarse` power-of-two onset sweep (pins W1 TODAY, pre-fix), `shape`
 oversample=4 (strongest bit-identity candidate), tremolo modulated-depth (after W2), coarse
 modulated-amount (after W3), crush audio-rate amount.
+
+---
+
+## The MASTER round (2026-08-31) — and the general fix W7 was pointing at
+
+Opened as the last of the maintainer's three queued picks. Two analyzers (framing/lifecycle +
+numerics/egress), then the maintainer redirected the fix: *"what would be the most general
+solution? the fix in the master seems to be a patch not a full solution"*. That redirect is the
+whole point of this round, and it was right.
+
+**M2 / W7 — the CRITICAL, and why the master was the wrong place to fix it.** One non-finite
+sample from any voice latched the master DC blockers; the limiter's own `isFinite` guards then
+turned every NaN into `0.0`; output was normal for exactly `delayFrames` (240 samples, 5 ms)
+while the lookahead ring drained real audio and then went to **digital silence, permanently, for
+every playback** — one `MasterStage` is shared across the summed mix, and `MasterStage.reset()`
+is called once per backend lifetime behind `WarmupRunner`'s `finished` gate. Recovery needed a
+page reload. No click, no error; `Feedback.Diagnostics` kept reporting healthy headroom.
+Three corrections to W7's own wording, all confirmed by both analyzers independently: the blast
+radius is the **backend session**, not the playback; the trigger is **`+Inf` as well as NaN** and
+ONE sample suffices (`x - Inf + a*Inf` = `-Inf + Inf` manufactures the NaN on the *next* sample);
+and the symptom is **silence, not a click**. Also corrected, my own claim on the way in: the clip
+ladder does map NaN to `Short.MIN_VALUE`, but it is unreachable there — `Compressor.kt:322`
+guards the ring write, and its comment cites that very mapping as the reason.
+
+**THE FIX (maintainer: "widen the helper, then close the exceptions").** The engine already had
+the right hook in the right places: `flushDenormal` was called at 58 IIR carry sites across 8
+files by house rule (`/code-style` #8). It only rejected denormals. Widened to reject
+non-finite as well and **renamed `flushState`** (maintainer's call: one concept, one word — the
+old name described one of its two jobs), so every IIR in the engine is now structurally unable
+to latch. Recovery 1-2 samples (`DcBlocker` 2, `SVF` 1). **Bit-identical for finite audio** —
+verified over 20k random samples through both topologies; only the rejected branch changed.
+Shape: `abs` + two compares + a select, no branch on the data. `a <= Double.MAX_VALUE` rejects
+Inf AND NaN in one compare where `isFinite()` is two tests and a JS call; `abs` folds the sign,
+which is the ONE genuinely unpredictable bit in an audio loop and must never be branched on.
+
+**Cost, measured, because the maintainer asked.** Interleaved A/B on `runSongBenchmark --args=ladders`,
+alternating the helper body run-by-run (the first attempt ran all-baseline-then-all-after and
+reported +2-3%, which was machine drift riding along with the change — a methodology error, not
+a result): **+0.36% median, +0.38% minimum** on the filter-heavy GTR1 row, matching the
+one-extra-compare prediction. The harness cannot RESOLVE 0.4% (n=4, ~35% spread), so the
+defensible claim is "no measurable regression, direction and magnitude match the analysis".
+The cheaper per-block-epilogue design (2 tests per block instead of per sample, at the cost of a
+whole block of NaN instead of 1-2 samples) was therefore not needed.
+
+**The exceptions the helper cannot reach, each closed on its own terms:**
+- **Reverb** keeps `+ ANTI_DENORMAL` (converting its 24 stores/sample to the flush was measured
+  at ~+11% and reverted 2026-05-19). Guarded at its two INPUT taps instead — equivalent and 12x
+  cheaper, because the comb/allpass network is a stable linear system (|feedback| < 1 via
+  `normalizeRoomSize`, damping in [0,1], coefficients guarded at configure), so a finite input
+  can never drive the state non-finite.
+- **`Compressor.envelopeStep`** (M3, MAJOR): the classic path had NO guard where its lookahead
+  twin does, so one `+Inf` latched `envelopeDb` to NaN and the limiter returned exactly `1.0`
+  forever — a brickwall silently degraded to a bit-exact pass-through. A NaN *sample* never did
+  this (`NaN > SILENCE_LIN` is false); only `±Inf`.
+- **`MasterBus.blendInto`** (M4, MAJOR): `Inf * 0.0` = NaN at the fade endpoints, injected from a
+  chain contributing *nothing* yet. Both taps sterilised.
+- **The delay ring** (`softCap(NaN) = NaN`; `softCap` already sterilises Inf to ±1.0) is **OPEN,
+  maintainer decision pending**: a per-sample `isFinite` was tried there and measured at +33% JVM
+  / +30% JS, removed 2026-05-22. `nanGuard()` is one compare rather than isFinite's two-plus-call,
+  so it is probably affordable — but that site has earned a measurement, not an assumption.
+
+**M1 — MAJOR, live on five shipped songs, and nothing to do with NaN.** The FIRST master
+application crossfaded the song's opening 60 ms up from **unmastered**: at playback start
+`previous == null` and `current == unity`, so `MasterBus:216` took the ordinary `beginFade` path
+and ramped `t` 0→1 over 2880 frames, while the master event and the first note promote in the
+same `promoteScheduled` call. DerSchmetterling (`gain(2.6)`) opened 8.30 dB down and swelled;
+Tetris / StrangerThings / ATruthWorthLyingFor (1.5) 3.52 dB; IrishLamentTechno (1.1) 0.83 dB.
+**Already observed and worked around, never decided** — `MasterBusTest:123` read "the crossfade
+means the first ~60 ms ramps in, hence a tolerance well below the nominal 2.0" and asserted
+`* 1.5`. Fixed (maintainer: adopt at full weight when there is nothing to fade from); that
+assertion is now the nominal `* 1.95` and is the guard.
+
+The discriminator cost a round: `hasProcessed` set inside `MasterBus.process` was WRONG, and
+`MasterBusTest` caught it — `PlaybackEngine.renderInto` takes a fast path that skips
+`MasterBus.process` entirely while the bus is inactive, which is exactly the unmastered case, so
+a MID-SONG first master (which genuinely wants the fade) would have been hard-cut over live
+audio. Moved to `markRendered()`, called by the engine from BOTH exits of `renderInto`, after the
+block's audio.
+
+**Guards + campaign:** `DspUtilSpec` (new — the helper is tested directly because dropping its
+denormal half is a CPU property with NO audible signature and survives every filter oracle in the
+suite), `MasterBusAdoptionSpec` (new — the bus-level before/after-render contract),
+`CompressorSpec` M3 row, `KatalystReverbEffectSpec` re-pointed, `MasterBusTest` M1 row.
+**5 of 6 mutations killed**, restores byte-exact. RECORDED UNGUARDED, honestly: moving
+`markRendered()` to before `scheduler.process` survives the end-to-end spec and I could not build
+an oracle for it, so the placement was made STRUCTURAL instead (both exits, after the audio, with
+the contract in its KDoc) rather than left as a load-bearing position in the middle of a method.
+`blendInto`'s sterilise has no dedicated row either: end to end it is masked by the very
+downstream guards it exists to protect — the same "UNGUARDABLE by construction" category this
+ledger already uses for the D13 wrap-site alias.
+
+**A shipped test pinned the old behaviour and had to be re-decided, not just updated:**
+`EqCoreSpec > "BELL boost propagates Inf/NaN bare (no output clamp — legacy parity)"` asserted
+"block 2: state is NaN, every sample must come out non-finite". The property it actually defends
+is *no output clamp* (a `safeOut` scrub on the bell output must redden it); that half is intact
+and sample 40 still leaves non-finite. The latch half was the decided change, and the row now
+also pins that sample 41 is already clean — one-sample recovery, stated directly.
+`KatalystReverbEffectSpec`'s Inf-poisoning row likewise had its ROUTE closed by the reverb input
+guard; it was re-pointed at the route that stays open (a sustained `MAX_VALUE` send overflows a
+comb cell after one delay revolution, ~1116 samples), which also proves the drain-heal is still
+load-bearing rather than dead code. No non-finite guard prevents large-finite overflow.
+
+**Master findings NOT addressed this round** (all recorded, none blocking): the authored
+`limiter()`'s lookahead produces a **level dip, not the comb its KDoc promises** (-15.6 dB at the
+50 ms max); authored-limiter latency is invisible to `MasterStage.latencyFrames`, so offline
+renders TRUNCATE the tail, FE highlighting fires early, and a swap permanently splices the
+timeline; `TAIL_CHECK_INTERVAL_BLOCKS` is an **unnamed Class 2 block-rate knob** — the twin of
+D11, missed when D11 was written; the clip truncates rather than rounds (-90.3 vs -96.3 dBFS,
+2-LSB dead-band at zero); `-32768/32767` overshoots the nominal range; nothing clears master
+state on stop/start (safe only because playback ids are a monotonic counter — but
+`createRealtimePlayback` reuses ids by name); `masterLatencyMs` and
+`KlangAudioRenderer.resetPostChain()` have zero callers; the AUTHORED limiter has no DC blocker
+ahead of it while the house one's KDoc calls that ordering "required rather than tidy"; ~2 String
+allocations per cycle on the audio thread; a NaN-poisoned bus reads as SILENT to `hasActiveTail()`.
+Off-lens but worth knowing: **`VoiceData.master` is inert on the entire realtime door**, so the
+MIDI playground can never be mastered.

@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.parseDistortionShape
@@ -750,7 +750,7 @@ private class ShimmerIgnitor(
                     if (grainElapsed[g] >= grainTotal[g]) grainActive[g] = false
                 }
 
-                lpfState = (lpfOneMinusA * wetSample + lpfA * lpfState).flushDenormal()
+                lpfState = (lpfOneMinusA * wetSample + lpfA * lpfState).flushState()
                 feedbackTap = lpfState
 
                 buffer[i] = (dry * dryC + wetSample * wetC)

@@ -359,7 +359,17 @@ class Compressor(
      * Uses precomputed [DB20_OVER_LN10] / [LN10_OVER_20] to skip per-sample `ln(10.0)` calls.
      */
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun envelopeStep(inputLevel: Double): Double {
+    private inline fun envelopeStep(level: Double): Double {
+        // Same non-finite guard the lookahead path carries at `lookaheadStep`, and for a
+        // sharper reason here: this path had NONE, so one +Inf sample latched the envelope
+        // and silently DISABLED the limiter for good. `ln(Inf)` gives `envelopeDb = Inf`, the
+        // next finite sample computes `Inf + releaseCoeff * -Inf` = NaN, and from then on
+        // `calculateGainReduction(NaN)` is NaN, `NaN < GAIN_SKIP_THRESHOLD_DB` is false, and
+        // this returns exactly 1.0 forever — a brickwall that has become a bit-exact
+        // pass-through with nothing to indicate it. Note the direction: a NaN SAMPLE never
+        // latched it (`NaN > SILENCE_LIN` is false); only +/-Inf did.
+        val inputLevel = if (abs(level) <= Double.MAX_VALUE) level else 0.0
+
         // Convert to dB (with silence floor to avoid log(0)).
         val inputDb = if (inputLevel > SILENCE_LIN) {
             DB20_OVER_LN10 * ln(inputLevel)

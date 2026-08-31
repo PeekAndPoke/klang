@@ -22,18 +22,53 @@ const val DENORMAL_THRESHOLD = 1e-15
 /**
  * Returns `0.0` if this value is NaN, otherwise the value unchanged.
  *
- * Used to sterilise sample values before they enter IIR / FIR state where a
- * single NaN would propagate forever (IIR: state becomes NaN; FIR: NaN smears
- * across the entire delay line until it scrolls out). Encodes the engine-wide
- * `// NaN-guard (NaN ≠ NaN)` idiom — the IEEE-754 property that `NaN != NaN`
- * is the cheapest finite NaN test.
+ * Used to sterilise a SAMPLE before it enters FIR / delay-line state, where a NaN would
+ * smear across the whole line and — in a recirculating ring — never scroll out. Encodes the
+ * engine-wide `// NaN-guard (NaN ≠ NaN)` idiom: the IEEE-754 property that `NaN != NaN` is
+ * the cheapest possible NaN test, one compare with no `abs` and no call.
+ *
+ * DIVISION OF LABOUR, since the master round: this guards the SAMPLE and catches NaN only;
+ * [flushState] guards the IIR STATE and catches non-finite as well as denormal. The permanent
+ * IIR-latch class belongs to [flushState] — do not widen this one to chase it, because an Inf
+ * passing through a sample path is the raw engine behaving as designed, while an Inf settling
+ * into filter state is a filter that can never recover.
  */
 @Suppress("NOTHING_TO_INLINE")
 inline fun Double.nanGuard(): Double = if (this != this) 0.0 else this
 
-/** Flushes a value to zero if it is below the denormal threshold. */
+/**
+ * Flushes an IIR/FIR carry to zero unless it is a NORMAL, FINITE magnitude.
+ *
+ * Two failure modes, one guard, because both say the same thing — this value must not be
+ * carried into the next sample:
+ * - a DENORMAL costs 10-100x on some platforms (the original reason this existed);
+ * - a NON-FINITE latches the filter FOREVER. An IIR whose state goes NaN can never come back,
+ *   and a single `Inf` is enough: the very next sample computes `x - Inf + a*Inf`, i.e.
+ *   `-Inf + Inf`, which manufactures the NaN. Ledger W7 / the master round measured where that
+ *   ends: one such sample silenced the WHOLE BACKEND until a page reload, because the master DC
+ *   blocker's only clearer runs once, at warmup.
+ *
+ * This is the engine-wide answer to that class rather than a patch at the master: house rule
+ * (`/code-style` #8) already puts this call on every IIR state variable, so widening it here
+ * makes every filter in the engine structurally unable to latch. Recovery is 1-2 samples.
+ * Bit-identical for every normal finite value — only the rejected branch changed — so no
+ * shipped sound moves.
+ *
+ * Shape matters in a per-sample loop: `abs` + two compares + a select, and NO branch on the
+ * data. The range test feeds a conditional move, and the sign — the one genuinely
+ * unpredictable bit in an audio signal — is masked away by `abs` rather than branched on.
+ * `a <= Double.MAX_VALUE` rejects Inf AND NaN in a single compare (NaN fails every
+ * comparison), where `isFinite()` would be two tests and, on Kotlin/JS, a call.
+ *
+ * See [nanGuard] for the other half of the convention: that one sterilises an incoming SAMPLE,
+ * this one sterilises the STATE it would otherwise poison.
+ */
 @Suppress("NOTHING_TO_INLINE")
-inline fun Double.flushDenormal(): Double = if (abs(this) < DENORMAL_THRESHOLD) 0.0 else this
+inline fun Double.flushState(): Double {
+    val a = abs(this)
+
+    return if (a >= DENORMAL_THRESHOLD && a <= Double.MAX_VALUE) this else 0.0
+}
 
 /**
  * Wraps this phase into `[0, period)`.

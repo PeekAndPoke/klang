@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_be.filters.bilinearK
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.PI
 import kotlin.math.pow
@@ -190,8 +190,8 @@ private class SvfIgnitor(
                             val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                             val vBp = g * vHp + ic1eq
                             val vLp = g * vBp + ic2eq
-                            ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
-                            ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                            ic1eq = (2.0 * vBp - ic1eq).flushState()
+                            ic2eq = (2.0 * vLp - ic2eq).flushState()
                             buffer[i] = vLp
                             a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                         }
@@ -201,8 +201,8 @@ private class SvfIgnitor(
                             val v3 = v0 - ic2eq
                             val v1 = a1 * ic1eq + a2 * v3
                             val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                            ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                            ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                            ic1eq = (2.0 * v1 - ic1eq).flushState()
+                            ic2eq = (2.0 * v2 - ic2eq).flushState()
                             buffer[i] = v2
                             a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                         }
@@ -219,8 +219,8 @@ private class SvfIgnitor(
                             val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                             val vBp = g * vHp + ic1eq
                             val vLp = g * vBp + ic2eq
-                            ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
-                            ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                            ic1eq = (2.0 * vBp - ic1eq).flushState()
+                            ic2eq = (2.0 * vLp - ic2eq).flushState()
                             buffer[i] = vHp
                             a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                         }
@@ -230,8 +230,8 @@ private class SvfIgnitor(
                             val v3 = v0 - ic2eq
                             val v1 = a1 * ic1eq + a2 * v3
                             val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                            ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                            ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                            ic1eq = (2.0 * v1 - ic1eq).flushState()
+                            ic2eq = (2.0 * v2 - ic2eq).flushState()
                             buffer[i] = v0 - k * v1 - v2
                             a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                         }
@@ -248,8 +248,8 @@ private class SvfIgnitor(
                         val v3 = v0 - ic2eq
                         val v1 = a1 * ic1eq + a2 * v3
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                        ic1eq = (2.0 * v1 - ic1eq).flushState()
+                        ic2eq = (2.0 * v2 - ic2eq).flushState()
                         buffer[i] = k * v1
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                     }
@@ -261,8 +261,8 @@ private class SvfIgnitor(
                         val v3 = v0 - ic2eq
                         val v1 = a1 * ic1eq + a2 * v3
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                        ic1eq = (2.0 * v1 - ic1eq).flushState()
+                        ic2eq = (2.0 * v2 - ic2eq).flushState()
                         buffer[i] = v0 - k * v1
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                     }
@@ -451,7 +451,7 @@ private class OnePoleLowpassIgnitor(
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 y += a * (input[i] - y)
-                y = y.flushDenormal()
+                y = y.flushState()
                 buffer[i] = y
             }
         }
@@ -505,7 +505,7 @@ private class OnePoleHighpassIgnitor(
             for (i in ctx.offset until end) {
                 val x = input[i]
                 y = b0 * (x - xPrev) + a1 * y
-                y = y.flushDenormal()
+                y = y.flushState()
                 xPrev = x
                 buffer[i] = y
             }
@@ -580,8 +580,8 @@ private class FormantIgnitor(
                     val v3 = v0 - band.ic2eq
                     val v1 = band.a1 * band.ic1eq + band.a2 * v3
                     val v2 = band.ic2eq + band.a2 * band.ic1eq + band.a3 * v3
-                    band.ic1eq = (2.0 * v1 - band.ic1eq).flushDenormal()
-                    band.ic2eq = (2.0 * v2 - band.ic2eq).flushDenormal()
+                    band.ic1eq = (2.0 * v1 - band.ic1eq).flushState()
+                    band.ic2eq = (2.0 * v2 - band.ic2eq).flushState()
                     buffer[i] = (buffer[i] + v1 * band.linearGain)
                 }
             }

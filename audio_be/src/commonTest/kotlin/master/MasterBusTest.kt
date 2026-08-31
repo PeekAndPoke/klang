@@ -120,9 +120,41 @@ class MasterBusTest : StringSpec({
         val boostedPeak = renderPeak(boosted, blocks = 40)
 
         plainPeak shouldBeGreaterThan 0.0
-        // Louder, and audibly so — the crossfade means the first ~60 ms ramps in, hence a
-        // tolerance well below the nominal 2.0 rather than an exact ratio.
-        boostedPeak shouldBeGreaterThan plainPeak * 1.5
+        // The nominal ratio, not a loosened one. This assertion used to read `* 1.5` with the
+        // note "the crossfade means the first ~60 ms ramps in" — a workaround for master round
+        // M1, which is now fixed: the first master is adopted at full weight.
+        boostedPeak shouldBeGreaterThan plainPeak * 1.95
+    }
+
+    "the FIRST master is adopted at full gain, not faded up from unity" {
+        // Master round M1. The crossfade exists to stop a click when swapping between two
+        // AUDIBLE chains; applied to the first master it instead ramped the song's opening
+        // 60 ms up from UNMASTERED, so the first downbeat of every mastered song was quieter
+        // than the same note later — up to 8.3 dB down for DerSchmetterling's gain(2.6), and
+        // audible on four other shipped songs.
+        //
+        // The probe window is 8 blocks: past the master limiter's 5 ms lookahead (240 frames,
+        // ~2 blocks — block 0 is literally silent, which is why a one-block probe cannot be
+        // used here) and still deep inside the 60 ms fade the old code would have been
+        // running. Under that old behaviour this window peaked around 1.4x, not 2x.
+        val loud = MasterDsl.of(MasterStageDsl.Gain(gain = 2.0))
+
+        val plain = newDispatcher()
+        plain.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(sineVoice())))
+        val plainEarly = renderPeak(plain, blocks = 8)
+
+        val boosted = newDispatcher()
+        boosted.handle(KlangCommLink.Cmd.RegisterMaster(playbackId = "song", name = "loud", dsl = loud))
+        boosted.handle(
+            KlangCommLink.Cmd.ScheduleVoices(
+                playbackId = "song",
+                voices = listOf(masterEvent("loud"), sineVoice()),
+            )
+        )
+        val boostedEarly = renderPeak(boosted, blocks = 8)
+
+        plainEarly shouldBeGreaterThan 0.0
+        boostedEarly shouldBeGreaterThan plainEarly * 1.9
     }
 
     "a master applies only to its own playback" {

@@ -66,6 +66,7 @@ class PlaybackEngine(
         if (!masterBus.isActive) {
             // Fast path — byte-identical to the pre-MasterDsl engine.
             cylinders.processAndMix(target)
+            markMasterBusRendered()
             return
         }
 
@@ -84,6 +85,24 @@ class PlaybackEngine(
             targetL[i] += busL[i]
             targetR[i] += busR[i]
         }
+
+        markMasterBusRendered()
+    }
+
+    /**
+     * Tells the master bus a block has now been produced (master round M1). Called from the END
+     * of each of [renderInto]'s two exits, so "this engine has rendered" is true from the next
+     * block onward and a `master(…)` promoted in the engine's FIRST block still sees `false` and
+     * is adopted at full weight instead of fading up from unmastered.
+     *
+     * The PLACEMENT is the contract, so it is deliberately at the end of the audio work rather
+     * than somewhere in the middle whose position a reader has to reason about: called before
+     * `scheduler.process` instead, the very first master would crossfade and M1 would be back.
+     * It cannot live inside `MasterBus.process` either — the fast path above skips that entirely
+     * while the bus is inactive, which is exactly the unmastered case being discriminated.
+     */
+    private fun markMasterBusRendered() {
+        masterBus.markRendered()
     }
 
     /** True while this engine still has sound of its own (voices or ringing orbit buses). */

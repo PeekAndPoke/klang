@@ -297,43 +297,53 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.reverb.roomSize shouldBe 1.0
     }
 
-    "an Inf-poisoned network resets instead of draining forever" {
-        // A hot Inf send writes Inf into the combs; `Inf x fb` never decays, so the countdown is
-        // infinite — the off-transition must heal (reset + Off), the exit the old gate's takeover
-        // path provided (review round 1: without it the orbit and its PlaybackEngine are pinned
-        // forever, feeding Inf/NaN into the mix).
+    "a non-finite SEND can no longer poison the network at all" {
+        // Master round: `Reverb.process` sterilises its two input taps, so the route this
+        // spec used to poison through is closed. The guard is on the INPUT and not on the 24
+        // state stores because converting those to flushState was measured at ~+11%/sample
+        // and reverted (2026-05-19) — and it is equivalent, since the comb/allpass network is
+        // a stable linear system: a finite input can never drive the state non-finite.
+        // Before it, one Inf send latched every comb for the life of the orbit.
+        for (hostile in listOf(Double.POSITIVE_INFINITY, Double.NaN)) {
+            val effect = createEffect(roomSize = 0.5)
+            val ctx = createCtx()
+
+            ctx.reverbSendBuffer.fill(0.8)
+            effect.process(ctx)
+
+            ctx.reverbSendBuffer.clear()
+            ctx.reverbSendBuffer.left[0] = hostile
+            effect.process(ctx)
+
+            effect.reverb.combPeakAbs().isFinite() shouldBe true
+        }
+    }
+
+    "an overflow-poisoned network resets instead of draining forever" {
+        // The route that REMAINS open after the input guard, and the realistic one: a runaway
+        // finite gain. A sustained MAX_VALUE send overflows a comb cell to non-finite after
+        // one delay revolution (~1116 samples at 44.1k) — no non-finite guard can prevent
+        // that, which is exactly why the drain-heal is still load-bearing rather than dead
+        // code. `Inf x fb` never decays, so the countdown is infinite and the off-transition
+        // must heal (reset + Off) — without it the orbit and its PlaybackEngine are pinned
+        // forever, feeding Inf/NaN into the mix (review round 1).
         val effect = createEffect(roomSize = 0.5)
         val ctx = createCtx()
 
-        ctx.reverbSendBuffer.left[0] = Double.POSITIVE_INFINITY
-        effect.process(ctx)
+        repeat(16) {
+            ctx.reverbSendBuffer.fill(Double.MAX_VALUE)
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+        }
+
         effect.reverb.drainSamplesUntilSilent(peak = effect.reverb.combPeakAbs()) shouldBe Double.POSITIVE_INFINITY
 
         effect.configureRoom(roomSize = 0.0, roomFade = null)
 
         effect.hasTail() shouldBe false
-        effect.reverb.hasTail(0.0) shouldBe false // literally zero — healed
-
-        // NaN half (round 2): `NaN > peak` is false, so a plain magnitude scan is BLIND to NaN
-        // cells — a finite peak next to them would start a FINITE drain that pumps NaN into the
-        // mix for its whole length. combPeakAbs must report the poisoned network as +Inf.
-        val nanPoisoned = createEffect(roomSize = 0.5)
-        val nanCtx = createCtx()
-
-        nanCtx.reverbSendBuffer.fill(0.8)
-        nanPoisoned.process(nanCtx)
-
-        nanCtx.reverbSendBuffer.clear()
-        nanCtx.reverbSendBuffer.left[0] = Double.NaN
-        nanPoisoned.process(nanCtx)
-
-        nanPoisoned.reverb.combPeakAbs() shouldBe Double.POSITIVE_INFINITY
-
-        nanPoisoned.configureRoom(roomSize = 0.0, roomFade = null)
-        nanPoisoned.hasTail() shouldBe false
         // hasTail(0.0) is itself NaN-blind (NaN > 0.0 is false), so the heal is pinned with the
         // NaN-hardened scan instead (review round 3): zero means reset() really cleared them.
-        nanPoisoned.reverb.combPeakAbs() shouldBe 0.0
+        effect.reverb.combPeakAbs() shouldBe 0.0
     }
 
     "a reverb owner arriving MID-drain goes straight to Active with the network kept" {

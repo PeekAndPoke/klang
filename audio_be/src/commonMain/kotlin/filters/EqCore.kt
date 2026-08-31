@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.safeOut
 
 /**
@@ -21,7 +21,7 @@ import io.peekandpoke.klang.audio_be.safeOut
  * `bilinearK` + the q clamp + the bell's db NaN-guard; the core adds NO clamps of its own:
  * the structural types inherit the Ignitor path's behavior exactly — pinned by parity rows
  * at extreme freq/q — and the bell's single clamp, safeOut on m1, lives in the coefficient
- * HELPER, not here), the process loop, and `flushDenormal` on both integrator states.
+ * HELPER, not here), the process loop, and `flushState` on both integrator states.
  * The SURFACE owns: param resolution (scalars per control tick), WHEN to call
  * [configureSection] (control rate; coefficients take effect immediately — the core is
  * SNAP-only, so any smoothing/ramping policy must be built by the surface BEFORE
@@ -316,8 +316,8 @@ class EqCore(
                         val v3 = v0 - s2
                         val v1 = ca1 * s1 + ca2 * v3
                         val v2 = s2 + ca2 * s1 + ca3 * v3
-                        s1 = (2.0 * v1 - s1).flushDenormal()
-                        s2 = (2.0 * v2 - s2).flushDenormal()
+                        s1 = (2.0 * v1 - s1).flushState()
+                        s2 = (2.0 * v2 - s2).flushState()
                         buffer[i] = v2
                     }
                 }
@@ -328,8 +328,8 @@ class EqCore(
                         val v3 = v0 - s2
                         val v1 = ca1 * s1 + ca2 * v3
                         val v2 = s2 + ca2 * s1 + ca3 * v3
-                        s1 = (2.0 * v1 - s1).flushDenormal()
-                        s2 = (2.0 * v2 - s2).flushDenormal()
+                        s1 = (2.0 * v1 - s1).flushState()
+                        s2 = (2.0 * v2 - s2).flushState()
                         buffer[i] = v0 - ck * v1 - v2
                     }
                 }
@@ -343,8 +343,8 @@ class EqCore(
                         val v3 = v0 - s2
                         val v1 = ca1 * s1 + ca2 * v3
                         val v2 = s2 + ca2 * s1 + ca3 * v3
-                        s1 = (2.0 * v1 - s1).flushDenormal()
-                        s2 = (2.0 * v2 - s2).flushDenormal()
+                        s1 = (2.0 * v1 - s1).flushState()
+                        s2 = (2.0 * v2 - s2).flushState()
                         buffer[i] = ck * v1
                     }
                 }
@@ -355,8 +355,8 @@ class EqCore(
                         val v3 = v0 - s2
                         val v1 = ca1 * s1 + ca2 * v3
                         val v2 = s2 + ca2 * s1 + ca3 * v3
-                        s1 = (2.0 * v1 - s1).flushDenormal()
-                        s2 = (2.0 * v2 - s2).flushDenormal()
+                        s1 = (2.0 * v1 - s1).flushState()
+                        s2 = (2.0 * v2 - s2).flushState()
                         buffer[i] = v0 - ck * v1
                     }
                 }
@@ -375,8 +375,8 @@ class EqCore(
                         val v3 = v0 - s2
                         val v1 = ca1 * s1 + ca2 * v3
                         val v2 = s2 + ca2 * s1 + ca3 * v3
-                        s1 = (2.0 * v1 - s1).flushDenormal()
-                        s2 = (2.0 * v2 - s2).flushDenormal()
+                        s1 = (2.0 * v1 - s1).flushState()
+                        s2 = (2.0 * v2 - s2).flushState()
                         // C2: ck * v1 = unity-peak band (see BANDPASS); gain rides on top.
                         buffer[i] += safeOut(ck * v1 * cg)
                     }
@@ -395,8 +395,8 @@ class EqCore(
                             val v3 = v0 - s2
                             val v1 = ca1 * s1 + ca2 * v3
                             val v2 = s2 + ca2 * s1 + ca3 * v3
-                            s1 = (2.0 * v1 - s1).flushDenormal()
-                            s2 = (2.0 * v2 - s2).flushDenormal()
+                            s1 = (2.0 * v1 - s1).flushState()
+                            s2 = (2.0 * v2 - s2).flushState()
                             buffer[i] = v0
                         }
                     } else {
@@ -408,8 +408,8 @@ class EqCore(
                             val v3 = v0 - s2
                             val v1 = ca1 * s1 + ca2 * v3
                             val v2 = s2 + ca2 * s1 + ca3 * v3
-                            s1 = (2.0 * v1 - s1).flushDenormal()
-                            s2 = (2.0 * v2 - s2).flushDenormal()
+                            s1 = (2.0 * v1 - s1).flushState()
+                            s2 = (2.0 * v2 - s2).flushState()
                             buffer[i] = v0 + cm1 * v1
                         }
                     }
