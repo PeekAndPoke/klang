@@ -526,11 +526,11 @@ private fun applySignal(f: (Double) -> Double): SprudelPattern =
  * @return A continuous pattern driven by [f].
  *
  * ```KlangScript(Playable)
- * signal { t -> kotlin.math.sin(t * 2 * kotlin.math.PI) }.range(200, 2000).freq().segment(128)
+ * signal(t => Math.sin(t * 6.28318)).range(200, 2000).freq().segment(128)
  * ```
  *
  * ```KlangScript(Playable)
- * signal { t -> t % 1.0 }.range(0.0, 127.0).freq().segment(128)
+ * signal(t => t % 1.0).range(0.0, 127.0).freq().segment(128)
  * ```
  * @category continuous
  * @tags signal, continuous, lfo, function, custom, oscillator
@@ -554,7 +554,7 @@ fun signal(@Suppress("unused") callInfo: CallInfo? = null, f: (Double) -> Double
  * ```
  *
  * ```KlangScript(Playable)
- * steady("c").note().segment(128)  // constant note "c" on every event
+ * steady(60).note().segment(128)  // constant note c4 (MIDI 60) on every event
  * ```
  * @category continuous
  * @tags steady, constant, continuous, signal, dc

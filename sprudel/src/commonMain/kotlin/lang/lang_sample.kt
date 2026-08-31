@@ -764,7 +764,7 @@ private fun applySlice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * s("breaks").slice(8, "0 1 2 3 4 5 6 7".i)  // sequence through all 8 slices
+ * s("breaks").slice(8, "0 1 2 3 4 5 6 7")    // sequence through all 8 slices
  * ```
  *
  * @param n Number of equal slices to divide the sample into. Integer.
@@ -830,7 +830,7 @@ private fun applySplice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * ```KlangScript(Playable)
- * s("breaks").splice(8, "0 2 4 6".i)    // every other slice, original tempo
+ * s("breaks").splice(8, "0 2 4 6")      // every other slice, original tempo
  * ```
  *
  * @param n Number of equal slices to divide the sample into; also used as speed multiplier. Integer.

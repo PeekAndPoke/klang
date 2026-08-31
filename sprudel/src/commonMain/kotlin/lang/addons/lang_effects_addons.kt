@@ -580,7 +580,7 @@ private fun applyNfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * - **release**: time in seconds for the filter to close after note release
  *
  * ```KlangScript(Playable)
- * note("c3").nf(200).nfenv(24).nfadsr(0.01, 0.3, 0.5, 0.5)
+ * note("c3").notchf(200).nfenv(24).nfadsr(0.01, 0.3, 0.5, 0.5)
  * ```
  *
  * @param attack Attack time in seconds.

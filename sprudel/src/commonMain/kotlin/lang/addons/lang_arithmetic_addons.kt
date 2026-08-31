@@ -70,7 +70,7 @@ fun String.flipSign(callInfo: CallInfo? = null): SprudelPattern =
  * Flips the sign of numerical values as a [PatternMapperFn].
  *
  * ```KlangScript(Playable)
- * flipSign("<[1 2 3 4] [-1 -2 -3 -4]>").scale("C4:major").n()
+ * "<[1 2 3 4] [-1 -2 -3 -4]>".apply(flipSign).scale("C4:major").n()
  * ```
  */
 @KlangScript.Constant

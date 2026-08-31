@@ -822,11 +822,11 @@ private fun applyPlyWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @return A pattern with `n` progressively transformed copies of each event per slot.
  *
  * ```KlangScript(Playable)
- * note("c").plyWith(4) { it.add(7) }   // c, g, d5, a5 — each copy adds 7 semitones more
+ * note("c").plyWith(4, x => x.add(7))   // c, g, d5, a5 — each copy adds 7 semitones more
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd").plyWith(3) { it.fast(2) }    // original, then 2x speed, then 4x speed in same slot
+ * s("bd").plyWith(3, x => x.fast(2))    // original, then 2x speed, then 4x speed in same slot
  * ```
  *
  * @alias plywith
@@ -849,7 +849,7 @@ fun String.plyWith(factor: Int, transform: PatternMapperFn, callInfo: CallInfo? 
  * @param transform Pattern transformation applied cumulatively per copy.
  *
  * ```KlangScript(Playable)
- * note("c").apply(plyWith(4) { it.add(7) })   // mapper form
+ * note("c").apply(plyWith(4, x => x.add(7)))   // mapper form
  * ```
  *
  * @alias plywith
@@ -956,11 +956,11 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
  * @return A pattern with `n` index-specific copies of each event per slot.
  *
  * ```KlangScript(Playable)
- * note("c").plyForEach(4) { pat, i -> pat.add(i * 2) }   // c, d, e, f# — index * 2 semitones
+ * note("c").plyForEach(4, (pat, i) => pat.add(i * 2))   // c, d, e, f# — index * 2 semitones
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd").plyForEach(3) { pat, i -> pat.gain(1.0 - i * 0.3) }  // fading copies
+ * s("bd").plyForEach(3, (pat, i) => pat.gain(1.0 - i * 0.3))  // fading copies
  * ```
  *
  * @alias plyforeach
@@ -1178,11 +1178,11 @@ private fun applyInside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @param transform Transformation to apply while the pattern is spread over `factor` cycles.
  *
  * ```KlangScript(Playable)
- * note("0 1 2 3").inside(4) { it.rev() }       // reverse across 4-cycle span, then compress back
+ * note("0 1 2 3").inside(4, x => x.rev())       // reverse across 4-cycle span, then compress back
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd hh cp").inside(2) { it.slow(2) }    // double-slow inside = no net change in tempo
+ * s("bd sd hh cp").inside(2, x => x.slow(2))    // double-slow inside = no net change in tempo
  * ```
  *
  * @category tempo
@@ -1236,11 +1236,11 @@ private fun applyOutside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @param transform Transformation to apply while the pattern covers only `1/factor` of the original cycle.
  *
  * ```KlangScript(Playable)
- * note("0 1 2 3").outside(4) { it.rev() }      // reverse on 1/4 speed, then speed back up
+ * note("0 1 2 3").outside(4, x => x.rev())      // reverse on 1/4 speed, then speed back up
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd hh cp").outside(2) { it.fast(2) }   // double-fast outside = no net change in tempo
+ * s("bd sd hh cp").outside(2, x => x.fast(2))   // double-fast outside = no net change in tempo
  * ```
  *
  * @category tempo

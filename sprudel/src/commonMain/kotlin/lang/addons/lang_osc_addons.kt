@@ -39,7 +39,7 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * that don't have dedicated DSL functions.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("supersaw").oscparam("analog", 0.2)
+ * note("c3 e3").s("supersaw").oscparam("analog", 4)
  * ```
  *
  * ```KlangScript(Playable)
@@ -137,18 +137,23 @@ private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * perturbations to the oscillator's phase increment. For unison/super oscillators,
  * each voice drifts independently, creating lush analog-like chorusing.
  *
- * A value of `0.0` gives a perfectly stable digital sound; `1.0` gives maximum drift.
- * Typical values are `0.05`–`0.3` for subtle warmth.
+ * The amount is the **peak drift in cents**: `analog(1)` wobbles up to about a cent
+ * either side of the note, `analog(8)` up to eight. `0.0` is off (and costs nothing).
+ * Typical values run from `1` to `8`; the built-in songs live in that band.
+ *
+ * Two layers make it up: a fast jitter (~50 ms) and a slow wander (~10 s). The slow
+ * layer starts CENTRED, so notes attack in tune and the wander only develops on notes
+ * held long enough to hear it: short plucks stay put, pads breathe.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").analog(0.2)   // lush analog supersaw
+ * note("c3 e3 g3").s("supersaw").analog(4)   // lush analog supersaw
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").s("sine").analog("<0 0.1 0.3>")   // cycle through drift amounts
+ * note("c3*4").s("sine").analog("<0 2 6>")   // cycle through drift amounts
  * ```
  *
- * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
+ * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
  * @return A new pattern with analog drift applied.
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
@@ -161,10 +166,10 @@ fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * Parses this string as a pattern and sets the analog drift amount.
  *
  * ```KlangScript(Playable)
- * "c3 e3".analog(0.2).s("supersaw").note()
+ * "c3 e3".analog(4).s("supersaw").note()
  * ```
  *
- * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
+ * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
  * @return A new pattern with analog drift applied.
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
@@ -177,10 +182,10 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * Creates a [PatternMapperFn] that sets the analog drift amount.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(analog(0.2))
+ * note("c3 e3").apply(analog(4))
  * ```
  *
- * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
+ * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
  * @return A [PatternMapperFn] that sets analog drift.
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
@@ -193,10 +198,10 @@ fun analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * Chains an analog-drift-set onto this [PatternMapperFn].
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(gain(0.8).analog(0.2))
+ * note("c3 e3").apply(gain(0.8).analog(4))
  * ```
  *
- * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
+ * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
  */
 @KlangScript.Function
 fun PatternMapperFn.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

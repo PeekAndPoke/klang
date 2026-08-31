@@ -1850,13 +1850,9 @@ private fun applyFilter(source: SprudelPattern, predicate: (SprudelPatternEvent)
  * @param predicate Function that receives a [SprudelPatternEvent] and returns `true` to keep it.
  * @return A pattern containing only the events that satisfy the predicate.
  *
- * ```KlangScript(Playable)
- * s("bd sd hh cp").filter(x => x.part.begin < 0.5)  // keep first-half events
- * ```
- *
- * ```KlangScript(Playable)
- * note("c d e f").filter(x => x.isOnset)             // keep only onset events
- * ```
+ * No KlangScript example: an event's properties are not reachable from script today, so a
+ * predicate written there has nothing to test. For time-based filtering use `filterWhen`,
+ * which takes the begin time as a plain number. See docs/tasks/sprudel-function-testing.md.
  *
  * @category structural
  * @tags filter, gate, conditional, predicate
@@ -1876,9 +1872,7 @@ fun String.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInf
  * @param predicate Function that receives a [SprudelPatternEvent] and returns `true` to keep it.
  * @return A [PatternMapperFn] that keeps only events satisfying the predicate.
  *
- * ```KlangScript(Playable)
- * s("bd sd hh cp").apply(filter(x => x.part.begin < 0.5))  // via mapper
- * ```
+ * No KlangScript example, for the same reason as [SprudelPattern.filter]: use `filterWhen`.
  *
  * @category structural
  * @tags filter, gate, conditional, predicate
@@ -2400,11 +2394,11 @@ internal fun applyChunk(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @return A new pattern with the transform cycling through chunks.
  *
  * ```KlangScript(Playable)
- * seq("0 1 2 3").chunk(4) { it.add(7) }.scale("c:minor").n()  // one chunk transformed per cycle
+ * seq("0 1 2 3").chunk(4, x => x.add(7)).scale("c:minor").n()  // one chunk transformed per cycle
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd ht lt").chunk(4) { it.gain(1.5) }  // one hit louder, cycling forward
+ * s("bd sd ht lt").chunk(4, x => x.gain(1.5))  // one hit louder, cycling forward
  * ```
  * @alias slowchunk, slowChunk
  * @category structural

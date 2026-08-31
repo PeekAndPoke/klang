@@ -304,7 +304,10 @@ private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 /**
  * Sets the post-gain (applied after voice processing) for each event in the pattern.
  *
- * Unlike `gain` which is applied before synthesis, `postgain` is a final output multiplier.
+ * `postgain` and `gain` are both output multipliers applied at the voice output (SendRenderer),
+ * so on a single voice they do the same arithmetic. The difference is what else touches them:
+ * `gain` is scaled by `velocity` and by the mute/solo/fade multiplier, while `postgain` is not.
+ * So `gain` is the per-note, performable level and `postgain` is the line's own final trim.
  *
  * ```KlangScript(Playable)
  * s("bd sd").postgain(1.5)                    // amplify after processing
@@ -624,15 +627,15 @@ private fun applyUnison(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 /**
  * Sets the number of unison voices for oscillator stacking effects (e.g. supersaw).
  *
- * Higher values produce a thicker, chorus-like sound. Use with `detune` and `spread`
- * to control the detuning and panning spread of the voices.
+ * Higher values produce a thicker, chorus-like sound. Use with `spread` to set how far
+ * apart the stacked voices are detuned (in semitones).
  *
  * ```KlangScript(Playable)
  * note("c3").s("supersaw").unison(5)               // 5 stacked sawtooth oscillators
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").unison("<3 6 10 16>").detune(0.3)  // unison pattern
+ * note("c3 e3 g3").s("supersaw").unison("<3 6 10 16>").spread(0.3)  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -649,7 +652,7 @@ fun SprudelPattern.unison(voices: PatternLike? = null, callInfo: CallInfo? = nul
  * Parses this string as a pattern and sets the number of unison voices.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").unison("<1 5 10 16>").detune(0.3).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").unison("<1 5 10 16>").spread(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -662,7 +665,7 @@ fun String.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).spread(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -675,7 +678,7 @@ fun unison(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3").s("supersaw").apply(unison(5).detune(0.3))  // unison + detune chained
+ * note("c3").s("supersaw").apply(unison(5).spread(0.3))  // unison + spread chained
  * ```
  *
  * @param voices The number of unison voices.
@@ -692,7 +695,7 @@ fun PatternMapperFn.unison(voices: PatternLike? = null, callInfo: CallInfo? = nu
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").uni("<1 5 10 16>").detune(0.3)  // unison pattern
+ * note("c3 e3 g3").s("supersaw").uni("<1 5 10 16>").spread(0.3)  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -709,7 +712,7 @@ fun SprudelPattern.uni(voices: PatternLike? = null, callInfo: CallInfo? = null):
  * Alias for [unison]. Parses this string as a pattern and sets the number of unison voices.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").detune(0.3).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").spread(0.3).note()  // unison pattern
  * ```
  */
 @KlangScript.Function
@@ -720,7 +723,7 @@ fun String.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).spread(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -734,7 +737,7 @@ fun uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * mapper.
  *
  * ```KlangScript(Playable)
- * note("c3").s("supersaw").apply(uni(5).detune(0.3))  // unison + detune chained
+ * note("c3").s("supersaw").apply(uni(5).spread(0.3))  // unison + spread chained
  * ```
  *
  * @param voices The number of unison voices.

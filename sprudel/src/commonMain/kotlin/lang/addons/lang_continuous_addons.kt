@@ -77,7 +77,7 @@ private fun getTimeOfDayFraction(kronos: Kronos): Double {
  * Returns the current time of day as a linear value: `0.0` (midnight) → `0.5` (noon) → `1.0` (midnight).
  *
  * ```KlangScript(Playable)
- * gain(timeOfDay)                   // gain rises through the day
+ * s("hh*8").gain(timeOfDay)         // gain rises through the day
  * ```
  *
  * ```KlangScript(Playable)
@@ -96,7 +96,7 @@ val timeOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * Returns the current time of day as a sine wave: `0.0` (midnight) → `1.0` (noon) → `0.0` (midnight).
  *
  * ```KlangScript(Playable)
- * gain(sinOfDay)                    // gain peaks at noon
+ * s("hh*8").gain(sinOfDay)          // gain peaks at noon
  * ```
  *
  * ```KlangScript(Playable)
@@ -120,7 +120,7 @@ val sinOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * ```
  *
  * ```KlangScript(Playable)
- * gain(sinOfDay2.range(0, 1))       // bipolar to unipolar conversion
+ * s("hh*8").gain(sinOfDay2.range(0, 1))  // bipolar to unipolar conversion
  * ```
  *
  * @category continuous
@@ -136,7 +136,7 @@ val sinOfDay2: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * Returns the current time of night (inverse of [timeOfDay]): `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
  *
  * ```KlangScript(Playable)
- * gain(timeOfNight)                 // gain is highest at midnight
+ * s("hh*8").gain(timeOfNight)       // gain is highest at midnight
  * ```
  *
  * ```KlangScript(Playable)
@@ -155,7 +155,7 @@ val timeOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * Returns the current time of night as a sine wave: `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
  *
  * ```KlangScript(Playable)
- * gain(sinOfNight)                  // gain peaks at midnight
+ * s("hh*8").gain(sinOfNight)        // gain peaks at midnight
  * ```
  *
  * ```KlangScript(Playable)
@@ -180,7 +180,7 @@ val sinOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * ```
  *
  * ```KlangScript(Playable)
- * gain(sinOfNight2.range(0, 1))     // bipolar night signal to unipolar gain
+ * s("hh*8").gain(sinOfNight2.range(0, 1))  // bipolar night signal to unipolar gain
  * ```
  *
  * @category continuous

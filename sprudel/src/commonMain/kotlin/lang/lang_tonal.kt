@@ -1434,7 +1434,7 @@ private fun applyFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * reinterprets the current event value as a frequency in Hz.
  *
  * ```KlangScript(Playable)
- * freq("440 550 660")          // A4, roughly C#5, roughly E5 by raw Hz
+ * "440 550 660".freq()         // A4, roughly C#5, roughly E5 by raw Hz
  * ```
  *
  * ```KlangScript(Playable)

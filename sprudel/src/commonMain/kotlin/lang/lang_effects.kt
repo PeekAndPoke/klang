@@ -968,7 +968,7 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * wins. The master bus takes the same values as `MasterFx.reverb().wet(0.3).roomFade(0.1)`.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").clip(0.5).s("sine").roomWet(0.5)   // 50% reverb send
+ * note("c3 e3 g3").clip(0.5).s("sine").roomWet(0.5).rsize(4)   // 50% reverb send (rsize gates it)
  * ```
  *
  * ```KlangScript(Playable)
@@ -976,7 +976,7 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * ```KlangScript(Playable)
- * seq("0 0.5 1.0").roomWet()   // reinterpret values as the reverb send
+ * seq("0 0.5 1.0").roomWet().rsize(4)   // reinterpret values as the reverb send
  * ```
  *
  * @param wet The reverb send amount (0–1). Omit to reinterpret the pattern's values.
@@ -2101,7 +2101,7 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @return A new pattern with the delay applied.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").delayWet(0.4)                         // 40% delay send
+ * note("c3 e3").delayWet(0.4, 0.25)                   // 40% delay send at 0.25 s (time gates it)
  * ```
  *
  * ```KlangScript(Playable)

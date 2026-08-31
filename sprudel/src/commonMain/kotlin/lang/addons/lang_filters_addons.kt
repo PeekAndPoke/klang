@@ -230,11 +230,11 @@ fun PatternMapperFn.nresonance(q: PatternLike? = null, callInfo: CallInfo? = nul
  * @return A new pattern with notch resonance applied.
  *
  * ```KlangScript(Playable)
- * note("c4").notchf(500).nres(10)   // alias for nresonance
+ * note("c4").notchf(500).notchq(10)   // alias for nresonance
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").nres("<5 20>")         // sweeping notch Q
+ * note("c4").notchq("<5 20>")       // sweeping notch Q
  * ```
  *
  * @param-tool q SprudelNotchQEditor, SprudelNotchQSequenceEditor
@@ -253,7 +253,7 @@ fun SprudelPattern.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): S
  * @return A new pattern with notch resonance applied.
  *
  * ```KlangScript(Playable)
- * "c4".notchf(500).nres(10)         // alias for String.nresonance
+ * "c4".notchf(500).notchq(10)       // alias for String.nresonance
  * ```
  */
 @KlangScript.Function
@@ -267,11 +267,11 @@ fun String.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @return A [PatternMapperFn] that applies notch resonance.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(notchf(1000).nres(10))  // alias for nresonance()
+ * note("c4 e4").apply(notchf(1000).notchq(10))  // alias for nresonance()
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, nres(15))           // narrow notch on first cycle
+ * note("c3*4").firstOf(4, notchq(15))         // narrow notch on first cycle
  * ```
  *
  * @alias nresonance
@@ -289,11 +289,11 @@ fun notchq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * @return A new [PatternMapperFn] chaining notch resonance after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(notchf(500).nres(10))   // notchf then nres
+ * note("c4 e4").apply(notchf(500).notchq(10)) // notchf then notchq
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, notchf(1000).nres(15))  // chain
+ * note("c3*4").firstOf(4, notchf(1000).notchq(15))  // chain
  * ```
  */
 @KlangScript.Function
