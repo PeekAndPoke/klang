@@ -282,6 +282,7 @@ class VoiceFactory(
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, freqHz ?: 0.0, voiceRandom = voiceRandom,
+                    cut = data.cut,
                     body = bodyDef, vowel = vowelDef,
                 )
             }

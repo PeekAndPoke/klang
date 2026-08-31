@@ -125,11 +125,14 @@ test.
 ## F3 — The test named after the mid-block clamp cannot detect the clamp's removal 🔴
 
 **MED.** `FilterModulationTest`, *"voice starting mid-block handles envelope correctly"*. The behaviour it names is
-`EnvelopeCalc.kt:28` — `val currentFrame = maxOf(blockStart, startFrame)`, which stops the envelope position going
+`EnvelopeCalc.kt:31` — `val currentFrame = maxOf(blockStart, startFrame)` *(anchor re-verified 2026-08-31; code unchanged)*, which stops the envelope position going
 negative when a block starts before the voice does.
 
 **Evidence (mutation S1).** Replaced it with `val currentFrame = blockStart` and ran the **whole**
 `FilterModulationTest`: **GREEN**. Not just that one test — no test in the file noticed.
+
+> **Mutation RE-RUN 2026-08-31 against the entire suite (1373 tests): still GREEN.** The finding
+> stands unchanged, and is now known to be suite-wide rather than file-wide.
 
 **Why:** with the clamp gone, `absPos` goes negative, which lands in the *attack* branch of
 `envelopeLevelAtPosition`. Every built-in curve is monotonic increasing with `shape(0) = 0`, so a negative `p` yields
@@ -145,13 +148,28 @@ clamp produces. The release branch is unreachable for a negative `absPos` (`gate
 
 ---
 
-## F4 — "filter without modulator is not modified" cannot fail 🔴
+## F4 — "filter without modulator is not modified" cannot fail ❌ WITHDRAWN
 
 **LOW.** `FilterModulationTest`, test 1. It asserts that a voice built with an empty
 `filterModulators` list never calls `setCutoff`.
 
 **Evidence (mutation S3).** Deleted the `if (modulators.isNotEmpty())` guard at
-`FilterPipelineBuilder.kt:43-46` so the renderer is added unconditionally: **GREEN**.
+`FilterPipelineBuilder.kt:47` *(anchor re-verified 2026-08-31)* so the renderer is added unconditionally: **GREEN**.
+
+> ❌ **WITHDRAWN 2026-08-31 — wrong when written, not stale.** The same mutation re-run against
+> the **whole** suite is **KILLED**, by `PipelinePresetSpec`: *"Modern minimal: with all effects off,
+> envelope is still last"* and *"Pedal minimal: … envelope is still first"*. Both assert the exact
+> renderer list for an effects-free pipeline, so an unconditionally-added `FilterModRenderer` shows
+> up as a surplus stage.
+>
+> The pilot ran mutation S3 against `FilterModulationTest` only and reported the result as
+> "**nothing** guards that it stays" — a file-scoped run stated as a suite-wide absence.
+> `PipelinePresetSpec` was added **2026-06-29**, five weeks before the pilot.
+>
+> **Second finding falsified by that same spec** (see [F14](#f14)'s withdrawn Pedal bullet). What
+> survives is only the narrow, already-recorded observation that `FilterModulationTest` test 1 is
+> guaranteed by the shape of its input rather than by production code — true, harmless, and not a
+> coverage hole, because the guard it worried about is guarded elsewhere.
 
 **Why:** `FilterModRenderer.render()` is `for (mod in modulators) { … }`. With an empty list the body never executes, so
 adding the renderer changes nothing observable. The assertion is guaranteed by the *shape of the input*, not by any line
@@ -209,7 +227,7 @@ indistinguishable from real guards.
 
 ---
 
-## F7 — Three known holes: all CONFIRMED 🔴
+## F7 — Three known holes: all CONFIRMED 🟡 *(solo + cut/choke now guarded 2026-08-31)*
 
 **HIGH.** Independently verified, and they are the load-bearing parts of the voice path:
 
@@ -218,15 +236,48 @@ indistinguishable from real guards.
   file. Its old
   `VoiceSchedulerDiagnosticsTest` was deleted when diagnostics moved to the dispatcher and nothing replaced it. This is
   the highest-churn file in the module.
+
+  > **Re-verified 2026-08-31 — the first half holds, the second half is WRONG.**
+  >
+  > **Holds:** the file is now **576 lines** (+41% in the four weeks the finding sat unreviewed) and
+  > still has no spec of its own. The hard-cut TODO moved to `:558`.
+  >
+  > **Wrong: "is not reached by any spec".** It is reached and *driven*, by at least two —
+  > `SampleVoiceOnsetSpec` and `SeededPlaybackReproducibilitySpec`. Both build a `Rig` around
+  > `AudioBackendContext.create(...)` + `PlaybackEngine.create(context)`, call
+  > `engine.scheduler.scheduleVoice(...)` (that is `VoiceScheduler.scheduleVoice`), and drive
+  > `process` → `promoteScheduled` → `activateVoice` on every rendered block.
+  >
+  > **How both the finding and its re-verification got this wrong:** a grep for the string
+  > `VoiceScheduler` in `commonTest` returns only comments, because these specs reach the object
+  > through `engine.scheduler` and never name the type. The finding's own phrasing —
+  > "constructed only in `PlaybackEngine.kt`" — is literally true and led to a false conclusion.
+  > **Third instance in this audit of a grep standing in for reading the code** (see [F14](#f14),
+  > [F15](#f15)); the first two were the pilot's, this one is the re-verification's own.
+  >
+  > **What survives, and it is still worth fixing:** no spec takes the scheduler's own logic as its
+  > *subject*, and **solo/mute and cut/choke specifically still have zero coverage** (re-grepped:
+  > `solo`, `choke`, `cutGroup` return nothing across `commonTest`). But the cost collapses — the
+  > `Rig` fixture already exists and is copyable, so this is a spec to write, not a harness to build.
 - **`SendRenderer.kt` — zero test references, but not dead.** Nuance worth keeping: it *executes* on every `render()` in
   all 33 tests, because `Voice.kt:81` appends it unconditionally. So it runs blind — no test ever inspects its output
   (pan, gain, postGain, or the delay/reverb send writes). Untested, not unexercised; a bug there fails silently rather
   than visibly.
 - **solo/mute and cut/choke — zero tests anywhere.** A repo-wide grep of `commonTest` for `solo`,
-  `cut` and `choke` returns nothing. `VoiceScheduler.process`'s solo ramp and `promoteScheduled`'s cut-group hard-kill
+  `cut` and `choke` returns nothing. *(Re-verified 2026-08-31: `solo`, `choke` and `cutGroup` still
+  return nothing across all of `commonTest`.)* `VoiceScheduler.process`'s solo ramp and `promoteScheduled`'s cut-group hard-kill
   are both entirely unexercised. The hard-kill is also the site of the standing
-  `VoiceScheduler.kt:388` TODO — *"Use a fade out / release phase instead of hard cut?"* — i.e. a known click source
+  `VoiceScheduler.kt:558` TODO — *"Use a fade out / release phase instead of hard cut?"* — i.e. a known click source
   with no test.
+
+  > ✅ **CLOSED 2026-08-31** by `VoiceSchedulerSoloCutSpec` — 11 rows, 7 mutations, 7 killed.
+  > Six rows cover the solo duck (ramp shape, the 0.05 floor, max-not-min across sources, the
+  > `sourceId != null` conjunct, and that the soloed source is itself exempt); four cover cut/choke.
+  > Row 1 is a deliberate positive control with no mutation of its own: it exists so that a wrong pan
+  > convention or a 0 Hz oscillator cannot quietly make the other ten vacuous.
+  > **Writing it found [F18](#f18) on the first run** — cut was inert on every synth voice.
+  > Still open in this bullet: the hard-kill's *click* is now observable but not guarded as an audio
+  > property, and mute has no rows of its own.
 
 ---
 
@@ -236,8 +287,9 @@ indistinguishable from real guards.
 the test would pass even if that path were deleted.
 
 1. **`EnvelopeTest` — "envelope clamps negative values to zero".**
-   **Evidence (mutation V1):** deleted `EnvelopeRenderer.kt:126` (`if (currentEnv < 0.0) currentEnv =
-   0.0`) — the whole `EnvelopeTest` stayed **GREEN**. Why: it is a single first-ever `render()` at `blockStart = 200`
+   **Evidence (mutation V1):** deleted `EnvelopeRenderer.kt:147` (`if (currentEnv < 0.0) currentEnv =
+   0.0`) *(anchor re-verified 2026-08-31; code unchanged)* — the whole `EnvelopeTest` stayed **GREEN**.
+   **Mutation RE-RUN 2026-08-31 against the entire suite (1373 tests): still GREEN.** Stands. Why: it is a single first-ever `render()` at `blockStart = 200`
    with no priming render, so
    `env.releaseStartLevel` is still its default `0.0` when the release branch primes it. Every release output is
    `0.0 * shape` = `0.0` for *any* shape. The clamp cannot be observed.
@@ -381,7 +433,10 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
 **MED.** Production behaviour that no spec in `voices/` claims:
 
 - **`Voice.Ducking` (sidechain) — untested by anything at the `Voice`/`VoiceScheduler` layer.** It is carried on `Voice`
-  but applied in `cylinders/Cylinder.kt`.
+  but applied in `cylinders/Cylinder.kt`. *(Re-verified 2026-08-31 and it HOLDS as written: `ducking`
+  appears in `voices/` only as a defaulted-null parameter of `VoiceTestHelpers`, never given a non-null
+  value by any test. `DuckingSpec` and `KatalystDuckingEffectSpec` do exist — and predate the pilot — but
+  they cover the effect and the Katalyst, which is the layer this bullet already excludes.)*
 - **`Voice.Compressor`'s DSP is untested.** `VoiceCompressorSpec` (4 tests) tests *string parsing*
   only — consistent with its own contents, but the name reads as coverage of the compressor. The runtime effect lives in
   `Cylinder.kt:181-216`.
@@ -391,23 +446,44 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
   `gain = baseGain * velocity`, legato/clip duration math, sample loop/pitch-ratio resolution,
   `perVoiceCutoffOffsetMul` randomisation, and the ADSR merge with sample metadata. (`VoiceFactoryFilterOrderSpec` does
   exercise `makeVoice`, but only for filter ordering.)
-- **`PipelinePreset.Pedal` is never exercised** — `Modern` is hard-coded into `VoiceTestHelpers`.
+- ~~**`PipelinePreset.Pedal` is never exercised** — `Modern` is hard-coded into `VoiceTestHelpers`.~~
+  **❌ WITHDRAWN 2026-08-31 — this was wrong when written, not stale.** `PipelinePresetSpec` builds an
+  active pipeline from `PipelinePreset.Pedal` at `:66` and `:75`, and that spec was added **2026-06-29**,
+  five weeks *before* the pilot ran. The pilot grepped `voices/` and phrased the result suite-wide.
+  What survives: `VoiceTestHelpers` does hard-code `Modern`, so the *voice-strip* path is Modern-only.
 - **`Voice.Fm` is `null` in every lifecycle/pipeline test**, and `FilterModulator.drift` is `null`
   everywhere — the third independent sighting of the analog-drift gap ([F2](#f2), [F5](#f5)).
 
 ---
 
-## F15 — Suite-wide: 25 assertion-free tests, in three distinct classes 🔴
+## F15 — Suite-wide: 21 assertion-free tests, in three distinct classes 🔴
+
+> **Recounted 2026-08-31, and the original count was too high.** The pilot's census matched
+> `shouldBe`-shaped assertions and missed this repo's **custom infix matchers** — `intShouldBeLessThan`,
+> `intShouldBeGreaterThan`, `should beGreaterThanOrEqualTo`. Three tests filed as defects below assert
+> perfectly well through those. Recount method: strip `//` and `/* */` first (these tests keep their
+> expected values in comments, so matching `should` unstripped reads a comment as an assertion), then
+> match the infix forms too. **Corrected: 21 assertion-free of 1373 tests** (the suite has grown from
+> 943). A further 4 hits in `IgnitorFilterEnvSemitoneSpec` are **not** defects either — all four
+> delegate to a helper, `envEqualsStatic()`, which carries the `maxDiff shouldBeLessThan 1e-12`.
+> A line-level census cannot see through a helper call; only reading the body settles it.
 
 Extends [F6](#f6) from the `voices/` pilot to the whole `audio_be` tree. The classification matters — only the first
 class is a defect:
 
-**(a) Named for a behaviour, checks nothing — 13 tests. Defects.**
-The 9 from [F6](#f6), plus: `ClippingFuncsBoundsSpec` *"rectify output is always non-negative"*,
-`IgnitorCombinatorsSpec` *"crush (amount) - output is quantized (fewer unique values than input)"* and *"accelerate (
-amount) - pitch changes over time"*, `VoicePipelineTest` *"voice renders correct number of samples"*. Each names a
-measurable property and measures nothing. Note the `accelerate` one is the **third** independent gap in accelerate
-coverage ([F10](#f10)).
+**(a) Named for a behaviour, checks nothing — 10 tests. Defects.**
+The 9 from [F6](#f6) (all nine re-confirmed 2026-08-31 by the corrected census), plus
+`VoicePipelineTest` *"voice renders correct number of samples"*. Each names a measurable property and
+measures nothing.
+
+> **Three former members of this class are WITHDRAWN 2026-08-31 — they do assert:**
+> `ShapingFuncsBoundsSpec` *"rectify output is always non-negative"* (renamed from
+> `ClippingFuncsBoundsSpec`) loops every input through
+> `withClue(...) { y should beGreaterThanOrEqualTo(0.0) }`; `IgnitorCombinatorsSpec` *"crush"* ends on
+> `wetUnique intShouldBeLessThan dryUnique`; *"accelerate"* counts zero crossings per half and ends on
+> `crossingsSecondHalf intShouldBeGreaterThan crossingsFirstHalf`. The accelerate one was cited as the
+> "third independent gap in accelerate coverage" — **that claim is withdrawn too**; accelerate is
+> covered here AND by `AccelerateSemitoneLawSpec`.
 
 **(b) Honestly-named smoke tests — 5 tests. Acceptable as-is.**
 `LowPassHighPassFiltersSpec` *"…zero-length buffer does not crash"* ×3 — the assertion *is* "does not throw";
@@ -418,7 +494,7 @@ exactly what is delivered. Worth keeping, worth not counting as coverage — and
 > **Half closed 2026-08-31:** `TremoloRenderer` now has `TremoloRendererSpec` (15 rows, added by
 > the block-framing W10 round). `StripPhaserRenderer` still has none.
 
-**(c) `GuitarClickHuntTest` — 7 of 7, and a separate question.**
+**(c) `GuitarClickHuntTest` — 6 of 7 (one has gained an assertion since), and a separate question.**
 This is the standing click-diagnostic harness; it prints and guards nothing, by design. But it is **5.4 s of the suite's
 6.9 s — 78% of total runtime for zero assertions.** Worth deciding whether a diagnostic probe belongs in the default
 `jvmTest` run or behind a tag.
@@ -511,6 +587,98 @@ clamps the body*.
 This is inherent to a log-domain follower with no rectifier pre-smoothing. **The fix is the peak-detector RMS smoothing
 already listed as deferred in `Compressor.kt`'s file KDoc** — not the blend. Affects every per-orbit compressor, not
 just the master.
+
+> **Re-verified 2026-08-31 — mechanism unchanged, so the 2026-08-06 measurements still describe the
+> live code.** `envelopeStep(abs(...))` at `:332`/`:351` and `lookaheadStep(max(abs(l), abs(r)))` at
+> `:312` still feed instantaneous `|x|` straight into the dB follower (`:423`), with no rectifier
+> smoothing anywhere between. `Compressor.kt` has taken five commits since the measurement (the master
+> limiter's lookahead, the wire-format split, two renames, and the `flushState` guard) and **not one of
+> them touches the detector's input path**. The RMS smoothing is still only the KDoc note at `:41`.
+> **This is the one open finding that is an audible engine defect rather than a test defect.**
+
+---
+
+## F18 — Cut/choke groups were silently inert on every SYNTH voice ✅ FIXED
+
+**HIGH — a real production defect, and the first one this audit found in shipped DSP rather than in
+its tests.** Found 2026-08-31 by the very first run of the spec written for [F7](#f7): the row
+*"a new voice hard-kills the voice already sounding in its cut group"* came back `expected:<1> but
+was:<2>`.
+
+**The defect.** `VoiceFactory.buildVoice` declares `cut: Int? = null`. There are exactly two call
+sites, and only one passed it:
+
+| call site | branch | `cut` argument |
+|-----------|--------|----------------|
+| `VoiceFactory.kt:372` | sample voice | `cut = data.cut` ✅ |
+| `VoiceFactory.kt:280` | synth / oscillator voice | **absent — silently defaulted to `null`** ❌ |
+
+So `Voice.cut` was always `null` for oscillator voices.
+
+**Why it produced an asymmetry rather than a clean no-op**, which is what settles that it was a slip
+and not a design choice: `VoiceScheduler.activateVoice` reads the **trigger** from
+`absoluteVoice.data.cut` but each **victim** from `activeVoice.voice.cut`. A synth voice therefore
+choked sample voices in its group perfectly well, while being immune to ever being choked itself.
+No reading of cut/choke intends "cuts others, cannot be cut".
+
+**Blast radius: none today.** A repo-wide grep found **zero** uses of `.cut(` in any shipped song, so
+the fix moves no shipped sound. The DSL surface lives in `sprudel/lang_sample.kt` and all its KDoc
+examples are sample-based, which is the likeliest reason the gap survived: cut reads as a
+sample-only feature, and on samples it always worked.
+
+**Fix.** One argument, at `VoiceFactory.kt:285` — `cut = data.cut` on the synth branch, matching the
+sample branch.
+
+**Guard.** `VoiceSchedulerSoloCutSpec`. Mutation **M1** (revert the fix) is the designated killer and
+takes down exactly one row.
+
+> **Method note — this is the payoff for the whole campaign.** The bug is invisible to inspection:
+> both call sites *look* complete, because a defaulted parameter is exactly as readable when it is
+> wrong. Nothing but an executed behavioural test could see it. It is also the second time in this
+> audit that a **default parameter** hid a defect (cf. [F1](#f1), constants read by nothing) — worth
+> treating `= null` defaults on wide internal builders as a smell in their own right.
+
+---
+
+## F19 — `cut(0)` is documented as "no choke" and the engine treats it as a normal group 🔴
+
+**MED — a contract mismatch between the DSL's documented promise and the engine, not a crash.**
+Found 2026-08-31 while explaining cut/choke to the maintainer, and verified rather than assumed.
+
+**The DSL says:**
+
+> *"Group `0` means no choke."* — `sprudel/lang_sample.kt:690`
+>
+> ```
+> s("bd sd").cut("<0 1>")   // alternate between no-cut and cut-group-1
+> ```
+
+**The engine says otherwise.** `VoiceScheduler.activateVoice:553` gates the sweep on
+`if (cut != null)`, and nothing on the path maps `0` to `null`:
+
+| stage | what happens to `cut(0)` |
+|-------|--------------------------|
+| `lang_sample.kt:681` | `cut = it?.asIntOrNull()` → `0` |
+| `VoiceData.cut` | `Int?` → `0` |
+| `VoiceScheduler:553` | `0 != null` → **the sweep runs** |
+| `VoiceScheduler:557` | victims are voices with `voice.cut == 0` → **group 0 chokes group 0** |
+
+So group `0` is an ordinary group. In the KDoc's own second example the `bd` would have its tail
+chopped by the following `sd` on the `0` cycle — exactly what the comment promises will not happen.
+
+**Not currently audible anywhere:** zero shipped songs use `.cut(`, same as [F18](#f18). And until
+F18 was fixed this was doubly invisible on synth voices, which could not be cut at all.
+
+**Two ways to settle it, and it is a maintainer decision because they differ in what users expect:**
+
+1. **Engine follows the docs** — gate on `cut != null && cut != 0`. Keeps `0` as a natural "off"
+   value that can be produced by a pattern (`"<0 1>"`), which is why the doc wanted it, and matches
+   what a Tidal/Strudel user would assume.
+2. **Docs follow the engine** — delete the "0 = no choke" sentence and fix the example. "Off" then
+   means *not calling* `.cut()` at all, and `0` is just a group like any other.
+
+Option 1 is the one that keeps a *pattern* able to switch choking on and off per event; option 2
+cannot express that at all. Recorded unfixed — no code touched.
 
 ---
 
