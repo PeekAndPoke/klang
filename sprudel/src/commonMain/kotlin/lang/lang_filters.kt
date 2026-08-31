@@ -966,3 +966,115 @@ fun PatternMapperFn.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
 fun bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bpe(semitones, callInfo) }
 
+// -- lowpass() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Applies a Low Pass Filter (LPF) — the CANONICAL name. `lpf` is the short form and stays first-class;
+ * both are the same function, so use whichever reads better in the line you are writing.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
+ * @return A new pattern with the filter applied.
+ *
+ * ```KlangScript(Playable)
+ * note("c3").s("saw").lowpass(800)
+ * ```
+ *
+ * @category effects
+ * @tags lowpass, lpf, cutoff, low pass filter, filter, frequency
+ */
+@KlangScript.Function
+fun SprudelPattern.lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    lpf(freq, q, passes, callInfo)
+
+/** Applies a Low Pass Filter (LPF) to a string pattern (see [SprudelPattern.lowpass]). */
+@KlangScript.Function
+fun String.lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.lpf(freq, q, passes, callInfo)
+
+/** Returns a [PatternMapperFn] that applies a Low Pass Filter (LPF) (see [SprudelPattern.lowpass]). */
+@KlangScript.Function
+fun lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    lpf(freq, q, passes, callInfo)
+
+/** Chains a lowpass step onto this [PatternMapperFn] (see [SprudelPattern.lowpass]). */
+@KlangScript.Function
+fun PatternMapperFn.lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.lpf(freq, q, passes, callInfo)
+
+
+// -- highpass() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Applies a High Pass Filter (HPF) — the CANONICAL name. `hpf` is the short form and stays first-class;
+ * both are the same function, so use whichever reads better in the line you are writing.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+ * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
+ * @return A new pattern with the filter applied.
+ *
+ * ```KlangScript(Playable)
+ * s("bd").highpass(200)
+ * ```
+ *
+ * @category effects
+ * @tags highpass, hpf, cutoff, high pass filter, filter, frequency
+ */
+@KlangScript.Function
+fun SprudelPattern.highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    hpf(freq, q, passes, callInfo)
+
+/** Applies a High Pass Filter (HPF) to a string pattern (see [SprudelPattern.highpass]). */
+@KlangScript.Function
+fun String.highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.hpf(freq, q, passes, callInfo)
+
+/** Returns a [PatternMapperFn] that applies a High Pass Filter (HPF) (see [SprudelPattern.highpass]). */
+@KlangScript.Function
+fun highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    hpf(freq, q, passes, callInfo)
+
+/** Chains a highpass step onto this [PatternMapperFn] (see [SprudelPattern.highpass]). */
+@KlangScript.Function
+fun PatternMapperFn.highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.hpf(freq, q, passes, callInfo)
+
+
+// -- bandpass() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Applies a Band Pass Filter (BPF) — the CANONICAL name. `bpf` is the short form and stays first-class;
+ * both are the same function, so use whichever reads better in the line you are writing.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @param q The filter Q factor (bandwidth). Omit to leave it unchanged.
+ * @return A new pattern with the filter applied.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").bandpass(1000)
+ * ```
+ *
+ * @category effects
+ * @tags bandpass, bpf, band pass filter, filter, frequency
+ */
+@KlangScript.Function
+fun SprudelPattern.bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    bpf(freq, q, callInfo)
+
+/** Applies a Band Pass Filter (BPF) to a string pattern (see [SprudelPattern.bandpass]). */
+@KlangScript.Function
+fun String.bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.bpf(freq, q, callInfo)
+
+/** Returns a [PatternMapperFn] that applies a Band Pass Filter (BPF) (see [SprudelPattern.bandpass]). */
+@KlangScript.Function
+fun bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    bpf(freq, q, callInfo)
+
+/** Chains a bandpass step onto this [PatternMapperFn] (see [SprudelPattern.bandpass]). */
+@KlangScript.Function
+fun PatternMapperFn.bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.bpf(freq, q, callInfo)
+

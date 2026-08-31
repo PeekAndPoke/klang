@@ -748,3 +748,104 @@ fun nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn
 @KlangScript.Function
 fun PatternMapperFn.nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.nfenv(depth, callInfo)
+
+// -- notch() / ntf() / ntq() -------------------------------------------------------------------------------------
+
+/**
+ * Applies a Notch (band-reject) filter — the CANONICAL name. `notchf` is the long-standing
+ * spelling and stays first-class; both are the same function.
+ *
+ * @param freq The centre frequency in Hz to reject. Omit to reinterpret the pattern's values.
+ * @param q The filter Q factor (notch width). Omit to leave it unchanged.
+ * @return A new pattern with the notch applied.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").notch(1000)
+ * ```
+ *
+ * @category effects
+ * @tags notch, notchf, ntf, band reject, filter, frequency, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    notchf(freq, q, callInfo)
+
+/** Applies a Notch filter to a string pattern (see [SprudelPattern.notch]). */
+@KlangScript.Function
+fun String.notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.notchf(freq, q, callInfo)
+
+/** Returns a [PatternMapperFn] that applies a Notch filter (see [SprudelPattern.notch]). */
+@KlangScript.Function
+fun notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    notchf(freq, q, callInfo)
+
+/** Chains a notch step onto this [PatternMapperFn] (see [SprudelPattern.notch]). */
+@KlangScript.Function
+fun PatternMapperFn.notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.notchf(freq, q, callInfo)
+
+/**
+ * Sets the notch centre frequency — the short form, completing the `xxf`/`xxq` family that
+ * `lpf`/`lpq`, `hpf`/`hpq` and `bpf`/`bpq` already had.
+ *
+ * @param freq The centre frequency in Hz to reject. Omit to reinterpret the pattern's values.
+ * @return A new pattern with the notch frequency applied.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").ntf(1000).ntq(8)
+ * ```
+ *
+ * @category effects
+ * @tags ntf, notch, notchf, band reject, filter, frequency, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    notchf(freq, null, callInfo)
+
+/** Sets the notch centre frequency on a string pattern (see [SprudelPattern.ntf]). */
+@KlangScript.Function
+fun String.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.notchf(freq, null, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the notch centre frequency (see [SprudelPattern.ntf]). */
+@KlangScript.Function
+fun ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    notchf(freq, null, callInfo)
+
+/** Chains an ntf step onto this [PatternMapperFn] (see [SprudelPattern.ntf]). */
+@KlangScript.Function
+fun PatternMapperFn.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.notchf(freq, null, callInfo)
+
+/**
+ * Sets the notch Q (width) — the short form, completing the `xxf`/`xxq` family.
+ *
+ * @param q The filter Q factor (notch width). Omit to reinterpret the pattern's values.
+ * @return A new pattern with the notch Q applied.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").ntf(1000).ntq(8)
+ * ```
+ *
+ * @category effects
+ * @tags ntq, notch, notchq, band reject, filter, resonance, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    notchq(q, callInfo)
+
+/** Sets the notch Q on a string pattern (see [SprudelPattern.ntq]). */
+@KlangScript.Function
+fun String.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.notchq(q, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the notch Q (see [SprudelPattern.ntq]). */
+@KlangScript.Function
+fun ntq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    notchq(q, callInfo)
+
+/** Chains an ntq step onto this [PatternMapperFn] (see [SprudelPattern.ntq]). */
+@KlangScript.Function
+fun PatternMapperFn.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.notchq(q, callInfo)
