@@ -772,7 +772,10 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     C6 (see `docs/tasks/filter-frequency-param-naming.md`). Do NOT re-budget this sweep. The
     blast radius WAS 57 `cutoffHz` + 51 `freqHz` occurrences. The recorded trap applied — the render-arg
     `freqHz` is note pitch and is OUT of scope.
-  - Aliases still to delete: `phd`, `phasdp`, `reverb`, `vibmod`.
+  - Aliases: ✅ ALL DELETED 2026-08-31. `phd`/`phasdp` (of `phaserWet`), `reverb` (a
+    full-signature duplicate of `roomWet`) and `vibmod` (of `vibratoMod`). All four are
+    pinned in `LangDeletedWetNamesSpec`. NOTE: `MasterFx.reverb()` is a different function
+    on the Master door and was NOT touched.
   - **STALE NUMBER CORRECTED:** the sweep below budgets "bandf x13, bandq x11 in
     songs+tutorials". That is spent — C6a already deleted the callable aliases and migrated
     the corpus; songs+tutorials now contain ZERO. The 83 remaining `bandf`/`bandq` references

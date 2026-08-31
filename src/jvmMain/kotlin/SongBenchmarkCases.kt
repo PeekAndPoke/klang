@@ -75,7 +75,7 @@ object SongBenchmarkCases {
             "2 +distort (0.62:tube:4)+clip" to
                     """.distort(0.620, "tube", 4).postgain("<0.220!48 0.110!16 0.220!48 0.330!16>").clip(0.89)""",
             "3 +pitchmod (vibrato/shuffle)" to
-                    """.release("<0.04!16 0.11!16>").vibrato(8).vibmod(0.01).shuffle("<1!64 0!16 1!1 4/8!14 1!33>")""",
+                    """.release("<0.04!16 0.11!16>").vibrato(8).vibratoMod(0.01).shuffle("<1!64 0!16 1!1 4/8!14 1!33>")""",
             "4 +superimpose (transpose+2xsuper)" to
                     """.superimpose(x => x.transpose(12).spread(0.12).velocity(0.10).pan(0.15).superimpose(pan(0.85)))""",
             "5 +analog(feel)" to """.analog(feel)""",

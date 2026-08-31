@@ -41,7 +41,7 @@ stack(                                                                          
     .hpf(1500).lpf(1575).lpe(berlin.range(19.0, 19.6).fast(4)).lpq(2.3).lpadsr(0.007, 1.3, 0.0, 0.01)                                    //                  //.
     .gain(0.50).distort(0.620, "tube", 4).postgain("<0.220!48 0.110!16 0.220!48 0.330!16>") // . solo()                                 //       //      //.
     .adsr(0.007, 4.0, 0.0, 0.01).clip(0.89)  // . mute()                                                                              //     //.   //    //.
-    .release("<0.04!16 0.11!16>").vibrato(8).vibmod(0.01)                                                                           //   //.         //  //.
+    .release("<0.04!16 0.11!16>").vibrato(8).vibratoMod(0.01)                                                                           //   //.         //  //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                        // //.              // //.
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.10).pan(0.15).superimpose(pan(0.85)))           //.                      //.
     .mute("<1!32 0!192>").analog(feel).pipeline("pedal").roomWet(0.3, 5, 0.1)
@@ -146,7 +146,7 @@ stack(
         .pan(sine.range(0.15, 0.8).slow(32)).clip(0.79)
     ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.75).body("glass").vowel("i a e".slow(12)).vowelWet(0.2)
     .superimpose(
-      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0)).vibrato("0.51".add(perlin.div(10))).vibmod(0.05)
+      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0)).vibrato("0.51".add(perlin.div(10))).vibratoMod(0.05)
         .crush("1.85".add(berlin2.mul(0.5).slow(4))).crushos(2).lpf(5.5 * 440).hpf(300).postgain(0.45)
         .pan(0.2).superimpose(pan(0.8))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))

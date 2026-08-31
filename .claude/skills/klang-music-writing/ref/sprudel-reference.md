@@ -184,7 +184,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet`/`reverb` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
+> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master.of(...))` with `MasterFx.gain` (make-up level), `MasterFx.limiter`, `MasterFx.reverb`, `MasterFx.delay` |
 
@@ -378,7 +378,7 @@ at the cutoff). Same third slot on the ignitor door.
 
 | Function                | Aliases                                                                                  | Description                                   | Example                                   |
 |-------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------------------|
-| `roomWet(mix)`             | `reverb`                                                                                 | Reverb amount (0-1)                           | `note("c3").roomWet(0.3)`                    |
+| `roomWet(mix)`             |                                                                                          | Reverb amount (0-1)                           | `note("c3").roomWet(0.3)`                    |
 | `roomsize(size)`        | `rsize`, `sz`, `size`                                                                    | Reverb room size                              | `note("c3").roomWet(0.3).rsize(5)`           |
 | `roomdim(dim)`          | `rdim`                                                                                   | Reverb damping/dimension                      | `note("c3").roomWet(0.3).rdim(0.5)`          |
 | `roomfade(x)` / `rfade` | Reverb tail **override**, 0..1 (NOT seconds) — wins over `roomsize`, which is then inert | `note("c3").roomWet(0.3).roomsize(8).rfade(0.1)` |

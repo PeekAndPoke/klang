@@ -140,9 +140,9 @@ let quietBuild = stack(
         .adsr(0.002, 0.08, 0.5, 0.05).distort(0.4, "soft", 2).postgain(0.4)
         .gain(saw.range(0.0, 0.45).slow(64)).orbit(4),
     // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.3, 0.65).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.05),
+    mel3.velocity(saw.range(0.3, 0.65).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibratoMod(0.05),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(-0.1, 0.70).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.10),
+    mel1.velocity(saw.range(-0.1, 0.70).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibratoMod(0.10),
     // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
     // enter at section-local cycle 32 (= second half of the build)
     chord("<Am Dm Bb C Gm F Am Dm>").voicing().struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
@@ -211,7 +211,7 @@ let darkBuild = stack(
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift
     note("<a5 d6 bb5 c6 g5 f5 a5 d6>")
         .sound("supersine").unison(8).spread(0.15).adsr(0.5, 0.3, 0.5, 0.5)
-        .hpf(1500).lpf(3000).lpe(19).bpf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibmod(0.1)
+        .hpf(1500).lpf(3000).lpe(19).bpf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibratoMod(0.1)
         .gain(saw.range(0.0, 0.7).slow(64)).body("glass")
         .pan(sine.range(0.25, 0.75).slow(5))
         .delayWet(0.4).delaytime(pure(2/8).div(cps)).delayfeedback(0.45)

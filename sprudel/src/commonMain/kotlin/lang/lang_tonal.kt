@@ -731,9 +731,8 @@ private fun applyVibratoMod(source: SprudelPattern, args: List<SprudelDslArg<Any
  *
  * @param semitones Vibrato depth in SEMITONES. 0.0 = no vibrato, 0.2 = subtle,
  *   0.5 = standard, 1.0+ = wide wobble. Default: 0.0. Typical range: 0.1–2.0.
- * @alias vibmod
  * @category tonal
- * @tags vibratoMod, vibmod, vibrato depth, pitch modulation
+ * @tags vibratoMod, vibrato depth, pitch modulation
  */
 @KlangScript.Function
 fun SprudelPattern.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -752,9 +751,8 @@ fun String.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null
  * note("c4").apply(vibratoMod(0.5))   // mapper form
  * ```
  *
- * @alias vibmod
  * @category tonal
- * @tags vibratoMod, vibmod, vibrato depth, pitch modulation
+ * @tags vibratoMod, vibrato depth, pitch modulation
  */
 @KlangScript.Function
 fun vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -763,36 +761,6 @@ fun vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): Patt
 /** Chains a vibratoMod operation onto this [PatternMapperFn]. */
 @KlangScript.Function
 fun PatternMapperFn.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vibratoMod(semitones, callInfo) }
-
-/** Alias for [vibratoMod] on this pattern. Sets the vibrato depth. */
-@KlangScript.Function
-fun SprudelPattern.vibmod(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.vibratoMod(semitones, callInfo)
-
-/** Alias for [vibratoMod] on a string pattern. */
-@KlangScript.Function
-fun String.vibmod(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vibratoMod(semitones, callInfo)
-
-/**
- * Alias for [vibratoMod]. Returns a [PatternMapperFn] that sets the vibrato depth.
- *
- * ```KlangScript(Playable)
- * note("c4").apply(vibmod(0.5))   // mapper form
- * ```
- *
- * @alias vibratoMod
- * @category tonal
- * @tags vibratoMod, vibmod, vibrato depth, pitch modulation
- */
-@KlangScript.Function
-fun vibmod(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.vibratoMod(semitones, callInfo) }
-
-/** Chains a vibmod operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.vibmod(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.vibratoMod(semitones, callInfo) }
 
 // -- pattack() / patt() -----------------------------------------------------------------------------------------------
