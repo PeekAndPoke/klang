@@ -208,7 +208,7 @@ voice that has no filter modulation (the common case).
 
 ---
 
-## F5 — Coverage holes found while verifying the filter strip 🟡 *(1 withdrawn, 1 fixed, 1 open — 2026-08-31)*
+## F5 — Coverage holes found while verifying the filter strip ✅ CLOSED *(1 withdrawn, 2 fixed — 2026-08-31)*
 
 **MED**, cumulatively. None of these is exercised by any spec in `voices/`:
 
@@ -221,7 +221,20 @@ voice that has no filter modulation (the common case).
   the spec that covers it lives in `voices/strip/filter/`, outside the pilot's survey. **Fifth
   finding in this audit whose "untested" claim did not survive checking** (cf. [F4](#f4), [F7](#f7),
   [F14](#f14), [F20](#f20)). The analog-drift feature is therefore implicated once, not twice.
-- **`VoiceFactory.toModulator()`** (~`:384-451`) — entirely untested. `FilterModulationTest`
+- **`VoiceFactory.toModulator()`** (~`:430-480`) — ✅ **FIXED 2026-08-31** by
+  `VoiceFactoryFilterEnvWireSpec`. The claim held: every `makeVoice` spec omits `FilterDef.envelope`,
+  so the function took its `envData == null && drift == null` early return every time and no real
+  branch ran. `FilterEnvSemitoneSpec` covers the semitone law well but builds `Voice.FilterModulator`
+  by hand — it starts *after* this wire.
+  **That is the [F18](#f18) shape exactly: both ends covered, the join empty.** The mutation proving
+  it — `is FilterDef.LowPass -> this.envelope` becomes `-> null`, so the parameter silently never
+  arrives — is now red, as is a depth sign flip. Measured as output energy rather than as a cutoff,
+  since `makeVoice` builds the filter internally and there is no spy to inject: a sawtooth through a
+  300 Hz lowpass opened by +24 semitones (×4) is a large, sign-fixed energy change.
+  *(Remaining, and deliberately not chased: the drift-only branch — `analog > 0` with no envelope —
+  cannot be isolated behaviourally, because `analog` also drives oscillator drift and unison jitter.
+  It needs an injectable filter, not a bigger render.)*
+  Original text follows. `FilterModulationTest`
   constructs `Voice.FilterModulator` directly, bypassing the factory; `VoiceFactoryFilterOrderSpec`
   uses filter defs with no envelope, so it never reaches it either. Untested branches: the non-`Tunable` early return
   (e.g. `Formant`), the `envData == null && drift == null` early return, the degenerate `depth = 0` envelope built for
