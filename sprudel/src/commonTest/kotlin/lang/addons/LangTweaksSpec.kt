@@ -20,10 +20,15 @@ import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.add
 import io.peekandpoke.klang.sprudel.lang.gain
+import io.peekandpoke.klang.sprudel.lang.n
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.pan
+import io.peekandpoke.klang.sprudel.lang.s
+import io.peekandpoke.klang.sprudel.lang.scale
 import io.peekandpoke.klang.sprudel.lang.seq
+import io.peekandpoke.klang.sprudel.lang.transpose
 
 /**
  * Tests for tweaks: named per-note modifiers attached in mini-notation (`e3{swell}`) and bound later
@@ -159,6 +164,80 @@ class LangTweaksSpec : StringSpec({
             bound[0].data.gain shouldBe null
             bound[0].part shouldBe plain[0].part
             bound[0].whole shouldBe plain[0].whole
+        }
+    }
+
+    // ── Across the pattern kinds ─────────────────────────────────────────────
+
+    "tweaks work on n() patterns" {
+        val events = n("0 1{swell} 2")
+            .tweaks("swell" to { p: SprudelPattern -> p.gain(0.5) })
+            .queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events[0].data.gain shouldBe null
+            events[1].data.gain shouldBe (0.5 plusOrMinus EPSILON)
+            events[2].data.gain shouldBe null
+        }
+    }
+
+    "tweaks survive scale resolution" {
+        val events = n("0 1{swell} 2")
+            .scale("c3:major")
+            .tweaks("swell" to { p: SprudelPattern -> p.gain(0.5) })
+            .queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events[1].data.note shouldBe "D3"
+            events[1].data.gain shouldBe (0.5 plusOrMinus EPSILON)
+            events[0].data.gain shouldBe null
+        }
+    }
+
+    "tweaks work on s() patterns and leave the sample index alone" {
+        val events = s("bd hh:2{swell}")
+            .tweaks("swell" to { p: SprudelPattern -> p.gain(0.5) })
+            .queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events[0].data.gain shouldBe null
+            events[1].data.gain shouldBe (0.5 plusOrMinus EPSILON)
+            events[1].data.soundIndex shouldBe 2
+        }
+    }
+
+    "a tweak on a chord applies to every note in it" {
+        val events = note("[c3,e3]{swell}")
+            .tweaks("swell" to { p: SprudelPattern -> p.gain(0.5) })
+            .queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events.forEach { it.data.gain shouldBe (0.5 plusOrMinus EPSILON) }
+        }
+    }
+
+    "arithmetic through a tweak hits only the marked event" {
+        val events = seq("0 1{up} 2")
+            .tweaks("up" to { p: SprudelPattern -> p.add(2) })
+            .queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
+            events[1].data.value?.asDouble shouldBe (3.0 plusOrMinus EPSILON)
+            events[2].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
+        }
+    }
+
+    "a pitch tweak transposes only the marked note" {
+        val events = note("c3 e3{up} g3")
+            .tweaks("up" to { p: SprudelPattern -> p.transpose(2) })
+            .queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events[0].data.note shouldBe "c3"
+            events[1].data.note shouldBe "F#3"
+            events[2].data.note shouldBe "g3"
         }
     }
 
