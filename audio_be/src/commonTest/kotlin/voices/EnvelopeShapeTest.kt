@@ -97,6 +97,45 @@ class EnvelopeShapeTest : StringSpec({
         }
     }
 
+    // Audit finding F8: the row above loops over all six curves and cannot distinguish them. Its
+    // guard is `absPos < attackFrames + decayFrames`, i.e. `200 < 200`, which is FALSE for every
+    // curve — so all six take the curve-agnostic `else -> sustain` branch and the loop is
+    // decoration. The boundary claim is still worth having (every curve must land exactly on
+    // sustain, which is a continuity claim), but the per-curve claim its shape implies needs a
+    // position INSIDE the decay window.
+    "mid-decay — the six curves are actually distinct there" {
+        val mid = 150 // attack 100 + half of decay 100, so p = 0.5 and shape(1 - p) = shape(0.5)
+        val levels = AdsrCurve.entries.map { curve ->
+            curve to envelopeLevelAtPosition(env(sustainLevel = 0.3, decayCurve = curve), mid)
+        }
+
+        // Every curve is strictly between sustain and the peak: it has left 1.0 and not yet arrived.
+        levels.forEach { (curve, level) ->
+            withClue("$curve at mid-decay") {
+                (level > 0.3 && level < 1.0) shouldBe true
+            }
+        }
+
+        // Linear/Square/Cube evaluate shape(0.5) as 0.5, 0.25 and 0.125, so through
+        // `sustain + (1 - sustain) * shape` they must land on 0.65, 0.475 and 0.3875 — different
+        // numbers, computed from the documented law rather than read off a run.
+        levels.toMap()[AdsrCurve.Linear] shouldBe (0.65 plusOrMinus 1e-9)
+        levels.toMap()[AdsrCurve.Square] shouldBe (0.475 plusOrMinus 1e-9)
+        levels.toMap()[AdsrCurve.Cube] shouldBe (0.3875 plusOrMinus 1e-9)
+
+        // NOT asserted at the midpoint: that all six differ. SCurve is defined piecewise around 0.5
+        // and evaluates to exactly 0.5 there, which is also Linear's value — an S-curve passes
+        // through its own midpoint by construction, so two of the six coincide here for a
+        // mathematical reason and no implementation choice can separate them.
+        // A quarter of the way in, they all part company:
+        val quarter = 125 // p = 0.25, so shape is evaluated at omp = 0.75
+        val quarterLevels = AdsrCurve.entries.map { curve ->
+            envelopeLevelAtPosition(env(sustainLevel = 0.3, decayCurve = curve), quarter)
+        }
+
+        quarterLevels.toSet().size shouldBe AdsrCurve.entries.size
+    }
+
     // ── Release via calculateControlRateEnvelope ──────────────────────────────
 
     "release midpoint via calculateControlRateEnvelope — Square = 0.25 of startLevel" {
