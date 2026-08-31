@@ -18,7 +18,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * Covers the door through to the wire (`AdsrDef.Std.on`). The value-side merge is in
  * `AdsrOnFlagSpec` (audio_bridge) and the render end in `VcaOnFlagRenderSpec` (audio_be).
  *
- * See `docs/tasks/ignitor-envelope-ownership.md` Phase 3.
+ * See `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` Phase 3.
  */
 class LangAdsrOnOffSpec : StringSpec({
 

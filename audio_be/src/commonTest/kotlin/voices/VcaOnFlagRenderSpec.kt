@@ -29,7 +29,7 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitors
  * whatever sample it happened to be at. There is no de-click smoother on this path; see
  * `EnvelopeRenderer.renderGate` for why one would break the exact-zero endpoint.
  *
- * See `docs/tasks/ignitor-envelope-ownership.md` Phase 3.
+ * See `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` Phase 3.
  */
 class VcaOnFlagRenderSpec : StringSpec({
 

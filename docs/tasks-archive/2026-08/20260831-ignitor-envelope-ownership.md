@@ -1,16 +1,48 @@
 # Ignitor envelope ownership — the double-ADSR problem
 
-> **Status (2026-08-27): Phases 0+1 SHIPPED, Phase 3 planned.** Found by the maintainer by ear
-> ("the release tail is cut off, causing these ugly cracks"), then reproduced and measured with
-> offline probe renders. The design was settled in a review round on 2026-08-27: build from
-> **[THE PLAN](#-the-plan-agreed-2026-08-27)** below, which supersedes the earlier direction
-> sections. Everything from "Design conversation" onward is kept as the reasoning record so it is
-> not re-derived; where it conflicts with THE PLAN, THE PLAN wins.
->
-> **Phases 0 and 1 (voice LIFETIME) are DONE and committed**, 2026-08-27: `controlRateValueOrNull`
-> lost its render context, and the build now reports the release tail in `BuiltIgnitor`, so `oscp`
-> overrides and release expressions reach lifetime. **Phase 3 (the VCA on/off model) is decided and
-> not started** — explicit `.adsrOff()` / `Vca(on = false)`, nothing inferred.
+**Status:** ✅ SHIPPED (archived 2026-08-31) · **Opened:** 2026-08-27
+
+All three phases are in. Found by the maintainer by ear ("the release tail is cut off, causing these
+ugly cracks"), then reproduced and measured with the offline probe renders below.
+
+| phase | what landed | commit |
+|---|---|---|
+| 0 | `controlRateValueOrNull` lost its render context, so the build can ask a node its value | `f79288dc` |
+| 1 | `BuiltIgnitor.releaseTailSec` carries the tail out of the build; `maxReleaseSec()` deleted, so `oscp` overrides and release expressions reach voice lifetime | `b2ed2521` |
+| housekeeping | `Ignitor.octaveUp()` / `octaveDown()` covered | `6403560b` |
+| 3 (plan) | the VCA is switched off explicitly, never inferred | `ad3c217c` |
+| 3 (build) | `.adsrOff()` / `.adsrOn()` on both doors, `Vca(on =)`, `renderGate` + the teardown fade | `4f6eb366` |
+
+The songs were re-tuned in the same round: `DerSchmetterling.kt` and `ATruthWorthLyingFor.kt` carry
+`.adsrOff()` on the guitars, so the compounded envelope is gone from the material it was authored
+against.
+
+**What survived this task, and where it went:**
+
+- **`docs/tasks/pluck-release-tail.md`** — Pluck / SuperPluck ring on through their own physics with
+  no `Adsr` node, so the tail accumulator reports zero for them. Split out on 2026-08-27 precisely so
+  it would outlive this file.
+- **`docs/tasks/future/envelope-shape-followups.md`** — the three findings this task measured but
+  deliberately did not act on: the convex attack default that explains "soft onsets", the fixed
+  millisecond minimums (release, declick) that should scale with the note's period, and the missing
+  tail cap for an `.adsrOff()` voice that never falls silent.
+
+Everything below is the design record as built, kept because it holds the reasoning for choices that
+would otherwise look arbitrary: why the tail rides on the returned structure rather than an
+accumulator (the cache-sharing trap), why nothing is inferred about who owns amplitude, and why
+`renderGate` carries no de-click smoother. Two things the plan did not predict and the build found:
+
+- **The de-click smoother was never the protection at teardown.** It smooths the GAIN, and a constant
+  gain has nothing to smooth. What actually guaranteed silence was that the VCA sits LAST in the strip
+  and drove the amplified signal to zero. An ignitor envelope sits before the instrument's amp, so it
+  cannot replace that: measured on the guitar, the amp lifts a near-zero tail by ~20 dB and teardown
+  steps it to zero in one sample. Hence `VCA_OFF_TEARDOWN_FADE_SECONDS`, guarded by `VcaOffTeardownSpec`.
+- **`AdsrDef.Resolved.on` had to stay nullable**, unlike every other field there: voice-level
+  resolution happens at that point but the pipeline's `Vca` is still a layer below it. Filling in
+  `true` there makes `Vca(on = false)` unreachable, which is the same dead-layer trap the plan called
+  out one level up for `AdsrDef.Std`.
+
+---
 
 ## The short version
 
@@ -206,7 +238,7 @@ Checked while designing this; useful if the tail question is ever escalated to r
   must register via `MemoizingIgnitor.incConsumers()` or the inner generates twice (`:63`), and the
   voice's read happens before the ignite stage within the same block.
 
-### Housekeeping to land at the END of this workstream
+### ✅ Housekeeping (DONE, commit `6403560b`)
 
 - **`Ignitor.octaveUp()` / `Ignitor.octaveDown()` (`Ignitor.kt:1324`, `:1327`) have zero callers and
   therefore zero tests.** Noticed by the maintainer during the Phase 0 review, 2026-08-27. They are
@@ -214,7 +246,7 @@ Checked while designing this; useful if the tail question is ever escalated to r
   `KlangScriptOscExtensions.kt:386`/`:391` are a DIFFERENT pair that build `IgnitorDsl.Detune`, so
   they do not cover these. Add specs (do not delete them) before the workstream closes.
 
-### ✅ PHASE 3 (decided 2026-08-27): explicit only, nothing inferred
+### ✅ PHASE 3 (SHIPPED, commit `4f6eb366`): explicit only, nothing inferred
 
 Phases 0 and 1 shipped voice LIFETIME. Phase 3 is the other half: stopping the two envelopes from
 compounding. **Decision: the VCA is switched off explicitly, never inferred.**
@@ -345,7 +377,7 @@ makes those envelopes longer and louder in their tails than they were tuned to b
 guitar (`decay 1.5, sustain 0.05, release 0.013`) currently compensates for the bug and will not sound
 the same afterwards. Land with a version note so the change is attributable.
 
-### Still open (nothing blocking)
+### Noted and deliberately kept (nothing blocking)
 
 - **`AdsrDef`'s sealed hierarchy has exactly one implementor and always has.** Checked across all
   eleven revisions of the file: it was a plain `data class` until `77b3fdf0`, became

@@ -237,7 +237,7 @@ depths are one of ~35 coefficients still lacking a DSL home, and that doc scopes
 carries §6.1 below as its S0 and the `IgnitorDsl` literal-duplication as its S5 — i.e. §1.1's defect is **still live**
 across ~30 oscillator constants that this task did not touch.
 
-➡️ **The drift ratio itself is owned by `docs/tasks/analog-drift-ratio-tuning.md`** (opened 2026-08-11), which also
+➡️ **The drift ratio itself is owned by `docs/tasks/by-ear/analog-drift-ratio-tuning.md`** (opened 2026-08-11), which also
 records the measurements
 that already constrain the answer. The design fork above is **resolved** there: the depths belong on an engine-level
 tuning object, not on `IgnitorDsl` per-instance — `engine-tuning-profile.md` Part A.3 had already made that call and it

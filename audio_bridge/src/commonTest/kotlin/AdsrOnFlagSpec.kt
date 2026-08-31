@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  * hard `true`. This spec covers the first layer and the hand-off to the second. The engine end of
  * the chain is in `VcaOnFlagRenderSpec` (audio_be).
  *
- * See `docs/tasks/ignitor-envelope-ownership.md` Phase 3.
+ * See `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` Phase 3.
  */
 class AdsrOnFlagSpec : StringSpec({
 

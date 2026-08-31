@@ -1,8 +1,10 @@
 # Pluck / SuperPluck — who owns the string's ring-out?
 
-> **Status (2026-08-27): FOLLOWUP, deliberately not started.** Split out of
-> [`ignitor-envelope-ownership.md`](ignitor-envelope-ownership.md) so it survives that task being
-> closed. Priority: **SHOULD** — not release-gating, but it blocks credible physical-modelling
+> **Status (2026-08-27): FOLLOWUP, deliberately not started.** Split out of the envelope-ownership
+> task so it survives that task being closed, which it now has: the parent shipped and was archived
+> on 2026-08-31 as
+> [`20260831-ignitor-envelope-ownership.md`](../tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md).
+> Priority: **SHOULD** — not release-gating, but it blocks credible physical-modelling
 > instruments.
 >
 > ⚠️ **No quick shot here** (maintainer, 2026-08-27). This needs the same depth the envelope-ownership
@@ -93,10 +95,12 @@ Not an interface — a policy. In rough dependency order:
 
 ## Links
 
-- Parent: [`ignitor-envelope-ownership.md`](ignitor-envelope-ownership.md) — the build-accumulator
-  design, the six-case ownership table, `.adsrOff()` semantics, the fade guard.
+- Parent (archived, shipped):
+  [`20260831-ignitor-envelope-ownership.md`](../tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md)
+  — the build-accumulator design, the six-case ownership table, `.adsrOff()` semantics, the fade guard.
 - Code: `audio_bridge/IgnitorDsl.kt:643` (`Pluck` node), `audio_be/ignitor/Ignitors.kt:59`
   (`decayDefault`), `Ignitors.kt:1176+` (`karplusStrong` / `KarplusStrongIgnitor`), `Ignitors.kt:1282+`
   (`superKarplusStrong`).
 - Prior art in this repo for "express time relative to the note rather than in absolute units": the
   harmonic-relative string filter and the period-scaled minimum release, both in the parent task.
+  The latter is now carried forward on its own in `docs/tasks/future/envelope-shape-followups.md`.

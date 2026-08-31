@@ -51,7 +51,8 @@ interface Ignitor {
      * implementation either ignores the block or forwards to its children, so the [IgniteContext]
      * parameter this used to carry was dead weight on all 34 overrides (audited 2026-08-27).
      * Dropping it is what lets the ignitor BUILD ask a node its value at note-on, where no context
-     * exists yet (voice-lifetime resolution — see `docs/tasks/ignitor-envelope-ownership.md`). The
+     * exists yet (voice-lifetime resolution — see
+     * `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md`). The
      * per-block variation this interface does support arrives through [freqHz] (e.g. [FreqIgnitor]
      * under detune), not through the block. If a node ever needs the block itself, add the
      * parameter back as REQUIRED: that breaks every override and forces a decision at each one,

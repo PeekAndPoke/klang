@@ -28,8 +28,8 @@ enough complexity.
 | `highpass(freq, q, passes)` | `hpf` | `hpq` `hpx` `hpe` `hpadsr` | |
 | `bandpass(freq, q)` | `bpf` | `bpq` `bpe` `bpadsr` | no passes: cascading only narrows, q does that |
 | `notch(freq, q)` | `ntf` | `ntq` | no passes, **no envelope** (see below) |
-| `band(freq, q, db)` | — | — | NEW on sprudel; serial bell, dB gain. **COLLISION — RESOLVED 2026-08-26** (commit `1b763c0e`): sprudel's `band(mask)` = bitwise AND was renamed to `bitAnd` (with `bitOr`/`bitXor`/`bitShl`/`bitShr`), exactly the candidate this row predicted. `band` is free for the EQ bell; the ignitor's `.band()` and `.eq()` kept their names. Guard is now `LangBitAndSpec` |
-| `tap(freq, q, gain)` | — | — | NEW on sprudel; parallel boost, linear gain |
+| `band(freq, q, db)` | — | — | ⏸️ **NOT V1** (maintainer 2026-08-31, see C6) — target shape, deferred with D9. NEW on sprudel; serial bell, dB gain. **COLLISION — RESOLVED 2026-08-26** (commit `1b763c0e`): sprudel's `band(mask)` = bitwise AND was renamed to `bitAnd` (with `bitOr`/`bitXor`/`bitShl`/`bitShr`), exactly the candidate this row predicted. `band` is free for the EQ bell; the ignitor's `.band()` and `.eq()` kept their names. Guard is now `LangBitAndSpec` |
+| `tap(freq, q, gain)` | — | — | ⏸️ **NOT V1** (maintainer 2026-08-31, see C6) — parallel boosts stay ignitor-only in V1. NEW on sprudel; parallel boost, linear gain |
 
 Parameter ORDER is `freq, q, passes` (and `freq, q` where passes does not apply), positional or
 all-named — there is no colon form any more (see "The function-shape contract" below). The
@@ -710,10 +710,26 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   the render thread. 16 = 192 dB/oct, far past any musical use. If you want it raw, the ceiling is
   a one-line change.
 
-### C6 — Canonical names + sprudel `band` (+ `tap` if decided)
+### C6 — Canonical names (sprudel `band`/`tap` CUT from V1)
+
+> **DECIDED 2026-08-31 (maintainer): no `band` and no `tap` on sprudel in V1.** C6 ships
+> **names only**. This closes the (a)/(b) question below without choosing either: not even
+> option (a)'s `band`-only, for now. Consequences, all intended:
+> - **C6 is unblocked.** It no longer waits on D9's static tier, which was its only hard
+>   dependency. C6 can start as soon as the chunk walkthrough happens.
+> - **D9 leaves V1 entirely.** It was pulled in only to open this gate; as pure internal perf
+>   (baking sprudel FilterDefs into `EqCore`) it changes no surface, so it can run underneath
+>   the tutorial phase. See `docs/plans/unified-eq.md` §D9.
+> - **Parallel boosts stay an ignitor-surface concept** in V1, which is what the plan-review
+>   finding below already concluded on the merits: a one-per-voice sprudel `tap` at a position
+>   nobody chose is a strictly weaker tap on one door, and shipping it would contradict the
+>   principle this plan exists to serve.
+> - The bell/tap vocabulary rows stay in the table above as the **agreed target shape**, not as
+>   V1 scope. Re-open with D9, not before.
+
 (The alias deletions and the compat cut moved to C6a, which runs first.)
 - Sprudel: add `lowpass/highpass/bandpass/notch` as canonical names, keep `lpf/hpf/bpf`, add
-  `ntf/ntq`, add `band`/`tap`, delete the alias list above, unify casing.
+  `ntf/ntq`, delete the alias list above, unify casing. **No `band`/`tap`** (decided above).
 - **How `band`/`tap` reach sprudel is decided, not open (maintainer, 2026-08-23): sprudel gets
   NO EQ implementation of its own.** Sprudel is one frontend driving the audio engine and is
   only here by accident; the engine is the horse and sprudel rides it. So `band`/`tap` become
@@ -727,6 +743,8 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   reads the node input: same word, two signals, the exact thing this plan exists to remove.
   So `band`/`tap` on sprudel are gated on D9's static tier landing first (the voice's fusible
   filters enter ONE EqCore, and the new variants join that list), or they wait.
+  **They wait — decided 2026-08-31, see the C6 header. This gate no longer blocks C6, because
+  C6 no longer carries `band`/`tap`.**
 - **Plan-review finding that changes the scope of `tap` on sprudel:** a tap's defining
   property is its LIST POSITION (it reads the pre-Eq input and adds at its slot; a `band`
   before a `tap` is re-injected from the uncut source), and its whole reason to exist is that
@@ -739,6 +757,8 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   cardinality), and parallel boosts stay an ignitor-surface concept; or (b) sprudel's filter
   list becomes genuinely ordered with repeatable entries, which is the "unordered voice model"
   flaw this plan explicitly does not fix. (a) is the honest default.
+  **CLOSED 2026-08-31 without choosing: neither ships in V1.** The reasoning above is what made
+  the cut easy, and it stands unchanged for whenever this re-opens.
 - **Pre-walkthrough facts, measured 2026-08-24 (after C5), so the chunk review starts from
   numbers rather than from the draft's estimates:**
   - **The `band`/`tap` gate is CLOSED: D9's static tier has not landed.** There is no

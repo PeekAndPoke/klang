@@ -63,7 +63,7 @@ into `IgnitorFilters`. Full write-up: `docs/tasks/audio-bridge-constants.md` §6
 ### S1 — Oscillator analog-drift depths → an engine tuning object
 
 **The only sub-task that blocks a stated by-ear question.** Owned in detail by
-`docs/tasks/analog-drift-ratio-tuning.md` §4 — that doc is authoritative for scope, guard and the measurements that
+`docs/tasks/by-ear/analog-drift-ratio-tuning.md` §4 — that doc is authoritative for scope, guard and the measurements that
 already constrain the answer. Listed here so the tracker is complete.
 
 | coefficient                                               | default         | note                                                         |
@@ -257,7 +257,7 @@ resonator coefficient with no authoring path at all, and its KDoc says it is tun
 ## Links
 
 - `docs/tasks/audio-bridge-constants.md` — the precursor (§6 = what was still missing; this doc is the answer)
-- `docs/tasks/analog-drift-ratio-tuning.md` — owns S1 in detail
+- `docs/tasks/by-ear/analog-drift-ratio-tuning.md` — owns S1 in detail
 - `docs/tasks/engine-tuning-profile.md` — Part B `EngineTuning`, which S1 starts and S5 unblocks
 - `docs/tasks/sprudel-sound-function-surface.md` — the compound-param blocker S6 would hit
 - `docs/tasks/katalyst-dsl.md` — where S7 lives

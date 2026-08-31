@@ -17,7 +17,8 @@ import io.peekandpoke.klang.audio_bridge.mul
  * Guards [BuiltIgnitor.releaseTailSec] — the number `VoiceFactory` turns into voice lifetime.
  *
  * This replaces `IgnitorDsl.maxReleaseSec()` (deleted 2026-08-27). The bug it existed to prevent,
- * and the two it silently caused, are documented in `docs/tasks/ignitor-envelope-ownership.md`:
+ * and the two it silently caused, are documented in
+ * `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md`:
  * an under-reported tail truncates the release audibly, an over-reported one only keeps a silent
  * voice alive slightly too long. So every case below that could go either way is asserted in the
  * safe direction on purpose.
@@ -74,8 +75,8 @@ class IgnitorTailSpec : StringSpec({
     }
 
     "a pitch-relative release resolves against the note frequency" {
-        // The shape docs/tasks/ignitor-envelope-ownership.md recommends for low notes: express the
-        // release in periods rather than milliseconds. 200 periods of 100 Hz = 2.0 s.
+        // The shape docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md recommends
+        // for low notes: express the release in periods rather than milliseconds. 200 periods of 100 Hz = 2.0 s.
         val dsl = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Sine(),
             releaseSec = IgnitorDsl.Recip(IgnitorDsl.Freq).mul(c(200.0)),

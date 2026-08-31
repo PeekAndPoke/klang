@@ -56,7 +56,13 @@ class IgniteContext(
     var offset: Int = 0,
     /** Number of samples to generate */
     var length: Int = 0,
-    /** Frames since voice start (monotonic, updated once per block) */
+    /**
+     * Frames since voice start (monotonic, updated once per block), counted AT buffer index
+     * [offset] — NOT at index 0. A voice's first `generate` call sees 0. Every consumer adds its
+     * own `i - offset` on top (`AdsrIgnitor`, `IgnitorFilters`, `PitchModFactories`); computing it
+     * at index 0 made the first block of a mid-block onset run a negative clock, which clamped to
+     * silence and then stepped. See `IgniteOnsetOffsetSpec`.
+     */
     var voiceElapsedFrames: Int = 0,
     /**
      * Per-sample phase-increment multipliers (1.0 = no change), or null.

@@ -752,6 +752,15 @@ over-conservative optimizer, and RNG draw order all needed structural or white-b
 - Fallback levers if the phone still misses: superimpose depth, distort oversample factor.
 
 ### D9 — Sprudel voice-filter baking → EqCore (maintainer-added 2026-08-20, LAST in order)
+
+> **NOT IN V1 — decided 2026-08-31 (maintainer).** Sprudel gets no `band`/`tap` in V1, so D9 is
+> no longer gating anything on the surface: `docs/plans/filter-unification.md` §C6 ships canonical
+> NAMES only and no longer waits for D9's static tier. What remains here is **pure internal perf**
+> (fusing per-voice FilterDefs into one EqCore pass), which changes no authored surface and no
+> tuned sound, so it can run underneath the frontend/tutorial phase rather than blocking it.
+> The plan's own CPU goal is already met (Fairphone 4, ~75%, 2026-08-20), so nothing forces it.
+> Re-open together with sprudel `band`/`tap` when those come back.
+
 **The third EqCore consumer.** Sprudel-sourced filters (`.lpf()/.hpf()/.bpf()/.notch()` pattern
 params → `FilterDef` list on VoiceData) are baked per voice in `VoiceFactory.makeVoice`
 (`voiceFilterDefs.map { it.toFilter(...) }` → `ChainAudioFilter`) — N separate class-form
@@ -870,5 +879,6 @@ D3a+D3b (one review round — exhaustive-when forces it) → **D3c (seeded per-v
 maintainer-added 2026-08-20)** → D4a → D4b (kill-switch, BEFORE fusion goes live) → D4c (R1 +
 seam) → D4d (R2) → (D5 ∥ D6) → D8 → D7 (optional, exactly-solvable migration + taste pass) →
 **D9 (sprudel voice-filter baking → EqCore — maintainer-added 2026-08-20, deliberately LAST:
-v1 = static/linear/Svf tier only; ramp API phase unblocks modulated filters + MasterFx/Katalyst).**
+v1 = static/linear/Svf tier only; ramp API phase unblocks modulated filters + MasterFx/Katalyst).
+⏸️ CUT FROM V1 2026-08-31 — see the note at §D9; it is pure internal perf and blocks no surface.**
 Each step: green tests + /review-loop clean round before the next.

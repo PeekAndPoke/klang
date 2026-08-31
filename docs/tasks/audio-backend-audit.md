@@ -159,6 +159,16 @@ the set — start there, big specs with few tests are where padding hides.
 - **solo/mute and cut/choke — zero tests anywhere.** Grepping the whole test tree for `solo` and
   `choke` returns nothing, yet `VoiceScheduler.process` computes solo gain and runs a `soloMuteRamp`, and
   `promoteScheduled` implements cut-group hard-kill.
+- **Four specs pin a context production can no longer produce** (added 2026-08-31, from
+  [`../tasks-archive/2026-08/20260831-voice-elapsed-frames-offset-mismatch.md`](../tasks-archive/2026-08/20260831-voice-elapsed-frames-offset-mismatch.md)).
+  `IgnitorDslOptimizerRenderSpec.kt:64`, `ConstantFoldParitySpec.kt:64`, `EqCoreSpec.kt:546` and
+  `EqIgnitorSpec.kt:648` set `voiceElapsedFrames = -offset` for their mid-block-onset rows, and the
+  first three state in a comment that this is the production shape. It was, until `IgniteRenderer`
+  gained `+ ctx.offset` on 2026-08-27; a voice's first block now lands on `voiceElapsedFrames == 0`.
+  They still PASS, because both sides of each A/B get the same context — but a negative clock clamps
+  any envelope in them to zero, so those rows compare near-silence and the comments teach the wrong
+  contract. Re-pin to `offset = 37, voiceElapsedFrames = 0` and re-run: an envelope-bearing parity
+  row that only starts exercising its envelope after the change is the point of doing it.
 - Zero direct coverage: `strip/filter/TremoloRenderer`, `strip/filter/StripPhaserRenderer`,
   `strip/pitch/{FmRenderer, AccelerateRenderer, PitchEnvelopeRenderer, VibratoRenderer}`,
   `strip/BlockContext`, `PlaybackCtx`. (The pitch ones are covered end-to-end by
