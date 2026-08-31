@@ -67,7 +67,14 @@ class BlockFramingInvarianceSpec : StringSpec({
      * off so the exciter itself is what gets compared. Fresh registry + [PlaybackCtx] per call with
      * a fixed pid, so every RNG-consuming node draws the identical stream on every call.
      */
-    fun renderVoice(dsl: IgnitorDsl, startFrame: Int, blockFrames: Int, pid: String = "framing"): DoubleArray {
+    fun renderVoice(
+        dsl: IgnitorDsl,
+        startFrame: Int,
+        blockFrames: Int,
+        pid: String = "framing",
+        /** Lets a row add STRIP-door modulation (`vibrato`, `accelerate`, the pitch envelope). */
+        dataMod: (VoiceData) -> VoiceData = { it },
+    ): DoubleArray {
         val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", dsl) }
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
@@ -85,10 +92,12 @@ class BlockFramingInvarianceSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = pid,
-                data = VoiceData.empty.copy(
-                    freqHz = 220.0,
-                    sound = "probe",
-                    adsr = AdsrDef.Std(release = relSec, on = false),
+                data = dataMod(
+                    VoiceData.empty.copy(
+                        freqHz = 220.0,
+                        sound = "probe",
+                        adsr = AdsrDef.Std(release = relSec, on = false),
+                    )
                 ),
                 startTime = (startFrame + 0.25) / sampleRate,
                 gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
@@ -215,6 +224,92 @@ class BlockFramingInvarianceSpec : StringSpec({
                     maxDiff(renderVoice(dsl, 0, bf), ref) shouldBe 0.0
                 }
             }
+        }
+    }
+
+    // ── The STRIP door (block-framing P4) ────────────────────────────────────────────────────────
+    //
+    // Everything above drives the IGNITOR door: the rows are `IgnitorDsl` chains, and even the
+    // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT `Voice.Fm`. The voice strip's own
+    // modulation renderers were therefore untouched by this harness, which is what P4 is about.
+    //
+    // Only the PER-SAMPLE ones belong on a bit-identity list. `VibratoRenderer`,
+    // `PitchEnvelopeRenderer` and `AccelerateRenderer` all derive their position per sample from
+    // `blockStart + offset` (+ a phase accumulator, in vibrato's case, advanced once per rendered
+    // sample), so they are Class 1.
+    //
+    // `FilterModRenderer` and `FmRenderer` are deliberately NOT here, and cannot be: they evaluate
+    // their envelope ONCE PER BLOCK, so their note-relative sampling grid is a function of where the
+    // block boundaries fall. That makes them Class 2 on BOTH axes — block size and onset alignment —
+    // and Class 2 means "named, not fixed". `MidBlockOnsetControlRateSpec` pins the part of them that
+    // IS fixed: the first evaluation lands on the voice's onset, not the block's first frame.
+    val stripNodes = listOf<Pair<String, (VoiceData) -> VoiceData>>(
+        "strip vibrato" to { d -> d.copy(vibrato = 5.0, vibratoMod = 0.4) },
+        "strip pitch envelope" to { d ->
+            d.copy(pEnv = 3.0, pAttack = 0.011, pDecay = 0.023, pRelease = 0.0)
+        },
+    )
+
+    // `accelerate` is deliberately NOT on the list above, for the same reason a modulated tremolo
+    // depth is not: it reassociates the float arithmetic rather than changing the value.
+    // `AccelerateRenderer` seeds `ratio` with ONE `pow()` per block and then multiplies per sample
+    // (its KDoc says so — it is a deliberate cost trade). The mathematical result is identical, but
+    // the rounding accumulated since the last reseed depends on how many steps ago that was, so both
+    // onset alignment and block size move the last bits.
+    //
+    // MEASURED 2026-08-31: 5.3e-15 across onset alignments, 1.7e-13 across block sizes 64/37 — call
+    // it -250 dB. The bound below is three orders looser than that and still eleven orders tighter
+    // than any logic error could hide in: a 2-semitone glide carries ratios around 1.12, so a
+    // mis-seeded reseed would show up at O(0.1), not O(1e-13).
+    val accelerateData: (VoiceData) -> VoiceData = { d -> d.copy(accelerate = 2.0) }
+    val floatNoiseBound = 1e-11
+
+    stripNodes.forEach { (name, mod) ->
+
+        "I1+I3+I4 $name: note-relative output is bit-identical at every onset alignment" {
+            val ref = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = mod)
+            check(peak(ref) > 1e-3) { "$name reference is silent — vacuous comparison" }
+            for (start in listOf(1, 37, 76, 127)) {
+                withClue("$name, startFrame=$start") {
+                    maxDiff(renderVoice(IgnitorDsl.Sine(), start, 128, dataMod = mod), ref) shouldBe 0.0
+                }
+            }
+        }
+
+        "I2 $name: bit-identical at block sizes 64 and 37" {
+            val ref = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = mod)
+            for (bf in listOf(64, 37)) {
+                withClue("$name, blockFrames=$bf") {
+                    maxDiff(renderVoice(IgnitorDsl.Sine(), 0, bf, dataMod = mod), ref) shouldBe 0.0
+                }
+            }
+        }
+    }
+
+    "strip accelerate: block framing moves only the last bits, not the value" {
+        val ref = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = accelerateData)
+        check(peak(ref) > 1e-3) { "accelerate reference is silent — vacuous comparison" }
+
+        for (start in listOf(1, 37, 76, 127)) {
+            withClue("accelerate, startFrame=$start") {
+                (maxDiff(renderVoice(IgnitorDsl.Sine(), start, 128, dataMod = accelerateData), ref) < floatNoiseBound) shouldBe true
+            }
+        }
+
+        for (bf in listOf(64, 37)) {
+            withClue("accelerate, blockFrames=$bf") {
+                (maxDiff(renderVoice(IgnitorDsl.Sine(), 0, bf, dataMod = accelerateData), ref) < floatNoiseBound) shouldBe true
+            }
+        }
+    }
+
+    "strip modulation actually reaches the output — the P4 rows are not comparing bare sines" {
+        val bare = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128)
+
+        // Without this, every row above would pass on three identical unmodulated renders.
+        (stripNodes + ("strip accelerate" to accelerateData)).forEach { (name, mod) ->
+            val modulated = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = mod)
+            withClue(name) { (maxDiff(modulated, bare) > 1e-6) shouldBe true }
         }
     }
 

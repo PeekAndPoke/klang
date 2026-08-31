@@ -487,7 +487,9 @@ the sample floor, and the two E4 code paths' reachability concern. B2 never land
 `PitchEnvelopeRenderer:30` (both already use `blockStart + offset`), `FilterModRenderer`, `FmRenderer`,
 `SendRenderer`, and `Voice.render` itself.
 
-> 🟡 **Control-rate half DONE 2026-08-31 — `voices.strip.MidBlockOnsetControlRateSpec`.**
+> ✅ **P4 DONE 2026-08-31.** Two halves, below.
+>
+> **Control-rate half — `voices.strip.MidBlockOnsetControlRateSpec`.**
 > Surveyed all twelve strip renderers. Four derive their position as `blockStart + offset`
 > (`EnvelopeRenderer:87`, `IgniteRenderer:43`, `AccelerateRenderer:39`, `PitchEnvelopeRenderer:30`).
 > **Two do not** — `FilterModRenderer:32` and `FmRenderer:43` hand `calculateControlRateEnvelope` the
@@ -504,11 +506,30 @@ the sample floor, and the two E4 code paths' reachability concern. B2 never land
 > This also closes audit finding **F3**, whose mutation (`currentFrame = blockStart`) had survived
 > the entire 1373-test suite and is now red on both new rows.
 >
-> **Still open in P4:** `SendRenderer` (reads `ctx.offset` for the copy loop, but takes
-> `ctx.renderContext.blockStart` for `getOrInit` — unreviewed), and `Voice.render` itself as the
-> source of `offset`/`length`. The per-sample renderers (`Vibrato`, `Crush`, `Coarse`, `Distortion`,
-> `StripPhaser`, `Tremolo`, `AudioFilter`) all index `ctx.offset + i` and carry no onset arithmetic
-> of their own, so they are out of scope for this item.
+> **Per-sample half — the harness now drives the STRIP door.** Everything the P0 harness had was the
+> IGNITOR door: its rows are `IgnitorDsl` chains, and even *"fm with envelope"* is
+> `IgnitorDsl.Sine().fm(...)`, **not** `Voice.Fm`. So the strip's own modulation renderers were
+> untouched by it. `renderVoice` gained a `dataMod` hook and there are now strip rows:
+>
+> | node | class | verdict |
+> |------|-------|---------|
+> | `VibratoRenderer` | 1 | **bit-identical** at every onset alignment and block size (its phase accumulator persists and advances once per rendered sample) |
+> | `PitchEnvelopeRenderer` | 1 | **bit-identical** |
+> | `AccelerateRenderer` | float-reassociation | **NOT bit-identical, and correctly so.** It seeds `ratio` with one `pow()` per block then multiplies per sample — a deliberate cost trade its KDoc states — so the rounding accumulated since the last reseed depends on where the boundaries fall. Measured **5.3e-15** across onsets, **1.7e-13** across block sizes 64/37. Bounded at 1e-11 instead, and that bound is not a rubber stamp: dropping `ctx.offset` from its seed blows straight through it |
+> | `FilterModRenderer`, `FmRenderer` | 2 | **cannot be on a bit-identity list at all** — they evaluate once per block, so their note-relative sampling grid is a function of the block boundaries, on both axes. Class 2 means named, not fixed. `MidBlockOnsetControlRateSpec` pins the part that IS fixed |
+>
+> A positive-control row asserts each strip config actually changes the output, so the rows above
+> cannot pass by comparing three identical unmodulated sines.
+>
+> **`SendRenderer` carries no onset arithmetic** — it is a pure per-sample map over
+> `[offset, offset+length)` with constant gains, so it is invariant by construction; its
+> `ctx.renderContext.blockStart` argument goes to `getOrInit` for cylinder housekeeping, not
+> positioning. **`Voice.render`** is the source of `offset`/`length` and is now exercised across
+> both axes by every strip row above, through the real `VoiceFactory`. Its integrality precondition
+> holds at the production site (`VoiceFactory.kt:87` floors `startFrame`).
+>
+> The remaining per-sample renderers (`Crush`, `Coarse`, `Distortion`, `StripPhaser`, `Tremolo`,
+> `AudioFilter`) index `ctx.offset + i` and carry no onset arithmetic of their own.
 
 **P5. The sample path** end to end, given instance 2.
 
