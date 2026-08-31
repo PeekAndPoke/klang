@@ -125,6 +125,15 @@ not matter** (the first is the master-limiter pump at the foot of `FINDINGS.md`)
 rule rather than a coincidence: **a measurement finds the mechanism, an ear decides whether it
 counts.** The audit's job is to hand over a mechanism with its evidence, not to spend a fix on it.
 
+**2026-08-31 (seventh pass) — ducking removed from scope.** Maintainer: *"it is not used yet and was
+never really tested yet, so let us not waste our time right now."* [F14](FINDINGS.md#f14)'s ducking
+bullet is withdrawn to [`docs/tasks/future/ducking-unfinished.md`](../tasks/future/ducking-unfinished.md).
+The observation stands — the DSL, bus effect and DSP each have a spec while the join between them has
+none, the same shape that hid [F18](FINDINGS.md#f18) — but no shipped song uses ducking, so it is
+unfinished work, not a hole in something live. The doc carries the four design questions, of which
+the sharpest is that `duckattack` sets the **release** while `Compressor.attackSeconds` in the same
+directory means something else again.
+
 **The lesson of this pass is the mirror of the first one.** The standing note warned that findings go
 *stale*. This sweep found the other failure: **four claims were wrong the day they were written** —
 three because the census matched one assertion dialect and this repo uses several, one because a grep

@@ -483,11 +483,16 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
 
 **MED.** Production behaviour that no spec in `voices/` claims:
 
-- **`Voice.Ducking` (sidechain) — untested by anything at the `Voice`/`VoiceScheduler` layer.** It is carried on `Voice`
-  but applied in `cylinders/Cylinder.kt`. *(Re-verified 2026-08-31 and it HOLDS as written: `ducking`
-  appears in `voices/` only as a defaulted-null parameter of `VoiceTestHelpers`, never given a non-null
-  value by any test. `DuckingSpec` and `KatalystDuckingEffectSpec` do exist — and predate the pilot — but
-  they cover the effect and the Katalyst, which is the layer this bullet already excludes.)*
+- ~~**`Voice.Ducking` (sidechain) — untested by anything at the `Voice`/`VoiceScheduler` layer.**~~
+  📋 **REMOVED FROM SCOPE 2026-08-31 (maintainer): "it is not used yet and was never really
+  tested yet, so let us not waste our time right now."** The observation was correct — the DSL, the
+  bus effect and the DSP all have specs, and the *join* between them (`Cylinder.kt:198-203`,
+  `Cylinders.kt:87-89`) has none, which is the same both-ends-covered-middle-empty shape that hid
+  [F18](#f18). But no shipped song uses ducking, so this is unfinished work rather than a coverage
+  hole in something live. Moved with its design questions to
+  [`docs/tasks/future/ducking-unfinished.md`](../tasks/future/ducking-unfinished.md) — including the
+  one worth fixing before anyone writes a song against it: `duckattack` sets the **release**, and
+  `Compressor` in the same directory has an `attackSeconds` that means something else again.
 - **`Voice.Compressor`'s DSP is untested.** `VoiceCompressorSpec` (4 tests) tests *string parsing*
   only — consistent with its own contents, but the name reads as coverage of the compressor. The runtime effect lives in
   `Cylinder.kt:181-216`.
