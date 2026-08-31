@@ -296,12 +296,23 @@ object VoiceTestHelpers {
 
         val processCalls = mutableListOf<ProcessCall>()
 
+        /**
+         * The first sample this filter was HANDED, per call. A counting spy can only say that a
+         * stage ran; recording what it saw is what makes stage ORDER observable, because a stage
+         * that runs after the VCA sees an enveloped signal and one that runs before sees the raw
+         * exciter. `VoicePipelineTest` had no way to check its own ordering claims without this
+         * (audit finding F13).
+         */
+        val seenAtProcess = mutableListOf<Double>()
+
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             processCalls.add(ProcessCall(offset, length, processCalls.size))
+            seenAtProcess.add(if (length > 0) buffer[offset] else 0.0)
         }
 
         open fun reset() {
             processCalls.clear()
+            seenAtProcess.clear()
         }
     }
 
@@ -313,6 +324,18 @@ object VoiceTestHelpers {
         val cutoffHistory = mutableListOf<Double>()
         var currentCutoff = 0.0
 
+        /**
+         * How many `setCutoff` calls had already landed when each `process` began. This is the only
+         * way to check "modulation updates the cutoff BEFORE the filter processes" — comparing two
+         * independent counters after the fact cannot distinguish the two orders.
+         */
+        val cutoffCountAtProcess = mutableListOf<Int>()
+
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+            cutoffCountAtProcess.add(cutoffHistory.size)
+            super.process(buffer, offset, length)
+        }
+
         override fun setCutoff(cutoffHz: Double) {
             currentCutoff = cutoffHz
             cutoffHistory.add(cutoffHz)
@@ -321,6 +344,7 @@ object VoiceTestHelpers {
         override fun reset() {
             super.reset()
             cutoffHistory.clear()
+            cutoffCountAtProcess.clear()
             currentCutoff = 0.0
         }
     }

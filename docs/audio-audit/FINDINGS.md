@@ -513,7 +513,7 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
 
 ---
 
-## F13 — Copy-paste tests that duplicate a sibling instead of testing their name 🟡 *(VoiceLifecycleTest fixed 2026-08-31)*
+## F13 — Copy-paste tests that duplicate a sibling instead of testing their name ✅ FIXED
 
 **MED.** Found by W5 in the lifecycle/pipeline specs; these are wrong *records*, not just weak ones:
 
@@ -550,6 +550,27 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
 - `VoicePipelineTest` — *"voice starting/ending mid-block renders **partial buffer**"*: no buffer content is ever
   inspected, only the lifecycle boolean. (The identically-named tests in
   `VoiceLifecycleTest` *do* check the buffer — so the two specs disagree about what the name means.)
+
+> ✅ **The `VoicePipelineTest` half FIXED 2026-08-31**, which closes F13.
+>
+> **A counting spy cannot see order.** `SpyFilter` recorded only how many times it ran, so both
+> ordering rows asserted `processCalls.size shouldBe 1` — true under either order. It now also
+> records **what it was handed** (`seenAtProcess`), which makes order observable: a stage running
+> after the VCA sees an enveloped signal, one running before sees the raw exciter. With a 100-frame
+> attack the VCA's gain at frame 0 is ~0, so the filter seeing `1.0` proves it ran first.
+> `TunableSpyFilter` additionally records how many `setCutoff` calls had landed **when `process`
+> began** — two counters compared afterwards are both 1 either way.
+>
+> **The partial-buffer row needed a sentinel, and finding that out is the lesson.** Asserting zeros
+> before the onset looked right and was toothless: a mutant ignoring the onset entirely
+> (`vStart = ctx.blockStart`) still produced zeros there, because the *envelope* floors a negative
+> position — the zeros were never evidence of windowing. Against a buffer pre-filled with a sentinel,
+> "the voice writes only `[offset, offset+length)`" becomes checkable, and that mutation is now red.
+> **The first version of this fix was itself a toothless test, caught only by mutating it.**
+>
+> Mutations: Modern's stage list reordered to run the VCA before the filter (which is genuinely
+> `Pedal`'s order, so the claim is preset-specific and correctly so); the `FilterMod` stage removed;
+> and the onset ignored. Each kills exactly its own row.
 
 ---
 
