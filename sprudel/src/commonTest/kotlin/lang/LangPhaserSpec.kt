@@ -87,22 +87,6 @@ class LangPhaserSpec : StringSpec({
         events[0].data.phaserDepth shouldBe 0.8
     }
 
-    "phaserWet() alias 'phd' works" {
-        val p = note("c3").phd("0.5")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.phaserDepth shouldBe 0.5
-    }
-
-    "phaserWet() alias 'phasdp' works" {
-        val p = note("c3").phasdp("0.7")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.phaserDepth shouldBe 0.7
-    }
-
     "phaserWet() works with control pattern" {
         val p = note("c3 e3").phaserWet("0.3 0.9")
         val events = p.queryArc(0.0, 1.0)

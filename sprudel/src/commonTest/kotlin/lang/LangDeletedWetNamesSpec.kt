@@ -17,13 +17,13 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * fail script dispatch as a member call and as a free mapper-factory call; if one resolves
  * again, an alias crept back in (docs/plans/filter-unification.md, chunk C4).
  *
- * `phd`/`phasdp` still resolve (they now point at `phaserWet`) — alias deletion is C6's job.
- * The wire fields (`room`, `delay`, `phaserDepth`, `bodyMix`, `vowelMix`) keep their old
+ * C6 finished the job: `phd`/`phasdp` are now deleted too and join the list below. The wire
+ * fields (`room`, `delay`, `phaserDepth`, `bodyMix`, `vowelMix`) keep their old
  * spelling on purpose; only the DSL surface renamed.
  */
 class LangDeletedWetNamesSpec : StringSpec({
 
-    val deleted = listOf("room", "delay", "phaserdepth", "bodyMix", "vowelMix")
+    val deleted = listOf("room", "delay", "phaserdepth", "bodyMix", "vowelMix", "phd", "phasdp")
 
     deleted.forEach { name ->
         "deleted wet name '$name' fails as a member call" {

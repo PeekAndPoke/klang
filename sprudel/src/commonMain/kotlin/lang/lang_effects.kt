@@ -2775,7 +2775,7 @@ fun ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike?
 fun PatternMapperFn.ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phaser(rate, wet, center, sweep, callInfo) }
 
-// -- phaserWet() / phd() / phasdp() ------------------------------------------------------------------------------------
+// -- phaserWet() ------------------------------------------------------------------------------------
 
 private val phaserWetMutation = voiceSetter { phaserDepth = it?.asDoubleOrNull() }
 
@@ -2811,9 +2811,8 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * seq("0.2 0.5 0.8 1.0").phaserWet()   // reinterpret values as the phaser wet
  * ```
  *
- * @alias phd, phasdp
  * @category effects
- * @tags phaserwet, phaserdepth, phd, phasdp, phaser, depth, modulation, wet
+ * @tags phaserwet, phaserdepth, phaser, depth, modulation, wet
  */
 @KlangScript.Function
 fun SprudelPattern.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -2851,9 +2850,8 @@ fun String.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * note("c3*4").every(4, phaserWet(1.0))   // full wet every 4th cycle
  * ```
  *
- * @alias phd, phasdp
  * @category effects
- * @tags phaserwet, phaserdepth, phd, phasdp, phaser, depth, modulation, wet
+ * @tags phaserwet, phaserdepth, phaser, depth, modulation, wet
  */
 @KlangScript.Function
 fun phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserWet(wet, callInfo) }
@@ -2875,162 +2873,6 @@ fun phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
 @KlangScript.Function
 fun PatternMapperFn.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.phaserWet(wet, callInfo) }
-
-/**
- * Alias for [phaserWet]. Sets the phaser wet amount for this pattern.
- *
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the phaser wet.
- *
- * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
- * @return A new pattern with the phaser wet applied.
- *
- * ```KlangScript(Playable)
- * note("c3*4").phaser(0.5).phd(0.8)   // deep phaser sweep
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").phd("<0.2 0.5 0.8 1.0>")   // increasing phaser depth
- * ```
- *
- * ```KlangScript(Playable)
- * seq("0.2 0.5 0.8 1.0").phd()   // reinterpret values as phaser depth
- * ```
- *
- * @alias phaserWet, phasdp
- * @category effects
- * @tags phd, phaserdepth, phasdp, phaser, depth, modulation
- */
-@KlangScript.Function
-fun SprudelPattern.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.phaserWet(amount, callInfo)
-
-/**
- * Alias for [phaserWet]. Parses this string as a pattern and sets the phaser wet.
- *
- * When [amount] is omitted, the string's numeric values are reinterpreted as the phaser wet.
- *
- * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
- *
- * ```KlangScript(Playable)
- * "c3*4".phd(0.8).phaser(0.5).note()   // deep phaser on string pattern
- * ```
- */
-@KlangScript.Function
-fun String.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserWet(amount, callInfo)
-
-/**
- * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserWet].
- *
- * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
- * @return A [PatternMapperFn] that sets the phaser wet.
- *
- * ```KlangScript(Playable)
- * note("c3*4").apply(phd(0.8))   // deep phaser via mapper
- * ```
- *
- * @alias phaserWet, phasdp
- * @category effects
- * @tags phd, phaserdepth, phasdp, phaser, depth, modulation
- */
-@KlangScript.Function
-fun phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserWet(amount, callInfo) }
-
-/**
- * Creates a chained [PatternMapperFn] that sets the phaser wet (alias for phaserWet) after the previous mapper.
- *
- * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
- * @return A new [PatternMapperFn] chaining this phaser wet after the previous mapper.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(phaser(0.5).phd(0.8))   // rate then depth
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, phaser(4.0).phd(1.0))   // full-depth fast phaser
- * ```
- */
-@KlangScript.Function
-fun PatternMapperFn.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaserWet(amount, callInfo) }
-
-/**
- * Alias for [phaserWet]. Sets the phaser wet amount for this pattern.
- *
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the phaser wet.
- *
- * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
- * @return A new pattern with the phaser wet applied.
- *
- * ```KlangScript(Playable)
- * note("c3*4").phaser(0.5).phasdp(0.8)   // deep phaser sweep
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").phasdp("<0.2 0.5 0.8 1.0>")   // increasing phaser depth
- * ```
- *
- * ```KlangScript(Playable)
- * seq("0.2 0.5 0.8 1.0").phasdp()   // reinterpret values as phaser depth
- * ```
- *
- * @alias phaserWet, phd
- * @category effects
- * @tags phasdp, phaserdepth, phd, phaser, depth, modulation
- */
-@KlangScript.Function
-fun SprudelPattern.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.phaserWet(amount, callInfo)
-
-/**
- * Alias for [phaserWet]. Parses this string as a pattern and sets the phaser wet.
- *
- * When [amount] is omitted, the string's numeric values are reinterpreted as the phaser wet.
- *
- * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
- *
- * ```KlangScript(Playable)
- * "c3*4".phasdp(0.8).phaser(0.5).note()   // deep phaser on string pattern
- * ```
- */
-@KlangScript.Function
-fun String.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserWet(amount, callInfo)
-
-/**
- * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserWet].
- *
- * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
- * @return A [PatternMapperFn] that sets the phaser wet.
- *
- * ```KlangScript(Playable)
- * note("c3*4").apply(phasdp(0.8))   // deep phaser via mapper
- * ```
- *
- * @alias phaserWet, phd
- * @category effects
- * @tags phasdp, phaserdepth, phd, phaser, depth, modulation
- */
-@KlangScript.Function
-fun phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserWet(amount, callInfo) }
-
-/**
- * Creates a chained [PatternMapperFn] that sets the phaser wet (alias for phaserWet) after the previous mapper.
- *
- * @param amount The wet amount (0–1). Omit to reinterpret the pattern's values as the phaser wet.
- * @return A new [PatternMapperFn] chaining this phaser wet after the previous mapper.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(phaser(0.5).phasdp(0.8))   // rate then depth
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, phaser(4.0).phasdp(1.0))   // full-depth fast phaser
- * ```
- */
-@KlangScript.Function
-fun PatternMapperFn.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.phaserWet(amount, callInfo) }
 
 // -- phaserFloor() ----------------------------------------------------------------------------------------------------
 

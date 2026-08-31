@@ -391,7 +391,7 @@ at the cutoff). Same third slot on the ignitor door.
 | `crush(bits)`           |                                                                                          | Bitcrusher                                    | `s("hh").crush(8)`                        |
 | `coarse(amt)`           |                                                                                          | Sample-rate reduction                         | `note("c3").s("saw").coarse(3)`           |
 | `phaser(params)`        | `ph`                                                                                     | Phaser effect                                 | `note("c3").phaser(1)`                    |
-| `phaserWet(d)`        | `phasdp`, `phd`                                                                          | Phaser wet (additive by default)              | `note("c3").phaser(1).phaserWet(0.5)`   |
+| `phaserWet(d)`        |                                                                                          | Phaser wet (additive by default)              | `note("c3").phaser(1).phaserWet(0.5)`   |
 | `phasercenter(hz)`      | `phc`                                                                                    | Phaser center freq                            | `note("c3").phaser(1).phc(1000)`          |
 | `phasersweep(hz)`       | `phs`                                                                                    | Phaser sweep range                            | `note("c3").phaser(1).phs(500)`           |
 | `tremolo(params)`       |                                                                                          | Tremolo rate                                  | `note("c3").tremolo(4)`                   |
