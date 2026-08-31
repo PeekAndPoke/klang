@@ -74,6 +74,64 @@ Today the arriving voice sweeps its own group and is then added, so it cannot cu
 right. But nothing says a voice must *belong* to the group it chokes — a one-way "stop group 1"
 trigger is expressible and might be useful (a hand damping a triangle it did not strike).
 
+## The option that could delete most of this: do it in sprudel (maintainer, 2026-08-31)
+
+**Consider implementing cut entirely on the frontend, inside sprudel, and removing the logic from the
+backend altogether.** Less machinery is better machinery, and this is a real chance to take a whole
+mechanism out of the audio thread.
+
+It fits the shape of the thing. Cut is not DSP — it is *"shorten the previous note when a new one in
+the same group starts"*, which is a statement about note durations, and sprudel already computes note
+durations (that is exactly what `legato` and clipping do). Sprudel also has what the backend
+structurally lacks: **it can see the whole pattern, so it knows when the next hit lands before it
+schedules the current one.** The backend can only react after the fact, which is why its
+implementation is a sweep-and-delete over live voices.
+
+**What it would remove:** the cut sweep in `VoiceScheduler.activateVoice`, the `cut` field on `Voice`,
+and — if nothing else needs it — `VoiceData.cut` and its wire slot. The scheduler stops carrying a
+concept it only ever half-implemented (it was inert on synth voices until 2026-08-31, see
+[F18](../../audio-audit/FINDINGS.md#f18)).
+
+**It also fixes question 3 for free, which is the strongest argument for it.** Clipping the earlier
+note at schedule time gives it a normal gate end and therefore a normal envelope release. The hard
+kill and its click stop existing, rather than needing a fade bolted onto the sweep.
+
+**And it sharpens question 2.** A sprudel-side cut is naturally scoped to the pattern that expresses
+it, which is a *defined* scope. Today's global-to-the-scheduler reach is not a decision anyone made,
+it is what falls out of iterating `active`.
+
+### The one thing that does not move: realtime voices
+
+`VoiceScheduler.startRealtimeVoice` is fed by MIDI and the live keyboard, where **there is no
+lookahead at all** — when a key goes down, nothing knows when the next one in its group will. Choking
+a held realtime note can only be decided at the moment the next note arrives, which is the backend.
+
+So the honest options are:
+
+1. **Sprudel-only, and realtime voices simply do not choke.** Cheapest and cleanest. Acceptable if
+   nobody wants a choke group on a MIDI performance, which today nobody does.
+2. **Sprudel for patterns, keep a minimal backend path for realtime voices only.** Keeps both, but
+   keeps most of the complexity too, so it wins much less.
+3. **Sprudel-only, and realtime choking is expressed differently** — e.g. as monophony on the voice
+   source, which is what a MIDI player actually means by it, and is a better-defined feature than a
+   numbered group.
+
+Option 3 is worth a hard look: "this instrument is monophonic" and "these sounds are one physical
+object" are different ideas that the current `cut` conflates, and splitting them may be what makes
+both simple.
+
+### What to check before committing to it
+
+- Can sprudel express the hi-hat case across a `stack()`? The two arms are separate patterns, and the
+  choke has to reach from one into the other. If that is awkward, this whole idea gets much weaker.
+- ~~Does anything other than choking read `VoiceData.cut`?~~ **Checked 2026-08-31: no.** Repo-wide,
+  the only readers are the two `VoiceFactory` call sites that copy it onto the `Voice` (`:285`,
+  `:379`) and the sweep itself (`VoiceScheduler.kt:552`, `:557`). Everything else is the sprudel
+  setter side (`SprudelVoiceData.kt:699-701`, `SvdGroups.kt:315`). So the backend field really is
+  single-purpose and deletable with the sweep.
+- What happens to a note already scheduled when a live-coding edit changes the pattern? The clip was
+  computed against the old future. `replaceVoices` should cover it, but it wants a test.
+
 ## Decide, then do
 
 The one-line repair is worth applying only once question 1 is answered; questions 2 and 3 change
