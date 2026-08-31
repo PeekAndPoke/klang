@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
@@ -41,209 +43,67 @@ class PitchModulationTest : StringSpec({
         return sqrt(sum / (to - from))
     }
 
-    "vibrato with depth 0 produces no modulation" {
-        val voiceWith = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.0)
-        )
-        val voiceWithout = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0)
-        )
+    "vibrato with depth 0 produces no modulation — and a real depth does" {
+        // Audit F12. Both voices used to be built with `semitones = 0.0` (only `rate` differed,
+        // and rate alone modulates nothing), so this compared a run against ITSELF: true by
+        // construction, and no mutation anywhere could falsify it. The zero-claim only means
+        // something next to a positive control proving the comparison can see a difference.
+        fun render(vibrato: Voice.Vibrato): AudioBuffer {
+            val voice = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), vibrato = vibrato)
+            val ctx = createContext(blockFrames = bf)
+            voice.render(ctx)
+            return ctx.voiceBuffer
+        }
 
-        val ctxWith = createContext(blockFrames = bf)
-        val ctxWithout = createContext(blockFrames = bf)
-        voiceWith.render(ctxWith)
-        voiceWithout.render(ctxWithout)
+        val bare = render(Voice.Vibrato(rate = 0.0, semitones = 0.0))
+        val zeroDepth = render(Voice.Vibrato(rate = 5.0, semitones = 0.0))
+        val realDepth = render(Voice.Vibrato(rate = 5.0, semitones = 2.0))
 
-        // With depth=0, output should be identical to no-vibrato
-        val diff = diffRms(ctxWith.voiceBuffer, ctxWithout.voiceBuffer)
-        (diff < 1e-6) shouldBe true
+        // The claim: depth 0 is inert whatever the rate says.
+        diffRms(zeroDepth, bare) shouldBeLessThan 1e-6
+        // The control, which is what makes the line above falsifiable at all.
+        diffRms(realDepth, bare) shouldBeGreaterThan 1e-3
     }
 
-    "vibrato with rate and depth modulates pitch" {
-        val voiceWith = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25)
-        )
-        val voiceWithout = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0)
-        )
+    "accelerate with 0 semitones produces no pitch change — and a real glide does" {
+        // Audit F12: `Voice.Accelerate(semitones = 0.0)` IS the helper default, so the two
+        // voices were configured identically. Positive control added.
+        fun render(accelerate: Voice.Accelerate): AudioBuffer {
+            val voice = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), accelerate = accelerate)
+            val ctx = createContext(blockFrames = bf)
+            voice.render(ctx)
+            return ctx.voiceBuffer
+        }
 
-        val ctxWith = createContext(blockFrames = bf)
-        val ctxWithout = createContext(blockFrames = bf)
-        voiceWith.render(ctxWith)
-        voiceWithout.render(ctxWithout)
+        val bare = render(Voice.Accelerate(0.0))
+        val zero = render(Voice.Accelerate(semitones = 0.0))
+        val glide = render(Voice.Accelerate(semitones = 12.0))
 
-        // Vibrato should produce output that differs from non-vibrato
-        val diff = diffRms(ctxWith.voiceBuffer, ctxWithout.voiceBuffer)
-        (diff > 1e-4) shouldBe true
+        diffRms(zero, bare) shouldBeLessThan 1e-6
+        diffRms(glide, bare) shouldBeGreaterThan 1e-3
     }
 
-    "vibrato with high rate produces fast modulation" {
-        val voiceFast = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 20.0, semitones = 0.5)
-        )
-        val voiceSlow = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 2.0, semitones = 0.5)
-        )
+    "pitch envelope with null is disabled — and a real one is not" {
+        // Audit F12: this compared `pitchEnvelope = null` against `= null` by default.
+        // Literally the same configuration.
+        fun render(pitchEnvelope: Voice.PitchEnvelope?): AudioBuffer {
+            val voice = createSynthVoice(blockFrames = bf, signal = Ignitors.sine(), pitchEnvelope = pitchEnvelope)
+            val ctx = createContext(blockFrames = bf)
+            voice.render(ctx)
+            return ctx.voiceBuffer
+        }
 
-        val ctxFast = createContext(blockFrames = bf)
-        val ctxSlow = createContext(blockFrames = bf)
-        voiceFast.render(ctxFast)
-        voiceSlow.render(ctxSlow)
-
-        // Fast and slow vibrato should produce different outputs
-        val diff = diffRms(ctxFast.voiceBuffer, ctxSlow.voiceBuffer)
-        (diff > 1e-4) shouldBe true
-    }
-
-    "vibrato with high depth produces wide pitch swings" {
-        val voiceWide = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.5)
-        )
-        val voiceNarrow = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.01)
-        )
-        val voiceNone = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0)
+        val bare = render(null)
+        val explicitNull = render(null)
+        val real = render(
+            Voice.PitchEnvelope(
+                attackFrames = 0.0, decayFrames = 200.0, releaseFrames = 0.0,
+                semitones = 12.0, curve = 1.0, anchor = 0.0,
+            )
         )
 
-        val ctxWide = createContext(blockFrames = bf)
-        val ctxNarrow = createContext(blockFrames = bf)
-        val ctxNone = createContext(blockFrames = bf)
-        voiceWide.render(ctxWide)
-        voiceNarrow.render(ctxNarrow)
-        voiceNone.render(ctxNone)
-
-        // Higher depth should produce a larger difference from no-vibrato
-        val diffWide = diffRms(ctxWide.voiceBuffer, ctxNone.voiceBuffer)
-        val diffNarrow = diffRms(ctxNarrow.voiceBuffer, ctxNone.voiceBuffer)
-        (diffWide > diffNarrow) shouldBe true
-    }
-
-    "accelerate with rate 0 produces no pitch change" {
-        val voiceWith = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            accelerate = Voice.Accelerate(semitones = 0.0)
-        )
-        val voiceWithout = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-        )
-
-        val ctxWith = createContext(blockFrames = bf)
-        val ctxWithout = createContext(blockFrames = bf)
-        voiceWith.render(ctxWith)
-        voiceWithout.render(ctxWithout)
-
-        // Zero accelerate should be identical to no accelerate
-        val diff = diffRms(ctxWith.voiceBuffer, ctxWithout.voiceBuffer)
-        (diff < 1e-6) shouldBe true
-    }
-
-    "accelerate with positive amount increases pitch over time" {
-        val blockSize = 256
-        val voice = createSynthVoice(
-            startFrame = 0.0,
-            endFrame = 1024.0,
-            blockFrames = blockSize,
-            signal = Ignitors.sine(),
-            accelerate = Voice.Accelerate(semitones = 2.0)
-        )
-        val voiceRef = createSynthVoice(
-            startFrame = 0.0,
-            endFrame = 1024.0,
-            blockFrames = blockSize,
-            signal = Ignitors.sine(),
-            accelerate = Voice.Accelerate(semitones = 0.0)
-        )
-
-        // Render first half
-        val ctxFirst = createContext(blockStart = 0.0, blockFrames = blockSize)
-        voice.render(ctxFirst)
-        val firstHalf = ctxFirst.voiceBuffer.copyOf()
-
-        // Render second half
-        val ctxSecond = createContext(blockStart = 512.0, blockFrames = blockSize)
-        voice.render(ctxSecond)
-        val secondHalf = ctxSecond.voiceBuffer.copyOf()
-
-        // Render reference (no accelerate) at both positions
-        val ctxRefFirst = createContext(blockStart = 0.0, blockFrames = blockSize)
-        voiceRef.render(ctxRefFirst)
-        val ctxRefSecond = createContext(blockStart = 512.0, blockFrames = blockSize)
-        voiceRef.render(ctxRefSecond)
-
-        // First half should differ from second half (pitch is changing)
-        val diffFirstSecond = diffRms(firstHalf, secondHalf)
-        (diffFirstSecond > 1e-4) shouldBe true
-
-        // The accelerated voice should differ from the reference
-        val diffFromRef = diffRms(ctxSecond.voiceBuffer, ctxRefSecond.voiceBuffer)
-        (diffFromRef > 1e-4) shouldBe true
-    }
-
-    "accelerate with negative rate decreases pitch over time" {
-        val voiceNeg = createSynthVoice(
-            startFrame = 0.0,
-            endFrame = 1000.0,
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            accelerate = Voice.Accelerate(semitones = -0.5)
-        )
-        val voiceNone = createSynthVoice(
-            startFrame = 0.0,
-            endFrame = 1000.0,
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-        )
-
-        val ctxNeg = createContext(blockFrames = bf)
-        val ctxNone = createContext(blockFrames = bf)
-        voiceNeg.render(ctxNeg)
-        voiceNone.render(ctxNone)
-
-        // Negative accelerate should differ from no-accelerate
-        val diff = diffRms(ctxNeg.voiceBuffer, ctxNone.voiceBuffer)
-        (diff > 1e-4) shouldBe true
-    }
-
-    "pitch envelope with null is disabled" {
-        val voiceWith = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-            pitchEnvelope = null,
-        )
-        val voiceWithout = createSynthVoice(
-            blockFrames = bf,
-            signal = Ignitors.sine(),
-        )
-
-        val ctxWith = createContext(blockFrames = bf)
-        val ctxWithout = createContext(blockFrames = bf)
-        voiceWith.render(ctxWith)
-        voiceWithout.render(ctxWithout)
-
-        // Null pitch envelope should be identical to default (no pitch envelope)
-        val diff = diffRms(ctxWith.voiceBuffer, ctxWithout.voiceBuffer)
-        (diff < 1e-6) shouldBe true
+        diffRms(explicitNull, bare) shouldBeLessThan 1e-6
+        diffRms(real, bare) shouldBeGreaterThan 1e-3
     }
 
     "pitch envelope with attack phase" {

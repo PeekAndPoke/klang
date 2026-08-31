@@ -4,6 +4,30 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-31, claude-code session): AUDIO-BACKEND-AUDIT TRIAGE started — the
+> `strip/pitch` cluster, done first because block-framing's phaseMod part 2 is about to change
+> that package and these findings WERE its net. F10 (inverted pitch glide passes the suite) did
+> NOT reproduce — `AccelerateSemitoneLawSpec` closed it since the pilot ran. F11 (FM modulator
+> 1000x too slow passes the suite) re-confirmed live, then fixed with a quantity oracle. F12's
+> five tautological "disabled" tests got positive controls; the two FM ones merged into a
+> three-way. 4/5 mutations killed; the survivor is UNFALSIFIABLE BY DESIGN (a depth-0 FmRenderer
+> is a mathematical identity, so that gate is an optimisation, not a behaviour) and recorded as
+> such. **Method note now standing in the audit INDEX: re-run every finding's mutation before it
+> costs a triage decision — 3 of 17 had moved in the four weeks the list sat unreviewed.**
+> audio_be 1441 green, :audio_be:compileKotlinJs green. UNCOMMITTED. 10 audit findings still open.
+> ⏳ STILL OWED: the W10 tremolo by-ear round (committed 9cb896ff unheard).
+
+> Last action (2026-08-31, claude-code block-framing session): DELAY-RING GUARD — the last open
+> item of the master round, closed. `nanGuard()` on `DelayLine`'s ring STORE: softCap already
+> sterilises Inf, but softCap(NaN) is NaN and the ring recirculates, so one NaN killed that
+> orbit's delay for life. Measured, not assumed, because a per-sample `isFinite` was removed here
+> at +33%/+30% in May: **the benchmark ladder had no delay coverage at all**, so a delay rung was
+> added to LEAD and the guard priced by interleaved A/B — indistinguishable from zero. The old
+> +33% was a NON-INLINED stdlib call, not the test; `nanGuard` is one inline self-compare.
+> 2/2 mutations killed (incl. guarding the output instead of the store — plausible-looking, and
+> it leaves the ring poisoned). Green: audio_be, audio_bridge, klang, root, :compileKotlinJs.
+> UNCOMMITTED. ⏳ STILL OWED: the W10 tremolo by-ear round (committed 9cb896ff unheard).
+
 > Last action (2026-08-31, claude-code block-framing session): MASTER ROUND done, and the fix is
 > NOT at the master. The maintainer redirected mid-round ("the fix in the master seems to be a
 > patch not a full solution") and that was right: `flushDenormal` was already called at 58 IIR

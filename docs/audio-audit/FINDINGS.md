@@ -269,7 +269,7 @@ cheap — do it every time.
 
 ---
 
-## F10 — An inverted pitch glide passes the entire suite 🔴
+## F10 — An inverted pitch glide passes the entire suite ✅ CLOSED (by later work)
 
 **HIGH — the most serious finding of the pilot.** `AccelerateRenderer` glides pitch over the voice's lifetime. Two tests
 are named for its *direction*:
@@ -287,9 +287,16 @@ glide rises. `PitchModulationTest`: **GREEN**. The **whole `audio_be` suite: GRE
 A note that swoops the wrong way is not subtle — it is the kind of thing you hear on the first bar. Nothing in 943 tests
 would tell us.
 
+> **CLOSED 2026-08-31 — re-verified, and it no longer reproduces.** The same mutation (negate the
+> glide exponent at both sites) now turns the WHOLE suite RED. The killer is
+> `AccelerateSemitoneLawSpec > "strip path: accelerate(24 st) is exactly ratio 2.0 at half the
+> voice"`, a spec that did not exist when the pilot ran. The pilot's most serious finding was
+> closed incidentally by later work. **Method note: this is why every finding gets its mutation
+> re-run before it costs a triage decision — three of seventeen had moved in four weeks.**
+
 ---
 
-## F11 — An FM modulator running 1000× too slow passes the entire suite 🔴
+## F11 — An FM modulator running 1000× too slow passes the entire suite ✅ FIXED
 
 **HIGH.** `FmSynthesisTest` — *"FM modulator phase advances correctly"*. Its assertion is
 `afterPhase > initialPhase`: the phase moved by *some* positive amount.
@@ -297,7 +304,15 @@ would tell us.
 **Evidence (mutation W2).** Multiplied `modInc` by `0.001` at `FmRenderer.kt:39`, so the modulator advances ~0.006 rad
 over 100 frames instead of ~6.3 rad. `FmSynthesisTest`: **GREEN**. The **whole suite: GREEN.**
 
-That is not a detuned FM patch, it is a different instrument. The same shape recurs across this spec:
+That is not a detuned FM patch, it is a different instrument.
+
+> **RE-CONFIRMED 2026-08-31** against the current tree (whole suite still GREEN under the
+> mutation), then **FIXED**: the test now asserts the phase QUANTITY, derived from the definition
+> of an FM modulator (`frames × TWO_PI × freq × ratio / sr`, wrapped once) rather than from the
+> renderer, to 1e-9. The pilot's own mutation is now killed by it. Renamed to
+> *"FM modulator phase advances by the EXPECTED amount, not merely upward"*.
+
+The same shape recurs across this spec:
 several tests assert `diff > 1e-3` against a clean baseline, which any nonzero FM satisfies — so they confirm "FM is
 on", not "FM is right".
 
@@ -307,7 +322,7 @@ not.
 
 ---
 
-## F12 — "disabled" tests compare a value against its own default 🔴
+## F12 — "disabled" tests compare a value against its own default ✅ FIXED
 
 **MED.** A recurring shape across `PitchModulationTest` and `FmSynthesisTest`: a test asserts that some feature at
 zero/null "produces no modulation" by comparing two voices — but *both* voices are configured identically, because the
@@ -322,6 +337,22 @@ explicit value equals the default.
 The renderer is never constructed in either branch (the pipeline gate excludes it), so the comparison is between two
 identical runs. And even if the gate were relaxed, the math is an identity at zero (`2^(sin(φ)·0/12) = 1`,
 `effectiveDepth = 0`). **No mutation can falsify these** — they are true by construction, not by behaviour.
+
+> **FIXED 2026-08-31 by adding a POSITIVE CONTROL to each.** A zero-claim is only meaningful next
+> to a run that proves the comparison can see a difference at all, so each test is now a two- or
+> three-way: bare ≡ zero-configured, and bare ≢ really-configured. The two FM tests were MERGED —
+> *"FM with depth 0 produces no modulation"* and *"FM with null is disabled"* were the same claim,
+> and the second only asserted the voice made some sound, which its name does not promise.
+>
+> Mutation-checked: disabling vibrato / accelerate / pitch-envelope / FM outright in
+> `PitchPipelineBuilder` now turns the respective test RED — under the old tests every one of
+> those was green.
+>
+> **One half remains unfalsifiable, and correctly so.** Relaxing the FM gate to `if (fm != null)`
+> so a depth-0 FM really does build an `FmRenderer` SURVIVES: `effectiveDepth = 0` makes
+> `fmMult = 1.0`, so the renderer is a mathematical identity and no output oracle can see it. That
+> gate is an allocation/iteration optimisation, not a behaviour — the same category as
+> [F4](#f4), and recorded rather than chased.
 
 ---
 
@@ -383,6 +414,9 @@ coverage ([F10](#f10)).
 `VoicePipelineTest` *"tremolo renders successfully"* / *"phaser renders successfully with defaults"*. The name promises
 exactly what is delivered. Worth keeping, worth not counting as coverage — and note this leaves `TremoloRenderer` and
 `StripPhaserRenderer` with no behavioural test at all.
+
+> **Half closed 2026-08-31:** `TremoloRenderer` now has `TremoloRendererSpec` (15 rows, added by
+> the block-framing W10 round). `StripPhaserRenderer` still has none.
 
 **(c) `GuitarClickHuntTest` — 7 of 7, and a separate question.**
 This is the standing click-diagnostic harness; it prints and guards nothing, by design. But it is **5.4 s of the suite's

@@ -11,7 +11,7 @@ list: [`FINDINGS.md`](FINDINGS.md) — **this is the list we go through together
 
 | Subsystem                  | Specs verified | Findings | State                                            |
 |----------------------------|---------------:|---------:|--------------------------------------------------|
-| `voices/` (pilot)          |        13 / 13 |       15 | 🟢 **analysis complete** — awaiting joint triage |
+| `voices/` (pilot)          |        13 / 13 |       17 | 🟡 **triage started 2026-08-31** — the `strip/pitch` cluster (F10/F11/F12) is closed; 10 findings still open |
 | root / lifecycle           |              — |        — | 🔴 not started                                   |
 | `cylinders/` + `katalyst/` |              — |        — | 🔴 not started                                   |
 | `effects/`                 |              — |        — | 🔴 not started                                   |
@@ -19,6 +19,21 @@ list: [`FINDINGS.md`](FINDINGS.md) — **this is the list we go through together
 | `ignitor/`                 |              — |        — | 🔴 not started                                   |
 | platform / audio thread    |              — |        — | 🔴 not started                                   |
 | `master/`                  |              — |        — | 🔴 not started (light pass)                      |
+
+## Triage log
+
+**2026-08-31 — `strip/pitch` cluster, done first because phaseMod part 2 of the block-framing
+workstream is about to change that package and these were its net.**
+
+| Finding | Outcome |
+|---------|---------|
+| F10 inverted glide | ✅ **CLOSED by later work** — `AccelerateSemitoneLawSpec` now kills the mutation. Did not reproduce. |
+| F11 FM 1000× slow | ✅ **FIXED** — re-confirmed live, then given a quantity oracle; the pilot's own mutation is killed. |
+| F12 tautological "disabled" tests | ✅ **FIXED** — positive controls added, two FM tests merged. One half stays unfalsifiable BY DESIGN (a depth-0 `FmRenderer` is a mathematical identity, so the gate is an optimisation, not a behaviour — as [F4](FINDINGS.md#f4)). |
+| F15(b) tremolo/phaser | 🟡 half closed — `TremoloRendererSpec` exists now; `StripPhaserRenderer` still has no behavioural test. |
+
+**Standing method note added by this session:** re-run every finding's mutation before spending a
+triage decision on it. Three of seventeen had moved in the four weeks the list sat unreviewed.
 
 ## Baseline
 
