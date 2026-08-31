@@ -588,9 +588,16 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
   [`docs/tasks/future/ducking-unfinished.md`](../tasks/future/ducking-unfinished.md) — including the
   one worth fixing before anyone writes a song against it: `duckattack` sets the **release**, and
   `Compressor` in the same directory has an `attackSeconds` that means something else again.
-- **`Voice.Compressor`'s DSP is untested.** `VoiceCompressorSpec` (4 tests) tests *string parsing*
-  only — consistent with its own contents, but the name reads as coverage of the compressor. The runtime effect lives in
-  `Cylinder.kt:181-216`.
+- ~~**`Voice.Compressor`'s DSP is untested.**~~ ❌ **WITHDRAWN 2026-08-31.** The DSP has two dedicated
+  specs: `effects/CompressorSpec` asserts gain reduction above threshold, transparency below it,
+  stereo behaviour, the soft knee, `reset`, and the `+Inf` guard; `effects/CompressorSmoothnessSpec`
+  covers the coefficient blend. The orbit wiring at the very lines this bullet cites
+  (`Cylinder.kt:181-216`) is covered by `CylinderCompressorSpec` — creation, parameter application,
+  first-writer-wins, reuse, clearing, and envelope preservation across voices — and the bus effect by
+  `KatalystCompressorEffectSpec`. **Sixth "untested" claim in this audit that did not survive
+  checking.**
+  What survives is only the naming half, and it is fair: `VoiceCompressorSpec` tests *string parsing*
+  while its name reads as coverage of the compressor.
 - **`VoiceFactory` (563 lines) is bypassed by all 37 lifecycle/pipeline tests** —
   `VoiceTestHelpers.createVoice` hand-rolls a *parallel* pipeline construction instead of calling
   `makeVoice()`. So the helper and production can drift apart silently. Untouched by that path:
@@ -602,8 +609,19 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
   active pipeline from `PipelinePreset.Pedal` at `:66` and `:75`, and that spec was added **2026-06-29**,
   five weeks *before* the pilot ran. The pilot grepped `voices/` and phrased the result suite-wide.
   What survives: `VoiceTestHelpers` does hard-code `Modern`, so the *voice-strip* path is Modern-only.
-- **`Voice.Fm` is `null` in every lifecycle/pipeline test**, and `FilterModulator.drift` is `null`
-  everywhere — the third independent sighting of the analog-drift gap ([F2](#f2), [F5](#f5)).
+- ~~**`Voice.Fm` is `null` in every lifecycle/pipeline test**, and `FilterModulator.drift` is `null`
+  everywhere~~ — **largely OVERTAKEN 2026-08-31.** `Voice.Fm` is now driven by
+  `SampleVoiceSpecificTest` (two rows, mutation-checked) and by the strip-door rows of
+  `BlockFramingInvarianceSpec`; `FilterModulator.drift` was already covered by `FilterEnvSemitoneSpec`
+  (see the withdrawal in [F5](#f5)). The "third independent sighting of the analog-drift gap" reading
+  does not hold: two of the three sightings were the same missed spec.
+
+> **Where F14 stands after re-verification: two bullets withdrawn (Pedal, compressor), one parked to
+> a future task (ducking), one overtaken (Fm/drift). One survives** — `VoiceFactory` is still bypassed
+> by the lifecycle/pipeline tests, because `VoiceTestHelpers.createVoice` hand-rolls a *parallel*
+> pipeline construction instead of calling `makeVoice`, so the helper and production can drift apart
+> silently. That one is real and unfixed. Fixing it means rewriting the foundation those ~37 tests
+> stand on, which is a maintainer call rather than an audit repair.
 
 ---
 
