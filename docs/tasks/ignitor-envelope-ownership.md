@@ -275,6 +275,8 @@ exists in Strudel, and `sprudel/ref/dsl-conventions.md` puts non-Strudel functio
 **NOT** the mini-notation attribute map (`MnPatternToSprudelPattern.kt`) — an earlier draft of this
 plan listed it. `loop`, the existing Boolean control, is not in that map either, so the precedent is
 that `{adsr=…}` sets the numbers while the switch stays a method call.
+(2026-08-30: the attribute map itself has since been removed, see
+`docs/tasks/mini-notation-tweaks.md`. The decision above stands; only its precedent is gone.)
 
 **C. `StageDsl.Vca` gains `on: Boolean = true`**, alongside `expK` and `declickSeconds`. Non-null
 here on purpose: `Vca` IS the fallback layer, so it has no "unset" state to express. This is a soft

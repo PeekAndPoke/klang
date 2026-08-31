@@ -1,8 +1,12 @@
 # Tweaks: named per-note modifiers in mini-notation
 
-> Status: **DESIGNED, NOT STARTED.** Captured 2026-08-30.
-> Supersedes the `{key=value}` attribute block documented in `mini-notation-extensions.md`.
-> Phase 0 of this doc **removes** that feature; the tweak concept replaces it wholesale.
+> Status: **Phase 0 DONE (uncommitted), phases 1-6 NOT STARTED.** Captured 2026-08-30.
+> Supersedes the `{key=value}` attribute block documented in `mini-notation-extensions.md`, which
+> Phase 0 has now removed.
+>
+> **State after Phase 0:** `{name name …}` parses, round-trips through `MnRenderer`, and rides on
+> `MnNode.Mods.tweaks`. The names are **not yet applied to anything** (that is Phase 2 + 4), and the
+> old `{key=value}` form now fails with a migration parse error rather than silently doing nothing.
 
 ## Why
 
@@ -258,7 +262,7 @@ inspected (`feedback_stop_before_commit`).
 
 | # | Phase                | Contents                                                                     |
 |---|----------------------|------------------------------------------------------------------------------|
-| 0 | Remove attrs         | the table above; parser accepts `{name name}` and stores names on `MnNode`    |
+| 0 | Remove attrs ✅ DONE | the table above; parser accepts `{name name}` and stores names on `MnNode`    |
 | 1 | Voice data field     | `tweaks: List<String>?` + `mergeTweaks` / `addTweak` / `withTweak`; NOT on wire |
 | 2 | Parser to voice data | `MnPatternToSprudelPattern` writes the names onto the atom's voice data        |
 | 3 | Marker DSL           | `tweak(name)` in all four forms, mirroring `tag`                              |
