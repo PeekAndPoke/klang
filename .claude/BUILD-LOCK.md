@@ -4,6 +4,38 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-31, claude-code ignitor-arithmetic session): IGNITOR ARITHMETIC TIDY.
+> `IgniteContext`/`BlockContext` gained `windowEnd` (`offset + length`, maintained by custom
+> setters + `private set` so it cannot desync — a stale render window is the block-framing bug
+> class); 119 `ctx.offset + ctx.length` sites across 32 files now read it. Plus two loop-invariant
+> hoists (`LerpIgnitor` `1 − kw`, `RangeIgnitor` `0.5·(kh − kl)`; both bit-identical, the Range
+> re-association is safe because ×0.5 is exact) and the `a/b/t` → `from/to/weight` rename.
+> Style: blank line before every `return` that is not alone in its block, 51 sites in `Ignitor.kt`,
+> and the rule is now written into `.claude/skills/code-style`.
+> Green: `:audio_be:jvmTest`, `:audio_bridge:jvmTest`, `:audio_be:compileKotlinJs`. UNCOMMITTED.
+> ⚠️ OPEN, needs a JS profile or a decision: a custom setter may make `ctx.offset` an accessor
+> call in Kotlin/JS, and `offset` is read PER SAMPLE in 15 loops. Cheap fix either way: hoist
+> `val off = ctx.offset` above those loops.
+
+> Last action (2026-08-31, claude-code block-framing session): W13 / "musical vs absolute
+> frequency, part 2" DONE — the LAST open item of the block-framing workstream. A pitch mod now
+> moves Freq-derived pitches and leaves absolute ones alone, on BOTH doors, via
+> `pitchedSource(freq, …)` in `buildRaw` + a new `ModBlockingIgnitor` that nulls `ctx.phaseMod`
+> around an absolute-freq source and restores it. Same predicate as D13's fold, asked per SOURCE
+> instead of per subtree. Zero per-sample cost.
+> NO SHIPPED SOUND MOVES. One song's code shape was affected — `DialogueWithTheStars`' nylon
+> guitar pitch-envelopes a spine ending in a "fixed-pitch" `Osc.sine(180)`, which was starting
+> 4.21 Hz sharp — but that song plays exactly one note through a binding named `placeholder`
+> (maintainer; confirmed at DialogueWithTheStars.kt:122), so it is audibly moot and no A/B is
+> needed. Worth keeping in the record anyway: a fixed-pitch body resonance summed into a
+> modulated spine is ordinary instrument design, so the next song to do it for real would have
+> hit this.
+> Guards: `AbsoluteFreqPitchModSpec` (7 rows, both doors), 4/4 mutations killed — two rows were
+> earned by the campaign (the missing-restore mutant needs BOTH absolute-first ordering AND the
+> strip door to be visible). No pre-existing test saw the change at all.
+> Green: audio_be 1448, audio_bridge 62, klang, root, :compileKotlinJs. UNCOMMITTED.
+> By-ear debts now live in `docs/tasks/by-ear/` (maintainer), not in these handover notes.
+
 > Last action (2026-08-31, claude-code session): AUDIO-BACKEND-AUDIT TRIAGE started — the
 > `strip/pitch` cluster, done first because block-framing's phaseMod part 2 is about to change
 > that package and these findings WERE its net. F10 (inverted pitch glide passes the suite) did

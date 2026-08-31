@@ -345,6 +345,28 @@ private fun IgnitorDsl.buildRaw(
 
     fun IgnitorDsl.noMod(): Ignitor = buildIgnitor(oscParams, cache).ignitor
 
+    /**
+     * Builds a PITCHED source: applies [accumulatedMod] as before when the source's own `freq`
+     * slot is musically derived, and otherwise shields it from pitch modulation entirely
+     * ([ModBlockingIgnitor]).
+     *
+     * Ledger W13. `usesMusicalFreq` is the same predicate D13's detune fold uses, but asked of the
+     * oscillator's OWN freq slot rather than of a whole subtree — that per-source question is
+     * exactly what W13 flagged as missing. A detuned arm still answers yes (its freq is the `Freq`
+     * leaf, forked under a detune context), so vibrato keeps moving detuned voices; a hand-rolled
+     * `Osc.sine(5)` LFO answers no, and so does a fixed-pitch body resonance.
+     *
+     * Every pitched source arm below goes through here. A new oscillator that calls the bare
+     * [applyMod] instead silently reopens W13 — [ModBlockingIgnitor]'s KDoc is the forcing note.
+     */
+    fun pitchedSource(freq: IgnitorDsl, source: Ignitor): Ignitor {
+        if (!cache.usesMusicalFreq(freq)) {
+            return ModBlockingIgnitor(source)
+        }
+
+        return applyMod(source, accumulatedMod)
+    }
+
     val ignitor = when (this) {
         is IgnitorDsl.Param, is IgnitorDsl.Constant, is IgnitorDsl.Freq ->
             error("Leaf DSL nodes must be built in buildIgnitor, not buildRaw")
@@ -360,28 +382,28 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Sources: apply accumulated mod ──
 
-        is IgnitorDsl.Sine -> applyMod(Ignitors.sine(freq.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Sawtooth -> applyMod(
+        is IgnitorDsl.Sine -> pitchedSource(freq, Ignitors.sine(freq.noMod(), analog.noMod()))
+        is IgnitorDsl.Sawtooth -> pitchedSource(
+            freq,
             Ignitors.sawtooth(freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax),
-            accumulatedMod
         )
-        is IgnitorDsl.Square -> applyMod(Ignitors.square(freq.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Triangle -> applyMod(Ignitors.triangle(freq.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Ramp -> applyMod(
+        is IgnitorDsl.Square -> pitchedSource(freq, Ignitors.square(freq.noMod(), analog.noMod()))
+        is IgnitorDsl.Triangle -> pitchedSource(freq, Ignitors.triangle(freq.noMod(), analog.noMod()))
+        is IgnitorDsl.Ramp -> pitchedSource(
+            freq,
             Ignitors.ramp(freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax),
-            accumulatedMod
         )
-        is IgnitorDsl.Zawtooth -> applyMod(Ignitors.zawtooth(freq.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Zamp -> applyMod(Ignitors.zamp(freq.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Pulze -> applyMod(
+        is IgnitorDsl.Zawtooth -> pitchedSource(freq, Ignitors.zawtooth(freq.noMod(), analog.noMod()))
+        is IgnitorDsl.Zamp -> pitchedSource(freq, Ignitors.zamp(freq.noMod(), analog.noMod()))
+        is IgnitorDsl.Pulze -> pitchedSource(
+            freq,
             Ignitors.pulze(
                 freq.noMod(), duty.noMod(), analog.noMod(),
                 flankSamples = flankSamples, riseFlank = riseFlank, fallFlank = fallFlank,
             ),
-            accumulatedMod
         )
-        is IgnitorDsl.RawPulze -> applyMod(Ignitors.rawPulze(freq.noMod(), duty.noMod(), analog.noMod()), accumulatedMod)
-        is IgnitorDsl.Impulse -> applyMod(Ignitors.impulse(freq.noMod(), analog.noMod()), accumulatedMod)
+        is IgnitorDsl.RawPulze -> pitchedSource(freq, Ignitors.rawPulze(freq.noMod(), duty.noMod(), analog.noMod()))
+        is IgnitorDsl.Impulse -> pitchedSource(freq, Ignitors.impulse(freq.noMod(), analog.noMod()))
         is IgnitorDsl.Silence -> applyMod(Ignitors.silence(), accumulatedMod)
 
         // Noise sources ignore phaseMod — skip ModApplyingIgnitor to avoid wasting cycles.
@@ -393,7 +415,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Dust -> Ignitors.dust(cache.random, density.noMod(), tail.noMod(), bipolar.noMod())
         is IgnitorDsl.Crackle -> Ignitors.crackle(cache.random, chaos.noMod())
 
-        is IgnitorDsl.SuperSaw -> applyMod(
+        is IgnitorDsl.SuperSaw -> pitchedSource(
+            freq,
             Ignitors.superSaw(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
@@ -402,10 +425,10 @@ private fun IgnitorDsl.buildRaw(
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
-            accumulatedMod
         )
 
-        is IgnitorDsl.SuperSine -> applyMod(
+        is IgnitorDsl.SuperSine -> pitchedSource(
+            freq,
             Ignitors.superSine(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
@@ -414,10 +437,10 @@ private fun IgnitorDsl.buildRaw(
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
-            accumulatedMod
         )
 
-        is IgnitorDsl.SuperSquare -> applyMod(
+        is IgnitorDsl.SuperSquare -> pitchedSource(
+            freq,
             Ignitors.superSquare(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
@@ -426,10 +449,10 @@ private fun IgnitorDsl.buildRaw(
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
-            accumulatedMod
         )
 
-        is IgnitorDsl.SuperTri -> applyMod(
+        is IgnitorDsl.SuperTri -> pitchedSource(
+            freq,
             Ignitors.superTri(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
@@ -438,10 +461,10 @@ private fun IgnitorDsl.buildRaw(
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
-            accumulatedMod
         )
 
-        is IgnitorDsl.SuperRamp -> applyMod(
+        is IgnitorDsl.SuperRamp -> pitchedSource(
+            freq,
             Ignitors.superRamp(
                 freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
@@ -450,10 +473,10 @@ private fun IgnitorDsl.buildRaw(
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
                 phasePools = cache.phasePools, orbit = cache.orbit,
             ),
-            accumulatedMod
         )
 
-        is IgnitorDsl.Pluck -> applyMod(
+        is IgnitorDsl.Pluck -> pitchedSource(
+            freq,
             Ignitors.karplusStrong(
                 freq.noMod(),
                 decay.noMod(),
@@ -463,10 +486,10 @@ private fun IgnitorDsl.buildRaw(
                 analog.noMod(),
                 rng = cache.random,
             ),
-            accumulatedMod,
         )
 
-        is IgnitorDsl.SuperPluck -> applyMod(
+        is IgnitorDsl.SuperPluck -> pitchedSource(
+            freq,
             Ignitors.superKarplusStrong(
                 freq.noMod(),
                 voices.noMod(),
@@ -478,7 +501,6 @@ private fun IgnitorDsl.buildRaw(
                 analog.noMod(),
                 rng = cache.random,
             ),
-            accumulatedMod,
         )
 
         // ── Arithmetic: pass mod to both children ──
