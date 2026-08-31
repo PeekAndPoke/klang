@@ -13,7 +13,7 @@ list: [`FINDINGS.md`](FINDINGS.md) — **this is the list we go through together
 |----------------------------|---------------:|---------:|--------------------------------------------------|
 | `voices/` (pilot)          |        13 / 13 |       19 | 🟡 **triage in progress 2026-08-31** — `strip/pitch` (F10/F11/F12) closed; F7's solo+cut half closed (and it found [F18](FINDINGS.md#f18)); all 10 remaining re-verified, **6 corrected/withdrawn**; 3 owed mutations re-run ✅ |
 | root / lifecycle           |              — |        — | 🔴 not started                                   |
-| `cylinders/` + `katalyst/` |              — |        — | 🔴 not started                                   |
+| `cylinders/` + `katalyst/` |          1 / 11 |        1 | 🟡 **started 2026-08-31** — `KatalystFilterSwap` verified + [F20](FINDINGS.md#f20) closed; 10 katalyst files still unverified |
 | `effects/`                 |              — |        — | 🔴 not started                                   |
 | `filters/`                 |              — |        — | 🔴 not started                                   |
 | `ignitor/`                 |              — |        — | 🔴 not started                                   |

@@ -768,6 +768,51 @@ cannot express that at all.
 
 ---
 
+## F20 — The declick crossfade's ramp was unguarded after its first sample ✅ FIXED
+
+**MED, and the first finding from the `cylinders/` + `katalyst/` subsystem.** Not a bug — the code is
+correct — but a proven hole with a silent failure mode, closed the same session it was found.
+
+**The campaign brief (§6.2) lists `KatalystFilterSwap.kt` as "102 lines, zero tests". Half true, and
+the false half matters** — it has no *eponymous* spec, but `KatalystBodyEffectSpec` and
+`KatalystFormantEffectSpec` both exercise it, and the former has a genuinely good row,
+*"a live material change does not step the output (declick crossfade)"*, which swaps a resonant bank
+while the orbit is ringing. **Fourth instance in this audit of "no spec named after it" being read as
+"untested"** (cf. [F7](#f7), [F14](#f14), [F4](#f4)).
+
+**What those rows could not see.** The declick test inspects **one sample** — the first after the
+swap. At 44100 Hz a 12 ms fade is **529 frames, 4.1 blocks of 128**. Everything after that first
+sample was unguarded, and the gap has a failure mode that is invisible exactly where the test looks:
+
+> If the ramp never advanced (`t` stuck at 0), the swap boundary would be **perfectly continuous** —
+> the output is simply still the old bank, which is what "no step" measures. The damage lands four
+> blocks later, when `fadePos` crosses `fadeLen`, the old pair is dropped, and the output snaps to the
+> new bank in one sample. A click, relocated to where nothing was looking.
+
+**Evidence, not argument.** Mutation `t = 0.0`:
+
+| spec | verdict |
+|------|---------|
+| `KatalystBodyEffectSpec` (the existing declick row) | **SURVIVED** |
+| `KatalystFormantEffectSpec` (its twin) | **SURVIVED** |
+| `KatalystFilterSwapSpec` (new) | killed, 2 rows |
+
+**Fix.** `KatalystFilterSwapSpec` — 5 rows, 4 mutations, 4 killed. The two "filters" are plain gains
+(old ×1.0, new ×0.0), which makes the expected output exactly `1 - t` and lets every constant be
+checked against a number recomputed from the class's own definition rather than from a recorded run.
+Mutations killed: ramp stalled at 0, `fadePos` not accumulating across blocks, the `coerceAtMost(1.0)`
+clamp dropped, and the blend running backwards.
+
+> **One row was written and then deleted, which is the method note worth keeping.** *"The fade end is
+> continuous when the old pair is dropped"* survived all four mutations: the linear-ramp row already
+> pins every sample to 1e-12, including the two either side of that release, so it contributed a name
+> and no kill power. Whether the old pair is *actually* released is not observable from the output at
+> all — a retained pair keeps blending at a clamped `t = 1` and sounds identical; it is a cost
+> property, not a behaviour. Writing a row that reads as a guard and is not is the defect class this
+> audit exists to find, so it went rather than shipping inside the fix for it.
+
+---
+
 ## Note — the pump was real on paper and marginal by ear ✅ RESOLVED
 
 Recorded because the *shape* of this result is worth remembering, not just the outcome.
