@@ -8,6 +8,7 @@ package io.peekandpoke.klang.sprudel.lang.parser
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.addons.applyTweaks
 import io.peekandpoke.klang.sprudel.lang.degradeBy
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.seq
@@ -177,7 +178,7 @@ object MnPatternToSprudelPattern {
 
     /**
      * Applies [MnNode.Mods] to a [SprudelPattern] in the canonical order:
-     * euclidean → multiplier → divisor → probability → weight
+     * euclidean → multiplier → divisor → probability → weight → tweaks
      */
     private fun applyMods(pattern: SprudelPattern, mods: MnNode.Mods): SprudelPattern {
         if (mods.isEmpty) return pattern
@@ -192,8 +193,9 @@ object MnPatternToSprudelPattern {
         mods.probability?.let { result = result.degradeBy(it) }
         mods.weight?.let { result = PropertyOverridePattern(result, weightOverride = it) }
 
-        // mods.tweaks are not applied here: the names ride on the voice data and the transform is
-        // bound later by `tweaks(…)`. Wiring them onto the voice data is the next phase.
+        // Only the NAMES are attached here. The transform each one refers to is bound later by
+        // `tweaks(…)`, so an unbound name rides along inert rather than failing.
+        result = applyTweaks(result, mods.tweaks)
 
         return result
     }

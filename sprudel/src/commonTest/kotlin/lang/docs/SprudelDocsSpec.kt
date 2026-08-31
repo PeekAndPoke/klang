@@ -45,6 +45,28 @@ class SprudelDocsSpec : StringSpec({
         tagDoc.tags shouldContain "visualization"
     }
 
+    "tweak documentation should be registered as an addon" {
+        val doc = KlangDocsRegistry.global.get("tweak")
+
+        doc shouldNotBe null
+        doc!!.name shouldBe "tweak"
+        doc.category shouldBe "structural"
+        doc.getLibrary()?.name shouldBe "sprudel"
+        doc.tags shouldContain "addon"
+        doc.tags shouldContain "modifier"
+    }
+
+    "tweaks documentation should be registered as an addon" {
+        val doc = KlangDocsRegistry.global.get("tweaks")
+
+        doc shouldNotBe null
+        doc!!.name shouldBe "tweaks"
+        doc.category shouldBe "structural"
+        doc.getLibrary()?.name shouldBe "sprudel"
+        doc.tags shouldContain "addon"
+        doc.tags shouldContain "modifier"
+    }
+
     "seq should have 3 variants" {
         val seqDoc = KlangDocsRegistry.global.get("seq")!!
 

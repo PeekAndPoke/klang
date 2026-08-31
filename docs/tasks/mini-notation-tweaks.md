@@ -1,12 +1,20 @@
 # Tweaks: named per-note modifiers in mini-notation
 
-> Status: **Phase 0 DONE (uncommitted), phases 1-6 NOT STARTED.** Captured 2026-08-30.
+> Status: **Phases 0-4 DONE, phases 5-6 open.** Captured 2026-08-30, built 2026-08-30/31.
 > Supersedes the `{key=value}` attribute block documented in `mini-notation-extensions.md`, which
-> Phase 0 has now removed.
+> Phase 0 removed.
 >
-> **State after Phase 0:** `{name name …}` parses, round-trips through `MnRenderer`, and rides on
-> `MnNode.Mods.tweaks`. The names are **not yet applied to anything** (that is Phase 2 + 4), and the
-> old `{key=value}` form now fails with a migration parse error rather than silently doing nothing.
+> **The feature works end to end:** `note("c3 e3{swell}").tweaks({ swell: x => x.gain(0.5) })`
+> plays, on both the script and the Kotlin door. What is left is Phase 5 (the editor's
+> unknown-tweak diagnostic, the one thing that keeps a typo from being silently inert) and Phase 6
+> (tutorial/popup docs).
+>
+> Two things learned while building that the plan did not predict:
+> - `ObjectValue` could not be a native param type at all: `convertToKotlin` had no identity case,
+>   so it threw "Cannot convert ObjectValue to ObjectValue". Fixed in `NativeInterop.kt` with a
+>   passthrough. Script lambdas survive only on that path.
+> - The DSL constructs used in tests all hand out `part == whole`, so the clipping path needed a
+>   stub pattern to be covered at all. See `ClippedEventPattern` in `LangTweaksSpec`.
 
 ## Why
 
@@ -263,10 +271,10 @@ inspected (`feedback_stop_before_commit`).
 | # | Phase                | Contents                                                                     |
 |---|----------------------|------------------------------------------------------------------------------|
 | 0 | Remove attrs ✅ DONE | the table above; parser accepts `{name name}` and stores names on `MnNode`    |
-| 1 | Voice data field     | `tweaks: List<String>?` + `mergeTweaks` / `addTweak` / `withTweak`; NOT on wire |
-| 2 | Parser to voice data | `MnPatternToSprudelPattern` writes the names onto the atom's voice data        |
-| 3 | Marker DSL           | `tweak(name)` in all four forms, mirroring `tag`                              |
-| 4 | Applier              | `TweaksPattern` + `tweaks(map)` on both doors, incl. `ObjectValue` bridging   |
+| 1 | Voice data ✅ DONE   | `tweaks: List<String>?` + `mergeTweaks` / `addTweak` / `withTweak`; NOT on wire |
+| 2 | Parser wiring ✅ DONE | `MnPatternToSprudelPattern` writes the names onto the atom's voice data        |
+| 3 | Marker DSL ✅ DONE   | `tweak(name)` in all four forms, mirroring `tag`                              |
+| 4 | Applier ✅ DONE      | `TweaksPattern` + `tweaks(map)` on both doors, incl. `ObjectValue` bridging   |
 | 5 | Editor diagnostic    | unknown-tweak warning via `suggestNames`                                      |
 | 6 | Docs                 | `sprudel/ref` entries, KDoc with the verb-noun caveat, popup category         |
 

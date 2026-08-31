@@ -135,6 +135,13 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? 
             else -> value
         }
 
+        // A native function may take the ObjectValue itself, to read properties the generic
+        // `value` map has already flattened — script lambdas, for one, survive only on this path.
+        is ObjectValue -> when (cls) {
+            ObjectValue::class -> this
+            else -> value
+        }
+
         else -> {
             val isValid = cls.isInstance(value)
 

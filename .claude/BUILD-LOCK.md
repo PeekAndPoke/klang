@@ -4,6 +4,32 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-31, claude-code mini-notation-tweaks session): **phases 0-4 of
+> `docs/tasks/mini-notation-tweaks.md` are DONE.** Tweaks work end to end:
+> `note("c3 e3{swell}").tweaks({ swell: x => x.gain(0.5) })` on both doors.
+>
+> **I touched one file outside sprudel: `klangscript/.../runtime/NativeInterop.kt`.** `ObjectValue`
+> could not be a native param type at all — `convertToKotlin` had no identity case, so any function
+> taking one threw "Cannot convert ObjectValue to ObjectValue". Added a passthrough branch. Script
+> lambdas inside an object literal survive only on that path, so do not "simplify" it back to
+> `value`. `:klangscript:jvmTest` is green.
+>
+> New in sprudel: `SprudelVoiceData.tweaks: List<String>?` (a LIST, ordered and repeatable, unlike
+> `tags`; immutable-replace; deliberately NOT on the wire), `pattern/TweaksPattern.kt`, and
+> `tweak()`/`tweaks()` in `lang_structural_addons.kt`.
+>
+> **What would surprise you:** `TweaksPattern` queries its inner exactly ONCE and routes per event.
+> That is load-bearing, not incidental — the obvious `stack(fn(tagged), untagged)` shape queries
+> inner twice per level, so chaining N tweaks would cost 2^N. `LangTweaksSpec` has a counting-pattern
+> guard for it. Also: applying a tweak does NOT consume the name, and unbound names are NOT stripped;
+> both are what makes inner/outer palettes compose, and both are mutation-checked.
+>
+> Still open: Phase 5, the editor's unknown-tweak diagnostic. Until it lands, a MISSPELLED tweak is
+> silently inert — the runtime cannot tell a typo from a name an outer palette will claim.
+>
+> `:sprudel:jvmTest` + `:klangscript:jvmTest` green. Seven phase-4 mutations killed, each by exactly
+> the test that should catch it, none by a compile error.
+
 > Last action (2026-08-30, claude-code block-framing session): W4 STRIP HALF done —
 > `CoarseRenderer.render`'s degenerate return widened to the ignitor door's form,
 > `!(amount > 1.0) || amount.isInfinite()` (maintainer: match the ignitor door). **The audit's own

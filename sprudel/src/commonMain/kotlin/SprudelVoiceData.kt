@@ -174,6 +174,19 @@ data class SprudelVoiceData(
      * [oscParams] (shared reference in [clone], fresh set on write).
      */
     var tags: Set<String>?,
+
+    /**
+     * Tweak names attached in mini-notation (`e3{swell}`) or via `.tweak(...)`, referencing
+     * transforms that `tweaks(...)` binds later. A LIST by design, unlike [tags]: tweaks apply in
+     * the order written and may repeat, so neither ordering nor duplicates may be dropped.
+     *
+     * Deliberately NOT copied into engine `VoiceData` by [toVoiceData]: a tweak is a pattern-layer
+     * concern that never reaches synthesis, so it would be dead weight on the wire.
+     *
+     * Treated as immutable-replace like [tags] / [oscParams] (shared reference in [clone], fresh
+     * list on write).
+     */
+    var tweaks: List<String>?,
 ) {
     // --- Flat-field accessors over the grouped storage -------------------------------------------------
     // Bridge so the rest of the engine/DSL/tests keep using the flat names (data.attack, data.cutoff, …)
@@ -774,6 +787,7 @@ data class SprudelVoiceData(
             control = control,
             value = other.value ?: value,
             tags = mergeTags(tags, other.tags),
+            tweaks = mergeTweaks(tweaks, other.tweaks),
         )
     }
 
@@ -827,6 +841,7 @@ data class SprudelVoiceData(
         // control intentionally NOT merged — see merge()
         value = other.value ?: value
         tags = mergeTags(tags, other.tags)
+        tweaks = mergeTweaks(tweaks, other.tweaks)
     }
 
     fun isTruthy(): Boolean {
@@ -1485,6 +1500,7 @@ internal val blueprint = SprudelVoiceData(
     control = null,
     value = null,
     tags = null,
+    tweaks = null,
 )
 
 /**
@@ -1530,6 +1546,42 @@ fun SprudelVoiceData.withTag(tag: String): SprudelVoiceData {
     val current = tags
     if (current != null && tag in current) return this
     return copy(tags = current.orEmpty() + tag)
+}
+
+/**
+ * Concatenates two tweak lists: [base] first, then [other]. Null when both are null — a merge must
+ * not materialize an empty list on untweaked data.
+ *
+ * Concatenation, not union: order is significant and repeats are meaningful. [other] is the later
+ * (outer) modifier in every [SprudelVoiceData.merge] direction, so inner tweaks stay in front.
+ */
+private fun mergeTweaks(
+    base: List<String>?,
+    other: List<String>?,
+): List<String>? = when {
+    base == null -> other
+    other == null -> base
+    else -> base + other
+}
+
+/**
+ * In-place tweak append. Unlike [addTag] this is NOT idempotent: a repeated tweak applies twice,
+ * which is the whole point of `tweaks` being a list. `tweaks` is treated as immutable-replace like
+ * `oscParams` — no new [SprudelVoiceData] is allocated. Only safe on a single-owner instance
+ * (see [SprudelVoiceData.clone]).
+ */
+fun SprudelVoiceData.addTweak(tweak: String) {
+    tweaks = tweaks.orEmpty() + tweak
+}
+
+/** Copy counterpart of [addTweak]. Always allocates: appending is never a no-op. */
+fun SprudelVoiceData.withTweak(tweak: String): SprudelVoiceData =
+    copy(tweaks = tweaks.orEmpty() + tweak)
+
+/** Appends several tweaks in one copy, preserving [names]' order. Returns this when [names] is empty. */
+fun SprudelVoiceData.withTweaks(names: List<String>): SprudelVoiceData = when {
+    names.isEmpty() -> this
+    else -> copy(tweaks = tweaks.orEmpty() + names)
 }
 
 /** Merges two oscParams maps: other's values override this's values. */

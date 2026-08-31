@@ -12,6 +12,9 @@ import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.script.runtime.FunctionValue
+import io.peekandpoke.klang.script.runtime.ObjectValue
+import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -38,7 +41,9 @@ import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 import io.peekandpoke.klang.sprudel.pattern.SoloPattern
+import io.peekandpoke.klang.sprudel.pattern.TweaksPattern
 import io.peekandpoke.klang.sprudel.withTag
+import io.peekandpoke.klang.sprudel.withTweaks
 import kotlin.math.floor
 
 // -- morse() ----------------------------------------------------------------------------------------------------------
@@ -700,3 +705,185 @@ fun tag(name: String, callInfo: CallInfo? = null): PatternMapperFn =
 @KlangScript.Function
 fun PatternMapperFn.tag(name: String, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tag(name, callInfo) }
+
+// -- tweak() ----------------------------------------------------------------------------------------------------------
+
+// Like tag(), the name is a LITERAL — never routed through the lift helpers, which would parse it
+// as mini-notation.
+internal fun applyTweaks(source: SprudelPattern, names: List<String>): SprudelPattern = when {
+    names.isEmpty() -> source
+    else -> source.reinterpretVoice { vd -> vd.withTweaks(names) }
+}
+
+/**
+ * Attaches a tweak name to every event of this pattern. It only marks: the transform the name
+ * refers to is bound later by `tweaks(...)`, and a name nothing binds stays inert.
+ *
+ * Tweaks accumulate as a LIST, unlike [tag]: they apply in the order attached and a repeated name
+ * applies twice. The usual place to attach one is mini-notation (`note("c3 e3{swell}")`); this
+ * function is for marking a whole pattern at once.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").tweak("swell")   // every event carries "swell"
+ * ```
+ *
+ * @param name The tweak to attach. Taken literally — not parsed as mini-notation.
+ * @return A new pattern whose events carry the tweak name.
+ * @category structural
+ * @tags tweak, tweaks, modifier, metadata, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.tweak(name: String, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    applyTweaks(this, listOf(name))
+
+/**
+ * Parses this string as a pattern and attaches a tweak name to every event.
+ *
+ * ```KlangScript
+ * "c3 e3 g3".tweak("swell").note()
+ * ```
+ *
+ * @param name The tweak to attach. Taken literally — not parsed as mini-notation.
+ * @return A new pattern whose events carry the tweak name.
+ */
+@KlangScript.Function
+fun String.tweak(name: String, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tweak(name, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that attaches a tweak name to every event of the input pattern.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(tweak("swell"))
+ * ```
+ *
+ * @param name The tweak to attach. Taken literally — not parsed as mini-notation.
+ * @return A mapper that marks the pattern it is applied to.
+ * @category structural
+ * @tags tweak, tweaks, modifier, metadata, addon
+ */
+@KlangScript.Function
+fun tweak(name: String, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tweak(name, callInfo) }
+
+/**
+ * Chains a tweak marking onto this [PatternMapperFn].
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(tweak("swell").tweak("bend"))   // both names accumulate, in this order
+ * ```
+ *
+ * @param name The tweak to attach. Taken literally — not parsed as mini-notation.
+ * @return A mapper that additionally marks the pattern it is applied to.
+ */
+@KlangScript.Function
+fun PatternMapperFn.tweak(name: String, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tweak(name, callInfo) }
+
+// -- tweaks() ---------------------------------------------------------------------------------------------------------
+
+/** Turns a script object literal of `name: x => …` into the Kotlin binding map. Non-function values are ignored. */
+private fun ObjectValue.toTweakDefs(): Map<String, PatternMapperFn> = buildMap {
+    for ((name, value) in properties) {
+        val fn = (value as? FunctionValue)?.convertFunctionToKotlin<Function1<Any?, Any?>>() ?: continue
+        put(name) { pattern -> fn(pattern) as SprudelPattern }
+    }
+}
+
+/**
+ * Binds tweak names to transforms and applies them to the events carrying those names.
+ *
+ * Names are attached upstream, in mini-notation or via [tweak]; this is where they finally mean
+ * something. Tweaks apply **in the order written on the event**, not in the order this map declares
+ * them, and a name repeated on an event applies twice.
+ *
+ * A name nothing binds passes through **untouched and unstripped**, so an inner `tweaks(...)` and an
+ * outer one compose without either knowing about the other. Applying does not consume the name
+ * either: two calls binding the same name both apply.
+ *
+ * Placement matters. A tweak applies where this call sits in the chain, so anything after it still
+ * overrides: put it last when the tweak should win.
+ *
+ * ```KlangScript
+ * note("c3 e3{swell} g3{swell bend}").tweaks({
+ *     swell: x => x.attack(0.3).gain(1.1),
+ *     bend:  x => x.detune(20).accelerate(0.5),
+ * })
+ * ```
+ *
+ * @param defs Object literal mapping each tweak name to a transform, e.g. `{ swell: x => x.gain(1.1) }`.
+ * @return A new pattern with the bound tweaks applied.
+ * @category structural
+ * @tags tweak, tweaks, modifier, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.tweaks(defs: ObjectValue, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    tweaks(defs.toTweakDefs())
+
+/**
+ * Kotlin door for [tweaks]: binds tweak names to transforms directly.
+ *
+ * ```kotlin
+ * note("c3 e3{swell}").tweaks(mapOf("swell" to { p: SprudelPattern -> p.gain(1.1) }))
+ * ```
+ *
+ * @param defs Map from tweak name to the transform it stands for.
+ * @return A new pattern with the bound tweaks applied.
+ */
+fun SprudelPattern.tweaks(defs: Map<String, PatternMapperFn>): SprudelPattern = when {
+    defs.isEmpty() -> this
+    else -> TweaksPattern(inner = this, defs = defs)
+}
+
+/**
+ * Kotlin door for [tweaks] taking pairs, so no map literal is needed.
+ *
+ * ```kotlin
+ * note("c3 e3{swell}").tweaks("swell" to { p: SprudelPattern -> p.gain(1.1) })
+ * ```
+ *
+ * @param defs Name-to-transform pairs. A repeated name keeps the last binding.
+ * @return A new pattern with the bound tweaks applied.
+ */
+fun SprudelPattern.tweaks(vararg defs: Pair<String, PatternMapperFn>): SprudelPattern =
+    tweaks(defs.toMap())
+
+/**
+ * Parses this string as a pattern, then binds and applies tweaks.
+ *
+ * ```KlangScript
+ * "c3 e3{swell}".tweaks({ swell: x => x.gain(1.1) }).note()
+ * ```
+ *
+ * @param defs Object literal mapping each tweak name to a transform.
+ * @return A new pattern with the bound tweaks applied.
+ */
+@KlangScript.Function
+fun String.tweaks(defs: ObjectValue, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tweaks(defs, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that binds and applies tweaks to the input pattern.
+ *
+ * ```KlangScript
+ * note("c3 e3{swell}").apply(tweaks({ swell: x => x.gain(1.1) }))
+ * ```
+ *
+ * @param defs Object literal mapping each tweak name to a transform.
+ * @return A mapper that applies the bound tweaks.
+ * @category structural
+ * @tags tweak, tweaks, modifier, addon
+ */
+@KlangScript.Function
+fun tweaks(defs: ObjectValue, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tweaks(defs, callInfo) }
+
+/**
+ * Chains a tweak binding onto this [PatternMapperFn].
+ *
+ * @param defs Object literal mapping each tweak name to a transform.
+ * @return A mapper that additionally applies the bound tweaks.
+ */
+@KlangScript.Function
+fun PatternMapperFn.tweaks(defs: ObjectValue, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tweaks(defs, callInfo) }

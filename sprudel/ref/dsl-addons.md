@@ -81,6 +81,8 @@ forms (c)/(d) and a literal (non-mini-notation) string parameter.
 | `repeat(times)` | structural | Repeat pattern N times sequentially |
 | `solo()` / `solo(enabled)` | structural | Solo this pattern, muting others |
 | `tag(name)` | structural | Add a semantic tag (Set, unordered) to every event, e.g. for visualizations |
+| `tweak(name)` | structural | Attach a tweak name (List, ordered, repeatable) to every event; marks only |
+| `tweaks(defs)` | structural | Bind tweak names to transforms and apply them to the events carrying them |
 | `cps` | continuous | Current cycles per second |
 | `bpm` | continuous | Current beats per minute (cps × 240) |
 | `timeOfDay` | continuous | Time of day 0.0 (midnight) → 1.0 |
