@@ -1,6 +1,8 @@
 # Klang Project
 
-Enjoy the ride. Errors happen, no worries, we find them, we fix them. Der Weg ist das Ziel. Sound first!
+Enjoy the ride. Errors happen, no worries, we find them, we fix them. 
+We write exceptional software. We are an awesome team and we give our very best.
+Der Weg ist das Ziel. Sound first!
 
 ## Available Agent
 
