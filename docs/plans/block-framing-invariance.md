@@ -41,6 +41,9 @@ by fixing clocks: a correct clock read once per block still gives a block-quanti
 
 ### Confirmed instance 1 — `IgniteRenderer.kt:36` (FIXED 2026-08-27)
 
+Filed independently on 2026-08-21 from a code read alone, before this audit existed:
+`docs/tasks-archive/2026-08/20260831-voice-elapsed-frames-offset-mismatch.md`.
+
 ```kotlin
 // was
 signalCtx.voiceElapsedFrames = (ctx.blockStart - startFrame).toInt()
@@ -500,7 +503,7 @@ the sample floor, and the two E4 code paths' reachability concern. B2 never land
 
 ## Related
 
-- `docs/tasks/ignitor-envelope-ownership.md` — where instance 1 surfaced.
+- `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` — where instance 1 surfaced.
 - `IgniteOnsetOffsetSpec` — the guard for instance 1, and the template for the harness.
 - `VcaOffTeardownSpec` — the teardown-side equivalent, already sweeping fractional and short spans.
 
@@ -620,10 +623,21 @@ whole block of NaN instead of 1-2 samples) was therefore not needed.
   this (`NaN > SILENCE_LIN` is false); only `±Inf`.
 - **`MasterBus.blendInto`** (M4, MAJOR): `Inf * 0.0` = NaN at the fade endpoints, injected from a
   chain contributing *nothing* yet. Both taps sterilised.
-- **The delay ring** (`softCap(NaN) = NaN`; `softCap` already sterilises Inf to ±1.0) is **OPEN,
-  maintainer decision pending**: a per-sample `isFinite` was tried there and measured at +33% JVM
-  / +30% JS, removed 2026-05-22. `nanGuard()` is one compare rather than isFinite's two-plus-call,
-  so it is probably affordable — but that site has earned a measurement, not an assumption.
+- **The delay ring** — CLOSED 2026-08-31 with a `nanGuard()` on the ring STORE. `softCap`
+  already sterilises ±Inf (it saturates to ±1) but `softCap(NaN)` is NaN, and the ring
+  RECIRCULATES, so one NaN never scrolled out: the orbit's delay was dead for the rest of its
+  life. `flushState` could not reach it — the ring is FIR-shaped state, not an IIR carry.
+  MEASURED rather than assumed, because a per-sample `isFinite` here was removed at +33% JVM /
+  +30% JS (2026-05-22): the benchmark ladder had NO delay coverage at all, so a delay rung was
+  added to LEAD (feedback 0.35, so the recirculating path is what is timed) and the guard priced
+  by interleaved A/B. Result: **indistinguishable from zero** (the guarded runs came out
+  nominally FASTER, which is noise — one compare cannot speed code up — but it bounds the cost
+  far below the isFinite history). The lesson generalises: that +33% was the cost of a
+  NON-INLINED stdlib call on a per-sample path, not of the test. `nanGuard` is one inline
+  self-compare. Guards: `DelayLineSpec` row asserting the delay still ECHOES after a NaN (not
+  merely that it is finite — a guard that zeroed the ring would pass a finiteness-only oracle);
+  2/2 mutations killed, including placing the guard on the OUTPUT instead of the store, which
+  looks equivalent and leaves the ring poisoned.
 
 **M1 — MAJOR, live on five shipped songs, and nothing to do with NaN.** The FIRST master
 application crossfaded the song's opening 60 ms up from **unmastered**: at playback start

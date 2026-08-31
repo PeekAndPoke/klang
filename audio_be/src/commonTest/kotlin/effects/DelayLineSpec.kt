@@ -389,4 +389,43 @@ class DelayLineSpec : StringSpec({
         out.left.all { it.isFinite() } shouldBe true
         out.right.all { it.isFinite() } shouldBe true
     }
+
+    "one NaN sample does not kill the delay for the rest of its life" {
+        // Master round, the delay's half of "no state may latch". `softCap` already sterilises
+        // +/-Inf (it saturates to +/-1), but `softCap(NaN)` is NaN, and this ring RECIRCULATES —
+        // so without the store guard one NaN never scrolls out and every later sample is NaN.
+        // `flushState` cannot reach this: the ring is FIR-shaped state, not an IIR carry.
+        val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
+        delay.delayTimeSeconds = 0.01
+        delay.feedback = 0.4
+
+        val poison = StereoBuffer(blockSize)
+        val out = StereoBuffer(blockSize)
+        poison.left[0] = Double.NaN
+        poison.right[0] = Double.NaN
+        delay.process(poison, out, blockSize)
+
+        // Now feed clean audio and require real echoes back out.
+        var heard = false
+        repeat(6) {
+            val send = StereoBuffer(blockSize)
+            val fresh = StereoBuffer(blockSize)
+            for (i in 0 until blockSize) {
+                send.left[i] = 0.5
+                send.right[i] = 0.5
+            }
+            delay.process(send, fresh, blockSize)
+
+            fresh.left.all { it.isFinite() } shouldBe true
+            fresh.right.all { it.isFinite() } shouldBe true
+
+            if (fresh.left.any { abs(it) > 0.01 }) {
+                heard = true
+            }
+        }
+
+        // Not merely finite — actually still delaying. A guard that zeroed the whole ring
+        // would satisfy isFinite and fail this.
+        heard shouldBe true
+    }
 })

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.effects
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.effects.DelayLine.Companion.MIN_DELAY_SECONDS
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -286,11 +287,23 @@ class DelayLine(
             val newSample = input[inputIndex] + (delayedSignal * fb)
             // cap is pre-sanitised (finite, > 0) so this reduces to the scaled softCap; at the
             // default 1.0 it is the exact pre-change `softCap(newSample)`.
-            buffer[pos] = if (cap == 1.0) {
+            // NaN-guard on the ring store. `softCap` already sterilises +/-Inf (it saturates to
+            // +/-1), but `softCap(NaN)` is NaN — both its branch tests are false — and this ring
+            // RECIRCULATES, so a single NaN never scrolls out: the orbit's delay is dead for the
+            // rest of its life. This is the delay's half of the master round's "no state may
+            // latch" pass; `flushState` could not reach it because the ring is FIR-shaped state,
+            // not an IIR carry.
+            //
+            // NOT the `isFinite` check that lived here until 2026-05-22 and was removed at a
+            // measured +33% JVM / +30% JS: that cost was the non-inlined stdlib call, not the
+            // test. `nanGuard` is one inline self-compare (`x != x`), and re-measured on a
+            // purpose-added delay rung it is indistinguishable from zero (interleaved A/B).
+            val stored = if (cap == 1.0) {
                 ShapingFuncs.softCap(newSample)
             } else {
                 cap * ShapingFuncs.softCap(newSample / cap)
             }
+            buffer[pos] = stored.nanGuard()
 
             // --- 3. Wet output, additive. Caller owns the dry mix.
             output[inputIndex] = output[inputIndex] + delayedSignal

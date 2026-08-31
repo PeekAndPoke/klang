@@ -81,6 +81,11 @@ object SongBenchmarkCases {
             "5 +analog(feel)" to """.analog(feel)""",
             "6 +pipeline(pedal)" to """.pipeline("pedal")""",
             "7 +room(0.3:5:0.1)" to """.roomWet(0.3, 5, 0.1)""",
+            // The ladder had NO delay coverage before the master round needed to price a
+            // per-sample guard on DelayLine's ring store (2026-08-31). Feedback is deliberately
+            // real (0.35) so the recirculating path — the one that carries the store cost — is
+            // exercised, not just a single tap.
+            "8 +delay(0.3:1/8:0.35)" to """.delayWet(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.35)""",
         ),
     )
 
