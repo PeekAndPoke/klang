@@ -1,20 +1,33 @@
 # Tweaks: named per-note modifiers in mini-notation
 
-> Status: **Phases 0-4 DONE, phases 5-6 open.** Captured 2026-08-30, built 2026-08-30/31.
-> Supersedes the `{key=value}` attribute block documented in `mini-notation-extensions.md`, which
-> Phase 0 removed.
->
-> **The feature works end to end:** `note("c3 e3{swell}").tweaks({ swell: x => x.gain(0.5) })`
-> plays, on both the script and the Kotlin door. What is left is Phase 5 (the editor's
-> unknown-tweak diagnostic, the one thing that keeps a typo from being silently inert) and Phase 6
-> (tutorial/popup docs).
->
-> Two things learned while building that the plan did not predict:
-> - `ObjectValue` could not be a native param type at all: `convertToKotlin` had no identity case,
->   so it threw "Cannot convert ObjectValue to ObjectValue". Fixed in `NativeInterop.kt` with a
->   passthrough. Script lambdas survive only on that path.
-> - The DSL constructs used in tests all hand out `part == whole`, so the clipping path needed a
->   stub pattern to be covered at all. See `ClippedEventPattern` in `LangTweaksSpec`.
+**Status:** ✅ SHIPPED (archived 2026-08-31) · **Opened:** 2026-08-30
+
+Phases 0-4 are in, in commits `a8b0b4f6` (the `{key=value}` removal), `5ceda001` (the feature) and
+`dbe2dc75` (coverage across pattern kinds). The remaining open points moved to
+**`docs/tasks/future/mini-notation-tweaks-followups.md`**; the most important of them is the
+unknown-tweak editor diagnostic, without which a misspelled name is silently inert.
+
+```klangscript
+note("c3 e3{swell} g3{swell bend}").tweaks({
+    swell: x => x.attack(0.3).gain(0.6),
+    bend:  x => x.detune(20).accelerate(0.5),
+})
+```
+
+Everything below is the design record as built, kept because it holds the reasoning for choices that
+would otherwise look arbitrary: why `tweaks` is a list and not a set, why the applier is one node
+instead of chained filter/stack, why applying does not consume the name, and why `mod` could not be
+the word. Two things the plan did not predict and the build found:
+
+- `ObjectValue` could not be a native param type at all. `convertToKotlin` had no identity case, so
+  any function taking one threw *"Cannot convert ObjectValue to ObjectValue"*. Fixed with a
+  passthrough in `klangscript/src/commonMain/kotlin/runtime/NativeInterop.kt`; script lambdas inside
+  an object literal survive only on that path, so do not simplify it back to `value`.
+- Every DSL construct used in tests hands out `part == whole`, so the clipping path had no coverage
+  until a stub pattern fed it a genuinely clipped event. See `ClippedEventPattern` in
+  `LangTweaksSpec`.
+
+---
 
 ## Why
 
@@ -297,41 +310,11 @@ own `Map` / `vararg Pair` signature so both surfaces stay first-class.
 
 New tests are mutation-checked per `feedback_review_loop`.
 
-## Open items
+## Open items and later findings
 
-Ordered by what actually blocks calling this finished.
+Moved out of this doc when it was archived, so there is one live copy rather than two that drift:
 
-**1. Phase 5, the unknown-tweak diagnostic.** The one item that changes whether the feature is safe
-rather than merely working: a misspelled name is silently inert today. The runtime cannot help,
-because it genuinely cannot tell a typo from a name an outer palette will claim later. Only the
-analysis layer sees the whole script. Reuse `suggestNames`
-(`klangscript/.../runtime/NameSuggestions.kt:25`) from commit `09783f50`.
-
-**2. Nothing has been heard yet.** Every claim in this doc is backed by tests, not by ears, which in
-this project is half a verification. Worth a session with a real song: is `{swell}` legible at a
-glance in a dense line, and does the *taste* of naming a treatment hold up when you have five of
-them?
-
-**3. The visual mini-notation editor has no tweak chip.** `MnSharedPanels.kt` offers chips for `*`,
-`/`, `@` and `?` but nothing for the brace block. Not a regression (the attribute block never had one
-either), but the braces are a first-class feature now, so their absence is more visible.
-
-**4. Phase 6 docs are half done.** `sprudel/ref/dsl-addons.md` and the KDoc are in, including the
-verb-noun caveat on `tweak`. Tutorials and the editor popup category are not.
-
-**5. Group semantics, mechanically settled but not by ear.** `[c4 e4]{swell}` applies the transform
-to each note separately, and `note("[c3,e3]{swell}")` is pinned in `LangTweaksSpec`. Whether
-per-event is what a musician *wants* there, rather than once to the group as a unit, is a taste call.
-
-**6. Whether tweaks should reach the UI after all.** Kept off the wire (see above). Revisit only with
-a concrete consumer, e.g. a visualization that wants to draw bent notes differently.
-
-**7. `tweak` vs `tweaks` ergonomics.** The singular/plural split is type-safe (String vs Object) but
-subtle. If it reads badly in a real song, the fallback applier name is `withTweaks`.
-
-## Found while building, unrelated but worth someone's time
-
-`add()` does nothing on an `n()` pattern: `n("0 1 2").add(2)` is inert because `n()` stores into
-`soundIndex` while `add()` operates on `value`. Verified against `superimpose` as a second reference
-point, so it is not a tweaks artefact. It is the same silent-inert class this feature was designed to
-avoid, and it deserves its own look.
+- **`docs/tasks/future/mini-notation-tweaks-followups.md`** — the seven tweak follow-ups, led by the
+  unknown-tweak editor diagnostic and the by-ear pass that no test can stand in for.
+- **`docs/tasks/future/n-pattern-add-noop.md`** — `add()` is inert on an `n()` pattern. Found while
+  probing tweaks, verified pre-existing, unrelated to this work.

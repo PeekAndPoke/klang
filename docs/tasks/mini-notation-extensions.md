@@ -3,7 +3,7 @@
 > **Status (2026-08-30): Phase 1 is SUPERSEDED and REMOVED.** The `{key=value}` attribute block
 > shipped 2026-04-13 (commit `b609e6af`) and was deleted again on 2026-08-30 with zero recorded
 > usage in songs, tutorials or `sprudel/ref`. The `{…}` braces now carry bare **tweak names**:
-> see **`docs/tasks/mini-notation-tweaks.md`**, which supersedes everything below about attributes.
+> see **`docs/tasks-archive/2026-08/20260831-mini-notation-tweaks.md`**, which supersedes everything below about attributes.
 > Do not restore `MnNode.Attrs` / `applyAttrs()` / `MiniNotationAttrsSpec.kt`.
 >
 > The attribute table below is kept only as the record of which per-note properties people wanted;

@@ -14,7 +14,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * Tests for the `{name name ...}` tweak block syntax in mini-notation.
  *
  * A tweak block attaches tweak NAMES to a node. The transform each name refers to is bound later
- * by `tweaks(...)`; parsing never resolves it. See `docs/tasks/mini-notation-tweaks.md`.
+ * by `tweaks(...)`; parsing never resolves it. See `docs/tasks-archive/2026-08/20260831-mini-notation-tweaks.md`.
  *
  * Covers:
  * - Tokenization and parsing of tweak blocks

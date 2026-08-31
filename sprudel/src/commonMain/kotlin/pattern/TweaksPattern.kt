@@ -15,7 +15,7 @@ import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
  * Binds tweak names to transforms and applies them to the events carrying those names.
  *
  * Tweak names are attached upstream, in mini-notation (`note("c3 e3{swell}")`) or via `.tweak(...)`;
- * this node is where a name finally means something. See `docs/tasks/mini-notation-tweaks.md`.
+ * this node is where a name finally means something. See `docs/tasks-archive/2026-08/20260831-mini-notation-tweaks.md`.
  *
  * Three semantics this node implements deliberately:
  *
