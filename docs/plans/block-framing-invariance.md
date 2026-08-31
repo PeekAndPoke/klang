@@ -533,6 +533,21 @@ the sample floor, and the two E4 code paths' reachability concern. B2 never land
 
 **P5. The sample path** end to end, given instance 2.
 
+> ✅ **P5 DONE 2026-08-31.** Driver A could never reach this: it passes `getSample = { null }`, so
+> `VoiceFactory` could only ever take the oscillator branch, and the sample path — where instance 2
+> of this entire bug class lived — had no invariance coverage at all. Added **Driver C**
+> (`renderSampleVoice`): an unregistered sound name so the factory takes the sample branch, a 20 000
+> frame **ramp** PCM so the sample value reveals the playhead position, and `pitchHz == freqHz` so the
+> playback rate is exactly 1.0 and the sample advances one frame per output frame.
+>
+> **Bit-identical on both axes** — every onset alignment {1, 37, 76, 127} and block sizes {64, 37}.
+>
+> **The acceptance criterion is met.** Reintroducing instance 2 itself — `sampleStartFrame =
+> maxOf(startFrame, nowFrame)` → `nowFrame`, i.e. rounding every sample onset down to the block
+> boundary — turns the onset row **RED**. The harness would now catch the bug that opened this
+> workstream. A second mutation (resetting `SampleIgnitor`'s playhead per block) is caught by both
+> rows.
+
 ## Settled (2026-08-28), recorded so they are not re-opened
 
 - **Block size must be treated as non-constant.** It is 128 in the browser only because the render

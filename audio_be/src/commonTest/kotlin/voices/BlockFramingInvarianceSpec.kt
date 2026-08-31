@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -108,6 +109,74 @@ class BlockFramingInvarianceSpec : StringSpec({
             playbackCtx = PlaybackCtx(playbackId = pid, ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },
         ) ?: error("makeVoice returned null")
+
+        val rc = Voice.RenderContext(
+            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            voiceBuffer = voiceBuffer,
+            freqModBuffer = DoubleArray(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
+        )
+        val out = ArrayList<Double>(startFrame + gateFrames + relFrames + blockFrames)
+        var b = 0.0
+        while (b < sampleRate * 4) {
+            voiceBuffer.fill(0.0)
+            rc.blockStart = b
+            if (!voice.render(rc)) break
+            for (v in voiceBuffer) out.add(v)
+            b += blockFrames
+        }
+        val total = gateFrames + relFrames
+        check(out.size >= startFrame + total) { "rendered ${out.size}, need ${startFrame + total}" }
+        return DoubleArray(total) { out[startFrame + it] }
+    }
+
+    // ── Driver C: the SAMPLE path (block-framing P5) ──────────────────────────────────────────
+    //
+    // Instance 2 of this whole bug class lived here, and Driver A cannot reach it: it passes
+    // `getSample = { null }`, so `VoiceFactory` can only ever take the oscillator branch. The sound
+    // name below is deliberately NOT registered, because the factory chooses the sample branch by
+    // `!ignitorRegistry.contains(sound)`.
+    fun renderSampleVoice(startFrame: Int, blockFrames: Int, pid: String = "framing-sample"): DoubleArray {
+        val registry = IgnitorRegistry().apply { registerDefaults() }
+        val voiceBuffer = DoubleArray(blockFrames)
+        // A ramp, not a constant: the sample VALUE reveals the playhead position, so a misplaced
+        // onset shows up as a wrong value rather than as more of the same number. Long enough to
+        // outlast gate + release at rate 1.0.
+        val pcm = TestSamples.ramp(size = 20_000, sampleRate = sampleRate)
+        val factory = VoiceFactory(
+            sampleRate = sampleRate,
+            sampleRateDouble = sampleRate.toDouble(),
+            blockFrames = blockFrames,
+            ignitorRegistry = registry,
+            pipelineRegistry = PipelineRegistry(),
+            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
+            voiceBuffer = voiceBuffer,
+            freqModBuffer = DoubleArray(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
+        )
+        val voice = factory.makeVoice(
+            scheduled = ScheduledVoice(
+                playbackId = pid,
+                data = VoiceData.empty.copy(
+                    freqHz = 220.0,
+                    sound = "framingsample",
+                    adsr = AdsrDef.Std(release = relSec, on = false),
+                ),
+                startTime = (startFrame + 0.25) / sampleRate,
+                gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
+                playbackStartTime = 0.0,
+            ),
+            nowFrame = 0.0,
+            backendStartTimeSec = 0.0,
+            playbackCtx = PlaybackCtx(playbackId = pid, ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
+            // pitchHz == the voice's freqHz, so the playback rate is exactly 1.0 and the sample
+            // advances one frame per output frame — the cleanest possible framing probe.
+            getSample = { req ->
+                SampleStore.SampleEntry.Complete(req = req, note = null, pitchHz = 220.0, sample = pcm)
+            },
+        ) ?: error("makeVoice returned null for the sample path")
 
         val rc = Voice.RenderContext(
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
@@ -310,6 +379,27 @@ class BlockFramingInvarianceSpec : StringSpec({
         (stripNodes + ("strip accelerate" to accelerateData)).forEach { (name, mod) ->
             val modulated = renderVoice(IgnitorDsl.Sine(), startFrame = 0, blockFrames = 128, dataMod = mod)
             withClue(name) { (maxDiff(modulated, bare) > 1e-6) shouldBe true }
+        }
+    }
+
+    // ── P5: the sample path ──────────────────────────────────────────────────────────────────────
+
+    "I1+I3+I4 sample path: note-relative output is bit-identical at every onset alignment" {
+        val ref = renderSampleVoice(startFrame = 0, blockFrames = 128)
+        check(peak(ref) > 1e-3) { "sample reference is silent — vacuous comparison" }
+        for (start in listOf(1, 37, 76, 127)) {
+            withClue("sample, startFrame=$start") {
+                maxDiff(renderSampleVoice(start, 128), ref) shouldBe 0.0
+            }
+        }
+    }
+
+    "I2 sample path: bit-identical at block sizes 64 and 37" {
+        val ref = renderSampleVoice(startFrame = 0, blockFrames = 128)
+        for (bf in listOf(64, 37)) {
+            withClue("sample, blockFrames=$bf") {
+                maxDiff(renderSampleVoice(0, bf), ref) shouldBe 0.0
+            }
         }
     }
 
