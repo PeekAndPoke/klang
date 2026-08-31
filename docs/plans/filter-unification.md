@@ -1,6 +1,24 @@
 # Filter and effect unification — one thing, one way, everywhere
 
-**Status: PLAN, not started.** Chunks will be reviewed one at a time before each starts.
+**Status: ✅ COMPLETE — all chunks shipped (C6a → C0 → C1+C2 → C3 → C4 → C5 → C6), closed
+2026-08-31.** Kept in `docs/plans/` rather than archived on purpose: seventeen files point here,
+most of them spec KDocs citing this plan as the reason their guard exists. Moving it would turn
+every one of those into a dangling reference.
+
+**What shipped, in order:** 50 alias names deleted (C6a); the null-q topology swap removed, so an
+absent `q` means the default `q` and never a different filter (C0); ONE default `q = 0.707` on
+every door (C1+C2); envelope depth in SEMITONES on both engine paths (C3); one shared wet/dry law
+with `wet == 0` as bit-identical bypass (C4); `passes` with the staggered Butterworth cascade
+(C5); canonical names, the notch family, and the last four aliases (C6).
+
+**Ran as its own round, out of band:** the `freq` rename (`cutoffHz`/`freqHz` → `freq` on every
+DSL surface and wire type) — see `docs/tasks/filter-frequency-param-naming.md`.
+
+**Still open, all of it the maintainer's:** the by-ear retunes listed below, a `JsCompatTests` run
+on a GraalVM runtime, and two engine follow-ups —
+`docs/tasks/svf-coefficient-cache-never-engages.md` and the band-shaped engine filters still
+documenting `@param cutoffHz Center frequency`. `band`/`tap` on sprudel remain deferred behind
+D9's static tier, which has not landed.
 
 ## Why this exists
 
