@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
@@ -113,11 +114,16 @@ class SampleVoiceSpecificTest : StringSpec({
         val ctx = createContext(blockFrames = 5)
         voice.render(ctx)
 
-        // Values should be interpolated between samples
-        // At playhead=0.0: sample[0] = 0.0
-        // At playhead=1.5: interpolate between sample[1] and sample[2]
-        // At playhead=3.0: sample[3]
-        // etc.
+        // ramp(10) is pcm[i] = i/9. At rate 1.5, frame k reads playhead 1.5k, and interpolating a
+        // STRAIGHT line linearly has to reproduce the line: out[k] = 1.5k/9. Derived from the
+        // definition of lerp, not read off a recorded run.
+        for (k in 0 until 5) {
+            ctx.voiceBuffer[k] shouldBe (1.5 * k / 9.0).plusOrMinus(1e-9)
+        }
+
+        // The row that separates linear from truncation or nearest-neighbour: frame 1 sits exactly
+        // half way between pcm[1] and pcm[2]. Truncating would return pcm[1] = 0.1111... instead.
+        ctx.voiceBuffer[1] shouldBe ((1.0 / 9.0 + 2.0 / 9.0) / 2.0).plusOrMinus(1e-9)
     }
 
     "SampleVoice without looping stops at end" {
@@ -204,7 +210,10 @@ class SampleVoiceSpecificTest : StringSpec({
     }
 
     "SampleVoice playhead advances correctly" {
-        val sample = TestSamples.constant(size = 100, value = 1.0)
+        // A ramp, NOT a constant: the old fixture was a constant 1.0, which is why this test could
+        // only say "can't directly verify playhead without access to private field". A ramp makes
+        // the playhead position readable straight off the output value.
+        val sample = TestSamples.ramp(size = 100)
 
         // Create voice with initial playhead
         val voice = createVoice(
@@ -224,14 +233,23 @@ class SampleVoiceSpecificTest : StringSpec({
         val ctx = createContext(blockFrames = 10)
         voice.render(ctx)
 
-        // Should render from playhead 10 to 20
-        // (Can't directly verify playhead without access to private field)
+        // ramp(100) is pcm[i] = i/99. Starting at playhead 10 and advancing by rate 1.0 per frame,
+        // frame k must read pcm[10 + k] — which pins BOTH the start offset and the step size.
+        for (k in 0 until 10) {
+            ctx.voiceBuffer[k] shouldBe ((10.0 + k) / 99.0).plusOrMinus(1e-9)
+        }
     }
 
     "SampleVoice with vibrato modulates playback rate" {
-        val sample = TestSamples.sine(size = 100)
-
-        val voice = createVoice(
+        // Long enough for a 5 Hz LFO to actually swing: 4000 frames at 44100 is ~91 ms, so the
+        // vibrato covers ~0.45 of a cycle. The original 100-frame block was 2.3 ms, over which a
+        // 5 Hz LFO barely leaves zero — the test could not have seen its own subject.
+        fun render(vibrato: Voice.Vibrato): AudioBuffer {
+            val sample = TestSamples.sine(size = 8000)
+            val voice = createVoice(
+                endFrame = 4000.0,
+                gateEndFrame = 4000.0,
+                blockFrames = 4000,
             signal = SampleIgnitor(
                 pcm = sample.pcm,
                 rate = 1.0,
@@ -242,21 +260,33 @@ class SampleVoiceSpecificTest : StringSpec({
                 stopFrame = Double.MAX_VALUE,
                 sampleRate = 48000,
             ),
-            freqHz = 440.0,
-            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
-        )
+                freqHz = 440.0,
+                vibrato = vibrato,
+            )
+            val ctx = createContext(blockFrames = 4000)
+            voice.render(ctx)
 
-        val ctx = createContext()
-        voice.render(ctx)
+            return ctx.voiceBuffer
+        }
 
-        // Vibrato should modulate sample playback rate
-        // Output will have time-varying playback speed
+        val dry = render(Voice.Vibrato(0.0, 0.0))
+        val wet = render(Voice.Vibrato(rate = 5.0, semitones = 0.25))
+
+        // Positive control first: without it, two silent buffers would also "differ by nothing" and
+        // a broken fixture would read as a passing dry render.
+        dry.any { it != 0.0 } shouldBe true
+
+        // Vibrato bends the playback rate, so the wet render must drift away from the dry one.
+        (0 until 4000).any { kotlin.math.abs(wet[it] - dry[it]) > 1e-9 } shouldBe true
     }
 
     "SampleVoice with FM modulates playback rate" {
-        val sample = TestSamples.sine(size = 100)
-
-        val voice = createVoice(
+        fun render(fm: Voice.Fm?): AudioBuffer {
+            val sample = TestSamples.sine(size = 8000)
+            val voice = createVoice(
+                endFrame = 4000.0,
+                gateEndFrame = 4000.0,
+                blockFrames = 4000,
             signal = SampleIgnitor(
                 pcm = sample.pcm,
                 rate = 1.0,
@@ -267,24 +297,34 @@ class SampleVoiceSpecificTest : StringSpec({
                 stopFrame = Double.MAX_VALUE,
                 sampleRate = 48000,
             ),
-            freqHz = 440.0,
-            fm = Voice.Fm(
-                ratio = 2.0,
-                depth = 50.0,
-                envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)
-            ),
-        )
+                freqHz = 440.0,
+                fm = fm,
+            )
+            val ctx = createContext(blockFrames = 4000)
+            voice.render(ctx)
 
-        val ctx = createContext()
-        voice.render(ctx)
+            return ctx.voiceBuffer
+        }
 
-        // FM should modulate sample playback rate
+        val dry = render(null)
+        val wet = render(Voice.Fm(ratio = 2.0, depth = 50.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)))
+
+        dry.any { it != 0.0 } shouldBe true
+        (0 until 4000).any { kotlin.math.abs(wet[it] - dry[it]) > 1e-9 } shouldBe true
     }
 
-    "SampleVoice getBaseFrequency returns sample base pitch" {
-        val sample = TestSamples.sine(size = 100)
-
-        val voice = createVoice(
+    // RENAMED 2026-08-31. The old name was "SampleVoice getBaseFrequency returns sample base pitch"
+    // and there is no `getBaseFrequency` anywhere in the codebase — the test was named after a
+    // symbol that does not exist, so nothing could have guarded it. What its comment described
+    // ("base frequency is used for FM calculation") IS real and observable, so the test now guards
+    // that instead of being deleted.
+    "SampleVoice freqHz shapes the FM modulation" {
+        fun render(freqHz: Double): AudioBuffer {
+            val sample = TestSamples.sine(size = 8000)
+            val voice = createVoice(
+                endFrame = 4000.0,
+                gateEndFrame = 4000.0,
+                blockFrames = 4000,
             signal = SampleIgnitor(
                 pcm = sample.pcm,
                 rate = 1.0,
@@ -295,14 +335,29 @@ class SampleVoiceSpecificTest : StringSpec({
                 stopFrame = Double.MAX_VALUE,
                 sampleRate = 48000,
             ),
-            freqHz = 440.0,
-        )
+                freqHz = freqHz,
+                fm = Voice.Fm(ratio = 1.0, depth = 50.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
+            )
+            val ctx = createContext(blockFrames = 4000)
+            voice.render(ctx)
 
-        // Base frequency is used for FM calculation
-        // For now, defaults to 440.0 Hz
-        val ctx = createContext()
-        voice.render(ctx)
-        // If this renders without error, getBaseFrequency works
+            return ctx.voiceBuffer
+        }
+
+        // FmRenderer uses freqHz TWICE: `modFreq = freqHz * ratio` sets the modulator's speed, and
+        // `fmMult = 1 + modSignal / freqHz` normalises its depth. At a fixed ratio, two different
+        // pitches must therefore produce two different modulations.
+        //
+        // ⚠️ This row deliberately does NOT claim to pin the modulator FREQUENCY specifically.
+        // Mutation Md (`modFreq = freqHz * ratio` -> `modFreq = ratio`) SURVIVES it, because role 2
+        // still separates the two renders on its own. Nothing in the suite currently distinguishes
+        // the two roles; see audit finding F6's notes. The earlier name for this row claimed the
+        // narrower guard and would have been the same kind of overstatement this file is fixing.
+        val low = render(440.0)
+        val high = render(880.0)
+
+        low.any { it != 0.0 } shouldBe true
+        (0 until 4000).any { kotlin.math.abs(high[it] - low[it]) > 1e-9 } shouldBe true
     }
 
     "SampleVoice with envelope modulates sample output" {
@@ -453,6 +508,10 @@ class SampleVoiceSpecificTest : StringSpec({
         val ctx = createContext()
         voice.render(ctx)
 
-        // Should render successfully with all features enabled
+        // Stacking vibrato + accelerate + FM + a looping sample is the combination most likely to
+        // produce a non-finite playhead, and a NaN here would propagate into the cylinder and kill
+        // the orbit silently. "Renders successfully" is now a claim with teeth: audible, and finite.
+        ctx.voiceBuffer.any { it != 0.0 } shouldBe true
+        ctx.voiceBuffer.all { it == it && kotlin.math.abs(it) <= 1.0e6 } shouldBe true
     }
 })

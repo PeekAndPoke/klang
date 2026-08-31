@@ -205,7 +205,7 @@ voice that has no filter modulation (the common case).
 
 ---
 
-## F6 — Nine tests contain no assertions at all 🔴
+## F6 — Nine tests contain no assertions at all ✅ FIXED
 
 **HIGH.** They render and then check nothing; the expected values exist only as comments. No mutation can ever turn them
 red — they pass as long as the code does not throw. Counted directly from source, not inferred:
@@ -224,6 +224,37 @@ auditing coverage by reading test names — which is what everyone does — is m
 
 **Note:** as smoke tests they are not worthless (a crash or an exception still fails). The defect is that they are
 indistinguishable from real guards.
+
+> ✅ **FIXED 2026-08-31 — all nine now assert, and each has a mutation that kills it.**
+>
+> | test | designated killer |
+> |------|-------------------|
+> | `…performs linear interpolation` | interpolator truncates instead of lerping |
+> | `…playhead advances correctly` | starting playhead ignored |
+> | `…with vibrato modulates playback rate` | vibrato depth → 0 |
+> | `…with FM modulates playback rate` | FM depth → 0 |
+> | `…freqHz shapes the FM modulation` *(renamed)* | FM depth → 0 |
+> | `…with all modulations renders correctly` (×2) | voice renders silence |
+> | `SynthVoice passes its freqHz to the ignitor` *(renamed)* | oscillator pitch hard-coded |
+> | `SynthVoice with filter affects signal output` | main filter never runs |
+>
+> **Two fixtures were changed on purpose**, because the old ones could not show what the test was
+> named for: a constant sample became a ramp (which is why the old body could only say *"can't
+> directly verify playhead without access to private field"* — with a ramp, the output value *is*
+> the playhead), and 100-frame blocks became 4000 (a 5 Hz vibrato over 2.3 ms barely leaves zero,
+> so the test could not have observed its own subject).
+>
+> **Two tests were renamed because `getBaseFrequency` does not exist anywhere in the codebase.**
+> They were named for a symbol that is not there, so nothing could ever have guarded them. Rather
+> than delete the coverage, both now guard what their comments actually described.
+>
+> **One test was ALSO renamed for overstating its guard**, and this is the useful part: mutation Md
+> (`modFreq = freqHz * ratio` → `modFreq = ratio`) **survived**. `FmRenderer` uses `freqHz` twice —
+> once to set the modulator's speed, once to normalise its depth (`fmMult = 1 + modSignal/freqHz`) —
+> and killing the first leaves the second still separating the renders. The row is now
+> *"freqHz shapes the FM modulation"*, which is what it proves.
+> **Residual gap, recorded not fixed: nothing in the suite distinguishes those two roles of
+> `freqHz`.** Md is an un-killed mutation and stays on the books.
 
 ---
 
@@ -471,10 +502,10 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
 Extends [F6](#f6) from the `voices/` pilot to the whole `audio_be` tree. The classification matters — only the first
 class is a defect:
 
-**(a) Named for a behaviour, checks nothing — 10 tests. Defects.**
-The 9 from [F6](#f6) (all nine re-confirmed 2026-08-31 by the corrected census), plus
-`VoicePipelineTest` *"voice renders correct number of samples"*. Each names a measurable property and
-measures nothing.
+**(a) Named for a behaviour, checks nothing — ~~10~~ 1 test. Defects.**
+~~The 9 from [F6](#f6)~~ — **fixed 2026-08-31, see [F6](#f6)** — leaving only
+`VoicePipelineTest` *"voice renders correct number of samples"*, which still names a measurable
+property and measures nothing.
 
 > **Three former members of this class are WITHDRAWN 2026-08-31 — they do assert:**
 > `ShapingFuncsBoundsSpec` *"rectify output is always non-negative"* (renamed from

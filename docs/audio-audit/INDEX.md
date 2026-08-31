@@ -94,6 +94,24 @@ Also filed this pass: [F19](FINDINGS.md#f19) — `cut(0)` is documented as "no c
 gates on `cut != null`, so group 0 chokes group 0. Found while explaining cut/choke; recorded
 unfixed, it needs a maintainer decision (change the engine, or change the doc).
 
+**2026-08-31 (fifth pass) — [F6](FINDINGS.md#f6) CLOSED.** All nine assertion-free tests in
+`SampleVoiceSpecificTest` and `SynthVoiceTest` now assert, each with a mutation that kills it
+(9 mutations run, 8 killed). Two fixtures were changed because the old ones could not show the
+behaviour the test was named for; three tests were renamed — two because `getBaseFrequency` does not
+exist anywhere in the codebase, and one because a mutation proved its name overstated its guard.
+
+**The one surviving mutation is the interesting result.** `modFreq = freqHz * ratio` → `= ratio`
+survives, because `FmRenderer` uses `freqHz` for two different jobs (the modulator's speed, and the
+depth normalisation `1 + modSignal/freqHz`), and no test separates them. Recorded as an open gap
+rather than papered over by leaving the test's original, wider-sounding name in place.
+
+**Method note earned the hard way this pass:** a mutation harness must restore from a **byte
+snapshot**, never by reverse string-replacement. Restoring `buffer[idxOut] = 0.0` → the lerp
+expression rewrote four *pre-existing* out-of-range branches that legitimately contained the
+replacement string, corrupting `SampleIgnitor.kt`. The byte-exact check caught it and `git checkout`
+repaired it, but a harness that can do that at all is a hazard in a campaign whose whole product is
+trustworthy verdicts.
+
 **The lesson of this pass is the mirror of the first one.** The standing note warned that findings go
 *stale*. This sweep found the other failure: **four claims were wrong the day they were written** —
 three because the census matched one assertion dialect and this repo uses several, one because a grep
