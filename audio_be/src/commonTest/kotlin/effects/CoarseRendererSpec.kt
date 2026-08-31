@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.effects
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
@@ -31,7 +32,9 @@ class CoarseRendererSpec : StringSpec({
         // Verify some samples are held (consecutive equal values exist)
         var heldPairs = 0
         for (i in 1 until buffer.size) {
-            if (buffer[i] == buffer[i - 1]) heldPairs++
+            if (buffer[i] == buffer[i - 1]) {
+                heldPairs++
+            }
         }
         (heldPairs > 0) shouldBe true
     }
@@ -79,6 +82,29 @@ class CoarseRendererSpec : StringSpec({
         }
         for (i in 0 until 28) {
             tail[i] shouldBe whole[i + 4]
+        }
+    }
+
+    "W4: a non-finite amount passes through, the same as the ignitor door" {
+        // +Inf could reach this renderer — `Inf > 1.0` passes FilterPipelineBuilder's gate
+        // and sprudel does not coerce — and gave `increment = 1.0 / Inf = 0.0`: sample 0
+        // captured, then held for the note's entire life, where ModulationClockSpec's
+        // "W3/W4" row has the ignitor door passing the signal straight through. NaN never
+        // reached this class (the gate rejects it) but is pinned here for direct callers.
+        // Both `stages` values matter: the 1 case kills a refactor that sinks the guard into
+        // renderDirect and leaves the oversampled path engaged.
+        for (amount in listOf(Double.POSITIVE_INFINITY, Double.NaN)) {
+            for (stages in listOf(0, 1)) {
+                val buffer = AudioBuffer(64) { (it + 1) * 0.01 }
+                val expected = buffer.copyOf()
+                CoarseRenderer(amount = amount, oversampleStages = stages).renderInPlace(buffer)
+
+                withClue("amount=$amount stages=$stages") {
+                    for (i in 0 until 64) {
+                        buffer[i] shouldBe expected[i]
+                    }
+                }
+            }
         }
     }
 

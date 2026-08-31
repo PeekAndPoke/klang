@@ -4,6 +4,84 @@
 **SINCE: —**
 **STATE: FREE.**
 
+> Last action (2026-08-30, claude-code block-framing session): W4 STRIP HALF done —
+> `CoarseRenderer.render`'s degenerate return widened to the ignitor door's form,
+> `!(amount > 1.0) || amount.isInfinite()` (maintainer: match the ignitor door). **The audit's own
+> W4 row was wrong in BOTH directions and the fix is the correction.** NaN could never reach the
+> class — `FilterPipelineBuilder` gates on `amount > 1.0` and NaN fails it, so the stage is never
+> built. +Inf CAN (`Inf > 1.0` passes) and gave `increment = 1/Inf = 0.0`: sample 0 captured, counter
+> stuck, frozen DC for the note's LIFE with no heal, because the strip amount is a per-note constant
+> where the ignitor door re-reads per block. So the defect was never a NaN latch; it was a
+> DOOR-PARITY break on a value the ignitor already passed through. Reachability verified, NO
+> incident on record and no shipped song passes a non-finite coarse (all four use a literal 2).
+> 1 review round (zero CRITICAL/MAJOR; 4 MINORs applied once under the tightened standard — three
+> were mine overstating "reached in production" when I had only proven reachable). 3/3 mutations,
+> one per arm of the guard, restores byte-exact. Green: :audio_be:jvmTest full,
+> :audio_be:compileKotlinJs. Ran NO `:sprudel:*` task while the parser session was live.
+> UNCOMMITTED, disjoint from the sprudel work below — stage the two `audio_be` files plus the
+> ledger. ⏳ STILL OWED from the previous item: the W10 tremolo by-ear round (committed 9cb896ff
+> unheard, maintainer had no time).
+
+> Last action (2026-08-30, claude-code mini-notation-tweaks session): **Phase 0 of
+> `docs/tasks/mini-notation-tweaks.md` is done and UNCOMMITTED** — the maintainer inspects the diff.
+> The `{key=value}` attribute block is GONE from the mini-notation parser (zero usage in
+> songs/tutorials/ref; only its own spec referenced it). `{…}` now carries bare **tweak names** on
+> `MnNode.Mods.tweaks: List<String>` — a LIST because tweaks apply in written order and may repeat.
+> `MnNode.Attrs`, `applyAttrs()` and `MiniNotationAttrsSpec.kt` are deleted; `EQUALS`/`C_EQUALS` are
+> gone from the tokeniser, so `=` no longer breaks a literal.
+>
+> **The one thing that would surprise you:** the names are parsed and rendered but **applied to
+> nothing yet** (that is phases 1-4: a `tweaks` field on `SprudelVoiceData`, then a `tweaks({…})`
+> applier). `c4{swell}` is currently inert BY DESIGN, not by bug.
+>
+> Because `=` stopped being a token, both `c4{g=0.5}` and a stray `bd=2` would have parsed as
+> nonsense-but-silent values. `rejectEquals()` turns both into a parse error carrying the migration
+> hint — deliberate, and mutation-checked at both call sites.
+>
+> Touched ONLY `sprudel/src/{commonMain,commonTest}/kotlin/lang/parser/*` plus three docs
+> (`mini-notation-tweaks.md`, `mini-notation-extensions.md` marked superseded, one stale-premise note
+> in `ignitor-envelope-ownership.md:277`). `:sprudel:jvmTest` fully green. Six mutations (order
+> reversal, block accumulation, migration guard, atom-level guard call site, renderer separator) all
+> killed with real `AssertionFailedError`s, verified not to be compile errors.
+
+> Last action (2026-08-30, claude-code mini-notation-tweaks session): **Phase 0 of
+> `docs/tasks/mini-notation-tweaks.md` is done and UNCOMMITTED** — the maintainer inspects the diff.
+> The `{key=value}` attribute block is GONE from the mini-notation parser (it had zero usage in
+> songs/tutorials/ref; only its own spec referenced it). `{…}` now carries bare **tweak names** on
+> `MnNode.Mods.tweaks: List<String>` — a LIST because tweaks apply in written order and may repeat.
+> `MnNode.Attrs`, `applyAttrs()` and `MiniNotationAttrsSpec.kt` are deleted; `EQUALS`/`C_EQUALS` are
+> gone from the tokeniser, so `=` no longer breaks a literal.
+>
+> **The one thing that would surprise you:** the names are parsed and rendered but **applied to
+> nothing yet** (that is phases 1-4: a `tweaks: List<String>?` field on `SprudelVoiceData`, then a
+> `tweaks({…})` applier). So `c4{swell}` is currently inert by design, not by bug. The old
+> `{key=value}` form now raises a migration parse error rather than silently parsing as a nonsense
+> tweak name — that guard is deliberate and mutation-checked.
+>
+> Touched ONLY `sprudel/src/{commonMain,commonTest}/kotlin/lang/parser/*` plus three docs
+> (`mini-notation-tweaks.md`, `mini-notation-extensions.md` marked superseded, and one stale-premise
+> note in `ignitor-envelope-ownership.md:277`). `:sprudel:jvmTest` fully green; the four new-test
+> mutations (order reversal, block accumulation, migration guard, renderer separator) were all
+> killed with real `AssertionFailedError`s, not compile errors.
+
+**CO-HOLDER (parallel work, maintainer-sanctioned 2026-08-30): claude-code block-framing session**
+**SINCE: 2026-08-30**
+**STATE: HELD — ledger W4 strip half: `audio_be/.../CoarseRenderer.kt` + `CoarseRendererSpec`
+ONLY. Disjoint from the sprudel parser work above, and running no `:sprudel:*` task while that
+holds. Two scopes are recorded here on purpose: the maintainer sanctioned the parallel run, and
+the REAL serialization is the flock (`console/with-build-lock.sh`), which both sessions take for
+every Gradle call. Add yourself rather than replacing a holder while this stands.**
+
+> ⚠️ **CONCURRENT AGENT, from 2026-08-30: another agent is working in `sprudel` only.**
+> The flock serializes BUILDS, not EDITS — so a `:sprudel:*` task any of us runs compiles whatever
+> the other has half-written, and a red sprudel suite may not be yours. Take the flock for every
+> Gradle call as usual (parallel Gradle also corrupts the sprudel KSP cache; recover with
+> `:sprudel:clean`), and if a sprudel test fails in a run whose changes are all in another module,
+> check `git status` before debugging it. The block-framing session is staying OUT of sprudel while
+> this holds: its next candidates (strip-W4, the master round) are `audio_be`-only, and the one
+> queued item that WOULD collide — "musical vs absolute frequency, part 2", which lands the phaseMod
+> fix on both doors including sprudel's `.vibrato()` — is deliberately not being picked meanwhile.
+
 > Last action (2026-08-30, claude-code block-framing session): W10 TREMOLO LFO done — the six
 > shipped sprudel functions (`tremoloskew`/`tremolophase`/`tremoloshape` + `trem*` aliases) are
 > live end-to-end. New `audio_be/LfoShape.kt`: five waveforms in the OSCILLATOR vocabulary
