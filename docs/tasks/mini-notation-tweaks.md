@@ -299,9 +299,39 @@ New tests are mutation-checked per `feedback_review_loop`.
 
 ## Open items
 
-- **Nested/structural tweaks on groups**: `[c4 e4]{swell}` marks both notes. Confirm by ear that
-  applying the transform per event (rather than once to the group as a pattern) is what is wanted.
-- **Whether tweaks should reach the UI** after all, for visualization ("this note is a bend"). Kept
-  off the wire for now; revisit only with a concrete consumer.
-- **`tweak` vs `tweaks` mix-up ergonomics**: the singular/plural distinction is type-safe (String vs
-  Object) but subtle. If it reads badly in a real song, the fallback applier name is `withTweaks`.
+Ordered by what actually blocks calling this finished.
+
+**1. Phase 5, the unknown-tweak diagnostic.** The one item that changes whether the feature is safe
+rather than merely working: a misspelled name is silently inert today. The runtime cannot help,
+because it genuinely cannot tell a typo from a name an outer palette will claim later. Only the
+analysis layer sees the whole script. Reuse `suggestNames`
+(`klangscript/.../runtime/NameSuggestions.kt:25`) from commit `09783f50`.
+
+**2. Nothing has been heard yet.** Every claim in this doc is backed by tests, not by ears, which in
+this project is half a verification. Worth a session with a real song: is `{swell}` legible at a
+glance in a dense line, and does the *taste* of naming a treatment hold up when you have five of
+them?
+
+**3. The visual mini-notation editor has no tweak chip.** `MnSharedPanels.kt` offers chips for `*`,
+`/`, `@` and `?` but nothing for the brace block. Not a regression (the attribute block never had one
+either), but the braces are a first-class feature now, so their absence is more visible.
+
+**4. Phase 6 docs are half done.** `sprudel/ref/dsl-addons.md` and the KDoc are in, including the
+verb-noun caveat on `tweak`. Tutorials and the editor popup category are not.
+
+**5. Group semantics, mechanically settled but not by ear.** `[c4 e4]{swell}` applies the transform
+to each note separately, and `note("[c3,e3]{swell}")` is pinned in `LangTweaksSpec`. Whether
+per-event is what a musician *wants* there, rather than once to the group as a unit, is a taste call.
+
+**6. Whether tweaks should reach the UI after all.** Kept off the wire (see above). Revisit only with
+a concrete consumer, e.g. a visualization that wants to draw bent notes differently.
+
+**7. `tweak` vs `tweaks` ergonomics.** The singular/plural split is type-safe (String vs Object) but
+subtle. If it reads badly in a real song, the fallback applier name is `withTweaks`.
+
+## Found while building, unrelated but worth someone's time
+
+`add()` does nothing on an `n()` pattern: `n("0 1 2").add(2)` is inert because `n()` stores into
+`soundIndex` while `add()` operates on `value`. Verified against `superimpose` as a second reference
+point, so it is not a tweaks artefact. It is the same silent-inert class this feature was designed to
+avoid, and it deserves its own look.
