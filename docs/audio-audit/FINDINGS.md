@@ -208,26 +208,35 @@ voice that has no filter modulation (the common case).
 
 ---
 
-## F5 — Coverage holes found while verifying the filter strip 🔴
+## F5 — Coverage holes found while verifying the filter strip 🟡 *(1 withdrawn, 1 fixed, 1 open — 2026-08-31)*
 
 **MED**, cumulatively. None of these is exercised by any spec in `voices/`:
 
-- **`FilterModRenderer`'s drift path** (`:32`) — `if (drift != null && drift.active)
-  drift.nextMultiplier() else 1.0`. No case in `FilterModulationTest` constructs a
-  `Voice.FilterModulator` with a non-null `drift`, so the per-block `AnalogDrift` advance on the filter cutoff is
-  untested here. This is the path `analog > 0` turns on, and it is the same subsystem as [F2](#f2) — so the analog-drift
-  feature is now **twice** implicated.
+- ~~**`FilterModRenderer`'s drift path** (`:32`)~~ ❌ **WITHDRAWN 2026-08-31.** `FilterEnvSemitoneSpec`
+  has a row — *"strip path: drift stays a pure multiplier OUTSIDE the semitone exponent"* — that
+  builds a `Voice.FilterModulator` with a real `AnalogDrift`, drives `FilterModRenderer`, and pins
+  both that the depth-12 / depth-0 cutoff ratio is exactly 2.0 (so drift is outside the exponent) and
+  that drift actually moved the cutoff off the pure formula value. That is a better guard than the
+  finding asked for. The finding said "no case in **`FilterModulationTest`**" and then generalised;
+  the spec that covers it lives in `voices/strip/filter/`, outside the pilot's survey. **Fifth
+  finding in this audit whose "untested" claim did not survive checking** (cf. [F4](#f4), [F7](#f7),
+  [F14](#f14), [F20](#f20)). The analog-drift feature is therefore implicated once, not twice.
 - **`VoiceFactory.toModulator()`** (~`:384-451`) — entirely untested. `FilterModulationTest`
   constructs `Voice.FilterModulator` directly, bypassing the factory; `VoiceFactoryFilterOrderSpec`
   uses filter defs with no envelope, so it never reaches it either. Untested branches: the non-`Tunable` early return
   (e.g. `Formant`), the `envData == null && drift == null` early return, the degenerate `depth = 0` envelope built for
   drift-only modulation, and `envData.resolve()`.
-- **Body/Formant exclusion from the per-voice chain** (`VoiceFactory.kt:108`) — the filter that routes `FilterDef.Body`/
-  `FilterDef.Formant` to the orbit-level Katalyst instead of the voice chain. No spec puts a Body or Formant def
-  alongside LP/HP/BP and checks it is excluded from the baked chain while still appearing on `Voice.body` /
-  `Voice.vowel`. This is the 2026-07-04 body-to-orbit move, whose whole point was that `body` stops being super-additive
-  with
-  `superimpose`.
+- **Body/Formant exclusion from the per-voice chain** (`VoiceFactory.kt:108`) — ✅ **FIXED 2026-08-31**
+  by `VoiceFactoryBodyVowelRoutingSpec` (4 rows, 2 mutations, both killed). The claim was accurate:
+  nothing put a Body or Formant alongside LP/HP through `makeVoice`. The rows pin that the resonators
+  leave the baked chain, that the survivors keep their authored order, and that the defs still ride on
+  `Voice.body` / `Voice.vowel` for the Katalyst. **Mutation Mu — leaving the resonators in the chain —
+  is the 2026-07-04 regression itself, and it is now red.**
+
+  > Learned while writing it: `mainFilter` is only a `ChainAudioFilter` when more than one filter
+  > survives the split. With one it is that filter unwrapped, with none it is null — so removing a
+  > Body changes the *shape* of `mainFilter`, not just its length, and a helper that assumed a chain
+  > fails on exactly the case the spec exists to test.
 
 ---
 
