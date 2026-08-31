@@ -112,6 +112,19 @@ replacement string, corrupting `SampleIgnitor.kt`. The byte-exact check caught i
 repaired it, but a harness that can do that at all is a hazard in a campaign whose whole product is
 trustworthy verdicts.
 
+**2026-08-31 (sixth pass) — the two findings that needed the maintainer, settled.**
+
+| Finding | Outcome |
+|---------|---------|
+| [F17](FINDINGS.md#f17)(b) compressor detector | ✅ **CLOSED BY EAR** — *"at least when currently listening to the songs I cannot hear any issues."* No change; RMS smoothing stays deferred. The measurement stands, the mechanism is still there, and the file records what would make it resurface (a genuinely slow glue compressor). |
+| [F19](FINDINGS.md#f19) `cut(0)` semantics | 📋 **PARKED to design** — *"never used yet, needs some thinking and design, not an on-the-fly judgement."* → [`docs/tasks/future/cut-group-semantics.md`](../tasks/future/cut-group-semantics.md) |
+| [F17](FINDINGS.md#f17)(a) `attackSeconds` is a τ, not a rise time | 🔴 still open — a docs/naming question, not a sound one, and cheap |
+
+**F17(b) is the second time in this campaign that a correct measurement described something that did
+not matter** (the first is the master-limiter pump at the foot of `FINDINGS.md`). Worth stating as a
+rule rather than a coincidence: **a measurement finds the mechanism, an ear decides whether it
+counts.** The audit's job is to hand over a mechanism with its evidence, not to spend a fix on it.
+
 **The lesson of this pass is the mirror of the first one.** The standing note warned that findings go
 *stale*. This sweep found the other failure: **four claims were wrong the day they were written** —
 three because the census matched one assertion dialect and this repo uses several, one because a grep

@@ -595,7 +595,7 @@ the thump.
 
 ---
 
-## F17 — REFUTED: the blend is innocent. The real cause is the detector. 🔴
+## F17 — REFUTED: the blend is innocent. The real cause is the detector. 🟡 *(b) closed by ear 2026-08-31*
 
 **The hypothesis was wrong, and the measurement is worth keeping.** A by-ear session (2026-08-06)
 found a glue compressor at 2:1 / −8 dB with a 30 ms attack producing audible "shocks" and needing 15 ms. I proposed
@@ -646,6 +646,27 @@ just the master.
 > limiter's lookahead, the wire-format split, two renames, and the `flushState` guard) and **not one of
 > them touches the detector's input path**. The RMS smoothing is still only the KDoc note at `:41`.
 > **This is the one open finding that is an audible engine defect rather than a test defect.**
+
+> ✅ **CLOSED BY EAR 2026-08-31 (maintainer): "at least when currently listening to the songs I
+> cannot hear any issues."** No change made, and the RMS smoothing stays deferred.
+>
+> **The measurement is not withdrawn — it is correct, and the mechanism is still there.** What the
+> ear settled is the question the measurement cannot answer: whether it matters on the material we
+> actually have. It does not. This is the same shape as the master-limiter pump recorded at the
+> bottom of this file, where everything measured badly and the level-matched A/B came back "really
+> subtle", and it is the project's standing rule that measurements find mechanisms while ears decide
+> whether they count.
+>
+> **What would make it resurface**, recorded so the next person does not re-derive it: the effect
+> scales with the configured attack. Nothing in the shipped songs leans on a slow attack, and the
+> detector's reading only drops ~4 dB on real material once you get to 30 ms. A future patch that
+> wants a genuinely slow glue compressor is where this comes back, and the fix is already named in
+> `Compressor.kt`'s KDoc.
+>
+> 🔴 **Part (a) is untouched and still open**: `attackSeconds` is a one-pole τ, not a rise time
+> (measured t10-90 = 2.33–2.54 × τ), so a configured 30 ms behaves like a ~74 ms attack in the units
+> a DAW would print. That is a documentation and naming question, not a sound one, and it costs
+> nothing to fix.
 
 ---
 
@@ -729,7 +750,16 @@ F18 was fixed this was doubly invisible on synth voices, which could not be cut 
    means *not calling* `.cut()` at all, and `0` is just a group like any other.
 
 Option 1 is the one that keeps a *pattern* able to switch choking on and off per event; option 2
-cannot express that at all. Recorded unfixed — no code touched.
+cannot express that at all.
+
+> 📋 **PARKED 2026-08-31 (maintainer): "it was never used yet, and needs some thinking and
+> design, not an on-the-fly judgement."** Moved to
+> [`docs/tasks/future/cut-group-semantics.md`](../tasks/future/cut-group-semantics.md), which opens
+> out the four questions this finding does not ask: whether per-event switchable choking is wanted at
+> all (the only thing `0` buys over simply not calling `.cut()`), how far a cut group reaches (today
+> it is **global to the scheduler** — two unrelated parts picking group `1` choke each other, which
+> nobody decided), the hard-kill click still carrying its TODO at `VoiceScheduler.kt:558`, and
+> whether a trigger must belong to the group it chokes. No code touched.
 
 ---
 
