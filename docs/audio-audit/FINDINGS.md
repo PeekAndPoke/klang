@@ -122,7 +122,7 @@ test.
 
 ---
 
-## F3 — The test named after the mid-block clamp cannot detect the clamp's removal 🔴
+## F3 — The test named after the mid-block clamp cannot detect the clamp's removal ✅ FIXED
 
 **MED.** `FilterModulationTest`, *"voice starting mid-block handles envelope correctly"*. The behaviour it names is
 `EnvelopeCalc.kt:31` — `val currentFrame = maxOf(blockStart, startFrame)` *(anchor re-verified 2026-08-31; code unchanged)*, which stops the envelope position going
@@ -133,6 +133,32 @@ negative when a block starts before the voice does.
 
 > **Mutation RE-RUN 2026-08-31 against the entire suite (1373 tests): still GREEN.** The finding
 > stands unchanged, and is now known to be suite-wide rather than file-wide.
+
+> ✅ **FIXED 2026-08-31 by `voices.strip.MidBlockOnsetControlRateSpec`**, written for block-framing
+> **P4**. The same mutation is now **RED on both of its rows**.
+>
+> **And the second question above is answered: NO, the clamp is not redundant.** The finding
+> speculated that `maxOf(blockStart, startFrame)` might be decoration next to the trailing
+> `coerceIn(0.0, 1.0)`. It is not, and the case that separates them is **`attackFrames == 0`**:
+>
+> | | `absPos` | branch taken | result |
+> |---|---|---|---|
+> | with the clamp | `0` | `0 < 0` is false → falls through | **sustain** |
+> | without it | `blockStart - startFrame` (negative) | `negative < 0` is **true** → attack | coerced to **0.0** |
+>
+> A zero attack is the ordinary case for a filter or FM envelope, so removing the clamp would drop
+> those two renderers to zero modulation for the whole onset block of any voice starting mid-block.
+> The trailing `coerceIn` masks it only when the attack is non-zero.
+>
+> **Why the clamp exists at all, which the finding did not identify:** it is the *offset
+> compensation* for the two control-rate callers. `FilterModRenderer` and `FmRenderer` pass
+> `calculateControlRateEnvelope` the raw `ctx.blockStart`, while `Voice.render` derives
+> `offset = maxOf(blockStart, startFrame) - blockStart`. Those are the same expression, so the
+> callee's clamp is what makes the raw `blockStart` mean "the voice's position in this block".
+> Neither end of that coupling says so; the new spec's KDoc now does.
+>
+> The finding's *first* question — that `FilterModulationTest`'s test does not guard its own name —
+> is untouched and remains true. It is simply no longer the only thing standing there.
 
 **Why:** with the clamp gone, `absPos` goes negative, which lands in the *attack* branch of
 `envelopeLevelAtPosition`. Every built-in curve is monotonic increasing with `shape(0) = 0`, so a negative `p` yields
@@ -810,6 +836,37 @@ clamp dropped, and the blend running backwards.
 > all — a retained pair keeps blending at a clamped `t = 1` and sounds identical; it is a cost
 > property, not a behaviour. Writing a row that reads as a guard and is not is the defect class this
 > audit exists to find, so it went rather than shipping inside the fix for it.
+
+---
+
+## F21 — A flaky test in the suite the audit reads its verdicts from ✅ FIXED
+
+**MED as a bug, HIGH as a threat to this campaign's method.** `IgnitorDefaultsTest` →
+*"predefined 'dust' produces non-zero output"* failed once during a routine full-suite run on
+2026-08-31, then passed alone and passed again in the full suite. Not an interaction — genuinely
+random.
+
+**The arithmetic.** `dust` is a sparse stochastic impulse generator. Its default `density` is `0.2`,
+`rateHz = density * 200 = 40`, so the per-sample fire probability is `40 / 44100 = 9.07e-4`. The spec
+renders `blockFrames = 4410`, giving an expected **4.0** impulses per block and
+
+> **P(no impulse at all) = e^-4 ≈ 1.8% — a failure roughly one run in fifty.**
+
+**Why it matters more here than in an ordinary suite.** This suite is the instrument every mutation
+verdict in this audit is read off. A random red is indistinguishable from a killed mutant, so at
+~2% per run a long mutation campaign will eventually record a mutation as "killed" that in fact
+survived — and that verdict then justifies a decision, or closes a finding, on noise. The ledger has
+already been wrong six times from bad *reasoning* ([F4](#f4), [F7](#f7), [F14](#f14), [F15](#f15));
+it should not also be wrong from bad *sampling*.
+
+**Fix.** `dust` moves out of the default-density list and is driven at `density = 1.0`, where
+`rateHz = 200`, the expected count is ~20 and `P(silence) = e^-20 ≈ 2e-9`. The claim under test is
+unchanged — that the registered name builds an exciter which emits audio. Mutation-checked: forcing
+the fire probability to 0 turns the row red.
+
+**Worth a sweep, not done here:** any other row asserting a property of a stochastic generator over a
+short window has the same shape. `crackle` is the obvious neighbour, though it is a chaotic rather
+than a sparse generator so its density argument differs.
 
 ---
 

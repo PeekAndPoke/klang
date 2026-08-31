@@ -66,8 +66,20 @@ class IgnitorDefaultsTest : StringSpec({
 
     val noiseOscillators = listOf(
         "whitenoise", "brownnoise", "pinknoise",
-        "perlin", "berlin", "dust", "crackle",
+        "perlin", "berlin", "crackle",
     )
+
+    // `dust` is SPARSE and STOCHASTIC, so "produces non-zero output" is a probabilistic claim and at
+    // the default density it is not a safe one. Default density 0.2 gives rateHz = 0.2 * 200 = 40, so
+    // p = 40/44100 per sample; over this spec's 4410-frame block the expected impulse count is only
+    // ~4.0 and P(silence) = e^-4 ~= 1.8%. That is a failure about one run in fifty — observed live
+    // 2026-08-31. A flaky row is worse here than anywhere else: this suite is the instrument the
+    // audio-backend audit reads mutation verdicts off, so a random red is indistinguishable from a
+    // killed mutant.
+    //
+    // Driven at full density instead: rateHz = 200, expected ~20 impulses, P(silence) = e^-20 ~= 2e-9.
+    // The claim under test is unchanged — the registered name builds an exciter that emits audio.
+    val sparseNoiseOscillators = listOf("dust")
 
     for (name in pitchedOscillators) {
         "predefined '$name' produces non-zero output" {
@@ -79,6 +91,13 @@ class IgnitorDefaultsTest : StringSpec({
     for (name in noiseOscillators) {
         "predefined '$name' produces non-zero output" {
             val buf = createAndGenerate(name, freqHz = 0.0)
+            buf.any { it != 0.0 } shouldBe true
+        }
+    }
+
+    for (name in sparseNoiseOscillators) {
+        "predefined '$name' produces non-zero output" {
+            val buf = createAndGenerate(name, oscParams = mapOf("density" to 1.0), freqHz = 0.0)
             buf.any { it != 0.0 } shouldBe true
         }
     }

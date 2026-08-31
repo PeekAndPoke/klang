@@ -134,6 +134,23 @@ unfinished work, not a hole in something live. The doc carries the four design q
 the sharpest is that `duckattack` sets the **release** while `Compressor.attackSeconds` in the same
 directory means something else again.
 
+**2026-08-31 (eighth pass) — [F3](FINDINGS.md#f3) closed from the block-framing side, and a flaky
+test found.** Working block-framing **P4** (the strip renderers) surfaced the answer to F3's open
+question: the `maxOf(blockStart, startFrame)` clamp is **not** redundant with the trailing
+`coerceIn` — the two disagree whenever `attackFrames == 0`, which is the ordinary case for a filter
+or FM envelope. The clamp is the *offset compensation* for the two control-rate renderers that pass
+raw `blockStart`. `MidBlockOnsetControlRateSpec` now guards it, and F3's mutation is red.
+
+**[F21](FINDINGS.md#f21) — and this one is about the audit's own instrument.** A full-suite run went
+red on *"predefined 'dust' produces non-zero output"*, then passed alone. `dust` is a sparse
+stochastic generator: at its default density the spec's 4410-frame block expects ~4 impulses, so
+**P(silence) = e^-4 ≈ 1.8%, a failure about one run in fifty.** Every mutation verdict in this
+campaign is read off this suite, and a random red is indistinguishable from a killed mutant. Fixed by
+driving `dust` at full density (P(silence) ≈ 2e-9) without changing what the row claims.
+
+**Standing rule added:** a stochastic generator asserted over a finite window needs its silence
+probability computed, not assumed.
+
 **The lesson of this pass is the mirror of the first one.** The standing note warned that findings go
 *stale*. This sweep found the other failure: **four claims were wrong the day they were written** —
 three because the census matched one assertion dialect and this repo uses several, one because a grep

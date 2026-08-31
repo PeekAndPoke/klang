@@ -487,6 +487,29 @@ the sample floor, and the two E4 code paths' reachability concern. B2 never land
 `PitchEnvelopeRenderer:30` (both already use `blockStart + offset`), `FilterModRenderer`, `FmRenderer`,
 `SendRenderer`, and `Voice.render` itself.
 
+> 🟡 **Control-rate half DONE 2026-08-31 — `voices.strip.MidBlockOnsetControlRateSpec`.**
+> Surveyed all twelve strip renderers. Four derive their position as `blockStart + offset`
+> (`EnvelopeRenderer:87`, `IgniteRenderer:43`, `AccelerateRenderer:39`, `PitchEnvelopeRenderer:30`).
+> **Two do not** — `FilterModRenderer:32` and `FmRenderer:43` hand `calculateControlRateEnvelope` the
+> raw `ctx.blockStart`.
+>
+> **That is correct, but only by construction elsewhere, and neither end says so.** `Voice.render`
+> sets `offset = maxOf(blockStart, startFrame) - blockStart`; `EnvelopeCalc` opens with
+> `currentFrame = maxOf(blockStart, startFrame)`. Same expression, so the callee's clamp *is* those
+> two callers' offset compensation. It is load-bearing, not decoration: at `attackFrames == 0` a
+> negative `absPos` takes the **attack** branch and coerces to 0.0, where the clamped `absPos = 0`
+> falls through to **sustain**. Removing it silences the modulation for the whole onset block of any
+> mid-block voice.
+>
+> This also closes audit finding **F3**, whose mutation (`currentFrame = blockStart`) had survived
+> the entire 1373-test suite and is now red on both new rows.
+>
+> **Still open in P4:** `SendRenderer` (reads `ctx.offset` for the copy loop, but takes
+> `ctx.renderContext.blockStart` for `getOrInit` — unreviewed), and `Voice.render` itself as the
+> source of `offset`/`length`. The per-sample renderers (`Vibrato`, `Crush`, `Coarse`, `Distortion`,
+> `StripPhaser`, `Tremolo`, `AudioFilter`) all index `ctx.offset + i` and carry no onset arithmetic
+> of their own, so they are out of scope for this item.
+
 **P5. The sample path** end to end, given instance 2.
 
 ## Settled (2026-08-28), recorded so they are not re-opened
