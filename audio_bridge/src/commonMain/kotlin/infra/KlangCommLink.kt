@@ -161,7 +161,7 @@ class KlangCommLink(capacity: Int = 8192) {
                  * an empty chunk carrying `isLastChunk`. Harmless (an empty `copyInto` is a no-op)
                  * and it still completes the sample, but it is one wasted message.
                  */
-                fun toChunks(chunkFrames: Int = 16 * 1024): List<Chunk> {
+                fun toChunks(chunkFrames: Int = 64 * 1024): List<Chunk> {
                     val numChunks = (sample.pcm.size / chunkFrames) + 1
 
                     return (0 until numChunks).map { i ->

@@ -285,7 +285,7 @@ class JsAudioBackend(
 
                     is KlangCommLink.Cmd.Sample.Complete -> {
                         // Complete samples will be split and put into the [cmdBuffer]
-                        val chunks = cmd.toChunks(64 * 1024)
+                        val chunks = cmd.toChunks(128 * 1024)
 
                         chunks.forEach { chunk -> sampleUploadBuffer.send(chunk) }
                     }

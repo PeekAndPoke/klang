@@ -306,7 +306,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             if (!benchmarkStarted && elapsedMs() >= bgFadeDurationMs + uiFadeDurationMs) {
                 benchmarkStarted = true
                 motorBackgroundRef { it.startScan() }
-                launch { benchmark.run(iterations = 5) }
+                launch { benchmark.run(iterations = 3) }
             }
         }
 

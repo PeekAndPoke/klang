@@ -67,8 +67,8 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body("mahogany").pan(0.66) // .struct()
-    .superimpose(fast(2).velocity(0.1).pan(0.2).superimpose(pan(0.8)))
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.55).body("mahogany").pan(0.66) // .struct()
+    .superimpose(fast(2).velocity(0.2).pan(0.2).superimpose(pan(0.8)))
 
   // Shakuhachi
   ,note(`
@@ -79,8 +79,8 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).orbit(1).sound(shaku).slow(14).gain(0.20).pan(perlin.range(0.3, 0.7).slow(8)).pan(0.33)
-    .lpf(perlin.range(3600, 3800).slow(2)).body("rosewood")
+  `).orbit(1).sound(shaku).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(8)).pan(0.33)
+    .lpf(perlin.range(3800, 4000).slow(2)).body("rosewood")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums

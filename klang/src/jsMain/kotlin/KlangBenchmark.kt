@@ -48,7 +48,7 @@ class KlangBenchmark(
             activeVoices = 0,
             currentRtf = 0.0,
             currentIteration = 0,
-            totalIterations = 5,
+            totalIterations = 3,
             isComplete = false
         )
     )
