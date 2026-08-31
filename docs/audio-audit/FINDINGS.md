@@ -384,6 +384,32 @@ the test would pass even if that path were deleted.
    branch six times. It can never distinguish a per-curve boundary bug; the
    `for` loop over all six curves is decoration.
 
+> ✅ **ALL THREE FIXED 2026-08-31.**
+>
+> **(1) The clamp's REACH was the missing piece, not the test's parameters.** Walking
+> `EnvelopeRenderer`'s branches shows no amount of release tuning could have helped: attack has
+> `p` in `[0,1)`, decay has `omp` in `(0,1]`, and release clamps `p` with `coerceAtMost(1.0)` so
+> `omp >= 0`. Every path is non-negative **unless `sustain` itself is negative** — and the VCA path
+> allows exactly that, because `Voice.kt:247` passes `sustainLevel = adsr.sustain` straight through.
+> The ignitor door coerces to `[0,1]` (`IgnitorEnvelopes.kt:75`); the strip VCA does not, and under
+> the raw-Motor rule that is a choice rather than an oversight. So a **negative sustain** is the
+> clamp's actual reach, and without the clamp the voice renders **phase-inverted at half level**
+> rather than silent. A new row covers it; the original is kept and annotated, since it does document
+> the past-release case.
+>
+> **(2)** Two samples now land inside the decay window, which nothing did before. They sit at 150 and
+> 190 rather than straddling the window's start: the gain smoother lags, so the rendered peak trails
+> the raw envelope's and a 99-vs-120 comparison measures the smoother catching up, not the decay.
+> *(Learned by writing it that way first and watching it fail.)*
+>
+> **(3)** A mid-decay row pins the golden values the documented law predicts (Linear 0.65, Square
+> 0.475, Cube 0.3875 at sustain 0.3) and asserts the six curves are distinct — **at the quarter point,
+> not the midpoint.** At the midpoint only five of six values differ, and that is mathematics rather
+> than a defect: `SCurve` is piecewise around 0.5 and evaluates to exactly 0.5 there, which is also
+> Linear's value, because an S-curve passes through its own midpoint by construction.
+>
+> Mutations: disabling the negative clamp, and perturbing the decay law. Both red.
+
 ---
 
 ## F9 — A misattribution worth keeping as a method note 🟢
