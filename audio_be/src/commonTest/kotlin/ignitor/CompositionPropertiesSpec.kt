@@ -42,8 +42,7 @@ class CompositionPropertiesSpec : StringSpec({
         releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 

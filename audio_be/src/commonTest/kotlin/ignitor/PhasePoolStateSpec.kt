@@ -221,7 +221,7 @@ class PhasePoolStateSpec : StringSpec({
             gateEndFrame = sampleRate,
             releaseFrames = n,
             scratchBuffers = ScratchBuffers(n),
-        ).apply { offset = 0; length = n; voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(0, n); voiceElapsedFrames = 0 }
         sig.generate(buffer, 375.0, ctx)
         var re = 0.0
         var im = 0.0

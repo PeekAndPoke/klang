@@ -92,9 +92,9 @@ class VcaOffTeardownSpec : StringSpec({
         var pos = 0
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
-            signalCtx.offset = 0; signalCtx.length = n; signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
-            ctx.offset = 0; ctx.length = n; ctx.blockStart = pos.toDouble()
+            ctx.updateOffsetAndLength(0, n); ctx.blockStart = pos.toDouble()
             renderer.render(ctx)
             for (i in 0 until n) out[pos + i] = block[i]
             pos += n
@@ -136,10 +136,10 @@ class VcaOffTeardownSpec : StringSpec({
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
-            signalCtx.offset = 0; signalCtx.length = n; signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
 
-            ctx.offset = 0; ctx.length = n; ctx.blockStart = pos.toDouble()
+            ctx.updateOffsetAndLength(0, n); ctx.blockStart = pos.toDouble()
             renderer.render(ctx)
 
             for (i in 0 until n) out[pos + i] = block[i]
@@ -163,7 +163,7 @@ class VcaOffTeardownSpec : StringSpec({
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
-            signalCtx.offset = 0; signalCtx.length = n; signalCtx.voiceElapsedFrames = pos
+            signalCtx.updateOffsetAndLength(0, n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
             for (i in 0 until n) out[pos + i] = block[i]
             pos += n

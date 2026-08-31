@@ -101,7 +101,7 @@ class PhasePoolSpec : StringSpec({
         )
         var sumSq = 0.0
         for (b in 0 until blocks) {
-            ctx.apply { offset = 0; length = blockFrames; voiceElapsedFrames = b * blockFrames }
+            ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
             sig.generate(buffer, freqHz, ctx)
             for (i in 0 until blockFrames) {
                 sumSq += buffer[i] * buffer[i]
@@ -169,7 +169,7 @@ class PhasePoolSpec : StringSpec({
         var idx = 0
         val w = TWO_PI * freqHz / sampleRate
         for (b in 0 until blocks) {
-            ctx.apply { offset = 0; length = blockFrames; voiceElapsedFrames = b * blockFrames }
+            ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
             sig.generate(buffer, freqHz, ctx)
             for (i in 0 until blockFrames) {
                 re += buffer[i] * cos(w * idx)
@@ -310,7 +310,7 @@ class PhasePoolSpec : StringSpec({
                 gateEndFrame = sampleRate,
                 releaseFrames = blockFrames,
                 scratchBuffers = ScratchBuffers(blockFrames),
-            ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
+            ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
             sig.generate(buffer, freqHz, ctx)
             withClue(name) { rng.nextDouble() shouldBe expected }
         }
@@ -325,7 +325,7 @@ class PhasePoolSpec : StringSpec({
         class VoicesParam(var value: Double) : Ignitor {
             override fun controlRateValueOrNull(freqHz: Double): Double = value
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-                buffer.fill(value, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(value, ctx.offset, ctx.windowEnd)
             }
         }
 
@@ -357,7 +357,7 @@ class PhasePoolSpec : StringSpec({
                 if (b == 2) {
                     voicesParam.value = 13.0
                 }
-                ctx.apply { offset = 0; length = blockFrames; voiceElapsedFrames = b * blockFrames }
+                ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
                 sig.generate(buffer, freqHz, ctx)
                 for (i in 0 until blockFrames) {
                     if (idx > 0) {

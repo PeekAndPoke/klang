@@ -38,7 +38,7 @@ class SuperStackTransitionSpec : StringSpec({
     /** 5 voices before note-relative frame 256, 6 from there on (block-start observed by design). */
     val steppingVoices = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            for (i in ctx.offset until ctx.offset + ctx.length) {
+            for (i in ctx.offset until ctx.windowEnd) {
                 val abs = ctx.voiceElapsedFrames + (i - ctx.offset)
                 buffer[i] = if (abs < 256) 5.0 else 6.0
             }
@@ -60,8 +60,7 @@ class SuperStackTransitionSpec : StringSpec({
         )
         val tmp = AudioBuffer(blockFrames)
         fun renderBlock(pos: Int) {
-            ctx.offset = 0
-            ctx.length = blockFrames
+            ctx.updateOffsetAndLength(0, blockFrames)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, 220.0, ctx)
         }

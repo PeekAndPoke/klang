@@ -114,8 +114,7 @@ class GuitarClickHuntTest : StringSpec({
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
-            ctx.offset = 0
-            ctx.length = n
+            ctx.updateOffsetAndLength(0, n)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, freqHz, ctx)
             for (i in 0 until n) out[pos + i] = tmp[i]
@@ -608,13 +607,13 @@ internal fun Ignitor.distortVariant(
                 upstream.generate(work, freqHz, ctx)
 
                 if (amount <= 0.0) {
-                    val end = ctx.offset + ctx.length
+                    val end = ctx.windowEnd
                     for (i in ctx.offset until end) buffer[i] = work[i]
                     return@use
                 }
 
                 val driveGain = 10.0.pow(amount * 1.2)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
 
                 // Pre-shape DC block (PRE_BLOCK only).
                 if (variant == DistortVariant.PRE_BLOCK) {

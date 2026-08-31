@@ -49,8 +49,7 @@ class ExcitersTest : StringSpec({
             releaseFrames = 4410,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            offset = 0
-            length = blockFrames
+            updateOffsetAndLength(0, blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -1216,7 +1215,7 @@ class ExcitersTest : StringSpec({
                 blockFrames = defaultBlockFrames, sampleRate = sampleRate,
             ),
         ).apply {
-            offset = 0; length = defaultBlockFrames; blockStart = 0.0
+            updateOffsetAndLength(0, defaultBlockFrames); blockStart = 0.0
         }
         val renderer = io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer(
             signal = signal,

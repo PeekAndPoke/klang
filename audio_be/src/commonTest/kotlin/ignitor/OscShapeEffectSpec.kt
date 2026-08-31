@@ -36,8 +36,7 @@ class OscShapeEffectSpec : StringSpec({
         releaseFrames = (0.1 * sampleRate).toInt(),
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 

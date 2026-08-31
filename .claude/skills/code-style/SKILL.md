@@ -72,6 +72,24 @@ for (i in ctx.offset until end) {
 }
 ```
 
+And a blank line before every `return` (added 2026-08-31), unless the `return` is the only
+statement in its block. Early-return ladders read as steps that way, and the final `return` of a
+function separates from the work that produced its value. A comment attached to the `return` stays
+attached: the blank goes above the comment, not between comment and `return`.
+
+```kotlin
+if (kw != null) {
+    val kwInv = 1.0 - kw
+
+    from.generate(buffer, freqHz, ctx)
+
+    return
+}
+
+// fine as-is — the return is the whole block
+fun Ignitor.mul(factor: Ignitor): Ignitor = this * factor
+```
+
 **Wrong:**
 
 ```kotlin

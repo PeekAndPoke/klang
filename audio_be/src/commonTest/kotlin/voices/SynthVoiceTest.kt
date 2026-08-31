@@ -64,7 +64,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 receivedPhaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }
@@ -88,7 +88,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 receivedPhaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }
@@ -186,7 +186,7 @@ class SynthVoiceTest : StringSpec({
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 receivedOffset = ctx.offset
                 receivedLength = ctx.length
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }
@@ -210,7 +210,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 receivedLength = ctx.length
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }
@@ -233,7 +233,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 elapsedFrames.add(ctx.voiceElapsedFrames)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }

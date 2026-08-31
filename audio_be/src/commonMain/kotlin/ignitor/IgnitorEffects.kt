@@ -113,7 +113,7 @@ private class DriveIgnitor(
             upstream.generate(work, freqHz, ctx)
 
             val amt = Ignitors.readParam(amount, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             if (amt <= 0.0) {
                 for (i in ctx.offset until end) {
@@ -177,7 +177,7 @@ private class ShapeIgnitor(
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             val s = shape
             val os = oversampler
 
@@ -236,7 +236,7 @@ private class CrushIgnitor(
             upstream.generate(work, freqHz, ctx)
 
             val amt = Ignitors.readParam(amount, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             val levels = 2.0.pow(amt)
             if (levels < 2.0) {
@@ -305,7 +305,7 @@ private class CoarseIgnitor(
             upstream.generate(work, freqHz, ctx)
 
             val amt = Ignitors.readParam(amount, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             // Ledger W3: the guard is load-bearing only for amt <= 0 (a negative increment
             // would walk the counter down and hold forever) and for non-finite amounts (a NaN
@@ -428,7 +428,7 @@ private class PhaserIgnitor(
             phaser.prepareBlock(ctx.length)
 
             val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             if (wetVal <= 0.0) {
                 // Allpass state is CLEARED on bypass entry (the shimmer's C4.1 policy, ledger D5):
@@ -526,7 +526,7 @@ private class TremoloIgnitor(
 
             val rateVal = Ignitors.readParam(rate, freqHz, ctx)
             val depthVal = Ignitors.readParam(depth, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
 
             if (depthVal <= 0.0) {
@@ -646,7 +646,7 @@ private class ShimmerIgnitor(
             val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
             // Read (tick) dryFloor unconditionally too — the D1 rule, all four slots.
             val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             // C4: wet == 0 IS bypass, regardless of feedback — bit-identical passthrough is
             // the wet(0) contract. State is CLEARED on bypass entry (decided in the C4.1

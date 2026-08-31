@@ -84,11 +84,50 @@ class BlockContext(
     // Mutable per block (updated before pipeline runs)
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /** Start index in buffer for this block */
+    /** Start index in buffer for this block. Moved via [updateOffsetAndLength] / [updateOffset]. */
     var offset: Int = 0
+        private set
 
-    /** Number of samples to process */
+    /** Number of samples to process. Moved via [updateOffsetAndLength] / [updateLength]. */
     var length: Int = 0
+        private set
+
+    /**
+     * One past the last buffer index this block touches, i.e. `offset + length`.
+     *
+     * All three window fields are `private set` so this one CANNOT go stale: the only way in is
+     * the update functions below, which recompute it once. That matters more than the arithmetic
+     * it saves — a wrong render window is the block-framing bug class
+     * (`docs/plans/block-framing-invariance.md`), and a hand-maintained copy would invite it back.
+     *
+     * The ignitor side does the same — see [IgniteContext.windowEnd].
+     */
+    var windowEnd: Int = 0
+        private set
+
+    /**
+     * Moves the whole render window — the normal per-block update.
+     *
+     * [windowEnd] is recomputed ONCE here. Assigning the two fields separately would compute it
+     * twice and, in between, leave the context describing a window that never existed.
+     */
+    fun updateOffsetAndLength(offset: Int, length: Int) {
+        this.offset = offset
+        this.length = length
+        this.windowEnd = offset + length
+    }
+
+    /** Moves the window start, keeping [length]. */
+    fun updateOffset(offset: Int) {
+        this.offset = offset
+        this.windowEnd = offset + length
+    }
+
+    /** Resizes the window, keeping [offset]. */
+    fun updateLength(length: Int) {
+        this.length = length
+        this.windowEnd = offset + length
+    }
 
     /** Current block start frame (absolute) */
     // Absolute backend frame — Double, see RenderClock.cursorFrame. Per-sample offsets stay Int.

@@ -142,8 +142,7 @@ class BlockFramingInvarianceSpec : StringSpec({
         while (pos < total) {
             val n = minOf(lengths[li % lengths.size], total - pos)
             li++
-            ctx.offset = 0
-            ctx.length = n
+            ctx.updateOffsetAndLength(0, n)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, freqHz, ctx)
             for (i in 0 until n) out[pos + i] = tmp[i]

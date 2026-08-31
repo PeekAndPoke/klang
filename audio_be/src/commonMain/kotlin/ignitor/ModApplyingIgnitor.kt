@@ -30,7 +30,7 @@ internal class ModApplyingIgnitor(val inner: Ignitor, val mod: Ignitor) : Ignito
 
             ctx.scratchBuffers.useDouble { ratioArray ->
                 val existing = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
 
                 if (existing != null) {
                     for (i in ctx.offset until end) {

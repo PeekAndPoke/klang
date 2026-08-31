@@ -43,8 +43,7 @@ class OnepoleParitySpec : StringSpec({
 
     fun render(chain: Ignitor): DoubleArray {
         val c = ctx()
-        c.offset = 0
-        c.length = blockFrames
+        c.updateOffsetAndLength(0, blockFrames)
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(frames)
         repeat(blocks) { blk ->
@@ -92,8 +91,7 @@ class OnepoleParitySpec : StringSpec({
         // old `warmth` was); the pin is the measured truth, not a design claim.
         fun rms(chain: Ignitor, freqHz: Double): Double {
             val c = ctx()
-            c.offset = 0
-            c.length = blockFrames
+            c.updateOffsetAndLength(0, blockFrames)
             val buf = AudioBuffer(blockFrames)
             var sum = 0.0
             var n = 0

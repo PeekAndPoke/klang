@@ -39,8 +39,7 @@ class ExciterCombinatorsSpec : StringSpec({
             releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            offset = 0
-            length = blockFrames
+            updateOffsetAndLength(0, blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -187,7 +186,7 @@ class ExciterCombinatorsSpec : StringSpec({
         val dcOffsetExciter: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 Ignitors.sine().generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     buffer[i] = buffer[i] + 0.5 // Add DC offset
                 }

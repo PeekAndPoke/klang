@@ -68,7 +68,7 @@ class DistortionRenderer(
         } else {
             // Direct path: NaN guard inline — a NaN escaping here would permanently
             // corrupt the downstream IIR DcBlocker.
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buf[i] = applyDistortionShape(s, buf[i] * d).nanGuard()
             }

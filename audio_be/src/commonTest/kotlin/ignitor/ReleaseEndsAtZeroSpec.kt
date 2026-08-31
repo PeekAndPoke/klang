@@ -75,7 +75,7 @@ class ReleaseEndsAtZeroSpec : StringSpec({
         var pos = 0
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
-            ctx.offset = 0; ctx.length = n; ctx.voiceElapsedFrames = pos
+            ctx.updateOffsetAndLength(0, n); ctx.voiceElapsedFrames = pos
             ig.generate(tmp, freqHz = 100.0, ctx = ctx)
             for (i in 0 until n) out[pos + i] = tmp[i]
             pos += n
@@ -141,7 +141,7 @@ class ReleaseEndsAtZeroSpec : StringSpec({
                     scratchBuffers = ScratchBuffers(total),
                 ),
                 cylinders = Cylinders(blockFrames = total, sampleRate = sampleRate),
-            ).apply { offset = 0; length = total; blockStart = 0.0 }
+            ).apply { updateOffsetAndLength(0, total); blockStart = 0.0 }
 
             renderer.render(ctx)
 
@@ -185,7 +185,7 @@ class ReleaseEndsAtZeroSpec : StringSpec({
                 scratchBuffers = ScratchBuffers(rendered),
             ),
             cylinders = Cylinders(blockFrames = rendered, sampleRate = sampleRate),
-        ).apply { offset = 0; length = rendered; blockStart = 0.0 }
+        ).apply { updateOffsetAndLength(0, rendered); blockStart = 0.0 }
 
         renderer.render(ctx)
         abs(buf[rendered - 1]) shouldBe 0.0

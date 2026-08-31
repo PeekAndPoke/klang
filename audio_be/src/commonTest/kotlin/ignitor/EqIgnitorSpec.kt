@@ -49,8 +49,7 @@ class EqIgnitorSpec : StringSpec({
         releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -189,8 +188,7 @@ class EqIgnitorSpec : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
             random = r,
         ).apply {
-            offset = 0
-            length = blockFrames
+            updateOffsetAndLength(0, blockFrames)
             voiceElapsedFrames = 0
         }
 
@@ -219,14 +217,14 @@ class EqIgnitorSpec : StringSpec({
         val upstreamProbe = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 order.add("upstream")
-                buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(0.0, ctx.offset, ctx.windowEnd)
             }
         }
         val paramProbe = object : Ignitor {
             // controlRateValueOrNull stays null -> readParam takes the scratch-render path.
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 order.add("param")
-                buffer.fill(1000.0, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(1000.0, ctx.offset, ctx.windowEnd)
             }
         }
         val eq = EqIgnitor(
@@ -317,8 +315,7 @@ class EqIgnitorSpec : StringSpec({
                 releaseFrames = 0,
                 scratchBuffers = ScratchBuffers(blockFrames),
             ).apply {
-                offset = 0
-                length = blockFrames
+                updateOffsetAndLength(0, blockFrames)
                 voiceElapsedFrames = 0
             }
         }
@@ -645,8 +642,8 @@ class EqIgnitorSpec : StringSpec({
         val sentinel = 123.456
         val bufA = AudioBuffer(blockFrames).apply { fill(sentinel) }
         val bufB = AudioBuffer(blockFrames).apply { fill(sentinel) }
-        val ca = ctx().apply { this.offset = offset; this.length = length; voiceElapsedFrames = -offset }
-        val cb = ctx().apply { this.offset = offset; this.length = length; voiceElapsedFrames = -offset }
+        val ca = ctx().apply { this.updateOffsetAndLength(offset, length); voiceElapsedFrames = -offset }
+        val cb = ctx().apply { this.updateOffsetAndLength(offset, length); voiceElapsedFrames = -offset }
         a.generate(bufA, 220.0, ca)
         b.generate(bufB, 220.0, cb)
         for (i in 0 until blockFrames) {

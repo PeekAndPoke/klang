@@ -85,7 +85,7 @@ class TremoloRenderer(
         val second = scaleSecond
         var p = phase
 
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             // wrapPhase over the bare subtract (ledger W2): identical in range; a non-finite
             // or negative rate can no longer kill the phase for the voice's life.

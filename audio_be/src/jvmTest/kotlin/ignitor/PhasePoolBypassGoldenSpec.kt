@@ -83,7 +83,7 @@ class PhasePoolBypassGoldenSpec : StringSpec({
         var first = 0.0
         var idx = 0
         for (b in 0 until blocks) {
-            ctx.apply { offset = 0; length = blockFrames; voiceElapsedFrames = b * blockFrames }
+            ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
             sig.generate(buffer, freqHz, ctx)
             for (i in 0 until blockFrames) {
                 if (idx == 0) {

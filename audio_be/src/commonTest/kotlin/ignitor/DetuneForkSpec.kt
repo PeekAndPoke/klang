@@ -42,8 +42,7 @@ class DetuneForkSpec : StringSpec({
 
         repeat(blocks) { b ->
             ctx.voiceElapsedFrames = b * blockFrames
-            ctx.offset = 0
-            ctx.length = blockFrames
+            ctx.updateOffsetAndLength(0, blockFrames)
             buf.fill(0.0)
             ignitor.generate(buf, freqHz, ctx)
 

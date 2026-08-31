@@ -52,10 +52,8 @@ class IgniteContext(
     val random: Random = Random,
 
     // ── Mutable per block (updated by caller before each generate() call) ──────
-    /** Start index in buffer for this block */
-    var offset: Int = 0,
-    /** Number of samples to generate */
-    var length: Int = 0,
+    // NOTE: `offset` and `length` are NOT here — they live in the body, because they carry
+    // custom setters that keep [windowEnd] in sync, and a constructor property cannot have one.
     /**
      * Frames since voice start (monotonic, updated once per block), counted AT buffer index
      * [offset] — NOT at index 0. A voice's first `generate` call sees 0. Every consumer adds its
@@ -74,6 +72,54 @@ class IgniteContext(
      */
     var phaseMod: DoubleArray? = null,
 ) {
+    // ── Mutable per block (updated by caller before each generate() call) ──────
+
+    /** Start index in buffer for this block. Moved via [updateOffsetAndLength] / [updateOffset]. */
+    var offset: Int = 0
+        private set
+
+    /** Number of samples to generate. Moved via [updateOffsetAndLength] / [updateLength]. */
+    var length: Int = 0
+        private set
+
+    /**
+     * One past the last buffer index this block touches, i.e. `offset + length`.
+     *
+     * All three window fields are `private set` so this one CANNOT go stale: the only way in is
+     * the update functions below, which recompute it once. That matters more than the arithmetic
+     * it saves — a wrong render window is the block-framing bug class
+     * (`docs/plans/block-framing-invariance.md`), and a hand-maintained copy would invite it back.
+     *
+     * Read it instead of recomputing the sum: ~120 render methods used to open with
+     * `val end = ctx.offset + ctx.length`, once per node per block.
+     */
+    var windowEnd: Int = 0
+        private set
+
+    /**
+     * Moves the whole render window — the normal per-block update.
+     *
+     * [windowEnd] is recomputed ONCE here. Assigning the two fields separately would compute it
+     * twice and, in between, leave the context describing a window that never existed.
+     */
+    fun updateOffsetAndLength(offset: Int, length: Int) {
+        this.offset = offset
+        this.length = length
+        this.windowEnd = offset + length
+    }
+
+    /** Moves the window start, keeping [length]. */
+    fun updateOffset(offset: Int) {
+        this.offset = offset
+        this.windowEnd = offset + length
+    }
+
+    /** Resizes the window, keeping [offset]. */
+    fun updateLength(length: Int) {
+        this.length = length
+        this.windowEnd = offset + length
+    }
+
     // ── Computed properties (derived from above, no storage) ───────────────────
 
     /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */

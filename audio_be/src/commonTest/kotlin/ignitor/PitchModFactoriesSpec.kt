@@ -26,8 +26,7 @@ class PitchModFactoriesSpec : StringSpec({
         releaseFrames = 0,
         scratchBuffers = ScratchBuffers(frames),
     ).apply {
-        offset = 0
-        length = frames
+        updateOffsetAndLength(0, frames)
         voiceElapsedFrames = 0
     }
 
@@ -198,7 +197,7 @@ class PitchModFactoriesSpec : StringSpec({
     /** 300 except absPos in [128, 256) — one exactly block-aligned zero window at blockFrames 128. */
     val gapDepth = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            for (i in ctx.offset until ctx.offset + ctx.length) {
+            for (i in ctx.offset until ctx.windowEnd) {
                 val abs = ctx.voiceElapsedFrames + (i - ctx.offset)
                 buffer[i] = if (abs in 128..255) 0.0 else 300.0
             }
@@ -218,8 +217,7 @@ class PitchModFactoriesSpec : StringSpec({
         val tmp = AudioBuffer(128)
         var pos = 0
         while (pos < totalFrames) {
-            ctx.offset = 0
-            ctx.length = 128
+            ctx.updateOffsetAndLength(0, 128)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, 220.0, ctx)
             for (i in 0 until 128) out[pos + i] = tmp[i]
@@ -248,7 +246,7 @@ class PitchModFactoriesSpec : StringSpec({
     "vibrato: the LFO's phase survives a depth gap (ledger E2)" {
         val gapSemitones = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-                for (i in ctx.offset until ctx.offset + ctx.length) {
+                for (i in ctx.offset until ctx.windowEnd) {
                     val abs = ctx.voiceElapsedFrames + (i - ctx.offset)
                     buffer[i] = if (abs in 128..255) 0.0 else 0.5
                 }
@@ -290,8 +288,7 @@ class PitchModFactoriesSpec : StringSpec({
             var pos = 0
             while (pos < total) {
                 val n = minOf(128, total - pos)
-                ctx.offset = 0
-                ctx.length = n
+                ctx.updateOffsetAndLength(0, n)
                 ctx.voiceElapsedFrames = pos
                 ig.generate(tmp, 523.25, ctx)
                 for (i in 0 until n) out[pos + i] = tmp[i]
@@ -343,8 +340,7 @@ class PitchModFactoriesSpec : StringSpec({
             var pos = 0
             while (pos < total) {
                 val n = minOf(128, total - pos)
-                ctx.offset = 0
-                ctx.length = n
+                ctx.updateOffsetAndLength(0, n)
                 ctx.voiceElapsedFrames = pos
                 ig.generate(tmp, 523.25, ctx)
                 for (i in 0 until n) out[pos + i] = tmp[i]

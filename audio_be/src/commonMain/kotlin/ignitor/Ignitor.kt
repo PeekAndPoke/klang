@@ -123,7 +123,7 @@ interface Ignitor {
  * (Plus is a naturally bounded op, see the safety table below).
  */
 private fun addConstInPlace(buffer: AudioBuffer, ctx: IgniteContext, k: Double) {
-    val end = ctx.offset + ctx.length
+    val end = ctx.windowEnd
     for (i in ctx.offset until end) {
         buffer[i] = buffer[i] + k
     }
@@ -137,7 +137,7 @@ private fun addConstInPlace(buffer: AudioBuffer, ctx: IgniteContext, k: Double) 
  * `audio/ref/performance.md` bans — one concrete helper per op.)
  */
 private fun mulConstInPlace(buffer: AudioBuffer, ctx: IgniteContext, k: Double) {
-    val end = ctx.offset + ctx.length
+    val end = ctx.windowEnd
     for (i in ctx.offset until end) {
         buffer[i] = safeOut(buffer[i] * k)
     }
@@ -176,7 +176,8 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
                 // clamp-free (safety table below), and clamping ONLY here would break
                 // bit-identity with the scratch loop — 1e15 + 1e15 is 2e15 bare but 1e15
                 // clamped. Clamp Plus everywhere or nowhere; the contract says nowhere.
-                buffer.fill(ka + kb, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(ka + kb, ctx.offset, ctx.windowEnd)
+
                 return
             }
         }
@@ -186,6 +187,7 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
                 addConstInPlace(buffer, ctx, kb)
+
                 return
             }
         }
@@ -195,6 +197,7 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 addConstInPlace(buffer, ctx, ka)
+
                 return
             }
         }
@@ -203,7 +206,7 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
 
         ctx.scratchBuffers.use { tmp ->
             b.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = buffer[i] + tmp[i]
             }
@@ -213,6 +216,7 @@ private class PlusIgnitor(private val a: Ignitor, private val b: Ignitor) : Igni
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
+
         return x + y
     }
 }
@@ -245,7 +249,8 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
             if (ka != null && kb != null) {
                 // Both constant: one multiply, one safeOut, one fill — bit-identical to the
                 // per-sample paths, which compute the same op on the same operands per index.
-                buffer.fill(safeOut(ka * kb), ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(safeOut(ka * kb), ctx.offset, ctx.windowEnd)
+
                 return
             }
         }
@@ -255,6 +260,7 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
                 mulConstInPlace(buffer, ctx, kb)
+
                 return
             }
         }
@@ -264,6 +270,7 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
                 mulConstInPlace(buffer, ctx, ka)
+
                 return
             }
         }
@@ -272,7 +279,7 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
 
         ctx.scratchBuffers.use { tmp ->
             b.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = safeOut(buffer[i] * tmp[i])
             }
@@ -282,6 +289,7 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
+
         return safeOut(x * y)
     }
 }
@@ -292,6 +300,7 @@ fun Ignitor.mul(factor: Ignitor): Ignitor = this * factor
 /** Scale signal amplitude per-sample by a constant [factor]. Short-circuits when factor is 1.0. */
 fun Ignitor.mul(factor: Double): Ignitor {
     if (factor == 1.0) return this
+
     return MulConstIgnitor(this, factor)
 }
 
@@ -305,6 +314,7 @@ private class MulConstIgnitor(private val upstream: Ignitor, private val factor:
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return safeOut(x * factor)
     }
 }
@@ -333,7 +343,8 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val ka = a.controlRateValueOrNull(freqHz)
             val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
-                buffer.fill(safeOut(ka / safeDiv(kb)), ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(safeOut(ka / safeDiv(kb)), ctx.offset, ctx.windowEnd)
+
                 return
             }
         }
@@ -343,10 +354,11 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             if (kb != null) {
                 val d = safeDiv(kb)
                 a.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     buffer[i] = safeOut(buffer[i] / d)
                 }
+
                 return
             }
         }
@@ -355,10 +367,11 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     buffer[i] = safeOut(ka / safeDiv(buffer[i]))
                 }
+
                 return
             }
         }
@@ -367,7 +380,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
 
         ctx.scratchBuffers.use { tmp ->
             b.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = safeOut(buffer[i] / safeDiv(tmp[i]))
             }
@@ -377,6 +390,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
+
         return safeOut(x / safeDiv(y))
     }
 }
@@ -387,6 +401,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
  */
 fun Ignitor.div(divisor: Double): Ignitor {
     val safeFactor = 1.0 / safeDiv(divisor)
+
     return mul(safeFactor)
 }
 
@@ -406,7 +421,8 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
             val ka = a.controlRateValueOrNull(freqHz)
             val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
-                buffer.fill(ka - kb, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(ka - kb, ctx.offset, ctx.windowEnd)
+
                 return
             }
         }
@@ -415,10 +431,11 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
             val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     buffer[i] = buffer[i] - kb
                 }
+
                 return
             }
         }
@@ -427,10 +444,11 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
             val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     buffer[i] = ka - buffer[i]
                 }
+
                 return
             }
         }
@@ -439,7 +457,7 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
 
         ctx.scratchBuffers.use { tmp ->
             b.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = buffer[i] - tmp[i]
             }
@@ -449,6 +467,7 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
+
         return x - y
     }
 }
@@ -461,7 +480,7 @@ private class NegIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             buffer[i] = -buffer[i]
         }
@@ -469,6 +488,7 @@ private class NegIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return -x
     }
 }
@@ -481,7 +501,7 @@ private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             val v = buffer[i]
             buffer[i] = if (v < 0.0) -v else v
@@ -490,6 +510,7 @@ private class AbsIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return if (v < 0.0) -v else v
     }
 }
@@ -516,7 +537,8 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
             val ke = exp.controlRateValueOrNull(freqHz)
             if (kb != null && ke != null) {
                 val raw = if (kb >= 0.0) kb.pow(ke) else -((-kb).pow(ke))
-                buffer.fill(safeOut(raw), ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(safeOut(raw), ctx.offset, ctx.windowEnd)
+
                 return
             }
         }
@@ -525,12 +547,13 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
             val ke = exp.controlRateValueOrNull(freqHz)
             if (ke != null) {
                 base.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val b = buffer[i]
                     val raw = if (b >= 0.0) b.pow(ke) else -((-b).pow(ke))
                     buffer[i] = safeOut(raw)
                 }
+
                 return
             }
         }
@@ -539,12 +562,13 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
             val kb = base.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 exp.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val e = buffer[i]
                     val raw = if (kb >= 0.0) kb.pow(e) else -((-kb).pow(e))
                     buffer[i] = safeOut(raw)
                 }
+
                 return
             }
         }
@@ -553,7 +577,7 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
 
         ctx.scratchBuffers.use { tmp ->
             exp.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 val b = buffer[i]
                 val e = tmp[i]
@@ -567,6 +591,7 @@ private class PowIgnitor(private val base: Ignitor, private val exp: Ignitor) : 
         val b = base.controlRateValueOrNull(freqHz) ?: return null
         val e = exp.controlRateValueOrNull(freqHz) ?: return null
         val raw = if (b >= 0.0) b.pow(e) else -((-b).pow(e))
+
         return safeOut(raw)
     }
 }
@@ -588,7 +613,8 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val ka = a.controlRateValueOrNull(freqHz)
             val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
-                buffer.fill(if (ka < kb) ka else kb, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(if (ka < kb) ka else kb, ctx.offset, ctx.windowEnd)
+
                 return
             }
         }
@@ -597,11 +623,12 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val x = buffer[i]
                     buffer[i] = if (x < kb) x else kb
                 }
+
                 return
             }
         }
@@ -610,11 +637,12 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val y = buffer[i]
                     buffer[i] = if (ka < y) ka else y
                 }
+
                 return
             }
         }
@@ -622,7 +650,7 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         a.generate(buffer, freqHz, ctx)
         ctx.scratchBuffers.use { tmp ->
             b.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 val x = buffer[i]
                 val y = tmp[i]
@@ -634,6 +662,7 @@ private class MinIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
+
         return if (x < y) x else y
     }
 }
@@ -653,7 +682,8 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val ka = a.controlRateValueOrNull(freqHz)
             val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
-                buffer.fill(if (ka > kb) ka else kb, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(if (ka > kb) ka else kb, ctx.offset, ctx.windowEnd)
+
                 return
             }
         }
@@ -662,11 +692,12 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
                 a.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val x = buffer[i]
                     buffer[i] = if (x > kb) x else kb
                 }
+
                 return
             }
         }
@@ -675,11 +706,12 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
                 b.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val y = buffer[i]
                     buffer[i] = if (ka > y) ka else y
                 }
+
                 return
             }
         }
@@ -687,7 +719,7 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         a.generate(buffer, freqHz, ctx)
         ctx.scratchBuffers.use { tmp ->
             b.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 val x = buffer[i]
                 val y = tmp[i]
@@ -699,6 +731,7 @@ private class MaxIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
+
         return if (x > y) x else y
     }
 }
@@ -723,7 +756,7 @@ private class ClampIgnitor(
             val kh = hi.controlRateValueOrNull(freqHz)
             if (kl != null && kh != null) {
                 upstream.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val v = buffer[i]
                     buffer[i] = when {
@@ -732,6 +765,7 @@ private class ClampIgnitor(
                         else -> v
                     }
                 }
+
                 return
             }
         }
@@ -741,7 +775,7 @@ private class ClampIgnitor(
             lo.generate(loBuf, freqHz, ctx)
             ctx.scratchBuffers.use { hiBuf ->
                 hi.generate(hiBuf, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val v = buffer[i]
                     val l = loBuf[i]
@@ -760,6 +794,7 @@ private class ClampIgnitor(
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         val l = lo.controlRateValueOrNull(freqHz) ?: return null
         val h = hi.controlRateValueOrNull(freqHz) ?: return null
+
         return when {
             v < l -> l
             v > h -> h
@@ -776,7 +811,7 @@ private class ExpIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             buffer[i] = safeOut(exp(buffer[i]))
         }
@@ -784,6 +819,7 @@ private class ExpIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return safeOut(exp(v))
     }
 }
@@ -801,7 +837,7 @@ private class LogIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             val v = buffer[i]
             buffer[i] = when {
@@ -814,6 +850,7 @@ private class LogIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return when {
             v > 0.0 -> ln(v)
             v < 0.0 -> -ln((-v))
@@ -830,12 +867,13 @@ private class SqrtIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return if (v >= 0.0) sqrt(v) else -sqrt((-v))
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             val v = buffer[i]
             buffer[i] = if (v >= 0.0) sqrt(v) else -sqrt((-v))
@@ -851,6 +889,7 @@ private class SignIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return when {
             v > 0.0 -> 1.0
             v < 0.0 -> -1.0
@@ -860,7 +899,7 @@ private class SignIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             val v = buffer[i]
             buffer[i] = when {
@@ -880,68 +919,103 @@ private class TanhIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return tanh(v)
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             buffer[i] = tanh(buffer[i])
         }
     }
 }
 
-/** Linear interpolation: `this·(1−t) + other·t`. Two scratch buffers. */
+/**
+ * Linear interpolation: `this·(1−t) + other·t`, i.e. [t] is how much of [other] is heard.
+ *
+ * `t = 0` is this signal alone, `t = 1` is [other] alone; values outside `[0, 1]` extrapolate and
+ * are deliberately NOT clamped (see `audio/ref/numerical-safety.md`). One scratch buffer for a
+ * block-constant [t], two when [t] is audio-rate.
+ */
 fun Ignitor.lerp(other: Ignitor, t: Ignitor): Ignitor = LerpIgnitor(this, other, t)
 
+/**
+ * @param from The signal heard at `weight = 0` — `IgnitorDsl.Lerp.left`, the chain the DSL call
+ *   hangs off (`x.lerp(y, t)` puts `x` here). Rendered straight into the output buffer.
+ * @param to The signal heard at `weight = 1` — `IgnitorDsl.Lerp.right`, the DSL's `other`.
+ *   Rendered into scratch, then mixed in.
+ * @param weight The per-sample crossfade position — `IgnitorDsl.Lerp.t`. Block-constant here is
+ *   the common case (a literal `0.3`) and takes the cheaper path in [generate].
+ */
 private class LerpIgnitor(
-    private val a: Ignitor,
-    private val b: Ignitor,
-    private val t: Ignitor,
+    private val from: Ignitor,
+    private val to: Ignitor,
+    private val weight: Ignitor,
 ) : Ignitor {
-    private val tConst = t.isBlockConstant
+    private val weightConst = weight.isBlockConstant
 
     override val isBlockConstant: Boolean =
-        a.isBlockConstant && b.isBlockConstant && tConst
+        from.isBlockConstant && to.isBlockConstant && weightConst
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = a.controlRateValueOrNull(freqHz) ?: return null
-        val y = b.controlRateValueOrNull(freqHz) ?: return null
-        val tv = t.controlRateValueOrNull(freqHz) ?: return null
-        return x * (1.0 - tv) + y * tv
+        val x = from.controlRateValueOrNull(freqHz) ?: return null
+        val y = to.controlRateValueOrNull(freqHz) ?: return null
+        val w = weight.controlRateValueOrNull(freqHz) ?: return null
+
+        return x * (1.0 - w) + y * w
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        // Partial fold: a block-constant `t` (the common `lerp(x, y, 0.3)` shape) skips one
-        // scratch render. Folding constant a/b too would be combinatorial for a rare shape —
+        // Partial fold: a block-constant `weight` (the common `lerp(x, y, 0.3)` shape) skips one
+        // scratch render. Folding constant from/to too would be combinatorial for a rare shape —
         // deliberately not done; a fully-constant Lerp folds at a FOLDING parent via the
         // overrides above (non-folding slots still run this loop — reachable, just rare).
         // Same breach policy as PlusIgnitor (null despite flag -> scratch path below).
-        if (tConst) {
-            val kt = t.controlRateValueOrNull(freqHz)
-            if (kt != null) {
-                a.generate(buffer, freqHz, ctx)
-                ctx.scratchBuffers.use { otherBuf ->
-                    b.generate(otherBuf, freqHz, ctx)
-                    val end = ctx.offset + ctx.length
+        if (weightConst) {
+            val kw = weight.controlRateValueOrNull(freqHz)
+
+            if (kw != null) {
+                // `1 − kw` is loop-invariant, hoisted NOT because the JIT would miss it (C2 and
+                // TurboFan both hoist a loop-invariant on a local) but because the baseline tiers
+                // run first and a short voice can be gone before the loop ever tiers up.
+                // Bit-identical either way.
+                val end = ctx.windowEnd
+                val kwInv = 1.0 - kw
+
+                from.generate(buffer, freqHz, ctx)
+
+                ctx.scratchBuffers.use { toBuf ->
+                    to.generate(toBuf, freqHz, ctx)
+
                     for (i in ctx.offset until end) {
-                        buffer[i] = buffer[i] * (1.0 - kt) + otherBuf[i] * kt
+                        buffer[i] = buffer[i] * kwInv + toBuf[i] * kw
                     }
                 }
+
                 return
             }
         }
 
-        a.generate(buffer, freqHz, ctx)
-        ctx.scratchBuffers.use { otherBuf ->
-            b.generate(otherBuf, freqHz, ctx)
-            ctx.scratchBuffers.use { tBuf ->
-                t.generate(tBuf, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+        from.generate(buffer, freqHz, ctx)
+
+        ctx.scratchBuffers.use { toBuf ->
+            to.generate(toBuf, freqHz, ctx)
+
+            ctx.scratchBuffers.use { weightBuf ->
+                val end = ctx.windowEnd
+
+                weight.generate(weightBuf, freqHz, ctx)
+
+                // NOTHING to hoist here: `w` changes every sample, so `1 − w` does too. The
+                // cheaper algebraic form `from + (to − from)·w` is deliberately NOT used — it
+                // would break bit-parity with the constant path above (ConstantFoldParitySpec)
+                // and lose the exact endpoints (`w = 1` must return `to` bit-exactly).
                 for (i in ctx.offset until end) {
-                    val tv = tBuf[i]
-                    buffer[i] = buffer[i] * (1.0 - tv) + otherBuf[i] * tv
+                    val w = weightBuf[i]
+
+                    buffer[i] = buffer[i] * (1.0 - w) + toBuf[i] * w
                 }
             }
         }
@@ -964,6 +1038,7 @@ private class RangeIgnitor(
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
         val l = lo.controlRateValueOrNull(freqHz) ?: return null
         val h = hi.controlRateValueOrNull(freqHz) ?: return null
+
         return l + (v + 1.0) * 0.5 * (h - l)
     }
 
@@ -974,25 +1049,42 @@ private class RangeIgnitor(
         if (boundsConst) {
             val kl = lo.controlRateValueOrNull(freqHz)
             val kh = hi.controlRateValueOrNull(freqHz)
+
             if (kl != null && kh != null) {
+                // Half the span, hoisted for the same reason as `LerpIgnitor`'s `kwInv`. The
+                // re-association is safe: scaling by 0.5 is exact, so `((x+1)·0.5)·span` and
+                // `(x+1)·(span·0.5)` are both ONE rounding of the same real product, and
+                // `ConstantFoldParitySpec` pins this loop against the audio-rate one below.
+                val end = ctx.windowEnd
+                val halfSpan = 0.5 * (kh - kl)
+
                 upstream.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+
                 for (i in ctx.offset until end) {
-                    buffer[i] = kl + (buffer[i] + 1.0) * 0.5 * (kh - kl)
+                    buffer[i] = kl + (buffer[i] + 1.0) * halfSpan
                 }
+
                 return
             }
         }
 
         upstream.generate(buffer, freqHz, ctx)
+
         ctx.scratchBuffers.use { loBuf ->
             lo.generate(loBuf, freqHz, ctx)
+
             ctx.scratchBuffers.use { hiBuf ->
+                val end = ctx.windowEnd
+
                 hi.generate(hiBuf, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+
+                // `h − l` is per-sample here, not invariant: both bounds are audio-rate signals.
+                // The form stays unfactored to match `controlRateValueOrNull` bit-for-bit
+                // (ControlRateScalarParitySpec renders this path as the scalar's oracle).
                 for (i in ctx.offset until end) {
                     val l = loBuf[i]
                     val h = hiBuf[i]
+
                     buffer[i] = l + (buffer[i] + 1.0) * 0.5 * (h - l)
                 }
             }
@@ -1008,12 +1100,15 @@ private class BipolarIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return v * 2.0 - 1.0
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val end = ctx.windowEnd
+
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+
         for (i in ctx.offset until end) {
             buffer[i] = buffer[i] * 2.0 - 1.0
         }
@@ -1028,12 +1123,15 @@ private class UnipolarIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return (v + 1.0) * 0.5
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val end = ctx.windowEnd
+
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+
         for (i in ctx.offset until end) {
             buffer[i] = (buffer[i] + 1.0) * 0.5
         }
@@ -1048,12 +1146,15 @@ private class FloorIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return floor(v)
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val end = ctx.windowEnd
+
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+
         for (i in ctx.offset until end) {
             buffer[i] = floor(buffer[i])
         }
@@ -1068,12 +1169,15 @@ private class CeilIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return ceil(v)
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val end = ctx.windowEnd
+
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+
         for (i in ctx.offset until end) {
             buffer[i] = ceil(buffer[i])
         }
@@ -1088,12 +1192,15 @@ private class RoundIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return round(v)
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val end = ctx.windowEnd
+
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+
         for (i in ctx.offset until end) {
             buffer[i] = round(buffer[i])
         }
@@ -1108,12 +1215,15 @@ private class FracIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return (v - floor(v))
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val end = ctx.windowEnd
+
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+
         for (i in ctx.offset until end) {
             val v = buffer[i]
             buffer[i] = (v - floor(v))
@@ -1138,6 +1248,7 @@ private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
+
         return x % safeDiv(y)
     }
 
@@ -1148,41 +1259,54 @@ private class ModIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         if (aConst && bConst) {
             val ka = a.controlRateValueOrNull(freqHz)
             val kb = b.controlRateValueOrNull(freqHz)
+
             if (ka != null && kb != null) {
-                buffer.fill(ka % safeDiv(kb), ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(ka % safeDiv(kb), ctx.offset, ctx.windowEnd)
+
                 return
             }
         }
 
         if (bConst) {
             val kb = b.controlRateValueOrNull(freqHz)
+
             if (kb != null) {
                 val d = safeDiv(kb)
+                val end = ctx.windowEnd
+
                 a.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+
                 for (i in ctx.offset until end) {
                     buffer[i] = buffer[i] % d
                 }
+
                 return
             }
         }
 
         if (aConst) {
             val ka = a.controlRateValueOrNull(freqHz)
+
             if (ka != null) {
+                val end = ctx.windowEnd
+
                 b.generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+
                 for (i in ctx.offset until end) {
                     buffer[i] = ka % safeDiv(buffer[i])
                 }
+
                 return
             }
         }
 
         a.generate(buffer, freqHz, ctx)
+
         ctx.scratchBuffers.use { tmp ->
+            val end = ctx.windowEnd
+
             b.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+
             for (i in ctx.offset until end) {
                 buffer[i] = buffer[i] % safeDiv(tmp[i])
             }
@@ -1203,12 +1327,15 @@ private class RecipIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return safeOut(1.0 / safeDiv(v))
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val end = ctx.windowEnd
+
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+
         for (i in ctx.offset until end) {
             buffer[i] = safeOut(1.0 / safeDiv(buffer[i]))
         }
@@ -1223,12 +1350,15 @@ private class SqIgnitor(private val upstream: Ignitor) : Ignitor {
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
+
         return safeOut(v * v)
     }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val end = ctx.windowEnd
+
         upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+
         for (i in ctx.offset until end) {
             val v = buffer[i]
             buffer[i] = safeOut(v * v)
@@ -1260,6 +1390,7 @@ private class SelectIgnitor(
         val c = cond.controlRateValueOrNull(freqHz) ?: return null
         val tv = whenTrue.controlRateValueOrNull(freqHz) ?: return null
         val fv = whenFalse.controlRateValueOrNull(freqHz) ?: return null
+
         return if (c > 0.0) tv else fv
     }
 
@@ -1270,11 +1401,15 @@ private class SelectIgnitor(
     // this full loop still runs — reachable, just rare.
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         cond.generate(buffer, freqHz, ctx)
+
         ctx.scratchBuffers.use { tBuf ->
             whenTrue.generate(tBuf, freqHz, ctx)
+
             ctx.scratchBuffers.use { fBuf ->
+                val end = ctx.windowEnd
+
                 whenFalse.generate(fBuf, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+
                 for (i in ctx.offset until end) {
                     buffer[i] = if (buffer[i] > 0.0) tBuf[i] else fBuf[i]
                 }
@@ -1307,6 +1442,7 @@ private class DetuneIgnitor(
 /** Shift frequency by a constant number of [semitones]. Short-circuits when semitones is 0.0. */
 fun Ignitor.detune(semitones: Double): Ignitor {
     if (semitones == 0.0) return this
+
     return DetuneConstIgnitor(this, 2.0.pow(semitones / 12.0))
 }
 
@@ -1327,6 +1463,7 @@ private class DetuneConstIgnitor(
 fun Ignitor.withGain(gain: Ignitor): Ignitor {
     if (gain is ConstantIgnitor && gain.value == 1.0) return this
     if (gain is ParamIgnitor && gain.default == 1.0) return this
+
     return this * gain
 }
 

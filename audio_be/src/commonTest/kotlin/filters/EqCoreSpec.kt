@@ -82,8 +82,7 @@ class EqCoreSpec : StringSpec({
         releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -541,8 +540,7 @@ class EqCoreSpec : StringSpec({
             val oracle = chainOracle(input, sections, startAt = offset)
             val bufOracle = AudioBuffer(blockFrames).apply { fill(sentinel) }
             val c = ctx().apply {
-                this.offset = offset
-                this.length = length
+                this.updateOffsetAndLength(offset, length)
                 voiceElapsedFrames = -offset // production mid-block-onset shape
             }
             oracle.generate(bufOracle, 220.0, c)
@@ -579,8 +577,7 @@ class EqCoreSpec : StringSpec({
             val bufOracle2 = AudioBuffer(blockFrames)
             input.copyInto(bufCore2, 0, offset + length, offset + length + blockFrames)
             core.process(bufCore2, 0, blockFrames)
-            c.offset = 0
-            c.length = blockFrames
+            c.updateOffsetAndLength(0, blockFrames)
             c.voiceElapsedFrames = length
             oracle.generate(bufOracle2, 220.0, c)
             c.voiceElapsedFrames += blockFrames
@@ -612,8 +609,7 @@ class EqCoreSpec : StringSpec({
 
             val bufOracle3 = AudioBuffer(blockFrames)
             for (half in 0 until 2) {
-                c.offset = 0
-                c.length = blockFrames
+                c.updateOffsetAndLength(0, blockFrames)
                 oracle.generate(bufOracle3, 220.0, c)
                 for (i in 0 until blockFrames) {
                     if (tol != null) {
@@ -1000,7 +996,7 @@ internal class BufferSourceIgnitor(
     private var pos = startAt
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) {
             buffer[i] = data[pos++]
         }

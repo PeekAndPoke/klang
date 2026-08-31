@@ -93,7 +93,7 @@ class AnalogSawSpec : StringSpec({
             gateEndFrame = onsetSampleRate,
             releaseFrames = blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
         sig.generate(buffer, freqHz, ctx)
         return buffer
     }

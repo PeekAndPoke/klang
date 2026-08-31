@@ -99,7 +99,7 @@ private class AdsrIgnitor(
 
             var absPos = ctx.voiceElapsedFrames
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 if (absPos >= gateEndPos) {
                     if (!releaseStarted) {

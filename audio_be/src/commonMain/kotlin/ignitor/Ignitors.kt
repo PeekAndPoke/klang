@@ -148,7 +148,7 @@ object Ignitors {
 
             val phaseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             if (d.active) {
                 if (phaseMod == null) {
@@ -387,7 +387,7 @@ object Ignitors {
             // 0 Hz, and split the MemoizingIgnitor key for a node shared with the signal spine
             // (the shared node then ran twice per block).
             val c = color.blockStartValue(freqHz, ctx).coerceIn(-1.0, 1.0)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             if (c == 0.0) {
                 for (i in ctx.offset until end) {
@@ -452,7 +452,7 @@ object Ignitors {
 
             val phaseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             if (d.active) {
                 if (phaseMod == null) {
@@ -516,7 +516,7 @@ object Ignitors {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val k = depth.blockStartValue(freqHz, ctx).coerceAtLeast(0.0)   // real freqHz: ledger O6
             val denom = 1.0 + k
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
                 val white = rng.nextDouble() * 2.0 - 1.0
@@ -540,7 +540,7 @@ object Ignitors {
         private var b6: Double = 0.0
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
                 val white = rng.nextDouble() * 2.0 - 1.0
@@ -585,7 +585,7 @@ object Ignitors {
             val step = readParam(rate, freqHz, ctx) * PERLIN_STEP
             val oct = readParam(octaves, freqHz, ctx).toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
             val pers = readParam(persistence, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
                 buffer[i] = noise.fbm(pos, oct, pers)
@@ -616,7 +616,7 @@ object Ignitors {
             val step = readParam(rate, freqHz, ctx) * PERLIN_STEP
             val oct = readParam(octaves, freqHz, ctx).toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
             val pers = readParam(persistence, freqHz, ctx)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
                 // BerlinNoise outputs 0..1, scale to -1..1
@@ -654,7 +654,7 @@ object Ignitors {
             // control-rate knobs (no buffer fill for Constant/Param) — read once per block
             val k = tail.blockStartValue(freqHz, ctx).coerceAtLeast(0.0)
             val bip = bipolar.blockStartValue(freqHz, ctx) > 0.5
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             if (!bip && k == 1.0) {
                 // perf-neutral, byte-identical default
@@ -700,7 +700,7 @@ object Ignitors {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             // readParam + real freqHz — see PerlinNoiseIgnitor (ledger O6/O7).
             val a = readParam(chaos, freqHz, ctx).coerceIn(0.0, CRACKLE_CHAOS_MAX)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
                 var y0 = abs(a * y1 - y2 - CRACKLE_C)
@@ -913,7 +913,7 @@ object Ignitors {
             }
 
             if (v <= 0) {
-                buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return
+                buffer.fill(0.0, ctx.offset, ctx.windowEnd); return
             }
 
             val spread = readParam(detune, actualFreq, ctx)
@@ -1416,7 +1416,7 @@ object Ignitors {
 
             val sr = ctx.sampleRateD
             val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             val baseDelay = (sr / actualFreq).coerceIn(2.0, (maxDelay - 1.0))
 
@@ -1557,7 +1557,7 @@ object Ignitors {
             }
 
             if (v <= 0) {
-                buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(0.0, ctx.offset, ctx.windowEnd)
                 return
             }
 
@@ -1573,7 +1573,7 @@ object Ignitors {
 
             val sr = ctx.sampleRateD
             val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
 
             // O2: param reads hoisted OUT of the per-string loop — a modulated subtree must
             // advance once per block, not v times, and every string samples the same value.
@@ -1669,7 +1669,7 @@ object Ignitors {
 
     private object SilenceIgnitor : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length)
+            buffer.fill(0.0, ctx.offset, ctx.windowEnd)
         }
     }
 

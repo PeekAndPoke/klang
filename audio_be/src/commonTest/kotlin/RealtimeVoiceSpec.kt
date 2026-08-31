@@ -550,8 +550,7 @@ class RealtimeVoiceSpec : StringSpec({
         ),
         cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         blockStart = 0.0
     }
 

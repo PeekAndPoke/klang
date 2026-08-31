@@ -27,7 +27,7 @@ class ModulationClockSpec : StringSpec({
      *  which let a bootstrap-dropped mutant pass every W1 row (review round 1). */
     class RampProbe : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = (ctx.voiceElapsedFrames + (i - ctx.offset) + 1) * 0.01
             }
@@ -38,7 +38,7 @@ class ModulationClockSpec : StringSpec({
     class ElapsedStep(private val valueAt: (Int) -> Double) : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val v = valueAt(ctx.voiceElapsedFrames)
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = v
             }
@@ -64,8 +64,7 @@ class ModulationClockSpec : StringSpec({
 
         for (seg in segments) {
             ctx.voiceElapsedFrames = elapsed
-            ctx.offset = 0
-            ctx.length = seg
+            ctx.updateOffsetAndLength(0, seg)
             buf.fill(0.0)
             ignitor.generate(buf, freqHz, ctx)
 
@@ -169,7 +168,7 @@ class ModulationClockSpec : StringSpec({
         // the guard's 0.0 — never NaN for `amount` frames.
         class NaNAtProbe(private val at: Int) : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     val n = ctx.voiceElapsedFrames + (i - ctx.offset)
                     buffer[i] = if (n == at) Double.NaN else (n + 1) * 0.01

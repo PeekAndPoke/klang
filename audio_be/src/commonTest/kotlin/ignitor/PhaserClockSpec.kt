@@ -51,8 +51,7 @@ class PhaserClockSpec : StringSpec({
 
     fun render(ig: Ignitor, c: IgniteContext, pos: Int, len: Int): DoubleArray {
         val tmp = AudioBuffer(blockFrames)
-        c.offset = 0
-        c.length = len
+        c.updateOffsetAndLength(0, len)
         c.voiceElapsedFrames = pos
         ig.generate(tmp, 220.0, c)
         return tmp.copyOf(maxOf(len, 1))

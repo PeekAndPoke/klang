@@ -31,8 +31,7 @@ class IgniteRenderer(
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
-        signalCtx.offset = ctx.offset
-        signalCtx.length = ctx.length
+        signalCtx.updateOffsetAndLength(ctx.offset, ctx.length)
         // + ctx.offset: voiceElapsedFrames is the elapsed count AT buffer index ctx.offset, which is
         // where every consumer starts counting (AdsrIgnitor seeds absPos from it and loops from
         // ctx.offset; IgnitorFilters adds sampleOffsetWithinBlock; PitchModFactories uses i - offset).

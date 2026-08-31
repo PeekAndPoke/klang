@@ -13,8 +13,12 @@
 > Style: blank line before every `return` that is not alone in its block, 51 sites in `Ignitor.kt`,
 > and the rule is now written into `.claude/skills/code-style`.
 > Green: `:audio_be:jvmTest`, `:audio_bridge:jvmTest`, `:audio_be:compileKotlinJs`. UNCOMMITTED.
-> ⚠️ OPEN, needs a JS profile or a decision: a custom setter may make `ctx.offset` an accessor
-> call in Kotlin/JS, and `offset` is read PER SAMPLE in 15 loops. Cheap fix either way: hoist
+> The window fields ended up `private set` behind `updateOffsetAndLength()` / `updateOffset()` /
+> `updateLength()`, so `windowEnd` is computed ONCE per move: ~98 call sites, of which exactly
+> TWO are production (`Voice`, `IgniteRenderer`) and the rest are per-spec ctx fixtures.
+> 1510 tests green.
+> ⚠️ STILL OPEN, needs a JS profile: whether a non-default accessor makes `ctx.offset` a method
+> call in Kotlin/JS — it is read PER SAMPLE in 15 loops. Cheap fix either way: hoist
 > `val off = ctx.offset` above those loops.
 
 > Last action (2026-08-31, claude-code block-framing session): W13 / "musical vs absolute

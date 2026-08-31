@@ -30,6 +30,6 @@ class ParamIgnitor(
     override fun controlRateValueOrNull(freqHz: Double): Double = defaultF
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        buffer.fill(defaultF, ctx.offset, ctx.offset + ctx.length)
+        buffer.fill(defaultF, ctx.offset, ctx.windowEnd)
     }
 }

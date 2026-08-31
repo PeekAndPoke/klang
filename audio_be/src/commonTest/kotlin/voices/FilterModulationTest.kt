@@ -28,7 +28,7 @@ class FilterModulationTest : StringSpec({
 
     val noopSignal: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) buffer[i] = 0.0
         }
     }

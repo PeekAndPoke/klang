@@ -31,15 +31,14 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
     // Constant DC = 1.0 source: with it, `.adsr(...)` output equals the envelope gain per sample.
     val dc: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, c: IgniteContext) {
-            val end = c.offset + c.length
+            val end = c.windowEnd
             for (i in c.offset until end) buffer[i] = 1.0
         }
     }

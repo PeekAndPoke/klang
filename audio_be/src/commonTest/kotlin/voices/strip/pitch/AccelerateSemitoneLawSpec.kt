@@ -54,8 +54,7 @@ class AccelerateSemitoneLawSpec : StringSpec({
             ),
             cylinders = Cylinders(blockFrames = frames, sampleRate = 48000),
         )
-        ctx.offset = 0
-        ctx.length = frames
+        ctx.updateOffsetAndLength(0, frames)
         ctx.blockStart = 0.0
         renderer.render(ctx)
 

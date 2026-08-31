@@ -88,6 +88,6 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
             cachedFreqHz = freqHz
         }
 
-        cache.copyInto(buffer, ctx.offset, ctx.offset, ctx.offset + ctx.length)
+        cache.copyInto(buffer, ctx.offset, ctx.offset, ctx.windowEnd)
     }
 }

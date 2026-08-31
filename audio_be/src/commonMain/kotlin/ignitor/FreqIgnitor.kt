@@ -14,6 +14,6 @@ object FreqIgnitor : Ignitor {
     override fun controlRateValueOrNull(freqHz: Double): Double = freqHz
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        buffer.fill(freqHz, ctx.offset, ctx.offset + ctx.length)
+        buffer.fill(freqHz, ctx.offset, ctx.windowEnd)
     }
 }

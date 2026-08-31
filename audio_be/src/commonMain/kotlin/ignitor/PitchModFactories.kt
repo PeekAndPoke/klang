@@ -38,7 +38,7 @@ fun deviationToRatioIgnitor(userMod: Ignitor): Ignitor = DeviationToRatioIgnitor
 private class DeviationToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         userMod.generate(buffer, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         for (i in ctx.offset until end) buffer[i] = buffer[i] + 1.0
     }
 }
@@ -65,7 +65,7 @@ private class VibratoModIgnitor(
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val rateVal = Ignitors.readParam(rate, freqHz, ctx)
         val depthSemitones = Ignitors.readParam(semitones, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
 
         if (depthSemitones <= 0.0) {
@@ -114,7 +114,7 @@ fun accelerateModIgnitor(semitones: Ignitor): Ignitor = AccelerateModIgnitor(sem
 private class AccelerateModIgnitor(private val semitones: Ignitor) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val amountVal = Ignitors.readParam(semitones, freqHz, ctx) / 12.0 // semitones -> octaves
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
 
         if (amountVal == 0.0) {
             for (i in ctx.offset until end) buffer[i] = 1.0
@@ -176,7 +176,7 @@ private class PitchEnvelopeModIgnitor(
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val amountVal = Ignitors.readParam(semitones, freqHz, ctx)
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
 
         if (amountVal == 0.0) {
             for (i in ctx.offset until end) buffer[i] = 1.0
@@ -256,7 +256,7 @@ private class FmModIgnitor(
     private val freq: Ignitor,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
 
         // The freq param is anchored on the incoming argument (FreqIgnitor answers it), read
         // FIRST because it is the bypass condition below.

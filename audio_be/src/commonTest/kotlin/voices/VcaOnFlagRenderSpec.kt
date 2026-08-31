@@ -63,8 +63,7 @@ class VcaOnFlagRenderSpec : StringSpec({
         ),
         cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
     }
 
     /** Renders a constant-1.0 block through one EnvelopeRenderer and returns it. */

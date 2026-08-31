@@ -380,7 +380,7 @@ object TestSamples {
 object TestIgnitors {
     val constant: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = 1.0
             }
@@ -389,7 +389,7 @@ object TestIgnitors {
 
     val ramp: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = (i - ctx.offset).toDouble() / ctx.length
             }
@@ -398,7 +398,7 @@ object TestIgnitors {
 
     val silence: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = 0.0
             }

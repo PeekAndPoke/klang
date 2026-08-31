@@ -54,7 +54,7 @@ class IgnitorDryFloorSpec : StringSpec({
     fun noiseSource(): Ignitor = object : Ignitor {
         var pos = 0
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            for (i in ctx.offset until ctx.offset + ctx.length) {
+            for (i in ctx.offset until ctx.windowEnd) {
                 buffer[i] = noise[pos++]
             }
         }
@@ -62,8 +62,7 @@ class IgnitorDryFloorSpec : StringSpec({
 
     fun render(chain: Ignitor): DoubleArray {
         val c = ctx()
-        c.offset = 0
-        c.length = blockFrames
+        c.updateOffsetAndLength(0, blockFrames)
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(frames)
         repeat(blocks) { blk ->

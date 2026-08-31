@@ -448,7 +448,7 @@ private class OnePoleLowpassIgnitor(
             val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
             val a = onePoleLpfCoeff(fc, ctx.sampleRate.toDouble())
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 y += a * (input[i] - y)
                 y = y.flushState()
@@ -501,7 +501,7 @@ private class OnePoleHighpassIgnitor(
             val b0 = invOnePlusK
             val a1 = (1.0 - k) * invOnePlusK
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 val x = input[i]
                 y = b0 * (x - xPrev) + a1 * y
@@ -558,7 +558,7 @@ private class FormantIgnitor(
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = 0.0
             }

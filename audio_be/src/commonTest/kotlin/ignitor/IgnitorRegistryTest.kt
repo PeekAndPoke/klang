@@ -194,7 +194,7 @@ class IgnitorRegistryTest : StringSpec({
             gateEndFrame = 44100,
             releaseFrames = 4410,
             scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
 
         val buffer = AudioBuffer(blockFrames)
         signal!!.generate(buffer, 440.0, ctx)
@@ -234,8 +234,7 @@ class IgnitorRegistryTest : StringSpec({
             releaseFrames = 4410,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            offset = 0
-            length = blockFrames
+            updateOffsetAndLength(0, blockFrames)
             voiceElapsedFrames = 0
         }
 
@@ -265,7 +264,7 @@ class IgnitorRegistryTest : StringSpec({
             gateEndFrame = 44100,
             releaseFrames = 4410,
             scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
 
         fun render(soundIndex: Int?): AudioBuffer {
             val data = VoiceData.empty.copy(sound = "v", freqHz = 440.0, soundIndex = soundIndex)

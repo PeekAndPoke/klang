@@ -230,7 +230,7 @@ class EnvelopeRenderer(
         // Skip the note body entirely: `from` collapses the per-sample branch and, for every block
         // before the ramp, the loop does not run at all. maxOf also absorbs the very negative
         // fadeStartIdx that ceil().toInt() produces on later blocks.
-        val end = ctx.offset + ctx.length
+        val end = ctx.windowEnd
         val from = maxOf(ctx.offset, fadeStartIdx)
         for (idx in from until end) {
             val remaining = (lastIdx - idx) * fadeScale

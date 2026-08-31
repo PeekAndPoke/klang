@@ -22,8 +22,7 @@ class MemoizingIgnitorSpec : StringSpec({
         releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -37,7 +36,7 @@ class MemoizingIgnitorSpec : StringSpec({
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             calls++
             val stamp = calls.toDouble()
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = stamp
             }
@@ -120,12 +119,11 @@ class MemoizingIgnitorSpec : StringSpec({
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames * 2)
 
-        ctx.offset = 0
-        ctx.length = blockFrames
+        ctx.updateOffsetAndLength(0, blockFrames)
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 1
 
-        ctx.offset = blockFrames
+        ctx.updateOffset(blockFrames)
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 2
     }
@@ -163,8 +161,7 @@ class MemoizingIgnitorSpec : StringSpec({
         val buf = AudioBuffer(blockFrames)
         val blocks = 8
         for (b in 0 until blocks) {
-            ctx.offset = 0
-            ctx.length = blockFrames
+            ctx.updateOffsetAndLength(0, blockFrames)
             ctx.voiceElapsedFrames = b * blockFrames
             sig.generate(buf, 220.0, ctx)
         }

@@ -213,10 +213,10 @@ class EffectBenchmark(
                 gateEndFrame = Int.MAX_VALUE / 2,
                 releaseFrames = sr / 10,
                 scratchBuffers = scratch,
-                offset = 0,
-                length = bf,
                 voiceElapsedFrames = 0,
-            )
+            ).apply {
+                updateOffsetAndLength(0, bf)
+            }
             val buffer = AudioBuffer(bf)
             val step: () -> Unit = {
                 ignitor.generate(buffer, 440.0, ctx)
@@ -410,7 +410,7 @@ class EffectBenchmark(
 
                 fun reader(): Ignitor = object : Ignitor {
                     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-                        src.copyInto(buffer, ctx.offset, ctx.offset, ctx.offset + ctx.length)
+                        src.copyInto(buffer, ctx.offset, ctx.offset, ctx.windowEnd)
                     }
                 }
 
@@ -427,10 +427,10 @@ class EffectBenchmark(
                     gateEndFrame = Int.MAX_VALUE / 2,
                     releaseFrames = sr / 10,
                     scratchBuffers = ScratchBuffers(bf),
-                    offset = 0,
-                    length = bf,
                     voiceElapsedFrames = 0,
-                )
+                ).apply {
+                    updateOffsetAndLength(0, bf)
+                }
                 val buffer = AudioBuffer(bf)
                 val step: () -> Unit = {
                     graph.generate(buffer, 440.0, ctx)

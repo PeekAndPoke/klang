@@ -55,16 +55,14 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames),
         random = random,
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
     /** Production mid-block onset: the voice clock starts NEGATIVE by the start offset. */
     fun onsetCtx(random: Random, offset: Int, length: Int): IgniteContext =
         ctx(random).apply {
-            this.offset = offset
-            this.length = length
+            this.updateOffsetAndLength(offset, length)
             voiceElapsedFrames = -offset
         }
 
@@ -127,8 +125,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 // allocated 128 for the 64-frame window (EqCoreSpec pins re-growth directly).
                 val curOffset = if (block == 0) offset else 0
                 val curLength = if (block == 0) length else blockFrames
-                ca.offset = curOffset; ca.length = curLength
-                cb.offset = curOffset; cb.length = curLength
+                ca.updateOffsetAndLength(curOffset, curLength)
+                cb.updateOffsetAndLength(curOffset, curLength)
 
                 for (i in 0 until blockFrames) {
                     bufA[i] = sentinel

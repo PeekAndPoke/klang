@@ -68,8 +68,7 @@ class PassesCascadeSpec : StringSpec({
             releaseFrames = 0,
             scratchBuffers = ScratchBuffers(blockFrames = block),
         )
-        ctx.offset = 0
-        ctx.length = block
+        ctx.updateOffsetAndLength(0, block)
         val buf = AudioBuffer(block)
         var sum = 0.0
         var n = 0

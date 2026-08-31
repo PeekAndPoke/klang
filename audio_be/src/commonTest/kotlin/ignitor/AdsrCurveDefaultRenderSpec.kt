@@ -40,8 +40,7 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
 
     fun render(chain: Ignitor): DoubleArray {
         val c = ctx()
-        c.offset = 0
-        c.length = blockFrames
+        c.updateOffsetAndLength(0, blockFrames)
         val buf = AudioBuffer(blockFrames)
         val out = DoubleArray(frames)
         repeat(blocks) { blk ->

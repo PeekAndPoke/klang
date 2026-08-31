@@ -36,8 +36,7 @@ class ConstantFoldParitySpec : StringSpec({
         releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        this.offset = offset
-        this.length = length
+        this.updateOffsetAndLength(offset, length)
         voiceElapsedFrames = 0
     }
 

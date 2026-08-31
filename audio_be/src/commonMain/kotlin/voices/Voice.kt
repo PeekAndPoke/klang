@@ -162,8 +162,7 @@ class Voice(
 
         // Update per-block state
         blockCtx.audioBuffer = ctx.voiceBuffer
-        blockCtx.offset = offset
-        blockCtx.length = length
+        blockCtx.updateOffsetAndLength(offset, length)
         blockCtx.blockStart = ctx.blockStart
         blockCtx.renderContext = ctx
         blockCtx.freqModBufferWritten = false

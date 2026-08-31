@@ -27,8 +27,7 @@ class ControlRateValueSpec : StringSpec({
         releaseFrames = 0,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -95,7 +94,7 @@ class ControlRateValueSpec : StringSpec({
         // A zero-length block renders nothing, so the scratch fallback used to return whatever a
         // previous node left at tmp[ctx.offset] — arbitrary and run-to-run nondeterministic.
         // Reachable: legato can clip a gate to 0 frames and Voice.render still runs the pipeline.
-        val ctx0 = ctx().apply { length = 0 }
+        val ctx0 = ctx().apply { updateLength(0) }
         // Dirty the pool first so a stale read would be visibly nonzero.
         ctx0.scratchBuffers.use { tmp -> tmp.fill(0.77) }
         // A stateful node (sine) has no control-rate value, so this takes the scratch fallback.
