@@ -142,12 +142,31 @@ class KlangCommLink(capacity: Int = 8192) {
             ) : Sample {
                 override val playbackId: String = SYSTEM_PLAYBACK_ID
 
-                fun toChunks(chunkSizeBytes: Int = 16 * 1024): List<Chunk> {
-                    val numChunks = (sample.pcm.size / chunkSizeBytes) + 1
+                /**
+                 * Splits the PCM for upload.
+                 *
+                 * [chunkFrames] counts **DoubleArray elements** (mono frames), NOT bytes: at 8
+                 * bytes each, 64 * 1024 frames is a 512 KB message. The parameter used to be
+                 * called `chunkSizeBytes`, which read as 8× smaller than it is (64 KB believed,
+                 * 512 KB actual) and made the upload look far more throttled than it was.
+                 *
+                 * Chunking originally existed to keep kotlinx-serialization decode off the audio
+                 * thread in slices. That cost is gone (the KSP wire codec replaced it), and what
+                 * remains per chunk is one structured-clone plus the `copyInto` in
+                 * `SampleStore.addSample` — linear in [chunkFrames], so this still bounds the
+                 * worst-case audio-thread hiccup. It is a SIZE bound, not a rate limit; the rate
+                 * is set by how many chunks the host forwards per tick.
+                 *
+                 * NB: when the PCM length is an exact multiple of [chunkFrames] the last entry is
+                 * an empty chunk carrying `isLastChunk`. Harmless (an empty `copyInto` is a no-op)
+                 * and it still completes the sample, but it is one wasted message.
+                 */
+                fun toChunks(chunkFrames: Int = 16 * 1024): List<Chunk> {
+                    val numChunks = (sample.pcm.size / chunkFrames) + 1
 
                     return (0 until numChunks).map { i ->
-                        val startByte = i * chunkSizeBytes
-                        val endByte = minOf(sample.pcm.size, (i + 1) * chunkSizeBytes)
+                        val start = i * chunkFrames
+                        val end = minOf(sample.pcm.size, (i + 1) * chunkFrames)
 
                         Chunk(
                             req = req,
@@ -157,8 +176,8 @@ class KlangCommLink(capacity: Int = 8192) {
                             meta = sample.meta,
                             totalSize = sample.pcm.size,
                             isLastChunk = i == numChunks - 1,
-                            chunkOffset = i * chunkSizeBytes,
-                            data = sample.pcm.copyOfRange(startByte, endByte),
+                            chunkOffset = start,
+                            data = sample.pcm.copyOfRange(start, end),
                         )
                     }
                 }
