@@ -1,5 +1,16 @@
 # docs/tasks — priorities (first pass)
 
+> ## ⚠️ SUPERSEDED 2026-08-31 by [`_v1-scope.md`](_v1-scope.md)
+>
+> That file is the current, decided V1 line. This one is the draft ranking from before the
+> August engine work (block-framing, unified EQ, filter unification, mini-notation tweaks,
+> the MIDI playground) and no longer describes reality: several items here have shipped,
+> the tutorial rows are stale (the 38 tutorials were wiped in `92f6d54f` and that workstream
+> is owned by a separate session), and the Katalyst sequencing question it flags was
+> answered by putting Katalyst in V1.
+>
+> Kept as the reasoning record. Do not plan from it.
+
 > **Draft for review.** Two axes here, kept separate on purpose:
 > - **Importance** — the release bar: **MUST** (non-negotiable) · **SHOULD** (strongly wanted, do
 >   before nice-to-haves) · **NICE** (opportunistic / polish).
