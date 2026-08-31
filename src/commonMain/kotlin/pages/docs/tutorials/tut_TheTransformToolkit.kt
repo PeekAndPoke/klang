@@ -33,7 +33,7 @@ val theTransformToolkitTutorial = Tutorial(
                     markdown = """
                     In ${Tut.subdivision}, `*2` doubled one step. `fast()` is the same multiplication applied to the whole line: `fast(2)` plays the entire pattern twice per cycle. `slow(2)` is its mirror: the pattern stretches over two cycles, and every note gets twice the room. (You already pointed `fast()` and `slow()` at signals in ${Tut.signalsMoveTheKnobs}; this is their day job.) Below, the melody wears `slow(2)` first; `fast(2)` and the plain line wait behind the `//`.
 
-                    **Try it:** swap the `//` between the three lines and press Update each time. On the slow line, watch the player's counter: the melody now needs two clicks to come around.
+                    **Try it:** swap the `//` between the three lines and press **Update** each time. On the slow line, watch the player's counter: the melody now needs two clicks to come around.
 
                     **Listen for:** the same shape at three sizes. Half-time makes the melody calm and heavy; double-time turns it into a run. Nothing about the melody changed, only how much time it is given.
                     """.trimIndent(),
@@ -54,7 +54,7 @@ val theTransformToolkitTutorial = Tutorial(
                     markdown = """
                     `superimpose()` plays the line, and on top of it a copy, run through a change. Below, the change is `transpose(12)` from ${Tut.scalesAndMelodies}: the copy sings one floor up, in step with the original. (Two copies add up, the practice from ${Tut.chordsInOneStep}, so the line, copy included, sits at 0.4 instead of the usual 0.5.)
 
-                    **Try it:** swap the `//` to hear the line alone, and press Update. Then make it `transpose(-12)`. The copy moves underneath. Last, headphones on: make it `.pan(0.3).superimpose(transpose(12).pan(0.7))`. The original on the left, its octave copy on the right.
+                    **Try it:** swap the `//` to hear the line alone, and press **Update**. Then make it `transpose(-12)`. The copy moves underneath. Last, headphones on: make it `.pan(0.3).superimpose(transpose(12).pan(0.7))`. The original on the left, its octave copy on the right.
 
                     **Listen for:** not a second melody but a taller one. The copy hits every note together with the original: the octave from ${Tut.firstNotes}, worn as a coat.
                     """.trimIndent(),
@@ -74,7 +74,7 @@ val theTransformToolkitTutorial = Tutorial(
                     markdown = """
                     Since ${Tut.firstNotes}, every note has held for its whole step; that was `legato(1)`, unwritten. `legato()` scales the held length: 0.5 cuts each note to half its step and leaves silence behind it; 2 holds it into the next step.
 
-                    **Try it:** swap the `//` and press Update, and swap back. Then change `legato(0.5)` to `legato(2)`. The notes hold past their steps and begin to touch, length doing what release did in ${Tut.shapeOfANote}.
+                    **Try it:** swap the `//` and press **Update**, and swap back. Then change `legato(0.5)` to `legato(2)`. The notes hold past their steps and begin to touch, length doing what release did in ${Tut.shapeOfANote}.
 
                     **Listen for:** the melody on tiptoe. Same notes, same places, but each one steps away early, and the silences carry as much groove as the notes. Short is a rhythm of its own.
                     """.trimIndent(),
@@ -94,7 +94,7 @@ val theTransformToolkitTutorial = Tutorial(
                     markdown = """
                     All three transforms on the one melody, over the groove from ${Tut.spaceAndRests}. One spelling change: the duration knob appears under its other name. `clip()` is `legato()`, letter for letter, and the songs spell it both ways.
 
-                    **Try it:** delete one transform at a time (`.slow(2)`, then `.superimpose(transpose(12))`, then `.clip(0.5)`), pressing Update after each, and hear the melody step back toward plain.
+                    **Try it:** delete one transform at a time (`.slow(2)`, then `.superimpose(transpose(12))`, then `.clip(0.5)`), pressing **Update** after each, and hear the melody step back toward plain.
 
                     **Listen for:** how far three words carried it. The counter needs two clicks per pass, the octave copy rides above, and every note is clipped short. The same eight steps you have carried since ${Tut.firstNotes}, wearing everything this lesson taught.
                     """.trimIndent(),

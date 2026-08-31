@@ -31,7 +31,7 @@ val shapeOfANoteTutorial = Tutorial(
                     code = """
                     note("a3 ~ c4 ~")              // the melody's opening leap, stretched long
                       .sound("saw")                // the bright voice from ${Tut.theFourWaveforms}
-                      .adsr(0.01, 0.1, 1, 0.05)     // the default shape, written out: on, hold, off
+                      .adsr(0.01, 0.1, 1, 0.05)    // the default shape, written out: on, hold, off
                       .gain(0.5)                   // kept modest, the stages are easier to hear
                     """.trimIndent(),
                 ),

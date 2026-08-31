@@ -40,7 +40,7 @@ val theFilterEnvelopeTutorial = Tutorial(
                     code = """
                     note("a3 ~ c4 ~")                // the long two-note phrase, room for the colour to move
                       .sound("saw")                  // the bright voice, about to be darkened
-                      .adsr(0.001, 0.3, 0, 0.1)       // the pluck shape on the loudness
+                      .adsr(0.001, 0.3, 0, 0.1)      // the pluck shape on the loudness
                       .lpf(400)                      // a closed, static filter: the "before"
                       .gain(0.5)                     // synths sit at 0.5
                     """.trimIndent(),
@@ -63,7 +63,7 @@ val theFilterEnvelopeTutorial = Tutorial(
                 Block.Code(
                     code = """
                     note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).lpe(36).lpadsr(0.001, 0.15, 0, 0.1).gain(0.5) // the öw
-                    // note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).gain(0.5)                                // closed, swap
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).lpf(400).gain(0.5)                                  // closed, swap
                     """.trimIndent(),
                 ),
             ),

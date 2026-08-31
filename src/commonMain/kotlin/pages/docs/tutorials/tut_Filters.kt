@@ -52,7 +52,7 @@ val filtersTutorial = Tutorial(
                     markdown = """
                     The cutoff is not a switch, it is a dial. Like every setting, it takes a pattern. With angle brackets from ${Tut.alternationAndRepetition}, each cycle gets its own cutoff.
 
-                    **Try it:** reorder the four numbers and press Update.
+                    **Try it:** reorder the four numbers and press **Update**.
 
                     **Listen for:** the order of loss. At 3200 almost nothing is missing; at 1600 the sparkle is gone but the melody is intact; at 800 it is under the blanket; at 400 only the body is left. The sparkle goes first, the body last: that order is what a cutoff is.
                     """.trimIndent(),

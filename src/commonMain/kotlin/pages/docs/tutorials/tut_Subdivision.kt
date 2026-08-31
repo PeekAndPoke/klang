@@ -31,7 +31,7 @@ val subdivisionTutorial = Tutorial(
                     markdown = """
                     **Square brackets** take a single step and divide it: everything inside `[ ]` shares that one step equally, and the rest of the pattern does not move. Four steps below, but the second one now holds two hats.
 
-                    **Try it:** swap the `//` between the two lines and press Update.
+                    **Try it:** swap the `//` between the two lines and press **Update**.
 
                     **Listen for:** the count. It is one-two-three-four in both versions (the kick and snare never move), but in the first, count two carries a double hat, its second half landing on the off-beat, the spot the hats sat in ${Tut.spaceAndRests}. The cycle did not gain a step; one step gained an inside.
                     """.trimIndent(),

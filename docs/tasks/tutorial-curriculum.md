@@ -66,6 +66,11 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
    narration, never decoration (no mood/metaphor comments — that rule produced the sculptor slop). Comment
    vocabulary follows the same taught-so-far rule as code. Familiar carrier boilerplate may go bare once
    it has been commented in earlier lessons.
+   **Inside one code block, every line comment starts at the same column** (lint-enforced): the comments
+   are a narration column running down the right, and a ragged one reads as sloppy code. The column is
+   set by the longest code line in the block; the gap after it is free (the corpus uses one or two
+   spaces). A line that is nothing but a commented-out A/B alternative has no trailing comment of its
+   own unless it carries one, in which case it aligns with the rest.
 13. **Concepts before use — including WITHIN a lesson (user notice to content reviewers, 2026-08-18).**
    A concept may only be used after it has been explained: earlier in the SAME lesson (section order
    counts — the vocab lint only checks lesson order, so reviewers must check section order by hand),
@@ -116,7 +121,7 @@ stages must not carry it.
 | B8 | Scales & melodies | `n()`, `scale()`, `transpose` | — | Numbers instead of note names; same line, swap the scale. *Listen for: major vs. minor mood flip.* |
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
-| A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: 1 voice → 9 voices → spread out → drift. *Listen for: mono vs. wide on headphones.* |
+| A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
 | A7 | Space & dirt | `roomWet`/`rsize`, `delayWet` family, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
 | A8 | Body | `body()`, `bodyWet` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
@@ -167,6 +172,24 @@ stages must not carry it.
   per-orbit but `roomWet` is a per-voice SEND; bare `roomWet()` is SILENT (gate needs roomsize); orbit
   bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
+- **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
+  `roomWet` + `rsize` preview under its own intuitions, plus the delay family, `distort`,
+  `onepole` and `postgain`. Biggest `teaches` list in the corpus (8) and the only `Standard`
+  scope; if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
+  (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
+  (a) BOTH space effects are sends WITH A GATE and the gate is the SECOND number, not the
+  send: reverb is inactive unless `roomSize >= 0.01` (defaults to 0.0) and delay is Off
+  unless `time >= 0.01` (defaults to 0.0), so a bare `roomWet(0.4)` and a bare
+  `delayWet(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
+  three silent `KlangScript(Playable)` KDoc examples were fixed at source in `lang_effects.kt`.
+  (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
+  distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
+  (c) `gain` and `postgain` are BOTH applied at the voice output in SendRenderer, so `gain`
+  does NOT drive the distortion and on one line the two are the same arithmetic; the draft's
+  "dropping gain feeds the distortion less" was also FALSE. The real split is that `velocity`
+  and mute/solo scale `gain` only, which is now what §6 teaches (and the misleading
+  "applied before synthesis" line in the `postgain` KDoc was corrected at source too).
+  Open: review loop not run; the dry-vs-distorted pair is a render-QA level item by nature.
 - **A7 (space & dirt):** B6 previews `roomWet` + `rsize` ("how much goes in" / "how big the room is")
   and points to "a Sound-track lesson still to come" — A7 must deliver both under those intuitions.
 - **B11 (chords & voicing):** B7 defers harmony ("Which notes agree like this, and which clash …
@@ -196,6 +219,20 @@ stages must not carry it.
   `n("0 ~ ~ 0  ~ ~ -3 ~").scale("a2:minor")` — later lessons may lean on both. §1's numbers-vs-
   note-names A/B is identical by design — sanctioned render-QA audibility exception (KDoc). B8
   licenses "ladder/rung" for scale degrees and "semitone" (with the vs-walking-step caveat).
+- **A6 (Thickness) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers `supersaw`
+  (A1's promise) and disambiguates "voice" by calling the count **unison layers** throughout.
+  ⚠️ Engine truths learned while writing it (all recorded in the lesson KDoc): `unison`/`spread`
+  are INERT on the plain voices (only the `super` family carries the `voices`/`spread` slots);
+  the stack is SUM-NORMALIZED, so layer-count A/Bs are level-matched by construction; defaults
+  are `voices` 8, `spread` 0.2, `analog` 0.0, so a bare `sound("supersaw")` is already eight
+  layers; `spread` is in SEMITONES and `analog` is peak drift in CENTS (the sprudel KDoc claimed
+  0.0-1.0 and was WRONG, corrected at source in `lang_osc_addons.kt` the way A4's `lpe` was, and
+  eight stale `.detune(0.3)` examples on `unison`/`uni`/`voices` were repaired at the same time,
+  since sprudel's `detune()` no longer exists); the slow drift layer is seeded at CENTRE, so
+  drift only develops on HELD notes, which is why the lesson's drift section wears A2's pad
+  shape plus B9's `.slow(2)`. Licensed term: "unison layers". Open: the compile gate has not
+  run (build lock held elsewhere), the review loop has not run, and §1's `saw` vs `supersaw`
+  pair is the first render-QA level measurement item.
 - **A6 (unison/thickness):** the word "voice" is taken — B3 introduced and A1 formalized it as the
   term for oscillator timbre ("not a recording ... a sound Klang builds on the spot"). A6 must
   disambiguate explicitly: the `unison`/`voices` parameter counts internal copies — call them
@@ -274,6 +311,9 @@ compatibility). Authoring contract for ALL new/edited prose:
 - `${'$'}{Tut.x}` interpolations stay plain.
 - B1 §1 carries the player-UI bullet tour (order matches the chrome) + the hover-help tip;
   B1 §4 lists drum names as bullets. Bullet lists are for enumerations prose would bury.
+- **Player-button names are bold**: `press **Update**` (lint-enforced), never `press Update`. B1's
+  player tour introduces **Play**, **Stop**, **Reset** and **Update** in bold, and every later
+  instruction to press one has to look like the thing the reader is hunting for in the chrome.
 - **NO EM-DASHES (user ruling 2026-08-18): never "—" or "–" in any user-facing text** (prose,
   descriptions, code comments). They read as an AI tell; rewrite with commas, colons,
   semicolons, parentheses, or a new sentence. The A/B comment suffix is ", swap" /

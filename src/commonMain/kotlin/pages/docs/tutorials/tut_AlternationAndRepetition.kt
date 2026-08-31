@@ -22,7 +22,7 @@ val alternationAndRepetitionTutorial = Tutorial(
                     markdown = """
                     **Angle brackets** are the opposite of a sequence: instead of splitting one cycle between all their entries, they play one entry per cycle and rotate. The line below holds four bass notes but plays a single note each time around; it takes four cycles to hear them all.
 
-                    **Try it:** change the `c3` to `c4` and press Update. Only one cycle in four changes.
+                    **Try it:** change the `c3` to `c4` and press **Update**. Only one cycle in four changes.
 
                     **Listen for:** the pitch at each restart: `a2`, then `c3`, then `g2`, then `e2`, one per turn of the counter. The pattern is bigger than the cycle now; that is new.
                     """.trimIndent(),
@@ -31,7 +31,7 @@ val alternationAndRepetitionTutorial = Tutorial(
                     code = """
                     note("<a2 c3 g2 e2>")            // four entries, one per cycle, four cycles to rotate
                       .sound("saw")                  // the bright voice from ${Tut.theFourWaveforms}
-                      .adsr(0.001, 0.3, 0, 0.1)       // the pluck shape from ${Tut.shapeOfANote}
+                      .adsr(0.001, 0.3, 0, 0.1)      // the pluck shape from ${Tut.shapeOfANote}
                       .gain(0.5)                     // synth voices sit around 0.5
                     """.trimIndent(),
                 ),
@@ -104,7 +104,7 @@ val alternationAndRepetitionTutorial = Tutorial(
                     markdown = """
                     Everything from this lesson in one line: bars between `< >`, the first one doubled with `!2`, and each bar built on a first note that holds the floor before two quicker steps. Two turns on a, a lift to c, a turn through e, and around again.
 
-                    **Try it:** change one note in one bar and press Update. The other bars keep their shape, so you are editing a song section, not a loop.
+                    **Try it:** change one note in one bar and press **Update**. The other bars keep their shape, so you are editing a song section, not a loop.
 
                     **Listen for:** the four-cycle journey home. Watch the counter to see which bar you are in; by the time the first bar comes back around, you have heard a four-cycle line. That is what this lesson was building to.
                     """.trimIndent(),
@@ -113,7 +113,7 @@ val alternationAndRepetitionTutorial = Tutorial(
                     code = """
                     note("<[a2@2 a2 g2]!2 [c3@2 c3 b2] [e2@2 e2 g2]>")  // three bars, the first doubled: four cycles
                       .sound("saw")                                     // bass voice
-                      .adsr(0.001, 0.3, 0, 0.1)                          // the pluck shape
+                      .adsr(0.001, 0.3, 0, 0.1)                         // the pluck shape
                       .gain(0.5)                                        // synths sit at 0.5
                     """.trimIndent(),
                 ),

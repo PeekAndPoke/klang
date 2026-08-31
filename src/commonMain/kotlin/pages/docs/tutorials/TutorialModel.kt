@@ -56,6 +56,8 @@ object Tut {
     const val scalesAndMelodies = "Scales and Melodies"
     const val theTransformToolkit = "The Transform Toolkit"
     const val gates = "Gates"
+    const val thickness = "Thickness"
+    const val spaceAndDirt = "Space and Dirt"
 }
 
 /**

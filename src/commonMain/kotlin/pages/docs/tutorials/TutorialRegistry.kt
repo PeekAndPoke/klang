@@ -50,6 +50,8 @@ val theKlangPathTrack = TutorialTrackDef(
         scalesAndMelodiesTutorial, // B8
         theTransformToolkitTutorial, // B9
         gatesTutorial, // B10
+        thicknessTutorial, // A6
+        spaceAndDirtTutorial, // A7
     ),
 )
 
@@ -64,6 +66,8 @@ val soundDesignBasicsTrack = TutorialTrackDef(
         filtersTutorial, // A3
         theFilterEnvelopeTutorial, // A4
         signalsMoveTheKnobsTutorial, // A5
+        thicknessTutorial, // A6
+        spaceAndDirtTutorial, // A7
     ),
     // A3 leans on <> from B5, so the honest baseline is the whole main path.
     buildsOn = listOf(theKlangPathTrack),
