@@ -439,7 +439,7 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
 
 ---
 
-## F13 — Copy-paste tests that duplicate a sibling instead of testing their name 🔴
+## F13 — Copy-paste tests that duplicate a sibling instead of testing their name 🟡 *(VoiceLifecycleTest fixed 2026-08-31)*
 
 **MED.** Found by W5 in the lifecycle/pipeline specs; these are wrong *records*, not just weak ones:
 
@@ -449,6 +449,26 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
 - `VoiceLifecycleTest` — *"voice at exact block boundaries handles edge cases"*: its third sub-case (commented *"ends
   exactly at endFrame"*) reuses the exact `blockStart = 100, blockFrames = 100` of the second. The end-boundary case is
   never queried — and the comment on `ctx4`, which *does* cover it, mislabels it as "starts exactly at endFrame".
+> ✅ **`VoiceLifecycleTest`'s two items FIXED 2026-08-31.**
+> *"voice ending at block boundary"* now renders the block containing the end **and** the next block,
+> which starts exactly at `endFrame` — the half that was missing, since the test was byte-identical
+> to its "starting" sibling. *"voice at exact block boundaries"*' third sub-case is now a block that
+> **straddles** `endFrame` (frames 150–250 on a voice ending at 200), asserting signal in the first
+> half and silence in the second.
+>
+> **One correction to this finding while fixing it:** it claimed `ctx4`'s comment mislabels the case
+> as *"starts exactly at endFrame"*. That comment is accurate — `ctx4` does start at `endFrame`. The
+> real gap was different: `ctx2`'s block `[100, 200)` already both starts at `startFrame` and ends at
+> `endFrame`, so *"ends exactly at endFrame"* had no distinct scenario left, and the straddle is what
+> was genuinely untested.
+>
+> Mutations: `>=` → `>` on the end test, and `minOf(blockEnd, endFrame)` → `blockEnd`. Both kill the
+> rewritten rows. **Honest scope: sibling tests catch both mutations too**, so the gain here is that
+> the tests stop being false records of coverage, not that a new regression became detectable.
+>
+> 🔴 **Still open: all three `VoicePipelineTest` items below.** No ordering is verified anywhere in
+> that spec.
+
 - `VoicePipelineTest` — *"envelope is applied **after** main filter"*: its assertion (`processCalls.size shouldBe 1`) is
   identical to the unrelated *"pipeline executes main filter"*. **No ordering is checked anywhere in the spec.**
 - `VoicePipelineTest` — *"filter modulation updates cutoff **before** filter processes"*: the

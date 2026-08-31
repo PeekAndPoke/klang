@@ -63,18 +63,26 @@ class VoiceLifecycleTest : StringSpec({
     }
 
     "voice ending at block boundary renders full block" {
+        // This test used to be BYTE-IDENTICAL to "voice starting at block boundary…" above — same
+        // fixture, same assertions — so no end-boundary scenario was constructed anywhere in the
+        // file, and the name was a false record of coverage (audit finding F13).
         val voice = createSynthVoice(
             startFrame = 0.0,
-            endFrame = 100.0
+            gateEndFrame = 100.0,
+            endFrame = 100.0,
         )
 
+        // The block that CONTAINS the end: the voice fills it completely.
         val ctx = createContext(blockStart = 0.0, blockFrames = 100)
-        val result = voice.render(ctx)
-
-        result shouldBe true
-
-        // Buffer should have audio
+        voice.render(ctx) shouldBe true
         ctx.voiceBuffer.all { it == 1.0 } shouldBe true
+
+        // The NEXT block starts exactly AT endFrame, so none of the voice belongs to it. This is
+        // the half that was missing: a voice that outlived its endFrame by one block would have
+        // been invisible to the whole spec.
+        val after = createContext(blockStart = 100.0, blockFrames = 100)
+        voice.render(after) shouldBe false
+        after.voiceBuffer.all { it == 0.0 } shouldBe true
     }
 
     "voice starting mid-block renders partial buffer" {
@@ -286,10 +294,15 @@ class VoiceLifecycleTest : StringSpec({
         voice.render(ctx2) shouldBe true
         ctx2.voiceBuffer.all { it == 1.0 } shouldBe true
 
-        // Query block that ends exactly at endFrame
-        val ctx3 = createContext(blockStart = 100.0, blockFrames = 100)
+        // Query block that STRADDLES endFrame. This sub-case used to reuse ctx2's exact
+        // blockStart = 100 / blockFrames = 100, so it was a duplicate and the partial-tail case was
+        // never queried (audit finding F13). Note ctx2's block [100, 200) already both starts at
+        // startFrame AND ends at endFrame, so "ends exactly at endFrame" had no separate scenario
+        // left to test — a straddle is the case that was actually missing.
+        val ctx3 = createContext(blockStart = 150.0, blockFrames = 100)
         voice.render(ctx3) shouldBe true
-        ctx3.voiceBuffer.all { it == 1.0 } shouldBe true
+        (0 until 50).all { ctx3.voiceBuffer[it] == 1.0 } shouldBe true
+        (50 until 100).all { ctx3.voiceBuffer[it] == 0.0 } shouldBe true
 
         // Query block that starts exactly at endFrame
         val ctx4 = createContext(blockStart = 200.0, blockFrames = 100)
