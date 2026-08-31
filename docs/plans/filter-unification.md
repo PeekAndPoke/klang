@@ -12,7 +12,7 @@ with `wet == 0` as bit-identical bypass (C4); `passes` with the staggered Butter
 (C5); canonical names, the notch family, and the last four aliases (C6).
 
 **Ran as its own round, out of band:** the `freq` rename (`cutoffHz`/`freqHz` → `freq` on every
-DSL surface and wire type) — see `docs/tasks/filter-frequency-param-naming.md`.
+DSL surface and wire type) — see `docs/tasks-archive/2026-08/20260825-filter-frequency-param-naming.md`.
 
 **Still open, all of it the maintainer's:** the by-ear retunes listed below, a `JsCompatTests` run
 on a GraalVM runtime, and two engine follow-ups —
@@ -787,7 +787,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   - Canonical names genuinely missing on the sprudel door: `lowpass`, `highpass`, `bandpass`,
     `notch` (0 declarations each) and `ntf`/`ntq` (0). `notchf`/`notchq` already exist.
   - `freq`/`cutoffHz` unification: ✅ **DONE 2026-08-25 as its own round**, ahead of the rest of
-    C6 (see `docs/tasks/filter-frequency-param-naming.md`). Do NOT re-budget this sweep. The
+    C6 (see `docs/tasks-archive/2026-08/20260825-filter-frequency-param-naming.md`). Do NOT re-budget this sweep. The
     blast radius WAS 57 `cutoffHz` + 51 `freqHz` occurrences. The recorded trap applied — the render-arg
     `freqHz` is note pitch and is OUT of scope.
   - Aliases: ✅ ALL DELETED 2026-08-31. `phd`/`phasdp` (of `phaserWet`), `reverb` (a
@@ -806,7 +806,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
 - Songs/tutorials/docs: mechanical rename sweep (`bandf` x13, `bandq` x11, `resonance` x2 in
   songs+tutorials; plus whatever the aliases hit) — but see the survey refresh above: the
   `bandf`/`bandq` half is already spent. The `freq`/`cutoffHz` unification
-  (`docs/tasks/filter-frequency-param-naming.md`) was ORIGINALLY planned to fold into this
+  (`docs/tasks-archive/2026-08/20260825-filter-frequency-param-naming.md`) was ORIGINALLY planned to fold into this
   chunk; it ran as its own round on 2026-08-25 instead, so only the remaining name work is
   left here.
 
