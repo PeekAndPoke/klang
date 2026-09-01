@@ -11,7 +11,7 @@ list: [`FINDINGS.md`](FINDINGS.md) — **this is the list we go through together
 
 | Subsystem                  | Specs verified | Findings | State                                            |
 |----------------------------|---------------:|---------:|--------------------------------------------------|
-| `voices/` (pilot)          |        13 / 13 |       19 | 🟡 **triage in progress 2026-08-31** — `strip/pitch` (F10/F11/F12) closed; F7's solo+cut half closed (and it found [F18](FINDINGS.md#f18)); all 10 remaining re-verified, **6 corrected/withdrawn**; 3 owed mutations re-run ✅ |
+| `voices/` (pilot)          |        13 / 13 |       21 | 🟢 **triage COMPLETE 2026-08-31** — every finding closed, withdrawn, parked or awaiting a maintainer call. Fixed: F3, F5, F6, F7(solo+cut), F8, F10, F11, F12, F13, F15(a), F18, F21. Withdrawn as wrong-when-written: F4, F14(Pedal + compressor), F5(drift), F7("unreached"). Parked to `docs/tasks/future/`: F19, ducking. **Awaiting a decision: F14's `VoiceTestHelpers` bypass, F15(c) GuitarClickHunt runtime, F17(a) `attackSeconds` naming.** |
 | root / lifecycle           |              — |        — | 🔴 not started                                   |
 | `cylinders/` + `katalyst/` |          1 / 11 |        1 | 🟡 **started 2026-08-31** — `KatalystFilterSwap` verified + [F20](FINDINGS.md#f20) closed; 10 katalyst files still unverified |
 | `effects/`                 |              — |        — | 🔴 not started                                   |
