@@ -3,7 +3,79 @@
 Looped soundfont instruments (e.g., gm_accordion, gm_violin, gm_organ) do not loop correctly.
 Need to understand the soundfont data structure and how to translate it to the Klang engine.
 
-## Status: TODO
+## Status: ROOT-CAUSED 2026-09-02 — fix proposed, not applied (it changes how every soundfont sounds)
+
+**Two defects, both in the same six lines of `VoiceFactory` (`:333-340`), and both the same shape:
+the playhead does not start at the start.** Everything else on the wire checked out.
+
+### Defect 1 — a looped instrument starts INSIDE its loop and never plays its attack
+
+```kotlin
+val playhead0 = if (data.begin != null) startSample
+    else if (useMetaLoop && sampleMetaLoop != null) sampleMetaLoop.startSec * sample.sampleRate  // ← here
+    else sample.meta.anchor * sample.sampleRate
+```
+
+A looped zone is played from `loopStart`, so the region `[0, loopStart)` — the attack — is skipped
+entirely. Measured on the FluidR3 set (loop points in seconds, decoded with ffprobe):
+
+| instrument | attack `[0, loopStart)` | loop `[loopStart, loopEnd)` | what you hear |
+|---|---|---|---|
+| violin z0 | 0 → **1.27 s** | 1.27 → 1.45 (a 180 ms slice) | no bow onset; a static 180 ms drone |
+| flute z0 | 0 → **0.66 s** | 0.66 → 0.91 | no breath attack |
+| accordion z0 | 0 → **1.66 s** | 1.66 → 8.26 | starts mid-bellows |
+
+That is the reported symptom: it *does* loop, but a violin that skips its bow and loops steady state
+does not read as a violin. Both SoundFont 2 and WebAudioFont start playback at the sample's start,
+play *through* the attack, and loop `[loopStart, loopEnd)` only once the playhead gets there.
+
+### Defect 2 — `anchor` is the PEAK position, not a start offset
+
+The non-loop branch starts percussive samples at `anchor`. The task asked what `anchor` means;
+measured against the decoded audio, **it is `argmax |x|` in seconds** — the position of the loudest
+sample — exact in 7 of 10 zones (violin 0.75/0.75, flute 0.80/0.81, guitar 0.03/0.02 …), and the
+other three are sustained tones where many samples tie for the maximum. It is a normalisation
+artefact of the converter, and nothing to do with where playback should begin. For the nylon guitar
+(`anchor` 0.03–0.06 s) it skips the pluck transient. `meta.anchor` is read in exactly one place:
+this line.
+
+### Cleared — verified correct, so nobody re-derives them
+
+- **Sample-rate round trip.** Zones declare 22050/44100 Hz, the browser decodes at the context
+  rate; the loop travels as **seconds** (`startSec = loopStart / zoneRate`) and the backend multiplies
+  by the *decoded* `sample.sampleRate` (`BrowserAudioDecoder:55`). Correct by construction.
+- **Loop geometry.** `loopEnd` ≈ OGG length − 70 ms on every zone checked; never past the PCM.
+- **`SampleIgnitor`'s wrap** is `ph >= loopEnd → loopStart + (ph − loopStart) % len`, i.e. the loop is
+  `[start, end)` with an exclusive end — exactly SF2's definition.
+- **The sustain envelope** (`getSampleMetadata`: sustain 1.0, release 0.2 s for loops ≥ 50 ms) is
+  the WebAudioFont convention: loop while held, amplitude release over the still-looping sample. SF2
+  mode 3's "play past `loopEnd` on release" is not expressible in this data format, so it is not a
+  target.
+
+### Secondary — not the bug, but wrong by the spec
+
+`SampleIndexLoader:118` picks the first zone whose **root pitch** is at or above the requested note
+and ignores `keyRangeLow`/`keyRangeHigh` entirely. It approximates the right zone (always pitching
+down from the nearest root above) but a zone's key range is the spec's selection rule. Lower priority.
+
+### Proposed fix (two lines, NOT applied)
+
+```kotlin
+val playhead0 = if (data.begin != null) startSample else 0.0
+```
+
+Play from the start unless the user set `begin`; the loop engages when the playhead reaches
+`loopStart`, as the format intends. Drops `anchor` from the playback path (keep the field as
+informational, or remove it). **No shipped song uses a `gm_` soundfont, so no shipped sound moves** —
+but every soundfont instrument gets its attack back, which is a by-ear change the maintainer should
+hear on violin/flute/guitar before it lands. Guard to write with it: a looped-sample voice's first
+frames must equal the PCM's first frames, not `pcm[loopStart]`.
+
+---
+
+## Original brief
+
+### Status (original): TODO
 
 ## Problem
 
