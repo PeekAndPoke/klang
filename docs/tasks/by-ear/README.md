@@ -99,3 +99,22 @@ voicing numbers were chosen before that landed.
 `docs/plans/unified-eq.md` §D7. Per-band exactly solvable, but it carries a topology warning and is
 explicitly a taste pass. Optional, and the plan's CPU goal is already met (Fairphone 4, ~75%), so
 this one is pure sound.
+
+### 6. Soundfont attacks are back — every `gm_` instrument sounds different now
+
+Landed 2026-09-02 (`VoiceFactory` playhead start). Until now a looped soundfont started **inside**
+its loop and never played its attack: the FluidR3 violin skipped 1.27 s of bow onset and looped a
+180 ms slice of steady state; the flute skipped 0.66 s; the nylon guitar skipped its pluck because
+it started at `anchor`, which turned out to be the loudest sample's position, not a start offset.
+
+The fix plays from frame 0 and loops when the playhead gets there — the SF2 / WebAudioFont
+behaviour. **No shipped song uses a `gm_` soundfont**, so nothing released moved, but everything a
+tutorial might reach for did. Worth hearing, in this order, before any tutorial ships one:
+
+- `note("c4 e4 g4").s("gm_violin")` — the bow should be audible now, then a steady sustain.
+- `s("gm_acoustic_guitar_nylon")` — the pluck transient is back; check it is not now too clicky.
+- `note("c3").s("gm_accordion").sustain(4)` — should breathe in, then hold cleanly across the loop.
+
+Open question for the ear: with the attack restored, is the fixed **sustain envelope**
+(`getSampleMetadata`: attack 10 ms, release 200 ms for looped zones) still right, or was it tuned
+to mask the missing onset? Record: `docs/tasks/soundfont-looping-investigation.md`.

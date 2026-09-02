@@ -3,7 +3,16 @@
 Looped soundfont instruments (e.g., gm_accordion, gm_violin, gm_organ) do not loop correctly.
 Need to understand the soundfont data structure and how to translate it to the Klang engine.
 
-## Status: ROOT-CAUSED 2026-09-02 — fix proposed, not applied (it changes how every soundfont sounds)
+## Status: ✅ FIXED 2026-09-02 — by-ear check owed (`docs/tasks/by-ear/README.md` §6)
+
+Applied as proposed: `playhead0 = if (data.begin != null) startSample else 0.0`. Guard:
+`SamplePlayheadStartSpec` (4 rows on a ramp PCM through the real `VoiceFactory`: attack plays first,
+the loop still engages at `loopStart`, `anchor` no longer moves the start, `begin()` still wins).
+Mutation-checked: reverting the fix turns three rows red; disabling the loop wrap turns the loop row
+red. `meta.anchor` is now read nowhere on the playback path — it can be dropped from
+`SampleMetadata` in a later tidy, or kept as informational.
+
+Still open from below: zone selection by `keyRange` (secondary, not the bug).
 
 **Two defects, both in the same six lines of `VoiceFactory` (`:333-340`), and both the same shape:
 the playhead does not start at the start.** Everything else on the wire checked out.

@@ -331,13 +331,17 @@ class VoiceFactory(
                     isLooping = false
                 }
 
-                val playhead0 = if (data.begin != null) {
-                    startSample
-                } else if (useMetaLoop && sampleMetaLoop != null) {
-                    sampleMetaLoop.startSec * sample.sampleRate
-                } else {
-                    sample.meta.anchor * sample.sampleRate
-                }
+                // Play from the START unless the user set `begin`. Both SoundFont 2 and WebAudioFont
+                // start at the sample's first frame, play THROUGH the attack, and loop
+                // `[loopStart, loopEnd)` only once the playhead arrives there.
+                //
+                // This used to start a looped sample AT `loopStart` — skipping the attack entirely
+                // (the FluidR3 violin lost 1.27 s of bow onset and looped a 180 ms slice of steady
+                // state) — and a non-looped one at `meta.anchor`, which is not a start offset at all:
+                // measured against the decoded audio, `anchor` is the position of the loudest sample
+                // (argmax |x|), a normalisation artefact of the converter. For the nylon guitar that
+                // skipped the pluck. See docs/tasks/soundfont-looping-investigation.md.
+                val playhead0 = if (data.begin != null) startSample else 0.0
 
                 // Sample-accurate onset, same as the oscillator branch: `Voice.render` clips the
                 // voice into the block itself (offset = startFrame - blockStart), so a sample that
