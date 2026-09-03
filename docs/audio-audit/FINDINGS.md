@@ -962,6 +962,29 @@ than a sparse generator so its density argument differs.
 
 ---
 
+## F22 — Every chunked sample lost its metadata at the worklet boundary ✅ FIXED
+
+**HIGH — a live production defect in shipped code, found 2026-09-03 while chasing "the accordion
+still does not loop".** `SampleStore`'s chunk reassembly built `MonoSamplePcm(sampleRate, pcm)`
+and let `meta` default. Every chunk carries `meta`; the receiver never read it. `JsAudioBackend`
+chunks **every** `Sample.Complete` before the worklet boundary regardless of size, so in the browser
+**no soundfont had ever had a loop, an envelope, or an anchor.** The JVM backend passes `Complete`
+in-process and was never affected — which is why the offline renderer looped while the browser did
+not, and why two earlier, correct fixes upstream (`aa93eef8`, `c1b503d8`) were inaudible.
+
+**Why no spec saw it.** Three specs sat on this path and none crossed the join: `SoundFontZoneMetadataTest`
+proves the metadata is computed, `SamplePlayheadStartSpec` hands the PCM to `VoiceFactory` directly,
+and `SampleChunkRoundTripSpec` — the one that does cross the wire — asserted the PCM bytes and never
+mentioned `meta`. **Third instance of the [F18](#f18) shape in this audit: both ends covered, the
+handoff empty.** The pattern is now strong enough to be the narrowed audit's target: not "is there a
+spec named after it", but "does anything test the *handoff*".
+
+**Fix.** One argument, `meta = msg.meta`. Guard: three rows in `SampleChunkRoundTripSpec` asserting
+loop, adsr and anchor arrive intact across single-, two- and four-chunk samples; reverting the
+argument turns all three red. Full record: `docs/tasks/soundfont-looping-investigation.md`, round 3.
+
+---
+
 ## Note — the pump was real on paper and marginal by ear ✅ RESOLVED
 
 Recorded because the *shape* of this result is worth remembering, not just the outcome.

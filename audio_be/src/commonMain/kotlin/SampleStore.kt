@@ -95,7 +95,14 @@ class SampleStore(
                     req = req,
                     note = msg.note,
                     pitchHz = msg.pitchHz,
-                    sample = MonoSamplePcm(sampleRate = msg.sampleRate, pcm = DoubleArray(msg.totalSize)),
+                    // `meta` MUST come across with the PCM. Every chunk carries it (toChunks puts the
+                    // sample's meta on each one), and this constructor used to leave it defaulted —
+                    // so every sample that travelled chunked arrived with loop = null, adsr = null,
+                    // anchor = 0. In the browser that is EVERY sample: JsAudioBackend chunks all
+                    // Complete messages before the worklet boundary, regardless of size. No soundfont
+                    // had ever looped there. The JVM path passes Complete in-process and never lost it,
+                    // which is why the offline renderer disagreed with the ear for so long.
+                    sample = MonoSamplePcm(sampleRate = msg.sampleRate, pcm = DoubleArray(msg.totalSize), meta = msg.meta),
                 )
 
                 msg.data.copyInto(destination = entry.sample.pcm, destinationOffset = msg.chunkOffset)

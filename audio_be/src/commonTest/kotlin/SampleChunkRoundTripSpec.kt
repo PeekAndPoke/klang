@@ -8,7 +8,9 @@ package io.peekandpoke.klang.audio_be
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
@@ -81,6 +83,43 @@ class SampleChunkRoundTripSpec : StringSpec({
             chunks.forEach { store.addSample(it) }
 
             store.getComplete(r).shouldNotBeNull().sample.pcm.toList() shouldBe original.toList()
+        }
+    }
+
+    // ── meta must round-trip too — it did not, and no soundfont had ever looped in the browser ──
+    //
+    // Every chunk carries the sample's meta (toChunks puts it on each one), and the receiver's
+    // reassembly used to construct `MonoSamplePcm(sampleRate, pcm)` and let meta default to
+    // {loop = null, adsr = null, anchor = 0}. JsAudioBackend chunks EVERY Complete before the
+    // worklet boundary regardless of size, so in the browser every sample arrived stripped: no
+    // soundfont ever looped there, while the JVM path — which passes Complete in-process — always
+    // did. The rows above checked that the PCM survived and never asked about meta. Both ends
+    // covered, the join empty.
+
+    val richMeta = SampleMetadata(
+        anchor = 0.75,
+        loop = SampleMetadata.LoopRange(startSec = 0.123, endSec = 0.456),
+        adsr = AdsrDef.Std(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.05),
+    )
+
+    listOf(1, chunk + 1, 3 * chunk + 3).forEach { size ->
+
+        "meta survives reassembly — loop, adsr and anchor intact after $size frames in chunks" {
+            val r = req("meta-$size")
+            val store = newStore()
+            val original = KlangCommLink.Cmd.Sample.Complete(
+                req = r,
+                note = "c4",
+                pitchHz = 261.6,
+                sample = MonoSamplePcm(sampleRate = 44100, pcm = pcmOf(size), meta = richMeta),
+            )
+
+            original.toChunks(chunk).forEach { store.addSample(it) }
+
+            val arrived = store.getComplete(r).shouldNotBeNull().sample.meta
+            arrived.loop shouldBe richMeta.loop
+            arrived.adsr shouldBe richMeta.adsr
+            arrived.anchor shouldBe richMeta.anchor
         }
     }
 

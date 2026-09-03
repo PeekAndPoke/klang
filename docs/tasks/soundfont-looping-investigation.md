@@ -24,6 +24,24 @@ a transparent VCA (attack 0, sustain 1, release 50 ms) that the user's `.adsr()`
 below the recorded pitch (measured); FluidR3 is accurate. Maintainer's rule: no font-name handling
 in code — the index order must be correct. Filed as `docs/tasks/soundfont-variant-curation.md`.
 
+**Round 3, 2026-09-03 — still no loop in the browser, and THIS was the one hiding the other two.**
+`JsAudioBackend.kt:288` converts every `Sample.Complete` into chunks before the worklet boundary,
+regardless of size. Each chunk carries `meta` (`toChunks` puts it on all of them). The worklet's
+`SampleStore` reassembled every chunked sample as `MonoSamplePcm(sampleRate, pcm)` and let `meta`
+default to `{loop = null, adsr = null, anchor = 0}`. **In the browser, no soundfont had ever looped.**
+Rounds 1 and 2 were computed correctly on the frontend and discarded at the boundary. The JVM backend
+passes `Complete` in-process and never lost it — the offline renderer always looped, which is why the
+code kept agreeing with the reasoning while the ear did not. The violin never looped either; its 1 s
+samples simply outlast a normal note, and the accordion's 0.13–0.39 s ones do not.
+
+Fix: one argument, `meta = msg.meta`, on the reassembled `MonoSamplePcm`. Guard: three new rows in
+`SampleChunkRoundTripSpec` — the one spec that crosses the wire, and which until now checked that the
+PCM bytes survived and never asked about `meta`. Reverting the argument turns all three red.
+
+**Zero of the three earlier specs could see this**, and that is the finding worth carrying: the FE
+spec proves the metadata is *computed*, the BE spec hands the PCM to `VoiceFactory` *directly*, the
+round-trip spec checked *bytes*. Both ends covered, the join empty — F18's shape, third time.
+
 Still open from below: zone selection by `keyRange` (secondary, not the bug).
 
 **Two defects, both in the same six lines of `VoiceFactory` (`:333-340`), and both the same shape:

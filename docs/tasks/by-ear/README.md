@@ -103,7 +103,10 @@ this one is pure sound.
 ### 6. Soundfonts: every `gm_` instrument sounds different now — three changes, one listening pass
 
 Landed 2026-09-02/03. No shipped song uses a `gm_` soundfont, so nothing released moved, but
-everything a tutorial might reach for did. Three changes stack:
+everything a tutorial might reach for did. **Nothing below was audible in the browser until
+2026-09-03's third fix** — the worklet dropped every sample's metadata on reassembly, so no
+soundfont had ever looped there. Restart the frontend watcher so the worklet bundle rebuilds before
+listening. Three changes stack:
 
 1. **Playback starts at frame 0** (`VoiceFactory`). A looped zone used to start *inside* its loop
    — the FluidR3 violin skipped 1.27 s of bow and looped 180 ms of steady state. And a non-looped
