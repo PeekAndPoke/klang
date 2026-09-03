@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
+import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -43,6 +44,12 @@ class AudioBackendContext(
      * so pool vocabularies reproduce.
      */
     val phasePoolSeed: Int? = null,
+    /**
+     * Where the backend's expensive buffers come from — one per backend, shared across playbacks and
+     * kept from the warmup engine rather than disposed with it. Owned here, not a Kotlin `object`,
+     * so specs and the offline renderer get their own. See `docs/plans/resource-warehouse.md`.
+     */
+    val warehouse: ResourceWarehouse = ResourceWarehouse(sampleRate = sampleRate, blockFrames = blockFrames),
 ) {
     val sampleRateDouble: Double = sampleRate.toDouble()
 

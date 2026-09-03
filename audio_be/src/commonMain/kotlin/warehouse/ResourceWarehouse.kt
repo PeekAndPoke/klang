@@ -40,8 +40,25 @@ class ResourceWarehouse(
         allocate = allocate,
     )
 
-    /** The one shared scratch pool. Engines render sequentially within a block, so one is enough. */
-    val scratch: ScratchBuffers = ScratchBuffers(blockFrames)
+    /**
+     * The one shared scratch pool. Engines render sequentially within a block, so one is enough.
+     *
+     * Sized HERE, once, to [SCRATCH_DEPTH] — not per voice at build. The plan said "the factory
+     * knows its graph's depth"; it does not, cheaply: the DSL tree has no walker, and a per-voice
+     * count would be a 78-arm `when` that every new node type must maintain, for a 1 KB buffer. The
+     * depth bound is a property of the corpus, not of one voice, and this pool is shared and never
+     * shrinks, so one generous pre-size covers every graph a song has — the deepest shipped chain
+     * nests well under half of it. The proof is not the number but the counter:
+     * [ScratchBuffers.lateAllocations] must read zero after any render, and a spec says so.
+     * The oversample sub-pools are warmed for the same reason — their first use would otherwise
+     * allocate inside `process()`.
+     */
+    val scratch: ScratchBuffers = ScratchBuffers(blockFrames).apply {
+        ensureCapacity(SCRATCH_DEPTH)
+        for (factor in WARM_OVERSAMPLE_FACTORS) {
+            oversample(factor).ensureCapacity(SCRATCH_DEPTH)
+        }
+    }
 
     companion object {
         /**
@@ -58,5 +75,15 @@ class ResourceWarehouse(
          * AudioWorklet; revisit only if a device proves the need.
          */
         const val SHELF_BUDGET_BYTES: Int = 32 * 1024 * 1024
+
+        /**
+         * Scratch buffers pre-allocated per pool: 64 × 1 KB. Measured: a synthetic 24-effect chain
+         * (deeper than any shipped instrument) reaches a high-water mark of 30. Real songs are
+         * shallower; `SharedScratchSpec` pins zero in-render allocations.
+         */
+        const val SCRATCH_DEPTH: Int = 64
+
+        /** Oversample factors the DSL offers; each gets its own pre-sized sub-pool. */
+        val WARM_OVERSAMPLE_FACTORS: List<Int> = listOf(2, 4, 8)
     }
 }

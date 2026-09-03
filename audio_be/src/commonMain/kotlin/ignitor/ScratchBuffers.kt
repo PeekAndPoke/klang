@@ -46,13 +46,28 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     /** Buffers in the pool right now, in use or not. */
     val capacity: Int get() = pool.size
 
+    /**
+     * The deepest simultaneous nesting this pool has ever served — i.e. the deepest ignitor graph
+     * that has rendered through it. Read it to know how much of [ensureCapacity]'s pre-size a real
+     * song actually uses.
+     */
+    var highWater: Int = 0
+        private set
+
+    /** Whether the sub-pool for [factor] already exists — i.e. its first use will NOT allocate. */
+    fun hasOversample(factor: Int): Boolean = factor <= 1 || factor in oversampleCache
+
     @PublishedApi
     internal fun acquire(): AudioBuffer {
         if (nextFree >= pool.size) {
             pool.add(AudioBuffer(blockFrames))
             lateAllocations++
         }
-        return pool[nextFree++]
+        val buf = pool[nextFree++]
+        if (nextFree > highWater) {
+            highWater = nextFree
+        }
+        return buf
     }
 
     @PublishedApi

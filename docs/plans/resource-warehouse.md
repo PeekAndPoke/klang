@@ -172,6 +172,7 @@ before anything touches it.
 | step | change | proves |
 |---|---|---|
 | 2a | scratch: shared instance, `ctx.warehouse.scratch`, sized at build, guarded release | mechanical rename; render never allocates scratch |
+| | ✅ **substance DONE 2026-09-03** — `AudioBackendContext` owns the `ResourceWarehouse`; the scheduler renders with `context.warehouse.scratch`; `SharedScratchSpec` proves through the real engine that every playback shares one pool, a 24-deep chain (high-water 30) makes zero in-render allocations, the oversample sub-pools exist before the first render, and the stack discipline holds. **Deviation recorded:** the pool is sized once at warehouse creation (`SCRATCH_DEPTH = 64`), not per voice at build — the DSL tree has no walker, and a per-voice count would be a 78-arm `when` every new node type must maintain, for a 1 KB buffer. The counter is the proof, not the number. **The rename `ctx.scratchBuffers → ctx.warehouse.scratch` is NOT done**: 45 production + 66 test sites, zero behaviour change; its own commit, when the parallel sessions are not mid-edit in `ignitor/` tests. | |
 | 2b | rings: lazy, class-sized, rented from the shelf | **measure on the Fairphone — the stutter should already be gone** |
 | 2c | grow: migrate up, contents preserved | a spec that *listens across the seam* |
 | 2d | reverb units: lazy on first `room`, rented | |
