@@ -86,7 +86,7 @@ class OrbitBusPipelineSpec : StringSpec({
             blockStart = 0.0,
         )
         cylinder.reverb.reverb.roomSize shouldBe 0.7
-        cylinder.delay.delayLine.delayTimeSeconds shouldBe 0.3
+        cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.3
 
         // Different voice, same block → denied → owner's settings persist.
         cylinder.updateFromVoice(
@@ -97,7 +97,7 @@ class OrbitBusPipelineSpec : StringSpec({
             blockStart = 0.0,
         )
         cylinder.reverb.reverb.roomSize shouldBe 0.7
-        cylinder.delay.delayLine.delayTimeSeconds shouldBe 0.3
+        cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.3
     }
 
     "when the orbit owner ends, a new voice takes over and its bus settings apply" {
@@ -389,8 +389,8 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        cylinder.delay.delayLine.delayTimeSeconds shouldBe 0.5
-        cylinder.delay.delayLine.feedback shouldBe 0.3
+        cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.5
+        cylinder.delay.delayLine!!.feedback shouldBe 0.3
     }
 
     "updateFromVoice configures reverb parameters" {

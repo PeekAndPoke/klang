@@ -34,11 +34,7 @@ class ResourceWarehouse(
     allocate: (frames: Int) -> StereoBuffer? = SizedBuffers::allocateOrNull,
 ) {
     /** Delay rings (and reverb units, once they rent). Class 0 is [MIN_RING_SECONDS] at [sampleRate]. */
-    val sized: SizedBuffers = SizedBuffers(
-        baseFrames = (sampleRate * MIN_RING_SECONDS).toInt(),
-        budgetBytes = budgetBytes,
-        allocate = allocate,
-    )
+    val sized: SizedBuffers = SizedBuffers.forRings(sampleRate, budgetBytes, allocate)
 
     /**
      * The one shared scratch pool. Engines render sequentially within a block, so one is enough.

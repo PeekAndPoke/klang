@@ -74,11 +74,11 @@ class KatalystDelayEffectSpec : StringSpec({
     "delay line parameters are accessible and writable" {
         val effect = createEffect(delayTime = 0.5, feedback = 0.3)
 
-        effect.delayLine.delayTimeSeconds shouldBe 0.5
-        effect.delayLine.feedback shouldBe 0.3
+        effect.delayLine!!.delayTimeSeconds shouldBe 0.5
+        effect.delayLine!!.feedback shouldBe 0.3
 
-        effect.delayLine.delayTimeSeconds = 1.0
-        effect.delayLine.delayTimeSeconds shouldBe 1.0
+        effect.delayLine!!.delayTimeSeconds = 1.0
+        effect.delayLine!!.delayTimeSeconds shouldBe 1.0
     }
 
     // ── The drain lifecycle (block-framing ledger D3) ─────────────────────────
@@ -136,7 +136,7 @@ class KatalystDelayEffectSpec : StringSpec({
 
         // The retained (last-active) params + the measured ring peak drive the countdown, so this
         // recomputes the same value the effect captured at the off-transition.
-        val drainSamples = effect.delayLine.drainSamplesUntilSilent(peak = effect.delayLine.tapWindowPeakAbs())
+        val drainSamples = effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs())
         drainSamples.isFinite() shouldBe true
         val drainBlocks = ceil(drainSamples / blockFrames).toInt()
 
@@ -156,7 +156,7 @@ class KatalystDelayEffectSpec : StringSpec({
 
         effect.hasTail() shouldBe false
         // Literally zero: hasTail(0.0) is a strict > comparison, ANY residue would trip it.
-        effect.delayLine.hasTail(0.0) shouldBe false
+        effect.delayLine!!.hasTail(0.0) shouldBe false
 
         // And Off is a true short-circuit: a hot send no longer reaches the mix.
         ctx.delaySendBuffer.fill(0.9)
@@ -178,7 +178,7 @@ class KatalystDelayEffectSpec : StringSpec({
         effect.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
 
         val drainBlocks = ceil(
-            effect.delayLine.drainSamplesUntilSilent(peak = effect.delayLine.tapWindowPeakAbs()) / blockFrames
+            effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs()) / blockFrames
         ).toInt() + 2
 
         repeat(drainBlocks) {
@@ -255,7 +255,7 @@ class KatalystDelayEffectSpec : StringSpec({
         effect.process(ctx)
         effect.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
 
-        val drainSamples = effect.delayLine.drainSamplesUntilSilent(peak = effect.delayLine.tapWindowPeakAbs())
+        val drainSamples = effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs())
         // Enough 128-frame calls that a countdown ticking by ctx.blockFrames would have flipped
         // Off — but the ring has only processed HALF that many samples and is still audible.
         val callsForBuggyFlip = ceil(drainSamples / blockFrames).toInt() + 2
@@ -283,9 +283,9 @@ class KatalystDelayEffectSpec : StringSpec({
 
         effect.reset()
 
-        effect.delayLine.delayTimeSeconds shouldBe 0.0
-        effect.delayLine.feedback shouldBe 0.0
-        effect.delayLine.feedbackCap shouldBe 1.0
+        effect.delayLine!!.delayTimeSeconds shouldBe 0.0
+        effect.delayLine!!.feedback shouldBe 0.0
+        effect.delayLine!!.feedbackCap shouldBe 1.0
     }
 
     "a quiet ring drains in proportion to its content, not the saturated worst case" {

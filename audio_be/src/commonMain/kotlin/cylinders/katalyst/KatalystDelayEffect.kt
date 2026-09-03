@@ -7,6 +7,8 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import kotlin.math.ceil
 import kotlin.math.min
 
 /**
@@ -42,14 +44,83 @@ import kotlin.math.min
  * and ring as a metallic comb instead of being silent (see the MasterChain gate note).
  */
 class KatalystDelayEffect(
+    /** Where the ring comes from. Rented on first activation, never before (resource warehouse, 2b). */
+    private val rings: SizedBuffers,
+    private val sampleRate: Int,
+    blockFrames: Int,
+) : KatalystEffect {
     /**
-     * The DSP core. INVARIANT: `delayTimeSeconds`/`feedback`/`feedbackCap` change only through
+     * Test seam: start with a ring already installed, as every spec written before rings were rented
+     * does. Production never calls this — a cylinder's delay has NO ring until a voice asks for one.
+     */
+    constructor(delayLine: DelayLine, blockFrames: Int) : this(
+        rings = SizedBuffers(baseFrames = delayLine.capacityFrames, budgetBytes = Int.MAX_VALUE),
+        sampleRate = delayLine.sampleRate,
+        blockFrames = blockFrames,
+    ) {
+        this.delayLine = delayLine
+    }
+
+    /**
+     * The DSP core, or `null` while this orbit has never asked for a delay. That null is the whole
+     * point: a cylinder used to construct a 10-second ring (7.68 MB, 97 % of the cylinder) whether
+     * or not the orbit ever used delay, and eight of those zero-filled on the audio thread on first
+     * play were the "Der Schmetterling" stutter. Now the ring is rented from the warehouse on the
+     * first `configure` that activates, sized to the class that holds the requested time.
+     *
+     * INVARIANT (unchanged): `delayTimeSeconds`/`feedback`/`feedbackCap` change only through
      * [configure] — a direct write bypasses the lifecycle and desyncs [state] from the DSP
      * (tests may write directly to probe the core; production must not).
      */
-    val delayLine: DelayLine,
-    blockFrames: Int,
-) : KatalystEffect {
+    var delayLine: DelayLine? = null
+        private set
+
+    /**
+     * Rents refused by the warehouse (out of memory). The effect degrades rather than dies: a
+     * first-activation refusal leaves it Off; a grow refusal keeps the current ring, and
+     * `DelayLine` clamps the time to what that ring holds. Surfaced through diagnostics later.
+     */
+    var deniedRents: Int = 0
+        private set
+
+    /** Frames a ring must hold to serve [timeSeconds], including the interpolation guard. */
+    private fun framesFor(timeSeconds: Double): Int = ceil(timeSeconds * sampleRate).toInt() + RING_MARGIN_FRAMES
+
+    /**
+     * Ensures a ring that holds [timeSeconds] is installed, renting or growing as needed. Returns the
+     * line to use, or `null` if there is none and the warehouse refused one.
+     *
+     * Growing (2b) rents the next sufficient class and gives the old ring back **without copying
+     * its contents** — a delay that is ringing at that moment loses its tail. Step 2c replaces this
+     * with a migration; `LazyRingSpec` pins the current behaviour as a tripwire so the switch is
+     * deliberate. Never shrinks: a shorter time keeps the ring it has.
+     */
+    private fun ensureRing(timeSeconds: Double): DelayLine? {
+        val needed = framesFor(timeSeconds)
+        val current = delayLine
+
+        if (current != null && current.capacityFrames >= needed) {
+            return current
+        }
+
+        val ring = rings.rent(needed)
+
+        if (ring == null) {
+            deniedRents++
+
+            // Keep what we have (the time will clamp to it), or stay without.
+            return current
+        }
+
+        if (current != null) {
+            rings.giveBack(current.ring)
+        }
+
+        val line = DelayLine(ring, sampleRate)
+        delayLine = line
+
+        return line
+    }
 
     private enum class State { Off, Active, Draining }
 
@@ -68,12 +139,18 @@ class KatalystDelayEffect(
      */
     fun configure(timeSeconds: Double, feedback: Double, cap: Double) {
         if (timeSeconds >= MIN_ACTIVE_DELAY_SECONDS) {
-            delayLine.delayTimeSeconds = timeSeconds
-            delayLine.feedback = feedback
-            delayLine.feedbackCap = cap
+            // No ring and none to be had: the orbit stays dry rather than the worklet dying.
+            val line = ensureRing(timeSeconds) ?: return
+
+            line.delayTimeSeconds = timeSeconds
+            line.feedback = feedback
+            line.feedbackCap = cap
             state = State.Active
             return
         }
+
+        // Never activated: nothing to drain.
+        val delayLine = this.delayLine ?: return
 
         if (state == State.Active) {
             // One O(delayInt) scan at the transition: the countdown starts from what the TAP can
@@ -109,7 +186,7 @@ class KatalystDelayEffect(
     fun hasTail(): Boolean = when (state) {
         State.Off -> false
         State.Draining -> true
-        State.Active -> delayLine.hasTail()
+        State.Active -> delayLine?.hasTail() ?: false
     }
 
     /** Clears the ring, the lifecycle AND the DSP params — called from `Cylinder.resetBusEffects`
@@ -118,15 +195,21 @@ class KatalystDelayEffect(
      *  otherwise inherit THIS life's value — e.g. a dead owner's self-oscillating feedback.
      *  Mirrors `Phaser.resetForReuse`. */
     fun reset() {
-        delayLine.reset()
-        delayLine.delayTimeSeconds = 0.0
-        delayLine.feedback = 0.0
-        delayLine.feedbackCap = 1.0
+        // The ring is KEPT — re-activation is then free. Eviction (2f) is what returns it.
+        delayLine?.let {
+            it.reset()
+            it.delayTimeSeconds = 0.0
+            it.feedback = 0.0
+            it.feedbackCap = 1.0
+        }
         state = State.Off
         drainRemaining = 0.0
     }
 
     override fun process(ctx: KatalystContext) {
+        // Active and Draining both imply a ring; the guard is so no path can throw in render.
+        val delayLine = this.delayLine ?: return
+
         when (state) {
             State.Off -> {}
 
@@ -156,6 +239,9 @@ class KatalystDelayEffect(
     }
 
     companion object {
+        /** Headroom past the requested time so `DelayLine`'s `bufferSize - 2` interpolation guard never clamps it. */
+        const val RING_MARGIN_FRAMES = 64
+
         /**
          * Below this, an authored delay time means "off" — the DSP would coerce it up to its own
          * minimum and ring as a metallic comb instead of falling silent.

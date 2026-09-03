@@ -142,6 +142,17 @@ class SizedBuffers(
     companion object {
         private const val BYTES_PER_FRAME = 2 * 8 // stereo, Double
 
+        /** A ring shelf whose class 0 is [ResourceWarehouse.MIN_RING_SECONDS] at [sampleRate]. */
+        fun forRings(
+            sampleRate: Int,
+            budgetBytes: Int = ResourceWarehouse.SHELF_BUDGET_BYTES,
+            allocate: (frames: Int) -> StereoBuffer? = ::allocateOrNull,
+        ): SizedBuffers = SizedBuffers(
+            baseFrames = (sampleRate * ResourceWarehouse.MIN_RING_SECONDS).toInt(),
+            budgetBytes = budgetBytes,
+            allocate = allocate,
+        )
+
         fun bytesOf(buffer: StereoBuffer): Int = buffer.left.size * BYTES_PER_FRAME
 
         /**

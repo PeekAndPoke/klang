@@ -17,10 +17,10 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystPhaserEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.VoiceLease
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**
@@ -40,7 +40,14 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 // pattern whose gaps straddle the grace at one block size but not another re-enters the sweep
 // differently (review round 4). `PlaybackEngine` shows the seconds-derived pattern if this ever
 // needs pinning to wall time.
-class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val silentBlocksBeforeTailCheck: Int = 10) {
+class Cylinder(
+    val id: Int,
+    val blockFrames: Int,
+    sampleRate: Int,
+    private val silentBlocksBeforeTailCheck: Int = 10,
+    /** The ring shelf this orbit's delay rents from. Production passes the backend's one warehouse. */
+    rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+) {
 
     // ════════════════════════════════════════════════════════════════════════════
     // Bus pipeline effects
@@ -52,8 +59,11 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
     val vowel = KatalystFormantEffect(sampleRate.toDouble())
 
+    // No ring until a voice asks for one (resource warehouse, 2b). This used to construct a
+    // 10-second DelayLine here — 7.68 MB, 97 % of the cylinder — for every orbit, delay or not.
     val delay = KatalystDelayEffect(
-        delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
+        rings = rings,
+        sampleRate = sampleRate,
         blockFrames = blockFrames,
     )
 

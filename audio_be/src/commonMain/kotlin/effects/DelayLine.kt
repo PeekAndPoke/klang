@@ -59,13 +59,28 @@ import kotlin.math.min
  *   `process()`, not per channel/chunk.
  */
 class DelayLine(
-    maxDelaySeconds: Double,
+    /** The ring. Rented from the resource warehouse in production; the secondary constructor allocates one. */
+    ring: StereoBuffer,
     val sampleRate: Int,
     delayTimeSeconds: Double = 0.5,
     feedback: Double = 0.0,
 ) {
-    private val bufferSize = (maxDelaySeconds * sampleRate).toInt()
-    private val buffer = StereoBuffer(bufferSize)
+    /** Allocates its own ring of [maxDelaySeconds]. Master chains and specs; cylinders rent instead. */
+    constructor(
+        maxDelaySeconds: Double,
+        sampleRate: Int,
+        delayTimeSeconds: Double = 0.5,
+        feedback: Double = 0.0,
+    ) : this(StereoBuffer((maxDelaySeconds * sampleRate).toInt()), sampleRate, delayTimeSeconds, feedback)
+
+    /** The ring itself, so an owner can give it back to the warehouse. */
+    internal val ring: StereoBuffer = ring
+
+    private val bufferSize = ring.left.size
+    private val buffer = ring
+
+    /** How many frames this ring holds — the longest delay it can serve, minus the interpolation guard. */
+    val capacityFrames: Int get() = bufferSize
     private var writePos = 0
 
     /** Delay time in seconds. Setter silently ignores non-finite values. */
@@ -198,6 +213,14 @@ class DelayLine(
     /** The effective tap distance in samples — [delayTimeSeconds] under the same coercion [process] applies. */
     private fun currentDelaySamples(): Double =
         (delayTimeSeconds * sampleRate).coerceIn(MIN_DELAY_SECONDS * sampleRate, bufferSize - 2.0)
+
+    /**
+     * The delay actually being rendered, in seconds — [delayTimeSeconds] after the physical bound of
+     * this ring. They differ only when the requested time exceeds the ring, which since the resource
+     * warehouse means "a longer ring was refused (out of memory) and this one is doing its best".
+     * That gap is what the frontend should show as "delay time reduced".
+     */
+    val effectiveDelaySeconds: Double get() = currentDelaySamples() / sampleRate
 
     /**
      * Clears the ring buffer and resets the write head so a reused delay line does not replay a previous
