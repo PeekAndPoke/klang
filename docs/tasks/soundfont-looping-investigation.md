@@ -22,7 +22,7 @@ a transparent VCA (attack 0, sustain 1, release 50 ms) that the user's `.adsr()`
 
 **The accordion's high notes being sharp is the DATA.** JCLive's declared roots are 0.4–1.4 st
 below the recorded pitch (measured); FluidR3 is accurate. Maintainer's rule: no font-name handling
-in code — the index order must be correct. Filed as `docs/tasks/soundfont-variant-curation.md`.
+in code — the index order must be correct. Filed as `docs/tasks/future/soundfont-variant-curation.md`.
 
 **Round 3, 2026-09-03 — still no loop in the browser, and THIS was the one hiding the other two.**
 `JsAudioBackend.kt:288` converts every `Sample.Complete` into chunks before the worklet boundary,
@@ -42,7 +42,8 @@ PCM bytes survived and never asked about `meta`. Reverting the argument turns al
 spec proves the metadata is *computed*, the BE spec hands the PCM to `VoiceFactory` *directly*, the
 round-trip spec checked *bytes*. Both ends covered, the join empty — F18's shape, third time.
 
-Still open from below: zone selection by `keyRange` (secondary, not the bug).
+Still open from below: zone selection by `keyRange` (secondary, not the bug) — filed as
+`docs/tasks/future/soundfont-zone-selection.md`.
 
 **Two defects, both in the same six lines of `VoiceFactory` (`:333-340`), and both the same shape:
 the playhead does not start at the start.** Everything else on the wire checked out.

@@ -134,5 +134,5 @@ specific belongs in the user's `.adsr()`, not in the engine default.
 **Not fixable here, and worth knowing before judging the accordion:** JCLive's declared root
 pitches sit **0.4–1.4 semitones below** what was recorded (measured, `soundfont-looping-
 investigation.md`). Zone 8 (keys 81–84) plays 1.4 st sharp. FluidR3 is accurate to a quarter-tone
-and is `.n(1)` for the accordion. That is a data / curation item, see `docs/tasks/soundfont-
-variant-curation.md`.
+and is `.n(1)` for the accordion. That is a data / curation item, see `docs/tasks/future/
+soundfont-variant-curation.md`.
