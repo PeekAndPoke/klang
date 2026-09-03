@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
+import io.peekandpoke.klang.audio_be.effects.DelayLine
 import kotlin.math.abs
 
 /**
@@ -175,30 +176,90 @@ class LazyRingSpec : StringSpec({
         rings.shelfCount shouldBe 1 // the small one is back on the shelf
     }
 
-    "PINNED (2b): a grow LOSES the tail — the new ring starts empty. Flip this when 2c migrates." {
-        // A tripwire, the same device the block-framing ledger uses: this row goes RED the moment
-        // step 2c copies the old ring's contents across the resize, forcing that switch to be
-        // deliberate. Until then, a delay that is ringing when a longer time arrives drops out.
+    "a grow PRESERVES the tail — the tripwire from 2b, flipped by 2c" {
+        // This row was pinned RED-on-fix in 2b ("a grow loses the tail; flip when 2c migrates").
+        // 2c migrated. A delay ringing when a longer time arrives keeps ringing.
         val (rings, _) = shelf()
         val fx = effect(rings)
         val c = ctx()
         fx.configure(timeSeconds = 0.05, feedback = 0.0, cap = 1.0)
 
-        // Fill the ring with signal, then let the send go silent: the tail alone is what sounds.
         c.delaySendBuffer.left.fill(0.5)
         repeat(20) { fx.process(c) }
         c.delaySendBuffer.left.fill(0.0)
         c.mixBuffer.clear()
         fx.process(c)
         val tailBefore = c.mixBuffer.left.maxOf { abs(it) }
-        tailBefore shouldBeGreaterThan 1e-3 // the old ring is ringing
+        tailBefore shouldBeGreaterThan 1e-3
 
-        fx.configure(timeSeconds = 1.5, feedback = 0.0, cap = 1.0) // grow
+        fx.configure(timeSeconds = 0.06, feedback = 0.0, cap = 1.0) // still class 0 — no grow yet
+        fx.configure(timeSeconds = 1.5, feedback = 0.0, cap = 1.0)  // grow to class 2
 
+        // The new tap reaches 1.5 s back, past everything the old ring recorded, so the FIRST block
+        // after the grow reads the honest zeros of never-recorded history. What must survive is
+        // the history itself: shorten the time back into the recorded span and the tail is there.
+        fx.configure(timeSeconds = 0.05, feedback = 0.0, cap = 1.0)
         c.mixBuffer.clear()
         fx.process(c)
         val tailAfter = c.mixBuffer.left.maxOf { abs(it) }
-        tailAfter shouldBeLessThan 1e-9 // ...and the new ring knows nothing of it. 2c: migrate.
+        tailAfter shouldBeGreaterThan 1e-3
+    }
+
+    "the seam is inaudible: a grown ring is BIT-IDENTICAL to a ring that was big from the start" {
+        // The real proof. Two effects get the same input and the same configure sequence; one
+        // starts on a class-0 ring and grows mid-way, the other was handed a 4 s ring up front and
+        // never grows. From the grow onward every output sample must match exactly — not "close",
+        // exactly — because "n samples ago" reads the same sample in both rings by construction.
+        val (rings, _) = shelf()
+        val grown = effect(rings)
+        val big = KatalystDelayEffect(delayLine = DelayLine(maxDelaySeconds = 4.0, sampleRate = sampleRate), blockFrames = blockFrames)
+
+        fun step(fx: KatalystDelayEffect, c: KatalystContext, block: Int): DoubleArray {
+            // A deterministic, non-periodic input so a misaligned copy cannot hide behind repetition.
+            for (i in 0 until blockFrames) {
+                val t = block * blockFrames + i
+                c.delaySendBuffer.left[i] = ((t * 7919) % 1000) / 1000.0 - 0.5
+                c.delaySendBuffer.right[i] = ((t * 104729) % 1000) / 1000.0 - 0.5
+            }
+            c.mixBuffer.clear()
+            fx.process(c)
+            return DoubleArray(blockFrames) { c.mixBuffer.left[it] }
+        }
+
+        val cg = ctx()
+        val cb = ctx()
+        grown.configure(timeSeconds = 0.05, feedback = 0.6, cap = 1.0)
+        big.configure(timeSeconds = 0.05, feedback = 0.6, cap = 1.0)
+        repeat(30) { block -> step(grown, cg, block); step(big, cb, block) }
+
+        // The grow: same instant, same new time, on both. Only one of them changes rings.
+        grown.configure(timeSeconds = 0.9, feedback = 0.6, cap = 1.0) // class 1: this is the grow
+        big.configure(timeSeconds = 0.9, feedback = 0.6, cap = 1.0)
+        grown.delayLine.shouldNotBeNull().capacityFrames shouldBe 2 * base // it did grow
+
+        // Then shorten the tap back INSIDE the old ring's span, on both. This is the part that
+        // makes the row see the migration at all: a 0.9 s tap reads past the 0.087 s either ring
+        // had recorded, into never-recorded zeros in BOTH — so the first cut of this row compared
+        // zeros to zeros for 270 blocks and could not tell a migrated ring from an empty one (two
+        // mutations survived it). At 0.06 s the tap reads the history itself, which exists in
+        // `big` because it recorded it and in `grown` only if the migration carried it.
+        grown.configure(timeSeconds = 0.06, feedback = 0.6, cap = 1.0)
+        big.configure(timeSeconds = 0.06, feedback = 0.6, cap = 1.0)
+
+        var readSomething = false
+        for (block in 30 until 300) {
+            val og = step(grown, cg, block)
+            val ob = step(big, cb, block)
+            for (i in 0 until blockFrames) {
+                if (og[i] != ob[i]) {
+                    throw AssertionError("seam broke at block $block frame $i: grown=${og[i]} big=${ob[i]}")
+                }
+                if (block < 33 && ob[i] != 0.0) readSomething = true
+            }
+        }
+        // Positive control: the first blocks after the grow must have echoed real history, or the
+        // identity above was zeros against zeros again.
+        readSomething shouldBe true
     }
 
     // ── Out of memory: degrade, count, never throw ───────────────────────────────────────────────

@@ -90,10 +90,9 @@ class KatalystDelayEffect(
      * Ensures a ring that holds [timeSeconds] is installed, renting or growing as needed. Returns the
      * line to use, or `null` if there is none and the warehouse refused one.
      *
-     * Growing (2b) rents the next sufficient class and gives the old ring back **without copying
-     * its contents** — a delay that is ringing at that moment loses its tail. Step 2c replaces this
-     * with a migration; `LazyRingSpec` pins the current behaviour as a tripwire so the switch is
-     * deliberate. Never shrinks: a shorter time keeps the ring it has.
+     * Growing rents the next sufficient class, **migrates the old ring's history into it** (2c —
+     * `DelayLine.adoptHistory`, so a delay that is ringing at that moment keeps ringing across the
+     * seam), then gives the old ring back. Never shrinks: a shorter time keeps the ring it has.
      */
     private fun ensureRing(timeSeconds: Double): DelayLine? {
         val needed = framesFor(timeSeconds)
@@ -112,11 +111,14 @@ class KatalystDelayEffect(
             return current
         }
 
+        val line = DelayLine(ring, sampleRate)
+
         if (current != null) {
+            // Adopt FIRST: giveBack clears the ring it is handed.
+            line.adoptHistory(current)
             rings.giveBack(current.ring)
         }
 
-        val line = DelayLine(ring, sampleRate)
         delayLine = line
 
         return line

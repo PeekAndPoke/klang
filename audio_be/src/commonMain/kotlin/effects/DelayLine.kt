@@ -81,6 +81,37 @@ class DelayLine(
 
     /** How many frames this ring holds — the longest delay it can serve, minus the interpolation guard. */
     val capacityFrames: Int get() = bufferSize
+
+    /**
+     * Seeds this ring with [from]'s history so that **"n samples ago" reads the same sample here as
+     * it did there** — which is exactly what makes the seam of a grow inaudible (resource warehouse,
+     * step 2c). A delay that is ringing when a longer time arrives keeps ringing.
+     *
+     * [from]'s oldest sample sits at its `writePos` (the slot about to be overwritten) and its newest
+     * one just before; they are copied oldest-first into `[0, n)` here and the cursor is left at `n`,
+     * so `writePos - d` lands on the same sample for every `d` the old ring could serve. Anything
+     * older than the old ring's span was never recorded and reads as the zeros this ring came with —
+     * the honest answer for a tap that now reaches further back than the delay ever recorded.
+     *
+     * Only ever called with a larger ring (a grow); a smaller [from] fits by construction and a
+     * larger one is truncated to what fits rather than thrown at.
+     */
+    internal fun adoptHistory(from: DelayLine) {
+        val n = minOf(from.bufferSize, bufferSize)
+        val src = from.buffer
+        val start = from.writePos
+
+        for (i in 0 until n) {
+            var s = start + i
+            if (s >= from.bufferSize) {
+                s -= from.bufferSize
+            }
+            buffer.left[i] = src.left[s]
+            buffer.right[i] = src.right[s]
+        }
+
+        writePos = if (n == bufferSize) 0 else n
+    }
     private var writePos = 0
 
     /** Delay time in seconds. Setter silently ignores non-finite values. */
