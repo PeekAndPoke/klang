@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import kotlin.math.ceil
 import kotlin.math.min
@@ -84,11 +85,15 @@ class KatalystDelayEffect(
         private set
 
     /**
-     * The smallest ring size the warehouse has refused this effect, or 0. Without it a refusal is
-     * retried on EVERY block — `Cylinder.applyBusEffects` re-applies the owner's config per block —
-     * and "graceful degradation" becomes a 344 Hz allocate-and-catch storm on the audio thread
-     * (review round 1, both reviewers). While `needed >= refusedFrames` the rent is not attempted.
-     * Cleared by [reset] (a new owner life) and by a later SUCCESSFUL rent of anything.
+     * The smallest ring CLASS the warehouse has failed to allocate for this effect, or 0. Without
+     * it a refusal is retried on EVERY block — `Cylinder.applyBusEffects` re-applies the owner's
+     * config per block — and "graceful degradation" becomes a 344 Hz allocate-and-catch storm on the
+     * audio thread (review round 1, both reviewers). While the needed class is `>= refusedFrames`
+     * no ALLOCATION is attempted; the shelf is still consulted, because a ring another orbit
+     * returned meanwhile is free to take (review round 2). Keyed on the class, not the raw frame
+     * count: two times inside one class are the same allocation, and the smaller one must not slip
+     * past the latch into a retry that is certain to fail. Cleared by [reset] (a new owner life)
+     * and by a later SUCCESSFUL rent of anything.
      */
     private var refusedFrames: Int = 0
 
@@ -124,16 +129,17 @@ class KatalystDelayEffect(
             return current
         }
 
-        if (refusedFrames != 0 && needed >= refusedFrames) {
-            // Already refused at this size or smaller: do not ask again every block.
-            return current
-        }
+        val neededClass = rings.classFrames(needed)
+        val latched = refusedFrames != 0 && neededClass >= refusedFrames
 
-        val ring = rings.rent(needed)
+        // Latched: the shelf only — never the allocation that already failed at this class.
+        val ring = rings.rent(needed, allocateOnMiss = !latched)
 
         if (ring == null) {
-            deniedRents++
-            refusedFrames = needed
+            if (!latched) {
+                deniedRents++
+                refusedFrames = neededClass
+            }
 
             // Keep what we have (the time will clamp to it), or stay without.
             return current
@@ -273,7 +279,8 @@ class KatalystDelayEffect(
 
     companion object {
         /** Headroom past the requested time so `DelayLine`'s `bufferSize - 2` interpolation guard never clamps it. */
-        const val RING_MARGIN_FRAMES = 64
+        /** See [ResourceWarehouse.RING_MARGIN_FRAMES] — class 0 of the shelf includes it. */
+        const val RING_MARGIN_FRAMES = ResourceWarehouse.RING_MARGIN_FRAMES
 
         /**
          * Below this, an authored delay time means "off" — the DSP would coerce it up to its own

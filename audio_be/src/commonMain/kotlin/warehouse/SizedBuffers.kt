@@ -100,9 +100,12 @@ class SizedBuffers(
 
     /**
      * A zeroed stereo buffer of at least [minFrames] frames, or `null` if the shelf had nothing big
-     * enough and allocation failed. Best-fit-up from the shelf; allocate on a miss.
+     * enough and allocation failed. Best-fit-up from the shelf; allocate on a miss — unless
+     * [allocateOnMiss] is false, in which case a miss is `null` and counts as nothing: the caller
+     * already knows allocation at this size fails and only wants what the shelf can serve for free
+     * (review round 2: a latched refusal must not also block a pure shelf hit).
      */
-    fun rent(minFrames: Int): StereoBuffer? {
+    fun rent(minFrames: Int, allocateOnMiss: Boolean = true): StereoBuffer? {
         val need = classFrames(minFrames)
 
         var best: StereoBuffer? = null
@@ -118,6 +121,10 @@ class SizedBuffers(
             hits++
 
             return best
+        }
+
+        if (!allocateOnMiss) {
+            return null
         }
 
         val fresh = allocate(need)
@@ -136,6 +143,9 @@ class SizedBuffers(
     /**
      * Returns [buffer] to the shelf, cleared. If that puts the shelf over budget, the largest idle
      * buffers are freed until it is not — which may be this one, if it alone exceeds the budget.
+     * The eviction is decided FIRST and only a buffer that stays on the shelf is cleared: this runs
+     * on the audio thread (a grow returns the old ring inside `configure`), and zero-filling a ring
+     * that the next line drops is O(frames) for nothing (review round 2).
      */
     fun giveBack(buffer: StereoBuffer) {
         for (idle in shelf) {
@@ -146,10 +156,10 @@ class SizedBuffers(
             }
         }
 
-        buffer.clear()
         shelf.add(buffer)
         shelfBytes += bytesOf(buffer)
 
+        var kept = true
         while (shelfBytes > budgetBytes && shelf.isNotEmpty()) {
             var largest = shelf[0]
             for (candidate in shelf) {
@@ -157,22 +167,37 @@ class SizedBuffers(
                     largest = candidate
                 }
             }
+            if (largest === buffer) {
+                kept = false
+            }
             shelf.remove(largest)
             shelfBytes -= bytesOf(largest)
             dropped++
+        }
+
+        if (kept) {
+            // Everything already on the shelf was cleared when it arrived; only the newcomer needs it.
+            buffer.clear()
         }
     }
 
     companion object {
         private const val BYTES_PER_FRAME = 2 * 8 // stereo, Double
 
-        /** A ring shelf whose class 0 is [ResourceWarehouse.MIN_RING_SECONDS] at [sampleRate]. */
+        /**
+         * A ring shelf whose class 0 holds a [ResourceWarehouse.MIN_RING_SECONDS] delay at
+         * [sampleRate] — INCLUDING the [ResourceWarehouse.RING_MARGIN_FRAMES] a delay effect adds
+         * for interpolation. Without the margin an exactly-0.5 s delay (a quarter at 120 BPM, the
+         * most common musical delay time) needs 64 frames more than class 0 and rents class 1,
+         * twice the memory, and the "corpus fits class 0" claim is false at its own boundary
+         * (review round 2).
+         */
         fun forRings(
             sampleRate: Int,
             budgetBytes: Int = ResourceWarehouse.SHELF_BUDGET_BYTES,
             allocate: (frames: Int) -> StereoBuffer? = ::allocateOrNull,
         ): SizedBuffers = SizedBuffers(
-            baseFrames = (sampleRate * ResourceWarehouse.MIN_RING_SECONDS).toInt(),
+            baseFrames = (sampleRate * ResourceWarehouse.MIN_RING_SECONDS).toInt() + ResourceWarehouse.RING_MARGIN_FRAMES,
             budgetBytes = budgetBytes,
             allocate = allocate,
         )

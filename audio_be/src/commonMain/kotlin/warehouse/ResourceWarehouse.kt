@@ -52,7 +52,9 @@ class ResourceWarehouse(
     val scratch: ScratchBuffers = ScratchBuffers(blockFrames).apply {
         ensureCapacity(SCRATCH_DEPTH)
         for (factor in WARM_OVERSAMPLE_FACTORS) {
-            oversample(factor).ensureCapacity(OVERSAMPLE_SCRATCH_DEPTH)
+            // Creation is the whole cost: a sub-pool's constructor already holds 4 work buffers,
+            // and its real depth is 1 (see WARM_OVERSAMPLE_FACTORS). Nothing more to pre-size.
+            oversample(factor)
         }
     }
 
@@ -62,6 +64,14 @@ class ResourceWarehouse(
          * a cycle, i.e. at most 0.5 s at 60 BPM, so the smallest class covers all of it.
          */
         const val MIN_RING_SECONDS: Double = 0.5
+
+        /**
+         * Frames a delay ring holds BEYOND its delay time: `DelayLine` reads one sample past the tap
+         * for interpolation and clamps the tap to `size - 2`, so a ring must be a little longer than
+         * the time it serves. Class 0 includes it (see [SizedBuffers.forRings]), so a delay of exactly
+         * [MIN_RING_SECONDS] fits the smallest class.
+         */
+        const val RING_MARGIN_FRAMES: Int = 64
 
         /**
          * Idle-shelf bound: roughly four songs of right-sized rings, one order below the old
@@ -80,20 +90,19 @@ class ResourceWarehouse(
         const val SCRATCH_DEPTH: Int = 64
 
         /**
-         * Nesting depth pre-sized per OVERSAMPLE sub-pool. Oversampled scratch is not the graph's
-         * depth: `Oversampler.process` takes one work buffer per oversampled node, and a chain
-         * rarely stacks more than a couple. The main pool's 64 here would cost 1 MB for the 8× pool
-         * alone — and every `AudioBackendContext` pays this eagerly, in the worklet inside the first
-         * `process()` (review round 1).
-         */
-        const val OVERSAMPLE_SCRATCH_DEPTH: Int = 8
-
-        /**
          * The WARMED oversample factors — not the set the DSL accepts. `IgnitorDsl` takes any Int
          * and `Oversampler.factorToStages` floors it to a power of two, so 32× is legal; a factor
          * outside this list builds its sub-pool on first use, inside render, and `lateAllocations`
          * cannot see that (it counts growth, not creation). 16× is the largest anyone has authored;
          * beyond it the trade is the user's.
+         *
+         * A sub-pool is NOT pre-sized beyond its construction default (4 work buffers): the real
+         * depth is ONE — `Oversampler.process` opens a single `use`, and `ShapeIgnitor` renders its
+         * upstream BEFORE opening it, so oversampled work never nests even when shaped nodes stack —
+         * and the DoubleArray half stays EMPTY, since nothing on an oversampled path calls
+         * `useDouble` (only `ModApplyingIgnitor`, on the main pool). Review round 1 had warmed both
+         * halves to depth 8, ~460 KB that no render can reach, paid eagerly in the worklet's first
+         * `process()` (review round 2). The proof is the sub-pool's own counters after a render.
          */
         val WARM_OVERSAMPLE_FACTORS: List<Int> = listOf(2, 4, 8, 16)
     }

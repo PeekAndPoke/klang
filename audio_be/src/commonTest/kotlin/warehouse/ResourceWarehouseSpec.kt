@@ -13,6 +13,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 
 /**
@@ -155,13 +156,36 @@ class ResourceWarehouseSpec : StringSpec({
         s.rent(64).shouldNotBeNull() shouldNotBeSameInstanceAs b64
     }
 
-    "a single buffer larger than the whole budget never sits on the shelf" {
+    "a single buffer larger than the whole budget never sits on the shelf — and is not cleared for nothing" {
         val (s, _) = shelf(budgetBytes = bytes(8))
         val big = s.rent(64).shouldNotBeNull()
+        big.left[3] = 0.5
         s.giveBack(big)
         s.shelfCount shouldBe 0
         s.shelfBytes shouldBe 0
         s.dropped shouldBe 1
+        // Review round 2: giveBack runs on the audio thread (a grow returns the old ring inside
+        // configure); a ring the same call drops is not worth an O(frames) zero-fill. The
+        // eviction is decided first, so the dropped buffer keeps its contents — it is garbage.
+        big.left[3] shouldBe 0.5
+    }
+
+    "a buffer that survives the eviction IS cleared, even when the return evicted another" {
+        val (s, _) = shelf(budgetBytes = bytes(16 + 8))
+        val b16 = s.rent(16).shouldNotBeNull()
+        val b8 = s.rent(8).shouldNotBeNull()
+        s.giveBack(b16)
+        b8.left[1] = 0.9
+        s.giveBack(b8) // 24 bytes-of-frames on the shelf: at the budget, nothing dropped
+        s.dropped shouldBe 0
+        b8.left[1] shouldBe 0.0
+
+        val b32 = s.rent(32).shouldNotBeNull()
+        b32.left[2] = 0.4
+        s.giveBack(b32) // 56 > 24: the 32 is the largest and goes; the 16 and 8 stay
+        s.dropped shouldBe 1
+        s.shelfCount shouldBe 2
+        b32.left[2] shouldBe 0.4
     }
 
     "the budget never touches WORKING memory — rented buffers are not the shelf's business" {
@@ -273,18 +297,28 @@ class ResourceWarehouseSpec : StringSpec({
 
     // ── The warehouse itself ─────────────────────────────────────────────────────────────────────
 
-    "the warehouse's class 0 is half a second at the backend's rate, and its budget is the named constant" {
+    "the warehouse's class 0 is half a second PLUS the interpolation margin, and its budget is the named constant" {
         val w = ResourceWarehouse(sampleRate = 48_000, blockFrames = 128)
-        w.sized.baseFrames shouldBe 24_000
+        w.sized.baseFrames shouldBe 24_000 + 64
         w.sized.budgetBytes shouldBe ResourceWarehouse.SHELF_BUDGET_BYTES
         ResourceWarehouse.SHELF_BUDGET_BYTES shouldBe 32 * 1024 * 1024
     }
 
-    "the warehouse's ring classes are 0.5, 1, 2, 4 … seconds — the shipped corpus's 0.25–0.5 s fits class 0" {
+    "the ring classes are 0.5, 1, 2, 4 … seconds, and a delay of 0.25–0.5 s fits class 0 THROUGH the real effect" {
+        // Review round 2: the first cut of this row called classFrames with the bare frame count
+        // and could not see that the effect adds a margin — LazyRingSpec proved the opposite of
+        // this row's title for exactly 0.5 s. The request now goes through KatalystDelayEffect.
         val w = ResourceWarehouse(sampleRate = 44_100, blockFrames = 128)
-        w.sized.classFrames((0.25 * 44_100).toInt()) shouldBe 22_050 // 0.5 s
-        w.sized.classFrames((0.5 * 44_100).toInt()) shouldBe 22_050
-        w.sized.classFrames((0.6 * 44_100).toInt()) shouldBe 44_100  // 1 s
-        w.sized.classFrames((3.0 * 44_100).toInt()) shouldBe 176_400 // 4 s
+        val class0 = 22_050 + ResourceWarehouse.RING_MARGIN_FRAMES
+        w.sized.classFrames(1) shouldBe class0
+        w.sized.classFrames(class0 + 1) shouldBe 2 * class0     // 1 s
+        w.sized.classFrames(3 * class0) shouldBe 4 * class0     // 2 s
+        w.sized.classFrames(7 * class0) shouldBe 8 * class0     // 4 s
+
+        for (time in listOf(0.25, 0.375, 0.5)) {
+            val fx = KatalystDelayEffect(rings = w.sized, sampleRate = 44_100, blockFrames = 128)
+            fx.configure(timeSeconds = time, feedback = 0.0, cap = 1.0)
+            withClue("delaytime $time") { fx.delayLine.shouldNotBeNull().capacityFrames shouldBe class0 }
+        }
     }
 })

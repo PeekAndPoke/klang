@@ -102,6 +102,10 @@ class SharedScratchSpec : StringSpec({
         // The claim. Before step 2a a fresh pool held 4 buffers and grew inside process() as the
         // chain nested.
         scratch.lateAllocations shouldBe 0
+        // The oversampled nodes in the chain render through the factor-4 SUB-pool, which has its
+        // own counters (review round 2: the parent's counter cannot see a sub-pool allocating).
+        scratch.oversample(4).lateAllocations shouldBe 0
+        scratch.oversample(4).highWater shouldBe 1 // one `use` per oversampled node, never nested
     }
 
     "the oversample sub-pools exist BEFORE the first render — their first use allocates nothing" {
@@ -115,7 +119,11 @@ class SharedScratchSpec : StringSpec({
         for (factor in listOf(2, 4, 8, 16)) {
             scratch.hasOversample(factor) shouldBe true
         }
-        scratch.oversample(16).doubleCapacity shouldBe ResourceWarehouse.OVERSAMPLE_SCRATCH_DEPTH
+        // Its construction default (4) already covers the real depth of 1; the DoubleArray half of
+        // a sub-pool is deliberately EMPTY, no oversampled path calls useDouble (review round 2
+        // sized the warm-up to what is reachable).
+        (scratch.oversample(16).capacity >= 1) shouldBe true
+        scratch.oversample(16).doubleCapacity shouldBe 0
     }
 
     "the stack discipline holds across a full render — no unbalanced release anywhere in the engine" {
@@ -159,7 +167,7 @@ class SharedScratchSpec : StringSpec({
         scratch.unbalancedReleases shouldBe 0
     }
 
-    "the DoubleArray half reports through the SAME counters — late allocations, high water, unbalanced releases" {
+    "the DoubleArray half reports through the same late/unbalanced counters and its OWN high water" {
         // The engine row above proves the pool is pre-sized; this one proves the counters it relies
         // on actually fire for the double half (a mutation that drops `lateAllocations++` in
         // acquireDouble() passes the engine row: zero is zero whether or not anything is counted).
@@ -168,9 +176,10 @@ class SharedScratchSpec : StringSpec({
         scratch.doubleCapacity shouldBe 1
 
         scratch.acquireDouble()
-        scratch.acquireDouble() // one past capacity: a late allocation, high water 2
+        scratch.acquireDouble() // one past capacity: a late allocation, double high water 2
         scratch.lateAllocations shouldBe 1
-        scratch.highWater shouldBe 2
+        scratch.doubleHighWater shouldBe 2
+        scratch.highWater shouldBe 0 // the AudioBuffer stack is untouched: the two are independent
         scratch.doubleCapacity shouldBe 2
 
         scratch.releaseDouble()

@@ -64,7 +64,10 @@ class ScratchBuffersSpec : StringSpec({
         }
     }
 
-    "reset resets the stack pointer - next use gets first buffer" {
+    "a balanced use/release cycle returns the pointer to the first buffer — no reset needed" {
+        // `reset()` was deleted (review round 2): it resynced only the AudioBuffer half, had no
+        // production caller, and the pool is now backend-lifetime — a stack that needs resetting
+        // has an unbalanced release, which `unbalancedReleases` reports instead of hiding.
         val scratch = ScratchBuffers(blockFrames)
 
         var firstRef: AudioBuffer? = null
@@ -72,10 +75,7 @@ class ScratchBuffersSpec : StringSpec({
             firstRef = buf
         }
 
-        // Advance the pointer by one more use/release cycle
         scratch.use { _ -> }
-
-        scratch.reset()
 
         scratch.use { buf ->
             (buf === firstRef) shouldBe true

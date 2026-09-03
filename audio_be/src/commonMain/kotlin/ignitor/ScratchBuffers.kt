@@ -36,12 +36,15 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     var unbalancedReleases: Int = 0
         private set
 
-    /** Pre-grows BOTH pools to [depth] buffers, OUTSIDE render, so neither acquire allocates inside it. */
-    fun ensureCapacity(depth: Int) {
+    /**
+     * Pre-grows the AudioBuffer pool to [depth] and the DoubleArray pool to [doubleDepth] buffers,
+     * OUTSIDE render, so neither acquire allocates inside it. Grow-only; never shrinks.
+     */
+    fun ensureCapacity(depth: Int, doubleDepth: Int = depth) {
         while (pool.size < depth) {
             pool.add(AudioBuffer(blockFrames))
         }
-        while (doublePool.size < depth) {
+        while (doublePool.size < doubleDepth) {
             doublePool.add(DoubleArray(blockFrames))
         }
     }
@@ -53,11 +56,16 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     val doubleCapacity: Int get() = doublePool.size
 
     /**
-     * The deepest simultaneous nesting this pool has ever served — i.e. the deepest ignitor graph
-     * that has rendered through it. Read it to know how much of [ensureCapacity]'s pre-size a real
-     * song actually uses.
+     * The deepest simultaneous nesting of AudioBuffer scratch this pool has ever served — i.e. the
+     * deepest ignitor graph that has rendered through it. Read it to know how much of
+     * [ensureCapacity]'s pre-size a real song actually uses. The DoubleArray stack is independent
+     * and has its own [doubleHighWater] (review round 2: one shared counter meant "deeper of either").
      */
     var highWater: Int = 0
+        private set
+
+    /** [highWater] for the DoubleArray stack — modulation-ratio scratch, `ModApplyingIgnitor`. */
+    var doubleHighWater: Int = 0
         private set
 
     /** Whether the sub-pool for [factor] already exists — i.e. its first use will NOT allocate. */
@@ -95,10 +103,6 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
         }
     }
 
-    fun reset() {
-        nextFree = 0
-    }
-
     // ── DoubleArray pool (same stack discipline) ────────────────────────────────
 
     private val doublePool = ArrayList<DoubleArray>(2)
@@ -113,8 +117,8 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
             lateAllocations++
         }
         val buf = doublePool[doubleNextFree++]
-        if (doubleNextFree > highWater) {
-            highWater = doubleNextFree
+        if (doubleNextFree > doubleHighWater) {
+            doubleHighWater = doubleNextFree
         }
         return buf
     }

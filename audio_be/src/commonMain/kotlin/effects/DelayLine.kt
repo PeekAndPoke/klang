@@ -79,7 +79,12 @@ class DelayLine(
     private val bufferSize = ring.left.size
     private val buffer = ring
 
-    /** How many frames this ring holds — the longest delay it can serve, minus the interpolation guard. */
+    /**
+     * How many frames this ring holds, raw. The longest delay it can SERVE is two frames less
+     * (`currentDelaySamples` clamps to `size - 2` for the interpolation neighbour); callers that
+     * size a ring add their margin on the request side (`KatalystDelayEffect.framesFor`), never
+     * subtract it here.
+     */
     val capacityFrames: Int get() = bufferSize
 
     /**

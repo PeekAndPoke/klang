@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.warehouse
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
@@ -34,7 +35,8 @@ class LazyRingSpec : StringSpec({
 
     val sampleRate = 44100
     val blockFrames = 128
-    val base = (sampleRate * ResourceWarehouse.MIN_RING_SECONDS).toInt() // 22 050 — class 0
+    // Class 0 holds a 0.5 s delay INCLUDING the interpolation margin: 22 050 + 64 frames.
+    val base = (sampleRate * ResourceWarehouse.MIN_RING_SECONDS).toInt() + ResourceWarehouse.RING_MARGIN_FRAMES
 
     /** A shelf whose allocator records sizes and can be told to fail. */
     class Recording(var failing: Boolean = false) : (Int) -> StereoBuffer? {
@@ -106,20 +108,24 @@ class LazyRingSpec : StringSpec({
 
         fx.configure(timeSeconds = 0.3, feedback = 0.4, cap = 1.0)
 
-        // 0.3 s + the 64-frame margin fits class 0 (0.5 s = 22 050 frames).
+        // 0.3 s + the 64-frame margin fits class 0 (0.5 s + margin = 22 114 frames).
         alloc.asked shouldBe listOf(base)
         fx.delayLine.shouldNotBeNull().capacityFrames shouldBe base
         fx.delayLine!!.delayTimeSeconds shouldBe 0.3
     }
 
-    "a time just past a class boundary gets the next class — the margin is real" {
+    "exactly 0.5 s fits class 0, and one frame past it takes class 1 — the margin is inside the class" {
+        // Review round 2: class 0 used to be 0.5 s FLAT, so the most common musical delay time
+        // (a quarter at 120 BPM) needed 64 frames more than the class and rented twice the memory.
         val (rings, alloc) = shelf()
         val fx = effect(rings)
 
-        // Exactly 0.5 s needs 22 050 + 64 frames: one class up.
         fx.configure(timeSeconds = 0.5, feedback = 0.0, cap = 1.0)
+        alloc.asked shouldBe listOf(base)
 
-        alloc.asked shouldBe listOf(2 * base)
+        val second = effect(rings)
+        second.configure(timeSeconds = 0.5 + 1.0 / sampleRate, feedback = 0.0, cap = 1.0)
+        alloc.asked shouldBe listOf(base, 2 * base)
     }
 
     "an off-config on a fresh effect rents nothing — 'off' does not need a ring" {
@@ -316,31 +322,86 @@ class LazyRingSpec : StringSpec({
         fx.deniedRents shouldBe 1
         fx.delayLine.shouldBeNull()
 
-        // A SMALLER request than the refused size is still tried (it might fit)...
+        // The latch is keyed on the CLASS: a shorter time inside the same class is the same
+        // allocation, and must not slip past into a retry that is certain to fail (round 2).
         alloc.asked.clear()
-        alloc.failing = false
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0) // same size: still latched
+        fx.configure(timeSeconds = 0.1, feedback = 0.0, cap = 1.0) // class 0 again: still latched
         alloc.asked shouldBe emptyList()
-        // ...and reset() clears the latch — a new owner life starts clean.
+        fx.deniedRents shouldBe 1
+
+        // reset() clears the latch — a new owner life starts clean.
+        alloc.failing = false
         fx.reset()
         fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
         fx.delayLine.shouldNotBeNull()
     }
 
-    "a hopeless time (past Int range, or non-finite) degrades to null rather than renting the smallest ring" {
-        // Review round 1: framesFor's toInt() saturated at Int.MAX and the + margin wrapped
-        // NEGATIVE, classFrames(negative) returned the base, and delaytime(60000) got a 0.5 s ring.
-        val alloc = Recording()
+    "a latched refusal still takes a ring the SHELF can serve — only the allocation is skipped" {
+        // Review round 2: the first latch sat above the shelf scan, so an orbit refused under memory
+        // pressure stayed dry for its whole life even after another orbit returned an exact fit
+        // that would cost nothing to hand over.
+        val alloc = Recording(failing = true)
         val (rings, _) = shelf(alloc)
         val fx = effect(rings)
 
-        fx.configure(timeSeconds = 60_000.0, feedback = 0.0, cap = 1.0)
-        fx.configure(timeSeconds = Double.POSITIVE_INFINITY, feedback = 0.0, cap = 1.0)
-
-        // The recording allocator is asked for Int.MAX_VALUE and — being a real StereoBuffer
-        // constructor — cannot serve it; production's allocateOrNull returns null the same way.
-        alloc.asked.all { it == Int.MAX_VALUE } shouldBe true
+        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
         fx.delayLine.shouldBeNull()
+        fx.deniedRents shouldBe 1
+
+        // Another orbit's ring comes back (the way 2f eviction will return it).
+        alloc.failing = false
+        val returned = rings.rent(base).shouldNotBeNull()
+        rings.giveBack(returned)
+        alloc.failing = true
+        alloc.asked.clear()
+
+        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+
+        fx.delayLine.shouldNotBeNull().ring shouldBeSameInstanceAs returned
+        alloc.asked shouldBe emptyList() // a shelf hit, no allocation attempted
+        fx.deniedRents shouldBe 1 // the shelf miss before it was not a refusal
+        rings.failures shouldBe 1
+    }
+
+    "a latched refusal at a larger class does NOT block a smaller class that may fit" {
+        // Refused at class 1 (0.7 s); a later 0.3 s (class 0) is a different, smaller allocation
+        // and is tried. The latch ratchets downward, so retries are bounded by the ladder, not by
+        // block rate.
+        val alloc = Recording(failing = true)
+        val (rings, _) = shelf(alloc)
+        val fx = effect(rings)
+
+        fx.configure(timeSeconds = 0.7, feedback = 0.0, cap = 1.0)
+        alloc.asked shouldBe listOf(2 * base)
+
+        alloc.failing = false
+        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+
+        alloc.asked shouldBe listOf(2 * base, base)
+        fx.delayLine.shouldNotBeNull().capacityFrames shouldBe base
+    }
+
+    "a hopeless time (past Int range, or non-finite) degrades to null rather than renting the smallest ring" {
+        // Review round 1: framesFor's toInt() saturated at Int.MAX and the + margin wrapped
+        // NEGATIVE, classFrames(negative) returned the base, and delaytime(60000) got a 0.5 s ring.
+        // One fresh effect per case: the first refusal latches (round 1's fix), so a second call on
+        // the same effect never reaches the allocator, and `all {}` on an empty list is true —
+        // the first cut of this row proved only the finite case (review round 2, both reviewers).
+        for (hopeless in listOf(60_000.0, Double.POSITIVE_INFINITY, Double.NaN)) {
+            val alloc = Recording()
+            val (rings, _) = shelf(alloc)
+            val fx = effect(rings)
+
+            fx.configure(timeSeconds = hopeless, feedback = 0.0, cap = 1.0)
+
+            withClue("time = $hopeless") {
+                // NaN is not >= MIN_ACTIVE: it is the OFF branch and asks for nothing, as before.
+                // The other two ask for Int.MAX_VALUE, which the recording allocator (like
+                // production's allocateOrNull) cannot serve.
+                alloc.asked shouldBe if (hopeless.isNaN()) emptyList() else listOf(Int.MAX_VALUE)
+                fx.delayLine.shouldBeNull()
+            }
+        }
     }
 
     "the shelf serves a refused-allocator effect from its idle rings — no allocation needed" {

@@ -18,9 +18,17 @@ Shipped songs touch up to **8 orbits**, so a first play zero-fills **~63 MB on t
 one cylinder per orbit as voices first arrive — each a 1M-element `DoubleArray` fill inside a 2.9 ms
 callback. That is the "Der Schmetterling" stutter.
 
-And the delay times songs actually use: every `delaytime` in the corpus is 1/8 to 1/4 of a cycle —
-**0.25–0.5 s**. The ring is 15–30× larger than anything ever asked for, allocated for orbits that
-have no delay at all. `MasterChain` already does it right (ring sized to `time + margin`).
+And the delay times songs actually use: every `delaytime` in the corpus is WRITTEN as 1/8 to 1/4 of
+a cycle — **0.25–0.5 s**. The ring is 15–30× larger than anything ever asked for, allocated for orbits
+that have no delay at all. `MasterChain` already does it right (ring sized to `time + margin`).
+
+> ⚠️ **That is a measurement of source text, not of values (review round 2, 2026-09-03).** The Kotlin
+> builtin songs write `pure(3/16)`, `pure(1/8)`, `pure(1/4)`: `PatternLike` is `Any`, so these are
+> Kotlin INTEGER divisions and every one of them is `pure(0)`. Every shipped Kotlin song's orbit delay
+> evaluates to 0 s, falls under `MIN_ACTIVE_DELAY_SECONDS`, and never activates. Consequences: the
+> corpus is not evidence for the base class (0.5 s stands on its own: a quarter at 120 BPM), and the
+> "behaviour-identical for the shipped corpus" claim is trivially true because no shipped Kotlin song
+> rents a ring at all. Song-side, pre-existing, the maintainer's call (7 sites, `pure(1.0/8)` fixes each).
 
 **So the ring is not a cost to manage; it is a mis-sizing to remove.** A warehouse of pre-warmed
 10 s rings would cost 77 MB of browser memory to shelve a problem that should not exist.
@@ -34,8 +42,15 @@ have no delay at all. `MasterChain` already does it right (ring sized to `time +
   up to its class. Ratio 2 was chosen over Fibonacci (≈1.6) because the ladder's job is *headroom*:
   a coarser ratio means a time change crosses a class boundary — and forces a regrow — less often.
   Fibonacci's tighter packing solves a memory problem right-sizing already solved 15×. `log2`
-  indexing is a bonus. 0.5 s covers every shipped delay at 60 BPM in the smallest class.
+  indexing is a bonus. Class 0 holds a 0.5 s delay INCLUDING the 64-frame interpolation margin
+  (review round 2: flat 0.5 s pushed exactly-0.5 s, a quarter at 120 BPM, into class 1).
 - **No maximum.** `delaytime(60)` gets a 46 MB ring and the one-time allocation it asked for.
+  **Known cost (review round 2):** two audio-thread scans are O(ring) and were bounded by the old
+  10 s ceiling — `DelayLine.hasTail()` (orbit cleanup polling, every block once the mix is silent)
+  and `drainSamplesUntilSilent`. A 64 s ring is a 6 M-element scan inside one block. The typical
+  case is 20× cheaper than before; the tail case is newly unbounded. `hasTail` could scan only the
+  reachable tap window (`tapWindowPeakAbs` already reasons that way) — a follow-up, not folded into
+  a review batch because it moves deactivation timing.
   `MasterChain.MAX_DELAY_SECONDS = 10.0` and its `coerceAtMost` are **removed**. `DelayLine:200`'s
   `coerceIn(MIN, bufferSize - 2)` stays — it is the physical bound of whatever ring exists, not a
   policy, and it becomes the out-of-memory clamp for free (below).
@@ -93,6 +108,10 @@ thread. A live coder who typos `delaytime(6000)` loses the set until a reload.
   device is moments from killing the tab anyway.
 - **Counted per playback and surfaced through feedback**, like `droppedVoices` — so the frontend
   can say *"delay time reduced: out of memory"* instead of the set going quiet.
+  **NOT BUILT (review round 2):** the counters exist (`deniedRents`, `effectiveDelaySeconds`,
+  `SizedBuffers.failures/dropped/doubleReturns`, `ScratchBuffers.lateAllocations/unbalancedReleases`)
+  and have zero non-test readers. Surfacing is its own step, with `droppedVoices` (B2), once the
+  FE feedback channel for backend counters exists.
 - On the house rule "no exceptions in audio hot paths": a catch around one large allocation, once
   per ring, is not a per-sample throw. JS: an ordinary `RangeError`. JVM: catching
   `OutOfMemoryError` at a single big-allocation site is the one sound pattern for it — the failed
@@ -178,8 +197,9 @@ before anything touches it.
 | 2c | grow: migrate up, contents preserved | a spec that *listens across the seam* |
 | | ✅ **DONE 2026-09-03** — `DelayLine.adoptHistory(from)`: the old ring's history is copied oldest-first into `[0, n)` and the cursor left at `n`, so "n samples ago" reads the same sample in the new ring as in the old. Adopt before `giveBack` (which clears). The 2b tripwire is flipped; the seam row proves a grown ring is **bit-identical** to one that was big from the start — *for taps within the old ring's span*, which is the honest scope: a tap past that span reads never-recorded zeros in both. **The first cut of that row compared zeros to zeros** (a 0.9 s tap past 0.087 s of history) and two mutations survived it; it now shortens the tap back inside the span after the grow and carries a positive control. 5 mutations red: no migration, cursor not advanced, off by one, reversed copy, giveBack-before-adopt. | |
 | | 🔎 **Review round 1 applied 2026-09-03** (two Opus reviewers, five overlapping findings). Fixed: a refused rent was **retried every block** (a per-block allocation storm exactly when memory is tight; now a `refusedFrames` latch, cleared on success and `reset()`); `framesFor` saturates hopeless times (past Int, NaN) to `Int.MAX_VALUE` → null, instead of renting the smallest ring; `adoptHistory` copies the **newest** n (the oldest-first cut was wrong, not truncated, for a smaller target; shrinks never happen, it is simply right now); the `DoubleArray` half of the scratch pool was un-hardened and empty (`ModApplyingIgnitor`'s first render allocated inside `process()` while `lateAllocations` read zero); shelf byte accounting was Int and wrapped past 134 M frames; a double `giveBack` could shelve one ring twice; `OVERSAMPLE_SCRATCH_DEPTH` 8 for factors 2/4/8/16; `StereoBuffer`'s redundant `init { clear() }` gone; stale docs in five places. New specs: `effects/DelayLineMigrationSpec` (cursor at 0, equal sizes = the branch whose absence HANGS, smaller target; its first ramp saturated in `softCap` to a wall of 1.0 — ones-vs-ones — and now carries a positive control), an offline `KlangAudioRenderer` clock-advance row, direct counter rows for the double half. All 19 mutations red. **Honest residual cost:** the first delay on a backend still allocates its ~0.4 MB class-0 ring inside render, and a grow allocates the next class in render; the shelf only helps the SECOND customer. Whether to pre-warm one class-0 ring at warmup, and whether a grow past the old ring's span (wet steps to zero for `newTime − oldSpan`) is acceptable or the minimum class should rise, are the two decisions parked with the maintainer. `nowFrame` in `VoiceFactory.createVoice` is dead since B2 and awaits its own cleanup commit. | |
+| | 🔎 **Review round 2 applied 2026-09-03** (two fresh Opus reviewers; **zero new CRITICAL/MAJOR** — the one MAJOR is the parked D1 with numbers: a 0.3→0.6 s grow at 48 kHz mutes the wet path for 100 ms; the audio reviewer's own recommendation is to accept D1 as parked and, if ever taken up, spend the lines on a wet-gain declick across the migration rather than a bigger ring, since no ring size recovers audio that was never recorded). MINOR batch applied without a further round: the refusal latch now gates only the ALLOCATION and is keyed on the CLASS (a latched orbit still takes a ring the shelf can serve for free; `SizedBuffers.rent(allocateOnMiss)`); `giveBack` decides eviction first and clears only what stays; class 0 = 0.5 s **plus** the 64-frame margin (`ResourceWarehouse.RING_MARGIN_FRAMES`), so exactly-0.5 s fits; `ScratchBuffers.highWater` split from `doubleHighWater`, `reset()` deleted (half-synced, no caller), `ensureCapacity(depth, doubleDepth)`; oversample sub-pools are created, not pre-sized (real depth 1, double half empty — the round-1 depth-8 warm-up was ~460 KB nothing could reach); `capacityFrames` KDoc; hopeless-time row runs one fresh effect per case (the latch had swallowed its second half); corpus/counter claims in this plan corrected (above); 2e moved ahead of 2d. Rejected: making `rings` a required ctor param on `Cylinder`/`Cylinders` (44 test sites, many in files under parallel edit; the one production site is pinned through `PlaybackEngine.create` by `LazyRingSpec`). 13 mutations red; three equivalent mutants documented (latch storing raw frames is behaviour-identical on a power-of-two ladder; NaN never reaches `framesFor`, the off branch catches it; sub-pool depth 1 = the real depth). | |
+| 2e | master: same ladder and shelf, `chainFor` rents; `MAX_DELAY_SECONDS` removed | the worst allocation site closed — **moved ahead of 2d (review round 2): the orbit/master `delaytime` parity gap is LIVE since 2b** (orbit uncapped, master clamps at 10 s), the roomSize-10× class of bug |
 | 2d | reverb units: lazy on first `room`, rented | |
-| 2e | master: same ladder and shelf, `chainFor` rents; `MAX_DELAY_SECONDS` removed | the worst allocation site closed |
 | 2f | D4: eviction returns rings and reverb to the shelf; `id2cylinder` stops growing | memory monotone and bounded |
 | 2g | sample PCM through the OOM catch | the last MB-scale site |
 
