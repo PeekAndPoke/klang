@@ -66,7 +66,7 @@ let guitar = (() => {
   let signal = saw //.mix(saw2, 1.0) 
     // Simulate plucked string
     .pitchEnvelope(0.5, 0.001, 0.02)
-    .lowpass(freq = Osc.constant(4000).add(Osc.constant(4000).adsr(pAttack, 0.5, 0.0, 0.020)), q = 0.7)
+    .lowpass(freq = Osc.freq().times(4).add(Osc.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
     .plus(Osc.crackle(2.0).highpass(300).adsr(pAttack, 0.05, 0.0, 0.05).mul(0.30))
     // the string - lowpass adsr for the string sound and adsr for the string
@@ -199,7 +199,7 @@ export guitar3_shape = x => x.gain(0.95).velocity(guitarDyna.fast(2)).sound(guit
   .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 1.7)
   .oscp("low", 5.0).oscp("lowHz", 700).oscp("lowQ", 0.7)
   .oscp("mid", 4.0).oscp("midHz", 1100).oscp("midQ", 0.7)
-  .oscp("high", 5.0).oscp("highHz", 2350).oscp("highQ", 0.7)
+  .oscp("high", 4.0).oscp("highHz", 2350).oscp("highQ", 0.7)
   .clip(guitarClip.fast(2)).pan(0.66)
 
 export guitar3_arrange = x => x.orbit(2)  // . solo()
