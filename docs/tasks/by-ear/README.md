@@ -100,21 +100,36 @@ voicing numbers were chosen before that landed.
 explicitly a taste pass. Optional, and the plan's CPU goal is already met (Fairphone 4, ~75%), so
 this one is pure sound.
 
-### 6. Soundfont attacks are back — every `gm_` instrument sounds different now
+### 6. Soundfonts: every `gm_` instrument sounds different now — three changes, one listening pass
 
-Landed 2026-09-02 (`VoiceFactory` playhead start). Until now a looped soundfont started **inside**
-its loop and never played its attack: the FluidR3 violin skipped 1.27 s of bow onset and looped a
-180 ms slice of steady state; the flute skipped 0.66 s; the nylon guitar skipped its pluck because
-it started at `anchor`, which turned out to be the loudest sample's position, not a start offset.
+Landed 2026-09-02/03. No shipped song uses a `gm_` soundfont, so nothing released moved, but
+everything a tutorial might reach for did. Three changes stack:
 
-The fix plays from frame 0 and loops when the playhead gets there — the SF2 / WebAudioFont
-behaviour. **No shipped song uses a `gm_` soundfont**, so nothing released moved, but everything a
-tutorial might reach for did. Worth hearing, in this order, before any tutorial ships one:
+1. **Playback starts at frame 0** (`VoiceFactory`). A looped zone used to start *inside* its loop
+   — the FluidR3 violin skipped 1.27 s of bow and looped 180 ms of steady state. And a non-looped
+   zone started at `anchor`, which turned out to be the loudest sample's position, not an offset.
+2. **Every loop is honoured** (`getSampleMetadata`). A 50 ms "is it a real loop" heuristic was
+   discarding **45 % of the corpus's loops** — single-cycle sustain loops of 1–5 ms, which is how
+   JCLive builds its whole accordion. It fell back to a percussive envelope and died at 0.5 s.
+3. **The VCA is transparent** (attack 0, sustain 1, release 50 ms). The synthesized ADSR fought
+   the sample: the "percussive" shape cut a 4 s guitar ring at half a second, the "sustain" shape's
+   10 ms attack softened the transients change 1 restored.
 
-- `note("c4 e4 g4").s("gm_violin")` — the bow should be audible now, then a steady sustain.
-- `s("gm_acoustic_guitar_nylon")` — the pluck transient is back; check it is not now too clicky.
-- `note("c3").s("gm_accordion").sustain(4)` — should breathe in, then hold cleanly across the loop.
+Listen, in this order:
 
-Open question for the ear: with the attack restored, is the fixed **sustain envelope**
-(`getSampleMetadata`: attack 10 ms, release 200 ms for looped zones) still right, or was it tuned
-to mask the missing onset? Record: `docs/tasks/soundfont-looping-investigation.md`.
+- `note("c4 e4 g4").s("gm_violin")` — bow onset audible, then a steady sustain (Aspirin, variant 0).
+- `note("c3 e3 g3").s("gm_accordion")` — **JCLive, variant 0: now sustains via 1–5 ms loops.**
+  Any buzz or beating on the held tone is the single-cycle loop itself; that is the font, not us.
+- `s("gm_acoustic_guitar_nylon")` — the pluck is back AND the ring lasts its full ~4 s. If it now
+  feels too long under a fast pattern, that is what `.adsr()` / `.release()` are for, per note.
+- `note("c3").s("gm_church_organ").sustain(4)` — should breathe in and hold cleanly across the loop.
+
+**The one knob:** `SOUNDFONT_RELEASE_SEC = 0.05` in `SoundFont.kt`. Shortest click-free cut that
+reads as a note ending. A reed might want less, a bowed string more — but anything instrument-
+specific belongs in the user's `.adsr()`, not in the engine default.
+
+**Not fixable here, and worth knowing before judging the accordion:** JCLive's declared root
+pitches sit **0.4–1.4 semitones below** what was recorded (measured, `soundfont-looping-
+investigation.md`). Zone 8 (keys 81–84) plays 1.4 st sharp. FluidR3 is accurate to a quarter-tone
+and is `.n(1)` for the accordion. That is a data / curation item, see `docs/tasks/soundfont-
+variant-curation.md`.

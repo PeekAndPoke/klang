@@ -52,7 +52,7 @@ class SamplePlayheadStartSpec : StringSpec({
     fun ramp() = AudioBuffer(pcmSize) { it.toDouble() / (pcmSize - 1) }
 
     /** Renders [blocks] blocks of a sample voice built through the real [VoiceFactory]. */
-    fun render(meta: SampleMetadata, begin: Double? = null, blocks: Int = 30): DoubleArray {
+    fun render(meta: SampleMetadata, begin: Double? = null, blocks: Int = 30, freqHz: Double = 220.0): DoubleArray {
         val pcm = MonoSamplePcm(sampleRate = sampleRate, pcm = ramp(), meta = meta)
         val registry = IgnitorRegistry().apply { registerDefaults() }
         val voiceBuffer = DoubleArray(blockFrames)
@@ -71,7 +71,7 @@ class SamplePlayheadStartSpec : StringSpec({
             scheduled = ScheduledVoice(
                 playbackId = "playhead",
                 data = VoiceData.empty.copy(
-                    freqHz = 220.0,
+                    freqHz = freqHz, // pitchHz below is 220, so freqHz / 220 is the playback rate
                     sound = "playheadprobe", // unregistered => the sample branch
                     adsr = AdsrDef.Std(release = 0.01, on = false), // VCA off: raw sample values
                     begin = begin,
@@ -134,6 +134,59 @@ class SamplePlayheadStartSpec : StringSpec({
             withClue("frame ${loopEndFrame + k}, one loop in") {
                 out[loopEndFrame + k] shouldBe pcmAt(loopStartFrame + k).plusOrMinus(1e-9)
             }
+        }
+    }
+
+    "a SINGLE-CYCLE loop sustains — 132 frames wrap cleanly, forever" {
+        // JCLive's accordion is 0.13–0.39 s samples ending in 1–5 ms loops. The frontend used to
+        // discard anything under 50 ms as "fake"; the backend must in turn wrap a 3 ms loop as
+        // faithfully as a 3 s one. 30 blocks = 3840 frames, so after loopStart (2205) the playhead
+        // wraps this 132-frame loop a dozen times: frame loopStart + n reads pcm[loopStart + n % 132].
+        val tinyLoopEnd = loopStartFrame + 132
+        val meta = SampleMetadata(
+            loop = SampleMetadata.LoopRange(
+                startSec = loopStartFrame.toDouble() / sampleRate,
+                endSec = tinyLoopEnd.toDouble() / sampleRate,
+            ),
+            adsr = AdsrDef.empty,
+            anchor = 0.0,
+        )
+        val out = render(meta)
+
+        for (n in listOf(0, 131, 132, 133, 1000, 1600)) {
+            withClue("frame ${loopStartFrame + n}, ${n / 132} wraps in") {
+                out[loopStartFrame + n] shouldBe pcmAt(loopStartFrame + (n % 132)).plusOrMinus(1e-9)
+            }
+        }
+    }
+
+    "a pitch-shifted single-cycle loop keeps its fractional overshoot across the wrap" {
+        // At rate 1.0 the playhead hits loopEnd EXACTLY and the wrap's modulo is unobservable — a
+        // mutant that snapped to loopStart and dropped the overshoot passed the row above. So did
+        // rate 1.5: 1558 * 1.5 = 2337.0 is loopEnd dead on, and 132 / 1.5 = 88 keeps every later
+        // wrap exact too. Rate 1.25 (freqHz 275 over pitchHz 220, exactly representable) first
+        // reaches loopEnd at 2337.5 and 132 / 1.25 = 105.6 keeps the overshoot varying after that.
+        // Dropping it means the tone drifts flat and the seam clicks on every cycle.
+        val tinyLoopEnd = loopStartFrame + 132
+        val meta = SampleMetadata(
+            loop = SampleMetadata.LoopRange(
+                startSec = loopStartFrame.toDouble() / sampleRate,
+                endSec = tinyLoopEnd.toDouble() / sampleRate,
+            ),
+            adsr = AdsrDef.empty,
+            anchor = 0.0,
+        )
+        val out = render(meta, freqHz = 275.0)
+
+        // The SF2 definition of a loop is a CONTINUOUS phase that wraps modulo the loop length.
+        // On a ramp PCM, linear interpolation of position x is exactly x / (pcmSize - 1).
+        var ph = 0.0
+        for (k in 0 until 30 * blockFrames) {
+            if (ph >= tinyLoopEnd) ph = loopStartFrame + (ph - loopStartFrame) % 132.0
+            if (k in listOf(1870, 1871, 2000, 2500, 3500)) {
+                withClue("frame $k, playhead $ph") { out[k] shouldBe (ph / (pcmSize - 1)).plusOrMinus(1e-9) }
+            }
+            ph += 1.25
         }
     }
 

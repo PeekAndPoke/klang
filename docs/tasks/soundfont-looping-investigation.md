@@ -12,6 +12,18 @@ Mutation-checked: reverting the fix turns three rows red; disabling the loop wra
 red. `meta.anchor` is now read nowhere on the playback path — it can be dropped from
 `SampleMetadata` in a later tidy, or kept as informational.
 
+**Round 2, 2026-09-03 — the accordion still did not loop, and it was a second defect.** Variant 0
+for the accordion is JCLive: 0.13–0.39 s samples ending in 1–5 ms *single-cycle* loops, which
+`getSampleMetadata`'s 50 ms heuristic rejected as "fake". Corpus census: that heuristic discarded
+**2 698 of 5 959 loops (45 %)**. Removed — a loop is a loop whenever `loopEnd > loopStart`. And the
+synthesized ADSR went with it: `ahdsr` is a boolean on all 6 476 zones and never a curve, and the
+invented shapes fought the sample (the percussive one cut a 4 s guitar at 0.5 s). Every zone now gets
+a transparent VCA (attack 0, sustain 1, release 50 ms) that the user's `.adsr()` merges over.
+
+**The accordion's high notes being sharp is the DATA.** JCLive's declared roots are 0.4–1.4 st
+below the recorded pitch (measured); FluidR3 is accurate. Maintainer's rule: no font-name handling
+in code — the index order must be correct. Filed as `docs/tasks/soundfont-variant-curation.md`.
+
 Still open from below: zone selection by `keyRange` (secondary, not the bug).
 
 **Two defects, both in the same six lines of `VoiceFactory` (`:333-340`), and both the same shape:
