@@ -52,7 +52,7 @@ class ResourceWarehouse(
     val scratch: ScratchBuffers = ScratchBuffers(blockFrames).apply {
         ensureCapacity(SCRATCH_DEPTH)
         for (factor in WARM_OVERSAMPLE_FACTORS) {
-            oversample(factor).ensureCapacity(SCRATCH_DEPTH)
+            oversample(factor).ensureCapacity(OVERSAMPLE_SCRATCH_DEPTH)
         }
     }
 
@@ -79,7 +79,22 @@ class ResourceWarehouse(
          */
         const val SCRATCH_DEPTH: Int = 64
 
-        /** Oversample factors the DSL offers; each gets its own pre-sized sub-pool. */
-        val WARM_OVERSAMPLE_FACTORS: List<Int> = listOf(2, 4, 8)
+        /**
+         * Nesting depth pre-sized per OVERSAMPLE sub-pool. Oversampled scratch is not the graph's
+         * depth: `Oversampler.process` takes one work buffer per oversampled node, and a chain
+         * rarely stacks more than a couple. The main pool's 64 here would cost 1 MB for the 8× pool
+         * alone — and every `AudioBackendContext` pays this eagerly, in the worklet inside the first
+         * `process()` (review round 1).
+         */
+        const val OVERSAMPLE_SCRATCH_DEPTH: Int = 8
+
+        /**
+         * The WARMED oversample factors — not the set the DSL accepts. `IgnitorDsl` takes any Int
+         * and `Oversampler.factorToStages` floors it to a power of two, so 32× is legal; a factor
+         * outside this list builds its sub-pool on first use, inside render, and `lateAllocations`
+         * cannot see that (it counts growth, not creation). 16× is the largest anyone has authored;
+         * beyond it the trade is the user's.
+         */
+        val WARM_OVERSAMPLE_FACTORS: List<Int> = listOf(2, 4, 8, 16)
     }
 }

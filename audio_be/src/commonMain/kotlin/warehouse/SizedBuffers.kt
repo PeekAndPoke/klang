@@ -29,8 +29,11 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  *
  * **Every buffer that leaves [rent] is all zeros** — fresh allocations are zero by construction and
  * [giveBack] clears before shelving. A rented ring carrying a previous owner's tail would replay it
- * (the hazard `DelayLine.reset()`'s KDoc warns about). Clearing happens at return time, i.e. at
- * eviction or disposal, never at the moment a note needs the ring.
+ * (the hazard `DelayLine.reset()`'s KDoc warns about). Clearing happens at return time. For eviction
+ * and disposal that is away from any onset; for a GROW it is not — the old ring is returned inside
+ * the same `configure` that rents the new one, so a grow pays one clear of the OLD (smaller) ring at
+ * note time on top of the new allocation. That is the accepted cost of a grow, proportional to the
+ * ring being outgrown, not the new one.
  *
  * **Never shrinks a buffer.** Growth is the owner's business (rent a bigger class, migrate, give the
  * old one back). The only thing that ever gets smaller is the shelf.
@@ -49,8 +52,13 @@ class SizedBuffers(
 ) {
     private val shelf = ArrayList<StereoBuffer>()
 
-    /** Bytes currently idle on the shelf. Always `<= budgetBytes` after any call returns. */
-    var shelfBytes: Int = 0
+    /**
+     * Bytes currently idle on the shelf. Always `<= budgetBytes` after any call returns. A `Double`
+     * because the ladder has no ceiling: a 45-minute ring at 48 kHz is 2.1 GB, past `Int`, and a
+     * wrapped-negative total would switch the budget off for the life of the shelf. (No `Long` in
+     * audio paths by house rule; a `Double` counts bytes exactly to 2^53.)
+     */
+    var shelfBytes: Double = 0.0
         private set
 
     /** How many buffers are idle on the shelf. */
@@ -64,6 +72,14 @@ class SizedBuffers(
     var failures: Int = 0
         private set
     var dropped: Int = 0
+        private set
+
+    /**
+     * [giveBack] calls for a buffer that was ALREADY on the shelf. Guarded, not thrown: a double
+     * return would put one ring on the shelf twice and rent it to two live orbits — two delays
+     * writing one ring, heard as cross-talk. Eviction (2f) is where that mistake is easiest to make.
+     */
+    var doubleReturns: Int = 0
         private set
 
     /**
@@ -122,6 +138,14 @@ class SizedBuffers(
      * buffers are freed until it is not — which may be this one, if it alone exceeds the budget.
      */
     fun giveBack(buffer: StereoBuffer) {
+        for (idle in shelf) {
+            if (idle === buffer) {
+                doubleReturns++
+
+                return
+            }
+        }
+
         buffer.clear()
         shelf.add(buffer)
         shelfBytes += bytesOf(buffer)
@@ -153,7 +177,10 @@ class SizedBuffers(
             allocate = allocate,
         )
 
-        fun bytesOf(buffer: StereoBuffer): Int = buffer.left.size * BYTES_PER_FRAME
+        fun bytesOf(buffer: StereoBuffer): Double = bytesOfFrames(buffer.left.size)
+
+        /** The same accounting by frame count — a 200 M-frame ring is 3.2 GB, past Int, without allocating one. */
+        fun bytesOfFrames(frames: Int): Double = frames.toDouble() * BYTES_PER_FRAME
 
         /**
          * The one allocation site. A `RangeError` on Kotlin/JS or an `OutOfMemoryError` on the JVM

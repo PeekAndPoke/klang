@@ -12,9 +12,10 @@ class StereoBuffer(blockFrames: Int) {
     val left = AudioBuffer(blockFrames)
     val right = AudioBuffer(blockFrames)
 
-    init {
-        clear()
-    }
+    // No init { clear() }: a DoubleArray is zero on both runtimes (JVM `new double[n]`,
+    // JS Float64Array), so the fill was a second full pass over every buffer ever constructed.
+    // For a rented delay ring that pass ran on the audio thread at the moment a note needed it
+    // (review round 1 on the resource warehouse).
 
     fun clear() {
         left.fill(0.0)

@@ -83,8 +83,30 @@ class KatalystDelayEffect(
     var deniedRents: Int = 0
         private set
 
-    /** Frames a ring must hold to serve [timeSeconds], including the interpolation guard. */
-    private fun framesFor(timeSeconds: Double): Int = ceil(timeSeconds * sampleRate).toInt() + RING_MARGIN_FRAMES
+    /**
+     * The smallest ring size the warehouse has refused this effect, or 0. Without it a refusal is
+     * retried on EVERY block — `Cylinder.applyBusEffects` re-applies the owner's config per block —
+     * and "graceful degradation" becomes a 344 Hz allocate-and-catch storm on the audio thread
+     * (review round 1, both reviewers). While `needed >= refusedFrames` the rent is not attempted.
+     * Cleared by [reset] (a new owner life) and by a later SUCCESSFUL rent of anything.
+     */
+    private var refusedFrames: Int = 0
+
+    /**
+     * Frames a ring must hold to serve [timeSeconds], including the interpolation guard. Past the
+     * Int range (13.5 h at 44.1 kHz, or a non-finite time) it saturates to `Int.MAX_VALUE`, which
+     * no allocator serves — so the request degrades to `null` as the design intends, instead of
+     * `toInt()` saturating and the `+ margin` wrapping NEGATIVE and quietly renting the smallest ring.
+     */
+    private fun framesFor(timeSeconds: Double): Int {
+        val frames = ceil(timeSeconds * sampleRate)
+
+        if (!(frames < Int.MAX_VALUE - RING_MARGIN_FRAMES)) { // also catches NaN
+            return Int.MAX_VALUE
+        }
+
+        return frames.toInt() + RING_MARGIN_FRAMES
+    }
 
     /**
      * Ensures a ring that holds [timeSeconds] is installed, renting or growing as needed. Returns the
@@ -102,14 +124,22 @@ class KatalystDelayEffect(
             return current
         }
 
+        if (refusedFrames != 0 && needed >= refusedFrames) {
+            // Already refused at this size or smaller: do not ask again every block.
+            return current
+        }
+
         val ring = rings.rent(needed)
 
         if (ring == null) {
             deniedRents++
+            refusedFrames = needed
 
             // Keep what we have (the time will clamp to it), or stay without.
             return current
         }
+
+        refusedFrames = 0
 
         val line = DelayLine(ring, sampleRate)
 
@@ -206,6 +236,7 @@ class KatalystDelayEffect(
         }
         state = State.Off
         drainRemaining = 0.0
+        refusedFrames = 0
     }
 
     override fun process(ctx: KatalystContext) {

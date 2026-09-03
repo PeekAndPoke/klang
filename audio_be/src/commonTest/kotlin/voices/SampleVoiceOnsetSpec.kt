@@ -21,8 +21,8 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlin.math.abs
 
 /**
- * Sample voices must start **sample-accurately**, exactly like oscillator voices — and must still
- * clamp to the current block when they arrive late.
+ * Sample voices must start **sample-accurately**, exactly like oscillator voices — and a voice that
+ * arrives late is DROPPED at admission, never clamped (block-framing B2, 2026-09-03).
  *
  * `VoiceFactory` used to hand the sample branch `nowFrame` (the current block's first frame) as the
  * voice's `startFrame`, so every sample onset was rounded DOWN to a block boundary — firing early by
@@ -33,9 +33,10 @@ import kotlin.math.abs
  * The mechanism to do it right was always there: `Voice.render` clips the voice into the block via
  * `offset = max(blockStart, startFrame) - blockStart`. The sample branch just wasn't using it.
  *
- * The fix is `maxOf(startFrame, nowFrame)`, so this spec has to pin **both** halves of that `maxOf`:
- * the on-time case (sample-accurate onset) and the late case (the `nowFrame` floor). A plain
- * `startFrame` passes the on-time cases, so without the late case the floor is unguarded.
+ * The fix was `maxOf(startFrame, nowFrame)` — an on-time half (sample-accurate onset) and a late
+ * half (the `nowFrame` floor). The late half is history: since B2 the scheduler refuses any voice
+ * whose start is behind the block being promoted for, so the floor became an identity and was
+ * removed. This spec pins the on-time half, and that a late voice is dropped and counted.
  *
  * Drives a bare [PlaybackEngine] rather than the dispatcher:
  *  - `PlaybackEngine.renderInto` skips `MasterStage`, whose limiter lookahead would delay the onset
@@ -167,7 +168,6 @@ class SampleVoiceOnsetSpec : StringSpec({
         (firstAudibleFrame(b) - firstAudibleFrame(a)) shouldBe 1
     }
 
-    // ── Late: `nowFrame` is still the floor ──────────────────────────────────────────────────────
 
     // ── Late voices: dropped, never admitted (block-framing B2, 2026-09-03) ──────────────────────
     //

@@ -172,6 +172,29 @@ class ResourceWarehouseSpec : StringSpec({
         s.dropped shouldBe 0
     }
 
+    "a double return is refused and counted — one ring can never be on the shelf twice" {
+        // Review round 1: without this, a returned-twice ring rents to two live orbits — two
+        // delays writing one ring, heard as cross-talk. Eviction (2f) is where it is easiest to do.
+        val (s, _) = shelf()
+        val b = s.rent(8).shouldNotBeNull()
+        s.giveBack(b)
+        s.giveBack(b)
+
+        s.shelfCount shouldBe 1
+        s.doubleReturns shouldBe 1
+        s.rent(8).shouldNotBeNull() shouldBeSameInstanceAs b
+        s.shelfCount shouldBe 0 // and it came off the shelf exactly once
+    }
+
+    "byte accounting survives the uncapped ladder — a ring past Int bytes does not wrap the shelf negative" {
+        // Review round 1: `left.size * 16` in Int wraps past ~134 M frames; a negative shelfBytes
+        // would switch the budget off forever. The accounting is Double now; this asserts the value
+        // for a synthetic huge ring without allocating one.
+        val huge = 200_000_000 // frames — 3.2 GB as bytes, past Int
+        SizedBuffers.bytesOfFrames(huge) shouldBe 3.2e9
+        SizedBuffers.bytesOf(StereoBuffer(1)) shouldBe 16.0
+    }
+
     // ── Out of memory: null at the one site, counted, not poisoned ───────────────────────────────
 
     "allocation failure returns null and is counted — it does not throw" {

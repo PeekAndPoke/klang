@@ -36,15 +36,21 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     var unbalancedReleases: Int = 0
         private set
 
-    /** Pre-grows the pool to [depth] buffers, OUTSIDE render, so [acquire] never allocates inside it. */
+    /** Pre-grows BOTH pools to [depth] buffers, OUTSIDE render, so neither acquire allocates inside it. */
     fun ensureCapacity(depth: Int) {
         while (pool.size < depth) {
             pool.add(AudioBuffer(blockFrames))
         }
+        while (doublePool.size < depth) {
+            doublePool.add(DoubleArray(blockFrames))
+        }
     }
 
-    /** Buffers in the pool right now, in use or not. */
+    /** Buffers in the AudioBuffer pool right now, in use or not. */
     val capacity: Int get() = pool.size
+
+    /** Buffers in the DoubleArray pool right now, in use or not. */
+    val doubleCapacity: Int get() = doublePool.size
 
     /**
      * The deepest simultaneous nesting this pool has ever served — i.e. the deepest ignitor graph
@@ -100,13 +106,26 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
 
     @PublishedApi
     internal fun acquireDouble(): DoubleArray {
-        if (doubleNextFree >= doublePool.size) doublePool.add(DoubleArray(blockFrames))
-        return doublePool[doubleNextFree++]
+        // Same discipline and the same counters as the AudioBuffer pool (review round 1: this half
+        // had been left un-hardened, and ModApplyingIgnitor's first render allocated here).
+        if (doubleNextFree >= doublePool.size) {
+            doublePool.add(DoubleArray(blockFrames))
+            lateAllocations++
+        }
+        val buf = doublePool[doubleNextFree++]
+        if (doubleNextFree > highWater) {
+            highWater = doubleNextFree
+        }
+        return buf
     }
 
     @PublishedApi
     internal fun releaseDouble() {
-        doubleNextFree--
+        if (doubleNextFree > 0) {
+            doubleNextFree--
+        } else {
+            unbalancedReleases++
+        }
     }
 
     /** Scoped access for DoubleArray buffers — same guarantees as [use]. */

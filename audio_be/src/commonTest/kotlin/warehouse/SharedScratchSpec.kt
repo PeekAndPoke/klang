@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.BackendClock
 import io.peekandpoke.klang.audio_be.PlaybackEngine
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -109,27 +110,91 @@ class SharedScratchSpec : StringSpec({
 
         // lateAllocations cannot see this: a sub-pool's first-use cost is its CREATION (four
         // buffers at once inside process()), not growth. Presence before any render is the proof.
-        for (factor in ResourceWarehouse.WARM_OVERSAMPLE_FACTORS) {
+        // Spelled out, not read off the constant: the DSL takes any oversample Int, and 2/4/8/16 are
+        // the factors a user actually writes (review round 1 widened the set from 2/4).
+        for (factor in listOf(2, 4, 8, 16)) {
             scratch.hasOversample(factor) shouldBe true
         }
+        scratch.oversample(16).doubleCapacity shouldBe ResourceWarehouse.OVERSAMPLE_SCRATCH_DEPTH
     }
 
     "the stack discipline holds across a full render — no unbalanced release anywhere in the engine" {
         val (context, clock) = context()
 
-        renderPeak(context, clock, pid = "deep", sound = "deepchain", blocks = 40)
+        val peak = renderPeak(context, clock, pid = "deep", sound = "deepchain", blocks = 40)
 
+        // Positive control (review round 1): a silent render runs no `use` block and would pass this
+        // row with the discipline broken.
+        peak shouldBeGreaterThan 1e-6
         context.warehouse.scratch.unbalancedReleases shouldBe 0
     }
 
-    "a second playback after the first pays nothing — the pool is kept, not disposed" {
+    "the DoubleArray half of the pool is pre-sized and never allocates in render either" {
+        // Review round 1: acquire()/release() were hardened and counted; acquireDouble()/
+        // releaseDouble() had been left alone, the double pool started EMPTY (ArrayList(2) is a
+        // capacity hint, not a fill), and ModApplyingIgnitor's first render allocated inside
+        // process() while lateAllocations read zero. A vibrato voice is what exercises that path.
         val (context, clock) = context()
-        renderPeak(context, clock, pid = "first", sound = "deepchain", blocks = 20)
-        val capacityAfterFirst = context.warehouse.scratch.capacity
+        val scratch = context.warehouse.scratch
+        scratch.doubleCapacity shouldBe ResourceWarehouse.SCRATCH_DEPTH
 
+        val engine = PlaybackEngine.create(context)
+        engine.scheduler.scheduleVoice(
+            ScheduledVoice(
+                playbackId = "vib", startTime = 0.0, gateEndTime = 1.0,
+                data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, vibrato = 5.0, vibratoMod = 0.3),
+                playbackStartTime = 0.0,
+            )
+        )
+        val mix = StereoBuffer(blockFrames)
+        var peak = 0.0
+        repeat(20) {
+            mix.clear(); engine.renderInto(mix, clock.cursorFrame)
+            for (i in 0 until blockFrames) peak = maxOf(peak, abs(mix.left[i]))
+            clock.cursorFrame += blockFrames
+        }
+
+        peak shouldBeGreaterThan 1e-6
+        scratch.lateAllocations shouldBe 0
+        scratch.unbalancedReleases shouldBe 0
+    }
+
+    "the DoubleArray half reports through the SAME counters — late allocations, high water, unbalanced releases" {
+        // The engine row above proves the pool is pre-sized; this one proves the counters it relies
+        // on actually fire for the double half (a mutation that drops `lateAllocations++` in
+        // acquireDouble() passes the engine row: zero is zero whether or not anything is counted).
+        val scratch = ScratchBuffers(blockFrames)
+        scratch.ensureCapacity(1)
+        scratch.doubleCapacity shouldBe 1
+
+        scratch.acquireDouble()
+        scratch.acquireDouble() // one past capacity: a late allocation, high water 2
+        scratch.lateAllocations shouldBe 1
+        scratch.highWater shouldBe 2
+        scratch.doubleCapacity shouldBe 2
+
+        scratch.releaseDouble()
+        scratch.releaseDouble()
+        scratch.releaseDouble() // one too many
+        scratch.unbalancedReleases shouldBe 1
+    }
+
+    "a second playback after the first pays nothing — the pool is kept, not disposed" {
+        // Review round 1: the first cut asserted `capacity` unchanged, which is a constant (64,
+        // pre-sized) and would have passed with every playback on its own private pool. The
+        // observable is the shared pool's high-water mark: the second playback's engine must be
+        // rendering through the SAME pool the first one already drove to depth.
+        val (context, clock) = context()
+        val scratch = context.warehouse.scratch
+        renderPeak(context, clock, pid = "first", sound = "deepchain", blocks = 20)
+        val highWaterAfterFirst = scratch.highWater
+        (highWaterAfterFirst >= 20) shouldBe true
+
+        val second = PlaybackEngine.create(context)
+        second.scheduler.scratchBuffersForTest shouldBeSameInstanceAs scratch
         renderPeak(context, clock, pid = "second", sound = "deepchain", blocks = 20)
 
-        context.warehouse.scratch.capacity shouldBe capacityAfterFirst
-        context.warehouse.scratch.lateAllocations shouldBe 0
+        scratch.highWater shouldBe highWaterAfterFirst // same depth reached, on the same pool
+        scratch.lateAllocations shouldBe 0
     }
 })

@@ -93,13 +93,21 @@ class DelayLine(
      * older than the old ring's span was never recorded and reads as the zeros this ring came with —
      * the honest answer for a tap that now reaches further back than the delay ever recorded.
      *
-     * Only ever called with a larger ring (a grow); a smaller [from] fits by construction and a
-     * larger one is truncated to what fits rather than thrown at.
+     * Copies the NEWEST `min(from.size, size)` samples, so it is correct in both directions: a
+     * larger target takes all of [from]'s history; a smaller one keeps the most recent slice and
+     * drops the oldest, which is the only truncation that leaves every reachable tap aligned.
+     * (Review round 1: a first cut started at [from]'s oldest sample, which for a smaller target
+     * discarded the NEWEST and shifted every tap — wrong, not truncated. Shrinks never happen
+     * today, so the function is now simply right rather than "right for grows".)
      */
     internal fun adoptHistory(from: DelayLine) {
         val n = minOf(from.bufferSize, bufferSize)
         val src = from.buffer
-        val start = from.writePos
+        // The newest n samples end just before from.writePos; their oldest one is n back from it.
+        var start = from.writePos - n
+        if (start < 0) {
+            start += from.bufferSize
+        }
 
         for (i in 0 until n) {
             var s = start + i
@@ -113,6 +121,9 @@ class DelayLine(
         writePos = if (n == bufferSize) 0 else n
     }
     private var writePos = 0
+
+    /** Test seam for the migration rows: where the next sample will be written. */
+    internal val writePosForTest: Int get() = writePos
 
     /** Delay time in seconds. Setter silently ignores non-finite values. */
     var delayTimeSeconds: Double = delayTimeSeconds

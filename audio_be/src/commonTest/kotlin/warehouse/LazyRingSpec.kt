@@ -41,7 +41,9 @@ class LazyRingSpec : StringSpec({
         val asked = mutableListOf<Int>()
         override fun invoke(frames: Int): StereoBuffer? {
             asked += frames
-            return if (failing) null else StereoBuffer(frames)
+            // A hopeless size is refused here rather than attempted: this is a recording double,
+            // and asking the JVM for Int.MAX frames would be a real OOM, not a simulated one.
+            return if (failing || frames == Int.MAX_VALUE) null else StereoBuffer(frames)
         }
     }
 
@@ -300,13 +302,54 @@ class LazyRingSpec : StringSpec({
         (ring.effectiveDelaySeconds * sampleRate <= ring.capacityFrames) shouldBe true
     }
 
+    "a refused rent is NOT retried every block — the refusal is latched until reset" {
+        // Review round 1, both reviewers: Cylinder.applyBusEffects re-applies the owner's config on
+        // EVERY block. Without a latch a refusal became a 344 Hz allocate-and-catch storm on the
+        // audio thread (with a full GC per catch on the JVM), and `deniedRents` counted blocks.
+        val alloc = Recording(failing = true)
+        val (rings, _) = shelf(alloc)
+        val fx = effect(rings)
+
+        repeat(100) { fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0) } // 100 blocks
+
+        alloc.asked.size shouldBe 1 // asked ONCE
+        fx.deniedRents shouldBe 1
+        fx.delayLine.shouldBeNull()
+
+        // A SMALLER request than the refused size is still tried (it might fit)...
+        alloc.asked.clear()
+        alloc.failing = false
+        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0) // same size: still latched
+        alloc.asked shouldBe emptyList()
+        // ...and reset() clears the latch — a new owner life starts clean.
+        fx.reset()
+        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        fx.delayLine.shouldNotBeNull()
+    }
+
+    "a hopeless time (past Int range, or non-finite) degrades to null rather than renting the smallest ring" {
+        // Review round 1: framesFor's toInt() saturated at Int.MAX and the + margin wrapped
+        // NEGATIVE, classFrames(negative) returned the base, and delaytime(60000) got a 0.5 s ring.
+        val alloc = Recording()
+        val (rings, _) = shelf(alloc)
+        val fx = effect(rings)
+
+        fx.configure(timeSeconds = 60_000.0, feedback = 0.0, cap = 1.0)
+        fx.configure(timeSeconds = Double.POSITIVE_INFINITY, feedback = 0.0, cap = 1.0)
+
+        // The recording allocator is asked for Int.MAX_VALUE and — being a real StereoBuffer
+        // constructor — cannot serve it; production's allocateOrNull returns null the same way.
+        alloc.asked.all { it == Int.MAX_VALUE } shouldBe true
+        fx.delayLine.shouldBeNull()
+    }
+
     "the shelf serves a refused-allocator effect from its idle rings — no allocation needed" {
         val alloc = Recording()
         val (rings, _) = shelf(alloc)
-        val first = effect(rings)
-        first.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
-        val ring = first.delayLine.shouldNotBeNull()
-        rings.giveBack(ring.ring) // what eviction (2f) will do
+        // Put a class-0 ring on the shelf the way eviction (2f) will: rent it, give it back.
+        // (The first cut of this row gave back a ring an effect still HELD — a double-owner, the
+        // exact mistake the shelf now guards against.)
+        rings.giveBack(rings.rent(base).shouldNotBeNull())
         alloc.failing = true
 
         val second = effect(rings)

@@ -101,9 +101,11 @@ internal class MasterChain private constructor(
         /**
          * Upper bound on a master delay ring.
          *
-         * Matches the per-orbit delay (`Cylinder` builds its `DelayLine` with 10 s) so `delay` means
-         * the same thing on both buses — a lower cap here would silently re-time a long echo. Rings
-         * are sized to the *declared* time, so raising the cap costs nothing for short delays.
+         * ⚠️ PARITY GAP since 2026-09-03, closed by resource-warehouse step 2e: the per-orbit delay
+         * no longer has a ceiling (its ring is rented from the warehouse, class-sized, open-ended),
+         * so `delay(20)` is a real 20 s echo on an orbit and a 10 s one here. Same parameter, two
+         * meanings — the roomSize-10× class of bug. 2e moves the master onto the same shelf and
+         * deletes this constant. Until then this comment is the record, not a justification.
          */
         private const val MAX_DELAY_SECONDS = 10.0
 

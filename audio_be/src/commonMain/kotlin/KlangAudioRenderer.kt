@@ -69,6 +69,9 @@ class KlangAudioRenderer private constructor(
         clock.cursorFrame = cursorFrame + context.blockFrames
     }
 
+    /** The render clock, for the spec that pins the between-renders convention offline (block-framing B1). */
+    internal val clockForTest: RenderClock get() = clock
+
     companion object {
         fun create(
             sampleRate: Int,
