@@ -26,15 +26,15 @@ even when they are valuable.
 
 ---
 
-## Layer 1: harden the engine (4 open, 5 done)
+## Layer 1: harden the engine (2 open, 7 done)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
 | ~~1~~ | ~~Block-framing **W13**: musical vs absolute frequency, part 2~~ | [`plans/block-framing-invariance.md`](../plans/block-framing-invariance.md) | ✅ **DONE 2026-08-31** (`79249849`). Guards: `AbsoluteFreqPitchModSpec`, 7 rows across both doors, 4/4 mutations killed. Note: no pre-existing test exercised an absolute-freq oscillator under a pitch mod at all |
 | ~~2~~ | ~~Block-framing **P4**: the strip renderers~~ | same | ✅ **DONE 2026-08-31** (`615faaf7`, `9d9612e5`). The harness now drives the strip door; vibrato + pitch envelope bit-identical, accelerate bounded (float reassociation, 1.7e-13), FilterMod/FM named Class 2. Also closed audit F3: the `EnvelopeCalc` clamp is the two control-rate renderers' offset compensation |
 | ~~3~~ | ~~Block-framing **P5**: the sample path end to end~~ | same | ✅ **DONE 2026-08-31** (`b5cf4eff`). Driver C reaches the sample branch; reintroducing instance 2 turns the harness red |
-| 4 | Track **B1**: scheduler startup protocol | same | Never designed |
-| 5 | Track **B2**: hard-drop admission + per-playback dropped-voice counter | same | The entire DSP side already assumes the no-late-voices guarantee that Track B has not delivered. B2 never lands before B1 |
+| ~~4~~ | ~~Track **B1**: scheduler startup protocol~~ | same | ✅ **DONE 2026-09-03.** Not a start command: a clock convention (between renders the clock is the NEXT block). The race was exactly one block, every playback, every time |
+| ~~5~~ | ~~Track **B2**: hard-drop admission + per-playback dropped-voice counter~~ | same | ✅ **DONE 2026-09-03**, same change as B1. `oldestAllowedSec` gone; late voices dropped and counted. **The scheduler now delivers the guarantee the DSP was verified against.** Counter not yet surfaced to the FE |
 | 6 | **Audio backend audit** — `voices/` pilot **COMPLETE 2026-08-31** (21 findings: 12 fixed, 5 withdrawn, 2 parked, 3 awaiting a call); 1 of 11 katalyst files done; 5 subsystems never started | [`audio-backend-audit.md`](audio-backend-audit.md) | Maintainer call. **Pilot exit criteria met (§5.4) — the protocol itself is up for re-evaluation, see the ledger** |
 | 7 | **Resource warehouse pool** | [`resource-warehouse-pool.md`](resource-warehouse-pool.md) | Maintainer call. Also the audible one: it kills the first-note alloc spike every tutorial example would hit |
 | 8 | `per-playback-engine` **D4** cylinder eviction | [`per-playback-engine.md`](per-playback-engine.md) | Routes into the pool; lands with it |

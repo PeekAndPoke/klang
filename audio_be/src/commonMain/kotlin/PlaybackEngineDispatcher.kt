@@ -142,6 +142,17 @@ class PlaybackEngineDispatcher(
         clock.cursorFrame = cursorFrame
         mix.clear()
 
+        try {
+            renderBlockAt(cursorFrame, out, startMs)
+        } finally {
+            // The clock convention (see RenderClock.cursorFrame): between renders it is the NEXT
+            // block. Advanced in `finally` so an exception mid-block cannot leave "now" in the past.
+            clock.cursorFrame = cursorFrame + context.blockFrames
+        }
+    }
+
+    private fun renderBlockAt(cursorFrame: Double, out: ShortArray, startMs: Double) {
+
         // processAndMix accumulates additively, so engines simply render into the same mix in turn.
         // (#11: with one engine this is a straight render into the final mix.) Per-engine master gain
         // in D6 will need a scratch buffer here for the ≥2 case.
@@ -215,6 +226,9 @@ class PlaybackEngineDispatcher(
 
     // ── Test / diagnostics inspection ────────────────────────────────────────────
     internal val activePlaybackIds: Set<String> get() = engines.keys
+
+    /** The render clock, for specs that must observe the between-renders convention (block-framing B1). */
+    internal val clockForTest: RenderClock get() = clock
     internal fun engine(playbackId: String): PlaybackEngine? = engines[playbackId]
 
     companion object {

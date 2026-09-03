@@ -481,6 +481,46 @@ mutation-checked. Gradual is the point.
 **B2. Flip admission to hard-drop** + per-playback dropped-voice counter; delete `oldestAllowedSec`,
 the sample floor, and the two E4 code paths' reachability concern. B2 never lands before B1.
 
+> ✅ **B1 + B2 DONE 2026-09-03, one change.** Designed with the maintainer in a session that answered
+> the sketch's open questions from the code:
+>
+> **The race was not "fractionally late by render time" — it was exactly one block, every time.**
+> Commands are handled BETWEEN renders (worklet `onmessage`, JVM drain loop), and `clock.cursorFrame`
+> was set on entry to `renderBlock` and never advanced, so between renders it pointed at the block
+> **just rendered**. `ensureEpoch` anchored a new playback there; its first voice therefore fell in
+> a block already gone, and the next render found it 128 frames late — admitted by the 5-block
+> window with its first block of attack skipped. The realtime path had noticed and compensated
+> (`+ blockFrames` at both its sites, with a comment); the timeline path had not. Every test rig had
+> always advanced its clock after rendering, so no rig could see it.
+>
+> **B1 is a convention, not a floor, and no start command is needed.** Between renders the clock is
+> the NEXT block to be rendered: `renderBlock` (dispatcher and offline renderer) advances it on exit,
+> the two realtime compensations come out, `ensureEpoch` is unchanged and now correct, and the
+> offline path is bit-identical (it schedules before the first render at cursor 0). Zero point =
+> next block start, ~2.9 ms of startup latency, never late by construction. `startFrame` stays
+> integral; `ZeroLengthWindowSpec` green throughout (O8 honoured).
+>
+> **B2:** `oldestAllowedSec` deleted; admission is `absoluteStart >= the block being promoted for`
+> (inclusive — the frontend schedules on boundaries constantly); the rest dropped and counted on
+> `PlaybackCtx.droppedVoices`, read via `VoiceScheduler.droppedVoiceCount(pid)`. The `master(…)`
+> swap still applies before the drop. The `VoiceFactory` sample floor `maxOf(startFrame, nowFrame)`
+> became an identity and is gone; `nowFrame` is no longer read by either branch.
+>
+> **Live edits are safe by a wide margin:** `replaceVoices` cuts off at `now + 0.2 s` (~70 blocks
+> ahead); the normal horizon is `lookaheadCycles = 2.0`, which under hard-drop IS the FE-stall
+> tolerance — beyond it, notes drop cleanly and count instead of smearing.
+>
+> Guards: `SchedulerStartupSpec` (drives the real dispatcher, because a rig cannot tell the two
+> conventions apart — 4 rows), `SampleVoiceOnsetSpec`'s two late rows rewritten. Mutations, all red:
+> the clock left on the rendered block (both B1 rows), the window reinstated, the boundary made
+> exclusive, the counter not incremented, the realtime compensation re-added. One row was caught
+> being too loose by its own mutation — the 0.12 threshold assumed a linear attack; the default
+> curve is quadratic, so a late voice opens at (128/441)² and the real one at (32/441)². Measured
+> 0.055 vs 0.0024; threshold now 0.02.
+>
+> **Surfacing the counter to the frontend (a gauge, a console line) is not done** — it is the only
+> visible trace of a stall now, and wants a home in the diagnostics feedback.
+
 **Track A continued:**
 
 **P4. The strip renderers**, which have their own copy of the same arithmetic: `EnvelopeRenderer:86`,

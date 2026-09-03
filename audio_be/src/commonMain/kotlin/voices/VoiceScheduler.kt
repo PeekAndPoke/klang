@@ -189,6 +189,13 @@ class VoiceScheduler(
 
     fun getActiveVoiceCount(): Int = active.size
 
+    /**
+     * Voices dropped at admission for [playbackId] because their start had already been rendered
+     * past (block-framing B2). Zero on a healthy link; a rising count is the only visible trace of
+     * a frontend stall now that late voices are dropped rather than smeared.
+     */
+    fun droppedVoiceCount(playbackId: String): Int = playbackContexts[playbackId]?.droppedVoices ?: 0
+
     /** Register a custom oscillator for THIS playback — lands on the per-engine fork, not the shared parent. */
     fun registerIgnitor(name: String, dsl: IgnitorDsl) = ignitorFork.register(name, dsl)
 
@@ -293,10 +300,12 @@ class VoiceScheduler(
         if (voice.data.control == true) return
 
         // The cursor still points at the block ALREADY rendered — commands drain BETWEEN blocks
-        // (see the promotion convention comment in VoiceFactory). The first frame that can
-        // actually be rendered is one block later; stamping "now" there lets the attack enter
-        // its curve at position 0 instead of silently losing its first block (audit R1).
-        val nowFrame = context.clock.cursorFrame + context.blockFrames
+        // (see the promotion convention comment in VoiceFactory). Between renders the clock IS
+        // the first frame that can still be rendered (RenderClock.cursorFrame, block-framing B1),
+        // so stamping "now" there lets the attack enter its curve at position 0 instead of
+        // silently losing its first block (audit R1). This used to add a block to compensate for
+        // a clock that lagged one behind; the lag is gone, and so is the compensation.
+        val nowFrame = context.clock.cursorFrame
         val nowSec = context.clock.secAt(nowFrame)
         val pCtx = ensureRealtimeCtx(playbackId, nowSec)
 
@@ -346,7 +355,8 @@ class VoiceScheduler(
      *   the floor, a zero-length tap renders one block of attack, then releases from there.
      */
     private fun releaseRealtimeVoice(activeVoice: ActiveVoice) {
-        val releaseFrame = context.clock.cursorFrame + context.blockFrames
+        // Same convention as [startRealtimeVoice]: the clock is already the next renderable frame.
+        val releaseFrame = context.clock.cursorFrame
         val floor = activeVoice.voice.startFrame + context.blockFrames
 
         activeVoice.voice.releaseGate(maxOf(releaseFrame, floor))
@@ -443,8 +453,10 @@ class VoiceScheduler(
         val pid = voice.playbackId
 
         if (pid !in playbackContexts) {
-            // Read the SHARED clock — i.e. the real current backend time — so the epoch snaps to "now"
-            // and the first voice is not judged in the past. (A fresh engine has no per-scheduler cursor.)
+            // Read the SHARED clock so the epoch snaps to "now" and the first voice is not judged in
+            // the past. "Now" is the NEXT block to be rendered (RenderClock.cursorFrame) — which is
+            // what makes this safe under no-late-voices: before B1 the clock lagged one block and
+            // every playback's first note was exactly one block late.
             val nowSec = context.clock.nowSec()
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
             playbackContexts[pid] = createPlaybackCtx(pid, nowSec, epoch = voice.playbackStartTime + latency)
@@ -489,8 +501,6 @@ class VoiceScheduler(
         val clock = context.clock
         val blockEndSec = clock.secAt(blockEnd)
         val nowSec = clock.secAt(nowFrame)
-        val blockSizeSec = context.blockFrames.toDouble() / context.sampleRate.toDouble()
-        val oldestAllowedSec = nowSec - (5 * blockSizeSec)
 
         while (true) {
             val head = scheduled.peek() ?: break
@@ -524,7 +534,14 @@ class VoiceScheduler(
                 continue
             }
 
-            if (absoluteStartSec < oldestAllowedSec) {
+            // NO LATE VOICES, EVER (block-framing B2, 2026-09-03). The DSP is written against the
+            // contract that a voice's first generate() has voiceElapsedFrames == 0; the scheduler
+            // guarantees it here. A voice whose start has already been rendered past is dropped and
+            // counted — observability, not a clamp. This replaces a 5-block tolerance window that
+            // admitted such voices LATE: oscillator phase fresh, envelope already blocks in, neither
+            // on time nor shifted, and two silent-note bugs reachable only in that state.
+            if (absoluteStartSec < nowSec) {
+                pCtx.droppedVoices++
                 continue
             }
 

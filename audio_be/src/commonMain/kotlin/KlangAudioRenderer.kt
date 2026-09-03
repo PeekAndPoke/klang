@@ -63,6 +63,10 @@ class KlangAudioRenderer private constructor(
         mix.clear()
         engine.renderInto(mix, cursorFrame)
         master.process(mix, out)
+        // Same convention as the live dispatcher (RenderClock.cursorFrame): the clock is the NEXT
+        // block between renders. Offline, everything is scheduled before the first render at
+        // cursor 0, so this changes nothing about where a render starts.
+        clock.cursorFrame = cursorFrame + context.blockFrames
     }
 
     companion object {

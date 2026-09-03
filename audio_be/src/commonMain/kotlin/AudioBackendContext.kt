@@ -57,7 +57,9 @@ class AudioBackendContext(
          *    constants (`AnalogDriftCoeffs`) are derived from it, so a different block size gives
          *    audibly different drift.
          *  - SVF cutoff smoothing / `FilterModRenderer` — per-block recompute granularity.
-         *  - `VoiceScheduler.oldestAllowedSec` = `now - 5 * blockDuration` — the late-voice drop window.
+         *  - `VoiceScheduler`'s startup epoch and admission both resolve to a BLOCK boundary (a
+         *    playback's zero point is the next block to be rendered; anything starting before the
+         *    block being promoted for is dropped, block-framing B1/B2).
          *  - `MasterBus` chain crossfades — start rounds to the current block.
          *
          * 128 because that is the Web Audio API render quantum: the browser worklet gets its block

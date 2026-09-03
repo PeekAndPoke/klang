@@ -62,9 +62,10 @@ class VoiceFactory(
     /**
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
      *
-     * For oscillator voices, [nowFrame] is not used (startFrame comes from the schedule).
-     * For sample voices, [nowFrame] is only a *floor* on the scheduled start frame — see
-     * `sampleStartFrame` below.
+     * [nowFrame] is no longer read by either branch: since block-framing B2 the scheduler drops
+     * any voice whose start is behind the block it is promoted for, so `startFrame` is always
+     * renderable as scheduled. The parameter stays for the call sites' sake; see `sampleStartFrame`
+     * below for what it used to floor.
      *
      * Returns null if the voice cannot be created (unknown sound, missing sample, etc.).
      */
@@ -349,16 +350,13 @@ class VoiceFactory(
                 // used to do unconditionally) fires every hit EARLY by 0..blockFrames-1 frames —
                 // not a constant offset but per-hit jitter, which is what wrecks the groove.
                 //
-                // [nowFrame] remains a floor for the LATE case: a voice whose scheduled start is
-                // already behind the current block would otherwise run its ADSR from a past frame
-                // while `SampleIgnitor`'s playhead still starts at the beginning of the PCM — the
-                // envelope and the sample would be out of sync (the original "late-start artifact").
-                //
-                // The floor BOUNDS that desync to one block rather than eliminating it: commands are
-                // drained before the cursor advances, so a voice arriving between blocks is promoted
-                // against the block just rendered and first sounds in the next one. Strictly better
-                // than the old code, which hit that worst case on every voice — but not a guarantee.
-                val sampleStartFrame = maxOf(startFrame, nowFrame)
+                // This used to be `maxOf(startFrame, nowFrame)`: a floor for the LATE case, so a
+                // voice whose start was already behind the current block would not run its ADSR
+                // from a past frame while the sample playhead started at the top of the PCM. Since
+                // block-framing B2 (2026-09-03) the scheduler drops late voices at admission — an
+                // admitted voice always has startFrame >= the block it is promoted for — so the
+                // floor was an identity and is gone. The desync class it bounded is unreachable.
+                val sampleStartFrame = startFrame
                 val voiceDurationFrames = (gateEndFrame - sampleStartFrame).toInt()
 
                 val signal = SampleIgnitor(

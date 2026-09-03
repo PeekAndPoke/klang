@@ -38,6 +38,15 @@ interface RenderClock {
      * ⚠️ **Absolute frames are `Double`; per-sample offsets stay `Int`.** The conversion happens once
      * per block per voice (e.g. `EnvelopeRenderer`: `(ctx.blockStart + ctx.offset) - startFrame`),
      * and everything inside the sample loop is `Int`. Do not widen the loop variables.
+     *
+     * **Between renders, this is the NEXT block to be rendered** (block-framing B1, 2026-09-03).
+     * `renderBlock` sets it to the block it is rendering on entry and advances it by one block on
+     * exit, so a command handled between two renders — a scheduled voice, a realtime note-on —
+     * sees "now" as the first frame that can still be rendered, never one that has already gone
+     * by. Before B1 the clock stayed on the block just rendered, the timeline path anchored a new
+     * playback's epoch to it, and every playback's first note was therefore exactly one block
+     * late — silently admitted by the old 5-block tolerance window with its first block of attack
+     * skipped. Every test rig had always advanced the clock after rendering; production now agrees.
      */
     val cursorFrame: Double
 
