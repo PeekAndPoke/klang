@@ -26,7 +26,7 @@ even when they are valuable.
 
 ---
 
-## Layer 1: harden the engine (5 open, 4 done)
+## Layer 1: harden the engine (4 open, 5 done)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
@@ -38,7 +38,7 @@ even when they are valuable.
 | 6 | **Audio backend audit** — `voices/` pilot **COMPLETE 2026-08-31** (21 findings: 12 fixed, 5 withdrawn, 2 parked, 3 awaiting a call); 1 of 11 katalyst files done; 5 subsystems never started | [`audio-backend-audit.md`](audio-backend-audit.md) | Maintainer call. **Pilot exit criteria met (§5.4) — the protocol itself is up for re-evaluation, see the ledger** |
 | 7 | **Resource warehouse pool** | [`resource-warehouse-pool.md`](resource-warehouse-pool.md) | Maintainer call. Also the audible one: it kills the first-note alloc spike every tutorial example would hit |
 | 8 | `per-playback-engine` **D4** cylinder eviction | [`per-playback-engine.md`](per-playback-engine.md) | Routes into the pool; lands with it |
-| 9 | Soundfont looping bug | [`soundfont-looping-investigation.md`](soundfont-looping-investigation.md) | User-visible correctness; would surface in any tutorial using sustained soundfonts |
+| ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
 
 ## Layer 2: widen and harden the interface (11 open, 1 done)
 
