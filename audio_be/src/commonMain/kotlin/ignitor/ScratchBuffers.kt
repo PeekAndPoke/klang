@@ -20,15 +20,48 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     }
     private var nextFree = 0
 
+    /**
+     * Buffers created by [acquire] because the pool was exhausted — i.e. allocations that happened
+     * INSIDE render. The goal is that this stays at zero: size the pool at build with
+     * [ensureCapacity] (a voice's ignitor graph knows its own depth) so the hot path never allocates.
+     */
+    var lateAllocations: Int = 0
+        private set
+
+    /**
+     * Unbalanced [release] calls — more releases than acquires. Guarded rather than thrown (no
+     * exceptions in audio paths), and counted so the imbalance is visible instead of silently
+     * corrupting `nextFree` and handing out live buffers twice.
+     */
+    var unbalancedReleases: Int = 0
+        private set
+
+    /** Pre-grows the pool to [depth] buffers, OUTSIDE render, so [acquire] never allocates inside it. */
+    fun ensureCapacity(depth: Int) {
+        while (pool.size < depth) {
+            pool.add(AudioBuffer(blockFrames))
+        }
+    }
+
+    /** Buffers in the pool right now, in use or not. */
+    val capacity: Int get() = pool.size
+
     @PublishedApi
     internal fun acquire(): AudioBuffer {
-        if (nextFree >= pool.size) pool.add(AudioBuffer(blockFrames))
+        if (nextFree >= pool.size) {
+            pool.add(AudioBuffer(blockFrames))
+            lateAllocations++
+        }
         return pool[nextFree++]
     }
 
     @PublishedApi
     internal fun release() {
-        nextFree--
+        if (nextFree > 0) {
+            nextFree--
+        } else {
+            unbalancedReleases++
+        }
     }
 
     /** Scoped access — guarantees release even on exceptions. Never leak a buffer. */

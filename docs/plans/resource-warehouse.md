@@ -159,6 +159,14 @@ best-fit-up, never shrink, return-to-shelf, budget with drop-largest, allocation
 (injected, not by exhausting the JVM), scratch sized-at-build with a guarded release. Mutation-checked
 before anything touches it.
 
+> ✅ **DONE 2026-09-03.** `warehouse/SizedBuffers.kt`, `warehouse/ResourceWarehouse.kt`, and two
+> additions to `ScratchBuffers` (`ensureCapacity`, guarded `release()`, `lateAllocations` +
+> `unbalancedReleases` counters). Nothing in the DSP references any of it yet. 20 rows, 10 mutations
+> (one per rule: linear ladder, largest-fit, too-small handed out, no clear on return, smallest freed
+> first, budget unenforced, failure uncounted, the real catch rethrowing, `ensureCapacity` inert,
+> `release` unguarded) — all red on exactly the row that names the rule. One row exercises the real
+> catch: `allocateOrNull(Int.MAX_VALUE)` (34 GB a channel) returns `null` rather than throwing.
+
 **2. Integrate one customer per step**, measuring at the audible one:
 
 | step | change | proves |
