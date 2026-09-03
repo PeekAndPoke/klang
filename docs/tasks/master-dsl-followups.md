@@ -63,7 +63,7 @@ Returning to a master last used more than `MAX_CACHED_CHAINS` (8) edits ago is a
 Bounded and documented, but reachable by ordinary live-coding A/B ("was 2.0 better?").
 
 **Proper fix belongs to the resource warehouse pool** — already written up there, see
-[`resource-warehouse-pool.md`](resource-warehouse-pool.md) §"Master chains — the second customer".
+[`../plans/resource-warehouse.md`](../plans/resource-warehouse.md) §"Master chains — the second customer".
 
 ## 4. Delete-to-undo for `master(...)`
 
@@ -117,5 +117,5 @@ full parametric EQ.
 - Foundation: [`per-playback-engine.md`](per-playback-engine.md) §H
 - Next in the same family: [`katalyst-dsl.md`](katalyst-dsl.md) — follows this application-path and effect-reuse
   precedent
-- [`resource-warehouse-pool.md`](resource-warehouse-pool.md) — owns item 3
+- [`../plans/resource-warehouse.md`](../plans/resource-warehouse.md) — owns item 3
 - [`auto-mix-advisor.md`](auto-mix-advisor.md) — wants item 5 (`MasterFx.eq`) for its closed-loop phase

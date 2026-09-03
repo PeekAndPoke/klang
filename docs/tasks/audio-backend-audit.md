@@ -380,7 +380,7 @@ Full list: `audio/MEMORY.md` + `docs/tasks-archive/`.
 - Worked example of the loop paying off:
   [`../tasks-archive/2026-08/20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)
 - Overlapping open work: [`master-dsl-followups.md`](master-dsl-followups.md) (§2 shared orbit+master tail hole), [
-  `resource-warehouse-pool.md`](resource-warehouse-pool.md) (audio-thread allocation),
+  `../plans/resource-warehouse.md`](../plans/resource-warehouse.md) (audio-thread allocation),
   [`audio-pipeline-open-topics.md`](audio-pipeline-open-topics.md), [`voice-culling.md`](voice-culling.md)
 - Orientation for a fresh reviewer — signal flow + file-by-file map:
   [`../audio-backend-file-map.md`](../audio-backend-file-map.md)
