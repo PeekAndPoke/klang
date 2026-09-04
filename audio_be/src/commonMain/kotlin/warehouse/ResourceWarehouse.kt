@@ -41,6 +41,9 @@ class ResourceWarehouse(
     /** Reverb units — one size, lazy on the first `room`, shelved by return (step 2d). */
     val reverbs: ReverbUnits = ReverbUnits(sampleRate, allocate = allocateReverb)
 
+    /** Whole cylinders — built by the warmup, returned by engine disposal, taken by the next engine. */
+    val cylinders: CylinderUnits = CylinderUnits(blockFrames = blockFrames, sampleRate = sampleRate, rings = sized, reverbs = reverbs)
+
     /**
      * The one shared scratch pool. Engines render sequentially within a block, so one is enough.
      *

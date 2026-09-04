@@ -41,10 +41,10 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 // differently (review round 4). `PlaybackEngine` shows the seconds-derived pattern if this ever
 // needs pinning to wall time.
 class Cylinder(
-    val id: Int,
+    id: Int,
     val blockFrames: Int,
     private val sampleRate: Int,
-    private val silentBlocksBeforeTailCheck: Int = 10,
+    silentBlocksBeforeTailCheck: Int = 10,
     /** The ring shelf this orbit's delay rents from. Production passes the backend's one warehouse. */
     rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
     /** The reverb-unit shelf this orbit's reverb rents from. Same warehouse. */
@@ -115,6 +115,12 @@ class Cylinder(
     // ════════════════════════════════════════════════════════════════════════════
     // State
     // ════════════════════════════════════════════════════════════════════════════
+
+    /** The orbit this cylinder serves. Re-labelled by [adopt] when a shelved cylinder is rented for another. */
+    var id: Int = id
+        private set
+
+    private var silentBlocksBeforeTailCheck: Int = silentBlocksBeforeTailCheck
 
     var isActive = false
         private set
@@ -309,14 +315,28 @@ class Cylinder(
      *    the counter and keep processing. If silent, deactivate.
      */
     /**
-     * Returns this orbit's rented units (delay ring, reverb network) to the warehouse — the
-     * resource-warehouse return path (2f). Only for a cylinder that will never render again: the
-     * owning engine is being disposed. `Cylinders.releaseAll` is the one caller.
+     * Retires this cylinder for the shelf (resource warehouse, cylinders): every bus effect off and
+     * cleared, the lease freed, the send buffers zeroed, and the rented units (delay ring, reverb
+     * network) handed back to THEIR shelves — a shelved cylinder holds nothing. The same clean slate
+     * [tryDeactivate] reaches, plus the return. Only for a cylinder that will never render again
+     * on its current orbit: `CylinderUnits.giveBack` is the one caller.
      */
-    fun release() {
+    fun retire() {
+        resetBusEffects()
         delay.release()
         reverb.release()
+        lease.reset()
+        mixBuffer.clear()
+        delaySendBuffer.clear()
+        reverbSendBuffer.clear()
         isActive = false
+        silentBlockCount = 0
+    }
+
+    /** Re-labels a retired cylinder for orbit [id] under the renting `Cylinders`' settings. */
+    fun adopt(id: Int, silentBlocksBeforeTailCheck: Int) {
+        this.id = id
+        this.silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck
     }
 
     fun tryDeactivate() {

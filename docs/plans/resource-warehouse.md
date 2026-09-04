@@ -203,6 +203,42 @@ before anything touches it.
 | 2g | sample PCM through the OOM catch | the last MB-scale site |
 | | ✅ **DONE 2026-09-04** — `SampleStore(commLink, allocatePcm = ::allocatePcmOrNull)`: the `DoubleArray(totalSize)` a chunked upload's first chunk makes (on the audio thread, through the worklet's message port; the only MB-scale allocation the store makes — a JVM `Complete` arrives already allocated) goes through one caught site. A failure becomes `SampleEntry.AllocationFailed` (silent like `NotFound`, distinct so diagnostics can say "out of memory", and so the upload's remaining chunks are DROPPED rather than restarting the allocation each), counted in `allocationFailures`. Before, that OOM stopped the worklet for good. Two rows in `SampleStoreSpec`, 4 mutations red (later chunks restart, uncounted, not remembered, catch removed). Not routed through `ResourceWarehouse` on purpose: PCM is owned for the backend's life by the one store (no return path, nothing to shelve); the shape is the same, the site is the store's. | |
 
+### Step 3 — cylinders join the warehouse; the warmup stocks it (2026-09-04, after the Fairphone)
+
+**Measured on the Fairphone with 2a–2g in:** the first run of Der Schmetterling still killed the
+playback. Its first frame builds eight cylinders and four reverb networks at once (no rings: the
+song has no `delaytime`), and JITs Freeverb, the effect constructors and every ignitor graph the song
+uses — the warmup only ever played a sine and a sample on orbit 0. ~1 MB of bytes, but the object
+graphs and the JIT weigh as much on a phone. Maintainer's decisions: (1) build 16 cylinders at
+warmup, **bucketed**, never all in one frame; (2) **cylinders join the warehouse**; (3) widen the
+warmup's coverage; explicit synthetic voices, not a builtin song.
+
+- ✅ `warehouse/CylinderUnits`: a shelf of whole cylinders. `Cylinder.retire()` = every bus effect
+  off and cleared, lease freed, send buffers zeroed, ring and network handed back to THEIR shelves
+  (a shelved cylinder holds nothing, so every idle byte is on exactly one shelf); `adopt(id, …)`
+  re-labels a rented one. `Cylinders.getOrInit` rents, `releaseAll` gives back. `maxIdle = 32`;
+  `ReverbUnits.MAX_IDLE_UNITS` raised to 32 to match.
+- ✅ `WarmupRunner`: `WARMUP_ORBITS = 16` voices, orbit k starting mid-block k (one cylinder, one
+  ring, one network per block — the same stall would otherwise just move into the warmup's first
+  frame, inaudible but long enough to have the worklet dropped), each with delay + room + filter,
+  rotating `WARMUP_SOUNDS` (sine, saw, supersaw, square, triangle, the all-zeros sample) so each
+  ignitor graph is JITed before a song's first note of it. `warmupBlocks = 16 + 8` ≈ 64 ms at 48 kHz.
+  `cleanupHard` at the end is the return path: **16 cylinders, 16 rings, 16 networks on the shelves
+  before `BackendReady`.**
+- `CylinderShelfSpec` (5 rows): disposal returns/retires and the next engine takes the same instance
+  under a new id; **a song on returned cylinders is bit-identical to the same song on fresh ones**
+  (song A loud and wet with different settings on every orbit, phaser engaged; both runs at the same
+  clock position, because the scheduled-time frame conversion rounds differently at different
+  positions — a 1-LSB trap); `maxIdle` + double return; after warmup the shelves hold 16 of each,
+  no block built more than one cylinder, and an 8-orbit wet song of every warmed sound makes zero
+  allocations; every warmup voice actually sounded through a ring and a network with zero drops.
+  10 mutations red (retire without `resetBusEffects` needed the phaser ENGAGED in both songs to
+  die — the LFO phase is the state that crosses; units kept inside; old id kept; shelf never used;
+  retire skipped; warmup un-bucketed; dry; without delay; fewer orbits).
+- Not measured again yet: the Fairphone, after this. If it still stalls, the next suspects are
+  per-note voice-graph construction and JIT of paths the warmup does not reach (body/vowel, master
+  chains), and the measurement should be a profile, not a guess.
+
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
 `VoiceScheduler` reads `context.warehouse.scratch`); the remaining `scratchBuffers` fields sit on the

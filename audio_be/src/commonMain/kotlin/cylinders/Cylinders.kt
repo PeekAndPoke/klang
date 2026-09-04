@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.peekandpoke.klang.audio_be.warehouse.CylinderUnits
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -18,10 +19,16 @@ class Cylinders(
     private val sampleRate: Int,
     private val silentBlocksBeforeTailCheck: Int = 10,
     maxCylinders: Int = MAX_CYLINDERS,
-    /** The ring shelf every cylinder rents from. Production passes the backend's one warehouse. */
-    private val rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
-    /** The reverb-unit shelf every cylinder rents from. Same warehouse. */
-    private val reverbs: ReverbUnits = ReverbUnits(sampleRate),
+    /**
+     * The cylinder shelf this engine rents from and returns to. Production passes the backend's one
+     * warehouse; the default is a private shelf over private unit shelves, for specs.
+     */
+    private val units: CylinderUnits = CylinderUnits(
+        blockFrames = blockFrames,
+        sampleRate = sampleRate,
+        rings = SizedBuffers.forRings(sampleRate),
+        reverbs = ReverbUnits(sampleRate),
+    ),
 ) {
     companion object {
         const val MAX_CYLINDERS = 256
@@ -48,13 +55,14 @@ class Cylinders(
      * Clear all cylinders
      */
     /**
-     * Returns every cylinder's rented units to the warehouse and drops the cylinders — the engine
-     * is being disposed (resource warehouse, 2f). The next playback's first delay or room of the
-     * same class is then a shelf hit, not an allocation in render.
+     * Returns every cylinder to the warehouse (which retires it: units back to their shelves,
+     * state to a clean slate) and forgets them — the engine is being disposed (resource warehouse,
+     * 2f + cylinders). The next playback's first voice on an orbit takes a shelved cylinder, and its
+     * first delay or room a shelved ring or network: nothing is built in render.
      */
     fun releaseAll() {
         for (cylinder in id2cylinder.values) {
-            cylinder.release()
+            units.giveBack(cylinder)
         }
         id2cylinder.clear()
     }
@@ -139,14 +147,7 @@ class Cylinders(
         val safeId = id % maxCylinders
 
         return id2cylinder.getOrPut(safeId) {
-            Cylinder(
-                id = safeId,
-                blockFrames = blockFrames,
-                sampleRate = sampleRate,
-                silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
-                rings = rings,
-                reverbs = reverbs,
-            )
+            units.rent(id = safeId, silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck)
         }.also {
             it.updateFromVoice(voice, blockStart)
         }

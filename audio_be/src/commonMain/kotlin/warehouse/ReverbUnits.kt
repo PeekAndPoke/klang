@@ -23,7 +23,7 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
  */
 class ReverbUnits(
     val sampleRate: Int,
-    /** Bound on IDLE units. A unit is ~200 KB; 16 is a little over 3 MB. */
+    /** Bound on IDLE units. A unit is ~200 KB; 32 is ~6.5 MB — the warmup's 16 plus a song's own returned on top. */
     val maxIdle: Int = MAX_IDLE_UNITS,
     private val allocate: (sampleRate: Int) -> Reverb? = ::allocateOrNull,
 ) {
@@ -90,7 +90,7 @@ class ReverbUnits(
     }
 
     companion object {
-        const val MAX_IDLE_UNITS: Int = 16
+        const val MAX_IDLE_UNITS: Int = 32
 
         /** The one place a reverb network is built; see [SizedBuffers.allocateOrNull] for why the catch is sound. */
         fun allocateOrNull(sampleRate: Int): Reverb? = try {

@@ -159,8 +159,7 @@ class PlaybackEngine(
             val cylinders = Cylinders(
                 blockFrames = context.blockFrames,
                 sampleRate = context.sampleRate,
-                rings = context.warehouse.sized,
-                reverbs = context.warehouse.reverbs,
+                units = context.warehouse.cylinders,
             )
             // The bus is built first and handed to the scheduler as the sink for `master(…)` events,
             // so neither has to know about the other's lifecycle.

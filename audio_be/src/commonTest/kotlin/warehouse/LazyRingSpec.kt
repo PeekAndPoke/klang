@@ -84,7 +84,10 @@ class LazyRingSpec : StringSpec({
 
     "eight cylinders without a delay allocate ZERO ring bytes — the Der Schmetterling case" {
         val (rings, alloc) = shelf()
-        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate, rings = rings)
+        val cylinders = Cylinders(
+            blockFrames = blockFrames, sampleRate = sampleRate,
+            units = CylinderUnits(blockFrames, sampleRate, rings = rings, reverbs = ReverbUnits(sampleRate)),
+        )
 
         // Touching an orbit constructs its cylinder; that used to cost 7.68 MB each, eight times.
         val eight = List(8) { id -> Cylinder(id = id, blockFrames = blockFrames, sampleRate = sampleRate, rings = rings) }
