@@ -13,6 +13,7 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import kotlinx.css.Display
 import kotlinx.css.Overflow
+import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.position
 import kotlinx.css.zIndex
@@ -25,8 +26,12 @@ import kotlinx.css.minWidth
 import kotlinx.css.overflow
 import kotlinx.css.overflowY
 import kotlinx.css.pct
+import kotlinx.css.pointerEvents
 import kotlinx.css.px
 import kotlinx.css.vh
+import kotlinx.css.top
+import kotlinx.css.bottom
+import kotlinx.css.left
 import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -42,6 +47,14 @@ fun Tag.MenuLayout(
 }
 
 class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
+
+    companion object {
+        /** The sidebar's width; the content column starts here. */
+        const val SIDEBAR_WIDTH_PX = 340
+
+        /** How far the content's glow reaches over the sidebar's right edge. */
+        const val CONTENT_GLOW_PX = 42
+    }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -91,9 +104,9 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
 
             div {
                 css {
-                    width = 340.px
+                    width = SIDEBAR_WIDTH_PX.px
                     // Prevent the menu from shrinking on smaller screens
-                    minWidth = 340.px
+                    minWidth = SIDEBAR_WIDTH_PX.px
                     flexShrink = 0.0
 
                     height = 100.pct
@@ -103,21 +116,38 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
                 SidebarMenu()
             }
 
+            // The editor's glow bleeding over the sidebar's right edge — painted HERE, by the
+            // layout, as a second light like the one above: an overlay with no children and no
+            // hit-testing. It used to be the scroller's own box-shadow showing through a 100px
+            // clip window (negative margin + padding on the scroller, z-index above the sidebar);
+            // that strip belonged to the scroller and took every click and hover meant for the
+            // Motor underneath it. The editor's own shadow is now clipped at the content edge,
+            // exactly where this strip takes over. Same colour and strength as that shadow
+            // (`accentMuted` at 18 %, blur 42px).
+            div {
+                key = "content-edge-light"
+                css {
+                    position = Position.absolute
+                    top = 0.px
+                    bottom = 0.px
+                    left = (SIDEBAR_WIDTH_PX - CONTENT_GLOW_PX).px
+                    width = CONTENT_GLOW_PX.px
+                    put("pointer-events", "none")
+                    zIndex = 5
+                    put(
+                        "background-image",
+                        "linear-gradient(to left," +
+                                " color-mix(in srgb, var(--klang-accent-muted) 18%, transparent) 0," +
+                                " transparent 100%)"
+                    )
+                }
+            }
+
             div {
                 css {
                     flexGrow = 1.0
                     height = 100.pct
                     overflowY = Overflow.auto
-                    // Above the sidebar (which is position:relative via chrome-bg),
-                    // so the editor's outer glow can bleed over the menu
-                    position = Position.relative
-                    zIndex = 1
-                    // Clip-window trick: the negative margin + equal padding keep
-                    // the layout pixel-identical, but move this scroller's clip
-                    // edge 100px INTO the sidebar — page content (e.g. the
-                    // editor's glow) may paint over the menu within that window.
-                    put("margin-left", "-100px")
-                    put("padding-left", "100px")
                     // No horizontal scrollbar from shadows poking the right edge
                     put("overflow-x", "hidden")
                 }
