@@ -19,6 +19,7 @@ import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.streams.ops.ticker
 import kotlinx.css.Color
 import kotlinx.css.Display
+import kotlinx.css.FontWeight
 import kotlinx.css.JustifyContent
 import kotlinx.css.TextAlign
 import kotlinx.css.WhiteSpace
@@ -28,6 +29,7 @@ import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.fontFamily
 import kotlinx.css.fontSize
+import kotlinx.css.fontWeight
 import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.lineHeight
@@ -148,7 +150,8 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                 css {
                     display = Display.inlineBlock
                     width = 3.4.rem
-                    color = Color(KlangTheme.Hex.textTertiary)
+                    color = Color.white
+                    fontWeight = FontWeight.bold
                 }
                 +label
             }
