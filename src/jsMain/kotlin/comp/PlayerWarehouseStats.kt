@@ -50,8 +50,8 @@ fun Tag.PlayerWarehouseStats() = comp {
 
 /**
  * The resource warehouse's stats, the way the backend keeps them: what it holds and what happened
- * to it (`docs/tasks/future/warehouse-stats-feed.md`). Rendered in the Motor's top slot when the
- * title is clicked, in place of the gauges, at exactly the gauges' height so nothing below moves.
+ * to it (`docs/tasks/future/warehouse-stats-feed.md`). Rendered in the Motor's title slot when the
+ * title is clicked, in place of the word, at exactly the slot's height so nothing else moves.
  *
  * The snapshot rides every `Diagnostics`; the backend rebuilds it only when a part changed, so
  * this component only reads the latest one.
@@ -93,17 +93,19 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
 
         div {
             css {
-                height = Motor.TOP_SLOT_HEIGHT
+                height = Motor.TITLE_HEIGHT
                 display = Display.flex
                 justifyContent = JustifyContent.center
                 fontFamily = "monospace"
-                fontSize = 0.65.rem
-                lineHeight = LineHeight("0.95rem")
+                fontSize = 0.62.rem
+                lineHeight = LineHeight("0.9rem")
                 whiteSpace = WhiteSpace.nowrap
                 textAlign = TextAlign.left
                 color = Color(KlangTheme.Hex.textSecondary)
                 put("text-shadow", "0 0 4px #000")
             }
+
+            title = "click: back to KLANGMOTOR"
 
             if (w == null) {
                 div {

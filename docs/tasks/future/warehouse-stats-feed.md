@@ -16,11 +16,11 @@
 - `Feedback.Diagnostics.warehouse: WarehouseStats?` (nullable for older backends): per part the
   idle bytes/counts, dirty counts, allocations/hits/failures/dropped/sync cleans, scratch capacity and
   high water, sample bytes/count/allocation failures, `droppedVoices`, `deniedRents`.
-- FE (maintainer's shape): a click on "KLANGMOTOR" in the Motor toggles its top slot between the
-  three gauges and `PlayerWarehouseStats` (two columns of four monospace lines: rings, reverbs,
-  cylinders, scratch, samples, late, dry); another click toggles back. The Motor's slots are
-  positioned absolutely in rem inside a fixed 13 rem frame, so the oscilloscope keeps its distance
-  to the bottom whatever the top slot shows. `Diagnostics.warehouse` is not nullable
+- FE (maintainer's shape): a click on the word "KLANGMOTOR" in the Motor swaps the WORD for
+  `PlayerWarehouseStats` (two columns of four monospace lines: rings, reverbs, cylinders, scratch,
+  samples, late, dry) in the same slot; a click on the stats swaps back. The gauges stay. The
+  Motor's slots are positioned absolutely in rem inside a fixed 13 rem frame (title slot 3.75 rem,
+  the word at its bottom edge), so the oscilloscope keeps its distance to the bottom either way. `Diagnostics.warehouse` is not nullable
   (`WarehouseStats.empty` for specs).
 - Guards: `WarehouseStatsSpec` (same-object on no change, every part's change re-snapshots, a
   re-upload replaces bytes, the dispatcher sends the snapshot with the engines' counters summed),

@@ -18,6 +18,8 @@ import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.css.Color
 import kotlinx.css.Cursor
 import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.JustifyContent
 import kotlinx.css.FontWeight
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
@@ -27,9 +29,11 @@ import kotlinx.css.bottom
 import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.em
+import kotlinx.css.flexDirection
 import kotlinx.css.fontFamily
 import kotlinx.css.fontWeight
 import kotlinx.css.height
+import kotlinx.css.justifyContent
 import kotlinx.css.left
 import kotlinx.css.lineHeight
 import kotlinx.css.opacity
@@ -55,12 +59,12 @@ fun Tag.Motoer() = comp {
 }
 
 /**
- * The Motor: gauges (or, on a click on the title, the warehouse stats), the oscilloscope, the
- * spectrum behind everything, and the title.
+ * The Motor: the gauges, the oscilloscope, the spectrum behind everything, and the title — which
+ * a click swaps for the warehouse stats, and back.
  *
- * Every slot is positioned ABSOLUTELY in rem inside a fixed-height frame, so that whatever the top
- * slot shows, the oscilloscope keeps its distance to the bottom (it used to be pushed up by the
- * height of the text under the gauges). The geometry is in the companion; the top slot's height is
+ * Every slot is positioned ABSOLUTELY in rem inside a fixed-height frame, so that whatever the
+ * title slot shows, the oscilloscope keeps its distance to the bottom (it used to be pushed up by
+ * the height of the text below it). The geometry is in the companion; the title slot's height is
  * shared with `PlayerWarehouseStats`, which renders at exactly that height.
  */
 class Motor(ctx: NoProps) : PureComponent(ctx) {
@@ -69,16 +73,19 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
         /** The frame's total height. */
         val FRAME_HEIGHT = 13.0.rem
 
-        /** The top slot: the three gauges (62 px + their glow) or the warehouse stats. */
+        /** The top slot: the three gauges (62 px + their glow). */
         val TOP_SLOT_HEIGHT = 4.5.rem
 
         /** Where the oscilloscope starts and how tall it is — its bottom is fixed at 8.75 rem from the top. */
         val OSCILLOSCOPE_TOP = 5.0.rem
         val OSCILLOSCOPE_HEIGHT = 3.75.rem
 
-        /** The title's box, anchored to the bottom. */
-        val TITLE_HEIGHT = 2.6.rem
-        val TITLE_BOTTOM = 0.5.rem
+        /**
+         * The title slot, anchored to the bottom: the title sits at its bottom edge; the warehouse
+         * stats, when toggled in, fill it.
+         */
+        val TITLE_HEIGHT = 3.75.rem
+        val TITLE_BOTTOM = 0.25.rem
 
         /** The spectrum's height, anchored to the bottom, behind everything. */
         val SPECTRUM_HEIGHT = 8.25.rem
@@ -89,7 +96,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
     // Build metadata, published as a stream; redraws once it loads so the title tooltip is current.
     private val versionInfo by subscribingTo(version)
 
-    /** A click on the title toggles the top slot between the gauges and the warehouse stats. */
+    /** A click on the title swaps it for the warehouse stats; a click on those swaps back. */
     private var showWarehouse by value(false)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,7 +112,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
             }
 
             div {
-                key = if (showWarehouse) "warehouse" else "stats"
+                key = "stats"
                 css {
                     position = Position.absolute
                     top = 0.rem
@@ -114,11 +121,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                     height = TOP_SLOT_HEIGHT
                     zIndex = 2
                 }
-                if (showWarehouse) {
-                    PlayerWarehouseStats()
-                } else {
-                    PlayerMiniStats()
-                }
+                PlayerMiniStats()
             }
 
             div {
@@ -165,39 +168,47 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                     right = 0.rem
                     height = TITLE_HEIGHT
                     opacity = 0.95
+                    cursor = Cursor.pointer
+                    // The title sits at the slot's bottom edge; the stats fill the slot.
+                    display = Display.flex
+                    flexDirection = FlexDirection.column
+                    justifyContent = JustifyContent.flexEnd
                 }
 
-                div {
-                    css {
-                        whiteSpace = WhiteSpace.nowrap
-                        cursor = Cursor.pointer
-                        put("text-shadow", "0 0 5px #000")
-                    }
+                // A click anywhere in the slot swaps the title for the stats, and back.
+                onClick { showWarehouse = !showWarehouse }
 
-                    // Reveal the build version as a native tooltip on hover
-                    versionInfo.takeIf { it.isAvailable }?.let { info ->
-                        title = buildString {
-                            append(info.project).append(" v").append(info.version)
-                            append("\nbranch: ").append(info.gitBranch)
-                            append("\nrev: ").append(info.gitDesc)
-                            info.date?.let { append("\nbuilt: ").append(it) }
-                            append("\n\nclick: ").append(if (showWarehouse) "back to the gauges" else "warehouse stats")
-                        }
-                    }
-
-                    // The title toggles the top slot; the start page is one click away in the menu.
-                    onClick { showWarehouse = !showWarehouse }
-
-                    ui.big.text {
+                if (showWarehouse) {
+                    PlayerWarehouseStats()
+                } else {
+                    div {
                         css {
-                            height = 2.0.em
-                            fontFamily = "monospace"
-                            lineHeight = LineHeight("2.0em")
-                            color = Color.white
-                            display = Display.inlineBlock
-                            fontWeight = FontWeight.bold
+                            whiteSpace = WhiteSpace.nowrap
+                            put("text-shadow", "0 0 5px #000")
                         }
-                        +"KLANGMOTOR"
+
+                        // Reveal the build version as a native tooltip on hover
+                        versionInfo.takeIf { it.isAvailable }?.let { info ->
+                            title = buildString {
+                                append(info.project).append(" v").append(info.version)
+                                append("\nbranch: ").append(info.gitBranch)
+                                append("\nrev: ").append(info.gitDesc)
+                                info.date?.let { append("\nbuilt: ").append(it) }
+                                append("\n\nclick: warehouse stats")
+                            }
+                        }
+
+                        ui.big.text {
+                            css {
+                                height = 2.0.em
+                                fontFamily = "monospace"
+                                lineHeight = LineHeight("2.0em")
+                                color = Color.white
+                                display = Display.inlineBlock
+                                fontWeight = FontWeight.bold
+                            }
+                            +"KLANGMOTOR"
+                        }
                     }
                 }
             }
