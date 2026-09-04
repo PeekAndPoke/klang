@@ -81,8 +81,8 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
         val OSCILLOSCOPE_HEIGHT = 3.75.rem
 
         /**
-         * The title slot, anchored to the bottom: the title sits at its bottom edge; the warehouse
-         * stats, when toggled in, fill it.
+         * The title slot, anchored to the bottom: the title sits vertically centred in it; the
+         * warehouse stats, when toggled in, fill it.
          */
         val TITLE_HEIGHT = 3.75.rem
         val TITLE_BOTTOM = 0.25.rem
@@ -169,10 +169,10 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                     height = TITLE_HEIGHT
                     opacity = 0.95
                     cursor = Cursor.pointer
-                    // The title sits at the slot's bottom edge; the stats fill the slot.
+                    // The title sits vertically centred in the slot; the stats fill it.
                     display = Display.flex
                     flexDirection = FlexDirection.column
-                    justifyContent = JustifyContent.flexEnd
+                    justifyContent = JustifyContent.center
                 }
 
                 // A click anywhere in the slot swaps the title for the stats, and back.
