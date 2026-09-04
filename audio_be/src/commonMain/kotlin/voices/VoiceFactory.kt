@@ -62,16 +62,14 @@ class VoiceFactory(
     /**
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
      *
-     * [nowFrame] is no longer read by either branch: since block-framing B2 the scheduler drops
-     * any voice whose start is behind the block it is promoted for, so `startFrame` is always
-     * renderable as scheduled. The parameter stays for the call sites' sake; see `sampleStartFrame`
-     * below for what it used to floor.
+     * There is no "now" here: since block-framing B2 the scheduler drops any voice whose start is
+     * behind the block it is promoted for, so `startFrame` is always renderable as scheduled (see
+     * `sampleStartFrame` below for the floor that used to need it).
      *
      * Returns null if the voice cannot be created (unknown sound, missing sample, etc.).
      */
     fun makeVoice(
         scheduled: ScheduledVoice,
-        nowFrame: Double,
         backendStartTimeSec: Double,
         playbackCtx: PlaybackCtx,
         getSample: (SampleRequest) -> SampleStore.SampleEntry.Complete?,

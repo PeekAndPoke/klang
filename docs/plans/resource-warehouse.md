@@ -203,10 +203,14 @@ before anything touches it.
 | 2g | sample PCM through the OOM catch | the last MB-scale site |
 | | ✅ **DONE 2026-09-04** — `SampleStore(commLink, allocatePcm = ::allocatePcmOrNull)`: the `DoubleArray(totalSize)` a chunked upload's first chunk makes (on the audio thread, through the worklet's message port; the only MB-scale allocation the store makes — a JVM `Complete` arrives already allocated) goes through one caught site. A failure becomes `SampleEntry.AllocationFailed` (silent like `NotFound`, distinct so diagnostics can say "out of memory", and so the upload's remaining chunks are DROPPED rather than restarting the allocation each), counted in `allocationFailures`. Before, that OOM stopped the worklet for good. Two rows in `SampleStoreSpec`, 4 mutations red (later chunks restart, uncounted, not remembered, catch removed). Not routed through `ResourceWarehouse` on purpose: PCM is owned for the backend's life by the one store (no return path, nothing to shelve); the shape is the same, the site is the store's. | |
 
-**All of 2a–2g shipped 2026-09-04.** Left open from the process list: the `ctx.scratchBuffers →
-ctx.warehouse.scratch` rename (its own commit, when `ignitor/` tests are not under parallel edit), dead
-`nowFrame` in `VoiceFactory`, the reporting half (counters → FE feedback), and the **Fairphone
-measurement**, which is the maintainer's.
+**All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
+out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
+`VoiceScheduler` reads `context.warehouse.scratch`); the remaining `scratchBuffers` fields sit on the
+per-block render contexts (`IgniteContext`, `BlockContext`, `Voice.Ctx`), where a direct field is the
+right thing in a hot path and the name says what it holds. Dead `nowFrame` removed from
+`VoiceFactory.makeVoice` and the scheduler's `activateVoice` (2026-09-04). Left open: the reporting half
+(counters → FE feedback, with `droppedVoices`), and the **Fairphone measurement**, which is the
+maintainer's.
 
 If 2b removes the stutter, 2c–2g are memory hygiene and correctness rather than the audible fix, and
 their urgency can be judged then.

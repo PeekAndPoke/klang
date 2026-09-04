@@ -327,7 +327,6 @@ class VoiceScheduler(
         activateVoice(
             absoluteVoice = absolute,
             origin = VoiceOrigin.Realtime(liveId = voice.liveId, held = voice.gateDurSec == null),
-            nowFrame = nowFrame,
             pCtx = pCtx,
         )
     }
@@ -556,7 +555,7 @@ class VoiceScheduler(
                 gateEndTime = epoch + head.gateEndTime,
             )
 
-            activateVoice(absoluteVoice, origin = VoiceOrigin.Timeline(head), nowFrame = nowFrame, pCtx = pCtx)
+            activateVoice(absoluteVoice, origin = VoiceOrigin.Timeline(head), pCtx = pCtx)
         }
     }
 
@@ -568,7 +567,6 @@ class VoiceScheduler(
     private fun activateVoice(
         absoluteVoice: ScheduledVoice,
         origin: VoiceOrigin,
-        nowFrame: Double,
         pCtx: PlaybackCtx,
     ) {
         // Handle Cut / Choke Groups before creating the new voice
@@ -586,7 +584,6 @@ class VoiceScheduler(
 
         voiceFactory.makeVoice(
             scheduled = absoluteVoice,
-            nowFrame = nowFrame,
             backendStartTimeSec = context.clock.startTimeSec,
             playbackCtx = pCtx,
             getSample = ::getCompleteSample,

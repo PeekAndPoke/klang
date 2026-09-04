@@ -50,7 +50,6 @@ class VoiceFactoryCompressorWireSpec : StringSpec({
         )
         return factory.makeVoice(
             scheduled = scheduled,
-            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },

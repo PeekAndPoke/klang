@@ -104,7 +104,6 @@ class BlockFramingInvarianceSpec : StringSpec({
                 gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
                 playbackStartTime = 0.0,
             ),
-            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = pid, ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },
@@ -168,7 +167,6 @@ class BlockFramingInvarianceSpec : StringSpec({
                 gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
                 playbackStartTime = 0.0,
             ),
-            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = pid, ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             // pitchHz == the voice's freqHz, so the playback rate is exactly 1.0 and the sample

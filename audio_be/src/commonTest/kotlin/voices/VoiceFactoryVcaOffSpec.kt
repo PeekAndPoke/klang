@@ -70,7 +70,6 @@ class VoiceFactoryVcaOffSpec : StringSpec({
                 playbackId = "t", data = data,
                 startTime = 0.0, gateEndTime = 0.1, playbackStartTime = 0.0,
             ),
-            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "t", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },

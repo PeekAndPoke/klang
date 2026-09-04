@@ -54,7 +54,7 @@ class ZeroLengthWindowSpec : StringSpec({
                 gateEndTime = 5000.0 / sampleRate,
                 playbackStartTime = 0.0,
             ),
-            nowFrame = 0.0, backendStartTimeSec = 0.0,
+            backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "z", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },
         ) ?: error("null voice")

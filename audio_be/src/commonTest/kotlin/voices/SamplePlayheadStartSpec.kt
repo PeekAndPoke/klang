@@ -80,7 +80,6 @@ class SamplePlayheadStartSpec : StringSpec({
                 gateEndTime = 0.5,
                 playbackStartTime = 0.0,
             ),
-            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "playhead", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { req -> SampleStore.SampleEntry.Complete(req = req, note = null, pitchHz = 220.0, sample = pcm) },

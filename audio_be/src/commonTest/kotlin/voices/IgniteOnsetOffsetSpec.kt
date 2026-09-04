@@ -72,7 +72,7 @@ class IgniteOnsetOffsetSpec : StringSpec({
                 ),
                 startTime = startTime, gateEndTime = startTime + 0.2, playbackStartTime = 0.0,
             ),
-            nowFrame = 0.0, backendStartTimeSec = 0.0,
+            backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "p", ignitorRegistry = registry, phasePools = PhasePools(kotlin.random.Random(1))),
             getSample = { null },
         ) ?: error("null voice")

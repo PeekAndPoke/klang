@@ -73,7 +73,6 @@ class VoiceFactoryFilterEnvWireSpec : StringSpec({
                 gateEndTime = 1.0,
                 playbackStartTime = 0.0,
             ),
-            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "wire", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },
