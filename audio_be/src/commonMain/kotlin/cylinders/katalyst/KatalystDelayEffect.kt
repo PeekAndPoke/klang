@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.effects.TailCountdown
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import kotlin.math.ceil
@@ -171,6 +172,13 @@ class KatalystDelayEffect(
     private val silentInput = StereoBuffer(blockFrames)
 
     /**
+     * The Active-state tail question in closed form (see [TailCountdown]): fed every block from
+     * the send buffer, it replaces the O(ring) scan `DelayLine.hasTail` used to run from
+     * `Cylinder.tryDeactivate`.
+     */
+    private val activeTail = TailCountdown()
+
+    /**
      * Applies the orbit owner's delay settings. Called by `Cylinder.applyBusEffects` on every
      * block the lease is (re)claimed. An off-config (time below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
@@ -180,6 +188,10 @@ class KatalystDelayEffect(
             // No ring and none to be had: the orbit stays dry rather than the worklet dying.
             val line = ensureRing(timeSeconds) ?: return
 
+            // A changed time or feedback changes how fast a silent ring decays: re-measure.
+            if (line.delayTimeSeconds != timeSeconds || line.feedback != feedback) {
+                activeTail.invalidate()
+            }
             line.delayTimeSeconds = timeSeconds
             line.feedback = feedback
             line.feedbackCap = cap
@@ -224,7 +236,8 @@ class KatalystDelayEffect(
     fun hasTail(): Boolean = when (state) {
         State.Off -> false
         State.Draining -> true
-        State.Active -> delayLine?.hasTail() ?: false
+        // Closed form, not a scan: the countdown [process] feeds from the send buffer.
+        State.Active -> delayLine != null && activeTail.hasTail
     }
 
     /**
@@ -237,6 +250,7 @@ class KatalystDelayEffect(
         delayLine = null
         state = State.Off
         drainRemaining = 0.0
+        activeTail.reset()
         refusedFrames = 0
         deniedRents = 0 // per life: a shelved cylinder must not carry a previous engine's count
     }
@@ -256,6 +270,7 @@ class KatalystDelayEffect(
         }
         state = State.Off
         drainRemaining = 0.0
+        activeTail.reset()
         refusedFrames = 0
     }
 
@@ -267,7 +282,15 @@ class KatalystDelayEffect(
             State.Off -> {}
 
             State.Active -> {
-                delayLine.process(ctx.delaySendBuffer, ctx.mixBuffer, ctx.blockFrames)
+                val send = ctx.delaySendBuffer
+                val frames = ctx.blockFrames
+                // The tail question is answered from the INPUT: audible send → a tail exists; the
+                // block it goes silent → one bounded read of what the tap can still reach starts
+                // the proof; after that, subtraction. Nothing here is O(ring).
+                activeTail.observe(silent = TailCountdown.isSilent(send, frames), frames = frames) {
+                    delayLine.drainSamplesUntilSilent(peak = delayLine.tapWindowPeakAbs())
+                }
+                delayLine.process(send, ctx.mixBuffer, frames)
             }
 
             State.Draining -> {

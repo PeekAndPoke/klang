@@ -341,6 +341,27 @@ docs/tasks/future" — judged not undue (one file, one spec, three lines in the 
 **What the vocabulary does NOT cover, by design:** a song's own registered ignitor still builds
 its graph on its first note (small, warm code); per-note voice construction; sample decoding.
 
+### Step 5 — the tail question in closed form (2026-09-04)
+
+The one follow-up every review round noted and the maintainer picked up: with no ring ceiling,
+`DelayLine.hasTail()` / `Reverb.hasTail()` were O(unit) scans on the audio thread, run from
+`Cylinder.tryDeactivate` (round-robin) and `MasterChain.hasActiveTail` (every 10 silent blocks).
+**Built: `effects/TailCountdown`.** The drain proof the Draining state already trusted
+(`drainSamplesUntilSilent`: the content ceiling falls by |feedback| per period, so after a
+computable number of periods the unit is provably below −100 dBFS and cannot come back) is now
+applied to the ACTIVE state too, triggered by the unit's INPUT: audible send → tail, no measurement;
+the block the send turns silent → one bounded read (`tapWindowPeakAbs`, proportional to the delay
+time, or `combPeakAbs`) starts the countdown; then subtraction. Idle (never fed since reset) → no
+tail, no read. A parameter change mid-proof invalidates it (re-measured on the next silent block).
+Self-oscillation → an infinite proof, pinning the orbit until the owner says off (raw engine).
+The master chain keeps one countdown PER time-based stage, fed from that stage's own input: a
+delay ahead of a reverb feeds it echoes after the bus went silent, so a single chain-wide
+countdown measured at the bus was wrong by exactly the delay's decay (a spec caught it). The
+scans stay in `DelayLine`/`Reverb` as test oracles with a "no production caller" comment.
+Rendered samples unchanged; deactivation timing is "provably silent" instead of "the scan said
+so" — conservative on the audible side, and shorter only for content the tap can never reach.
+`TailCountdownSpec` (8 rows) + `ClosedFormTailSpec` (7 rows, the scan as the oracle); 10 mutations red.
+
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
 `VoiceScheduler` reads `context.warehouse.scratch`); the remaining `scratchBuffers` fields sit on the

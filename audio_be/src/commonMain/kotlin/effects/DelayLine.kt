@@ -172,6 +172,8 @@ class DelayLine(
      * back above threshold, so a `false` return is safe.
      */
     fun hasTail(threshold: Double = 0.00001): Boolean {
+        // Test/diagnostic only since the closed-form tail (`TailCountdown`): no production caller,
+        // and none should return — this is O(ring) with no ceiling on the ring.
         for (i in 0 until bufferSize) {
             if (abs(buffer.left[i]) > threshold || abs(buffer.right[i]) > threshold) {
                 return true

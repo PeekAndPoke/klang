@@ -153,6 +153,7 @@ class Reverb(
      * still well below audibility for typical thresholds).
      */
     fun hasTail(threshold: Double = TAIL_THRESHOLD): Boolean {
+        // Test/diagnostic only since the closed-form tail (`TailCountdown`): no production caller.
         for (c in 0 until numCombs) {
             for (sample in combBufsL[c]) {
                 if (sample > threshold || sample < -threshold) {

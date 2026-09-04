@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.effects.TailCountdown
 import io.peekandpoke.klang.audio_be.master.MasterChain.Companion.buildReverb
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -50,6 +51,8 @@ internal class MasterChain private constructor(
     val reverbs: Array<Reverb>,
     val delays: Array<DelayLine>,
     val limiters: Array<Compressor>,
+    /** One closed-form tail per time-based stage, fed inside that stage's [MasterFx]. */
+    private val tails: Array<TailCountdown>,
     /**
      * Delay and reverb stages the warehouse REFUSED a ring or unit for (resource-warehouse steps
      * 2e/2d). Each is built without its effect — the chain stays usable, the echo or room is
@@ -81,21 +84,21 @@ internal class MasterChain private constructor(
     }
 
     /**
-     * True while any reverb/delay in this chain still holds audible energy.
+     * True while any reverb/delay in this chain still holds audible energy — a compare, not a scan.
      *
-     * Asks the DSP about its **internal** state rather than watching the chain's output — a delay's
-     * output is silent between echoes, so an output-based test would declare a 250 ms delay finished
-     * ~85 ms after the last note and cut every remaining echo. This is exactly how the orbit path
-     * decides (`Cylinder.tryDeactivate` → `DelayLine.hasTail()` / `Reverb.hasTail()`).
+     * Each time-based stage answers in closed form (see [TailCountdown]) from ITS OWN input, the
+     * bus as it reaches that stage: a delay ahead of a reverb keeps feeding the reverb its echoes
+     * after the bus went silent, so the reverb's proof starts when the echoes end, not when the
+     * bus did — one chain-wide countdown measured at the bus was wrong by exactly that. Not
+     * decided from the chain's output either: a delay's output is silent between echoes, so an
+     * output-based test would declare a 250 ms delay finished ~85 ms after the last note and cut
+     * every remaining echo. Same closed form as the orbit path (`KatalystDelayEffect` /
+     * `KatalystReverbEffect`); the whole-ring `DelayLine.hasTail` scan it replaced had lost its
+     * bound when the ring ceiling went (2e).
      */
     fun hasActiveTail(): Boolean {
-        for (i in reverbs.indices) {
-            if (reverbs[i].hasTail()) {
-                return true
-            }
-        }
-        for (i in delays.indices) {
-            if (delays[i].hasTail()) {
+        for (i in tails.indices) {
+            if (tails[i].hasTail) {
                 return true
             }
         }
@@ -125,6 +128,9 @@ internal class MasterChain private constructor(
     fun reset() {
         if (released) {
             return
+        }
+        for (i in tails.indices) {
+            tails[i].reset()
         }
         for (i in reverbs.indices) {
             reverbs[i].reset()
@@ -173,6 +179,7 @@ internal class MasterChain private constructor(
             val reverbUnits = mutableListOf<Reverb>()
             val delays = mutableListOf<DelayLine>()
             val limiters = mutableListOf<Compressor>()
+            val tails = mutableListOf<TailCountdown>()
             var deniedRents = 0
 
             for (stage in dsl.stages) {
@@ -190,6 +197,7 @@ internal class MasterChain private constructor(
                         BuiltReverb.Denied -> deniedRents++
                         is BuiltReverb.Ready -> {
                             reverbUnits.add(built.reverb)
+                            tails.add(built.tail)
                             stages.add(built.fx)
                         }
                     }
@@ -199,6 +207,7 @@ internal class MasterChain private constructor(
                         BuiltDelay.Denied -> deniedRents++
                         is BuiltDelay.Ready -> {
                             delays.add(built.delayLine)
+                            tails.add(built.tail)
                             stages.add(built.fx)
                         }
                     }
@@ -210,19 +219,20 @@ internal class MasterChain private constructor(
                 reverbs = reverbUnits.toTypedArray(),
                 delays = delays.toTypedArray(),
                 limiters = limiters.toTypedArray(),
+                tails = tails.toTypedArray(),
                 deniedRents = deniedRents,
             )
         }
 
         private sealed class BuiltReverb {
-            class Ready(val reverb: Reverb, val fx: MasterFx) : BuiltReverb()
+            class Ready(val reverb: Reverb, val fx: MasterFx, val tail: TailCountdown) : BuiltReverb()
 
             /** The shelf had no unit and could not allocate one: the stage is skipped, and counted. */
             object Denied : BuiltReverb()
         }
 
         private sealed class BuiltDelay {
-            class Ready(val delayLine: DelayLine, val fx: MasterFx) : BuiltDelay()
+            class Ready(val delayLine: DelayLine, val fx: MasterFx, val tail: TailCountdown) : BuiltDelay()
 
             /** The shelf had no ring and could not allocate one: the stage is skipped, and counted. */
             object Denied : BuiltDelay()
@@ -313,10 +323,16 @@ internal class MasterChain private constructor(
                 it.roomLp = stage.roomLp?.takeIf { lp -> lp.isFinite() }
             }
             val send = StereoBuffer(blockFrames)
+            val tail = TailCountdown()
 
             return BuiltReverb.Ready(
                 reverb = reverb,
+                tail = tail,
                 fx = MasterFx { bus, frames ->
+                    // The tail proof reads THIS stage's input, before it processes (TailCountdown).
+                    tail.observe(silent = TailCountdown.isSilent(bus, frames), frames = frames) {
+                        reverb.drainSamplesUntilSilent(peak = reverb.combPeakAbs())
+                    }
                     fillSend(send, bus, frames, wet)
                     reverb.process(send, bus, frames)
                 },
@@ -367,10 +383,16 @@ internal class MasterChain private constructor(
                 it.feedbackCap = finite(stage.cap, 1.0)
             }
             val send = StereoBuffer(blockFrames)
+            val tail = TailCountdown()
 
             return BuiltDelay.Ready(
                 delayLine = delayLine,
+                tail = tail,
                 fx = MasterFx { bus, frames ->
+                    // The tail proof reads THIS stage's input, before it processes (TailCountdown).
+                    tail.observe(silent = TailCountdown.isSilent(bus, frames), frames = frames) {
+                        delayLine.drainSamplesUntilSilent(peak = delayLine.tapWindowPeakAbs())
+                    }
                     fillSend(send, bus, frames, wet)
                     delayLine.process(send, bus, frames)
                 },
