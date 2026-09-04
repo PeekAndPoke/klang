@@ -21,7 +21,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * [clock], and the [warehouse] every engine rents from — cylinders included: an engine's
  * `Cylinders` map is its own, but the cylinders in it come from the warehouse's shelf and go back
  * there when the engine is disposed. Per-engine state (that map, the scheduling timeline) is NOT
- * here. See `docs/tasks/per-playback-engine.md`.
+ * here. See `docs/tasks-archive/2026-09/20260904-per-playback-engine.md`.
  *
  * Note: `performanceTimeMs` is transitional — once diagnostics emission moves up to the dispatcher
  * (D5), the per-scheduler wall-clock read leaves this context.

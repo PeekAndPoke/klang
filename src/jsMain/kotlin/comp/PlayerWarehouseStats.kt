@@ -57,7 +57,7 @@ fun Tag.PlayerWarehouseStats() = comp {
 
 /**
  * The resource warehouse's stats, the way the backend keeps them: what it holds and what happened
- * to it (`docs/tasks/future/warehouse-stats-feed.md`). Rendered in the Motor's title slot when the
+ * to it (`docs/tasks-archive/2026-09/20260904-warehouse-stats-feed.md`). Rendered in the Motor's title slot when the
  * title is clicked, in place of the word, at exactly the slot's height so nothing else moves.
  *
  * The snapshot rides every `Diagnostics`; the backend rebuilds it only when a part changed, so

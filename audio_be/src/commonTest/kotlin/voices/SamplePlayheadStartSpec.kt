@@ -26,7 +26,7 @@ import kotlin.random.Random
 
 /**
  * Where a sample voice's playhead STARTS — the two-line root cause of the soundfont looping bug
- * (`docs/tasks/soundfont-looping-investigation.md`).
+ * (`docs/tasks-archive/2026-09/20260903-soundfont-looping-investigation.md`).
  *
  * `VoiceFactory` used to start a looped sample AT `loopStart`, skipping the attack `[0, loopStart)`
  * entirely: the FluidR3 violin lost 1.27 s of bow onset and looped a 180 ms slice of steady state,

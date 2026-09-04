@@ -106,7 +106,7 @@ Not in scope for immediate implementation. Design notes:
 | `klangscript-intellisense.md`            | Diagnostics/completion, different system   |
 | `completion-member-access-bug.md`        | Code editor bug, unrelated                 |
 | `code-quality-review.md`                 | General quality items                      |
-| `soundfont-looping-investigation.md`     | Audio playback bug                         |
+| `20260903-soundfont-looping-investigation.md` (archived) | Audio playback bug                         |
 | `audio-pipeline-open-topics.md`          | Future audio features                      |
 | `ignitor-dsl-open-items.md`              | Synthesis DSL features                     |
 

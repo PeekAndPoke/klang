@@ -18,7 +18,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * `Map<playbackId, PlaybackEngine>` — one fully-isolated engine per playback, created lazily and
  * disposed once told to stop ([cleanup]) and fully drained. Both platform backends shrink to a thin
  * pump: drain commands → [renderBlock] → convert/output → forward feedback. See
- * `docs/tasks/per-playback-engine.md`.
+ * `docs/tasks-archive/2026-09/20260904-per-playback-engine.md`.
  */
 class PlaybackEngineDispatcher(
     private val context: AudioBackendContext,

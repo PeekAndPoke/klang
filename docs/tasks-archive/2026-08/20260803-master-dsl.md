@@ -10,7 +10,7 @@
 > §Implementation notes at the end for where the build deviated from this plan). Priority: **MUST #1** (`_priorities.md`
 > item 1). This is the
 > detailed implementation plan for the revised D6 design in
-> [`per-playback-engine.md`](per-playback-engine.md) §H (master-in-pattern — supersedes
+> [`per-playback-engine.md`](../2026-09/20260904-per-playback-engine.md) §H (master-in-pattern — supersedes
 > `Song.master`/`Cmd.SetMaster`). First feature to be built under the **`/review-loop`** standard.
 
 ## Design in one paragraph
@@ -242,7 +242,7 @@ The user-facing question: how do we go from master A to master B without crackli
 
 ## Links
 
-- [`per-playback-engine.md`](per-playback-engine.md) §H — the design decision record (revised 2026-08-02)
+- [`per-playback-engine.md`](../2026-09/20260904-per-playback-engine.md) §H — the design decision record (revised 2026-08-02)
 - [`katalyst-dsl.md`](katalyst-dsl.md) — will follow this application-path precedent
 - Memory: `project_per_playback_engine` (D6 revision paragraph), `engine_dsl_misnamed`
   (`PipelineValue` playbook), `project_live_update_double_voice` (dedup), `project_body_resonator`

@@ -36,7 +36,7 @@ Enhance `KlangAudioRenderer` to support configurable mastering chains (e.g., "Tr
 See archived `klang-audio-master-configuration.md` for full implementation plan.
 
 > **Cross-ref:** the master *surface* (the structural home for these settings) is being built in
-> `per-playback-engine.md` §H / **D6** (the thin master path: `Song.master` → `Cmd.SetMaster` →
+> `../tasks-archive/2026-09/20260904-per-playback-engine.md` §H / **D6** (the thin master path: `Song.master` → `Cmd.SetMaster` →
 > per-engine gain). Keep this topic's rich mastering chain aligned with that surface so the two don't diverge.
 
 ## 3. New Oscillator Candidates

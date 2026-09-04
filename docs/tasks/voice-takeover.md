@@ -262,5 +262,5 @@ compound param — is designed, or we just grow the debt.
 - `docs/tasks/sprudel-sound-function-surface.md` — **the Phase 2 blocker.** Compound-string vs per-param surface; needs
   widening from `snd*` to all compound params.
 - `docs/tasks/sprudel-ui-tools.md` — the `@param-tool` editor catalogue that the UI question lands in.
-- `docs/tasks/per-playback-engine.md` — the per-playback `PlaybackEngine` / `VoiceScheduler` model Phase 1 plugs into.
+- `docs/tasks-archive/2026-09/20260904-per-playback-engine.md` — the per-playback `PlaybackEngine` / `VoiceScheduler` model Phase 1 plugs into.
 - `audio/ref/data-model.md` — `VoiceData` field catalogue (update when the field lands).

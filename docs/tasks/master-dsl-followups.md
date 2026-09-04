@@ -114,7 +114,7 @@ full parametric EQ.
 
 - Shipped plan + full review history: [
   `../tasks-archive/2026-08/20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)
-- Foundation: [`per-playback-engine.md`](per-playback-engine.md) §H
+- Foundation: [`../tasks-archive/2026-09/20260904-per-playback-engine.md`](../tasks-archive/2026-09/20260904-per-playback-engine.md) §H
 - Next in the same family: [`katalyst-dsl.md`](katalyst-dsl.md) — follows this application-path and effect-reuse
   precedent
 - [`../plans/resource-warehouse.md`](../plans/resource-warehouse.md) — owns item 3

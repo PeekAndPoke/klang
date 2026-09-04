@@ -339,7 +339,7 @@ class VoiceFactory(
                 // state) — and a non-looped one at `meta.anchor`, which is not a start offset at all:
                 // measured against the decoded audio, `anchor` is the position of the loudest sample
                 // (argmax |x|), a normalisation artefact of the converter. For the nylon guitar that
-                // skipped the pluck. See docs/tasks/soundfont-looping-investigation.md.
+                // skipped the pluck. See docs/tasks-archive/2026-09/20260903-soundfont-looping-investigation.md.
                 val playhead0 = if (data.begin != null) startSample else 0.0
 
                 // Sample-accurate onset, same as the oscillator branch: `Voice.render` clips the

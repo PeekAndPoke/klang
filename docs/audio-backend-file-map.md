@@ -3,7 +3,7 @@
 Reference map of the backend for walking the code. The shared backend is `audio_be/src/commonMain`
 (platform-independent DSP, used by both JVM and the JS AudioWorklet). Tags: **[NEW]** / **[changed]**
 mark files created/modified by the per-playback-engine work (D1 + D2 — see
-`docs/tasks/per-playback-engine.md`).
+`docs/tasks-archive/2026-09/20260904-per-playback-engine.md`).
 
 ## Signal flow (the spine)
 

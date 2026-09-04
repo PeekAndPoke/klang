@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * Shared across all PlaybackEngines: `Cmd.Sample` uploads are SYSTEM-wide (they carry
  * `SYSTEM_PLAYBACK_ID`) and PCM is large, so there is exactly **one** store per backend. Extracted
  * from `VoiceScheduler` so per-playback schedulers can share it rather than each owning a private
- * cache. See `docs/tasks/per-playback-engine.md` (D2·a).
+ * cache. See `docs/tasks-archive/2026-09/20260904-per-playback-engine.md` (D2·a).
  */
 class SampleStore(
     private val commLink: KlangCommLink.BackendEndpoint,

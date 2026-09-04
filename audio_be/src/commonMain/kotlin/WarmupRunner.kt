@@ -193,7 +193,7 @@ class WarmupRunner(
     /**
      * Test seam: true if `BackendReady` went out with the shelves still dirty — the wait hit
      * [maxCleanWaitBlocks]. Not surfaced anywhere yet; belongs in the warehouse stats feed
-     * (`docs/tasks/future/warehouse-stats-feed.md`) so a phone that hits the cap is not invisible.
+     * (`docs/tasks-archive/2026-09/20260904-warehouse-stats-feed.md`) so a phone that hits the cap is not invisible.
      */
     internal var readyWhileDirty: Boolean = false
         private set

@@ -1,7 +1,7 @@
 # Soundfont zone selection: by key range, not nearest root
 
 Status: **future, low priority.** Approximately right today, wrong by the spec. Found during the
-soundfont looping investigation (`../soundfont-looping-investigation.md`), 2026-09-02.
+soundfont looping investigation (`../../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md`), 2026-09-02.
 
 ## What happens now
 

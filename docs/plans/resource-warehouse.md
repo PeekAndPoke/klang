@@ -104,7 +104,7 @@ thread. A live coder who typos `delaytime(6000)` loses the set until a reload.
   device is moments from killing the tab anyway.
 - **Counted per playback and surfaced through feedback**, like `droppedVoices` — so the frontend
   can say *"delay time reduced: out of memory"* instead of the set going quiet.
-  ✅ **BUILT 2026-09-04** as the warehouse stats feed (`docs/tasks/future/warehouse-stats-feed.md`):
+  ✅ **BUILT 2026-09-04** as the warehouse stats feed (`docs/tasks-archive/2026-09/20260904-warehouse-stats-feed.md`):
   every counter rides `Diagnostics.warehouse`, incrementally maintained, shown under the mini gauges.
 - On the house rule "no exceptions in audio hot paths": a catch around one large allocation, once
   per ring, is not a per-sample throw. JS: an ordinary `RangeError`. JVM: catching

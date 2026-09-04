@@ -98,7 +98,7 @@ class SoundFontZoneMetadataTest : StringSpec({
 
     "anchor is passed through" {
         // Informational only now: it is the loudest sample's position, and nothing on the playback
-        // path reads it any more (see docs/tasks/soundfont-looping-investigation.md).
+        // path reads it any more (see docs/tasks-archive/2026-09/20260903-soundfont-looping-investigation.md).
         zone(anchor = 1.5).getSampleMetadata().anchor shouldBe 1.5
     }
 })

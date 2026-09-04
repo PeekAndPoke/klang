@@ -47,7 +47,7 @@ class VoiceScheduler(
     private val masterBus = options.masterBus
 
     // Per-engine registry forks — custom oscs/engines for THIS playback live here and die with the
-    // engine; the shared parent ([context]) keeps only the built-ins. See per-playback-engine.md (#2).
+    // engine; the shared parent ([context]) keeps only the built-ins. See docs/tasks-archive/2026-09/20260904-per-playback-engine.md (#2).
     private val ignitorFork = context.ignitorRegistry.fork()
     private val pipelineFork = context.pipelineRegistry.fork()
 

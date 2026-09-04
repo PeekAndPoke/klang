@@ -1,7 +1,13 @@
 # SampleMetadata is dropped on the chunk path, so the browser and offline renders disagree
 
-Status: **found 2026-08-31, NOT fixed. Needs the maintainer's ear, because fixing it changes what
-the browser sounds like.** Found by a reviewer while reviewing the realtime-latency change; it is
+Status: ✅ **FIXED 2026-09-03** (`f9e076f5`, audit finding F22): `SampleStore` reassembly now carries
+`meta` on the partial buffer, guarded by `SampleChunkRoundTripSpec` (+3 meta rows). This was the
+third of the three stacked soundfont-looping defects — in the browser, where every sample travels
+chunked, NO soundfont had ever looped; confirmed by ear ("the accordion loops now"). The
+maintainer's ear decided: a loop is a loop, the VCA is transparent. Archived 2026-09-04.
+
+Original record (2026-08-31): **found, NOT fixed. Needs the maintainer's ear, because fixing it
+changes what the browser sounds like.** Found by a reviewer while reviewing the realtime-latency change; it is
 pre-existing and unrelated to that change, which is why it was not folded into it.
 
 ## The bug

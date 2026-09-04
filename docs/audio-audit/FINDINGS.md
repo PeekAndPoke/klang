@@ -981,7 +981,7 @@ spec named after it", but "does anything test the *handoff*".
 
 **Fix.** One argument, `meta = msg.meta`. Guard: three rows in `SampleChunkRoundTripSpec` asserting
 loop, adsr and anchor arrive intact across single-, two- and four-chunk samples; reverting the
-argument turns all three red. Full record: `docs/tasks/soundfont-looping-investigation.md`, round 3.
+argument turns all three red. Full record: `docs/tasks-archive/2026-09/20260903-soundfont-looping-investigation.md`, round 3.
 
 ---
 

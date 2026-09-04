@@ -22,7 +22,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
- * The warehouse stats feed (`docs/tasks/future/warehouse-stats-feed.md`, maintainer 2026-09-04):
+ * The warehouse stats feed (`docs/tasks-archive/2026-09/20260904-warehouse-stats-feed.md`, maintainer 2026-09-04):
  * ONE entry point for what the backend holds, maintained INCREMENTALLY — every part bumps a
  * version when something changes, the snapshot is rebuilt only then, and an unchanged warehouse
  * hands back the same object. Sent with every `Diagnostics`.

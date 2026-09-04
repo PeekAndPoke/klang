@@ -116,7 +116,7 @@ The release-defining set, regardless of when they're sequenced:
 
 ## Lower / opportunistic (Q3 "likely, lower priority")
 
-15. **SHOULD** · **Soundfont looping bug** — [`soundfont-looping-investigation.md`](soundfont-looping-investigation.md)
+15. **SHOULD** · **Soundfont looping bug** — [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md)
     🔴
     Sustained soundfont instruments loop incorrectly (correctness bug); matters if they feature in tutorials.
     The only user-visible item on that list; blocks round-trip drops loop/break/continue.
