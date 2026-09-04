@@ -273,17 +273,14 @@ class CylinderShelfSpec : StringSpec({
         // warehouse is shared state other playbacks return into. An unbounded wait would keep the
         // output silenced while the frontend gives up and starts cold (review round 4).
         val f = fixture()
-        // A dirty ring three classes up takes eight housekeeping blocks; the wait allows two.
-        val big = f.warehouse.sized.rent(f.warehouse.sized.baseFrames * 8).shouldNotBeNull()
+        // The warmup's own sixteen dirty rings and networks need sixteen housekeeping blocks; a
+        // wait of two cannot get there, so the cap is what ends it.
         val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend, maxCleanWaitBlocks = 2)
         warmup.start()
 
         var block = 0
         while (warmup.isWarming) {
             (block < 400) shouldBe true
-            if (block == WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS) {
-                f.warehouse.sized.giveBack(big) // lands dirty right at disposal
-            }
             f.render(1)
             block++
             warmup.tick()

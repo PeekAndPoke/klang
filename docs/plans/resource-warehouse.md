@@ -230,7 +230,7 @@ warmup's coverage; explicit synthetic voices, not a builtin song.
   ring, one network per block — the same stall would otherwise just move into the warmup's first
   frame, inaudible but long enough to have the worklet dropped), each with delay + room + filter,
   rotating `WARMUP_SOUNDS` (sine, saw, supersaw, square, triangle, the all-zeros sample) so each
-  ignitor graph is JITed before a song's first note of it. `warmupBlocks = 16 + 2` (round 3 shortened the tail), plus ~16 blocks until the shelves are clean, ≈ 90 ms at 48 kHz.
+  ignitor graph is JITed before a song's first note of it. `warmupBlocks = 16 + 2` (round 3 shortened the tail), plus ~16 blocks until the shelves are clean, ≈ 90 ms at 48 kHz; worst case, if the shelves never come clean, the wait caps at 64 blocks and `BackendReady` goes out dirty at 18 + 64 blocks ≈ 219 ms.
   `cleanupHard` at the end is the return path: **16 cylinders, 16 rings, 16 networks on the shelves
   before `BackendReady`.**
 - `CylinderShelfSpec` (5 rows): disposal returns/retires and the next engine takes the same instance
@@ -304,6 +304,21 @@ as is** — "it does not really matter when we zero; keep a clean flag on each r
 that comes off the shelf dirty is zeroed first; the price is paid in any case (except for one evicted
 dirty, which is never zeroed)". That is the built design; the per-block slice is the optimisation on
 top. 14 mutations red.
+
+### Review round 5 (2026-09-04) — **clean on production code**
+
+Zero CRITICAL/MAJOR defects in the code. The coding reviewer rated one item MAJOR as a *test gap*:
+the sync-clean `dirtyCount--` in both shelves' `take` had no mutation coverage (a stuck count would
+make `housekeep` walk the shelf every block and every warmup wait its full cap, silently). Rows added;
+the mutant dies. The rest, all MINOR and applied: the oversized-under-OOM fallback now picks the
+SMALLEST candidate first and uses cleanliness only as a tie-break (clean-first would have re-imported
+the O(ring) tail scans the cap removed); a latched caller (`allocateOnMiss = false`) takes an
+oversized buffer only if it is clean (a dirty one would be an unbounded clear with no allocation
+having failed just now); the oversized-dirty zeroing has its own row; `readyWhileDirty` is an
+`internal` test seam; the "costs what the allocation would" claim says "at most twice"; an orphaned
+KDoc, a misplaced comment, a tautological assertion and an inert spec setup fixed; the plan's warmup
+timing carries the worst case. 6 mutations red. **Loop closed here**: five rounds, the last one
+clean on code; per the standard the remaining MINORs were applied as one batch without a re-review.
 
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and

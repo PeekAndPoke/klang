@@ -234,6 +234,30 @@ class ResourceWarehouseSpec : StringSpec({
         again shouldBeSameInstanceAs b
         (again.left.all { it == 0.0 } && again.right.all { it == 0.0 }) shouldBe true
         s.syncCleans shouldBe 1
+        // The dirty count followed the buffer out: nothing idle, nothing dirty (round 5: a stuck
+        // count would make housekeep walk the shelf every block and every warmup wait its full cap).
+        s.shelfCount shouldBe 0
+        s.isClean shouldBe true
+    }
+
+    "dropping a CLEAN buffer leaves the dirty count alone; dropping a dirty one takes it along" {
+        val (s, _) = shelf(budgetBytes = bytes(8 + 8))
+        val a = s.rent(8).shouldNotBeNull()
+        val b = s.rent(8).shouldNotBeNull()
+        val c = s.rent(8).shouldNotBeNull()
+        s.giveBack(a)
+        s.housekeepAll() // a clean
+        s.giveBack(b) // b dirty; 16 on the shelf, at budget
+        s.dirtyCount shouldBe 1
+
+        s.giveBack(c) // 24 > 16: the largest goes — all equal, the first found: a (clean)
+        s.shelfCount shouldBe 2
+        s.dirtyCount shouldBe 2 // b and c
+
+        s.rent(8) // takes... a clean one if any: none — b (oldest dirty), zeroed on the spot
+        s.dirtyCount shouldBe 1
+        s.housekeepAll()
+        s.dirtyCount shouldBe 0
     }
 
     "housekeep zeroes the oldest return first, across buffers, within one budget" {
@@ -259,7 +283,6 @@ class ResourceWarehouseSpec : StringSpec({
         val huge = s.rent(64).shouldNotBeNull()
         s.giveBack(huge)
         s.housekeepAll()
-        s.isClean shouldBe true
 
         val small = s.rent(8).shouldNotBeNull()
         small shouldNotBeSameInstanceAs huge
@@ -270,10 +293,70 @@ class ResourceWarehouseSpec : StringSpec({
         s.giveBack(sixteen)
         s.housekeepAll()
         s.rent(8) shouldBeSameInstanceAs sixteen
-        // ...and only when allocation FAILS does the oversized one serve, clean before dirty.
+        // ...and only when allocation FAILS does the oversized one serve.
         alloc.failing = true
         s.rent(8) shouldBeSameInstanceAs huge
         s.failures shouldBe 1
+    }
+
+    "an oversized DIRTY buffer serving under OOM is zeroed on the spot — the last path that could replay a tail" {
+        val (s, alloc) = shelf()
+        val huge = s.rent(64).shouldNotBeNull()
+        huge.left.fill(0.6)
+        huge.right.fill(-0.6)
+        s.giveBack(huge) // dirty, and the only thing on the shelf
+        alloc.failing = true
+
+        val got = s.rent(8).shouldNotBeNull()
+
+        got shouldBeSameInstanceAs huge
+        (got.left.all { it == 0.0 } && got.right.all { it == 0.0 }) shouldBe true
+        s.syncCleans shouldBe 1
+        s.isClean shouldBe true
+    }
+
+    "among oversized candidates under OOM the SMALLEST serves, and clean only breaks a size tie" {
+        // Round 5: clean-first among oversized would hand a 0.5 s need a clean 32 s ring over a
+        // dirty 2 s one — the O(ring) tail scans the cap exists to prevent, for one saved clear.
+        val (s, alloc) = shelf()
+        val big = s.rent(64).shouldNotBeNull()
+        val mid = s.rent(32).shouldNotBeNull()
+        s.giveBack(big)
+        s.housekeepAll() // big is clean
+        mid.left[0] = 0.5
+        s.giveBack(mid) // mid is dirty
+        alloc.failing = true
+
+        s.rent(8) shouldBeSameInstanceAs mid // smaller wins, even dirty
+        s.syncCleans shouldBe 1
+
+        // Same size: clean wins.
+        val (t, alloc2) = shelf()
+        val x = t.rent(64).shouldNotBeNull()
+        val y = t.rent(64).shouldNotBeNull()
+        t.giveBack(x)
+        t.housekeepAll()
+        y.left[0] = 0.5
+        t.giveBack(y)
+        alloc2.failing = true
+        t.rent(8) shouldBeSameInstanceAs x
+        t.syncCleans shouldBe 0
+    }
+
+    "a latched caller (allocateOnMiss = false) takes an oversized buffer only if it is CLEAN" {
+        // Round 5: the latched path skipped the allocation and fell straight into the oversized
+        // fallback, so a dirty 20 s master ring could be zeroed inside applyBusEffects with no
+        // allocation having failed just now.
+        val (s, _) = shelf()
+        val huge = s.rent(64).shouldNotBeNull()
+        huge.left[1] = 0.4
+        s.giveBack(huge) // dirty
+
+        s.rent(8, allocateOnMiss = false).shouldBeNull()
+        s.syncCleans shouldBe 0
+
+        s.housekeepAll()
+        s.rent(8, allocateOnMiss = false) shouldBeSameInstanceAs huge
     }
 
     "a dropped buffer is never cleared — garbage needs no zero-fill" {

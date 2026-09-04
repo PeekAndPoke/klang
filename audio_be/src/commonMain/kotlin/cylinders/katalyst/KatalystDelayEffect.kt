@@ -227,11 +227,6 @@ class KatalystDelayEffect(
         State.Active -> delayLine?.hasTail() ?: false
     }
 
-    /** Clears the ring, the lifecycle AND the DSP params — called from `Cylinder.resetBusEffects`
-     *  on orbit deactivation. The params go back to factory here (review round 5): `DelayLine`'s
-     *  setters DROP non-finite writes, so a NaN param from the next life's first owner would
-     *  otherwise inherit THIS life's value — e.g. a dead owner's self-oscillating feedback.
-     *  Mirrors `Phaser.resetForReuse`. */
     /**
      * The return path (resource warehouse, 2f): hands the ring back to the shelf and forgets it.
      * Called when the owning engine is disposed — never while the orbit can still render, since
@@ -246,6 +241,11 @@ class KatalystDelayEffect(
         deniedRents = 0 // per life: a shelved cylinder must not carry a previous engine's count
     }
 
+    /** Clears the ring, the lifecycle AND the DSP params — called from `Cylinder.resetBusEffects`
+     *  on orbit deactivation. The params go back to factory here (review round 5): `DelayLine`'s
+     *  setters DROP non-finite writes, so a NaN param from the next life's first owner would
+     *  otherwise inherit THIS life's value — e.g. a dead owner's self-oscillating feedback.
+     *  Mirrors `Phaser.resetForReuse`. */
     fun reset() {
         // The ring is KEPT — re-activation is then free. Eviction (2f) is what returns it.
         delayLine?.let {

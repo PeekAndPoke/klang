@@ -237,6 +237,7 @@ class LazyReverbSpec : StringSpec({
         again shouldBeSameInstanceAs used
         again.hasTail(0.0) shouldBe false
         units.syncCleans shouldBe 1
+        units.isClean shouldBe true // the dirty count followed the unit out (round 5)
     }
 
     "rent prefers a CLEAN idle unit over a dirty one" {

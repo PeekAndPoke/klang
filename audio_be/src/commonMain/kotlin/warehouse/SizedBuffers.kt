@@ -38,7 +38,8 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * 20 s master ring is 24 MB; sixteen warmup orbits retired in one block were ~19 MB). [giveBack] is
  * O(1) and marks the buffer DIRTY; [housekeep] clears a bounded number of frames per call, and the
  * backend calls it once per block; [rent] prefers a clean buffer and cleans a dirty one on the spot
- * only when nothing clean fits — which costs what the allocation it replaces would have cost.
+ * only when nothing clean fits — at most twice what the allocation it replaces would have zeroed,
+ * since a candidate may be one class up.
  *
  * **Never shrinks a buffer.** Growth is the owner's business (rent a bigger class, migrate, give the
  * old one back). The only thing that ever gets smaller is the shelf.
@@ -127,10 +128,12 @@ class SizedBuffers(
 
     /**
      * A zeroed stereo buffer of at least [minFrames] frames, or `null` if the shelf had nothing big
-     * enough and allocation failed. Best-fit-up from the shelf; allocate on a miss — unless
+     * enough and allocation failed. Bounded best-fit-up from the shelf; allocate on a miss — unless
      * [allocateOnMiss] is false, in which case a miss is `null` and counts as nothing: the caller
-     * already knows allocation at this size fails and only wants what the shelf can serve for free
-     * (review round 2: a latched refusal must not also block a pure shelf hit).
+     * already knows allocation at this size fails and only wants what the shelf can serve cheaply
+     * (review round 2: a latched refusal must not also block a shelf hit). On that path an
+     * OVERSIZED idle buffer serves only if it is clean — a dirty one would be an unbounded clear
+     * inside the onset block with no allocation having failed just now (review round 5).
      */
     fun rent(minFrames: Int, allocateOnMiss: Boolean = true): StereoBuffer? {
         val need = classFrames(minFrames)
@@ -138,13 +141,14 @@ class SizedBuffers(
         // Best-fit-up, bounded: a candidate is acceptable up to ONE class above the need (a 2 s
         // request takes an idle 4 s — the maintainer's example — never an idle 32 s). Among the
         // acceptable, a clean buffer beats a dirty one whatever its class, because idle memory is
-        // plentiful and audio-thread time is not; a dirty one is zeroed on the spot, which costs
-        // what the allocation it replaces would (a fresh array is zeroed by the runtime). The cap
-        // is what keeps that claim true — a dirty 20 s master ring handed to a 0.25 s delay would be
+        // plentiful and audio-thread time is not; a dirty one is zeroed on the spot, at most twice
+        // what the allocation it replaces would zero (a fresh array is zeroed by the runtime). The
+        // cap is what keeps that bound — a dirty 20 s master ring handed to a 0.25 s delay would be
         // a 24 MB clear inside an onset block — and keeps `DelayLine.hasTail()`'s whole-ring scan
         // proportional to the delay, not to whatever happened to be idle (review round 4). Past the
         // cap the request allocates; only when allocation fails does an oversized idle buffer serve,
-        // clean before dirty: the big clear beats silence.
+        // SMALLEST first and then clean before dirty (round 5: clean-first among oversized would
+        // re-import the O(ring) scans the cap removed, for one saved clear): the big clear beats silence.
         val cap = if (need <= Int.MAX_VALUE / 2) 2 * need else Int.MAX_VALUE
         var best: Idle? = null
         var bestIsClean = false
@@ -159,8 +163,8 @@ class SizedBuffers(
             val clean = candidate.cleanFrames == size
             if (size > cap) {
                 val better = oversized == null ||
-                    (clean && !oversizedIsClean) ||
-                    (clean == oversizedIsClean && size < oversized.buffer.left.size)
+                    size < oversized.buffer.left.size ||
+                    (size == oversized.buffer.left.size && clean && !oversizedIsClean)
                 if (better) {
                     oversized = candidate
                     oversizedIsClean = clean
@@ -192,7 +196,7 @@ class SizedBuffers(
             failures++
         }
 
-        if (oversized != null) {
+        if (oversized != null && (allocateOnMiss || oversizedIsClean)) {
             return take(oversized, clean = oversizedIsClean)
         }
 
