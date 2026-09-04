@@ -33,6 +33,7 @@ import kotlinx.css.fontWeight
 import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.lineHeight
+import kotlinx.css.marginLeft
 import kotlinx.css.marginRight
 import kotlinx.css.opacity
 import kotlinx.css.Padding
@@ -125,26 +126,67 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                 return@div
             }
 
-            // Two columns of four lines each — the height of the three gauges.
+            // Two columns of four lines each — the height of the title slot. Every number carries
+            // its own hover hint; the labels say what the row is about.
             div {
                 css { marginRight = 0.9.rem }
-                title = "Delay rings on the shelf: idle bytes (count, not yet zeroed) · allocated / shelf hits / failed / dropped / zeroed on rent"
-                line("rings", "${mb(w.ringIdleBytes)} ${w.ringIdleCount}i ${w.ringDirtyCount}d")
-                line("", "${w.ringAllocations}a ${w.ringHits}h ${w.ringFailures}f ${w.ringDropped}x ${w.ringSyncCleans}z")
-                line("reverb", "${w.reverbIdleCount}i ${w.reverbDirtyCount}d ${w.reverbAllocations}a ${w.reverbHits}h")
-                line("cyl", "${w.cylinderIdleCount}i ${w.cylinderAllocations}a ${w.cylinderHits}h ${w.cylinderDropped}x")
+                line(
+                    "rings", "Delay rings: the shelf of class-sized stereo buffers orbit and master delays rent",
+                    mb(w.ringIdleBytes) to "bytes idle on the shelf",
+                    "${w.ringIdleCount}i" to "rings idle on the shelf",
+                    "${w.ringDirtyCount}d" to "idle rings not yet zeroed (housekeeping zeroes a slice per block)",
+                )
+                line(
+                    "", "",
+                    "${w.ringAllocations}a" to "rings allocated since start",
+                    "${w.ringHits}h" to "rents served from the shelf without allocating",
+                    "${w.ringFailures}f" to "allocations that failed (out of memory)",
+                    "${w.ringDropped}x" to "idle rings freed because the shelf was over budget",
+                    "${w.ringSyncCleans}z" to "rents that had to zero a dirty ring on the spot",
+                )
+                line(
+                    "reverb", "Reverb networks: one size each, lazy on the first room()",
+                    "${w.reverbIdleCount}i" to "networks idle on the shelf",
+                    "${w.reverbDirtyCount}d" to "idle networks not yet zeroed",
+                    "${w.reverbAllocations}a" to "networks allocated since start",
+                    "${w.reverbHits}h" to "rents served from the shelf",
+                )
+                line(
+                    "cyl", "Cylinders: whole orbits, built by the warmup, returned when a playback ends",
+                    "${w.cylinderIdleCount}i" to "cylinders idle on the shelf",
+                    "${w.cylinderAllocations}a" to "cylinders built since start",
+                    "${w.cylinderHits}h" to "orbits served from the shelf",
+                    "${w.cylinderDropped}x" to "idle cylinders dropped because the shelf was full",
+                )
             }
             div {
-                title = "Scratch: high water / capacity, late allocations, unbalanced releases · sample PCM bytes (count), allocation failures · voices dropped as late · delay/room rents refused"
-                line("scratch", "${w.scratchHighWater}/${w.scratchCapacity} ${w.scratchLateAllocations}l ${w.scratchUnbalancedReleases}u")
-                line("samples", "${mb(w.sampleBytes)} (${w.sampleCount}) ${w.sampleAllocationFailures}f")
-                line("late", "${w.droppedVoices}", warn = w.droppedVoices > 0)
-                line("dry", "${w.deniedRents}", warn = w.deniedRents > 0)
+                line(
+                    "scratch", "Scratch buffers: the one shared block-sized pool every ignitor renders through",
+                    "${w.scratchHighWater}/${w.scratchCapacity}" to "deepest nesting ever served / pre-sized capacity",
+                    "${w.scratchLateAllocations}l" to "allocations that happened inside render (should stay 0)",
+                    "${w.scratchUnbalancedReleases}u" to "releases without an acquire (should stay 0)",
+                )
+                line(
+                    "samples", "Sample PCM resident in the backend's store",
+                    mb(w.sampleBytes) to "PCM bytes resident",
+                    "(${w.sampleCount})" to "samples resident (complete or still arriving)",
+                    "${w.sampleAllocationFailures}f" to "uploads whose PCM could not be allocated (silent samples)",
+                )
+                line(
+                    "late", "Voices dropped at admission because their start was already behind the render clock",
+                    "${w.droppedVoices}" to "voices dropped as late since start (across all playbacks)",
+                    warn = w.droppedVoices > 0,
+                )
+                line(
+                    "dry", "Delay or room rents the warehouse refused for lack of memory: that orbit plays dry",
+                    "${w.deniedRents}" to "refused rents since start (across all live orbits)",
+                    warn = w.deniedRents > 0,
+                )
             }
         }
     }
 
-    private fun FlowContent.line(label: String, value: String, warn: Boolean = false) {
+    private fun FlowContent.line(label: String, labelHint: String, vararg values: Pair<String, String>, warn: Boolean = false) {
         div {
             span {
                 css {
@@ -153,13 +195,25 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                     color = Color.white
                     fontWeight = FontWeight.bold
                 }
+                if (labelHint.isNotEmpty()) {
+                    title = labelHint
+                }
                 +label
             }
-            span {
-                if (warn) {
-                    css { color = KlangTheme.warning }
+            for ((index, entry) in values.withIndex()) {
+                val (value, hint) = entry
+                span {
+                    css {
+                        if (warn) {
+                            color = KlangTheme.warning
+                        }
+                        if (index > 0) {
+                            marginLeft = 0.35.rem
+                        }
+                    }
+                    title = hint
+                    +value
                 }
-                +value
             }
         }
     }
