@@ -73,6 +73,10 @@ class SizedBuffers(
     /** How many buffers are idle on the shelf. */
     val shelfCount: Int get() = shelf.size
 
+    /** Bumped on every change to the shelf or its counters — the stats snapshot rebuilds only then. */
+    var version: Int = 0
+        private set
+
     // Counters, for specs and for the diagnostics feed. Never reset; monotone.
     var allocations: Int = 0
         private set
@@ -186,6 +190,7 @@ class SizedBuffers(
 
         if (allocateOnMiss) {
             val fresh = allocate(need)
+            version++
 
             if (fresh != null) {
                 allocations++
@@ -207,6 +212,7 @@ class SizedBuffers(
         shelf.remove(idle)
         shelfBytes -= bytesOf(idle.buffer)
         hits++
+        version++
 
         if (!clean) {
             clearFrom(idle)
@@ -223,6 +229,7 @@ class SizedBuffers(
      * buffers are freed until it is not — which may be this one, if it alone exceeds the budget.
      */
     fun giveBack(buffer: StereoBuffer) {
+        version++
         for (i in shelf.indices) {
             if (shelf[i].buffer === buffer) {
                 doubleReturns++
@@ -289,6 +296,9 @@ class SizedBuffers(
 
         val done = maxFrames - budget
         housekeptFrames += done
+        if (done > 0) {
+            version++
+        }
 
         return done
     }

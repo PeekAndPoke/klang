@@ -43,14 +43,20 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     fun ensureCapacity(depth: Int, doubleDepth: Int = depth) {
         while (pool.size < depth) {
             pool.add(AudioBuffer(blockFrames))
+            version++
         }
         while (doublePool.size < doubleDepth) {
             doublePool.add(DoubleArray(blockFrames))
+            version++
         }
     }
 
     /** Buffers in the AudioBuffer pool right now, in use or not. */
     val capacity: Int get() = pool.size
+
+    /** Bumped when a counter or a capacity changes (never on a plain acquire/release). */
+    var version: Int = 0
+        private set
 
     /** Buffers in the DoubleArray pool right now, in use or not. */
     val doubleCapacity: Int get() = doublePool.size
@@ -76,10 +82,12 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
         if (nextFree >= pool.size) {
             pool.add(AudioBuffer(blockFrames))
             lateAllocations++
+            version++
         }
         val buf = pool[nextFree++]
         if (nextFree > highWater) {
             highWater = nextFree
+            version++
         }
         return buf
     }
@@ -90,6 +98,7 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
             nextFree--
         } else {
             unbalancedReleases++
+            version++
         }
     }
 
@@ -115,10 +124,12 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
         if (doubleNextFree >= doublePool.size) {
             doublePool.add(DoubleArray(blockFrames))
             lateAllocations++
+            version++
         }
         val buf = doublePool[doubleNextFree++]
         if (doubleNextFree > doubleHighWater) {
             doubleHighWater = doubleNextFree
+            version++
         }
         return buf
     }
@@ -129,6 +140,7 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
             doubleNextFree--
         } else {
             unbalancedReleases++
+            version++
         }
     }
 

@@ -1,7 +1,28 @@
 # Warehouse stats feed: one entry point, incrementally maintained, sent with Diagnostics
 
-**Status:** IDEA, maintainer 2026-09-04. Not started. Belongs after the resource warehouse
-(`docs/plans/resource-warehouse.md`, all steps shipped) as its "reporting half".
+**Status:** ✅ SHIPPED 2026-09-04 (v1). Maintainer's idea the same day; built as the warehouse's
+"reporting half" (`docs/plans/resource-warehouse.md`).
+
+## What shipped
+
+- `SampleStore` lives in the warehouse (`ResourceWarehouse.samples`; `AudioBackendContext.sampleStore`
+  is now an accessor to it). Behaviour unchanged; it gained `residentBytes` / `residentCount`,
+  maintained on arrival (a re-upload replaces, not adds).
+- Every part carries a `version` bumped on change (rings, reverb units, cylinders, scratch, samples).
+  `ResourceWarehouse.stats(droppedVoices, deniedRents)` rebuilds the `WarehouseStats` snapshot only
+  when the combined version moved and otherwise hands back the SAME object — reading is a plain
+  read, as required. The two engine-side counters are summed by the dispatcher (it already walks the
+  cylinders for `CylinderState`) and folded into the version.
+- `Feedback.Diagnostics.warehouse: WarehouseStats?` (nullable for older backends): per part the
+  idle bytes/counts, dirty counts, allocations/hits/failures/dropped/sync cleans, scratch capacity and
+  high water, sample bytes/count/allocation failures, `droppedVoices`, `deniedRents`.
+- FE: `PlayerMiniStats` shows one monospace line under the gauges (`shelf 6.2M · smp 12.3M · idle
+  16/16/8`, plus `dry N · late N` only when non-zero) with the full breakdown as its tooltip.
+- Guards: `WarehouseStatsSpec` (same-object on no change, every part's change re-snapshots, a
+  re-upload replaces bytes, the dispatcher sends the snapshot with the engines' counters summed),
+  the JS wire round-trip case, 7 mutations red.
+
+## Original idea (kept as written)
 
 ## The idea (maintainer, verbatim in substance)
 

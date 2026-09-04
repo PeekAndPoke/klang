@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.warehouse
 
+import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 
 /**
@@ -35,6 +37,13 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 class ResourceWarehouse(
     sampleRate: Int,
     blockFrames: Int,
+    /**
+     * The backend's sample PCM store — in the warehouse so that every MB-scale thing the backend
+     * holds reports through ONE entry point ([stats]); its behaviour is unchanged. Built outside
+     * because it needs the comm link (it asks the frontend for samples); a spec without one gets
+     * a store on a private link.
+     */
+    val samples: SampleStore = SampleStore(KlangCommLink(capacity = 16).backend),
     budgetBytes: Int = SHELF_BUDGET_BYTES,
     allocate: (frames: Int) -> StereoBuffer? = SizedBuffers::allocateOrNull,
     allocateReverb: (sampleRate: Int) -> Reverb? = ReverbUnits::allocateOrNull,
@@ -61,6 +70,62 @@ class ResourceWarehouse(
 
     /** True when every idle ring and network is zeroed — what the warmup waits for before `BackendReady`. */
     val isClean: Boolean get() = sized.isClean && reverbs.isClean
+
+    // ── Stats: one entry point, maintained by change, read for free ──────────────────────────────
+
+    private var statsVersion = -1
+    private var stats: KlangCommLink.Feedback.Diagnostics.WarehouseStats? = null
+
+    /**
+     * The warehouse's stats for the diagnostics feed (maintainer, 2026-09-04: "the stats need to
+     * be calculated for each part as soon as something has changed, so that getting the stats does
+     * not need to do any calculations again and again"). Every part bumps a `version` when it
+     * changes; this rebuilds the snapshot only when the combined version moved, otherwise it hands
+     * back the same object. [droppedVoices] and [deniedRents] live in the engines, not here, so the
+     * caller sums them and passes them in; they are folded into the version so a change re-snapshots.
+     */
+    fun stats(droppedVoices: Int, deniedRents: Int): KlangCommLink.Feedback.Diagnostics.WarehouseStats {
+        val version = sized.version + reverbs.version + cylinders.version + scratch.version + samples.version +
+            droppedVoices + deniedRents
+        val cached = stats
+        if (cached != null && version == statsVersion) {
+            return cached
+        }
+
+        val fresh = KlangCommLink.Feedback.Diagnostics.WarehouseStats(
+            ringIdleBytes = sized.shelfBytes,
+            ringIdleCount = sized.shelfCount,
+            ringDirtyCount = sized.dirtyCount,
+            ringAllocations = sized.allocations,
+            ringHits = sized.hits,
+            ringFailures = sized.failures,
+            ringDropped = sized.dropped,
+            ringSyncCleans = sized.syncCleans,
+            reverbIdleCount = reverbs.idleCount,
+            reverbDirtyCount = reverbs.dirtyCount,
+            reverbAllocations = reverbs.allocations,
+            reverbHits = reverbs.hits,
+            reverbFailures = reverbs.failures,
+            reverbDropped = reverbs.dropped,
+            cylinderIdleCount = cylinders.idleCount,
+            cylinderAllocations = cylinders.allocations,
+            cylinderHits = cylinders.hits,
+            cylinderDropped = cylinders.dropped,
+            scratchCapacity = scratch.capacity,
+            scratchHighWater = scratch.highWater,
+            scratchLateAllocations = scratch.lateAllocations,
+            scratchUnbalancedReleases = scratch.unbalancedReleases,
+            sampleBytes = samples.residentBytes,
+            sampleCount = samples.residentCount,
+            sampleAllocationFailures = samples.allocationFailures,
+            droppedVoices = droppedVoices,
+            deniedRents = deniedRents,
+        )
+        stats = fresh
+        statsVersion = version
+
+        return fresh
+    }
 
     /**
      * The one shared scratch pool. Engines render sequentially within a block, so one is enough.

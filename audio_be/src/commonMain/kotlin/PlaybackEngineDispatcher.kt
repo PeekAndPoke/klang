@@ -188,13 +188,17 @@ class PlaybackEngineDispatcher(
         lastDiagnosticsTimeMs = endMs
 
         var voiceCount = 0
+        var droppedVoices = 0
+        var deniedRents = 0
         val cylinderStates = mutableListOf<KlangCommLink.Feedback.Diagnostics.CylinderState>()
         for (engine in engines.values) {
             voiceCount += engine.scheduler.getActiveVoiceCount()
+            droppedVoices += engine.scheduler.droppedVoicesTotal()
             for (cylinder in engine.cylinders.cylinders) {
                 cylinderStates.add(
                     KlangCommLink.Feedback.Diagnostics.CylinderState(id = cylinder.id, active = cylinder.isActive)
                 )
+                deniedRents += cylinder.delay.deniedRents + cylinder.reverb.deniedRents
             }
         }
 
@@ -206,6 +210,8 @@ class PlaybackEngineDispatcher(
                 activeVoiceCount = voiceCount,
                 cylinders = cylinderStates,
                 backendNowMs = endMs,
+                // The warehouse's own snapshot: rebuilt only when one of its parts changed.
+                warehouse = context.warehouse.stats(droppedVoices = droppedVoices, deniedRents = deniedRents),
             )
         )
     }

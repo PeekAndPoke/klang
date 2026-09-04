@@ -44,13 +44,12 @@ class EngineDisposalReturnSpec : StringSpec({
 
     fun fixture(): Fixture {
         val clock = BackendClock(sampleRate)
-        val warehouse = ResourceWarehouse(sampleRate = sampleRate, blockFrames = blockFrames)
         val commLink = KlangCommLink(capacity = 1024).backend
+        val warehouse = ResourceWarehouse(sampleRate = sampleRate, blockFrames = blockFrames, samples = SampleStore(commLink))
         val context = AudioBackendContext(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             commLink = commLink,
-            sampleStore = SampleStore(commLink),
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
             pipelineRegistry = PipelineRegistry(),
             masterRegistry = MasterRegistry(),

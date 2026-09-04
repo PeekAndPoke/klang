@@ -36,6 +36,10 @@ class CylinderUnits(
     /** Idle cylinders on the shelf right now. */
     val idleCount: Int get() = shelf.size
 
+    /** Bumped on every change — the stats snapshot rebuilds only then. */
+    var version: Int = 0
+        private set
+
     // Counters, for specs and for the diagnostics feed. Never reset; monotone.
     var allocations: Int = 0
         private set
@@ -51,6 +55,7 @@ class CylinderUnits(
      * is the owning `Cylinders`' setting and is adopted along with the id.
      */
     fun rent(id: Int, silentBlocksBeforeTailCheck: Int): Cylinder {
+        version++
         if (shelf.isNotEmpty()) {
             hits++
 
@@ -71,6 +76,7 @@ class CylinderUnits(
 
     /** Retires [cylinder] (units back to their shelves, state to a clean slate) and shelves it. */
     fun giveBack(cylinder: Cylinder) {
+        version++
         for (idle in shelf) {
             if (idle === cylinder) {
                 doubleReturns++

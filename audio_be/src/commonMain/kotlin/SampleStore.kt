@@ -75,6 +75,18 @@ class SampleStore(
     var allocationFailures: Int = 0
         private set
 
+    /** PCM bytes resident in the store (8 per sample; a Double, no Long). Maintained on arrival. */
+    var residentBytes: Double = 0.0
+        private set
+
+    /** Samples with PCM in the store (complete or still arriving). */
+    var residentCount: Int = 0
+        private set
+
+    /** Bumped on every change to the store's contents or counters — the stats snapshot rebuilds only then. */
+    var version: Int = 0
+        private set
+
     fun getComplete(req: SampleRequest): SampleEntry.Complete? = samples[req] as? SampleEntry.Complete
 
     fun contains(req: SampleRequest): Boolean = samples.containsKey(req)
@@ -100,16 +112,25 @@ class SampleStore(
 
         return when (msg) {
             is KlangCommLink.Cmd.Sample.NotFound -> {
+                version++
                 samples[req] = SampleEntry.NotFound(req)
             }
 
             is KlangCommLink.Cmd.Sample.Complete -> {
+                val previous = samples[req]
+                if (previous is SampleEntry.Complete) {
+                    residentBytes -= previous.sample.pcm.size * BYTES_PER_SAMPLE
+                    residentCount--
+                }
                 samples[req] = SampleEntry.Complete(
                     req = req,
                     note = msg.note,
                     pitchHz = msg.pitchHz,
                     sample = msg.sample,
                 )
+                residentBytes += msg.sample.pcm.size * BYTES_PER_SAMPLE
+                residentCount++
+                version++
                 notifyReceived(msg.playbackId, req)
             }
 
@@ -122,6 +143,7 @@ class SampleStore(
 
                     if (pcm == null) {
                         allocationFailures++
+                        version++
                         samples[req] = SampleEntry.AllocationFailed(req)
                         // The upload is over as far as the frontend is concerned: release its wait.
                         notifyReceived(msg.playbackId, req)
@@ -129,6 +151,9 @@ class SampleStore(
                         return
                     }
 
+                    residentBytes += pcm.size * BYTES_PER_SAMPLE
+                    residentCount++
+                    version++
                     SampleEntry.Partial(
                         req = req,
                         note = msg.note,
@@ -163,6 +188,8 @@ class SampleStore(
     }
 
     companion object {
+        private const val BYTES_PER_SAMPLE = 8.0
+
         /** The one place a sample's PCM is allocated; see `SizedBuffers.allocateOrNull` for why the catch is sound. */
         fun allocatePcmOrNull(frames: Int): DoubleArray? = try {
             DoubleArray(frames)

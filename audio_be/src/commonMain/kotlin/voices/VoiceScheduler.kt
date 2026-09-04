@@ -202,6 +202,15 @@ class VoiceScheduler(
      */
     fun droppedVoiceCount(playbackId: String): Int = playbackContexts[playbackId]?.droppedVoices ?: 0
 
+    /** Voices dropped at admission across every playback this scheduler still knows. For the stats feed. */
+    fun droppedVoicesTotal(): Int {
+        var total = 0
+        for (ctx in playbackContexts.values) {
+            total += ctx.droppedVoices
+        }
+        return total
+    }
+
     /** Register a custom oscillator for THIS playback — lands on the per-engine fork, not the shared parent. */
     fun registerIgnitor(name: String, dsl: IgnitorDsl) = ignitorFork.register(name, dsl)
 

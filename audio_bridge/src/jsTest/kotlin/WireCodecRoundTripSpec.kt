@@ -127,6 +127,20 @@ class WireCodecRoundTripSpec : StringSpec({
                 ),
                 backendNowMs = 1234.5,
             ),
+            // The warehouse snapshot rides the same message; a null one (older backend) must survive too.
+            KlangCommLink.Feedback.Diagnostics(
+                playbackId = "pb", sampleRate = 44100, renderHeadroom = 0.5, activeVoiceCount = 0,
+                cylinders = emptyList(), backendNowMs = 1.0,
+                warehouse = KlangCommLink.Feedback.Diagnostics.WarehouseStats(
+                    ringIdleBytes = 6_160_384.0, ringIdleCount = 16, ringDirtyCount = 2, ringAllocations = 16, ringHits = 8,
+                    ringFailures = 0, ringDropped = 0, ringSyncCleans = 1,
+                    reverbIdleCount = 16, reverbDirtyCount = 0, reverbAllocations = 16, reverbHits = 4, reverbFailures = 0, reverbDropped = 0,
+                    cylinderIdleCount = 8, cylinderAllocations = 16, cylinderHits = 8, cylinderDropped = 0,
+                    scratchCapacity = 64, scratchHighWater = 30, scratchLateAllocations = 0, scratchUnbalancedReleases = 0,
+                    sampleBytes = 12_345_678.0, sampleCount = 7, sampleAllocationFailures = 0,
+                    droppedVoices = 3, deniedRents = 1,
+                ),
+            ),
         )
         cases.forEach { decode_KlangCommLink_Feedback(encode_KlangCommLink_Feedback(it)) shouldBe it }
     }

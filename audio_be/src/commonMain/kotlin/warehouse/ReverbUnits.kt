@@ -37,6 +37,10 @@ class ReverbUnits(
     /** Idle units on the shelf right now. */
     val idleCount: Int get() = shelf.size
 
+    /** Bumped on every change — the stats snapshot rebuilds only then. */
+    var version: Int = 0
+        private set
+
     // Counters, for specs and for the diagnostics feed. Never reset; monotone.
     var allocations: Int = 0
         private set
@@ -82,6 +86,7 @@ class ReverbUnits(
             pick = shelf.size - 1
         }
 
+        version++
         if (pick >= 0) {
             val idle = shelf.removeAt(pick)
             hits++
@@ -117,6 +122,7 @@ class ReverbUnits(
      * instead.
      */
     fun giveBack(unit: Reverb) {
+        version++
         for (i in shelf.indices) {
             if (shelf[i].unit === unit) {
                 doubleReturns++
@@ -149,6 +155,7 @@ class ReverbUnits(
                 idle.clean = true
                 dirtyCount--
                 housekeptUnits++
+                version++
 
                 return true
             }

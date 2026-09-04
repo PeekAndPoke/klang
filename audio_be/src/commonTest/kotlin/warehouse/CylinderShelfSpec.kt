@@ -57,11 +57,10 @@ class CylinderShelfSpec : StringSpec({
 
     fun fixture(): Fixture {
         val clock = BackendClock(sampleRate)
-        val warehouse = ResourceWarehouse(sampleRate = sampleRate, blockFrames = blockFrames)
         val commLink = KlangCommLink(capacity = 4096)
+        val warehouse = ResourceWarehouse(sampleRate = sampleRate, blockFrames = blockFrames, samples = SampleStore(commLink.backend))
         val context = AudioBackendContext(
             sampleRate = sampleRate, blockFrames = blockFrames, commLink = commLink.backend,
-            sampleStore = SampleStore(commLink.backend),
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
             pipelineRegistry = PipelineRegistry(), masterRegistry = MasterRegistry(),
             clock = clock, performanceTimeMs = { 0.0 }, warehouse = warehouse,

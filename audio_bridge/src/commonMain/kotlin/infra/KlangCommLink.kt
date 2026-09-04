@@ -268,12 +268,59 @@ class KlangCommLink(capacity: Int = 8192) {
              * latency figures cannot see it.
              */
             val outputLatencyMs: Double = 0.0,
+            /**
+             * The resource warehouse's stats — what the backend holds and what happened to it.
+             * Maintained INCREMENTALLY on the backend (each shelf bumps a version when something
+             * changes; the snapshot is rebuilt only then), so reading is a plain read. `null` from
+             * a backend that predates the field.
+             */
+            val warehouse: WarehouseStats? = null,
         ) : Feedback {
             data class CylinderState(
                 /** Cylinder ID (0-15 typically) */
                 val id: Int,
                 /** Whether this cylinder is currently active (processing audio or effect tails) */
                 val active: Boolean,
+            )
+
+            /**
+             * One line per part of the warehouse. Counters are monotone since backend start;
+             * `idle*` are current. Bytes are Double (no Long on the wire or in audio paths).
+             */
+            data class WarehouseStats(
+                /** Delay rings: idle bytes on the shelf, idle count, dirty (not yet zeroed) count. */
+                val ringIdleBytes: Double,
+                val ringIdleCount: Int,
+                val ringDirtyCount: Int,
+                val ringAllocations: Int,
+                val ringHits: Int,
+                val ringFailures: Int,
+                val ringDropped: Int,
+                val ringSyncCleans: Int,
+                /** Reverb networks: one size each (~200 KB at 44.1 kHz). */
+                val reverbIdleCount: Int,
+                val reverbDirtyCount: Int,
+                val reverbAllocations: Int,
+                val reverbHits: Int,
+                val reverbFailures: Int,
+                val reverbDropped: Int,
+                /** Whole cylinders. */
+                val cylinderIdleCount: Int,
+                val cylinderAllocations: Int,
+                val cylinderHits: Int,
+                val cylinderDropped: Int,
+                /** Shared scratch: pre-sized capacity and the deepest nesting ever served. */
+                val scratchCapacity: Int,
+                val scratchHighWater: Int,
+                val scratchLateAllocations: Int,
+                val scratchUnbalancedReleases: Int,
+                /** Sample PCM resident in the store, and uploads whose PCM could not be allocated. */
+                val sampleBytes: Double,
+                val sampleCount: Int,
+                val sampleAllocationFailures: Int,
+                /** Across all live engines: voices dropped at admission (late), and refused unit rents. */
+                val droppedVoices: Int,
+                val deniedRents: Int,
             )
         }
     }

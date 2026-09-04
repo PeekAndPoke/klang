@@ -30,7 +30,6 @@ class AudioBackendContext(
     val sampleRate: Int,
     val blockFrames: Int,
     val commLink: KlangCommLink.BackendEndpoint,
-    val sampleStore: SampleStore,
     /** Parent ignitor registry — each engine's scheduler forks it per playback. */
     val ignitorRegistry: IgnitorRegistry,
     val pipelineRegistry: PipelineRegistry,
@@ -51,9 +50,16 @@ class AudioBackendContext(
      * kept from the warmup engine rather than disposed with it. Owned here, not a Kotlin `object`,
      * so specs and the offline renderer get their own. See `docs/plans/resource-warehouse.md`.
      */
-    val warehouse: ResourceWarehouse = ResourceWarehouse(sampleRate = sampleRate, blockFrames = blockFrames),
+    val warehouse: ResourceWarehouse = ResourceWarehouse(
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        samples = SampleStore(commLink),
+    ),
 ) {
     val sampleRateDouble: Double = sampleRate.toDouble()
+
+    /** The backend's sample PCM store — owned by the [warehouse] since the stats feed; same object, same behaviour. */
+    val sampleStore: SampleStore get() = warehouse.samples
 
     companion object {
         /**
@@ -94,7 +100,6 @@ class AudioBackendContext(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             commLink = commLink,
-            sampleStore = SampleStore(commLink),
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
             phasePoolSeed = phasePoolSeed,
             pipelineRegistry = PipelineRegistry(),
