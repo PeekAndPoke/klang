@@ -397,6 +397,25 @@ the comb damping's small reach into older windows; a row that could not fail ind
 mutation gap on the sub-window remainder fixed. 5 new mutations red, one equivalent (the input
 guard is backed by the saturation).
 
+**Step 5, review round 3 (2026-09-04, Fable 5.1, one reviewer given the whole loop):** verdict —
+**the ceiling is the right closed form; keep it; converge by subtraction.** The bound was worked
+against `DelayLine.process` and `Reverb.process` and holds for |fb| ≤ 1 (for |fb| > 1 it is not a
+bound but is monotone, which is all "pinned" needs). One MAJOR by contract: a period SHRINK under a
+running window closed `elapsed / newWindow` windows at once, decaying content that had never
+recirculated — round 2's cap-and-fold had implemented the right principle at the wrong boundary
+(64 closes instead of one). **Fixed by subtraction:** a shrink seals the running window once,
+undecayed, and the cap, the fold and their constant are deleted; the loop is bounded by
+`frames / window + 1` by construction. The three carried round-1 items were real and are closed:
+the vocabulary spec certified the AUTHORED graph while the optimizer fuses plain filters (with a
+literal `analog = 0`) into Eq sections — Der Schmetterling's guitar passes `analog` as a Param, so
+the standalone SVF kinds ran cold; the vocabulary now has an `analog = 1.0` chain and the spec
+walks the OPTIMIZED graph by class (Java reflection over the data classes), with `OptimizerHint`
+and `Variants` excluded with reasons; the Eq-section row reads the Eq nodes' own sections; the
+audio row checks both channels. KDoc: the invariant stated precisely ("bounds every cell written
+under the current period within the current and previous window; a lengthening can reach older
+content, raw live-change behaviour"). 6 mutations red. **Loop closed** on the reviewer's own
+recommendation ("round 3 should be the last").
+
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
 `VoiceScheduler` reads `context.warehouse.scratch`); the remaining `scratchBuffers` fields sit on the

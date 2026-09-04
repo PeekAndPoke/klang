@@ -116,6 +116,21 @@ class ClosedFormTailSpec : StringSpec({
         blocks shouldBeGreaterThan 200
     }
 
+    "shortening the delay time mid-ring does not cut what the shorter tap reaches" {
+        // Review round 3's oracle case: a long delay fed for a while, then shortened; one silent
+        // block later the tap window (the oracle) holds the last input, and the ceiling agrees.
+        val fx = delayEffect(time = 1.0, feedback = 0.1)
+        val ctx = ctx()
+        // 300 blocks: 38 400 samples into the 1 s window (no close yet). Before the seal, the
+        // shrink closed 17 new windows at once and decayed the ceiling to ~1e-17.
+        repeat(300) { fx.feed(ctx, 0.5) }
+        fx.configure(timeSeconds = 0.05, feedback = 0.1, cap = 1.0)
+        fx.feed(ctx, 0.0)
+
+        (fx.delayLine!!.tapWindowPeakAbs() > TailCeiling.SILENCE) shouldBe true
+        fx.hasTail() shouldBe true
+    }
+
     "self-oscillation (feedback >= 1) keeps the tail until the owner turns it off" {
         val fx = delayEffect(time = 0.05, feedback = 1.0)
         val ctx = ctx()

@@ -12,10 +12,12 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlin.math.abs
+import kotlin.reflect.KClass
 
 /**
  * The warmup vocabulary must (1) execute EVERY `IgnitorDsl` node kind, so no song's instrument
@@ -35,31 +37,61 @@ class WarmupVocabularySpec : StringSpec({
      * the sealed hierarchy must appear in a vocabulary graph.
      */
     val excluded: Map<String, String> = mapOf(
-        // (none today — add a kind here only with a reason a reviewer would accept)
+        "OptimizerHint" to "dissolves in the optimizer before anything is built — there is no runtime node to warm",
+        "Variants" to "dissolves at the registry boundary (children[soundIndex]) — no runtime node; the chosen child is warmed",
     )
 
-    /** Simple class names of every node in a graph, off the data-class `toString` — a JVM guard. */
-    fun kindsIn(dsl: IgnitorDsl): Set<String> =
-        Regex("""\b([A-Z][A-Za-z]+)(?=\(|,|\)|$)""").findAll(dsl.toString()).map { it.groupValues[1] }.toSet()
-
-    "every IgnitorDsl node kind appears in the vocabulary, or is excluded with a reason" {
-        val allKinds = IgnitorDsl::class.sealedSubclasses.mapNotNull { it.simpleName }.toSet()
-        (allKinds.size > 70) shouldBe true // the hierarchy really was enumerated
-
-        val present = WarmupVocabulary.sounds.flatMap { (_, dsl) -> kindsIn(dsl) }.toSet()
-        val missing = allKinds.filter { it !in present && it !in excluded }
-
-        withClue("node kinds no warmup graph executes: $missing") { missing.shouldBeEmpty() }
-        withClue("excluded kinds that are not in the hierarchy (stale exclusion): ${excluded.keys - allKinds}") {
-            (excluded.keys - allKinds).shouldBeEmpty()
+    /**
+     * Every node in a graph, walked by reflection over the data classes' properties (an
+     * `IgnitorDsl`-typed property or a list of them is a child). Classes, not names: a simple-name
+     * regex over `toString()` could not tell `EqSection.Lowpass` from `IgnitorDsl.Lowpass`, and
+     * certified the four standalone filters the optimizer had fused away (review round 3).
+     */
+    fun nodesOf(dsl: IgnitorDsl): Set<KClass<*>> {
+        val out = mutableSetOf<KClass<*>>()
+        fun walk(node: Any?) {
+            when (node) {
+                is IgnitorDsl -> {
+                    out.add(node::class) // a tree: every node is visited once, whatever its class
+                    // Java reflection (kotlin-reflect's `memberProperties` is not on the test
+                    // classpath): every zero-arg getter that yields a node or a list of nodes.
+                    for (m in node.javaClass.methods) {
+                        if (m.parameterCount != 0 || !m.name.startsWith("get")) continue
+                        val v = runCatching { m.invoke(node) }.getOrNull()
+                        if (v is IgnitorDsl || v is List<*>) walk(v)
+                    }
+                }
+                is IgnitorDsl.EqSection -> out.add(node::class)
+                is List<*> -> node.forEach { walk(it) }
+                else -> {}
+            }
         }
+        walk(dsl)
+        return out
     }
 
-    "every Eq section kind appears in the vocabulary" {
-        val sectionKinds = IgnitorDsl.EqSection::class.sealedSubclasses.mapNotNull { it.simpleName }.toSet()
+    "every IgnitorDsl node kind is BUILT by the vocabulary after the optimizer, or is excluded with a reason" {
+        // The registry optimizes every graph before building it (a plain lowpass with analog 0 is
+        // fused into an Eq section), so what the warmup executes is the OPTIMIZED graph — that is
+        // what is certified here (review round 3: the authored graph claimed four filter nodes the
+        // optimizer had fused away; the analog = 1.0 chain now keeps them standalone).
+        val allKinds = IgnitorDsl::class.sealedSubclasses.toSet()
+        (allKinds.size > 70) shouldBe true // the hierarchy really was enumerated
+
+        val present = WarmupVocabulary.sounds.flatMap { (_, dsl) -> nodesOf(dsl.optimize()) }.toSet()
+        val missing = allKinds.filter { it !in present && it.simpleName !in excluded }.map { it.simpleName }
+
+        withClue("node kinds no warmup graph executes: $missing") { missing.shouldBeEmpty() }
+        val stale = excluded.keys - allKinds.mapNotNull { it.simpleName }.toSet()
+        withClue("excluded kinds that are not in the hierarchy (stale exclusion): $stale") { stale.shouldBeEmpty() }
+    }
+
+    "every Eq section kind is built by the optimized filters graph" {
+        val sectionKinds = IgnitorDsl.EqSection::class.sealedSubclasses.toSet()
         (sectionKinds.size >= 6) shouldBe true
-        val present = kindsIn(WarmupVocabulary.filters)
-        withClue("Eq sections no warmup graph executes") { sectionKinds.filter { it !in present }.shouldBeEmpty() }
+        val present = nodesOf(WarmupVocabulary.filters.optimize())
+        val missing = (sectionKinds - present).map { it.simpleName }
+        withClue("Eq sections no warmup graph executes: $missing") { missing.shouldBeEmpty() }
     }
 
     "every vocabulary sound renders audible, FINITE audio through the real engine" {
@@ -88,9 +120,10 @@ class WarmupVocabularySpec : StringSpec({
                 mix.clear()
                 engine.renderInto(mix, clock.cursorFrame)
                 for (i in 0 until blockFrames) {
-                    val v = mix.left[i]
-                    if (v != v || v == Double.POSITIVE_INFINITY || v == Double.NEGATIVE_INFINITY) finite = false // NaN-guard
-                    peak = maxOf(peak, abs(v))
+                    val l = mix.left[i]
+                    val r = mix.right[i]
+                    if (l != l || r != r || abs(l) == Double.POSITIVE_INFINITY || abs(r) == Double.POSITIVE_INFINITY) finite = false // NaN-guard
+                    peak = maxOf(peak, abs(l), abs(r))
                 }
                 clock.cursorFrame += blockFrames
             }

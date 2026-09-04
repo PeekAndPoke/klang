@@ -140,27 +140,25 @@ class TailCeilingSpec : StringSpec({
         blocks shouldBe 43
     }
 
-    "a window collapse is bounded: past MAX_CLOSES_PER_CALL the rest fold without decay — held, never cut" {
+    "a period that shrinks under a running window seals it ONCE, undecayed — the shorter tap still reaches it" {
+        // Review round 3: the elapsed time carried from the old window closed `elapsed / newWindow`
+        // new windows at once, each decaying content that had never recirculated. Nine blocks
+        // into a 1000-sample window, then the window drops to 100: the content written 100
+        // samples ago is exactly what the new tap reads, and the ceiling must still say so.
         val c = TailCeiling()
-        c.observe(inputPeak = 1.0, frames = 128, windowSamples = 1_000_000.0, feedback = 0.5, lapsPerWindow = 1)
-        // 20 s → 10 ms: ~7 800 boundaries pending; 64 are decayed, the rest are folded.
-        c.observe(inputPeak = 0.0, frames = 128, windowSamples = 1.0, feedback = 0.5, lapsPerWindow = 1)
-        c.hasTail shouldBe false // 64 halvings of 1.0 is 5e-20: below threshold regardless
-        val d = TailCeiling()
-        d.observe(inputPeak = 1.0, frames = 128, windowSamples = 1_000_000.0, feedback = 0.999, lapsPerWindow = 1)
-        d.observe(inputPeak = 0.0, frames = 128, windowSamples = 1.0, feedback = 0.999, lapsPerWindow = 1)
-        d.hasTail shouldBe true // 64 decays at 0.999 is 0.94: still a tail, and the folded rest did not cut it
+        repeat(9) { c.observe(inputPeak = 1.0, frames = 100, windowSamples = 1000.0, feedback = 0.5, lapsPerWindow = 1) }
+        c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+        c.hasTail shouldBe true // sealed at 1.0, then ONE real close: previous 0.5
 
-        // The fold really discards the stale elapsed time: the next single-sample call closes ONE
-        // window, not 64 more. At fb 0.9: 64 decays → 1.2e-3; one more → 1.1e-3 (a tail); 64 more
-        // would be 1.3e-6 (cut) — time that elapsed under the OLD period must not decay content
-        // under the new one.
-        val e = TailCeiling()
-        e.observe(inputPeak = 1.0, frames = 128, windowSamples = 1_000_000.0, feedback = 0.9, lapsPerWindow = 1)
-        e.observe(inputPeak = 0.0, frames = 128, windowSamples = 1.0, feedback = 0.9, lapsPerWindow = 1)
-        e.hasTail shouldBe true
-        e.observe(inputPeak = 0.0, frames = 1, windowSamples = 1.0, feedback = 0.9, lapsPerWindow = 1)
-        e.hasTail shouldBe true
+        // From here it halves per new window: previous = 0.5^(1+k) ≤ 1e-5 from k = 16. Ten stale
+        // closes (the old behaviour) would have left only 7; a seal that decays once, 15.
+        var more = 0
+        while (c.hasTail) {
+            c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+            more++
+            (more < 100) shouldBe true
+        }
+        more shouldBe 16
     }
 
     "reset(): the unit holds nothing" {

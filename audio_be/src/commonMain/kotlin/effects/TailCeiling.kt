@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import kotlin.math.floor
 
 /**
  * "Does this delay or reverb still hold audible energy?" — answered from a running CEILING on its
@@ -33,8 +32,10 @@ import kotlin.math.floor
  * where `laps` is how many times any sample can pass the shortest recirculation path within one
  * window (2 for a ring: only its very first sample comes back inside the same window; 2 for
  * Freeverb, whose comb lengths span less than 2×). The previous-window term needs no such series:
- * a re-lapped previous sample is `fb² · previous + input`, and `fb² ≤ fb` folds it into the terms
- * above. With silent input this is a geometric decay by |fb| per window — the same proof
+ * a re-lapped previous sample is `fb² · previous + input`, and for |fb| ≤ 1 `fb² ≤ fb` folds it
+ * into the terms above; for |fb| > 1 the recurrence is not a bound but is monotone from the first
+ * input, which is all "pinned" needs. With silent input this is a geometric decay by |fb| per
+ * window — the same proof
  * `drainSamplesUntilSilent` uses for the Draining state — and with sub-threshold input it
  * converges to the true steady floor `input / (1 − fb)` instead of pretending the unit is empty.
  *
@@ -46,11 +47,12 @@ import kotlin.math.floor
  * |feedback| ≥ 1 never decays and pins the orbit until the owner turns it off — the raw engine's
  * intent, and what the scan did for a charged self-oscillating ring.
  *
- * **When the answer differs from the scan.** Never on the audible side FOR WHAT THE CURRENT TAP
- * CAN REACH: the ceiling bounds every cell within one recirculation of the head, so "no tail"
- * here implies `tapWindowPeakAbs` would say so too. Content parked deeper in a ring after a
- * delay-time SHORTENING is outside that scope (a later lengthening could tap it again), which the
- * delay effect's own KDoc already files under raw live-change behaviour; and the comb damping's
+ * **When the answer differs from the scan.** The invariant, precisely: the ceiling bounds every
+ * cell written under the CURRENT period within the current and the previous window, so "no
+ * tail" here implies `tapWindowPeakAbs` would say so too. A delay-time LENGTHENING can reach
+ * older cells the ceiling has already decayed (up to the ring's capacity, 0.5 s at class 0) —
+ * raw live-change behaviour the delay effect's own KDoc already files, and the cut, if an orbit
+ * deactivates right then, lands at `quiet/loud · 1e-5`, −60 to −90 dBFS. The comb damping's
  * one-pole carries a small weight (≤ d², 0.16 at most) of windows older than the previous one,
  * folded into the bound's own slack (its steady state overstates a comb by ~1.7× at fb 0.7).
  * On the other side it can hold the unit longer — up to one window, and by that slack (up to 2×
@@ -76,9 +78,8 @@ class TailCeiling {
      * A block's peak is credited to EVERY window the block touches — the one it closes and the
      * one it continues — so the bound holds whatever the block/window ratio (a window shorter
      * than a block is unreachable today: the smallest delay is 10 ms, 441 samples at 44.1 kHz,
-     * against 128 frames; the reverb's is ~1 641). A delay-time collapse can leave many windows to
-     * close in one call; past [MAX_CLOSES_PER_CALL] the rest are folded WITHOUT decay (holding
-     * longer, never cutting), so no call is ever unbounded.
+     * against 128 frames; the reverb's is ~1 641). A period that shrinks under a running window
+     * seals that window once, undecayed (see the body).
      *
      * @param inputPeak the block's largest |sample| going INTO the unit (after any send scaling)
      * @param frames the block's length in samples
@@ -88,38 +89,39 @@ class TailCeiling {
      */
     fun observe(inputPeak: Double, frames: Int, windowSamples: Double, feedback: Double, lapsPerWindow: Int) {
         val fb = if (feedback < 0.0) -feedback else feedback
+        val window = if (windowSamples >= 1.0) windowSamples else 1.0
+
+        // Under a constant window the loop below always leaves `elapsed < window`, so arriving here
+        // with `elapsed >= window` means the period SHRANK under time already spent in the running
+        // window. Seal that window once, undecayed: its ceiling bounds every cell the shorter tap
+        // can now reach, and the time was spent under the OLD period — closing it as several new
+        // windows would decay content that never recirculated (review round 3; round 2's cap-and-
+        // fold implemented this principle at the wrong boundary).
+        if (elapsed >= window) {
+            previous = current
+            inputPeakInWindow = 0.0
+            elapsed = 0.0
+        }
+
         // A non-finite send (a poisoned voice) must not reach the arithmetic: `Inf · 0` is NaN, and
         // a NaN ceiling compares false — "no tail" while the ring rings, the one cut this class
         // promises never to make. It counts as "louder than any audio" instead (review round 2).
-        // [saturate] would catch the NaN too (`NaN <= MAX` is false); this guard keeps the
-        // arithmetic finite from the start rather than relying on that.
         val peak = if (inputPeak <= CEILING_MAX) inputPeak else CEILING_MAX
         if (peak > inputPeakInWindow) {
             inputPeakInWindow = peak
         }
         current = saturate(fresh(inputPeakInWindow, fb, lapsPerWindow) + fb * previous)
 
+        // Bounded by `frames / window + 1` by construction: one close through both 10 ms doors.
         elapsed += frames
-        val window = if (windowSamples >= 1.0) windowSamples else 1.0
-        var closes = 0
-        while (elapsed >= window && closes < MAX_CLOSES_PER_CALL) {
+        while (elapsed >= window) {
             previous = current
             elapsed -= window
             // The next window holds this block's peak only if the block reaches into it: a block
             // that ends exactly on the boundary contributes nothing to what follows.
             inputPeakInWindow = if (elapsed > 0.0) peak else 0.0
             current = saturate(fresh(inputPeakInWindow, fb, lapsPerWindow) + fb * previous)
-            closes++
         }
-        if (elapsed >= window) {
-            // A window collapse (20 s → 10 ms): fold the remaining boundaries without decaying.
-            elapsed -= window * floorDiv(elapsed, window)
-        }
-    }
-
-    private fun floorDiv(a: Double, b: Double): Double {
-        val q = a / b
-        return if (q >= 0.0) floor(q) else 0.0
     }
 
     /** Keeps the ceiling finite: |feedback| > 1 grows it without bound, and Inf arithmetic breeds NaN. */
@@ -155,8 +157,6 @@ class TailCeiling {
          */
         const val CEILING_MAX: Double = 1.0e6
 
-        /** Window closes handled with decay in one [observe]; the rest fold without decay. */
-        const val MAX_CLOSES_PER_CALL: Int = 64
 
         /** The largest |sample| in the first [frames] of [buffer], both channels. O(frames). */
         fun peakOf(buffer: StereoBuffer, frames: Int): Double {

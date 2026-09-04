@@ -138,13 +138,23 @@ object WarmupVocabulary {
         withParam.detune(7.0).optimizer(on = 1).mul(Constant(0.5))
     }
 
-    /** Every filter node and every Eq section kind, in one chain. */
+    /**
+     * Every filter node and every Eq section kind, in one chain — TWICE: the optimizer fuses a
+     * plain `lowpass/highpass/bandpass/notch` into `Eq` sections only when `analog` is a literal
+     * zero, so the first pass runs the fused Eq path and the second (`analog = 1.0`, the
+     * state-dependent damping branch) runs the standalone SVF nodes — the branch Der Schmetterling's
+     * guitar takes with its `analog` param (review round 3).
+     */
     val filters: IgnitorDsl = IgnitorDsl.Sawtooth()
         .lowpass(freq = 3000.0, q = 1.2, passes = 2)
         .highpass(freq = 80.0, q = 0.9)
         .onepole(freq = 6000.0)
         .bandpass(freq = 1200.0, q = 2.0)
         .notch(freq = 900.0, q = 4.0)
+        .lowpass(freq = 4000.0, q = 1.0, analog = 1.0)
+        .highpass(freq = 60.0, q = 0.8, analog = 1.0)
+        .bandpass(freq = 1500.0, q = 1.5, analog = 1.0)
+        .notch(freq = 700.0, q = 3.0, analog = 1.0)
         .eq()
         .band(freq = 400.0, q = 1.0, db = 3.0) // EqSection.Bell
         .tap(freq = 2500.0, q = 3.0, gain = 0.5) // EqSection.RawTap
