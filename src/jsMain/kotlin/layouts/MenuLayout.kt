@@ -98,6 +98,20 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
 
                     height = 100.pct
                     overflowY = Overflow.hidden
+                    position = Position.relative
+                }
+
+                // The sidebar's background as its own layer, BELOW the content scroller's glow
+                // window (that scroller is z-index 1 with a 100px clip window over this column),
+                // while the menu content renders ABOVE it (`SidebarMenu`'s root is z-index 2). The
+                // glow lands on the background and the content stays clickable: `chrome-bg`
+                // isolates its own stacking, so it must not be on the content element itself.
+                div("chrome-bg") {
+                    key = "sidebar-background"
+                    css {
+                        position = Position.absolute
+                        put("inset", "0")
+                    }
                 }
 
                 SidebarMenu()

@@ -60,6 +60,9 @@ import kotlinx.css.paddingLeft
 import kotlinx.css.paddingTop
 import kotlinx.css.pct
 import kotlinx.css.px
+import kotlinx.css.position
+import kotlinx.css.zIndex
+import kotlinx.css.Position
 import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.Tag
@@ -271,7 +274,12 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     //  RENDER  ////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        div("chrome-bg") {
+        // No `chrome-bg` here any more: the background is a separate layer in `MenuLayout`, BELOW
+        // the content scroller's glow window, and this content sits ABOVE it (z-index 2 in the
+        // page's stacking context). `chrome-bg` isolates its stacking, so a background on this
+        // very element would have pinned the menu and the Motor under the glow strip, where they
+        // received no clicks (the Motor's title toggle and the stats' hover hints).
+        div {
             key = "sidebar-menu"
             css {
                 color = Color.white
@@ -279,6 +287,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 display = Display.flex
                 flexDirection = FlexDirection.column
                 justifyContent = JustifyContent.spaceBetween
+                position = Position.relative
+                zIndex = 2
             }
 
             div {
