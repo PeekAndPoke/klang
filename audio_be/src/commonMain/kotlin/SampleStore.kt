@@ -43,7 +43,11 @@ class SampleStore(
          * The PCM array for this sample could not be allocated. Behaves like [NotFound] for every
          * consumer (no `Complete`, so the voice is silent); a distinct state so the diagnostics can
          * say "out of memory" rather than "no such sample", and so the remaining chunks of that
-         * upload are dropped instead of restarting the allocation each.
+         * upload are dropped instead of restarting the allocation each. The frontend is told with
+         * the same `SampleReceived` a success sends — its preloader awaits that ack with no timeout,
+         * and before review round 3 a failed upload left it waiting forever. Permanent for the
+         * backend's life, on purpose: making `contains` false would re-request and re-upload
+         * megabytes on every note under the very memory pressure that failed the first one.
          */
         data class AllocationFailed(
             override val req: SampleRequest,
@@ -119,6 +123,8 @@ class SampleStore(
                     if (pcm == null) {
                         allocationFailures++
                         samples[req] = SampleEntry.AllocationFailed(req)
+                        // The upload is over as far as the frontend is concerned: release its wait.
+                        notifyReceived(msg.playbackId, req)
 
                         return
                     }

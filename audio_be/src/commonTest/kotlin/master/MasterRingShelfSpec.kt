@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.master
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -200,5 +201,28 @@ class MasterRingShelfSpec : StringSpec({
         rings.rent(1) shouldBeSameInstanceAs small
         rings.rent(1) shouldBeSameInstanceAs large
         rings.shelfCount shouldBe 0
+    }
+
+
+    "a released chain never writes into its old ring again — process() and reset() are no-ops after releaseUnits" {
+        // Review round 3: releaseUnits handed the units back but left the chain's references live;
+        // a stray process() on an evicted chain would write into a ring another orbit had rented,
+        // cross-talk the double-return guard cannot see.
+        val (rings, _) = shelf()
+        val chain = MasterChain.build(delayDsl(0.3, feedback = 0.0), sampleRate, blockFrames, rings)
+        val ring = chain.delays[0].ring
+        chain.releaseUnits(rings, ReverbUnits(sampleRate))
+
+        val next = rings.rent(1).shouldNotBeNull() // the same ring, zeroed for its next owner
+        next shouldBeSameInstanceAs ring
+
+        val loud = StereoBuffer(blockFrames).apply { left.fill(0.9); right.fill(0.9) }
+        repeat(4) { chain.process(loud, blockFrames) }
+        (ring.left.all { it == 0.0 } && ring.right.all { it == 0.0 }) shouldBe true // process() wrote nothing
+
+        // The new owner's audio in the ring survives the old chain's reset(): it is not its ring to zero.
+        next.left[10] = 0.3
+        chain.reset()
+        next.left[10] shouldBe 0.3
     }
 })

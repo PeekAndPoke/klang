@@ -156,7 +156,7 @@ class ResourceWarehouseSpec : StringSpec({
         s.rent(64).shouldNotBeNull() shouldNotBeSameInstanceAs b64
     }
 
-    "a single buffer larger than the whole budget never sits on the shelf — and is not cleared for nothing" {
+    "a single buffer larger than the whole budget never sits on the shelf" {
         val (s, _) = shelf(budgetBytes = bytes(8))
         val big = s.rent(64).shouldNotBeNull()
         big.left[3] = 0.5
@@ -170,22 +170,93 @@ class ResourceWarehouseSpec : StringSpec({
         big.left[3] shouldBe 0.5
     }
 
-    "a buffer that survives the eviction IS cleared, even when the return evicted another" {
+    // ── Rule 4 (review round 3): a return is O(1); clearing is deferred housekeeping ─────────────
+
+    "giveBack touches nothing — the buffer comes back DIRTY, and housekeep zeroes it a slice at a time" {
+        // Every return site is on the audio thread (a grow inside configure, an engine's disposal
+        // inside the render callback, a master chain's eviction inside a command drain), so the
+        // clear cannot live there: sixteen warmup rings retired in one block were ~19 MB of stores.
+        val (s, _) = shelf()
+        val b = s.rent(64).shouldNotBeNull() // class 64 frames
+        b.left.fill(0.7)
+        b.right.fill(-0.3)
+
+        s.giveBack(b)
+
+        b.left[63] shouldBe 0.7 // untouched at return
+        s.isClean shouldBe false
+
+        s.housekeep(maxFrames = 40) shouldBe 40 // a bounded slice: the first 40 frames
+        b.left[39] shouldBe 0.0
+        b.right[39] shouldBe 0.0
+        b.left[40] shouldBe 0.7
+        s.isClean shouldBe false
+
+        s.housekeep(maxFrames = 40) shouldBe 24 // the rest, and no more than there was
+        b.left[63] shouldBe 0.0
+        b.right[63] shouldBe 0.0
+        s.isClean shouldBe true
+        s.housekeep(maxFrames = 40) shouldBe 0 // nothing left to do
+        s.housekeptFrames shouldBe 64.0
+    }
+
+    "rent prefers a CLEAN buffer, even a larger class, over a dirty exact fit" {
+        val (s, _) = shelf()
+        val dirty8 = s.rent(8).shouldNotBeNull()
+        val clean16 = s.rent(16).shouldNotBeNull()
+        s.giveBack(clean16)
+        s.housekeep() // the 16 is clean now
+        dirty8.left[0] = 0.5
+        s.giveBack(dirty8) // and the 8 is dirty
+
+        s.rent(8) shouldBeSameInstanceAs clean16
+        s.syncCleans shouldBe 0
+    }
+
+    "rent of a dirty buffer, when nothing clean fits, zeroes it on the spot — and counts that" {
+        val (s, _) = shelf()
+        val b = s.rent(8).shouldNotBeNull()
+        b.left[3] = 0.9
+        b.right[5] = -0.2
+        s.giveBack(b)
+
+        val again = s.rent(8).shouldNotBeNull()
+
+        again shouldBeSameInstanceAs b
+        (again.left.all { it == 0.0 } && again.right.all { it == 0.0 }) shouldBe true
+        s.syncCleans shouldBe 1
+    }
+
+    "housekeep zeroes the oldest return first, across buffers, within one budget" {
+        val (s, _) = shelf()
+        val first = s.rent(8).shouldNotBeNull().also { it.left.fill(1.0) }
+        val second = s.rent(8).shouldNotBeNull().also { it.left.fill(1.0) }
+        s.giveBack(first)
+        s.giveBack(second)
+
+        s.housekeep(maxFrames = 12) shouldBe 12
+
+        (first.left.all { it == 0.0 }) shouldBe true // 8 of the 12
+        first.right.all { it == 0.0 } shouldBe true
+        second.left[3] shouldBe 0.0 // 4 more
+        second.left[4] shouldBe 1.0
+    }
+
+    "a dropped buffer is never cleared — garbage needs no zero-fill" {
         val (s, _) = shelf(budgetBytes = bytes(16 + 8))
         val b16 = s.rent(16).shouldNotBeNull()
         val b8 = s.rent(8).shouldNotBeNull()
         s.giveBack(b16)
-        b8.left[1] = 0.9
         s.giveBack(b8) // 24 bytes-of-frames on the shelf: at the budget, nothing dropped
         s.dropped shouldBe 0
-        b8.left[1] shouldBe 0.0
 
         val b32 = s.rent(32).shouldNotBeNull()
         b32.left[2] = 0.4
         s.giveBack(b32) // 56 > 24: the 32 is the largest and goes; the 16 and 8 stay
         s.dropped shouldBe 1
         s.shelfCount shouldBe 2
-        b32.left[2] shouldBe 0.4
+        repeat(10) { s.housekeep() }
+        b32.left[2] shouldBe 0.4 // not on the shelf, not housekept
     }
 
     "the budget never touches WORKING memory — rented buffers are not the shelf's business" {

@@ -203,19 +203,28 @@ class CylinderShelfSpec : StringSpec({
 
         val builtPerBlock = mutableListOf<Int>()
         while (warmup.isWarming) {
+            // A warmup that never becomes ready (housekeeping missing) must FAIL, not hang the suite.
+            (builtPerBlock.size < 400) shouldBe true
             val before = f.warehouse.cylinders.allocations
             f.render(1)
             builtPerBlock.add(f.warehouse.cylinders.allocations - before)
             warmup.tick()
         }
 
-        // BackendReady went out, and only after the shelves were stocked.
+        // BackendReady went out, and only after the shelves were stocked AND zeroed: the units
+        // come back dirty (an O(1) return) and the dispatcher's per-block housekeeping clears them
+        // a slice at a time; the warmup holds the ready signal until that is done (review round 3).
         val feedback = generateSequence { f.commLink.frontend.feedback.receive() }.toList()
         feedback.last().shouldBeInstanceOf<KlangCommLink.Feedback.BackendReady>()
         f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldBeNull()
         f.warehouse.cylinders.idleCount shouldBe WarmupRunner.WARMUP_ORBITS
         f.warehouse.sized.shelfCount shouldBe WarmupRunner.WARMUP_ORBITS
         f.warehouse.reverbs.idleCount shouldBe WarmupRunner.WARMUP_ORBITS
+        f.warehouse.isClean shouldBe true
+        (f.warehouse.sized.housekeptFrames > 0.0) shouldBe true // zeroed by housekeeping, not at return
+        f.warehouse.reverbs.housekeptUnits shouldBe WarmupRunner.WARMUP_ORBITS
+        // The whole warmup took longer than the voices alone: the teardown is bucketed too.
+        (builtPerBlock.size > WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS) shouldBe true
         // Bucketed: never more than one cylinder built in one render frame.
         (builtPerBlock.max() <= 1) shouldBe true
         builtPerBlock.sum() shouldBe WarmupRunner.WARMUP_ORBITS
@@ -230,6 +239,47 @@ class CylinderShelfSpec : StringSpec({
         f.warehouse.cylinders.hits shouldBe 8
         f.warehouse.sized.hits shouldBe 8
         f.warehouse.reverbs.hits shouldBe 8
+        // ...and none of those hits had to zero anything on the spot: the shelves were clean.
+        f.warehouse.sized.syncCleans shouldBe 0
+        f.warehouse.reverbs.syncCleans shouldBe 0
+    }
+
+    "BackendReady is held while the shelves are still dirty — a warmup that ends before housekeeping is not ready" {
+        val f = fixture()
+        val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend)
+        warmup.start()
+
+        var readyAt = -1
+        var block = 0
+        var dirtyWhenReady = false
+        while (warmup.isWarming) {
+            (block < 400) shouldBe true // never ready = a failure, not a hang
+            f.render(1)
+            block++
+            val stillWarming = warmup.tick()
+            if (!stillWarming && readyAt < 0) {
+                readyAt = block
+                dirtyWhenReady = !f.warehouse.isClean
+            }
+        }
+
+        readyAt shouldBe block
+        dirtyWhenReady shouldBe false
+        // And it was NOT ready on the disposal tick itself: sixteen dirty rings need sixteen slices.
+        (readyAt > WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS + 8) shouldBe true
+    }
+
+    "the warmup reaches the phaser, compressor, body and vowel constructors too" {
+        val f = fixture()
+        val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend)
+        warmup.start()
+        repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
+
+        val cylinders = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull().cylinders.cylinders.sortedBy { it.id }
+        cylinders[0].phaser.phaser.depth shouldBeGreaterThan 0.0
+        cylinders[1].compressor.compressor.shouldNotBeNull()
+        cylinders[2].body.isEngaged shouldBe true
+        cylinders[3].vowel.isEngaged shouldBe true
     }
 
     "every warmup voice actually sounds through its orbit — the warmed paths are the real ones" {
@@ -239,7 +289,8 @@ class CylinderShelfSpec : StringSpec({
         val f = fixture()
         val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend)
         warmup.start()
-        repeat(WarmupRunner.WARMUP_ORBITS + 2) { f.render(1); warmup.tick() }
+        // One block short of the disposal tick: every orbit has rented, the engine is still alive.
+        repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
 
         val engine = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull()
         engine.cylinders.cylinders.size shouldBe WarmupRunner.WARMUP_ORBITS

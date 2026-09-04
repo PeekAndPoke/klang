@@ -187,7 +187,18 @@ class LazyReverbSpec : StringSpec({
         repeat(200) { used.process(noise(blockFrames, seed = it + 1), sink, blockFrames) }
         units.giveBack(used)
 
+        // Review round 3: the return is O(1) — parameters back now, the network still charged —
+        // and housekeep() zeroes it later, one unit per call.
+        used.roomSize shouldBe 0.5
+        used.hasTail(0.0) shouldBe true
+        units.isClean shouldBe false
+        units.housekeep() shouldBe true
+        units.isClean shouldBe true
+        units.housekeep() shouldBe false // nothing left
+        units.housekeptUnits shouldBe 1
+
         val again = units.rent().shouldNotBeNull()
+        units.syncCleans shouldBe 0
         again shouldBeSameInstanceAs used
         again.roomSize shouldBe 0.5 // constructor defaults
         again.damp shouldBe 0.5
@@ -212,6 +223,57 @@ class LazyReverbSpec : StringSpec({
             }
         }
         energy shouldBeGreaterThan 1.0 // positive control: the reverb did something
+    }
+
+    "rent of a dirty unit, when no clean one is idle, zeroes it on the spot — a rented unit is always clean" {
+        val (units, _) = shelf()
+        val used = units.rent().shouldNotBeNull()
+        val sink = StereoBuffer(blockFrames)
+        repeat(50) { used.process(noise(blockFrames, seed = it + 1), sink, blockFrames) }
+        units.giveBack(used)
+
+        val again = units.rent().shouldNotBeNull()
+
+        again shouldBeSameInstanceAs used
+        again.hasTail(0.0) shouldBe false
+        units.syncCleans shouldBe 1
+    }
+
+    "rent prefers a CLEAN idle unit over a dirty one" {
+        val (units, _) = shelf()
+        val a = units.rent().shouldNotBeNull()
+        val b = units.rent().shouldNotBeNull()
+        units.giveBack(a)
+        units.housekeep() // a is clean
+        val sink = StereoBuffer(blockFrames)
+        b.process(noise(blockFrames, seed = 3), sink, blockFrames)
+        units.giveBack(b) // b is dirty, and newer
+
+        units.rent() shouldBeSameInstanceAs a
+        units.syncCleans shouldBe 0
+    }
+
+    "a latched refusal still takes a unit the SHELF can serve — only the allocation is skipped" {
+        // The delay's round-2 lesson, re-learned for the reverb in round 3: a Boolean latch that
+        // sat above the shelf lookup kept an orbit dry after other playbacks had returned units.
+        val alloc = Recording(failing = true)
+        val (units, _) = shelf(alloc)
+        val fx = effect(units)
+        fx.room(roomSize = 0.6)
+        fx.reverb.shouldBeNull()
+        fx.deniedRents shouldBe 1
+
+        alloc.failing = false
+        val returned = units.rent().shouldNotBeNull()
+        units.giveBack(returned)
+        alloc.failing = true
+        val askedBefore = alloc.asked
+
+        fx.room(roomSize = 0.6)
+
+        fx.reverb shouldBeSameInstanceAs returned
+        alloc.asked shouldBe askedBefore // no allocation attempted
+        fx.deniedRents shouldBe 1 // a shelf miss while latched is not a refusal
     }
 
     "the shelf holds at most maxIdle units; a further return is dropped, a double return refused" {
@@ -239,10 +301,11 @@ class LazyReverbSpec : StringSpec({
         units.allocations shouldBe 4
     }
 
-    "the default allocator turns an allocation failure into null rather than a throw" {
-        // Reverb(sampleRate) cannot be made to fail from here without exhausting the JVM; the
-        // catch is the same shape as SizedBuffers.allocateOrNull, and its spec exercises a real
-        // OOM. Here: the happy path through the default allocator.
+    "the default allocator builds a unit at the backend's rate (the catch itself is not reachable from here)" {
+        // Reverb(sampleRate) cannot be made to fail without exhausting the JVM; the catch is the
+        // same shape as SizedBuffers.allocateOrNull / SampleStore.allocatePcmOrNull, whose specs
+        // exercise a real OOM. This row pins only the happy path (review round 3: the old name
+        // claimed the catch).
         ReverbUnits.allocateOrNull(sampleRate).shouldNotBeNull().sampleRate shouldBe sampleRate
     }
 

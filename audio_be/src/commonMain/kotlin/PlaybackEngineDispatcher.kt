@@ -166,6 +166,8 @@ class PlaybackEngineDispatcher(
         master.process(mix, out)
 
         disposeDrainedEngines()
+        // Deferred clearing of returned rings and networks, a bounded slice per block (round 3).
+        context.warehouse.housekeep()
         emitDiagnostics(startMs)
     }
 
@@ -226,6 +228,12 @@ class PlaybackEngineDispatcher(
 
     /** Reset the master post-chain (limiter envelope + DC blockers) after warmup. */
     fun resetPostChain() = master.reset()
+
+    /** True when every idle ring and network on the warehouse's shelves is zeroed (see [WarmupRunner.tick]). */
+    val isWarehouseClean: Boolean get() = context.warehouse.isClean
+
+    /** The real block size — the warmup buckets on it, not on a constant. */
+    val blockFrames: Int get() = context.blockFrames
 
     // ── Test / diagnostics inspection ────────────────────────────────────────────
     internal val activePlaybackIds: Set<String> get() = engines.keys

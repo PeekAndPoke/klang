@@ -81,7 +81,9 @@ class KatalystReverbEffect(
     /**
      * A refusal is remembered until [reset]: the owner re-applies its config every block, and
      * without the latch a refused unit is an allocate-and-catch per block (the delay's lesson,
-     * review round 1). All units are one size, so a Boolean is the whole latch.
+     * review round 1). All units are one size, so a Boolean is the whole latch. While latched the
+     * shelf is still consulted — a unit another orbit or playback returned meanwhile is free to
+     * take (the delay's round-2 lesson, re-learned here in round 3); only the allocation is skipped.
      */
     private var refused = false
 
@@ -189,15 +191,13 @@ class KatalystReverbEffect(
      * [reset]. Nothing else in this class allocates.
      */
     private fun rentUnit(): Reverb? {
-        if (refused) {
-            return null
-        }
-
-        val unit = units.rent()
+        val unit = units.rent(allocateOnMiss = !refused)
 
         if (unit == null) {
-            deniedRents++
-            refused = true
+            if (!refused) {
+                deniedRents++
+                refused = true
+            }
 
             return null
         }

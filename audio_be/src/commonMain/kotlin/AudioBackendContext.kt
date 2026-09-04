@@ -18,9 +18,10 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * [PlaybackEngine] / `VoiceScheduler`, instead of threading half a dozen separate parameters.
  *
  * Holds the shared services (sample cache, registries, IPC link, config) and the read-only
- * [clock], and the [warehouse] every engine rents from. Per-engine state (its own `Cylinders`,
- * scheduling timeline) is NOT here
- * — it is built inside each engine. See `docs/tasks/per-playback-engine.md`.
+ * [clock], and the [warehouse] every engine rents from — cylinders included: an engine's
+ * `Cylinders` map is its own, but the cylinders in it come from the warehouse's shelf and go back
+ * there when the engine is disposed. Per-engine state (that map, the scheduling timeline) is NOT
+ * here. See `docs/tasks/per-playback-engine.md`.
  *
  * Note: `performanceTimeMs` is transitional — once diagnostics emission moves up to the dispatcher
  * (D5), the per-scheduler wall-clock read leaves this context.

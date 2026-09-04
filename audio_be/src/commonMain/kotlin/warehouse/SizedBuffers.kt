@@ -27,13 +27,16 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  *    first. Being wrong about the budget is never audible: too small means a few more allocations
  *    on re-run, too big means idle memory. So it is a constant, not a mechanism.
  *
- * **Every buffer that leaves [rent] is all zeros** — fresh allocations are zero by construction and
- * [giveBack] clears before shelving. A rented ring carrying a previous owner's tail would replay it
- * (the hazard `DelayLine.reset()`'s KDoc warns about). Clearing happens at return time. For eviction
- * and disposal that is away from any onset; for a GROW it is not — the old ring is returned inside
- * the same `configure` that rents the new one, so a grow pays one clear of the OLD (smaller) ring at
- * note time on top of the new allocation. That is the accepted cost of a grow, proportional to the
- * ring being outgrown, not the new one.
+ * **Every buffer that leaves [rent] is all zeros** — fresh allocations are zero by construction, and
+ * a returned one is cleared before it is rented again. A rented ring carrying a previous owner's
+ * tail would replay it (the hazard `DelayLine.reset()`'s KDoc warns about). **The clearing is
+ * DEFERRED housekeeping, not done at return** (review round 3): every return site runs on the audio
+ * thread — a grow inside `configure`, an engine's disposal inside the render callback, a master
+ * chain's eviction inside a command drain — and clearing there is O(ring) at the worst moment (a
+ * 20 s master ring is 24 MB; sixteen warmup orbits retired in one block were ~19 MB). [giveBack] is
+ * O(1) and marks the buffer DIRTY; [housekeep] clears a bounded number of frames per call, and the
+ * backend calls it once per block; [rent] prefers a clean buffer and cleans a dirty one on the spot
+ * only when nothing clean fits — which costs what the allocation it replaces would have cost.
  *
  * **Never shrinks a buffer.** Growth is the owner's business (rent a bigger class, migrate, give the
  * old one back). The only thing that ever gets smaller is the shelf.
@@ -50,7 +53,10 @@ class SizedBuffers(
     val budgetBytes: Int,
     private val allocate: (frames: Int) -> StereoBuffer? = ::allocateOrNull,
 ) {
-    private val shelf = ArrayList<StereoBuffer>()
+    /** An idle buffer and how much of it is already zero: `cleanFrames == size` means clean. */
+    private class Idle(val buffer: StereoBuffer, var cleanFrames: Int)
+
+    private val shelf = ArrayList<Idle>()
 
     /**
      * Bytes currently idle on the shelf. Always `<= budgetBytes` after any call returns. A `Double`
@@ -82,6 +88,26 @@ class SizedBuffers(
     var doubleReturns: Int = 0
         private set
 
+    /** Frames zeroed by [housekeep] so far. Monotone; the per-block cost is `<= HOUSEKEEP_FRAMES_PER_CALL` frames. */
+    var housekeptFrames: Double = 0.0
+        private set
+
+    /** Rents that had to clean a dirty buffer synchronously because nothing clean fitted. */
+    var syncCleans: Int = 0
+        private set
+
+    /** True when every idle buffer is fully zeroed — the warmup waits for this before `BackendReady`. */
+    val isClean: Boolean
+        get() {
+            for (idle in shelf) {
+                if (idle.cleanFrames < idle.buffer.left.size) {
+                    return false
+                }
+            }
+
+            return true
+        }
+
     /**
      * The smallest class holding [minFrames]: `baseFrames * 2^k` with the least `k >= 0` such that
      * it is `>= minFrames`. Anything at or below the base gets the base.
@@ -108,19 +134,38 @@ class SizedBuffers(
     fun rent(minFrames: Int, allocateOnMiss: Boolean = true): StereoBuffer? {
         val need = classFrames(minFrames)
 
-        var best: StereoBuffer? = null
+        // Best fit among CLEAN buffers first; a clean larger class beats a dirty exact class, because
+        // idle memory is plentiful and audio-thread time is not.
+        var best: Idle? = null
+        var bestIsClean = false
         for (candidate in shelf) {
-            if (candidate.left.size >= need && (best == null || candidate.left.size < best.left.size)) {
+            val size = candidate.buffer.left.size
+            if (size < need) {
+                continue
+            }
+            val clean = candidate.cleanFrames == size
+            val better = best == null ||
+                (clean && !bestIsClean) ||
+                (clean == bestIsClean && size < best.buffer.left.size)
+            if (better) {
                 best = candidate
+                bestIsClean = clean
             }
         }
 
         if (best != null) {
             shelf.remove(best)
-            shelfBytes -= bytesOf(best)
+            shelfBytes -= bytesOf(best.buffer)
             hits++
 
-            return best
+            if (!bestIsClean) {
+                // Nothing clean fitted: finish this one now. Bounded by what the allocation it
+                // replaces would have zeroed anyway.
+                clearFrom(best)
+                syncCleans++
+            }
+
+            return best.buffer
         }
 
         if (!allocateOnMiss) {
@@ -141,48 +186,85 @@ class SizedBuffers(
     }
 
     /**
-     * Returns [buffer] to the shelf, cleared. If that puts the shelf over budget, the largest idle
+     * Returns [buffer] to the shelf, DIRTY — O(1), nothing is touched (see the class KDoc: every
+     * return site is on the audio thread). If that puts the shelf over budget, the largest idle
      * buffers are freed until it is not — which may be this one, if it alone exceeds the budget.
-     * The eviction is decided FIRST and only a buffer that stays on the shelf is cleared: this runs
-     * on the audio thread (a grow returns the old ring inside `configure`), and zero-filling a ring
-     * that the next line drops is O(frames) for nothing (review round 2).
      */
     fun giveBack(buffer: StereoBuffer) {
         for (idle in shelf) {
-            if (idle === buffer) {
+            if (idle.buffer === buffer) {
                 doubleReturns++
 
                 return
             }
         }
 
-        shelf.add(buffer)
+        shelf.add(Idle(buffer, cleanFrames = 0))
         shelfBytes += bytesOf(buffer)
 
-        var kept = true
         while (shelfBytes > budgetBytes && shelf.isNotEmpty()) {
             var largest = shelf[0]
             for (candidate in shelf) {
-                if (candidate.left.size > largest.left.size) {
+                if (candidate.buffer.left.size > largest.buffer.left.size) {
                     largest = candidate
                 }
             }
-            if (largest === buffer) {
-                kept = false
-            }
             shelf.remove(largest)
-            shelfBytes -= bytesOf(largest)
+            shelfBytes -= bytesOf(largest.buffer)
             dropped++
         }
+    }
 
-        if (kept) {
-            // Everything already on the shelf was cleared when it arrived; only the newcomer needs it.
-            buffer.clear()
+    /**
+     * Zeroes up to [maxFrames] frames of dirty idle buffers, oldest return first, and returns how
+     * many it zeroed (0 when the shelf is clean). The backend calls this once per block with the
+     * default budget: one class-0 ring at 48 kHz, ~385 KB of stores, so a sixteen-ring warmup
+     * teardown is clean sixteen blocks later and a 20 s master ring in about fifty.
+     */
+    fun housekeep(maxFrames: Int = HOUSEKEEP_FRAMES_PER_CALL): Int {
+        var budget = maxFrames
+
+        for (idle in shelf) {
+            if (budget <= 0) {
+                break
+            }
+            val size = idle.buffer.left.size
+            val dirty = size - idle.cleanFrames
+            if (dirty == 0) {
+                continue
+            }
+            val n = if (dirty < budget) dirty else budget
+            val from = idle.cleanFrames
+            idle.buffer.left.fill(0.0, from, from + n)
+            idle.buffer.right.fill(0.0, from, from + n)
+            idle.cleanFrames += n
+            budget -= n
+        }
+
+        val done = maxFrames - budget
+        housekeptFrames += done
+
+        return done
+    }
+
+    private fun clearFrom(idle: Idle) {
+        val size = idle.buffer.left.size
+        if (idle.cleanFrames < size) {
+            idle.buffer.left.fill(0.0, idle.cleanFrames, size)
+            idle.buffer.right.fill(0.0, idle.cleanFrames, size)
+            idle.cleanFrames = size
         }
     }
 
     companion object {
         private const val BYTES_PER_FRAME = 2 * 8 // stereo, Double
+
+        /**
+         * Frames [housekeep] zeroes per call: one class-0 ring at 48 kHz. ~385 KB of stores per block,
+         * a fraction of a block's budget on a phone, and enough that the shelf is clean again within
+         * a few dozen blocks of any return.
+         */
+        const val HOUSEKEEP_FRAMES_PER_CALL: Int = 24_064
 
         /**
          * A ring shelf whose class 0 holds a [ResourceWarehouse.MIN_RING_SECONDS] delay at

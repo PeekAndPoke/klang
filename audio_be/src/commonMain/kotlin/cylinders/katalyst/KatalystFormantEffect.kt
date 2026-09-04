@@ -30,6 +30,9 @@ class KatalystFormantEffect(
     // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
     private val swap = KatalystFilterSwap(sampleRate)
 
+    /** True while a formant bank is installed — the owner has a vowel. */
+    val isEngaged: Boolean get() = swap.active
+
     /** Configure from the OWNER voice's vowel. `null` (owner has no vowel) turns the resonator off. */
     fun configure(vowel: FilterDef.Formant?) {
         if (vowel == null) {

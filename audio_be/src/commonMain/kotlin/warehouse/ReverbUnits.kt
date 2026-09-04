@@ -16,10 +16,13 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
  * `room`, and comes from here.
  *
  * Same rules as [SizedBuffers], simpler because every unit is the same size: **stocked by return,
- * never by prediction**; a returned unit is [Reverb.reset] and put back to constructor defaults, so
- * a rented one is indistinguishable from a new one; the shelf holds at most [maxIdle] units and
- * drops any further return (working memory is demand-driven and unbounded); allocation failure is
- * caught at this one site and reported as `null`; a double return is refused and counted.
+ * never by prediction**; a rented unit is indistinguishable from a new one — parameters back to
+ * constructor defaults at return (six fields, O(1)), state zeroed by DEFERRED housekeeping
+ * ([housekeep], one unit per call, called once per block by the backend) or on the spot by [rent]
+ * when nothing clean is idle (review round 3: a unit's `reset()` is ~27 k stores, and sixteen of
+ * them inside one render callback was the warmup's teardown stall); the shelf holds at most
+ * [maxIdle] units and drops any further return; allocation failure is caught at this one site and
+ * reported as `null`; a double return is refused and counted.
  */
 class ReverbUnits(
     val sampleRate: Int,
@@ -27,7 +30,9 @@ class ReverbUnits(
     val maxIdle: Int = MAX_IDLE_UNITS,
     private val allocate: (sampleRate: Int) -> Reverb? = ::allocateOrNull,
 ) {
-    private val shelf = ArrayList<Reverb>()
+    private class Idle(val unit: Reverb, var clean: Boolean)
+
+    private val shelf = ArrayList<Idle>()
 
     /** Idle units on the shelf right now. */
     val idleCount: Int get() = shelf.size
@@ -44,12 +49,57 @@ class ReverbUnits(
     var doubleReturns: Int = 0
         private set
 
-    /** A unit at constructor defaults with all-zero state, or `null` if none is idle and allocation failed. */
-    fun rent(): Reverb? {
-        if (shelf.isNotEmpty()) {
-            hits++
+    /** Units zeroed by [housekeep] so far. */
+    var housekeptUnits: Int = 0
+        private set
 
-            return shelf.removeAt(shelf.size - 1)
+    /** Rents that had to zero a dirty unit synchronously because no clean one was idle. */
+    var syncCleans: Int = 0
+        private set
+
+    /** True when every idle unit is zeroed — the warmup waits for this before `BackendReady`. */
+    val isClean: Boolean
+        get() {
+            for (idle in shelf) {
+                if (!idle.clean) {
+                    return false
+                }
+            }
+
+            return true
+        }
+
+    /**
+     * A unit at constructor defaults with all-zero state, or `null` if none is idle and allocation
+     * failed — or, with [allocateOnMiss] false, if none is idle (the caller knows allocation fails
+     * and only wants what the shelf serves for free; the delay's round-2 lesson).
+     */
+    fun rent(allocateOnMiss: Boolean = true): Reverb? {
+        // A clean unit first, newest return first; a dirty one is zeroed on the spot.
+        var pick = -1
+        for (i in shelf.indices.reversed()) {
+            if (shelf[i].clean) {
+                pick = i
+                break
+            }
+        }
+        if (pick < 0 && shelf.isNotEmpty()) {
+            pick = shelf.size - 1
+        }
+
+        if (pick >= 0) {
+            val idle = shelf.removeAt(pick)
+            hits++
+            if (!idle.clean) {
+                idle.unit.reset()
+                syncCleans++
+            }
+
+            return idle.unit
+        }
+
+        if (!allocateOnMiss) {
+            return null
         }
 
         val fresh = allocate(sampleRate)
@@ -66,12 +116,13 @@ class ReverbUnits(
     }
 
     /**
-     * Returns [unit] to the shelf, reset to all-zero state and constructor-default parameters. Over
-     * [maxIdle] the unit is dropped instead (and not reset: garbage needs no zero-fill).
+     * Returns [unit] to the shelf: parameters back to constructor defaults now (O(1)), state zeroed
+     * later by [housekeep] or by the [rent] that takes it. Over [maxIdle] the unit is dropped
+     * instead.
      */
     fun giveBack(unit: Reverb) {
         for (idle in shelf) {
-            if (idle === unit) {
+            if (idle.unit === unit) {
                 doubleReturns++
 
                 return
@@ -84,9 +135,23 @@ class ReverbUnits(
             return
         }
 
-        unit.reset()
         unit.restoreDefaults()
-        shelf.add(unit)
+        shelf.add(Idle(unit, clean = false))
+    }
+
+    /** Zeroes ONE dirty idle unit (oldest return first). Returns true if it did. */
+    fun housekeep(): Boolean {
+        for (idle in shelf) {
+            if (!idle.clean) {
+                idle.unit.reset()
+                idle.clean = true
+                housekeptUnits++
+
+                return true
+            }
+        }
+
+        return false
     }
 
     companion object {

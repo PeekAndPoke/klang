@@ -58,6 +58,13 @@ internal class MasterChain private constructor(
      */
     val deniedRents: Int,
 ) {
+    /**
+     * Set by [releaseUnits]: the chain's rings and networks belong to the shelf now, and any
+     * further [process] / [reset] would write into units another orbit may already have rented —
+     * cross-talk the double-return guard cannot see (review round 3). Both become no-ops.
+     */
+    private var released = false
+
     /** True when this chain does anything at all — an empty chain is a pure pass-through. */
     val isActive: Boolean = stages.isNotEmpty()
 
@@ -65,6 +72,9 @@ internal class MasterChain private constructor(
     val hasTail: Boolean = reverbs.isNotEmpty() || delays.isNotEmpty()
 
     fun process(bus: StereoBuffer, frames: Int) {
+        if (released) {
+            return
+        }
         for (i in stages.indices) {
             stages[i].process(bus, frames)
         }
@@ -99,6 +109,10 @@ internal class MasterChain private constructor(
      * belong to whoever rents them next).
      */
     fun releaseUnits(rings: SizedBuffers, reverbs: ReverbUnits) {
+        if (released) {
+            return
+        }
+        released = true
         for (i in delays.indices) {
             rings.giveBack(delays[i].ring)
         }
@@ -109,6 +123,9 @@ internal class MasterChain private constructor(
 
     /** Clears every stateful unit, so a re-adopted chain cannot replay an earlier section. */
     fun reset() {
+        if (released) {
+            return
+        }
         for (i in reverbs.indices) {
             reverbs[i].reset()
         }

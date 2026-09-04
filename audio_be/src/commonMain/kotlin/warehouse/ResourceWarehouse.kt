@@ -18,10 +18,14 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
  * spec would share one warehouse, the offline renderer would share it with a live backend in the
  * same JVM, and state would leak between tests.
  *
- * Two shelves with different rules, on purpose:
+ * Four shelves, two kinds of rule:
  *
- * - [sized] — large, per-orbit, returnable state (delay rings, reverb units). Rent may return
- *   `null`: this is the one out-of-memory catch site, and the compiler makes every consumer decide.
+ * - [sized] (delay rings, class-sized, byte-budgeted), [reverbs] (Freeverb networks, one size,
+ *   count-bounded) and [cylinders] (whole orbits, count-bounded) — large, returnable state. Rent
+ *   may return `null` for rings and networks: those are the out-of-memory catch sites, and the
+ *   compiler makes every consumer decide. A cylinder without units is a few KB and is not caught.
+ *   Idle memory is therefore `SHELF_BUDGET_BYTES` (rings) + 32 networks (~6.5 MB at 44.1 kHz) +
+ *   32 cylinders (KBs); the byte budget covers the part that has a ladder.
  * - [scratch] — per-node, per-block, KB-scale, held for microseconds. NOT nullable: a 1 KB failure
  *   cannot be handled meaningfully, and `acquire()` runs per node per block, so nullability there
  *   would spread branches whose only content is "render silence" through every composing ignitor.
@@ -43,6 +47,20 @@ class ResourceWarehouse(
 
     /** Whole cylinders — built by the warmup, returned by engine disposal, taken by the next engine. */
     val cylinders: CylinderUnits = CylinderUnits(blockFrames = blockFrames, sampleRate = sampleRate, rings = sized, reverbs = reverbs)
+
+    /**
+     * One block's worth of deferred clearing: up to one class-0 ring's frames and one reverb network
+     * (review round 3). The backend calls this once per rendered block, after the mix, so a return
+     * costs nothing where it happens and the shelf is zeroed a few dozen blocks later. Cylinders
+     * need no housekeeping: a retired one holds no units and its own state is small.
+     */
+    fun housekeep() {
+        sized.housekeep()
+        reverbs.housekeep()
+    }
+
+    /** True when every idle ring and network is zeroed — what the warmup waits for before `BackendReady`. */
+    val isClean: Boolean get() = sized.isClean && reverbs.isClean
 
     /**
      * The one shared scratch pool. Engines render sequentially within a block, so one is enough.

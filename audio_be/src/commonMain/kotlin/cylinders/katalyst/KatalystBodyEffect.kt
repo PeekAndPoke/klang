@@ -39,6 +39,9 @@ class KatalystBodyEffect(
     // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
     private val swap = KatalystFilterSwap(sampleRate)
 
+    /** True while a resonator bank is installed — the owner has a body. */
+    val isEngaged: Boolean get() = swap.active
+
     /** Configure from the OWNER voice's body. `null` (owner has no body) turns the resonator off. */
     fun configure(body: FilterDef.Body?) {
         if (body == null) {

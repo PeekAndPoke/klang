@@ -130,7 +130,9 @@ class SampleStoreSpec : StringSpec({
         store.contains(r) shouldBe true // known, so it is not re-requested every note
         store.allocationFailures shouldBe 1
         asked shouldBe 1 // the second chunk did not restart the allocation
-        commLink.drainFeedback().filterIsInstance<KlangCommLink.Feedback.SampleReceived>() shouldBe emptyList()
+        // The frontend's preloader awaits the same ack a success sends, with no timeout: without
+        // it a failed upload left the playback waiting forever (review round 3).
+        commLink.drainFeedback().filterIsInstance<KlangCommLink.Feedback.SampleReceived>().map { it.req } shouldBe listOf(r)
     }
 
     "the default PCM allocator turns a hopeless size into null rather than a throw" {

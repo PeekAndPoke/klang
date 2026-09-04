@@ -322,7 +322,15 @@ class Cylinder(
      * on its current orbit: `CylinderUnits.giveBack` is the one caller.
      */
     fun retire() {
-        resetBusEffects()
+        // NOT resetBusEffects(): that would zero the ring and the network here, on the audio thread,
+        // and the shelves zero them again on return (review round 3: sixteen warmup cylinders
+        // retired in one block were ~19 MB of stores, twice). The units go back DIRTY and the
+        // warehouse's housekeeping zeroes them a block at a time; only the small effects reset here.
+        body.reset()
+        vowel.reset()
+        phaser.phaser.resetForReuse()
+        compressor.compressor = null
+        ducking.clear()
         delay.release()
         reverb.release()
         lease.reset()

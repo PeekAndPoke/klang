@@ -139,11 +139,19 @@ of catching it there.
 
 ```kotlin
 /** One per backend, owned by AudioBackendContext — singleton in effect, injectable in specs. */
-class ResourceWarehouse(blockFrames: Int, budgetBytes: Int) {
-    val sized: SizedBuffers      // rings + reverb units: rent (nullable) / return / shelf / budget
-    val scratch: ScratchBuffers  // one shared pool, sized at build, never allocates in render
+class ResourceWarehouse(sampleRate: Int, blockFrames: Int, budgetBytes: Int) {
+    val sized: SizedBuffers        // delay rings: class ladder, rent (nullable) / return / byte budget
+    val reverbs: ReverbUnits       // Freeverb networks: one size, rent (nullable) / return / count bound
+    val cylinders: CylinderUnits   // whole orbits: rent / return / count bound (as built 2026-09-04)
+    val scratch: ScratchBuffers    // one shared pool, sized at build, never allocates in render
+    fun housekeep()                // one block's slice of deferred zeroing (review round 3)
+    val isClean: Boolean           // the warmup waits for this before BackendReady
 }
 ```
+
+(As designed this was two shelves, `sized` holding "rings + reverb units"; as built, networks are
+their own one-size shelf and cylinders joined later. The byte budget covers the rings; networks and
+cylinders are count-bounded, ~6.5 MB and KBs respectively.)
 
 `ctx.scratchBuffers` becomes `ctx.warehouse.scratch`. **Not a Kotlin `object`** (maintainer agreed):
 a real singleton cannot be replaced, so every spec would share one warehouse, the offline renderer
@@ -238,6 +246,36 @@ warmup's coverage; explicit synthetic voices, not a builtin song.
 - Not measured again yet: the Fairphone, after this. If it still stalls, the next suspects are
   per-note voice-graph construction and JIT of paths the warmup does not reach (body/vowel, master
   chains), and the measurement should be a profile, not a guess.
+
+### Review round 3 (2026-09-04, two fresh Opus reviewers on 2d–2g + cylinders + warmup)
+
+Both reviewers' MAJOR, which I had missed: **the teardown**. `retire()` zeroed every ring and
+network twice (`reset()` then the shelf's `giveBack`), and the warmup's `cleanupHard` retired all
+sixteen cylinders inside ONE render callback (~19 MB of stores, on the phone this exists for);
+the same shape at every song stop (inside `renderBlockAt`) and at master-chain eviction (a 20 s
+master ring is 24.6 MB, inside a command drain). The plan's own "clearing at return is away from
+any onset" was false at every return site. **Fix: clearing is deferred housekeeping in the shelves.**
+`giveBack` is O(1) and marks the unit dirty; `ResourceWarehouse.housekeep()` runs once per block
+from the dispatcher and zeroes a bounded slice (one class-0 ring's frames + one network); `rent`
+prefers a clean unit, any class, and zeroes a dirty one on the spot only when nothing clean fits
+(what the allocation it replaces would have cost). `retire()` resets only the small effects. The
+warmup holds `BackendReady` until `isClean`. This also retires round 1's "grow pays a clear at
+note time" residual: a grow's old ring goes back dirty too.
+
+Second MAJOR (coding): `SampleEntry.AllocationFailed` sent no `SampleReceived`, and the FE
+preloader awaits that ack with no timeout — a failed upload hung the playback forever. Now acked.
+MINORs, applied: the reverb's refusal latch blocked a free shelf hit (the delay's round-2 lesson,
+re-learned: `ReverbUnits.rent(allocateOnMiss)`); the warmup bucketed on `RENDER_QUANTUM_FRAMES`,
+not the host's block size (now `dispatcher.blockFrames`); `MasterChain.releaseUnits` left live
+references (a `released` flag makes `process`/`reset` no-ops); a `LazyReverbSpec` row named the
+catch but tested the happy path (renamed); the warmup now also reaches the phaser, compressor,
+body and vowel constructors; stale KDocs. The audio reviewer's third MAJOR — sixteen wet
+cylinders rendering for the warmup's last nine blocks — is answered by `TAIL_BLOCKS = 2`: the
+peak lasts two blocks, and deactivation cannot fire inside the window anyway (round-robin tail
+check, one cylinder per block). Rejected: retrying a failed sample upload (`contains` false would
+re-upload megabytes on every note under the memory pressure that failed the first one; permanent
+by design, documented). Noted, not changed: the master's `hasActiveTail` whole-ring scan lost its
+10 s bound with `MAX_DELAY_SECONDS` (same follow-up as the orbit's, round 2). 17 mutations red.
 
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
