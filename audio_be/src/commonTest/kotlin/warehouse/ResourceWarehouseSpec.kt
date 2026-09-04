@@ -28,6 +28,15 @@ class ResourceWarehouseSpec : StringSpec({
 
     val base = 8
 
+    /** Runs the per-block slice until the shelf is clean (the default slice is one class-0 ring: 8 frames here). */
+    fun SizedBuffers.housekeepAll() {
+        var guard = 0
+        while (!isClean) {
+            (guard++ < 10_000) shouldBe true // a stuck dirty counter must FAIL, not hang the suite
+            housekeep()
+        }
+    }
+
     /** An allocator that records every size it was asked for and can be told to fail. */
     class Recording(var failing: Boolean = false) : (Int) -> StereoBuffer? {
         val asked = mutableListOf<Int>()
@@ -205,7 +214,7 @@ class ResourceWarehouseSpec : StringSpec({
         val dirty8 = s.rent(8).shouldNotBeNull()
         val clean16 = s.rent(16).shouldNotBeNull()
         s.giveBack(clean16)
-        s.housekeep() // the 16 is clean now
+        s.housekeepAll() // the 16 is clean now
         dirty8.left[0] = 0.5
         s.giveBack(dirty8) // and the 8 is dirty
 
@@ -229,8 +238,8 @@ class ResourceWarehouseSpec : StringSpec({
 
     "housekeep zeroes the oldest return first, across buffers, within one budget" {
         val (s, _) = shelf()
-        val first = s.rent(8).shouldNotBeNull().also { it.left.fill(1.0) }
-        val second = s.rent(8).shouldNotBeNull().also { it.left.fill(1.0) }
+        val first = s.rent(8).shouldNotBeNull().also { it.left.fill(1.0); it.right.fill(1.0) }
+        val second = s.rent(8).shouldNotBeNull().also { it.left.fill(1.0); it.right.fill(1.0) }
         s.giveBack(first)
         s.giveBack(second)
 
@@ -240,6 +249,31 @@ class ResourceWarehouseSpec : StringSpec({
         first.right.all { it == 0.0 } shouldBe true
         second.left[3] shouldBe 0.0 // 4 more
         second.left[4] shouldBe 1.0
+    }
+
+    "best-fit-up is BOUNDED at one class above the need — an oversized idle ring is not handed out" {
+        // Review round 4: an unbounded preference handed a 0.25 s delay a 32 s ring (every later
+        // tail scan O(ring), and a dirty one a 24 MB clear inside the onset block). Past one class
+        // up the request allocates its own size...
+        val (s, alloc) = shelf()
+        val huge = s.rent(64).shouldNotBeNull()
+        s.giveBack(huge)
+        s.housekeepAll()
+        s.isClean shouldBe true
+
+        val small = s.rent(8).shouldNotBeNull()
+        small shouldNotBeSameInstanceAs huge
+        small.left.size shouldBe 8
+        s.shelfCount shouldBe 1 // the huge one stayed idle
+        // ...one class up is still taken (the maintainer's "a 2 s request takes an idle 4 s")...
+        val sixteen = s.rent(16).shouldNotBeNull()
+        s.giveBack(sixteen)
+        s.housekeepAll()
+        s.rent(8) shouldBeSameInstanceAs sixteen
+        // ...and only when allocation FAILS does the oversized one serve, clean before dirty.
+        alloc.failing = true
+        s.rent(8) shouldBeSameInstanceAs huge
+        s.failures shouldBe 1
     }
 
     "a dropped buffer is never cleared — garbage needs no zero-fill" {
@@ -255,7 +289,7 @@ class ResourceWarehouseSpec : StringSpec({
         s.giveBack(b32) // 56 > 24: the 32 is the largest and goes; the 16 and 8 stay
         s.dropped shouldBe 1
         s.shelfCount shouldBe 2
-        repeat(10) { s.housekeep() }
+        s.housekeepAll()
         b32.left[2] shouldBe 0.4 // not on the shelf, not housekept
     }
 

@@ -230,7 +230,7 @@ warmup's coverage; explicit synthetic voices, not a builtin song.
   ring, one network per block — the same stall would otherwise just move into the warmup's first
   frame, inaudible but long enough to have the worklet dropped), each with delay + room + filter,
   rotating `WARMUP_SOUNDS` (sine, saw, supersaw, square, triangle, the all-zeros sample) so each
-  ignitor graph is JITed before a song's first note of it. `warmupBlocks = 16 + 8` ≈ 64 ms at 48 kHz.
+  ignitor graph is JITed before a song's first note of it. `warmupBlocks = 16 + 2` (round 3 shortened the tail), plus ~16 blocks until the shelves are clean, ≈ 90 ms at 48 kHz.
   `cleanupHard` at the end is the return path: **16 cylinders, 16 rings, 16 networks on the shelves
   before `BackendReady`.**
 - `CylinderShelfSpec` (5 rows): disposal returns/retires and the next engine takes the same instance
@@ -276,6 +276,30 @@ check, one cylinder per block). Rejected: retrying a failed sample upload (`cont
 re-upload megabytes on every note under the memory pressure that failed the first one; permanent
 by design, documented). Noted, not changed: the master's `hasActiveTail` whole-ring scan lost its
 10 s bound with `MAX_DELAY_SECONDS` (same follow-up as the orbit's, round 2). 17 mutations red.
+
+### Review round 4 (2026-09-04, two fresh Opus reviewers on the round-3 fix)
+
+One MAJOR, found by both: `rent`'s preference was class-unbounded. The clean-first pick could hand a
+0.25 s delay an idle 32 s ring (every later `hasTail` scan O(ring)), and the dirty fallback could
+zero a 24 MB master ring INSIDE an onset block — the round-3 stall relocated from the return to the
+rent. **Fixed: best-fit-up is bounded at one class above the need** (the maintainer's "a 2 s request
+takes an idle 4 s" is exactly the cap); past it the request allocates its own size, and an oversized
+idle buffer serves only when allocation fails, clean before dirty. A second MAJOR (coding): the
+warmup's ready-when-clean wait was unbounded on shared state — other playbacks return into the same
+shelves, and the frontend gives up after 2 s and starts cold with the output still zeroed. **Fixed:
+`maxCleanWaitBlocks` (4 × 16); past it `BackendReady` goes out dirty** (`readyWhileDirty`), which is
+safe because `rent` zeroes what it hands out either way. Also: `dirtyCount` on both shelves so the
+per-block `housekeep` is an integer compare while clean (100 % of playing time); the housekeeping
+slice is `baseFrames` (rate-derived) not a literal; the offline `KlangAudioRenderer` housekeeps too;
+`deniedRents` is per cylinder life; `isEngaged` seams are `internal`; a tautological assertion and a
+row that claimed the right channel dropped/fixed; three stale docs. **Recorded, not changed:** a
+master re-registration at the same class evicts a chain and rebuilds it in the same command drain,
+so the rebuilt chain takes the just-returned dirty ring and zeroes it there — the same bytes a fresh
+allocation would zero, i.e. the pre-2e cost, not the round-3 "O(1)" the triage line claimed for that
+site. **Parked for the maintainer:** `Cylinder.tryDeactivate` → `resetBusEffects()` still zeroes the
+kept ring and network synchronously in render every time an orbit goes silent (pre-existing, ~385 KB
++ a network at class 0); the alternative is to give the units back on deactivation (O(1), dirty; the
+re-activation becomes a shelf hit, clean by then in practice). 14 mutations red.
 
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and

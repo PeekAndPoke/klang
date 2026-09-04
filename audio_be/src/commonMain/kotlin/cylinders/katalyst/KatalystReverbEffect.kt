@@ -217,6 +217,7 @@ class KatalystReverbEffect(
         state = State.Off
         drainRemaining = 0.0
         refused = false
+        deniedRents = 0 // per life, see the delay's release()
     }
 
     /** Clears the network, the lifecycle AND the DSP params — called from

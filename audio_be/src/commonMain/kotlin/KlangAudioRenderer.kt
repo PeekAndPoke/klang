@@ -66,6 +66,9 @@ class KlangAudioRenderer private constructor(
         // Same convention as the live dispatcher (RenderClock.cursorFrame): the clock is the NEXT
         // block between renders. Offline, everything is scheduled before the first render at
         // cursor 0, so this changes nothing about where a render starts.
+        // The same per-block housekeeping as the live dispatcher: offline is not realtime, but
+        // "every render loop housekeeps" keeps the shelf contract a renderer contract, not a host one.
+        context.warehouse.housekeep()
         clock.cursorFrame = cursorFrame + context.blockFrames
     }
 

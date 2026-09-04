@@ -150,7 +150,7 @@ class KatalystDelayEffect(
         val line = DelayLine(ring, sampleRate)
 
         if (current != null) {
-            // Adopt FIRST: giveBack clears the ring it is handed.
+            // Adopt FIRST: once given back the ring belongs to the shelf and its next renter.
             line.adoptHistory(current)
             rings.giveBack(current.ring)
         }
@@ -243,6 +243,7 @@ class KatalystDelayEffect(
         state = State.Off
         drainRemaining = 0.0
         refusedFrames = 0
+        deniedRents = 0 // per life: a shelved cylinder must not carry a previous engine's count
     }
 
     fun reset() {

@@ -44,6 +44,14 @@ class WarmupRunner(
      * divergence is gone.
      */
     private val warmupBlocks: Int = WARMUP_ORBITS + TAIL_BLOCKS,
+    /**
+     * Blocks after disposal the runner waits for the warehouse to be clean before sending
+     * `BackendReady` regardless. The clean shelf is an optimisation, not a correctness condition
+     * (`rent` zeroes a dirty buffer itself), and the warehouse is shared state other playbacks
+     * return into — an unbounded wait could hold the output silenced forever while the frontend
+     * gives up and starts cold (review round 4). Sixteen rings need sixteen blocks; four times that.
+     */
+    private val maxCleanWaitBlocks: Int = 4 * WARMUP_ORBITS,
 ) {
     companion object {
         /** Reserved playback-id — no real song can use this. */
@@ -173,6 +181,10 @@ class WarmupRunner(
     /** The warmup engine has been disposed; the runner is waiting for the warehouse to zero what came back. */
     private var disposed = false
 
+    /** True if `BackendReady` went out with the shelves still dirty — the wait hit [maxCleanWaitBlocks]. */
+    var readyWhileDirty: Boolean = false
+        private set
+
     /**
      * Should be called once per audio block while warming. Counts progress toward [warmupBlocks];
      * on that tick the warmup engine is disposed (its cylinders, rings and networks go to the
@@ -195,10 +207,14 @@ class WarmupRunner(
             dispatcher.resetPostChain()
         }
 
-        if (disposed && dispatcher.isWarehouseClean) {
-            finished = true
-            feedback.feedback.send(KlangCommLink.Feedback.BackendReady())
-            return false
+        if (disposed) {
+            val clean = dispatcher.isWarehouseClean
+            if (clean || blocksRun >= warmupBlocks + maxCleanWaitBlocks) {
+                finished = true
+                readyWhileDirty = !clean
+                feedback.feedback.send(KlangCommLink.Feedback.BackendReady())
+                return false
+            }
         }
 
         return true

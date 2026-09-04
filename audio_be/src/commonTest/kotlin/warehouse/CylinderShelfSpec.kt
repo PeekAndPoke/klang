@@ -263,10 +263,36 @@ class CylinderShelfSpec : StringSpec({
             }
         }
 
-        readyAt shouldBe block
         dirtyWhenReady shouldBe false
         // And it was NOT ready on the disposal tick itself: sixteen dirty rings need sixteen slices.
         (readyAt > WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS + 8) shouldBe true
+    }
+
+    "the clean-shelf wait is BOUNDED — a warehouse that never gets clean still becomes ready" {
+        // The shelf being clean is an optimisation (rent zeroes a dirty buffer itself), and the
+        // warehouse is shared state other playbacks return into. An unbounded wait would keep the
+        // output silenced while the frontend gives up and starts cold (review round 4).
+        val f = fixture()
+        // A dirty ring three classes up takes eight housekeeping blocks; the wait allows two.
+        val big = f.warehouse.sized.rent(f.warehouse.sized.baseFrames * 8).shouldNotBeNull()
+        val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend, maxCleanWaitBlocks = 2)
+        warmup.start()
+
+        var block = 0
+        while (warmup.isWarming) {
+            (block < 400) shouldBe true
+            if (block == WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS) {
+                f.warehouse.sized.giveBack(big) // lands dirty right at disposal
+            }
+            f.render(1)
+            block++
+            warmup.tick()
+        }
+
+        block shouldBe WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS + 2
+        warmup.readyWhileDirty shouldBe true
+        f.warehouse.isClean shouldBe false
+        generateSequence { f.commLink.frontend.feedback.receive() }.toList().last().shouldBeInstanceOf<KlangCommLink.Feedback.BackendReady>()
     }
 
     "the warmup reaches the phaser, compressor, body and vowel constructors too" {

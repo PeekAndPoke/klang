@@ -57,17 +57,12 @@ class ReverbUnits(
     var syncCleans: Int = 0
         private set
 
-    /** True when every idle unit is zeroed — the warmup waits for this before `BackendReady`. */
-    val isClean: Boolean
-        get() {
-            for (idle in shelf) {
-                if (!idle.clean) {
-                    return false
-                }
-            }
+    /** Idle units not yet zeroed; keeps the per-block [housekeep] an integer compare while clean. */
+    var dirtyCount: Int = 0
+        private set
 
-            return true
-        }
+    /** True when every idle unit is zeroed — the warmup waits for this before `BackendReady`. */
+    val isClean: Boolean get() = dirtyCount == 0
 
     /**
      * A unit at constructor defaults with all-zero state, or `null` if none is idle and allocation
@@ -92,6 +87,7 @@ class ReverbUnits(
             hits++
             if (!idle.clean) {
                 idle.unit.reset()
+                dirtyCount--
                 syncCleans++
             }
 
@@ -121,8 +117,8 @@ class ReverbUnits(
      * instead.
      */
     fun giveBack(unit: Reverb) {
-        for (idle in shelf) {
-            if (idle.unit === unit) {
+        for (i in shelf.indices) {
+            if (shelf[i].unit === unit) {
                 doubleReturns++
 
                 return
@@ -137,14 +133,21 @@ class ReverbUnits(
 
         unit.restoreDefaults()
         shelf.add(Idle(unit, clean = false))
+        dirtyCount++
     }
 
-    /** Zeroes ONE dirty idle unit (oldest return first). Returns true if it did. */
+    /** Zeroes ONE dirty idle unit (oldest return first). Returns true if it did; an integer compare when clean. */
     fun housekeep(): Boolean {
-        for (idle in shelf) {
+        if (dirtyCount == 0) {
+            return false
+        }
+
+        for (i in shelf.indices) {
+            val idle = shelf[i]
             if (!idle.clean) {
                 idle.unit.reset()
                 idle.clean = true
+                dirtyCount--
                 housekeptUnits++
 
                 return true
