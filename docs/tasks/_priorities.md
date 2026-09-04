@@ -116,9 +116,9 @@ The release-defining set, regardless of when they're sequenced:
 
 ## Lower / opportunistic (Q3 "likely, lower priority")
 
-15. **SHOULD** · **Soundfont looping bug** — [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md)
-    🔴
-    Sustained soundfont instruments loop incorrectly (correctness bug); matters if they feature in tutorials.
+15. ~~**SHOULD** · **Soundfont looping bug**~~ — ✅ DONE 2026-09-03, confirmed by ear; archived
+    [`20260903-soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md).
+    Three stacked defects; in the browser no soundfont had ever looped (the worklet dropped every sample's metadata).
     The only user-visible item on that list; blocks round-trip drops loop/break/continue.
 17. **NICE** · **Filter-envelope curve config** (`lpadsrCurves`) — [
     `filter-envelope-configuration.md`](filter-envelope-configuration.md) 🔴
