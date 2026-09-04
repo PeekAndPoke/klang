@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.effects
 
-import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -105,14 +104,17 @@ class TailCeilingSpec : StringSpec({
         decay(4) shouldBe 17
     }
 
-    "a window shorter than a block closes several times inside one observe; a period change is followed" {
+    "several boundaries in one block: the block's peak is credited to every window it touches" {
+        // Window 8, block 128: sixteen closes per call. A full-scale sample anywhere in the block
+        // must still be a ceiling of 1.0 for the window the block continues — the first cut
+        // credited the peak to the first window only and under-bounded by fb^16 (review round 2).
         val c = TailCeiling()
         c.observe(inputPeak = 1.0, frames = 128, windowSamples = 8.0, feedback = 0.5, lapsPerWindow = 1)
-        // 128 frames = 16 windows of 8: the 1.0 written in the first window has halved ~15 times
-        // by the end of the block — still above 1e-5 (2^-15 ≈ 3e-5)...
         c.hasTail shouldBe true
+        // The next block, silent: the ceiling is ~1.0 at its start and decays 16 halvings inside it.
         c.observe(inputPeak = 0.0, frames = 128, windowSamples = 8.0, feedback = 0.5, lapsPerWindow = 1)
-        // ...and gone after the next block's 16 more.
+        c.hasTail shouldBe true // 2^-16 ≈ 1.5e-5 is still over the threshold
+        c.observe(inputPeak = 0.0, frames = 128, windowSamples = 8.0, feedback = 0.5, lapsPerWindow = 1)
         c.hasTail shouldBe false
 
         // A longer period from here on decays slower: the same content survives longer.
@@ -120,6 +122,45 @@ class TailCeilingSpec : StringSpec({
         slow.observe(inputPeak = 1.0, frames = 128, windowSamples = 8.0, feedback = 0.5, lapsPerWindow = 1)
         slow.observe(inputPeak = 0.0, frames = 128, windowSamples = 100_000.0, feedback = 0.5, lapsPerWindow = 1)
         slow.hasTail shouldBe true
+    }
+
+    "a block that does not divide the window carries its remainder — boundaries land on the sample, not the block" {
+        // 300-sample windows, 128-frame blocks. The fed block closes no window; the first close
+        // is at sample 300 (block 3), carrying 1.0 into `previous`; the k-th close at 300·k leaves
+        // previous = 0.5^(k−1), below 1e-5 from k = 18, i.e. sample 5400, inside block 43.
+        // Dropping the carry (elapsed = 0 each block) would never close a window at all.
+        val c = TailCeiling()
+        c.observe(inputPeak = 1.0, frames = 128, windowSamples = 300.0, feedback = 0.5, lapsPerWindow = 1)
+        var blocks = 1
+        while (c.hasTail) {
+            c.observe(inputPeak = 0.0, frames = 128, windowSamples = 300.0, feedback = 0.5, lapsPerWindow = 1)
+            blocks++
+            (blocks < 500) shouldBe true
+        }
+        blocks shouldBe 43
+    }
+
+    "a window collapse is bounded: past MAX_CLOSES_PER_CALL the rest fold without decay — held, never cut" {
+        val c = TailCeiling()
+        c.observe(inputPeak = 1.0, frames = 128, windowSamples = 1_000_000.0, feedback = 0.5, lapsPerWindow = 1)
+        // 20 s → 10 ms: ~7 800 boundaries pending; 64 are decayed, the rest are folded.
+        c.observe(inputPeak = 0.0, frames = 128, windowSamples = 1.0, feedback = 0.5, lapsPerWindow = 1)
+        c.hasTail shouldBe false // 64 halvings of 1.0 is 5e-20: below threshold regardless
+        val d = TailCeiling()
+        d.observe(inputPeak = 1.0, frames = 128, windowSamples = 1_000_000.0, feedback = 0.999, lapsPerWindow = 1)
+        d.observe(inputPeak = 0.0, frames = 128, windowSamples = 1.0, feedback = 0.999, lapsPerWindow = 1)
+        d.hasTail shouldBe true // 64 decays at 0.999 is 0.94: still a tail, and the folded rest did not cut it
+
+        // The fold really discards the stale elapsed time: the next single-sample call closes ONE
+        // window, not 64 more. At fb 0.9: 64 decays → 1.2e-3; one more → 1.1e-3 (a tail); 64 more
+        // would be 1.3e-6 (cut) — time that elapsed under the OLD period must not decay content
+        // under the new one.
+        val e = TailCeiling()
+        e.observe(inputPeak = 1.0, frames = 128, windowSamples = 1_000_000.0, feedback = 0.9, lapsPerWindow = 1)
+        e.observe(inputPeak = 0.0, frames = 128, windowSamples = 1.0, feedback = 0.9, lapsPerWindow = 1)
+        e.hasTail shouldBe true
+        e.observe(inputPeak = 0.0, frames = 1, windowSamples = 1.0, feedback = 0.9, lapsPerWindow = 1)
+        e.hasTail shouldBe true
     }
 
     "reset(): the unit holds nothing" {
@@ -136,5 +177,61 @@ class TailCeilingSpec : StringSpec({
         b.left[2] = 0.1
         TailCeiling.peakOf(b, 8) shouldBe 0.3
         TailCeiling.peakOf(b, 5) shouldBe 0.1 // index 5 is past the first five
+    }
+
+
+    "a non-finite input peak counts as 'louder than any audio', never as NaN — no tail is cut, no orbit pinned by accident" {
+        // Review round 2: peakOf propagates +Inf; at feedback 0 `Inf · 0` made the ceiling NaN,
+        // NaN compares false, and the effect reported no tail while the ring still rang.
+        val c = TailCeiling()
+        c.observe(inputPeak = Double.POSITIVE_INFINITY, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 2)
+        c.hasTail shouldBe true // finite, saturated, still a tail (the window closed; previous holds it)
+        c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 2)
+        c.hasTail shouldBe false // and at feedback 0 it is gone after the next window, like any content
+
+        // With feedback it decays from the saturation value in a finite number of windows.
+        val d = TailCeiling()
+        d.observe(inputPeak = Double.POSITIVE_INFINITY, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 2)
+        var w = 0
+        while (d.hasTail) {
+            d.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 2)
+            w++
+            (w < 1000) shouldBe true
+        }
+        (w in 30..40) shouldBe true // log2(1e6 · 1.5 / 1e-5) ≈ 37 halvings
+
+        // NaN samples are skipped by peakOf (a NaN compares false), so they contribute nothing.
+        val b = StereoBuffer(4)
+        b.left[1] = Double.NaN
+        b.right[2] = 0.2
+        TailCeiling.peakOf(b, 4) shouldBe 0.2
+    }
+
+
+    "self-oscillation then a sane feedback again: the ceiling saturates, so it can still decay — and feedback 0 does not NaN it" {
+        // Review round 2: without a cap, fb 10 overflowed the ceiling to +Inf in ~3 s; a later
+        // fb 0.5 kept it at Inf (pinned for life) and fb 0.0 made it NaN (no tail while ringing).
+        val c = TailCeiling()
+        c.observe(inputPeak = 0.5, frames = 100, windowSamples = 100.0, feedback = 10.0, lapsPerWindow = 2)
+        repeat(1000) { c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 10.0, lapsPerWindow = 2) }
+        c.hasTail shouldBe true
+
+        var w = 0
+        while (c.hasTail) {
+            c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 2)
+            w++
+            (w < 1000) shouldBe true
+        }
+        (w in 30..40) shouldBe true // from the saturation value, not from infinity
+
+        val z = TailCeiling()
+        z.observe(inputPeak = 0.5, frames = 100, windowSamples = 100.0, feedback = 10.0, lapsPerWindow = 2)
+        repeat(1000) { z.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 10.0, lapsPerWindow = 2) }
+        // At feedback 0 the ring emits its content once more, during the window in progress...
+        z.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 2)
+        z.hasTail shouldBe true // previous still holds the saturated value inside this window
+        // ...and holds nothing after that window closes: a real false, not a NaN one.
+        z.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 2)
+        z.hasTail shouldBe false
     }
 })

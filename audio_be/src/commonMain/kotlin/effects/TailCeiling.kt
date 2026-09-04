@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import kotlin.math.floor
 
 /**
  * "Does this delay or reverb still hold audible energy?" — answered from a running CEILING on its
@@ -45,11 +46,16 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * |feedback| ≥ 1 never decays and pins the orbit until the owner turns it off — the raw engine's
  * intent, and what the scan did for a charged self-oscillating ring.
  *
- * **When the answer differs from the scan.** Never on the audible side: the ceiling is an upper
- * bound of every cell, so "no tail" here implies the scan would say so too. It can hold the unit
- * longer — up to one window, and by the slack of the bound (up to 2× at high feedback, i.e. one
- * extra halving-time) — which costs an idle orbit a moment, never audio. The scans stay as test
- * oracles for exactly that claim.
+ * **When the answer differs from the scan.** Never on the audible side FOR WHAT THE CURRENT TAP
+ * CAN REACH: the ceiling bounds every cell within one recirculation of the head, so "no tail"
+ * here implies `tapWindowPeakAbs` would say so too. Content parked deeper in a ring after a
+ * delay-time SHORTENING is outside that scope (a later lengthening could tap it again), which the
+ * delay effect's own KDoc already files under raw live-change behaviour; and the comb damping's
+ * one-pole carries a small weight (≤ d², 0.16 at most) of windows older than the previous one,
+ * folded into the bound's own slack (its steady state overstates a comb by ~1.7× at fb 0.7).
+ * On the other side it can hold the unit longer — up to one window, and by that slack (up to 2×
+ * at high feedback, i.e. one extra halving-time) — which costs an idle orbit a moment, never
+ * audio. The scans stay as test oracles for exactly that claim.
  */
 class TailCeiling {
     private var previous = 0.0
@@ -67,27 +73,57 @@ class TailCeiling {
     /**
      * Once per block, before or after the unit processes it (the bound holds either way).
      *
+     * A block's peak is credited to EVERY window the block touches — the one it closes and the
+     * one it continues — so the bound holds whatever the block/window ratio (a window shorter
+     * than a block is unreachable today: the smallest delay is 10 ms, 441 samples at 44.1 kHz,
+     * against 128 frames; the reverb's is ~1 641). A delay-time collapse can leave many windows to
+     * close in one call; past [MAX_CLOSES_PER_CALL] the rest are folded WITHOUT decay (holding
+     * longer, never cutting), so no call is ever unbounded.
+     *
      * @param inputPeak the block's largest |sample| going INTO the unit (after any send scaling)
+     * @param frames the block's length in samples
      * @param windowSamples one recirculation plus the read's reach (see the unit's `tailWindowSamples`)
      * @param feedback the feedback in force right now (signed; only |feedback| matters)
      * @param lapsPerWindow how many times a sample can pass the shortest path within one window
      */
     fun observe(inputPeak: Double, frames: Int, windowSamples: Double, feedback: Double, lapsPerWindow: Int) {
         val fb = if (feedback < 0.0) -feedback else feedback
-        if (inputPeak > inputPeakInWindow) {
-            inputPeakInWindow = inputPeak
+        // A non-finite send (a poisoned voice) must not reach the arithmetic: `Inf · 0` is NaN, and
+        // a NaN ceiling compares false — "no tail" while the ring rings, the one cut this class
+        // promises never to make. It counts as "louder than any audio" instead (review round 2).
+        // [saturate] would catch the NaN too (`NaN <= MAX` is false); this guard keeps the
+        // arithmetic finite from the start rather than relying on that.
+        val peak = if (inputPeak <= CEILING_MAX) inputPeak else CEILING_MAX
+        if (peak > inputPeakInWindow) {
+            inputPeakInWindow = peak
         }
-        current = fresh(inputPeakInWindow, fb, lapsPerWindow) + fb * previous
+        current = saturate(fresh(inputPeakInWindow, fb, lapsPerWindow) + fb * previous)
 
         elapsed += frames
         val window = if (windowSamples >= 1.0) windowSamples else 1.0
-        while (elapsed >= window) {
+        var closes = 0
+        while (elapsed >= window && closes < MAX_CLOSES_PER_CALL) {
             previous = current
-            inputPeakInWindow = 0.0
-            current = fb * previous
             elapsed -= window
+            // The next window holds this block's peak only if the block reaches into it: a block
+            // that ends exactly on the boundary contributes nothing to what follows.
+            inputPeakInWindow = if (elapsed > 0.0) peak else 0.0
+            current = saturate(fresh(inputPeakInWindow, fb, lapsPerWindow) + fb * previous)
+            closes++
+        }
+        if (elapsed >= window) {
+            // A window collapse (20 s → 10 ms): fold the remaining boundaries without decaying.
+            elapsed -= window * floorDiv(elapsed, window)
         }
     }
+
+    private fun floorDiv(a: Double, b: Double): Double {
+        val q = a / b
+        return if (q >= 0.0) floor(q) else 0.0
+    }
+
+    /** Keeps the ceiling finite: |feedback| > 1 grows it without bound, and Inf arithmetic breeds NaN. */
+    private fun saturate(value: Double): Double = if (value <= CEILING_MAX) value else CEILING_MAX
 
     /** The unit was reset: it holds nothing. */
     fun reset() {
@@ -111,6 +147,16 @@ class TailCeiling {
     companion object {
         /** ~-100 dBFS: the silence threshold the drain math and the old scans share. */
         const val SILENCE: Double = 0.00001
+
+        /**
+         * Louder than any audio the engine stores (the soft cap keeps cells near the user's cap,
+         * 1.0 by default): the ceiling saturates here, so it stays finite under self-oscillation
+         * and under a non-finite input peak, and "pinned" means exactly this value.
+         */
+        const val CEILING_MAX: Double = 1.0e6
+
+        /** Window closes handled with decay in one [observe]; the rest fold without decay. */
+        const val MAX_CLOSES_PER_CALL: Int = 64
 
         /** The largest |sample| in the first [frames] of [buffer], both channels. O(frames). */
         fun peakOf(buffer: StereoBuffer, frames: Int): Double {

@@ -56,21 +56,15 @@ class ClosedFormTailSpec : StringSpec({
         repeat(20) { fx.feed(ctx, 0.5) }
         fx.hasTail() shouldBe true
 
-        // Silence in: while the scan (the oracle) still finds audible energy in the tap window,
-        // the closed form must say tail — on EVERY block, accumulated...
+        // Silence in: the ceiling must not say "no tail" before the scan (the oracle) finds the
+        // tap window below the threshold. The loop ends on the first "no tail", so the oracle is
+        // asked exactly there.
         var blocksWithTail = 0
-        var neverCutWhileAudible = true
         while (fx.hasTail()) {
             fx.feed(ctx, 0.0)
             blocksWithTail++
             (blocksWithTail < 2000) shouldBe true
-            val scanAudible = fx.delayLine!!.tapWindowPeakAbs() > TailCeiling.SILENCE
-            if (scanAudible && !fx.hasTail()) {
-                neverCutWhileAudible = false
-            }
         }
-        neverCutWhileAudible shouldBe true
-        // ...and it said false only once the tap window is below the threshold.
         (fx.delayLine!!.tapWindowPeakAbs() <= TailCeiling.SILENCE) shouldBe true
         // Positive control: the echoes were held — at least a few delay periods (0.05 s ≈ 17 blocks).
         blocksWithTail shouldBeGreaterThan 17

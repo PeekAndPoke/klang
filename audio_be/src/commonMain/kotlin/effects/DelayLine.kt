@@ -265,8 +265,11 @@ class DelayLine(
      */
     val tailWindowSamples: Double get() = currentDelaySamples() + 1.0
 
-    /** The ring's laps per [tailWindowSamples]: only a window's first sample comes back inside it. */
-    val tailLapsPerWindow: Int get() = 2
+    /**
+     * The ring's laps per [tailWindowSamples]: computed like the reverb's, `ceil(window / period)`,
+     * which is 2 for every reachable period (only a window's first sample comes back inside it).
+     */
+    val tailLapsPerWindow: Int get() = ceil(tailWindowSamples / currentDelaySamples()).toInt()
 
     /** The effective tap distance in samples — [delayTimeSeconds] under the same coercion [process] applies. */
     private fun currentDelaySamples(): Double =

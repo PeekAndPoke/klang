@@ -383,6 +383,20 @@ crossings, 1e13-class samples through the combs) with a `peak < 10` bound in the
 rows that could not fail; the released master chain reports no tail. `TailCeilingSpec` (9 rows) +
 `ClosedFormTailSpec` (7 rows, scans as oracles); 12 mutations red.
 
+**Step 5, review round 2 (2026-09-04):** one MAJOR, found by both reviewers: the ceiling had no
+finite cap, so |fb| ≥ 1 grew it to +Inf (~3 s at fb 10), after which a sane feedback pinned the
+orbit for life and feedback 0 made it NaN (`0 · Inf`), which compares false — "no tail" while the
+ring rang, the one cut the class forbids; a non-finite send peak did the same at fb 0. **Fixed:
+the ceiling saturates at `CEILING_MAX` (1e6, "louder than any audio") and the input peak is
+guarded.** MINORs applied: a block's peak is credited to every window the block reaches into
+(the bound now holds for windows shorter than a block too, though none is reachable); a window
+collapse (20 s → 10 ms) closes at most 64 windows per call and folds the rest WITHOUT decay
+(time elapsed under the old period must not decay content under the new one); the delay computes
+its laps like the reverb; the KDoc scopes "never cuts" to what the current tap can reach and notes
+the comb damping's small reach into older windows; a row that could not fail independently and a
+mutation gap on the sub-window remainder fixed. 5 new mutations red, one equivalent (the input
+guard is backed by the saturation).
+
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
 `VoiceScheduler` reads `context.warehouse.scratch`); the remaining `scratchBuffers` fields sit on the
