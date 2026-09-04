@@ -9,7 +9,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.effects.TailCountdown
+import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.master.MasterChain.Companion.buildReverb
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -51,8 +51,8 @@ internal class MasterChain private constructor(
     val reverbs: Array<Reverb>,
     val delays: Array<DelayLine>,
     val limiters: Array<Compressor>,
-    /** One closed-form tail per time-based stage, fed inside that stage's [MasterFx]. */
-    private val tails: Array<TailCountdown>,
+    /** One content ceiling per time-based stage, fed inside that stage's [MasterFx]. */
+    private val tails: Array<TailCeiling>,
     /**
      * Delay and reverb stages the warehouse REFUSED a ring or unit for (resource-warehouse steps
      * 2e/2d). Each is built without its effect — the chain stays usable, the echo or room is
@@ -86,10 +86,10 @@ internal class MasterChain private constructor(
     /**
      * True while any reverb/delay in this chain still holds audible energy — a compare, not a scan.
      *
-     * Each time-based stage answers in closed form (see [TailCountdown]) from ITS OWN input, the
-     * bus as it reaches that stage: a delay ahead of a reverb keeps feeding the reverb its echoes
-     * after the bus went silent, so the reverb's proof starts when the echoes end, not when the
-     * bus did — one chain-wide countdown measured at the bus was wrong by exactly that. Not
+     * Each time-based stage answers from a ceiling on its content (see [TailCeiling]) fed by ITS
+     * OWN input, the send as it reaches that stage: a delay ahead of a reverb keeps feeding the
+     * reverb its echoes after the bus went silent, so the reverb's ceiling decays only once the
+     * echoes end — one chain-wide measure at the bus was wrong by exactly that. Not
      * decided from the chain's output either: a delay's output is silent between echoes, so an
      * output-based test would declare a 250 ms delay finished ~85 ms after the last note and cut
      * every remaining echo. Same closed form as the orbit path (`KatalystDelayEffect` /
@@ -97,6 +97,9 @@ internal class MasterChain private constructor(
      * bound when the ring ceiling went (2e).
      */
     fun hasActiveTail(): Boolean {
+        if (released) {
+            return false
+        }
         for (i in tails.indices) {
             if (tails[i].hasTail) {
                 return true
@@ -179,7 +182,7 @@ internal class MasterChain private constructor(
             val reverbUnits = mutableListOf<Reverb>()
             val delays = mutableListOf<DelayLine>()
             val limiters = mutableListOf<Compressor>()
-            val tails = mutableListOf<TailCountdown>()
+            val tails = mutableListOf<TailCeiling>()
             var deniedRents = 0
 
             for (stage in dsl.stages) {
@@ -225,14 +228,14 @@ internal class MasterChain private constructor(
         }
 
         private sealed class BuiltReverb {
-            class Ready(val reverb: Reverb, val fx: MasterFx, val tail: TailCountdown) : BuiltReverb()
+            class Ready(val reverb: Reverb, val fx: MasterFx, val tail: TailCeiling) : BuiltReverb()
 
             /** The shelf had no unit and could not allocate one: the stage is skipped, and counted. */
             object Denied : BuiltReverb()
         }
 
         private sealed class BuiltDelay {
-            class Ready(val delayLine: DelayLine, val fx: MasterFx, val tail: TailCountdown) : BuiltDelay()
+            class Ready(val delayLine: DelayLine, val fx: MasterFx, val tail: TailCeiling) : BuiltDelay()
 
             /** The shelf had no ring and could not allocate one: the stage is skipped, and counted. */
             object Denied : BuiltDelay()
@@ -323,17 +326,22 @@ internal class MasterChain private constructor(
                 it.roomLp = stage.roomLp?.takeIf { lp -> lp.isFinite() }
             }
             val send = StereoBuffer(blockFrames)
-            val tail = TailCountdown()
+            val tail = TailCeiling()
 
             return BuiltReverb.Ready(
                 reverb = reverb,
                 tail = tail,
                 fx = MasterFx { bus, frames ->
-                    // The tail proof reads THIS stage's input, before it processes (TailCountdown).
-                    tail.observe(silent = TailCountdown.isSilent(bus, frames), frames = frames) {
-                        reverb.drainSamplesUntilSilent(peak = reverb.combPeakAbs())
-                    }
                     fillSend(send, bus, frames, wet)
+                    // The ceiling reads what the unit is FED — the send, after `wet`, like the
+                    // orbit effects read their send buffers.
+                    tail.observe(
+                        inputPeak = TailCeiling.peakOf(send, frames),
+                        frames = frames,
+                        windowSamples = reverb.tailWindowSamples,
+                        feedback = reverb.tailFeedback,
+                        lapsPerWindow = reverb.tailLapsPerWindow,
+                    )
                     reverb.process(send, bus, frames)
                 },
             )
@@ -383,17 +391,22 @@ internal class MasterChain private constructor(
                 it.feedbackCap = finite(stage.cap, 1.0)
             }
             val send = StereoBuffer(blockFrames)
-            val tail = TailCountdown()
+            val tail = TailCeiling()
 
             return BuiltDelay.Ready(
                 delayLine = delayLine,
                 tail = tail,
                 fx = MasterFx { bus, frames ->
-                    // The tail proof reads THIS stage's input, before it processes (TailCountdown).
-                    tail.observe(silent = TailCountdown.isSilent(bus, frames), frames = frames) {
-                        delayLine.drainSamplesUntilSilent(peak = delayLine.tapWindowPeakAbs())
-                    }
                     fillSend(send, bus, frames, wet)
+                    // The ceiling reads what the unit is FED — the send, after `wet`, like the
+                    // orbit effects read their send buffers.
+                    tail.observe(
+                        inputPeak = TailCeiling.peakOf(send, frames),
+                        frames = frames,
+                        windowSamples = delayLine.tailWindowSamples,
+                        feedback = delayLine.feedback,
+                        lapsPerWindow = delayLine.tailLapsPerWindow,
+                    )
                     delayLine.process(send, bus, frames)
                 },
             )

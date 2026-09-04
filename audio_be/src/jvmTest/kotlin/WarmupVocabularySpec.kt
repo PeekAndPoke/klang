@@ -9,6 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -96,6 +97,10 @@ class WarmupVocabularySpec : StringSpec({
             withClue("$name: peak $peak, finite $finite") {
                 finite shouldBe true
                 peak shouldBeGreaterThan 1e-4
+                // Bounded too: a graph driving 1e13-class samples through the combs and the post
+                // chain is only harmless by three unrelated facts (silenced output, the post-chain
+                // reset at disposal, the shelf zeroing a dirty unit). Keep it a signal.
+                peak shouldBeLessThan 10.0
             }
             engine.scheduler.droppedVoiceCount("warm") shouldBe 0
         }

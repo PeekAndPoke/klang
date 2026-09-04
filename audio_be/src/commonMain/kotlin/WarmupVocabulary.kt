@@ -42,6 +42,7 @@ import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.pitchMod
+import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.pow
 import io.peekandpoke.klang.audio_bridge.range
 import io.peekandpoke.klang.audio_bridge.recip
@@ -130,7 +131,7 @@ object WarmupVocabulary {
         val c = b.exp().log().sqrt().sign().mul(b.tanh()).lerp(t, lfo).range(Constant(-0.5), Constant(0.5))
         val d = c.bipolar().unipolar().mul(Constant(4.0)).floor().mul(Constant(0.1))
             .mul(t.ceil().round().mul(Constant(0.1)).mul(t.frac()))
-            .mod(Constant(0.5)).mul(t.mul(Constant(0.5)).mul(Constant(0.5)).sq().recip().mul(Constant(0.01)))
+            .mod(Constant(0.5)).mul(t.sq().plus(Constant(2.0)).recip().mul(Constant(0.5))) // recip of `+2`: never near zero
         val chosen = lfo.select(whenTrue = d, whenFalse = c)
         val variants = IgnitorDsl.Variants(listOf(chosen, s))
         val withParam = variants.mul(IgnitorDsl.Param(name = "warm", default = 0.5))

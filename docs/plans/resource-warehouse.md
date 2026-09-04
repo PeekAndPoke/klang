@@ -362,6 +362,27 @@ Rendered samples unchanged; deactivation timing is "provably silent" instead of 
 so" — conservative on the audible side, and shorter only for content the tap can never reach.
 `TailCountdownSpec` (8 rows) + `ClosedFormTailSpec` (7 rows, the scan as the oracle); 10 mutations red.
 
+**Step 5, review round 1 (2026-09-04):** the countdown was the wrong closed form. Both reviewers:
+the "one bounded read at silence onset" fires once per NOTE GAP and is still O(delay time), a net
+loss on sparse material with long delays; a grow could skip the invalidation (the compare ran
+against a fresh line's constructor defaults) and cut a live echo; a non-finite parameter made the
+invalidation fire every block (setters drop non-finite writes, so the compare never settled) —
+the orbit pinned and the read per block; `Idle` collapsed into `Counting` after one silent block;
+"silent input" at ≤ 1e-5 is not the exact zero the drain proof assumes (steady floor
+`input/(1−fb)`, 1e-3 at fb 0.99). **Rebuilt as `effects/TailCeiling`: a running CEILING on the
+unit's content, maintained from the block's input PEAK, no reads at all.** In windows of one
+recirculation (+1 sample so a read never reaches past the previous window),
+`current = peak·(1+fb+…+fb^(laps−1)) + |fb|·previous`; silent input → geometric decay by |fb| per
+window (the drain proof); sub-threshold input → the true floor; |fb| ≥ 1 → pinned; parameter
+changes need no invalidation (the next window decays by the feedback in force, as the ring does);
+a never-fed unit is 0. `laps` is computed by the unit (ring: 2, only a window's first sample laps
+inside it; Freeverb: 2, comb lengths under 2×). The master measures the send after `wet`, like the
+orbit effects. The scans (`DelayLine.hasTail`, `Reverb.hasTail`) remain test oracles. Also fixed:
+the vocabulary's `math` graph now IS "recip of +2" as its doc said (it was 1/sin² near zero
+crossings, 1e13-class samples through the combs) with a `peak < 10` bound in the spec; two spec
+rows that could not fail; the released master chain reports no tail. `TailCeilingSpec` (9 rows) +
+`ClosedFormTailSpec` (7 rows, scans as oracles); 12 mutations red.
+
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
 `VoiceScheduler` reads `context.warehouse.scratch`); the remaining `scratchBuffers` fields sit on the

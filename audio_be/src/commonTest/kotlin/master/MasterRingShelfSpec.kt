@@ -211,6 +211,9 @@ class MasterRingShelfSpec : StringSpec({
         val (rings, _) = shelf()
         val chain = MasterChain.build(delayDsl(0.3, feedback = 0.0), sampleRate, blockFrames, rings)
         val ring = chain.delays[0].ring
+        val fed = StereoBuffer(blockFrames).apply { left.fill(0.5); right.fill(0.5) }
+        repeat(4) { chain.process(fed, blockFrames) } // charged: its tail ceiling is up
+        chain.hasActiveTail() shouldBe true
         chain.releaseUnits(rings, ReverbUnits(sampleRate))
 
         val next = rings.rent(1).shouldNotBeNull() // the same ring, zeroed for its next owner
@@ -219,6 +222,7 @@ class MasterRingShelfSpec : StringSpec({
         val loud = StereoBuffer(blockFrames).apply { left.fill(0.9); right.fill(0.9) }
         repeat(4) { chain.process(loud, blockFrames) }
         (ring.left.all { it == 0.0 } && ring.right.all { it == 0.0 }) shouldBe true // process() wrote nothing
+        chain.hasActiveTail() shouldBe false // and it claims no tail: its units are not its own any more
 
         // The new owner's audio in the ring survives the old chain's reset(): it is not its ring to zero.
         next.left[10] = 0.3

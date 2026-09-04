@@ -153,7 +153,7 @@ class Reverb(
      * still well below audibility for typical thresholds).
      */
     fun hasTail(threshold: Double = TAIL_THRESHOLD): Boolean {
-        // Test/diagnostic only since the closed-form tail (`TailCountdown`): no production caller.
+        // Test/diagnostic only since the content-ceiling tail (`TailCeiling`): no production caller.
         for (c in 0 until numCombs) {
             for (sample in combBufsL[c]) {
                 if (sample > threshold || sample < -threshold) {
@@ -304,6 +304,19 @@ class Reverb(
      *  FEEDBACK_OFFSET` — one definition shared with [drainSamplesUntilSilent], so the drain
      *  math can never diverge from the DSP it predicts. */
     private fun effectiveFeedback(): Double = (roomFade ?: roomSize) * FEEDBACK_SCALE + FEEDBACK_OFFSET
+
+    /** The comb feedback right now, for [TailCeiling] — one definition with [process] and the drain. */
+    val tailFeedback: Double get() = effectiveFeedback()
+
+    /** The window for [TailCeiling]: the longest comb's revolution plus one sample. */
+    val tailWindowSamples: Double get() = longestCombSamples + 1.0
+
+    /**
+     * How many times a sample can pass the SHORTEST comb within [tailWindowSamples]: the comb
+     * lengths span 1116..1617 (+ spread), under 2×, so two. Computed, not assumed, so a retuning
+     * cannot silently break the ceiling's bound.
+     */
+    val tailLapsPerWindow: Int = ceil((longestCombSamples + 1.0) / combTuning.min().toDouble()).toInt()
 
     /**
      * Process one block. Reads dry stereo from [input], adds the wet

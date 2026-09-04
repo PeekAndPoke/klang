@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.effects.TailCountdown
+import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import kotlin.math.min
 
@@ -96,8 +96,8 @@ class KatalystReverbEffect(
     /** All-zero input for the draining phase — the owner said off, so live sends are discarded. */
     private val silentInput = StereoBuffer(blockFrames)
 
-    /** The Active-state tail question in closed form (see [TailCountdown]); replaces the comb scan. */
-    private val activeTail = TailCountdown()
+    /** The Active-state tail question from a ceiling on the combs' content (see [TailCeiling]); replaces the comb scan. */
+    private val activeTail = TailCeiling()
 
     /**
      * Applies the orbit owner's reverb settings. Called by `Cylinder.applyBusEffects` on every
@@ -134,12 +134,7 @@ class KatalystReverbEffect(
         if (fade != null || (roomSize.isFinite() && roomSize >= MIN_ACTIVE_ROOM_SIZE)) {
             val unit = reverb ?: rentUnit() ?: return
 
-            // A changed room changes the comb feedback and so the decay the countdown assumed.
-            val newRoomSize = roomSize.coerceIn(0.0, 1.0)
-            if (unit.roomSize != newRoomSize || unit.roomFade != fade) {
-                activeTail.invalidate()
-            }
-            unit.roomSize = newRoomSize
+            unit.roomSize = roomSize.coerceIn(0.0, 1.0)
             unit.roomFade = fade
             unit.roomLp = roomLp?.takeIf { it.isFinite() }
             unit.roomDim = roomDim
@@ -160,6 +155,7 @@ class KatalystReverbEffect(
 
             if (drainRemaining <= 0.0 || !drainRemaining.isFinite()) {
                 unit.reset()
+                activeTail.reset() // the unit holds nothing now
                 state = State.Off
             } else {
                 state = State.Draining
@@ -192,7 +188,7 @@ class KatalystReverbEffect(
     fun hasTail(): Boolean = when (state) {
         State.Off -> false
         State.Draining -> true
-        // Closed form, not a scan: the countdown [process] feeds from the send buffer.
+        // A ceiling, not a scan: [process] maintains it from the send buffer.
         State.Active -> reverb != null && activeTail.hasTail
     }
 
@@ -263,11 +259,15 @@ class KatalystReverbEffect(
             State.Active -> {
                 val send = ctx.reverbSendBuffer
                 val frames = ctx.blockFrames
-                // Same shape as the delay's: the send says whether a tail exists; the block it
-                // goes silent, one comb-peak read starts the proof (`Reverb.drainSamplesUntilSilent`).
-                activeTail.observe(silent = TailCountdown.isSilent(send, frames), frames = frames) {
-                    unit.drainSamplesUntilSilent(peak = unit.combPeakAbs())
-                }
+                // Same shape as the delay's: the send peak feeds a ceiling on the combs' content,
+                // decaying by the comb feedback once per longest-comb revolution (TailCeiling).
+                activeTail.observe(
+                    inputPeak = TailCeiling.peakOf(send, frames),
+                    frames = frames,
+                    windowSamples = unit.tailWindowSamples,
+                    feedback = unit.tailFeedback,
+                    lapsPerWindow = unit.tailLapsPerWindow,
+                )
                 unit.process(send, ctx.mixBuffer, frames)
             }
 
@@ -283,6 +283,7 @@ class KatalystReverbEffect(
 
                 if (drainRemaining <= 0.0) {
                     unit.reset()
+                    activeTail.reset() // the unit holds nothing now
                     state = State.Off
                 }
             }

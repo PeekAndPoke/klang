@@ -12,12 +12,13 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.master.MasterChain
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 
 /**
- * The Active-state tail question answered in closed form (`TailCountdown`) instead of by scanning
+ * The Active-state tail question answered from a content ceiling (`TailCeiling`) instead of by scanning
  * the ring or the combs, for both orbit effects and the master chain. The scans (`DelayLine.hasTail`,
  * `Reverb.hasTail`) stay as the ORACLE here: the closed form must never say "no tail" while the
  * scan still finds audible energy in what the tap can reach — and must eventually say it.
@@ -55,45 +56,61 @@ class ClosedFormTailSpec : StringSpec({
         repeat(20) { fx.feed(ctx, 0.5) }
         fx.hasTail() shouldBe true
 
-        // Silence in: the closed form must stay true as long as the scan finds a tail...
+        // Silence in: while the scan (the oracle) still finds audible energy in the tap window,
+        // the closed form must say tail — on EVERY block, accumulated...
         var blocksWithTail = 0
-        var scanSaidTail = true
+        var neverCutWhileAudible = true
         while (fx.hasTail()) {
             fx.feed(ctx, 0.0)
             blocksWithTail++
             (blocksWithTail < 2000) shouldBe true
-            if (fx.hasTail()) {
-                scanSaidTail = fx.delayLine!!.tapWindowPeakAbs() > 0.0
+            val scanAudible = fx.delayLine!!.tapWindowPeakAbs() > TailCeiling.SILENCE
+            if (scanAudible && !fx.hasTail()) {
+                neverCutWhileAudible = false
             }
         }
+        neverCutWhileAudible shouldBe true
         // ...and it said false only once the tap window is below the threshold.
-        (fx.delayLine!!.tapWindowPeakAbs() <= 0.00001) shouldBe true
+        (fx.delayLine!!.tapWindowPeakAbs() <= TailCeiling.SILENCE) shouldBe true
         // Positive control: the echoes were held — at least a few delay periods (0.05 s ≈ 17 blocks).
         blocksWithTail shouldBeGreaterThan 17
-        scanSaidTail shouldBe true
     }
 
-    "a note mid-decay restarts the proof — the orbit is not cut under a new note" {
+    "a note mid-decay lifts the ceiling back up — the orbit is not cut under a new note" {
+        fun decayBlocks(fx: KatalystDelayEffect, ctx: KatalystContext): Int {
+            var blocks = 0
+            while (fx.hasTail()) {
+                fx.feed(ctx, 0.0)
+                blocks++
+                (blocks < 5000) shouldBe true
+            }
+            return blocks
+        }
+        // The full decay from a charged ring, measured, not guessed.
+        val reference = delayEffect(time = 0.05, feedback = 0.3)
+        val refCtx = ctx()
+        repeat(10) { reference.feed(refCtx, 0.5) }
+        val full = decayBlocks(reference, refCtx)
+
         val fx = delayEffect(time = 0.05, feedback = 0.3)
         val ctx = ctx()
         repeat(10) { fx.feed(ctx, 0.5) }
-        repeat(5) { fx.feed(ctx, 0.0) }
+        val silentFirst = 40 // over two windows of 0.05 s ≈ 17 blocks: well into the decay
+        repeat(silentFirst) { fx.feed(ctx, 0.0) }
         fx.hasTail() shouldBe true
-        fx.feed(ctx, 0.5)
-        var blocks = 0
-        while (fx.hasTail()) {
-            fx.feed(ctx, 0.0)
-            blocks++
-            (blocks < 2000) shouldBe true
-        }
-        blocks shouldBeGreaterThan 17 // a full decay again, not the remainder of the first
+        fx.feed(ctx, 0.5) // a note
+
+        val afterNote = decayBlocks(fx, ctx)
+        // From the note the tail lasts a full decay again (one window of phase slack), not the
+        // remainder of the first one, which would be ~40 blocks shorter.
+        (afterNote > full - silentFirst + 17) shouldBe true
     }
 
-    "raising the feedback mid-decay re-measures — the proof is not the old, faster one" {
+    "raising the feedback mid-decay is followed — the ceiling decays by the feedback in force, not the old one" {
         val fast = delayEffect(time = 0.05, feedback = 0.1)
         val ctx = ctx()
         repeat(10) { fast.feed(ctx, 0.5) }
-        fast.feed(ctx, 0.0) // proof started at fb 0.1
+        fast.feed(ctx, 0.0) // decaying at fb 0.1
         fast.configure(timeSeconds = 0.05, feedback = 0.9, cap = 1.0) // the owner turns it up
         var blocks = 0
         while (fast.hasTail()) {
@@ -115,16 +132,16 @@ class ClosedFormTailSpec : StringSpec({
         fx.hasTail() shouldBe true
     }
 
-    "the closed form never scans the ring: a ring far bigger than the delay costs the delay, not the ring" {
-        // No timing assertion (not a benchmark); the structural fact: the only read at the
-        // silence onset is the tap window, whose size is the delay time, not the ring class.
+    "the ceiling never reads the ring: a ring far bigger than the delay decays exactly like a small one" {
+        // No timing assertion (not a benchmark); the structural fact: nothing about the ring's
+        // size enters the answer — only the input, the period and the feedback.
         val huge = DelayLine(StereoBuffer(4 * sampleRate), sampleRate, delayTimeSeconds = 0.05, feedback = 0.5)
         val fx = KatalystDelayEffect(delayLine = huge, blockFrames = blockFrames)
             .apply { configure(timeSeconds = 0.05, feedback = 0.5, cap = 1.0) }
         val ctx = ctx()
         repeat(10) { fx.feed(ctx, 0.5) }
         fx.feed(ctx, 0.0)
-        // The proof length is the drain math on the tap window peak — the same number a tiny ring gives.
+        // Same input, same period, same feedback: the same number of blocks, whatever the ring.
         val small = delayEffect(time = 0.05, feedback = 0.5)
         val ctx2 = ctx()
         repeat(10) { small.feed(ctx2, 0.5) }

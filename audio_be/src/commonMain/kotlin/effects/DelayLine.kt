@@ -172,7 +172,7 @@ class DelayLine(
      * back above threshold, so a `false` return is safe.
      */
     fun hasTail(threshold: Double = 0.00001): Boolean {
-        // Test/diagnostic only since the closed-form tail (`TailCountdown`): no production caller,
+        // Test/diagnostic only since the content-ceiling tail (`TailCeiling`): no production caller,
         // and none should return — this is O(ring) with no ceiling on the ring.
         for (i in 0 until bufferSize) {
             if (abs(buffer.left[i]) > threshold || abs(buffer.right[i]) > threshold) {
@@ -258,6 +258,15 @@ class DelayLine(
 
         return (periods + 1.0) * delaySamples
     }
+
+    /**
+     * The window for [TailCeiling]: one recirculation (the effective tap distance) plus the
+     * interpolation neighbour, so a read never reaches further back than the previous window.
+     */
+    val tailWindowSamples: Double get() = currentDelaySamples() + 1.0
+
+    /** The ring's laps per [tailWindowSamples]: only a window's first sample comes back inside it. */
+    val tailLapsPerWindow: Int get() = 2
 
     /** The effective tap distance in samples — [delayTimeSeconds] under the same coercion [process] applies. */
     private fun currentDelaySamples(): Double =

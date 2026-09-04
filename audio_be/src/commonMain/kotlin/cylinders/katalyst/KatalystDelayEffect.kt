@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
-import io.peekandpoke.klang.audio_be.effects.TailCountdown
+import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import kotlin.math.ceil
@@ -172,11 +172,11 @@ class KatalystDelayEffect(
     private val silentInput = StereoBuffer(blockFrames)
 
     /**
-     * The Active-state tail question in closed form (see [TailCountdown]): fed every block from
-     * the send buffer, it replaces the O(ring) scan `DelayLine.hasTail` used to run from
-     * `Cylinder.tryDeactivate`.
+     * The Active-state tail question answered from a ceiling on the ring's content (see
+     * [TailCeiling]), maintained every block from the send buffer; it replaces the O(ring) scan
+     * `DelayLine.hasTail` used to run from `Cylinder.tryDeactivate`.
      */
-    private val activeTail = TailCountdown()
+    private val activeTail = TailCeiling()
 
     /**
      * Applies the orbit owner's delay settings. Called by `Cylinder.applyBusEffects` on every
@@ -188,10 +188,8 @@ class KatalystDelayEffect(
             // No ring and none to be had: the orbit stays dry rather than the worklet dying.
             val line = ensureRing(timeSeconds) ?: return
 
-            // A changed time or feedback changes how fast a silent ring decays: re-measure.
-            if (line.delayTimeSeconds != timeSeconds || line.feedback != feedback) {
-                activeTail.invalidate()
-            }
+            // No tail bookkeeping here: the ceiling reads the period and feedback in force on
+            // every block, so a change (or a grow, which keeps the content) is simply followed.
             line.delayTimeSeconds = timeSeconds
             line.feedback = feedback
             line.feedbackCap = cap
@@ -212,6 +210,7 @@ class KatalystDelayEffect(
 
             if (drainRemaining <= 0.0) {
                 delayLine.reset()
+                activeTail.reset() // the unit holds nothing now
                 state = State.Off
             } else {
                 state = State.Draining
@@ -236,7 +235,7 @@ class KatalystDelayEffect(
     fun hasTail(): Boolean = when (state) {
         State.Off -> false
         State.Draining -> true
-        // Closed form, not a scan: the countdown [process] feeds from the send buffer.
+        // A ceiling, not a scan: [process] maintains it from the send buffer.
         State.Active -> delayLine != null && activeTail.hasTail
     }
 
@@ -284,12 +283,16 @@ class KatalystDelayEffect(
             State.Active -> {
                 val send = ctx.delaySendBuffer
                 val frames = ctx.blockFrames
-                // The tail question is answered from the INPUT: audible send → a tail exists; the
-                // block it goes silent → one bounded read of what the tap can still reach starts
-                // the proof; after that, subtraction. Nothing here is O(ring).
-                activeTail.observe(silent = TailCountdown.isSilent(send, frames), frames = frames) {
-                    delayLine.drainSamplesUntilSilent(peak = delayLine.tapWindowPeakAbs())
-                }
+                // The tail question is answered from the INPUT: the block's send peak feeds a
+                // ceiling on the ring's content that decays by the feedback once per delay period
+                // (TailCeiling). O(block) here, O(1) to ask. Nothing is ever O(ring).
+                activeTail.observe(
+                    inputPeak = TailCeiling.peakOf(send, frames),
+                    frames = frames,
+                    windowSamples = delayLine.tailWindowSamples,
+                    feedback = delayLine.feedback,
+                    lapsPerWindow = delayLine.tailLapsPerWindow,
+                )
                 delayLine.process(send, ctx.mixBuffer, frames)
             }
 
@@ -308,6 +311,7 @@ class KatalystDelayEffect(
 
                 if (drainRemaining <= 0.0) {
                     delayLine.reset()
+                    activeTail.reset() // the unit holds nothing now
                     state = State.Off
                 }
             }
