@@ -103,4 +103,38 @@ class SampleStoreSpec : StringSpec({
         store.contains(r) shouldBe true
         store.getComplete(r) shouldBe null
     }
+
+
+    // ── Resource warehouse 2g: the PCM array is the one MB-scale allocation the store makes ──────
+
+    "a chunked sample whose PCM cannot be allocated is silent, counted, and its later chunks are dropped — nothing throws" {
+        // Chunks arrive on the audio thread through the worklet's message port; before 2g a failed
+        // DoubleArray(totalSize) was an uncaught OutOfMemoryError there, and the worklet stopped
+        // for good. Now it is a sample that never completes, like a NotFound one.
+        val commLink = KlangCommLink(capacity = 1024)
+        var asked = 0
+        val store = SampleStore(commLink.backend, allocatePcm = { asked++; null })
+        val r = req("huge")
+        val meta = SampleMetadata.default
+
+        val first = KlangCommLink.Cmd.Sample.Chunk(
+            req = r, note = null, pitchHz = 440.0, sampleRate = 44100, meta = meta,
+            totalSize = 4, isLastChunk = false, chunkOffset = 0, data = doubleArrayOf(1.0, 2.0),
+        )
+        val last = first.copy(isLastChunk = true, chunkOffset = 2, data = doubleArrayOf(3.0, 4.0))
+
+        store.addSample(first)
+        store.addSample(last)
+
+        store.getComplete(r) shouldBe null
+        store.contains(r) shouldBe true // known, so it is not re-requested every note
+        store.allocationFailures shouldBe 1
+        asked shouldBe 1 // the second chunk did not restart the allocation
+        commLink.drainFeedback().filterIsInstance<KlangCommLink.Feedback.SampleReceived>() shouldBe emptyList()
+    }
+
+    "the default PCM allocator turns a hopeless size into null rather than a throw" {
+        SampleStore.allocatePcmOrNull(Int.MAX_VALUE) shouldBe null
+        SampleStore.allocatePcmOrNull(4).shouldNotBeNull().size shouldBe 4
+    }
 })

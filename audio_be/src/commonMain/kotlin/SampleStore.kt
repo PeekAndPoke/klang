@@ -19,6 +19,14 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  */
 class SampleStore(
     private val commLink: KlangCommLink.BackendEndpoint,
+    /**
+     * Where a chunked sample's PCM array comes from — the one MB-scale allocation the store makes,
+     * on the audio thread (chunks arrive through the worklet's message port). Caught here as
+     * `null` rather than thrown (resource warehouse, 2g): an uncaught allocation failure inside
+     * the worklet stops it permanently, while a sample that failed to arrive is simply silent, the
+     * way a NotFound one is. Injectable so a spec can fail it without exhausting the JVM.
+     */
+    private val allocatePcm: (frames: Int) -> DoubleArray? = ::allocatePcmOrNull,
 ) {
     sealed interface SampleEntry {
         val req: SampleRequest
@@ -28,6 +36,16 @@ class SampleStore(
         ) : SampleEntry
 
         data class NotFound(
+            override val req: SampleRequest,
+        ) : SampleEntry
+
+        /**
+         * The PCM array for this sample could not be allocated. Behaves like [NotFound] for every
+         * consumer (no `Complete`, so the voice is silent); a distinct state so the diagnostics can
+         * say "out of memory" rather than "no such sample", and so the remaining chunks of that
+         * upload are dropped instead of restarting the allocation each.
+         */
+        data class AllocationFailed(
             override val req: SampleRequest,
         ) : SampleEntry
 
@@ -48,6 +66,10 @@ class SampleStore(
 
     // The samples uploaded to the backend.
     private val samples = mutableMapOf<SampleRequest, SampleEntry>()
+
+    /** Chunked uploads whose PCM array could not be allocated. Monotone; for the diagnostics feed. */
+    var allocationFailures: Int = 0
+        private set
 
     fun getComplete(req: SampleRequest): SampleEntry.Complete? = samples[req] as? SampleEntry.Complete
 
@@ -89,21 +111,32 @@ class SampleStore(
 
             is KlangCommLink.Cmd.Sample.Chunk -> {
                 val existing = samples[req]
-                if (existing is SampleEntry.Complete) return
+                if (existing is SampleEntry.Complete || existing is SampleEntry.AllocationFailed) return
 
-                val entry = (existing as? SampleEntry.Partial) ?: SampleEntry.Partial(
-                    req = req,
-                    note = msg.note,
-                    pitchHz = msg.pitchHz,
-                    // `meta` MUST come across with the PCM. Every chunk carries it (toChunks puts the
-                    // sample's meta on each one), and this constructor used to leave it defaulted —
-                    // so every sample that travelled chunked arrived with loop = null, adsr = null,
-                    // anchor = 0. In the browser that is EVERY sample: JsAudioBackend chunks all
-                    // Complete messages before the worklet boundary, regardless of size. No soundfont
-                    // had ever looped there. The JVM path passes Complete in-process and never lost it,
-                    // which is why the offline renderer disagreed with the ear for so long.
-                    sample = MonoSamplePcm(sampleRate = msg.sampleRate, pcm = DoubleArray(msg.totalSize), meta = msg.meta),
-                )
+                val entry = (existing as? SampleEntry.Partial) ?: run {
+                    val pcm = allocatePcm(msg.totalSize)
+
+                    if (pcm == null) {
+                        allocationFailures++
+                        samples[req] = SampleEntry.AllocationFailed(req)
+
+                        return
+                    }
+
+                    SampleEntry.Partial(
+                        req = req,
+                        note = msg.note,
+                        pitchHz = msg.pitchHz,
+                        // `meta` MUST come across with the PCM. Every chunk carries it (toChunks puts the
+                        // sample's meta on each one), and this constructor used to leave it defaulted —
+                        // so every sample that travelled chunked arrived with loop = null, adsr = null,
+                        // anchor = 0. In the browser that is EVERY sample: JsAudioBackend chunks all
+                        // Complete messages before the worklet boundary, regardless of size. No soundfont
+                        // had ever looped there. The JVM path passes Complete in-process and never lost it,
+                        // which is why the offline renderer disagreed with the ear for so long.
+                        sample = MonoSamplePcm(sampleRate = msg.sampleRate, pcm = pcm, meta = msg.meta),
+                    )
+                }
 
                 msg.data.copyInto(destination = entry.sample.pcm, destinationOffset = msg.chunkOffset)
 
@@ -120,6 +153,15 @@ class SampleStore(
                     }
                 }
             }
+        }
+    }
+
+    companion object {
+        /** The one place a sample's PCM is allocated; see `SizedBuffers.allocateOrNull` for why the catch is sound. */
+        fun allocatePcmOrNull(frames: Int): DoubleArray? = try {
+            DoubleArray(frames)
+        } catch (e: Throwable) {
+            null
         }
     }
 }
