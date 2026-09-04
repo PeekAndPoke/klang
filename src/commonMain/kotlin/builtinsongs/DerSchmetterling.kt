@@ -57,7 +57,7 @@ let guitar = (() => {
   let pHpQ        = Osc.param("hpq",          0.707, "Highpass resonance")
   // --------------------------------------------------------------------------------------------------------------
 
-  let saw = Osc.supersaw(freq = Osc.freq(), voices = 19, spread = 0.10)
+  let saw = Osc.supersaw(freq = Osc.freq(), voices = 25, spread = 0.10)
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.60, kMax = 0.85, warmup = 0, selection = "normal")
     // character knobs — plain scalars, SuperSaw-typed, must precede the filter
@@ -116,9 +116,9 @@ let bass = (() => {
   // Asymmetric shapes also produce DC; the highpass removes it.
   let grind = Osc.saw()
     .add(Osc.saw(freq = Osc.freq().mul(2)).times(0.25))
-    .add(Osc.saw(freq = Osc.freq().mul(4)).times(0.06))
-    .add(Osc.saw(freq = Osc.freq().mul(8)).times(0.0100))
-    .add(Osc.saw(freq = Osc.freq().mul(16)).times(0.0025))
+    .add(Osc.sine(freq = Osc.freq().mul(4)).times(0.125))
+    .add(Osc.sine(freq = Osc.freq().mul(8)).times(0.0625))
+    .add(Osc.sine(freq = Osc.freq().mul(16)).times(0.0312))
     .pitchEnvelope(12, 0.001, 0.02)
     .distort(pDrive, "tube", 4).highpass(25)
     .lowpass(freq = Osc.freq().times(48), q = 0.707)
@@ -212,8 +212,8 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 3 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 4 6] 9]!1>/8`
 
-export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.09) //. mute()
-    .oscp("drive", 0.35).oscp("grindlo", 100).oscp("grindhi", 2000).oscp("grind", 0.80).oscp("sub", 0.80)  // . solo()
+export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.08) //. mute()
+    .oscp("drive", 0.25).oscp("grindlo", 100).oscp("grindhi", 3000).oscp("grind", 0.70).oscp("sub", 0.90)  // . solo()
     .adsr(0.003, 0.5, 0.1, 0.050)
 
 export bass_arrange = x => x.orbit(3) // . mute()
