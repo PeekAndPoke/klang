@@ -14,6 +14,11 @@ Der Schmetterling on the Fairphone, three measurements on 2026-09-04:
    run is clean.
 3. With the warmup vocabulary (`WarmupVocabulary`: every `IgnitorDsl` node kind executed before
    the first song): "a bit better, still a massive spike when all voices set in".
+4. With the vocabulary certifying the OPTIMIZED graph and an `analog = 1.0` filter chain (the SVF
+   branch Der Schmetterling's guitar takes, previously fused away by the optimizer in the warmup):
+   **"the warmup now works on the Fairphone"** — the first run plays. What remains visible is the
+   warmup's own 100 % gauge spike before the song, paid in silence (maintainer: fine). This task
+   is therefore no longer urgent; it stays as the place to profile if a first-run artefact returns.
 
 So the resource side is closed (`docs/plans/resource-warehouse.md`), the node-kind JIT theory
 helped a little, and something else dominates. "Second run clean" still says: first-time work,

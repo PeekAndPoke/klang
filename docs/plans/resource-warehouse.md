@@ -416,6 +416,16 @@ under the current period within the current and previous window; a lengthening c
 content, raw live-change behaviour"). 6 mutations red. **Loop closed** on the reviewer's own
 recommendation ("round 3 should be the last").
 
+**Fairphone, fourth measurement (2026-09-04): the warmup works — the first run of Der Schmetterling
+plays.** The headroom gauge shows a 100 % spike BEFORE the song starts: that is the warmup itself
+(sixteen wet orbits with the vocabulary graphs, all sixteen rendering in its last blocks, every
+graph compiling on first execution), the cold work deliberately paid in silence. It cannot kill the
+worklet: only an uncaught exception ends a processor, an over-budget quantum merely underruns, and
+the output is zeroed until `BackendReady`, which waits for the warmup's disposal. **Maintainer: fine
+to see it.** If it is ever unwanted, the lever is one constant — start an orbit every second block
+instead of every block (half the peak, ~45 ms more warmup). The remaining first-run item is the
+profiling round in `docs/tasks/future/first-run-spike-v2.md`, now much smaller than it was.
+
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
 `VoiceScheduler` reads `context.warehouse.scratch`); the remaining `scratchBuffers` fields sit on the
