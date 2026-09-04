@@ -22,6 +22,8 @@ import kotlinx.css.Display
 import kotlinx.css.JustifyContent
 import kotlinx.css.TextAlign
 import kotlinx.css.WhiteSpace
+import kotlinx.css.backgroundColor
+import kotlinx.css.borderRadius
 import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.fontFamily
@@ -31,6 +33,8 @@ import kotlinx.css.justifyContent
 import kotlinx.css.lineHeight
 import kotlinx.css.marginRight
 import kotlinx.css.opacity
+import kotlinx.css.Padding
+import kotlinx.css.padding
 import kotlinx.css.properties.LineHeight
 import kotlinx.css.rem
 import kotlinx.css.textAlign
@@ -96,6 +100,10 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                 height = Motor.TITLE_HEIGHT
                 display = Display.flex
                 justifyContent = JustifyContent.center
+                // A solid ground at 80 % over the spectrum, or the numbers cannot be read.
+                backgroundColor = Color("${KlangTheme.Hex.panelBackground}CC")
+                borderRadius = 0.3.rem
+                padding = Padding(vertical = 0.2.rem, horizontal = 0.5.rem)
                 fontFamily = "monospace"
                 fontSize = 0.62.rem
                 lineHeight = LineHeight("0.9rem")
