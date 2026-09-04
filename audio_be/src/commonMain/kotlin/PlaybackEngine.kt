@@ -153,6 +153,7 @@ class PlaybackEngine(
                 sampleRate = context.sampleRate,
                 blockFrames = context.blockFrames,
                 registry = context.masterRegistry.fork(),
+                rings = context.warehouse.sized,
             )
             val scheduler = VoiceScheduler(
                 VoiceScheduler.Options(context = context, cylinders = cylinders, masterBus = masterBus)

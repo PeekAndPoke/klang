@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.master
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import kotlin.math.abs
 import io.peekandpoke.klang.audio_be.master.MasterBus.Companion.MAX_CACHED_CHAINS
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 
 /**
@@ -44,14 +45,17 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
  * than [MAX_CACHED_CHAINS] edits ago rebuilds it on the audio thread.
  *
  * Note that registration is *also* handled on the audio thread (both backends drain commands there),
- * so building still costs one allocation at that moment — bounded by sizing delay rings to their
- * declared time. That residual is the same class as the known cylinder allocation spike and belongs
- * to the resource-warehouse-pool work, not here.
+ * so building still costs at that moment: Freeverb buffers always, and a delay ring only when the
+ * backend's shelf has none of that class idle (resource-warehouse step 2e: master delays rent from
+ * the same class-sized shelf as the orbits, and an evicted chain's rings go back to it). The first
+ * master delay of a class on a backend still allocates in render, by decision (D2, 2026-09-04).
  */
 class MasterBus(
     private val sampleRate: Int,
     private val blockFrames: Int,
     private val registry: MasterRegistry,
+    /** The backend's ring shelf; master delays rent from it and evicted chains return to it. */
+    private val rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
 ) {
     companion object {
         /** Crossfade length for a master swap. Tune by ear. */
@@ -91,6 +95,7 @@ class MasterBus(
         dsl = MasterDsl.default,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
+        rings = rings,
     )
 
     /** The active chain. Unity until a `master(…)` event says otherwise. */
@@ -174,7 +179,7 @@ class MasterBus(
         }
 
         evictIfNeeded()
-        chains[key] = MasterChain.build(dsl, sampleRate, blockFrames)
+        chains[key] = MasterChain.build(dsl, sampleRate, blockFrames, rings)
     }
 
     /**
@@ -191,6 +196,9 @@ class MasterBus(
             } ?: return
 
             chains.remove(victim.key)
+            // The chain is out of play (not current, not outgoing, not queued): its rings go back
+            // to the shelf, where the next master delay of that class finds them without allocating.
+            victim.value.releaseRings(rings)
         }
     }
 
@@ -272,7 +280,7 @@ class MasterBus(
 
         evictIfNeeded()
 
-        return MasterChain.build(dsl, sampleRate, blockFrames).also { chains[key] = it }
+        return MasterChain.build(dsl, sampleRate, blockFrames, rings).also { chains[key] = it }
     }
 
     /**

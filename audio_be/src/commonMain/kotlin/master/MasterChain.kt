@@ -10,8 +10,11 @@ import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.master.MasterChain.Companion.buildReverb
+import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import kotlin.math.ceil
 
 /**
  * One stage of a built [MasterChain] — a thin shell over the **shared** DSP in
@@ -46,6 +49,12 @@ internal class MasterChain private constructor(
     val reverbs: Array<Reverb>,
     val delays: Array<DelayLine>,
     val limiters: Array<Compressor>,
+    /**
+     * Delay stages the warehouse REFUSED a ring for (resource-warehouse step 2e). Each is built
+     * without its delay — the chain stays usable, the echo is simply absent — and counted here so
+     * the reporting step can surface it like a per-orbit `deniedRents`.
+     */
+    val deniedRents: Int,
 ) {
     /** True when this chain does anything at all — an empty chain is a pure pass-through. */
     val isActive: Boolean = stages.isNotEmpty()
@@ -81,6 +90,17 @@ internal class MasterChain private constructor(
         return false
     }
 
+    /**
+     * Hands every delay ring back to [rings] — the return path of resource-warehouse step 2e. Call
+     * exactly once, when the chain leaves the cache ([MasterBus.evictIfNeeded]); the chain must not
+     * process afterwards (its `DelayLine`s now write into a ring the shelf will lend out again).
+     */
+    fun releaseRings(rings: SizedBuffers) {
+        for (i in delays.indices) {
+            rings.giveBack(delays[i].ring)
+        }
+    }
+
     /** Clears every stateful unit, so a re-adopted chain cannot replay an earlier section. */
     fun reset() {
         for (i in reverbs.indices) {
@@ -95,20 +115,6 @@ internal class MasterChain private constructor(
     }
 
     companion object {
-        /** Head-room added to a delay ring on top of the declared time. */
-        private const val DELAY_RING_MARGIN_SECONDS = 0.05
-
-        /**
-         * Upper bound on a master delay ring.
-         *
-         * ⚠️ PARITY GAP since 2026-09-03, closed by resource-warehouse step 2e: the per-orbit delay
-         * no longer has a ceiling (its ring is rented from the warehouse, class-sized, open-ended),
-         * so `delay(20)` is a real 20 s echo on an orbit and a 10 s one here. Same parameter, two
-         * meanings — the roomSize-10× class of bug. 2e moves the master onto the same shelf and
-         * deletes this constant. Until then this comment is the record, not a justification.
-         */
-        private const val MAX_DELAY_SECONDS = 10.0
-
         /**
          * Ceiling on limiter lookahead. `MasterBus.register` builds chains on the audio thread, so
          * an unbounded value would allocate there — 50 ms is ~77 KB stereo, 10 s would be ~7.7 MB.
@@ -127,14 +133,23 @@ internal class MasterChain private constructor(
         /**
          * Builds the shells for [dsl] in declaration order.
          *
-         * **Allocates** (Freeverb buffers, delay rings) — call this at registration time, never while
-         * applying a swap.
+         * **Allocates** (Freeverb buffers; delay rings only when the shelf has none idle) — call
+         * this at registration time, never while applying a swap. Delay rings come from [rings],
+         * the backend's shelf, class-sized exactly as the per-orbit delay sizes its own (step 2e):
+         * `delay(20)` is the same 20 s echo on both buses, and a ring an evicted chain returns is
+         * what the next master delay of that class gets without allocating.
          */
-        fun build(dsl: MasterDsl, sampleRate: Int, blockFrames: Int): MasterChain {
+        fun build(
+            dsl: MasterDsl,
+            sampleRate: Int,
+            blockFrames: Int,
+            rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+        ): MasterChain {
             val stages = mutableListOf<MasterFx>()
             val reverbs = mutableListOf<Reverb>()
             val delays = mutableListOf<DelayLine>()
             val limiters = mutableListOf<Compressor>()
+            var deniedRents = 0
 
             for (stage in dsl.stages) {
                 when (stage) {
@@ -151,9 +166,13 @@ internal class MasterChain private constructor(
                         stages.add(built.fx)
                     }
 
-                    is MasterStageDsl.Delay -> buildDelay(stage, sampleRate, blockFrames)?.let { built ->
-                        delays.add(built.delayLine)
-                        stages.add(built.fx)
+                    is MasterStageDsl.Delay -> when (val built = buildDelay(stage, sampleRate, blockFrames, rings)) {
+                        null -> {} // inaudible, or below the off-threshold: no stage
+                        BuiltDelay.Denied -> deniedRents++
+                        is BuiltDelay.Ready -> {
+                            delays.add(built.delayLine)
+                            stages.add(built.fx)
+                        }
                     }
                 }
             }
@@ -163,11 +182,18 @@ internal class MasterChain private constructor(
                 reverbs = reverbs.toTypedArray(),
                 delays = delays.toTypedArray(),
                 limiters = limiters.toTypedArray(),
+                deniedRents = deniedRents,
             )
         }
 
         private class BuiltReverb(val reverb: Reverb, val fx: MasterFx)
-        private class BuiltDelay(val delayLine: DelayLine, val fx: MasterFx)
+
+        private sealed class BuiltDelay {
+            class Ready(val delayLine: DelayLine, val fx: MasterFx) : BuiltDelay()
+
+            /** The shelf had no ring and could not allocate one: the stage is skipped, and counted. */
+            object Denied : BuiltDelay()
+        }
 
         /**
          * Finite-guards a user-supplied parameter, falling back to [fallback].
@@ -270,20 +296,36 @@ internal class MasterChain private constructor(
          * time there). Without the skip, a "zero" time would be coerced up to the DSP's ~5-sample
          * minimum and ring as a metallic comb.
          *
-         * The ring is sized to the declared time (fixed per chain), not to a blanket maximum — a
-         * 0.25 s master delay costs ~190 KB instead of ~3 MB.
+         * The ring is rented from the shelf at the class that holds the declared time plus the
+         * interpolation margin — the SAME sizing rule as `KatalystDelayEffect.framesFor`, so a time
+         * means one ring on either bus. There is no ceiling on either (a 20 s master delay is a
+         * real 20 s echo, as it is on an orbit). A time past the Int range asks for
+         * `Int.MAX_VALUE`, which nothing serves: the stage is [BuiltDelay.Denied], like a refused
+         * allocation.
          */
-        private fun buildDelay(stage: MasterStageDsl.Delay, sampleRate: Int, blockFrames: Int): BuiltDelay? {
+        private fun buildDelay(
+            stage: MasterStageDsl.Delay,
+            sampleRate: Int,
+            blockFrames: Int,
+            rings: SizedBuffers,
+        ): BuiltDelay? {
             val wet = finite(stage.wet, 0.0)
-            val timeSeconds = finite(stage.timeSeconds, 0.25)
+            val time = finite(stage.timeSeconds, 0.25)
 
-            if (wet <= MIN_WET || timeSeconds < MIN_TIME_FX) {
+            if (wet <= MIN_WET || time < MIN_TIME_FX) {
                 return null
             }
 
-            val time = timeSeconds.coerceAtMost(MAX_DELAY_SECONDS)
+            val frames = ceil(time * sampleRate)
+            val needed = if (frames < Int.MAX_VALUE - ResourceWarehouse.RING_MARGIN_FRAMES) {
+                frames.toInt() + ResourceWarehouse.RING_MARGIN_FRAMES
+            } else {
+                Int.MAX_VALUE
+            }
+            val ring = rings.rent(needed) ?: return BuiltDelay.Denied
+
             val delayLine = DelayLine(
-                maxDelaySeconds = time + DELAY_RING_MARGIN_SECONDS,
+                ring = ring,
                 sampleRate = sampleRate,
                 delayTimeSeconds = time,
                 // A property initializer bypasses the class's own non-finite setter guard.
@@ -293,7 +335,7 @@ internal class MasterChain private constructor(
             }
             val send = StereoBuffer(blockFrames)
 
-            return BuiltDelay(
+            return BuiltDelay.Ready(
                 delayLine = delayLine,
                 fx = MasterFx { bus, frames ->
                     fillSend(send, bus, frames, wet)
