@@ -107,8 +107,8 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                 borderRadius = 0.3.rem
                 padding = Padding(vertical = 0.2.rem, horizontal = 0.5.rem)
                 fontFamily = "monospace"
-                fontSize = 0.62.rem
-                lineHeight = LineHeight("0.9rem")
+                fontSize = 0.7.rem
+                lineHeight = LineHeight("0.85rem")
                 whiteSpace = WhiteSpace.nowrap
                 textAlign = TextAlign.left
                 color = Color(KlangTheme.Hex.textSecondary)

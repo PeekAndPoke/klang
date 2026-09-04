@@ -71,7 +71,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
         /** The frame's total height. */
-        val FRAME_HEIGHT = 13.0.rem
+        val FRAME_HEIGHT = 13.25.rem
 
         /** The top slot: the three gauges (62 px + their glow). */
         val TOP_SLOT_HEIGHT = 4.5.rem
@@ -84,7 +84,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
          * The title slot, anchored to the bottom: the title sits vertically centred in it; the
          * warehouse stats, when toggled in, fill it.
          */
-        val TITLE_HEIGHT = 3.75.rem
+        val TITLE_HEIGHT = 4.0.rem
         val TITLE_BOTTOM = 0.25.rem
 
         /** The spectrum's height, anchored to the bottom, behind everything. */
