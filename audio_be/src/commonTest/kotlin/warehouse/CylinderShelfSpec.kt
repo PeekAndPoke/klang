@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.BackendClock
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.WarmupRunner
+import io.peekandpoke.klang.audio_be.WarmupVocabulary
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
@@ -290,6 +291,24 @@ class CylinderShelfSpec : StringSpec({
         warmup.readyWhileDirty shouldBe true
         f.warehouse.isClean shouldBe false
         generateSequence { f.commLink.frontend.feedback.receive() }.toList().last().shouldBeInstanceOf<KlangCommLink.Feedback.BackendReady>()
+    }
+
+    "the warmup plays every vocabulary graph at least once — sixteen orbits cover the twelve sounds" {
+        // The vocabulary is what makes a song's custom instrument warm (WarmupVocabularySpec proves
+        // it covers every node kind); this row pins that the warmup actually schedules each of
+        // them, and that no warmup voice is dropped for an unregistered sound.
+        WarmupVocabulary.sounds.map { it.first }.forEach { name -> (name in WarmupRunner.WARMUP_SOUNDS) shouldBe true }
+        (WarmupRunner.WARMUP_ORBITS >= WarmupRunner.WARMUP_SOUNDS.size) shouldBe true
+
+        val f = fixture()
+        val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend)
+        warmup.start()
+        repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
+
+        val engine = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull()
+        engine.scheduler.droppedVoiceCount(WarmupRunner.WARMUP_PLAYBACK_ID) shouldBe 0
+        WarmupVocabulary.sounds.forEach { (name, _) -> engine.scheduler.containsIgnitor(name) shouldBe true }
+        engine.scheduler.getActiveVoiceCount() shouldBe WarmupRunner.WARMUP_ORBITS
     }
 
     "the warmup reaches the phaser, compressor, body and vowel constructors too" {

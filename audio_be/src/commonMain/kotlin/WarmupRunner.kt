@@ -85,11 +85,14 @@ class WarmupRunner(
         const val TAIL_BLOCKS: Int = 2
 
         /**
-         * Sounds the warmed voices rotate through. Each is a different ignitor graph, and the first
-         * note of each JITs it: a song's first supersaw used to compile in a live frame. The
-         * warmup's own all-zeros sample exercises the sample path.
+         * Sounds the warmed voices rotate through: the common builtins, the warmup's own all-zeros
+         * sample (the sample path), and the [WarmupVocabulary] graphs, which between them execute
+         * EVERY `IgnitorDsl` node kind — a song's custom instrument is composed of those kinds, and
+         * its first note used to JIT each of them in a live frame (the Fairphone's spike-then-hiccups
+         * once Der Schmetterling's voices came in, 2026-09-04). Sixteen orbits cover the twelve.
          */
-        val WARMUP_SOUNDS: List<String> = listOf("sine", "saw", "supersaw", "square", "triangle", WARMUP_SAMPLE_NAME)
+        val WARMUP_SOUNDS: List<String> =
+            listOf("sine", "saw", "supersaw", "square", "triangle", WARMUP_SAMPLE_NAME) + WarmupVocabulary.sounds.map { it.first }
 
         /**
          * Orbit-level effects the warmed voices rotate through on top of delay + room + filter, so
@@ -129,6 +132,12 @@ class WarmupRunner(
                 ),
             )
         )
+
+        // The vocabulary graphs are custom ignitors on the warmup playback, registered the way a
+        // song registers its own — the same path, the same registry fork.
+        for ((name, dsl) in WarmupVocabulary.sounds) {
+            dispatcher.handle(KlangCommLink.Cmd.RegisterIgnitor(playbackId = WARMUP_PLAYBACK_ID, name = name, dsl = dsl))
+        }
 
         // One WET voice per warmed orbit on a dedicated warmup engine, each starting one block
         // after the previous (bucketed, see TAIL_BLOCKS): every block builds one cylinder and rents

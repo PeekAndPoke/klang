@@ -320,6 +320,27 @@ KDoc, a misplaced comment, a tautological assertion and an inert spec setup fixe
 timing carries the worst case. 6 mutations red. **Loop closed here**: five rounds, the last one
 clean on code; per the standard the remaining MINORs were applied as one batch without a re-review.
 
+### Step 4 — the warmup vocabulary (2026-09-04, second Fairphone measurement)
+
+**Measured with step 3 + rounds 3–5 in:** better, not perfect. The count-in is fine; when all the
+other voices come in there is a spike followed by hiccups that stabilise; stop and run again and it
+is fine. That is the signature of COLD CODE, not of resources: the song's instruments are custom
+ignitors composed of node kinds the warmup had never executed (`eq` sections, `range`, `seg`,
+`pitchEnvelope`, `crackle`, `unison` …), and each kind's first blocks JIT on the audio thread.
+**Fix: `WarmupVocabulary`** — six synthetic graphs (waves, supers, noises, math, filters, effects)
+that together touch every `IgnitorDsl` node kind and every `EqSection` kind, finite by
+construction, registered on the warmup playback exactly as a song registers its own and rotated
+over the sixteen orbits with the builtin sounds (twelve sounds, sixteen orbits). Guard:
+`WarmupVocabularySpec` (JVM, reflection over the sealed hierarchy) fails when a node kind exists
+that no vocabulary graph executes and is not excluded with a reason; every graph must render
+audible, finite audio through the real engine, one fresh engine per sound (a shared one let an
+earlier tail make a muted graph look audible, a mutation caught that). 5 mutations red; one
+equivalent (`div` by a zero constant does not produce NaN — the engine guards it). Maintainer's
+rule for this step: "if the solution introduces undue complexity, keep as is and defer to
+docs/tasks/future" — judged not undue (one file, one spec, three lines in the runner).
+**What the vocabulary does NOT cover, by design:** a song's own registered ignitor still builds
+its graph on its first note (small, warm code); per-note voice construction; sample decoding.
+
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
 `VoiceScheduler` reads `context.warehouse.scratch`); the remaining `scratchBuffers` fields sit on the
