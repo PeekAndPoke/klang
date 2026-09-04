@@ -120,7 +120,10 @@ class PlaybackEngineDispatcher(
 
     /** Immediate disposal (warmup teardown) — does not let voices ring out. */
     fun cleanupHard(playbackId: String) {
-        engines.remove(playbackId)?.scheduler?.cleanupHard(playbackId)
+        engines.remove(playbackId)?.let { engine ->
+            engine.scheduler.cleanupHard(playbackId)
+            engine.dispose()
+        }
         draining.remove(playbackId)
     }
 
@@ -215,7 +218,7 @@ class PlaybackEngineDispatcher(
             val playbackId = iter.next()
             val engine = engines[playbackId]
             if (engine == null || engine.isIdle()) {
-                engines.remove(playbackId)
+                engines.remove(playbackId)?.dispose()
                 iter.remove()
             }
         }

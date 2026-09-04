@@ -308,6 +308,17 @@ class Cylinder(
      * 2. After N silent blocks, scan effect internal buffers. If they still have audio, reset
      *    the counter and keep processing. If silent, deactivate.
      */
+    /**
+     * Returns this orbit's rented units (delay ring, reverb network) to the warehouse — the
+     * resource-warehouse return path (2f). Only for a cylinder that will never render again: the
+     * owning engine is being disposed. `Cylinders.releaseAll` is the one caller.
+     */
+    fun release() {
+        delay.release()
+        reverb.release()
+        isActive = false
+    }
+
     fun tryDeactivate() {
         if (!isActive) return
 

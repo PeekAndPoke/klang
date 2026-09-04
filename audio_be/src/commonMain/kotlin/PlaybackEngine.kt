@@ -121,6 +121,16 @@ class PlaybackEngine(
      * quiet — a delay with `feedback >= 1.0` recirculates without loss, so its ring never empties
      * and an unbounded hold would keep a stopped playback rendering (leaking one engine per stop).
      */
+    /**
+     * The engine's end: every rented unit (orbit delay rings, reverb networks, master chain units)
+     * goes back to the backend's warehouse (2f). Called by the dispatcher exactly once, after the
+     * engine has been removed from the render set; nothing renders through it afterwards.
+     */
+    fun dispose() {
+        cylinders.releaseAll()
+        masterBus.releaseAll()
+    }
+
     fun isIdle(): Boolean {
         if (hasOwnSound()) {
             return false

@@ -47,6 +47,18 @@ class Cylinders(
     /**
      * Clear all cylinders
      */
+    /**
+     * Returns every cylinder's rented units to the warehouse and drops the cylinders — the engine
+     * is being disposed (resource warehouse, 2f). The next playback's first delay or room of the
+     * same class is then a shelf hit, not an allocation in render.
+     */
+    fun releaseAll() {
+        for (cylinder in id2cylinder.values) {
+            cylinder.release()
+        }
+        id2cylinder.clear()
+    }
+
     fun clearAll() {
         for (cylinder in id2cylinder.values) {
             cylinder.clear()

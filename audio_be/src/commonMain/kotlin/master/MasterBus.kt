@@ -187,6 +187,19 @@ class MasterBus(
     }
 
     /**
+     * Returns every cached chain's units to the warehouse and drops the cache — the owning engine
+     * is being disposed (resource warehouse, 2f). The bus must not process afterwards.
+     */
+    fun releaseAll() {
+        for (chain in chains.values) {
+            chain.releaseUnits(rings, reverbs)
+        }
+        chains.clear()
+        current = unity
+        previous = null
+    }
+
+    /**
      * Drops cached chains that are not in play, keeping the cache bounded.
      *
      * "In play" includes the **queued** chain: evicting it would make the fade-completion path

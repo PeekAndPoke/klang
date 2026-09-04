@@ -232,6 +232,19 @@ class KatalystDelayEffect(
      *  setters DROP non-finite writes, so a NaN param from the next life's first owner would
      *  otherwise inherit THIS life's value — e.g. a dead owner's self-oscillating feedback.
      *  Mirrors `Phaser.resetForReuse`. */
+    /**
+     * The return path (resource warehouse, 2f): hands the ring back to the shelf and forgets it.
+     * Called when the owning engine is disposed — never while the orbit can still render, since
+     * the ring now belongs to whoever rents it next. A later [configure] would rent afresh.
+     */
+    fun release() {
+        delayLine?.let { rings.giveBack(it.ring) }
+        delayLine = null
+        state = State.Off
+        drainRemaining = 0.0
+        refusedFrames = 0
+    }
+
     fun reset() {
         // The ring is KEPT — re-activation is then free. Eviction (2f) is what returns it.
         delayLine?.let {

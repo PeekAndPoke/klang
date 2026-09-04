@@ -207,6 +207,18 @@ class KatalystReverbEffect(
         return unit
     }
 
+    /**
+     * The return path (resource warehouse, 2f): hands the network back to the shelf and forgets
+     * it. Called when the owning engine is disposed — never while the orbit can still render.
+     */
+    fun release() {
+        reverb?.let { units.giveBack(it) }
+        reverb = null
+        state = State.Off
+        drainRemaining = 0.0
+        refused = false
+    }
+
     /** Clears the network, the lifecycle AND the DSP params — called from
      *  `Cylinder.resetBusEffects` on orbit deactivation. The params go back to factory here
      *  (the delay's review-round-5 rationale): [Reverb]'s setters DROP non-finite writes, so a
