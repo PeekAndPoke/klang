@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.master.MasterChain.Companion.buildReverb
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
@@ -50,9 +51,10 @@ internal class MasterChain private constructor(
     val delays: Array<DelayLine>,
     val limiters: Array<Compressor>,
     /**
-     * Delay stages the warehouse REFUSED a ring for (resource-warehouse step 2e). Each is built
-     * without its delay — the chain stays usable, the echo is simply absent — and counted here so
-     * the reporting step can surface it like a per-orbit `deniedRents`.
+     * Delay and reverb stages the warehouse REFUSED a ring or unit for (resource-warehouse steps
+     * 2e/2d). Each is built without its effect — the chain stays usable, the echo or room is
+     * simply absent — and counted here so the reporting step can surface it like a per-orbit
+     * `deniedRents`.
      */
     val deniedRents: Int,
 ) {
@@ -91,13 +93,17 @@ internal class MasterChain private constructor(
     }
 
     /**
-     * Hands every delay ring back to [rings] — the return path of resource-warehouse step 2e. Call
-     * exactly once, when the chain leaves the cache ([MasterBus.evictIfNeeded]); the chain must not
-     * process afterwards (its `DelayLine`s now write into a ring the shelf will lend out again).
+     * Hands every delay ring back to [rings] and every reverb network back to [reverbs] — the
+     * return path of resource-warehouse steps 2e/2d. Call exactly once, when the chain leaves the
+     * cache ([MasterBus.evictIfNeeded]); the chain must not process afterwards (its units now
+     * belong to whoever rents them next).
      */
-    fun releaseRings(rings: SizedBuffers) {
+    fun releaseUnits(rings: SizedBuffers, reverbs: ReverbUnits) {
         for (i in delays.indices) {
             rings.giveBack(delays[i].ring)
+        }
+        for (i in this.reverbs.indices) {
+            reverbs.giveBack(this.reverbs[i])
         }
     }
 
@@ -144,9 +150,10 @@ internal class MasterChain private constructor(
             sampleRate: Int,
             blockFrames: Int,
             rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+            reverbs: ReverbUnits = ReverbUnits(sampleRate),
         ): MasterChain {
             val stages = mutableListOf<MasterFx>()
-            val reverbs = mutableListOf<Reverb>()
+            val reverbUnits = mutableListOf<Reverb>()
             val delays = mutableListOf<DelayLine>()
             val limiters = mutableListOf<Compressor>()
             var deniedRents = 0
@@ -161,9 +168,13 @@ internal class MasterChain private constructor(
                         stages.add(MasterFx { bus, frames -> limiter.process(bus.left, bus.right, frames) })
                     }
 
-                    is MasterStageDsl.Reverb -> buildReverb(stage, sampleRate, blockFrames)?.let { built ->
-                        reverbs.add(built.reverb)
-                        stages.add(built.fx)
+                    is MasterStageDsl.Reverb -> when (val built = buildReverb(stage, blockFrames, reverbs)) {
+                        null -> {} // inaudible: no stage
+                        BuiltReverb.Denied -> deniedRents++
+                        is BuiltReverb.Ready -> {
+                            reverbUnits.add(built.reverb)
+                            stages.add(built.fx)
+                        }
                     }
 
                     is MasterStageDsl.Delay -> when (val built = buildDelay(stage, sampleRate, blockFrames, rings)) {
@@ -179,14 +190,19 @@ internal class MasterChain private constructor(
 
             return MasterChain(
                 stages = stages.toTypedArray(),
-                reverbs = reverbs.toTypedArray(),
+                reverbs = reverbUnits.toTypedArray(),
                 delays = delays.toTypedArray(),
                 limiters = limiters.toTypedArray(),
                 deniedRents = deniedRents,
             )
         }
 
-        private class BuiltReverb(val reverb: Reverb, val fx: MasterFx)
+        private sealed class BuiltReverb {
+            class Ready(val reverb: Reverb, val fx: MasterFx) : BuiltReverb()
+
+            /** The shelf had no unit and could not allocate one: the stage is skipped, and counted. */
+            object Denied : BuiltReverb()
+        }
 
         private sealed class BuiltDelay {
             class Ready(val delayLine: DelayLine, val fx: MasterFx) : BuiltDelay()
@@ -251,7 +267,7 @@ internal class MasterChain private constructor(
          * "off" master reverb costs nothing (Freeverb is the heaviest single DSP unit in the
          * engine).
          */
-        private fun buildReverb(stage: MasterStageDsl.Reverb, sampleRate: Int, blockFrames: Int): BuiltReverb? {
+        private fun buildReverb(stage: MasterStageDsl.Reverb, blockFrames: Int, units: ReverbUnits): BuiltReverb? {
             val wet = finite(stage.wet, 0.0)
             // The authored value is on the sprudel ~0..10 scale; ONE shared conversion for both
             // buses. The fallback must be the *authored* default, not the normalized one — a 0.5
@@ -273,7 +289,7 @@ internal class MasterChain private constructor(
             // feedback, so it carries the same 0..1 bound (past unity the combs run away to NaN —
             // see `Reverb.normalizeRoomSize`); damp is bounded because past 2.5 the comb one-pole
             // coefficient exceeds 1 and the filter diverges.
-            val reverb = Reverb(sampleRate = sampleRate).also {
+            val reverb = (units.rent() ?: return BuiltReverb.Denied).also {
                 it.roomSize = roomSize
                 it.damp = finite(stage.damp, 0.5).coerceIn(0.0, 1.0)
                 it.roomFade = stage.roomFade?.takeIf { fade -> fade.isFinite() }?.coerceIn(0.0, 1.0)
@@ -281,7 +297,7 @@ internal class MasterChain private constructor(
             }
             val send = StereoBuffer(blockFrames)
 
-            return BuiltReverb(
+            return BuiltReverb.Ready(
                 reverb = reverb,
                 fx = MasterFx { bus, frames ->
                     fillSend(send, bus, frames, wet)

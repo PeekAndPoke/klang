@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -19,6 +20,8 @@ class Cylinders(
     maxCylinders: Int = MAX_CYLINDERS,
     /** The ring shelf every cylinder rents from. Production passes the backend's one warehouse. */
     private val rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+    /** The reverb-unit shelf every cylinder rents from. Same warehouse. */
+    private val reverbs: ReverbUnits = ReverbUnits(sampleRate),
 ) {
     companion object {
         const val MAX_CYLINDERS = 256
@@ -130,6 +133,7 @@ class Cylinders(
                 sampleRate = sampleRate,
                 silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
                 rings = rings,
+                reverbs = reverbs,
             )
         }.also {
             it.updateFromVoice(voice, blockStart)

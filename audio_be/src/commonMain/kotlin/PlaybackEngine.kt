@@ -146,7 +146,12 @@ class PlaybackEngine(
 
         /** Builds an engine: its own [Cylinders] + a [VoiceScheduler] wired to the shared [context]. */
         fun create(context: AudioBackendContext): PlaybackEngine {
-            val cylinders = Cylinders(blockFrames = context.blockFrames, sampleRate = context.sampleRate, rings = context.warehouse.sized)
+            val cylinders = Cylinders(
+                blockFrames = context.blockFrames,
+                sampleRate = context.sampleRate,
+                rings = context.warehouse.sized,
+                reverbs = context.warehouse.reverbs,
+            )
             // The bus is built first and handed to the scheduler as the sink for `master(…)` events,
             // so neither has to know about the other's lifecycle.
             val masterBus = MasterBus(
@@ -154,6 +159,7 @@ class PlaybackEngine(
                 blockFrames = context.blockFrames,
                 registry = context.masterRegistry.fork(),
                 rings = context.warehouse.sized,
+                reverbs = context.warehouse.reverbs,
             )
             val scheduler = VoiceScheduler(
                 VoiceScheduler.Options(context = context, cylinders = cylinders, masterBus = masterBus)

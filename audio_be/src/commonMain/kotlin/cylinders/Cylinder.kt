@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.VoiceLease
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
-import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
 
@@ -43,10 +43,12 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 class Cylinder(
     val id: Int,
     val blockFrames: Int,
-    sampleRate: Int,
+    private val sampleRate: Int,
     private val silentBlocksBeforeTailCheck: Int = 10,
     /** The ring shelf this orbit's delay rents from. Production passes the backend's one warehouse. */
     rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+    /** The reverb-unit shelf this orbit's reverb rents from. Same warehouse. */
+    reverbs: ReverbUnits = ReverbUnits(sampleRate),
 ) {
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -67,8 +69,9 @@ class Cylinder(
         blockFrames = blockFrames,
     )
 
+    // No network until a voice asks for room (resource warehouse, 2d): ~200 KB per orbit otherwise.
     val reverb = KatalystReverbEffect(
-        reverb = Reverb(sampleRate),
+        units = reverbs,
         blockFrames = blockFrames,
     )
 
@@ -211,7 +214,7 @@ class Cylinder(
             val existing = ducking.ducking
             if (existing == null) {
                 ducking.ducking = Ducking(
-                    sampleRate = reverb.reverb.sampleRate,
+                    sampleRate = sampleRate,
                     attackSeconds = voiceDucking.attackSeconds,
                     depth = voiceDucking.depth,
                 )
@@ -230,7 +233,7 @@ class Cylinder(
             val existing = compressor.compressor
             if (existing == null) {
                 compressor.compressor = Compressor(
-                    sampleRate = reverb.reverb.sampleRate,
+                    sampleRate = sampleRate,
                     thresholdDb = compSettings.thresholdDb,
                     ratio = compSettings.ratio,
                     kneeDb = compSettings.kneeDb,

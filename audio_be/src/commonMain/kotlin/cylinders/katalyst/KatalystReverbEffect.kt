@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import kotlin.math.min
 
 /**
@@ -42,16 +43,47 @@ import kotlin.math.min
  * This adoption fixes the GATE shape only; the Freeverb internals keep their own audit round.
  */
 class KatalystReverbEffect(
-    /**
-     * The DSP core. INVARIANT: the room params change only through [configure] — a direct write
-     * bypasses the lifecycle and desyncs [state] from the DSP (tests may write directly to probe
-     * the core; production must not).
-     */
-    val reverb: Reverb,
+    /** The unit shelf this orbit rents from (resource warehouse, 2d). */
+    private val units: ReverbUnits,
     blockFrames: Int,
 ) : KatalystEffect {
 
+    /**
+     * Test seam: an effect around a unit the spec already holds. It behaves exactly like one that
+     * rented that unit on its first activating [configure]; a further rent is never needed.
+     */
+    constructor(reverb: Reverb, blockFrames: Int) : this(
+        units = ReverbUnits(reverb.sampleRate),
+        blockFrames = blockFrames,
+    ) {
+        this.reverb = reverb
+    }
+
     private enum class State { Off, Active, Draining }
+
+    /**
+     * The DSP core, or `null` until an owner asks for reverb (a fresh orbit holds NO network — a
+     * Freeverb unit is ~200 KB, and eight of them per playback were 1.6 MB zero-filled on the audio
+     * thread before any note). Rented from [units] on the first activating [configure]; kept across
+     * [reset] like the delay's ring, returned only by eviction (2f).
+     *
+     * INVARIANT: the room params change only through [configure] — a direct write bypasses the
+     * lifecycle and desyncs [state] from the DSP (tests may write directly to probe the core;
+     * production must not).
+     */
+    var reverb: Reverb? = null
+        private set
+
+    /** Activating configures the shelf refused a unit for. Counted per orbit life, like the delay's. */
+    var deniedRents: Int = 0
+        private set
+
+    /**
+     * A refusal is remembered until [reset]: the owner re-applies its config every block, and
+     * without the latch a refused unit is an allocate-and-catch per block (the delay's lesson,
+     * review round 1). All units are one size, so a Boolean is the whole latch.
+     */
+    private var refused = false
 
     private var state = State.Off
 
@@ -94,26 +126,29 @@ class KatalystReverbEffect(
         val fade = roomFade?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
 
         if (fade != null || (roomSize.isFinite() && roomSize >= MIN_ACTIVE_ROOM_SIZE)) {
-            reverb.roomSize = roomSize.coerceIn(0.0, 1.0)
-            reverb.roomFade = fade
-            reverb.roomLp = roomLp?.takeIf { it.isFinite() }
-            reverb.roomDim = roomDim
-            reverb.iResponse = iResponse
+            val unit = reverb ?: rentUnit() ?: return
+
+            unit.roomSize = roomSize.coerceIn(0.0, 1.0)
+            unit.roomFade = fade
+            unit.roomLp = roomLp?.takeIf { it.isFinite() }
+            unit.roomDim = roomDim
+            unit.iResponse = iResponse
             state = State.Active
             return
         }
 
-        if (state == State.Active) {
+        val unit = reverb
+        if (state == State.Active && unit != null) {
             // One comb scan at the transition: the countdown starts from what the combs actually
             // hold, so a barely-charged network drains in proportion to its content. An
             // already-silent network goes straight to Off — and so does a BROKEN one: a
             // non-finite comb cell makes the countdown non-finite (combPeakAbs reports any
             // poisoned cell as +Inf), and the reset is the heal (review rounds 1-2; the old
             // gate's takeover path provided exactly this exit).
-            drainRemaining = reverb.drainSamplesUntilSilent(peak = reverb.combPeakAbs())
+            drainRemaining = unit.drainSamplesUntilSilent(peak = unit.combPeakAbs())
 
             if (drainRemaining <= 0.0 || !drainRemaining.isFinite()) {
-                reverb.reset()
+                unit.reset()
                 state = State.Off
             } else {
                 state = State.Draining
@@ -146,7 +181,30 @@ class KatalystReverbEffect(
     fun hasTail(): Boolean = when (state) {
         State.Off -> false
         State.Draining -> true
-        State.Active -> reverb.hasTail()
+        State.Active -> reverb?.hasTail() ?: false
+    }
+
+    /**
+     * Rents the unit on the first activating configure. Refused → stays Off, counted, latched until
+     * [reset]. Nothing else in this class allocates.
+     */
+    private fun rentUnit(): Reverb? {
+        if (refused) {
+            return null
+        }
+
+        val unit = units.rent()
+
+        if (unit == null) {
+            deniedRents++
+            refused = true
+
+            return null
+        }
+
+        reverb = unit
+
+        return unit
     }
 
     /** Clears the network, the lifecycle AND the DSP params — called from
@@ -155,23 +213,30 @@ class KatalystReverbEffect(
      *  NaN param from the next life's first owner would otherwise inherit THIS life's value.
      *  Mirrors [KatalystDelayEffect.reset]. */
     fun reset() {
-        reverb.reset()
-        reverb.roomSize = 0.0
-        reverb.damp = 0.5
-        reverb.roomFade = null
-        reverb.roomLp = null
-        reverb.roomDim = null
-        reverb.iResponse = null
+        val unit = reverb
+        if (unit != null) {
+            unit.reset()
+            unit.roomSize = 0.0
+            unit.damp = 0.5
+            unit.roomFade = null
+            unit.roomLp = null
+            unit.roomDim = null
+            unit.iResponse = null
+        }
         state = State.Off
         drainRemaining = 0.0
+        refused = false
     }
 
     override fun process(ctx: KatalystContext) {
+        // Active and Draining are only ever entered with a unit in hand; Off needs none.
+        val unit = reverb ?: return
+
         when (state) {
             State.Off -> {}
 
             State.Active -> {
-                reverb.process(ctx.reverbSendBuffer, ctx.mixBuffer, ctx.blockFrames)
+                unit.process(ctx.reverbSendBuffer, ctx.mixBuffer, ctx.blockFrames)
             }
 
             State.Draining -> {
@@ -180,12 +245,12 @@ class KatalystReverbEffect(
                 // the DSP processed — a countdown outrunning the network would fire the terminal
                 // reset while the tail is still audible (the delay's review-round-2 rationale).
                 val frames = min(ctx.blockFrames, silentInput.left.size)
-                reverb.process(silentInput, ctx.mixBuffer, frames)
+                unit.process(silentInput, ctx.mixBuffer, frames)
 
                 drainRemaining -= frames
 
                 if (drainRemaining <= 0.0) {
-                    reverb.reset()
+                    unit.reset()
                     state = State.Off
                 }
             }

@@ -85,7 +85,7 @@ class OrbitBusPipelineSpec : StringSpec({
             ),
             blockStart = 0.0,
         )
-        cylinder.reverb.reverb.roomSize shouldBe 0.7
+        cylinder.reverb.reverb!!.roomSize shouldBe 0.7
         cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.3
 
         // Different voice, same block → denied → owner's settings persist.
@@ -96,7 +96,7 @@ class OrbitBusPipelineSpec : StringSpec({
             ),
             blockStart = 0.0,
         )
-        cylinder.reverb.reverb.roomSize shouldBe 0.7
+        cylinder.reverb.reverb!!.roomSize shouldBe 0.7
         cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.3
     }
 
@@ -106,12 +106,12 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.5, roomSize = 0.7)), blockStart = 0.0,
         )
-        cylinder.reverb.reverb.roomSize shouldBe 0.7
+        cylinder.reverb.reverb!!.roomSize shouldBe 0.7
 
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.5, roomSize = 0.2)), blockStart = 2.0 * bf,
         )
-        cylinder.reverb.reverb.roomSize shouldBe 0.2 // new owner's
+        cylinder.reverb.reverb!!.roomSize shouldBe 0.2 // new owner's
     }
 
     "switching reverb off starts the drain: the orbit rings out, stays alive, then deactivates clean" {
@@ -138,7 +138,7 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.0, roomSize = 0.0)), blockStart = 2.0 * bf,
         )
-        cylinder.reverb.reverb.roomSize shouldBe 0.05 // retained
+        cylinder.reverb.reverb!!.roomSize shouldBe 0.05 // retained
         cylinder.reverb.hasTail() shouldBe true // draining — VISIBLE to cleanup now
 
         // The tail CHECK itself must hold the orbit, not just the mix-silence gate: with the mix
@@ -171,7 +171,7 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.tryDeactivate()
 
         cylinder.isActive shouldBe false
-        cylinder.reverb.reverb.hasTail(0.0) shouldBe false // literally zero on lease free
+        cylinder.reverb.reverb!!.hasTail(0.0) shouldBe false // literally zero on lease free
     }
 
     "cylinder bus context shares buffers with cylinder" {
@@ -400,10 +400,10 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        cylinder.reverb.reverb.roomSize shouldBe 0.7
-        cylinder.reverb.reverb.roomFade shouldBe 0.3
-        cylinder.reverb.reverb.roomLp shouldBe 5000.0
-        cylinder.reverb.reverb.roomDim shouldBe 0.2
+        cylinder.reverb.reverb!!.roomSize shouldBe 0.7
+        cylinder.reverb.reverb!!.roomFade shouldBe 0.3
+        cylinder.reverb.reverb!!.roomLp shouldBe 5000.0
+        cylinder.reverb.reverb!!.roomDim shouldBe 0.2
     }
 
     "updateFromVoice configures phaser parameters" {

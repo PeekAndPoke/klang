@@ -285,6 +285,20 @@ class Reverb(
         }
     }
 
+    /**
+     * Puts every parameter back to its constructor default — what a unit fresh from `Reverb(sampleRate)`
+     * carries. With [reset] this makes a shelved unit indistinguishable from a new one
+     * (`ReverbUnits.giveBack`). Keep in sync with the property initialisers above.
+     */
+    fun restoreDefaults() {
+        roomSize = 0.5
+        damp = 0.5
+        roomFade = null
+        roomLp = null
+        roomDim = null
+        iResponse = null
+    }
+
     /** The comb feedback [process] runs at: `(roomFade ?: roomSize) x FEEDBACK_SCALE +
      *  FEEDBACK_OFFSET` — one definition shared with [drainSamplesUntilSilent], so the drain
      *  math can never diverge from the DSP it predicts. */

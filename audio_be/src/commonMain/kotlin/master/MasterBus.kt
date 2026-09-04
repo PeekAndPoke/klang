@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.master
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import kotlin.math.abs
 import io.peekandpoke.klang.audio_be.master.MasterBus.Companion.MAX_CACHED_CHAINS
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 
@@ -56,6 +57,8 @@ class MasterBus(
     private val registry: MasterRegistry,
     /** The backend's ring shelf; master delays rent from it and evicted chains return to it. */
     private val rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+    /** The backend's reverb-unit shelf, same contract. */
+    private val reverbs: ReverbUnits = ReverbUnits(sampleRate),
 ) {
     companion object {
         /** Crossfade length for a master swap. Tune by ear. */
@@ -96,6 +99,7 @@ class MasterBus(
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = rings,
+        reverbs = reverbs,
     )
 
     /** The active chain. Unity until a `master(…)` event says otherwise. */
@@ -179,7 +183,7 @@ class MasterBus(
         }
 
         evictIfNeeded()
-        chains[key] = MasterChain.build(dsl, sampleRate, blockFrames, rings)
+        chains[key] = MasterChain.build(dsl, sampleRate, blockFrames, rings, reverbs)
     }
 
     /**
@@ -198,7 +202,7 @@ class MasterBus(
             chains.remove(victim.key)
             // The chain is out of play (not current, not outgoing, not queued): its rings go back
             // to the shelf, where the next master delay of that class finds them without allocating.
-            victim.value.releaseRings(rings)
+            victim.value.releaseUnits(rings, reverbs)
         }
     }
 
@@ -280,7 +284,7 @@ class MasterBus(
 
         evictIfNeeded()
 
-        return MasterChain.build(dsl, sampleRate, blockFrames, rings).also { chains[key] = it }
+        return MasterChain.build(dsl, sampleRate, blockFrames, rings, reverbs).also { chains[key] = it }
     }
 
     /**

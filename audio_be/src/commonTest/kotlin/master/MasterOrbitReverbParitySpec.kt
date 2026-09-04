@@ -86,7 +86,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
         val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        return cylinder.reverb.reverb.roomSize
+        return cylinder.reverb.reverb!!.roomSize
     }
 
     /** What the MASTER path hands the Freeverb for the same authored room size. */
@@ -139,14 +139,14 @@ class MasterOrbitReverbParitySpec : StringSpec({
         val orbit = KatalystReverbEffect(Reverb(sampleRate), blockFrames)
         // A finite fade first, so the +Inf outcome is provably "unset", not a fresh default.
         orbit.configure(roomSize = 0.5, roomFade = 0.3, roomLp = null, roomDim = null, iResponse = null)
-        orbit.reverb.roomFade shouldBe 0.3
+        orbit.reverb!!.roomFade shouldBe 0.3
 
         orbit.configure(
             roomSize = 0.5, roomFade = Double.POSITIVE_INFINITY,
             roomLp = null, roomDim = null, iResponse = null,
         )
-        orbit.reverb.roomFade shouldBe null
-        orbit.reverb.roomSize shouldBe 0.5 // active via roomSize; the non-finite fade is no override
+        orbit.reverb!!.roomFade shouldBe null
+        orbit.reverb!!.roomSize shouldBe 0.5 // active via roomSize; the non-finite fade is no override
     }
 
     "the master exposes the orbit's tail/damping vocabulary, unchanged" {

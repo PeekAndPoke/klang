@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.warehouse
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 
 /**
@@ -32,9 +33,13 @@ class ResourceWarehouse(
     blockFrames: Int,
     budgetBytes: Int = SHELF_BUDGET_BYTES,
     allocate: (frames: Int) -> StereoBuffer? = SizedBuffers::allocateOrNull,
+    allocateReverb: (sampleRate: Int) -> Reverb? = ReverbUnits::allocateOrNull,
 ) {
-    /** Delay rings (and reverb units, once they rent). Class 0 is [MIN_RING_SECONDS] at [sampleRate]. */
+    /** Delay rings. Class 0 is [MIN_RING_SECONDS] at [sampleRate]. */
     val sized: SizedBuffers = SizedBuffers.forRings(sampleRate, budgetBytes, allocate)
+
+    /** Reverb units — one size, lazy on the first `room`, shelved by return (step 2d). */
+    val reverbs: ReverbUnits = ReverbUnits(sampleRate, allocate = allocateReverb)
 
     /**
      * The one shared scratch pool. Engines render sequentially within a block, so one is enough.

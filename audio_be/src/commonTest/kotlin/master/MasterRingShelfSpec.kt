@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
@@ -180,7 +181,7 @@ class MasterRingShelfSpec : StringSpec({
         alloc.asked.size shouldBe allocatedBefore // no allocation for the ninth
     }
 
-    "releaseRings hands back exactly the chain's rings, and they are the instances the shelf lends next" {
+    "releaseUnits hands back exactly the chain's rings, and they are the instances the shelf lends next" {
         val (rings, _) = shelf()
         val chain = MasterChain.build(
             MasterDsl.of(
@@ -192,7 +193,7 @@ class MasterRingShelfSpec : StringSpec({
         val small = chain.delays[0].ring
         val large = chain.delays[1].ring
 
-        chain.releaseRings(rings)
+        chain.releaseUnits(rings, ReverbUnits(sampleRate))
 
         rings.shelfCount shouldBe 2
         // Best-fit-up: a class-0 request takes the small ring, the next class-0 request the large one.

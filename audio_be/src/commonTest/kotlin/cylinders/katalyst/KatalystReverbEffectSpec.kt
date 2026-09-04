@@ -96,8 +96,8 @@ class KatalystReverbEffectSpec : StringSpec({
     "reverb parameters are accessible" {
         val effect = createEffect(roomSize = 0.7)
 
-        effect.reverb.roomSize shouldBe 0.7
-        effect.reverb.sampleRate shouldBe sampleRate
+        effect.reverb!!.roomSize shouldBe 0.7
+        effect.reverb!!.sampleRate shouldBe sampleRate
     }
 
     // ── The drain lifecycle (block-framing ledger D3, adopted for the reverb) ─────────────────
@@ -121,7 +121,7 @@ class KatalystReverbEffectSpec : StringSpec({
         drained.configureRoom(roomSize = 0.0, roomFade = null)
 
         // The off-config must not have reached the DSP: the drain decays at the RETAINED room.
-        drained.reverb.roomSize shouldBe 0.05
+        drained.reverb!!.roomSize shouldBe 0.05
 
         // 40 blocks ≈ 3 revolutions of the longest comb — well inside the countdown, so the two
         // runs must be BIT-identical: the drain is by construction "active with silent input".
@@ -160,7 +160,7 @@ class KatalystReverbEffectSpec : StringSpec({
         // recomputes the same value the effect captured at the off-transition. Pinned: peak 1.0
         // (the impulse cell) at fb 0.714 (roomSize 0.05) is 36 revolutions of the 1640-sample
         // longest comb (1617 + 23 stereo spread at 44.1 kHz).
-        val drainSamples = effect.reverb.drainSamplesUntilSilent(peak = effect.reverb.combPeakAbs())
+        val drainSamples = effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs())
         drainSamples shouldBe (36.0 * 1640.0)
         val drainBlocks = ceil(drainSamples / blockFrames).toInt()
 
@@ -180,7 +180,7 @@ class KatalystReverbEffectSpec : StringSpec({
 
         effect.hasTail() shouldBe false
         // Literally zero: hasTail(0.0) is a strict > comparison, ANY residue would trip it.
-        effect.reverb.hasTail(0.0) shouldBe false
+        effect.reverb!!.hasTail(0.0) shouldBe false
 
         // And Off is a true short-circuit: a hot send no longer reaches the mix.
         ctx.reverbSendBuffer.fill(0.9)
@@ -202,7 +202,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.configureRoom(roomSize = 0.0, roomFade = null)
 
         val drainBlocks = ceil(
-            effect.reverb.drainSamplesUntilSilent(peak = effect.reverb.combPeakAbs()) / blockFrames
+            effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) / blockFrames
         ).toInt() + 2
 
         repeat(drainBlocks) {
@@ -254,7 +254,7 @@ class KatalystReverbEffectSpec : StringSpec({
         poisoned.configureRoom(roomSize = Double.POSITIVE_INFINITY, roomFade = Double.NaN)
         off.configureRoom(roomSize = 0.0, roomFade = null)
 
-        poisoned.reverb.roomSize shouldBe 0.05 // retained — the non-finite config never reached the DSP
+        poisoned.reverb!!.roomSize shouldBe 0.05 // retained — the non-finite config never reached the DSP
         poisoned.hasTail() shouldBe true // draining
 
         var maxDiff = 0.0
@@ -279,22 +279,22 @@ class KatalystReverbEffectSpec : StringSpec({
     "a NaN roomLp reads as unset, never as the previous owner's damping" {
         val effect = createEffect(roomSize = 0.5)
         effect.configure(roomSize = 0.5, roomFade = null, roomLp = 500.0, roomDim = null, iResponse = null)
-        effect.reverb.roomLp shouldBe 500.0
+        effect.reverb!!.roomLp shouldBe 500.0
 
         effect.configure(roomSize = 0.5, roomFade = null, roomLp = Double.NaN, roomDim = null, iResponse = null)
-        effect.reverb.roomLp shouldBe null
+        effect.reverb!!.roomLp shouldBe null
     }
 
     "roomFade is bounded to the stable 0..1 at the door — above unity the network has no steady state" {
         val effect = createEffect(roomSize = 0.0, roomFade = 5.0)
-        effect.reverb.roomFade shouldBe 1.0
+        effect.reverb!!.roomFade shouldBe 1.0
     }
 
     "roomSize is bounded to the stable 0..1 at the door too" {
         // Production pre-normalizes in VoiceFactory, so this pins the door contract for the
         // future direct caller the KDoc cites (review round 3: the clamp had no guard).
         val effect = createEffect(roomSize = 5.0)
-        effect.reverb.roomSize shouldBe 1.0
+        effect.reverb!!.roomSize shouldBe 1.0
     }
 
     "a non-finite SEND can no longer poison the network at all" {
@@ -315,7 +315,7 @@ class KatalystReverbEffectSpec : StringSpec({
             ctx.reverbSendBuffer.left[0] = hostile
             effect.process(ctx)
 
-            effect.reverb.combPeakAbs().isFinite() shouldBe true
+            effect.reverb!!.combPeakAbs().isFinite() shouldBe true
         }
     }
 
@@ -336,14 +336,14 @@ class KatalystReverbEffectSpec : StringSpec({
             effect.process(ctx)
         }
 
-        effect.reverb.drainSamplesUntilSilent(peak = effect.reverb.combPeakAbs()) shouldBe Double.POSITIVE_INFINITY
+        effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) shouldBe Double.POSITIVE_INFINITY
 
         effect.configureRoom(roomSize = 0.0, roomFade = null)
 
         effect.hasTail() shouldBe false
         // hasTail(0.0) is itself NaN-blind (NaN > 0.0 is false), so the heal is pinned with the
         // NaN-hardened scan instead (review round 3): zero means reset() really cleared them.
-        effect.reverb.combPeakAbs() shouldBe 0.0
+        effect.reverb!!.combPeakAbs() shouldBe 0.0
     }
 
     "a reverb owner arriving MID-drain goes straight to Active with the network kept" {
@@ -359,7 +359,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.configureRoom(roomSize = 0.0, roomFade = null)
         // The original countdown: a mutant that stays Draining would terminally reset by then.
         val originalDrainBlocks = ceil(
-            effect.reverb.drainSamplesUntilSilent(peak = effect.reverb.combPeakAbs()) / blockFrames
+            effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) / blockFrames
         ).toInt() + 2
 
         repeat(10) {
@@ -372,7 +372,7 @@ class KatalystReverbEffectSpec : StringSpec({
         // New owner takes the lease with the LONGEST room: network kept, params written, sends live.
         effect.configureRoom(roomSize = 1.0, roomFade = null)
 
-        effect.reverb.roomSize shouldBe 1.0 // the new owner's params reached the DSP
+        effect.reverb!!.roomSize shouldBe 1.0 // the new owner's params reached the DSP
         effect.hasTail() shouldBe true // the tail was NOT cut
 
         repeat(originalDrainBlocks) {
@@ -404,7 +404,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.process(ctx)
         effect.configureRoom(roomSize = 0.0, roomFade = null)
 
-        val drainSamples = effect.reverb.drainSamplesUntilSilent(peak = effect.reverb.combPeakAbs())
+        val drainSamples = effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs())
         // Enough 128-frame calls that a countdown ticking by ctx.blockFrames would have flipped
         // Off — but the network has only processed HALF that many samples.
         val callsForBuggyFlip = ceil(drainSamples / blockFrames).toInt() + 2
@@ -430,16 +430,16 @@ class KatalystReverbEffectSpec : StringSpec({
         // otherwise keep THIS life's value.
         val effect = createEffect(roomSize = 0.8, roomFade = 0.3)
         effect.configure(roomSize = 0.8, roomFade = 0.3, roomLp = 5000.0, roomDim = 1.0, iResponse = "hall")
-        effect.reverb.damp = 0.9 // not on the configure surface; still guarded, still restored
+        effect.reverb!!.damp = 0.9 // not on the configure surface; still guarded, still restored
 
         effect.reset()
 
-        effect.reverb.roomSize shouldBe 0.0
-        effect.reverb.damp shouldBe 0.5
-        effect.reverb.roomFade shouldBe null
-        effect.reverb.roomLp shouldBe null
-        effect.reverb.roomDim shouldBe null
-        effect.reverb.iResponse shouldBe null
+        effect.reverb!!.roomSize shouldBe 0.0
+        effect.reverb!!.damp shouldBe 0.5
+        effect.reverb!!.roomFade shouldBe null
+        effect.reverb!!.roomLp shouldBe null
+        effect.reverb!!.roomDim shouldBe null
+        effect.reverb!!.iResponse shouldBe null
     }
 
     "a quiet network drains in proportion to its content, not the saturated worst case" {
@@ -466,7 +466,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.hasTail() shouldBe false
         // Literally zero: proves the TERMINAL RESET fired inside the proportional window — a
         // worst-case countdown (peak 1.0 -> 68 revolutions = 872 blocks) would still be Draining.
-        effect.reverb.hasTail(0.0) shouldBe false
+        effect.reverb!!.hasTail(0.0) shouldBe false
     }
 
     "an empty network goes straight to Off — no drain hold on a silent orbit; a charged one reports its tail" {
