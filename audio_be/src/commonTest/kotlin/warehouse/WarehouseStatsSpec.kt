@@ -152,7 +152,7 @@ class WarehouseStatsSpec : StringSpec({
         val diagnostics = generateSequence { commLink.frontend.feedback.receive() }
             .filterIsInstance<KlangCommLink.Feedback.Diagnostics>().toList()
         (diagnostics.size >= 2) shouldBe true
-        val stats = diagnostics.last().warehouse.shouldNotBeNull()
+        val stats = diagnostics.last().warehouse
         stats.droppedVoices shouldBe 1
         stats.scratchCapacity shouldBe ResourceWarehouse.SCRATCH_DEPTH
         // Nothing changed between the last two emissions: the same snapshot object rode both.

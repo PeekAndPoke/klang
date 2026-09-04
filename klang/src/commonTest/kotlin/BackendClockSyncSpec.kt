@@ -25,6 +25,7 @@ class BackendClockSyncSpec : StringSpec({
             cylinders = emptyList(),
             backendNowMs = backendNowMs,
             outputLatencyMs = outputLatencyMs,
+            warehouse = KlangCommLink.Feedback.Diagnostics.WarehouseStats.empty,
         )
 
     "one Diagnostics within the threshold nudges the offset via EMA (α=0.05)" {

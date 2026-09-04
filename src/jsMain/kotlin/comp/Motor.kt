@@ -5,21 +5,19 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.version
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
-import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.css.Color
+import kotlinx.css.Cursor
 import kotlinx.css.Display
-import kotlinx.css.FlexDirection
 import kotlinx.css.FontWeight
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
@@ -29,20 +27,20 @@ import kotlinx.css.bottom
 import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.em
-import kotlinx.css.flexDirection
 import kotlinx.css.fontFamily
 import kotlinx.css.fontWeight
 import kotlinx.css.height
 import kotlinx.css.left
 import kotlinx.css.lineHeight
-import kotlinx.css.marginBottom
 import kotlinx.css.opacity
 import kotlinx.css.pct
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.properties.LineHeight
-import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.css.top
 import kotlinx.css.right
+import kotlinx.css.cursor
 import kotlinx.css.textAlign
 import kotlinx.css.whiteSpace
 import kotlinx.css.width
@@ -56,12 +54,43 @@ fun Tag.Motoer() = comp {
     Motor(it)
 }
 
+/**
+ * The Motor: gauges (or, on a click on the title, the warehouse stats), the oscilloscope, the
+ * spectrum behind everything, and the title.
+ *
+ * Every slot is positioned ABSOLUTELY in rem inside a fixed-height frame, so that whatever the top
+ * slot shows, the oscilloscope keeps its distance to the bottom (it used to be pushed up by the
+ * height of the text under the gauges). The geometry is in the companion; the top slot's height is
+ * shared with `PlayerWarehouseStats`, which renders at exactly that height.
+ */
 class Motor(ctx: NoProps) : PureComponent(ctx) {
+
+    companion object {
+        /** The frame's total height. */
+        val FRAME_HEIGHT = 13.0.rem
+
+        /** The top slot: the three gauges (62 px + their glow) or the warehouse stats. */
+        val TOP_SLOT_HEIGHT = 4.5.rem
+
+        /** Where the oscilloscope starts and how tall it is — its bottom is fixed at 8.75 rem from the top. */
+        val OSCILLOSCOPE_TOP = 5.0.rem
+        val OSCILLOSCOPE_HEIGHT = 3.75.rem
+
+        /** The title's box, anchored to the bottom. */
+        val TITLE_HEIGHT = 2.6.rem
+        val TITLE_BOTTOM = 0.5.rem
+
+        /** The spectrum's height, anchored to the bottom, behind everything. */
+        val SPECTRUM_HEIGHT = 8.25.rem
+    }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Build metadata, published as a stream; redraws once it loads so the title tooltip is current.
     private val versionInfo by subscribingTo(version)
+
+    /** A click on the title toggles the top slot between the gauges and the warehouse stats. */
+    private var showWarehouse by value(false)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -72,39 +101,51 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
             css {
                 textAlign = TextAlign.center
                 position = Position.relative
-                // Flex column ensures the container height includes children's margins
-                display = Display.flex
-                flexDirection = FlexDirection.column
+                height = FRAME_HEIGHT
             }
 
             div {
-                key = "stats"
+                key = if (showWarehouse) "warehouse" else "stats"
                 css {
-                    marginBottom = 6.px
+                    position = Position.absolute
+                    top = 0.rem
+                    left = 0.rem
+                    right = 0.rem
+                    height = TOP_SLOT_HEIGHT
+                    zIndex = 2
                 }
-                PlayerMiniStats()
+                if (showWarehouse) {
+                    PlayerWarehouseStats()
+                } else {
+                    PlayerMiniStats()
+                }
             }
 
             div {
                 key = "oscilloscope"
-                css { height = 60.px }
+                css {
+                    position = Position.absolute
+                    top = OSCILLOSCOPE_TOP
+                    left = 0.rem
+                    right = 0.rem
+                    height = OSCILLOSCOPE_HEIGHT
+                    zIndex = 2
+                }
                 Oscilloscope(player = Player.player)
             }
 
             div {
                 key = "spectrum-visualizer"
 
-                val spectHeight = 132
                 css {
                     zIndex = 1
                     position = Position.absolute
                     pointerEvents = PointerEvents.none
                     // Anchor to bottom
-                    bottom = 0.px
-                    left = 0.px
-                    right = 0.px
-                    // Dimensions
-                    height = spectHeight.px
+                    bottom = 0.rem
+                    left = 0.rem
+                    right = 0.rem
+                    height = SPECTRUM_HEIGHT
                     width = 100.pct
 
                     opacity = 0.66
@@ -118,13 +159,18 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
 
                 css {
                     zIndex = 100
-                    marginBottom = 8.px
+                    position = Position.absolute
+                    bottom = TITLE_BOTTOM
+                    left = 0.rem
+                    right = 0.rem
+                    height = TITLE_HEIGHT
                     opacity = 0.95
                 }
 
                 div {
                     css {
                         whiteSpace = WhiteSpace.nowrap
+                        cursor = Cursor.pointer
                         put("text-shadow", "0 0 5px #000")
                     }
 
@@ -135,10 +181,12 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                             append("\nbranch: ").append(info.gitBranch)
                             append("\nrev: ").append(info.gitDesc)
                             info.date?.let { append("\nbuilt: ").append(it) }
+                            append("\n\nclick: ").append(if (showWarehouse) "back to the gauges" else "warehouse stats")
                         }
                     }
 
-                    onClick { router.navToUri(Nav.start()) }
+                    // The title toggles the top slot; the start page is one click away in the menu.
+                    onClick { showWarehouse = !showWarehouse }
 
                     ui.big.text {
                         css {

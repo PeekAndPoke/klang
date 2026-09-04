@@ -126,8 +126,9 @@ class WireCodecRoundTripSpec : StringSpec({
                     KlangCommLink.Feedback.Diagnostics.CylinderState(id = 1, active = false),
                 ),
                 backendNowMs = 1234.5,
+                warehouse = KlangCommLink.Feedback.Diagnostics.WarehouseStats.empty,
             ),
-            // The warehouse snapshot rides the same message; a null one (older backend) must survive too.
+            // The warehouse snapshot rides the same message.
             KlangCommLink.Feedback.Diagnostics(
                 playbackId = "pb", sampleRate = 44100, renderHeadroom = 0.5, activeVoiceCount = 0,
                 cylinders = emptyList(), backendNowMs = 1.0,

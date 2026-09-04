@@ -16,8 +16,12 @@
 - `Feedback.Diagnostics.warehouse: WarehouseStats?` (nullable for older backends): per part the
   idle bytes/counts, dirty counts, allocations/hits/failures/dropped/sync cleans, scratch capacity and
   high water, sample bytes/count/allocation failures, `droppedVoices`, `deniedRents`.
-- FE: `PlayerMiniStats` shows one monospace line under the gauges (`shelf 6.2M · smp 12.3M · idle
-  16/16/8`, plus `dry N · late N` only when non-zero) with the full breakdown as its tooltip.
+- FE (maintainer's shape): a click on "KLANGMOTOR" in the Motor toggles its top slot between the
+  three gauges and `PlayerWarehouseStats` (two columns of four monospace lines: rings, reverbs,
+  cylinders, scratch, samples, late, dry); another click toggles back. The Motor's slots are
+  positioned absolutely in rem inside a fixed 13 rem frame, so the oscilloscope keeps its distance
+  to the bottom whatever the top slot shows. `Diagnostics.warehouse` is not nullable
+  (`WarehouseStats.empty` for specs).
 - Guards: `WarehouseStatsSpec` (same-object on no change, every part's change re-snapshots, a
   re-upload replaces bytes, the dispatcher sends the snapshot with the engines' counters summed),
   the JS wire round-trip case, 7 mutations red.

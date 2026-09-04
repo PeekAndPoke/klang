@@ -271,10 +271,9 @@ class KlangCommLink(capacity: Int = 8192) {
             /**
              * The resource warehouse's stats — what the backend holds and what happened to it.
              * Maintained INCREMENTALLY on the backend (each shelf bumps a version when something
-             * changes; the snapshot is rebuilt only then), so reading is a plain read. `null` from
-             * a backend that predates the field.
+             * changes; the snapshot is rebuilt only then), so reading is a plain read.
              */
-            val warehouse: WarehouseStats? = null,
+            val warehouse: WarehouseStats,
         ) : Feedback {
             data class CylinderState(
                 /** Cylinder ID (0-15 typically) */
@@ -321,7 +320,21 @@ class KlangCommLink(capacity: Int = 8192) {
                 /** Across all live engines: voices dropped at admission (late), and refused unit rents. */
                 val droppedVoices: Int,
                 val deniedRents: Int,
-            )
+            ) {
+                companion object {
+                    /** A warehouse that holds nothing and has done nothing — for specs and placeholders. */
+                    val empty = WarehouseStats(
+                        ringIdleBytes = 0.0, ringIdleCount = 0, ringDirtyCount = 0, ringAllocations = 0, ringHits = 0,
+                        ringFailures = 0, ringDropped = 0, ringSyncCleans = 0,
+                        reverbIdleCount = 0, reverbDirtyCount = 0, reverbAllocations = 0, reverbHits = 0,
+                        reverbFailures = 0, reverbDropped = 0,
+                        cylinderIdleCount = 0, cylinderAllocations = 0, cylinderHits = 0, cylinderDropped = 0,
+                        scratchCapacity = 0, scratchHighWater = 0, scratchLateAllocations = 0, scratchUnbalancedReleases = 0,
+                        sampleBytes = 0.0, sampleCount = 0, sampleAllocationFailures = 0,
+                        droppedVoices = 0, deniedRents = 0,
+                    )
+                }
+            }
         }
     }
 
