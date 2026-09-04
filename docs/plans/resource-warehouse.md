@@ -299,7 +299,11 @@ allocation would zero, i.e. the pre-2e cost, not the round-3 "O(1)" the triage l
 site. **Parked for the maintainer:** `Cylinder.tryDeactivate` → `resetBusEffects()` still zeroes the
 kept ring and network synchronously in render every time an orbit goes silent (pre-existing, ~385 KB
 + a network at class 0); the alternative is to give the units back on deactivation (O(1), dirty; the
-re-activation becomes a shelf hit, clean by then in practice). 14 mutations red.
+re-activation becomes a shelf hit, clean by then in practice). **Maintainer 2026-09-04: SETTLED, keep
+as is** — "it does not really matter when we zero; keep a clean flag on each resource, and a resource
+that comes off the shelf dirty is zeroed first; the price is paid in any case (except for one evicted
+dirty, which is never zeroed)". That is the built design; the per-block slice is the optimisation on
+top. 14 mutations red.
 
 **All of 2a–2g shipped 2026-09-04.** The `ctx.scratchBuffers → ctx.warehouse.scratch` rename turned
 out to be MOOT: `AudioBackendContext` no longer has a `scratchBuffers` at all (the warehouse owns it and
