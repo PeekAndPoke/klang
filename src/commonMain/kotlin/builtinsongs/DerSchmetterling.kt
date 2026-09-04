@@ -91,7 +91,7 @@ let guitar = (() => {
       .lowpass(5000).lowpass(5000)                       // cabinet speaker sim    
       .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)  // follow freq to avoid low mud ... again
  
-  return amped.mul(0.60)
+  return amped.mul(0.55)
 })()
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
@@ -213,7 +213,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 4 6] 9]!1>/8`
 
 export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.09) //. mute()
-    .oscp("drive", 0.35).oscp("grindlo", 100).oscp("grindhi", 2000).oscp("grind", 0.85).oscp("sub", 0.85)  // . solo()
+    .oscp("drive", 0.35).oscp("grindlo", 100).oscp("grindhi", 2000).oscp("grind", 0.80).oscp("sub", 0.80)  // . solo()
     .adsr(0.003, 0.5, 0.1, 0.050)
 
 export bass_arrange = x => x.orbit(3) // . mute()
