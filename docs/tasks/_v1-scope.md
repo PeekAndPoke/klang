@@ -26,7 +26,7 @@ even when they are valuable.
 
 ---
 
-## Layer 1: harden the engine (2 open, 7 done)
+## Layer 1: harden the engine (1 open, 8 done)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
@@ -36,8 +36,8 @@ even when they are valuable.
 | ~~4~~ | ~~Track **B1**: scheduler startup protocol~~ | same | ✅ **DONE 2026-09-03.** Not a start command: a clock convention (between renders the clock is the NEXT block). The race was exactly one block, every playback, every time |
 | ~~5~~ | ~~Track **B2**: hard-drop admission + per-playback dropped-voice counter~~ | same | ✅ **DONE 2026-09-03**, same change as B1. `oldestAllowedSec` gone; late voices dropped and counted. **The scheduler now delivers the guarantee the DSP was verified against.** Counter not yet surfaced to the FE |
 | 6 | **Audio backend audit** — `voices/` pilot **COMPLETE 2026-08-31** (21 findings: 12 fixed, 5 withdrawn, 2 parked, 3 awaiting a call); 1 of 11 katalyst files done; 5 subsystems never started | [`audio-backend-audit.md`](audio-backend-audit.md) | Maintainer call. **Pilot exit criteria met (§5.4) — the protocol itself is up for re-evaluation, see the ledger** |
-| 7 | **Resource warehouse** | [`plans/resource-warehouse.md`](../plans/resource-warehouse.md) | **DESIGNED 2026-09-03.** Right-size first (the 10 s ring is 97 % of a cylinder and 15–30× any delay a song uses), then a shelf stocked by return, never by prediction. OOM caught at one site, degraded, counted. Moved up: the only remaining audible Layer-1 item |
-| 8 | `per-playback-engine` **D4** cylinder eviction | [`plans/resource-warehouse.md`](../plans/resource-warehouse.md) step 2f | Eviction IS the shelf's return path; lands with it |
+| ~~7~~ | ~~**Resource warehouse**~~ | [`plans/resource-warehouse.md`](../plans/resource-warehouse.md) | ✅ **DONE 2026-09-04** (steps 1–2g, cylinders in the warehouse, bucketed 16-orbit warmup, the warmup vocabulary; 5 review rounds, the last clean on code). Rings, reverb networks and cylinders are lazy, shelved by return, zeroed by deferred housekeeping; OOM caught at one site per resource. **Fairphone: the resource stutter is gone; a cold-code spike on the first run was the last symptom, answered by the vocabulary (`da002b73`), measurement pending.** Open: the reporting half → [`future/warehouse-stats-feed.md`](future/warehouse-stats-feed.md) |
+| ~~8~~ | ~~`per-playback-engine` **D4** cylinder eviction~~ | same, step 2f | ✅ **DONE 2026-09-04** as engine disposal: the end of a playback returns every unit. Idle cylinders inside a live engine stay (maintainer, settled) |
 | ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
 
 ## Layer 2: widen and harden the interface (11 open, 1 done)
@@ -131,7 +131,7 @@ Tracked in the order they bite. See the conversation record for the reasoning.
 1. **Katalyst design round** (blocks #10 and the estimate's credibility). Now the top one: it is
    the only V1 item that is a stub with no design.
 2. **Engine tuning Part B**: the `Double`-vs-node resolution path (blocks #14).
-3. **Track B1**: the startup protocol wants its own design pass (blocks #4 and #5).
+~~3. **Track B1**~~ — done 2026-09-03 as a clock convention, no design pass needed.
 
 ~~C6 chunk walkthrough~~ — moot, C6 shipped 2026-08-31.
 
