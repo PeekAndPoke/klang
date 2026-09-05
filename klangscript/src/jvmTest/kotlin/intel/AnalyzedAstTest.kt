@@ -37,6 +37,7 @@ import io.peekandpoke.klang.script.generated.generatedStdlibDocs
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangParam
+import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
 
@@ -919,4 +920,214 @@ let a = placeholder("aa", Osc.sine())"""
 
         // These are DIFFERENT results — the bug was using topLevel when member was intended
     }
+
+    // ── Typed lambda parameters at call sites (configure lambdas) ──────────
+
+    /**
+     * A hand-built registry standing in for the builder-typed DSL doors of
+     * `docs/tasks/dsl-configure-lambdas.md`: `Osc.supersaw(freq?, configure?)` whose
+     * `configure` is `((OscSuperSawBuilder) -> OscSuperSawBuilder)?`, the builder's
+     * `.voices()`, and a sprudel-like `superimpose(vararg transforms: PatternMapperFn)`.
+     */
+    fun builderRegistry(): KlangDocsRegistry = KlangDocsRegistry().apply {
+        val builder = KlangType("OscSuperSawBuilder", fqcn = "test.OscSuperSawBuilder")
+        val pattern = KlangType("SprudelPattern", fqcn = "test.SprudelPattern")
+        val configureType = KlangType(
+            "Function1", fqcn = "kotlin.Function1", isNullable = true,
+            functionParams = listOf(builder), functionReturn = builder,
+        )
+        val mapperFn = KlangType(
+            "PatternMapperFn", fqcn = "test.PatternMapperFn", isTypeAlias = true,
+            functionParams = listOf(pattern), functionReturn = pattern,
+        )
+        registerAll(listOf(
+            KlangSymbol(
+                name = "Osc", category = "osc", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(KlangProperty(name = "Osc", type = KlangType("Osc", fqcn = "test.Osc"))),
+            ),
+            KlangSymbol(
+                name = "supersaw", category = "osc", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(
+                    KlangCallable(
+                        name = "supersaw", receiver = KlangType("Osc", fqcn = "test.Osc"),
+                        params = listOf(
+                            KlangParam(name = "freq", type = KlangType("Number"), isOptional = true),
+                            KlangParam(name = "configure", type = configureType, isOptional = true),
+                        ),
+                        returnType = KlangType("IgnitorDsl", fqcn = "test.IgnitorDsl"),
+                    )
+                ),
+            ),
+            KlangSymbol(
+                name = "voices", category = "osc", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(
+                    KlangCallable(
+                        name = "voices", receiver = builder,
+                        params = listOf(KlangParam(name = "n", type = KlangType("Number"))),
+                        returnType = builder,
+                    )
+                ),
+            ),
+            KlangSymbol(
+                name = "note", category = "pattern", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(
+                    KlangCallable(
+                        name = "note",
+                        params = listOf(KlangParam(name = "p", type = KlangType("String"))),
+                        returnType = pattern,
+                    )
+                ),
+            ),
+            KlangSymbol(
+                name = "superimpose", category = "pattern", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(
+                    KlangCallable(
+                        name = "superimpose", receiver = pattern,
+                        params = listOf(KlangParam(name = "transforms", type = mapperFn, isVararg = true)),
+                        returnType = pattern,
+                    )
+                ),
+            ),
+            KlangSymbol(
+                name = "every", category = "pattern", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(
+                    KlangCallable(
+                        name = "every", receiver = pattern,
+                        params = listOf(
+                            KlangParam(name = "n", type = KlangType("Number"), isOptional = true),
+                            KlangParam(name = "transforms", type = mapperFn, isVararg = true),
+                        ),
+                        returnType = pattern,
+                    )
+                ),
+            ),
+            KlangSymbol(
+                name = "transpose", category = "pattern", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(
+                    KlangCallable(
+                        name = "transpose", receiver = pattern,
+                        params = listOf(KlangParam(name = "n", type = KlangType("Number"))),
+                        returnType = pattern,
+                    )
+                ),
+            ),
+        ))
+    }
+
+    fun analyzeBuilders(code: String): AnalyzedAst = AnalyzedAst.build(code, builderRegistry())
+
+    /** The `x` identifier and the body call of the FIRST arrow argument of the top-level call. */
+    fun AnalyzedAst.firstLambdaParts(): Pair<Identifier, CallExpression> {
+        val call = topExpr() as CallExpression
+        val arrow = call.arguments.map { it.value }.filterIsInstance<ArrowFunction>().first()
+        val bodyCall = (arrow.body as ArrowFunctionBody.ExpressionBody).expression as CallExpression
+        val param = (bodyCall.callee as MemberAccess).obj as Identifier
+        return param to bodyCall
+    }
+
+    "configure lambda: a sole positional lambda floats to `configure` and its param is the builder" {
+        val a = analyzeBuilders("Osc.supersaw(x => x.voices(9))")
+        val (x, body) = a.firstLambdaParts()
+        a.typeOf(x)?.simpleName shouldBe "OscSuperSawBuilder"
+        a.typeOf(body)?.simpleName shouldBe "OscSuperSawBuilder"
+        a.typeOf(a.topExpr())?.simpleName shouldBe "IgnitorDsl"
+    }
+
+    "configure lambda: explicit positional freq then lambda" {
+        val a = analyzeBuilders("Osc.supersaw(440, x => x.voices(9))")
+        val (x, _) = a.firstLambdaParts()
+        a.typeOf(x)?.simpleName shouldBe "OscSuperSawBuilder"
+    }
+
+    "configure lambda: named `configure =` types the param too" {
+        val a = analyzeBuilders("Osc.supersaw(configure = x => x.voices(9))")
+        val (x, _) = a.firstLambdaParts()
+        a.typeOf(x)?.simpleName shouldBe "OscSuperSawBuilder"
+    }
+
+    "configure lambda: completion receiver before the dot inside the lambda is the builder" {
+        val code = "Osc.supersaw(x => x.voices(9))"
+        val a = analyzeBuilders(code)
+        val dot = code.indexOf("x.voices") + 1
+        a.receiverTypeBeforeDot(dot)?.simpleName shouldBe "OscSuperSawBuilder"
+    }
+
+    "configure lambda: hovering the param inside the lambda shows a typed PARAM local" {
+        val code = "Osc.supersaw(x => x.voices(9))"
+        val a = analyzeBuilders(code)
+        val symbol = a.symbolAt(code.indexOf("x.voices"))
+        symbol.shouldNotBeNull()
+        symbol.origin shouldBe KlangSymbol.Origin.Local(KlangSymbol.LocalKind.PARAM)
+        symbol.variants.filterIsInstance<KlangProperty>().single().type.simpleName shouldBe "OscSuperSawBuilder"
+    }
+
+    "configure lambda: a second lambda param beyond the declared arity is bound but untyped" {
+        val code = "Osc.supersaw((x, y) => y.voices(9))"
+        val a = analyzeBuilders(code)
+        val (y, body) = a.firstLambdaParts()
+        a.typeOf(y).shouldBeNull()
+        a.typeOf(body).shouldBeNull()
+        // still a PARAM local (shadows the registry), just without a type
+        val symbol = a.symbolAt(code.indexOf("y.voices"))
+        symbol.shouldNotBeNull()
+        symbol.origin shouldBe KlangSymbol.Origin.Local(KlangSymbol.LocalKind.PARAM)
+    }
+
+    "vararg function params: every lambda passed to superimpose gets the pattern type" {
+        val code = """note("c3").superimpose(x => x.transpose(12), y => y.transpose(7))"""
+        val a = analyzeBuilders(code)
+        val call = a.topExpr() as CallExpression
+        val arrows = call.arguments.map { it.value }.filterIsInstance<ArrowFunction>()
+        arrows.size shouldBe 2
+        for (arrow in arrows) {
+            val body = (arrow.body as ArrowFunctionBody.ExpressionBody).expression as CallExpression
+            val param = (body.callee as MemberAccess).obj as Identifier
+            a.typeOf(param)?.simpleName shouldBe "SprudelPattern"
+            a.typeOf(body)?.simpleName shouldBe "SprudelPattern"
+        }
+    }
+
+    "vararg tail: no floating, a sole lambda lands on the leading scalar like the interpreter does" {
+        // every(n?, vararg transforms): the interpreter's vararg branch maps positionally, so
+        // `every(x => ...)` puts the lambda on `n`. The analyzer must not pretend otherwise.
+        val a = analyzeBuilders("""note("c3").every(x => x.transpose(12))""")
+        val (x, _) = a.firstLambdaParts()
+        a.typeOf(x).shouldBeNull()
+    }
+
+    "vararg tail: lambdas after the scalar take the vararg's function type" {
+        val a = analyzeBuilders("""note("c3").every(2, x => x.transpose(12))""")
+        val (x, body) = a.firstLambdaParts()
+        a.typeOf(x)?.simpleName shouldBe "SprudelPattern"
+        a.typeOf(body)?.simpleName shouldBe "SprudelPattern"
+    }
+
+    "unknown callee: lambda params stay untyped, no crash" {
+        val a = analyzeBuilders("mystery(x => x.voices(9))")
+        val (x, body) = a.firstLambdaParts()
+        a.typeOf(x).shouldBeNull()
+        a.typeOf(body).shouldBeNull()
+    }
+
+    "a lambda that is not the last argument is not floated by the analyzer either" {
+        // Mirrors ArgAlignment: the lambda lands on `freq` (Number), so x is untyped.
+        val a = analyzeBuilders("Osc.supersaw(x => x.voices(9), 440)")
+        val (x, _) = a.firstLambdaParts()
+        a.typeOf(x).shouldBeNull()
+    }
+
+    "primitive-typed values match NumberValue receivers: Math.abs(-1).toString() types as String" {
+        // KSP maps `kotlin.Double` to the NumberValue fqcn on emitted types (return types and
+        // lambda parameter types alike); without it the registry's fqcn-to-fqcn match fails and
+        // a Number returned by a native offers no Number methods.
+        val a = analyze("Math.abs(-1).toString()")
+        a.typeOf(a.topExpr())?.simpleName shouldBe "String"
+    }
+
+    "function type renders structurally in the callable signature" {
+        val supersaw = builderRegistry().getCallable("supersaw", KlangType("Osc", fqcn = "test.Osc"))
+        supersaw.shouldNotBeNull()
+        supersaw.params[1].type.render() shouldBe "((OscSuperSawBuilder) -> OscSuperSawBuilder)?"
+    }
+
 })

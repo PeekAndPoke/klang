@@ -107,12 +107,21 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? 
             else -> value
         }
 
-        is FunctionValue -> this.convertFunctionToKotlin()
+        is FunctionValue -> {
+            requireFunctionTarget(cls, loc)
+            // Build the lambda in the ARITY THE SLOT DEMANDS, not the arity the script author
+            // wrote: `() => 42` handed to a `(A) -> B` parameter must be a Function1, or the
+            // native's cast blows up (JVM) or silently misbinds (JS). Script params the slot
+            // does not supply bind null; extra Kotlin args are dropped (see callFunction).
+            this.convertFunctionToKotlin(arity = ParamSpec.functionArity(cls) ?: parameters.size)
+        }
 
         is NativeFunctionValue -> {
-            @Suppress("RedundantLambdaArrow") { ->
-                val result = function(emptyList(), null)
-                result.value
+            requireFunctionTarget(cls, loc)
+            // Same arity discipline as for script functions: a native function handed to a
+            // `(A) -> B` slot must arrive as a Function1, or the cast at the call site fails.
+            kotlinLambdaOfArity(ParamSpec.functionArity(cls) ?: 0) { args ->
+                function(args.map { wrapAsRuntimeValue(it) }, null).value
             }
         }
 
@@ -161,73 +170,99 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? 
 }
 
 /**
- * Convert a script [FunctionValue] to a Kotlin lambda.
+ * A function value may only convert to a function type (or `Any`). Without this guard a lambda
+ * landing on a `Double` slot became a `ClassCastException` on the JVM and silent garbage on
+ * JS (unchecked cast), instead of a script-level type error at the call site.
+ */
+private fun requireFunctionTarget(cls: KClass<*>, loc: SourceLocation?) {
+    if (cls == Any::class || cls in ParamSpec.FUNCTION_CLASSES) {
+        return
+    }
+    throw KlangScriptTypeError(
+        message = "expected ${cls.simpleName ?: "a value"}, got a function",
+        operation = "argument conversion",
+        location = loc,
+    )
+}
+
+/**
+ * Convert a script [FunctionValue] to a Kotlin lambda of the given [arity].
  *
- * Supports functions with 0 to 10 parameters.
+ * Supports arities 0 to 10. [arity] defaults to the script function's own parameter count;
+ * a caller that knows the target slot (`FunctionN::class`) passes that arity so the lambda
+ * matches the cast site regardless of how many parameters the script author declared.
+ * Parameters the slot does not supply bind null (see [callFunction]).
  *
  * @return A Kotlin lambda that invokes this script function
- * @throws KlangScriptTypeError if the function has more than 10 parameters
+ * @throws KlangScriptTypeError if the arity exceeds 10
  */
-fun <T : Any> FunctionValue.convertFunctionToKotlin(): T {
-
-    val func = this
-
+fun <T : Any> FunctionValue.convertFunctionToKotlin(arity: Int = parameters.size): T {
     @Suppress("UNCHECKED_CAST")
-    val fn = when (func.parameters.size) {
-        0 -> run {
-            // NOTICE: The -> is important. It defines a Function0
-            { -> callFunction(listOf(Unit)) } as T
-        }
+    return kotlinLambdaOfArity(arity) { args -> callFunction(args) } as T
+}
 
-        1 -> { a1: Any? ->
-            callFunction(listOf(a1))
+/**
+ * Build a `kotlin.FunctionN` of exactly [arity] parameters whose body receives the arguments as
+ * a list. The ONE place that knows how to spell a Kotlin lambda per arity; both script
+ * functions and native functions handed to a `FunctionN` slot go through it, so the object at
+ * the native's cast site always has the arity the slot declares.
+ *
+ * @throws KlangScriptTypeError if [arity] exceeds 10
+ */
+internal fun kotlinLambdaOfArity(arity: Int, body: (List<Any?>) -> Any?): Any {
+    // Each branch declares its lambda with an explicit function type: inside a `when`, a
+    // bare lambda literal would take the type inferred from the first branch.
+    return when (arity) {
+        0 -> {
+            val f: () -> Any? = { body(emptyList()) }
+            f
         }
-
-        2 -> { a1: Any?, a2: Any? ->
-            callFunction(listOf(a1, a2))
+        1 -> {
+            val f: (Any?) -> Any? = { a1 -> body(listOf(a1)) }
+            f
         }
-
-        3 -> { a1: Any?, a2: Any?, a3: Any? ->
-            callFunction(listOf(a1, a2, a3))
+        2 -> {
+            val f: (Any?, Any?) -> Any? = { a1, a2 -> body(listOf(a1, a2)) }
+            f
         }
-
-        4 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any? ->
-            callFunction(listOf(a1, a2, a3, a4))
+        3 -> {
+            val f: (Any?, Any?, Any?) -> Any? = { a1, a2, a3 -> body(listOf(a1, a2, a3)) }
+            f
         }
-
-        5 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any? ->
-            callFunction(listOf(a1, a2, a3, a4, a5))
+        4 -> {
+            val f: (Any?, Any?, Any?, Any?) -> Any? = { a1, a2, a3, a4 -> body(listOf(a1, a2, a3, a4)) }
+            f
         }
-
-        6 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any? ->
-            callFunction(listOf(a1, a2, a3, a4, a5, a6))
+        5 -> {
+            val f: (Any?, Any?, Any?, Any?, Any?) -> Any? = { a1, a2, a3, a4, a5 -> body(listOf(a1, a2, a3, a4, a5)) }
+            f
         }
-
-        7 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any?, a7: Any? ->
-            callFunction(listOf(a1, a2, a3, a4, a5, a6, a7))
+        6 -> {
+            val f: (Any?, Any?, Any?, Any?, Any?, Any?) -> Any? = { a1, a2, a3, a4, a5, a6 -> body(listOf(a1, a2, a3, a4, a5, a6)) }
+            f
         }
-
-        8 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any?, a7: Any?, a8: Any? ->
-            callFunction(listOf(a1, a2, a3, a4, a5, a6, a7, a8))
+        7 -> {
+            val f: (Any?, Any?, Any?, Any?, Any?, Any?, Any?) -> Any? = { a1, a2, a3, a4, a5, a6, a7 -> body(listOf(a1, a2, a3, a4, a5, a6, a7)) }
+            f
         }
-
-        9 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any?, a7: Any?, a8: Any?, a9: Any? ->
-            callFunction(listOf(a1, a2, a3, a4, a5, a6, a7, a8, a9))
+        8 -> {
+            val f: (Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?) -> Any? = { a1, a2, a3, a4, a5, a6, a7, a8 -> body(listOf(a1, a2, a3, a4, a5, a6, a7, a8)) }
+            f
         }
-
-        10 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any?, a7: Any?, a8: Any?, a9: Any?, a10: Any? ->
-            callFunction(listOf(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10))
+        9 -> {
+            val f: (Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?) -> Any? = { a1, a2, a3, a4, a5, a6, a7, a8, a9 -> body(listOf(a1, a2, a3, a4, a5, a6, a7, a8, a9)) }
+            f
         }
-
+        10 -> {
+            val f: (Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?) -> Any? = { a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 -> body(listOf(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10)) }
+            f
+        }
         else -> throw KlangScriptTypeError(
-            message = "Cannot convert script function to Kotlin. Only functions with up to 10 parameters are supported.",
+            message = "Cannot convert function to Kotlin. Only functions with up to 10 parameters are supported (asked for $arity).",
             operation = "parameter conversion",
             // No location available for function conversion errors
         )
     }
-
-    @Suppress("UNCHECKED_CAST")
-    return fn as T
 }
 
 /**
@@ -244,9 +279,11 @@ private fun FunctionValue.callFunction(args: List<Any?>): Any? {
     val wrappedArgs = args.map { wrapAsRuntimeValue(it) }
     // 2. Create a new environment for this call, extending the closure
     val callEnv = Environment(parent = closureEnv)
-    // 3. Bind the arguments to parameters
-    parameters.zip(wrappedArgs).forEach { (paramName, argValue) ->
-        callEnv.define(paramName, argValue)
+    // 3. Bind the arguments to parameters. Every declared parameter is defined: a missing
+    //    argument binds null. Leaving it unbound would let the name resolve through the
+    //    closure to an OUTER variable of the same name, silently. Extra arguments are dropped.
+    parameters.forEachIndexed { i, paramName ->
+        callEnv.define(paramName, wrappedArgs.getOrElse(i) { NullValue })
     }
     // 4. Create a new Interpreter instance with a default execution context
     // This is used when script functions are called from Kotlin code
@@ -514,7 +551,34 @@ data class ParamSpec(
     val isNullable: Boolean = false,
     val default: (() -> RuntimeValue)? = null,
     val isVararg: Boolean = false,
-)
+) {
+    /**
+     * True when the Kotlin parameter is a function type (`(A) -> B`, emitted by KSP as
+     * `Function1::class`). Drives the trailing-lambda rule in [ArgAlignment]: a script
+     * lambda given positionally floats to the single trailing function-typed slot.
+     */
+    val isFunctionType: Boolean get() = kotlinType in FUNCTION_CLASSES
+
+    companion object {
+        /** `kotlin.FunctionN` for every arity a native parameter can declare; index = arity. */
+        val FUNCTION_CLASSES: List<KClass<*>> = listOf(
+            Function0::class, Function1::class, Function2::class, Function3::class, Function4::class,
+            Function5::class, Function6::class, Function7::class, Function8::class, Function9::class,
+            Function10::class,
+        )
+
+        /** The arity a `FunctionN` target class demands, or null for a non-function target. */
+        fun functionArity(cls: KClass<*>): Int? = FUNCTION_CLASSES.indexOf(cls).takeIf { it >= 0 }
+    }
+}
+
+/**
+ * A runtime value the trailing-lambda rule treats as "a function" (see [ArgAlignment]): a script
+ * function, a native function, or a Kotlin lambda returned by a native (e.g. sprudel's
+ * `rev()`, a `PatternMapperFn`), which [wrapAsRuntimeValue] carries as a [NativeObjectValue].
+ */
+fun RuntimeValue.isCallableValue(): Boolean =
+    this is FunctionValue || this is NativeFunctionValue || (this is NativeObjectValue<*> && this.value is Function<*>)
 
 /**
  * Bind a [CallArgs] to a spec list, producing a flat List<RuntimeValue?>
@@ -574,7 +638,15 @@ fun resolveByParamSpec(
                         callStackTrace = callStackTrace,
                     )
                 }
-                args.values.forEachIndexed { i, v -> result[i] = v }
+                // Identity, except that a trailing lambda floats to the single trailing
+                // function-typed slot (see ArgAlignment). Shared with the analyzer.
+                val targets = ArgAlignment.positionalTargets(
+                    argCount = args.values.size,
+                    paramCount = specs.size,
+                    isFunctionArg = { args.values[it].isCallableValue() },
+                    isFunctionParam = { specs[it].isFunctionType },
+                )
+                args.values.forEachIndexed { i, v -> result[targets[i]] = v }
             }
         }
 

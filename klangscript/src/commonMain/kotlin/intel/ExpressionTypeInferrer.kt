@@ -17,6 +17,7 @@ import io.peekandpoke.klang.script.ast.ObjectLiteral
 import io.peekandpoke.klang.script.ast.StringLiteral
 import io.peekandpoke.klang.script.ast.TemplateLiteral
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangType
 
@@ -79,7 +80,16 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
         return prop?.type
     }
 
-    private fun inferCallExpression(call: CallExpression, scope: TypeScope?): KlangType? {
+    private fun inferCallExpression(call: CallExpression, scope: TypeScope?): KlangType? =
+        resolveCallable(call, scope)?.returnType
+
+    /**
+     * The registered callable a call expression dispatches to, or null when unknown.
+     *
+     * Used for the return type (here) and by `AnalyzedAst` to read the declared
+     * parameter types, which is how a lambda argument's parameters get typed.
+     */
+    fun resolveCallable(call: CallExpression, scope: TypeScope?): KlangCallable? {
         return when (val callee = call.callee) {
             is Identifier -> {
                 // Calling a local binding (e.g. `let f = ...; f(...)`) short-circuits
@@ -89,15 +99,13 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
                 if (scope != null && scope.contains(callee.name)) {
                     return null
                 }
-                val callable = registry.getCallable(callee.name, receiverType = null)
-                callable?.returnType
+                registry.getCallable(callee.name, receiverType = null)
             }
 
             is MemberAccess -> {
                 // Method call: Osc.sine(), pattern.gain(0.5), signal.lowpass(...)
                 val objType = inferType(callee.obj, scope) ?: return null
-                val callable = registry.getCallable(callee.property, objType)
-                callable?.returnType
+                registry.getCallable(callee.property, objType)
             }
 
             else -> null

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.script.intel
 
+import io.peekandpoke.klang.script.ast.Argument
 import io.peekandpoke.klang.script.ast.ArrayLiteral
 import io.peekandpoke.klang.script.ast.ArrowFunction
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
@@ -38,6 +39,7 @@ import io.peekandpoke.klang.script.ast.Statement
 import io.peekandpoke.klang.script.ast.StringLiteral
 import io.peekandpoke.klang.script.ast.TemplateLiteral
 import io.peekandpoke.klang.script.ast.TemplatePart
+import io.peekandpoke.klang.script.runtime.ArgAlignment
 import io.peekandpoke.klang.script.ast.TernaryExpression
 import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.ast.WhileStatement
@@ -338,7 +340,21 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
         when (expr) {
             is CallExpression -> {
                 visitExpr(expr.callee)
-                expr.arguments.forEach { visitExpr(it.value) }
+                // Resolving the callee re-infers the receiver chain; only pay for it when a
+                // lambda argument can actually use the declared parameter types.
+                val expected = if (expr.arguments.any { it.value is ArrowFunction }) expectedArgumentTypes(expr) else null
+                expr.arguments.forEachIndexed { i, arg ->
+                    val value = arg.value
+                    val lambdaParams = expected?.getOrNull(i)?.functionParams
+                    if (value is ArrowFunction && lambdaParams != null) {
+                        // A lambda passed where the callee declares a function type: its
+                        // parameters take the declared types, so `x.` completes inside.
+                        map[value] = inferrer.inferType(value, scope)
+                        visitArrowBody(value, lambdaParams)
+                    } else {
+                        visitExpr(value)
+                    }
+                }
             }
 
             is BinaryOperation -> {
@@ -378,18 +394,9 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
                 expr.properties.forEach { (_, v) -> visitExpr(v) }
             }
 
-            is ArrowFunction -> withChildScope {
-                // Arrow parameters become locals in the function body. We have no
-                // type for them (parameters carry only names in the AST) — they
-                // still shadow same-named registry symbols inside the body.
-                expr.parameters.forEach { p ->
-                    scope.bind(TypeScope.LocalBinding(name = p, type = null, kind = KlangSymbol.LocalKind.PARAM))
-                }
-                when (val body = expr.body) {
-                    is ArrowFunctionBody.ExpressionBody -> visitExpr(body.expression)
-                    is ArrowFunctionBody.BlockBody -> body.statements.forEach { visitStmt(it) }
-                }
-            }
+            // A bare arrow (not a call argument) has no expected type: its parameters
+            // are untyped locals that still shadow same-named registry symbols.
+            is ArrowFunction -> visitArrowBody(expr, paramTypes = null)
 
             is IfExpression -> {
                 visitExpr(expr.condition)
@@ -411,6 +418,62 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
             // Leaf expressions — no children to recurse into
             is NumberLiteral, is StringLiteral, is BooleanLiteral, is Identifier, NullLiteral -> {}
         }
+    }
+
+    /**
+     * Visit an arrow function's body in a child scope, binding its parameters. When
+     * [paramTypes] is given (the arrow is an argument to a callable whose parameter is
+     * function-typed) the parameters are bound WITH those types; extra parameters beyond
+     * the declared arity bind untyped (the runtime binds them to null).
+     */
+    private fun visitArrowBody(expr: ArrowFunction, paramTypes: List<KlangType>?) = withChildScope {
+        expr.parameters.forEachIndexed { i, p ->
+            scope.bind(
+                TypeScope.LocalBinding(name = p, type = paramTypes?.getOrNull(i), kind = KlangSymbol.LocalKind.PARAM)
+            )
+        }
+        when (val body = expr.body) {
+            is ArrowFunctionBody.ExpressionBody -> visitExpr(body.expression)
+            is ArrowFunctionBody.BlockBody -> body.statements.forEach { visitStmt(it) }
+        }
+    }
+
+    /**
+     * The declared parameter type each argument of [call] binds to, aligned with
+     * `call.arguments`, or null when the callee is unknown or the call mixes named and
+     * positional arguments (an error the checker reports elsewhere).
+     *
+     * Positional alignment goes through [ArgAlignment] so the editor binds a trailing
+     * lambda to the same parameter the interpreter does. Arguments past the declared
+     * parameters fall into a trailing vararg parameter when there is one.
+     */
+    private fun expectedArgumentTypes(call: CallExpression): List<KlangType?>? {
+        val callable = inferrer.resolveCallable(call, scope) ?: return null
+        val params = callable.params
+        val args = call.arguments
+        if (args.isEmpty()) {
+            return emptyList()
+        }
+        if (args.all { it is Argument.Named }) {
+            return args.map { arg -> params.firstOrNull { it.name == (arg as Argument.Named).name }?.type }
+        }
+        if (!args.all { it is Argument.Positional }) {
+            return null
+        }
+
+        val varargType = params.lastOrNull()?.takeIf { it.isVararg }?.type
+        // The interpreter's vararg branch maps positionally and never floats (see ArgAlignment).
+        val targets = if (varargType != null) {
+            List(args.size) { it }
+        } else {
+            ArgAlignment.positionalTargets(
+                argCount = args.size,
+                paramCount = params.size,
+                isFunctionArg = { args[it].value is ArrowFunction },
+                isFunctionParam = { params[it].type.isFunction },
+            )
+        }
+        return targets.map { t -> params.getOrNull(t)?.type ?: varargType }
     }
 
     fun visitStmt(stmt: Statement) {

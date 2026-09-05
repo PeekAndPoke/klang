@@ -145,3 +145,32 @@ let r2 = applyOperation(5, 3, multiply);  // 15
 ```
 
 **Expected:** Results as commented
+
+### 4.10 Lambdas as arguments to native functions ✅ — typed in the editor, trailing-lambda rule
+
+A script arrow function passed to a native (Kotlin) function whose parameter is function-typed
+(`(A) -> B`, or a typealias of one) is converted to a Kotlin lambda and may be called back by the
+native (`NativeInterop.convertFunctionToKotlin`). Two rules make this pleasant at the call site:
+
+- **Trailing-lambda rule** (`runtime/ArgAlignment`): when the LAST positional argument is a
+  function, the parameter at its index is not function-typed, and exactly one function-typed
+  parameter follows, the argument binds to that parameter and the skipped slots take their
+  defaults. `Osc.supersaw(x => x.voices(9))` lands the lambda in the trailing `configure`
+  parameter although `freq` comes first. Only the last argument floats; two candidates are
+  ambiguous (name the parameter instead).
+- **Typed parameters in the editor**: the analyzer binds the lambda's parameters with the
+  callee's declared function-parameter types, so `x.` completes inside the lambda.
+
+```javascript
+note("c3").superimpose(x => x.transpose(12))              // x: SprudelPattern (works today)
+Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder, ONCE step S2 of the
+                                                          // plan below adds `configure` to the Osc doors
+```
+
+A door that wants the trailing-lambda rule must give every EARLIER optional parameter a literal
+default (number, string, boolean, null): the rule runs on the spec-aware call path, which needs
+a default thunk for each skipped slot, and KSP only emits thunks for literals. The KSP processor
+refuses a function-typed parameter preceded by a non-literal optional default.
+
+Tests: `ArgAlignmentTest.kt`, `ConfigureLambdaBindingTest.kt` (runtime), `AnalyzedAstTest.kt`
+("configure lambda" cases, analyzer). Plan: `docs/tasks/dsl-configure-lambdas.md`.

@@ -6,6 +6,15 @@
 - **Production**: Kotlin/JS builds working ✅
 - **Parser**: Hand-rolled recursive descent (replaced better-parse due to Kotlin/JS issue #66)
 
+## Recent Work (2026-09)
+
+- **Configure-lambda foundation (S1 of `docs/tasks/dsl-configure-lambdas.md`)**:
+  `runtime/ArgAlignment` (trailing-lambda rule, shared by interpreter and analyzer),
+  `ParamSpec.isFunctionType`, `KlangType.functionParams/functionReturn` (KSP now emits the
+  `FunctionN` components, aliases like `PatternMapperFn` included), and the analyzer binds a
+  lambda argument's parameters with the callee's declared types (`.superimpose(x => x.` now
+  completes). Language docs: `language-features/04-functions.md` 4.10.
+
 ## Recent Work (2026-05)
 
 - Added `ExportDeclaration` — new top-level form `export name = expr` (immutable binding +
@@ -35,6 +44,17 @@
 - **No `this` keyword**: object methods use stored arrow functions (`obj.fn = (a, b) => ...`)
 - **No `var`**: only `let` and `const`
 - **No `undefined`**: only `null`
+- **Stays a JS-syntax dialect for V1 (decided 2026-09-05)**: the maintainer considered a Kotlin
+  subset (trailing lambdas `f { }`, receiver lambdas) to fix the broken sub-type chains
+  (`Osc.supersaw().voices(9).lowpass(800).analog(3)` cannot reach `.analog`). Decided instead:
+  **configure lambdas on the existing arrow syntax with dedicated immutable builder types**,
+  `Osc.sine(freq, configure: (OscSineBuilder) -> OscSineBuilder)`; knobs leave `IgnitorDsl`;
+  NO back-compat; `Master(...)`/`Pipeline(...)` via the `invoke` operator
+  (`docs/tasks/klangscript-native-object-operators.md` must be revised first). Full plan and
+  every closed decision: `docs/tasks/dsl-configure-lambdas.md`. Receiver lambdas PARKED (need
+  multiple `this` + mutable builders). Kotlin round trip is an editor feature for later
+  (paste-detect + "copy as Kotlin" from the AST), not a grammar change. Analyzer gap that this
+  work closes: arrow params bind with `type = null`, so `.superimpose(x => x.` has no completion.
 
 ## Completed Phases
 
