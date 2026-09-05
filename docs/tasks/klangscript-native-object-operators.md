@@ -20,6 +20,101 @@ checks for these names during operator and call dispatch. No new storage infrast
 
 ---
 
+## Revision 2026-09-05 (step S0 of `dsl-configure-lambdas.md`)
+
+> This plan was written in the hand-registration era (`registerMethod` helpers in Kotlin). Since
+> then every native surface is emitted by KSP from `@KlangScript.*` annotations, native calls
+> are spec-aware (named arguments, default thunks, and since S1 the trailing-lambda rule in
+> `runtime/ArgAlignment`), and the editor analyzer resolves callables from the KSP-emitted
+> docs registry. The `invoke` operator is now a prerequisite of two consumers:
+> `dsl-configure-lambdas.md` (`Master(m => ...)`, `Pipeline(p => ...)`, later `Katalyst(...)`)
+> and `sprudel-field-accessors.md` (`gain(0.5)` on a callable accessor constant). This revision
+> supersedes Steps 1 to 3a for `invoke`; Steps 3b/3c (arithmetic, comparison, unary) remain
+> valid designs but are NOT part of the configure-lambda work and stay unscheduled.
+
+### What stays
+
+- Operators are extension methods under canonical Kotlin names (`invoke`, `plus`, ...), looked
+  up through `engine.getExtensionMethod(value, name)`, so the runtime supertype walk applies and
+  no new storage is needed. `NativeOperatorNames` (Step 1) stays as the single home of the names.
+- The dispatch points in the interpreter (Step 3) are the right ones.
+
+### What changes
+
+**Registration is an annotation, not a helper.** `@KlangScript.Method(name = "invoke")` on a
+member of an `@KlangScript.Object` (or of a `@KlangScript.TypeExtensions` object) is all a library
+author writes. KSP already emits such a method as an extension method on the object's class with
+full `ParamSpec`s, so `Master(configure = m => ...)`, `Master()` and the trailing-lambda rule
+work exactly like on any other method. The `register*Operator` helpers of Step 2 are dropped;
+the builder path keeps `registerMethod(NativeOperatorNames.INVOKE, ...)` for hand-registered
+types, no dedicated helper needed. Verified 2026-09-05: no registration in the stdlib or sprudel
+output uses the name `invoke` today, so the name is free.
+
+**Aliases first, operator second (decision D8 of `dsl-configure-lambdas.md`).** Every callable
+object ships the method form and the operator as aliases of each other, so the operator can be
+tested against a form that already works:
+
+```kotlin
+@KlangScript.Object("Master")
+object KlangScriptMaster {
+    @KlangScript.Method fun build(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = ...
+    @KlangScript.Method fun default(): MasterDsl = MasterDsl.default
+    @KlangScript.Method(name = "invoke")
+    fun invoke(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = build(configure)
+}
+```
+
+The spec asserts `Master(...) == Master.build(...)` and `Master() == Master.default()` node for
+node. (The `configure` parameter's only earlier parameters must have literal defaults, per the
+KSP trailing-lambda guard; here there are none.)
+
+**Interpreter (replaces Step 3a).** In `Interpreter.evaluateCall`, the `when (callee)` gains a
+`NativeObjectValue<*>` branch BEFORE the "Cannot call non-function value" fallback. It looks up
+`engine.getExtensionMethod(callee, NativeOperatorNames.INVOKE)` and, when found, goes through
+the SAME path a member call `Master.build(...)` takes: `positionalArgsForNative(name,
+extensionMethod.paramSpecs, callArgs, call)` then the guarded invoker (the block around
+`paramSpecs = extensionMethod.paramSpecs` in the MemberAccess call path). Step 3a's sketch
+passed the raw argument list straight to `invoker`, which would bypass named arguments, default
+thunks and the trailing-lambda rule; that is the part being replaced. When no `invoke` is
+registered the existing error stands, with the hint appended: "register a method named
+'invoke' to make it callable". Call-stack frame name: `<ObjectName>.invoke`.
+
+**Analyzer (new, was missing).** `ExpressionTypeInferrer.resolveCallable` on an `Identifier`
+callee currently returns `registry.getCallable(name, null)` only. Add the fallback: when that is
+null and the identifier resolves (scope first, then registry property) to a type `T`, return
+`registry.getCallable("invoke", T)`. Everything downstream is then free: the return type of
+`Master(...)`, the typed lambda parameter in `Master(m => m.` (R3), hover on the call. Same
+fallback for a `MemberAccess` callee whose property resolves to an object with an invoke, so
+`Foo.Bar(...)` would work if such nesting ever appears (not needed now, one `?:` more).
+
+**Docs popup.** `KlangCallable.signature` renders `Master.invoke(configure: ...)`; add one rule:
+when `name == "invoke"` and a receiver exists, render `Master(configure: ...)`. The
+`KlangSymbol` for the object keeps its property variant; the invoke callable is listed under
+the object's receiver like any method, so completion after `Master.` does not show `invoke`
+(filter it out there, it is not meant to be typed).
+
+**Field accessors (second consumer).** `sprudel-field-accessors.md` wants `gain` to be a
+`@KlangScript.Constant` whose class carries `@KlangScript.Method("invoke")`. Same mechanism, no
+special casing: the constant's value is a `NativeObjectValue`, the interpreter finds `invoke` on
+its class. The only difference is the analyzer fallback above resolving through a registry
+PROPERTY (the constant) rather than an object; that is the same code path.
+
+### Steps for `invoke` (this is what `dsl-configure-lambdas.md` S4 builds)
+
+1. `Interpreter.evaluateCall`: the `NativeObjectValue` branch through the spec-aware path.
+2. `ExpressionTypeInferrer.resolveCallable`: the `invoke` fallback for identifier (and member)
+   callees.
+3. `KlangCallable.signature` rendering rule + completion filter for `invoke`.
+4. Tests: `NativeObjectInvokeTest` (runtime: positional, named, empty call, lambda floating
+   into `invoke(configure)`, error text when no invoke is registered, call-stack frame);
+   `AnalyzedAstTest` (return type of `Obj(...)`, typed lambda param in `Obj(m => m.`);
+   `CompletionProviderTest` (`invoke` hidden after the dot). Mutation-checked per `/review-loop`.
+5. First consumer lands in the same diff as S5 (`Master`), so the mechanism ships with a real
+   user and its alias spec.
+
+Steps 3b/3c (arithmetic and unary operators) keep their original design below and get the same
+annotation treatment (`@KlangScript.Method("plus")`) when they are scheduled.
+
 ## Operator Name Convention
 
 Follow Kotlin's operator function naming:

@@ -128,6 +128,20 @@ The `audio_be` oscillator code was consolidated (branch `dedicated-cycle-time`) 
   last in chain, on the summed mix. The lookahead delays the whole output by 5 ms (uniform, so nothing desyncs). The
   *authored* `MasterFx.limiter()` differs on purpose: no lookahead, 1 ms one-pole attack, because it is per-playback.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
+- **Every DSL is immutable at construction time (maintainer principle, 2026-09-05)**: nodes,
+  builders, `MasterDsl`, `PipelineDsl`, patterns. A "mutating" call returns a new instance; never
+  a `var`, never a mutable builder, never a `MutableList` escaping a DSL type. Why: it removes an
+  entire bug class (shared-state mutation at a distance) and therefore an entire chapter of
+  explaining; composition falls out of it. Runtime data may be mutable for performance
+  (single-owner `SprudelVoiceData`), that is engine-internal and stays. Receiver lambdas were
+  parked for exactly this reason (they need mutable builders).
+- **Configure lambdas + builder types (decided 2026-09-05, not started)**: sub-type knobs
+  (`analog`, `voices`, `spread`, `phasePool`, `band`/`tap`, `wet`/`dryFloor`, master stage and
+  pipeline stage knobs) move OFF `IgnitorDsl`/`MasterStageDsl`/`StageDsl` onto immutable
+  `Osc*Builder`/`EqBuilder`/`Master*Builder`/`Pipeline*Builder` classes in `audio_bridge`,
+  annotated for KlangScript directly (KSP runs on `audio_bridge`). `MasterFx`, `Stage`,
+  `Master.of`, `Pipeline.of` and all 17 sub-type extension objects are DELETED, no back-compat.
+  Plan: `docs/tasks/dsl-configure-lambdas.md`.
 
 ## Filter Saturation Dead-End — Linear SVF is the Right Choice (2026-05-28)
 

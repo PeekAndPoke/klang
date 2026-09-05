@@ -4,6 +4,12 @@ Enjoy the ride. Errors happen, no worries, we find them, we fix them.
 We write exceptional software. We are an awesome team and we give our very best.
 Der Weg ist das Ziel. Sound first!
 
+## Memory lives in the repo
+
+Record decisions, status and lessons in the module memory files the skills load
+(`klangscript/MEMORY.md`, `audio/MEMORY.md`, `sprudel/MEMORY.md`) and in `docs/tasks/`.
+Never in the home-directory auto-memory. If something has no module home, ask where it belongs.
+
 ## Available Agent
 
 | Agent                       | Trigger                                                                                                       | Description                                                                                                                                                         |
@@ -21,6 +27,7 @@ Use `/skill-name` or describe what you need in natural language to invoke a skil
 | `/klangscript-knowhow`   | "work on klangscript", "add language feature", "klangscript parser", "klangscript interpreter" | Load klangscript context incrementally (dispatcher + targeted ref files)                                  |
 | `/klangaudio-knowhow`    | "work on audio", "audio engine", "voice synthesis", "effects", "sample loading", "orbits"      | Load audio subsystem context (audio_bridge / audio_be / audio_fe / audio_jsworklet)                       |
 | `/code-style`            | "apply code style", "check code style", "clean up code style", "follow code conventions"       | Project code style rules (curly braces, formatting, etc.)                                                 |
+| `/dsl-design`            | "design a DSL", "add a DSL door/knob", "review a DSL change", "builder", "configure lambda", "DSL immutability", "parameter parity" | Design principles for every Klang DSL: construction-time immutability, builder/configure-lambda door shape, two doors, parity, one word per concept, coerce vs raw, wire types, review checklist |
 | `/review-loop`           | "review this change", "code review", "review loop", "mutation check", "apply review findings"  | Review standard: reviews loop until a clean round (fixes get re-reviewed); new tests are mutation-checked |
 | `/ultra-libs-knowhow`    | "ultra libs", "ultra.html", "ultra events", "io.peekandpoke.ultra"                             | Source reference for all `io.peekandpoke.ultra.*` modules (html, streams, common, etc.)                   |
 | `/kraft-knowhow`         | "kraft", "kraft component", "kraft forms", "kraft routing", "io.peekandpoke.kraft"             | Source reference for the Kraft UI framework (components, VDom, forms, routing, etc.)                      |

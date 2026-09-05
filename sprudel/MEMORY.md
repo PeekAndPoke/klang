@@ -31,6 +31,11 @@
 
 ## Lessons Learned
 
+**Immutable at construction, mutable at runtime, both deliberate.** Every combinator returns a new
+pattern (the project-wide DSL principle, see `audio/MEMORY.md` Architecture Decisions and
+`docs/tasks/dsl-configure-lambdas.md`). The query/render path uses mutable single-owner
+`SprudelVoiceData` on purpose (leaf clone ~17x faster). Do not "fix" either side toward the other.
+
 **`_innerJoin` is mandatory** for any DSL function accepting pattern arguments — static values work
 without it, but control patterns (e.g. `pressBy("<0 0.5>")`) silently break without it.
 
