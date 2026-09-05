@@ -5,19 +5,23 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Dual-language equivalence for the typed superramp DSL (Phase 2). Mirrors [KlangScriptSuperSawSpec].
+ * Dual-language equivalence for the `Osc.superramp(freq, configure)` door and its [OscSuperRampBuilder].
  *
- * Each case expresses the SAME thing two ways — as KlangScript source run through the full engine, and as
- * the Kotlin builder + data class `.copy()` — then asserts the resulting [IgnitorDsl.SuperRamp] objects are
- * structurally equal. One `shouldBe` validates the whole binding chain (field, order, coercion, defaults).
+ * Each case expresses the SAME thing two ways, as KlangScript source run through the full engine
+ * (parse, interpret, native interop, the configure lambda floating into its slot) and as the
+ * Kotlin door with a Kotlin lambda or a data class `.copy()`, then asserts the resulting
+ * [IgnitorDsl.SuperRamp] nodes are structurally equal. Comparing against `.copy()` keeps the check
+ * independent of the builder: a knob writing the wrong field is caught.
  */
 class KlangScriptSuperRampSpec : StringSpec({
 
@@ -29,62 +33,68 @@ class KlangScriptSuperRampSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun superRamp() = KlangScriptOsc.superramp()
+    fun node() = KlangScriptOsc.superramp()
 
-    "Osc.superramp() — KlangScript == Kotlin builder" {
-        ks("Osc.superramp()") shouldBe superRamp()
+    "Osc.superramp(): script == Kotlin door, all defaults" {
+        ks("Osc.superramp()") shouldBe node()
     }
 
-    "freq(220)" {
-        ks("Osc.superramp().freq(220)") shouldBe superRamp().copy(freq = IgnitorDsl.Constant(220.0))
+    "freq is the door's first parameter, not a knob: Osc.superramp(220)" {
+        ks("Osc.superramp(220)") shouldBe (node() as IgnitorDsl.SuperRamp).copy(freq = IgnitorDsl.Constant(220.0))
     }
 
-    "voices(9)" {
-        ks("Osc.superramp().voices(9)") shouldBe superRamp().copy(voices = IgnitorDsl.Constant(9.0))
+    "voices(9) via the configure lambda" {
+        ks("Osc.superramp(x => x.voices(9))") shouldBe (node() as IgnitorDsl.SuperRamp).copy(voices = IgnitorDsl.Constant(9.0))
+    }
+
+    "voices accepts an Osc graph (control-rate)" {
+        ks("Osc.superramp(x => x.voices(Osc.sine(0.5)))") shouldBe
+                (node() as IgnitorDsl.SuperRamp).copy(voices = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.5)))
     }
 
     "spread(0.3)" {
-        ks("Osc.superramp().spread(0.3)") shouldBe superRamp().copy(spread = IgnitorDsl.Constant(0.3))
+        ks("Osc.superramp(x => x.spread(0.3))") shouldBe (node() as IgnitorDsl.SuperRamp).copy(spread = IgnitorDsl.Constant(0.3))
     }
 
     "analog(5.0)" {
-        ks("Osc.superramp().analog(5.0)") shouldBe superRamp().copy(analog = IgnitorDsl.Constant(5.0))
+        ks("Osc.superramp(x => x.analog(5.0))") shouldBe (node() as IgnitorDsl.SuperRamp).copy(analog = IgnitorDsl.Constant(5.0))
     }
 
     "spreadPower(1.5)" {
-        ks("Osc.superramp().spreadPower(1.5)") shouldBe superRamp().copy(spreadPower = 1.5)
+        ks("Osc.superramp(x => x.spreadPower(1.5))") shouldBe (node() as IgnitorDsl.SuperRamp).copy(spreadPower = 1.5)
     }
 
     "sideAtten(0.25)" {
-        ks("Osc.superramp().sideAtten(0.25)") shouldBe superRamp().copy(sideAtten = 0.25)
+        ks("Osc.superramp(x => x.sideAtten(0.25))") shouldBe (node() as IgnitorDsl.SuperRamp).copy(sideAtten = 0.25)
     }
 
     "gainJitter(0.0)" {
-        ks("Osc.superramp().gainJitter(0.0)") shouldBe superRamp().copy(gainJitter = 0.0)
+        ks("Osc.superramp(x => x.gainJitter(0.0))") shouldBe (node() as IgnitorDsl.SuperRamp).copy(gainJitter = 0.0)
     }
 
     "centerJitter(1.0) maps to centerJitterScale" {
-        ks("Osc.superramp().centerJitter(1.0)") shouldBe superRamp().copy(centerJitterScale = 1.0)
+        ks("Osc.superramp(x => x.centerJitter(1.0))") shouldBe (node() as IgnitorDsl.SuperRamp).copy(centerJitterScale = 1.0)
     }
 
-    "phasePool() - on with family defaults (sync guard: method defaults == node defaults)" {
-        ks("Osc.superramp().phasePool()") shouldBe superRamp().copy(phasePool = 1.0)
+    "phasePool(): on with family defaults (sync guard: knob defaults == node defaults)" {
+        ks("Osc.superramp(x => x.phasePool())") shouldBe (node() as IgnitorDsl.SuperRamp).copy(phasePool = 1.0)
     }
 
-    "phasePool(on = 0, kMin = 0.2) - all-named subset (mixing positional+named is a language error)" {
-        ks("Osc.superramp().phasePool(on = 0, kMin = 0.2)") shouldBe superRamp().copy(phasePool = 0.0, kMin = 0.2)
+    "phasePool(on = 0, kMin = 0.2): all-named subset" {
+        ks("Osc.superramp(x => x.phasePool(on = 0, kMin = 0.2))") shouldBe
+                (node() as IgnitorDsl.SuperRamp).copy(phasePool = 0.0, kMin = 0.2)
     }
 
-    "phasePool(refreshEvery = 0) - named arg skips the LEADING literal default" {
-        ks("Osc.superramp().phasePool(refreshEvery = 0)") shouldBe superRamp().copy(phasePool = 1.0, refreshEvery = 0.0)
+    "phasePool(refreshEvery = 0): a named arg skips the leading literal defaults" {
+        ks("Osc.superramp(x => x.phasePool(refreshEvery = 0))") shouldBe
+                (node() as IgnitorDsl.SuperRamp).copy(phasePool = 1.0, refreshEvery = 0.0)
     }
 
-    "every typed config method in one chain" {
-        val code = "Osc.superramp().freq(110).voices(11).spread(0.12).analog(4.0)" +
+    "every knob in one lambda, freq on the door" {
+        val code = "Osc.superramp(110, x => x.voices(11).spread(0.12).analog(4.0)" +
                 ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
-                ".phasePool(1, 0.2, 0.7, 8, 64, 5, \"random\", 8)"
-
-        ks(code) shouldBe superRamp().copy(
+                ".phasePool(1, 0.2, 0.7, 8, 64, 5, \"random\", 8))"
+        ks(code) shouldBe (node() as IgnitorDsl.SuperRamp).copy(
             freq = IgnitorDsl.Constant(110.0),
             voices = IgnitorDsl.Constant(11.0),
             spread = IgnitorDsl.Constant(0.12),
@@ -104,11 +114,29 @@ class KlangScriptSuperRampSpec : StringSpec({
         )
     }
 
-    "superramp().lowpass(2000) — base wrapper applies to the narrowed subtype" {
-        val dsl = ks("Osc.superramp().spreadPower(1.5).lowpass(2000)")
+    "the Kotlin door takes the same lambda" {
+        ks("Osc.superramp(x => x.voices(11).spread(0.12))") shouldBe
+                KlangScriptOsc.superramp(configure = { it.voices(11).spread(0.12) })
+    }
+
+    "named configure binds too" {
+        ks("Osc.superramp(configure = x => x.voices(3))") shouldBe (node() as IgnitorDsl.SuperRamp).copy(voices = IgnitorDsl.Constant(3.0))
+    }
+
+    "processing goes OUTSIDE the lambda: the wrapper sees the configured node" {
+        val dsl = ks("Osc.superramp(x => x.spreadPower(1.5)).lowpass(2000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         val inner = dsl.inner
         inner.shouldBeInstanceOf<IgnitorDsl.SuperRamp>()
         inner.spreadPower shouldBe 1.5
+    }
+
+    "a lambda that returns nothing is a script-level type error naming the door" {
+        val err = shouldThrow<KlangScriptTypeError> { ks("Osc.superramp(x => { x.voices(3) })") }
+        err.message shouldBe "the configure lambda of Osc.superramp returned nothing; return the builder it received (`x => x.analog(3)`)"
+    }
+
+    "a lambda that returns something else is a script-level type error, not a cast failure" {
+        shouldThrow<KlangScriptTypeError> { ks("Osc.superramp(x => 5)") }
     }
 })

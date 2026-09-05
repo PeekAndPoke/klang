@@ -54,35 +54,27 @@ class StdlibDocsInferenceTest : StringSpec({
         inferrer.inferType(parseExpr("Osc.sine()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.saw() returns the narrow Sawtooth subtype" {
-        // Phase 2: saw() narrows to IgnitorDsl.Sawtooth so the shape config methods (.resetSamples/.shapeMax)
-        // are discoverable; the supertype walk keeps the base IgnitorDsl methods (.lowpass/.adsr) resolvable.
+    "real stdlib: Osc.saw() and Osc.supersaw() return the base IgnitorDsl (knobs live on builders)" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.saw()"))?.simpleName shouldBe "Sawtooth"
+        inferrer.inferType(parseExpr("Osc.saw()"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Osc.supersaw()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.supersaw() returns the narrow SuperSaw subtype" {
-        // Phase 2: supersaw() narrows its return to IgnitorDsl.SuperSaw so the typed
-        // config methods (.spreadPower/.sideAtten/…) are discoverable. The supertype
-        // walk (below) keeps the base IgnitorDsl methods resolvable on it.
-        val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.supersaw()"))?.simpleName shouldBe "SuperSaw"
-    }
-
-    "real stdlib: Osc.supersaw() carries IgnitorDsl as a supertype" {
-        val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        val type = inferrer.inferType(parseExpr("Osc.supersaw()"))!!
-        type.supertypes.map { it.simpleName } shouldContain "IgnitorDsl"
-    }
-
-    "real stdlib: base IgnitorDsl method resolves on a narrowed SuperSaw receiver" {
-        // getCallable must walk the receiver's supertypes: .lowpass() is registered on
-        // IgnitorDsl, yet the receiver here is the narrowed SuperSaw.
+    "real stdlib: the supersaw door's configure parameter is a typed function of the builder" {
         val reg = stdlibRegistry()
-        val superSaw = reg.getCallable("supersaw", KlangType("Osc"))!!.returnType!!
-        val lowpass = reg.getCallable("lowpass", superSaw)
-        lowpass shouldNotBe null
-        lowpass!!.returnType?.simpleName shouldBe "IgnitorDsl"
+        val supersaw = reg.getCallable("supersaw", KlangType("Osc"))!!
+        val configure = supersaw.params.single { it.name == "configure" }
+        configure.type.render() shouldBe "((OscSuperSawBuilder) -> OscSuperSawBuilder)?"
+        configure.isOptional shouldBe true
+    }
+
+    "real stdlib: builder knobs resolve on the builder and keep its type, base wrappers do not" {
+        val reg = stdlibRegistry()
+        val builder = reg.getCallable("supersaw", KlangType("Osc"))!!
+            .params.single { it.name == "configure" }.type.functionParams!!.single()
+        reg.getCallable("voices", builder)!!.returnType?.simpleName shouldBe "OscSuperSawBuilder"
+        reg.getCallable("phasePool", builder)!!.returnType?.simpleName shouldBe "OscSuperSawBuilder"
+        reg.getCallable("lowpass", builder) shouldBe null
     }
 
     "real stdlib: Osc.whitenoise() returns IgnitorDsl" {

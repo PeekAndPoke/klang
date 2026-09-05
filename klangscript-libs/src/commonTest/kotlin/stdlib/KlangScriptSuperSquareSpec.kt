@@ -5,15 +5,23 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Dual-language equivalence for the typed supersquare DSL (Phase 2). Mirrors [KlangScriptSuperSawSpec].
+ * Dual-language equivalence for the `Osc.supersquare(freq, configure)` door and its [OscSuperSquareBuilder].
+ *
+ * Each case expresses the SAME thing two ways, as KlangScript source run through the full engine
+ * (parse, interpret, native interop, the configure lambda floating into its slot) and as the
+ * Kotlin door with a Kotlin lambda or a data class `.copy()`, then asserts the resulting
+ * [IgnitorDsl.SuperSquare] nodes are structurally equal. Comparing against `.copy()` keeps the check
+ * independent of the builder: a knob writing the wrong field is caught.
  */
 class KlangScriptSuperSquareSpec : StringSpec({
 
@@ -25,62 +33,68 @@ class KlangScriptSuperSquareSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun superSquare() = KlangScriptOsc.supersquare()
+    fun node() = KlangScriptOsc.supersquare()
 
-    "Osc.supersquare() — KlangScript == Kotlin builder" {
-        ks("Osc.supersquare()") shouldBe superSquare()
+    "Osc.supersquare(): script == Kotlin door, all defaults" {
+        ks("Osc.supersquare()") shouldBe node()
     }
 
-    "freq(220)" {
-        ks("Osc.supersquare().freq(220)") shouldBe superSquare().copy(freq = IgnitorDsl.Constant(220.0))
+    "freq is the door's first parameter, not a knob: Osc.supersquare(220)" {
+        ks("Osc.supersquare(220)") shouldBe (node() as IgnitorDsl.SuperSquare).copy(freq = IgnitorDsl.Constant(220.0))
     }
 
-    "voices(9)" {
-        ks("Osc.supersquare().voices(9)") shouldBe superSquare().copy(voices = IgnitorDsl.Constant(9.0))
+    "voices(9) via the configure lambda" {
+        ks("Osc.supersquare(x => x.voices(9))") shouldBe (node() as IgnitorDsl.SuperSquare).copy(voices = IgnitorDsl.Constant(9.0))
+    }
+
+    "voices accepts an Osc graph (control-rate)" {
+        ks("Osc.supersquare(x => x.voices(Osc.sine(0.5)))") shouldBe
+                (node() as IgnitorDsl.SuperSquare).copy(voices = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.5)))
     }
 
     "spread(0.3)" {
-        ks("Osc.supersquare().spread(0.3)") shouldBe superSquare().copy(spread = IgnitorDsl.Constant(0.3))
+        ks("Osc.supersquare(x => x.spread(0.3))") shouldBe (node() as IgnitorDsl.SuperSquare).copy(spread = IgnitorDsl.Constant(0.3))
     }
 
     "analog(5.0)" {
-        ks("Osc.supersquare().analog(5.0)") shouldBe superSquare().copy(analog = IgnitorDsl.Constant(5.0))
+        ks("Osc.supersquare(x => x.analog(5.0))") shouldBe (node() as IgnitorDsl.SuperSquare).copy(analog = IgnitorDsl.Constant(5.0))
     }
 
     "spreadPower(1.5)" {
-        ks("Osc.supersquare().spreadPower(1.5)") shouldBe superSquare().copy(spreadPower = 1.5)
+        ks("Osc.supersquare(x => x.spreadPower(1.5))") shouldBe (node() as IgnitorDsl.SuperSquare).copy(spreadPower = 1.5)
     }
 
     "sideAtten(0.25)" {
-        ks("Osc.supersquare().sideAtten(0.25)") shouldBe superSquare().copy(sideAtten = 0.25)
+        ks("Osc.supersquare(x => x.sideAtten(0.25))") shouldBe (node() as IgnitorDsl.SuperSquare).copy(sideAtten = 0.25)
     }
 
     "gainJitter(0.0)" {
-        ks("Osc.supersquare().gainJitter(0.0)") shouldBe superSquare().copy(gainJitter = 0.0)
+        ks("Osc.supersquare(x => x.gainJitter(0.0))") shouldBe (node() as IgnitorDsl.SuperSquare).copy(gainJitter = 0.0)
     }
 
     "centerJitter(1.0) maps to centerJitterScale" {
-        ks("Osc.supersquare().centerJitter(1.0)") shouldBe superSquare().copy(centerJitterScale = 1.0)
+        ks("Osc.supersquare(x => x.centerJitter(1.0))") shouldBe (node() as IgnitorDsl.SuperSquare).copy(centerJitterScale = 1.0)
     }
 
-    "phasePool() - on with family defaults (sync guard: method defaults == node defaults)" {
-        ks("Osc.supersquare().phasePool()") shouldBe superSquare().copy(phasePool = 1.0)
+    "phasePool(): on with family defaults (sync guard: knob defaults == node defaults)" {
+        ks("Osc.supersquare(x => x.phasePool())") shouldBe (node() as IgnitorDsl.SuperSquare).copy(phasePool = 1.0)
     }
 
-    "phasePool(on = 0, kMin = 0.2) - all-named subset (mixing positional+named is a language error)" {
-        ks("Osc.supersquare().phasePool(on = 0, kMin = 0.2)") shouldBe superSquare().copy(phasePool = 0.0, kMin = 0.2)
+    "phasePool(on = 0, kMin = 0.2): all-named subset" {
+        ks("Osc.supersquare(x => x.phasePool(on = 0, kMin = 0.2))") shouldBe
+                (node() as IgnitorDsl.SuperSquare).copy(phasePool = 0.0, kMin = 0.2)
     }
 
-    "phasePool(refreshEvery = 0) - named arg skips the LEADING literal default" {
-        ks("Osc.supersquare().phasePool(refreshEvery = 0)") shouldBe superSquare().copy(phasePool = 1.0, refreshEvery = 0.0)
+    "phasePool(refreshEvery = 0): a named arg skips the leading literal defaults" {
+        ks("Osc.supersquare(x => x.phasePool(refreshEvery = 0))") shouldBe
+                (node() as IgnitorDsl.SuperSquare).copy(phasePool = 1.0, refreshEvery = 0.0)
     }
 
-    "every typed config method in one chain" {
-        val code = "Osc.supersquare().freq(110).voices(11).spread(0.12).analog(4.0)" +
+    "every knob in one lambda, freq on the door" {
+        val code = "Osc.supersquare(110, x => x.voices(11).spread(0.12).analog(4.0)" +
                 ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
-                ".phasePool(1, 0.2, 0.7, 8, 64, 5, \"random\", 8)"
-
-        ks(code) shouldBe superSquare().copy(
+                ".phasePool(1, 0.2, 0.7, 8, 64, 5, \"random\", 8))"
+        ks(code) shouldBe (node() as IgnitorDsl.SuperSquare).copy(
             freq = IgnitorDsl.Constant(110.0),
             voices = IgnitorDsl.Constant(11.0),
             spread = IgnitorDsl.Constant(0.12),
@@ -100,11 +114,29 @@ class KlangScriptSuperSquareSpec : StringSpec({
         )
     }
 
-    "supersquare().lowpass(2000) — base wrapper applies to the narrowed subtype" {
-        val dsl = ks("Osc.supersquare().spreadPower(1.5).lowpass(2000)")
+    "the Kotlin door takes the same lambda" {
+        ks("Osc.supersquare(x => x.voices(11).spread(0.12))") shouldBe
+                KlangScriptOsc.supersquare(configure = { it.voices(11).spread(0.12) })
+    }
+
+    "named configure binds too" {
+        ks("Osc.supersquare(configure = x => x.voices(3))") shouldBe (node() as IgnitorDsl.SuperSquare).copy(voices = IgnitorDsl.Constant(3.0))
+    }
+
+    "processing goes OUTSIDE the lambda: the wrapper sees the configured node" {
+        val dsl = ks("Osc.supersquare(x => x.spreadPower(1.5)).lowpass(2000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         val inner = dsl.inner
         inner.shouldBeInstanceOf<IgnitorDsl.SuperSquare>()
         inner.spreadPower shouldBe 1.5
+    }
+
+    "a lambda that returns nothing is a script-level type error naming the door" {
+        val err = shouldThrow<KlangScriptTypeError> { ks("Osc.supersquare(x => { x.voices(3) })") }
+        err.message shouldBe "the configure lambda of Osc.supersquare returned nothing; return the builder it received (`x => x.analog(3)`)"
+    }
+
+    "a lambda that returns something else is a script-level type error, not a cast failure" {
+        shouldThrow<KlangScriptTypeError> { ks("Osc.supersquare(x => 5)") }
     }
 })

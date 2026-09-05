@@ -19,7 +19,9 @@ script registration). Split out of `:klangscript` on 2026-09-06
 | `src/commonMain/kotlin/stdlib/KlangScriptOsc.kt`  | The `Osc` doors (oscillators, noise, super-oscillators, pluck)             |
 | `src/commonMain/kotlin/stdlib/KlangScriptOscExtensions.kt` | Base `IgnitorDsl` wrappers (`lowpass`, `adsr`, `eq`, `phaser`, ...) and `IgnitorDslLike` |
 | `src/commonMain/kotlin/stdlib/KlangScriptMaster.kt`, `KlangScriptPipeline.kt` | Master and Pipeline doors                              |
-| `src/commonMain/kotlin/stdlib/KlangScript*Extensions.kt` | Knobs per node type (being replaced by builders, see below)          |
+| `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |
+| `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |
+| `src/commonMain/kotlin/stdlib/KlangScript*Extensions.kt` | Remaining knob objects: Eq, Phaser/Shimmer (S3), Master stages (S5), Pipeline stages (S6) |
 | `src/{jvmMain,jsMain}/kotlin/stdlib/PlatformConsole.kt` | Platform console output                                              |
 | `build/generated/ksp/metadata/commonMain/kotlin/`  | `GeneratedStdlibRegistration.kt` (KSP output, never edit)                 |
 

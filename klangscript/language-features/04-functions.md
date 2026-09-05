@@ -162,9 +162,8 @@ native (`NativeInterop.convertFunctionToKotlin`). Two rules make this pleasant a
   callee's declared function-parameter types, so `x.` completes inside the lambda.
 
 ```javascript
-note("c3").superimpose(x => x.transpose(12))              // x: SprudelPattern (works today)
-Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder, ONCE step S2 of the
-                                                          // plan below adds `configure` to the Osc doors
+note("c3").superimpose(x => x.transpose(12))              // x: SprudelPattern
+Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder (klangscript-libs)
 ```
 
 A door that wants the trailing-lambda rule must give every EARLIER optional parameter a literal

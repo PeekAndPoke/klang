@@ -5,15 +5,18 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Dual-language equivalence for the typed ramp shape DSL (Phase 2). Mirrors [KlangScriptSawtoothSpec].
+ * Dual-language equivalence for the `Osc.ramp(freq, configure)` door and its [OscRampBuilder]: script
+ * lambda vs Kotlin door / data class `.copy()`, structurally equal [IgnitorDsl.Ramp] nodes.
  */
 class KlangScriptRampSpec : StringSpec({
 
@@ -25,42 +28,45 @@ class KlangScriptRampSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun ramp() = KlangScriptOsc.ramp()
+    fun node() = KlangScriptOsc.ramp()
 
-    "Osc.ramp() — KlangScript == Kotlin builder" {
-        ks("Osc.ramp()") shouldBe ramp()
+    "Osc.ramp(): script == Kotlin door, all defaults" {
+        ks("Osc.ramp()") shouldBe node()
     }
 
-    "freq(220)" {
-        ks("Osc.ramp().freq(220)") shouldBe ramp().copy(freq = IgnitorDsl.Constant(220.0))
+    "freq is the door's first parameter: Osc.ramp(220)" {
+        ks("Osc.ramp(220)") shouldBe (node() as IgnitorDsl.Ramp).copy(freq = IgnitorDsl.Constant(220.0))
     }
 
     "analog(5.0)" {
-        ks("Osc.ramp().analog(5.0)") shouldBe ramp().copy(analog = IgnitorDsl.Constant(5.0))
+        ks("Osc.ramp(x => x.analog(5.0))") shouldBe (node() as IgnitorDsl.Ramp).copy(analog = IgnitorDsl.Constant(5.0))
     }
 
     "resetSamples(4.0)" {
-        ks("Osc.ramp().resetSamples(4.0)") shouldBe ramp().copy(resetSamples = 4.0)
+        ks("Osc.ramp(x => x.resetSamples(4.0))") shouldBe (node() as IgnitorDsl.Ramp).copy(resetSamples = 4.0)
     }
 
     "shapeMax(0.3)" {
-        ks("Osc.ramp().shapeMax(0.3)") shouldBe ramp().copy(shapeMax = 0.3)
+        ks("Osc.ramp(x => x.shapeMax(0.3))") shouldBe (node() as IgnitorDsl.Ramp).copy(shapeMax = 0.3)
     }
 
-    "every typed config method in one chain" {
-        ks("Osc.ramp().freq(110).analog(4.0).resetSamples(3.0).shapeMax(0.4)") shouldBe ramp().copy(
-            freq = IgnitorDsl.Constant(110.0),
-            analog = IgnitorDsl.Constant(4.0),
-            resetSamples = 3.0,
-            shapeMax = 0.4,
-        )
+    "every knob in one lambda" {
+        ks("Osc.ramp(110, x => x.analog(5.0).resetSamples(4.0).shapeMax(0.3))") shouldBe (node() as IgnitorDsl.Ramp).copy(freq = IgnitorDsl.Constant(110.0), analog = IgnitorDsl.Constant(5.0), resetSamples = 4.0, shapeMax = 0.3)
     }
 
-    "ramp().lowpass(2000) — base wrapper applies to the narrowed subtype" {
-        val dsl = ks("Osc.ramp().resetSamples(4.0).lowpass(2000)")
+    "the Kotlin door takes the same lambda" {
+        ks("Osc.ramp(x => x.shapeMax(0.3))") shouldBe KlangScriptOsc.ramp(configure = { it.shapeMax(0.3) })
+    }
+
+    "processing goes OUTSIDE the lambda: the wrapper sees the configured node" {
+        val dsl = ks("Osc.ramp(x => x.shapeMax(0.3)).lowpass(2000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         val inner = dsl.inner
         inner.shouldBeInstanceOf<IgnitorDsl.Ramp>()
-        inner.resetSamples shouldBe 4.0
+        inner.shapeMax shouldBe 0.3
+    }
+
+    "a lambda that returns nothing is a script-level type error" {
+        shouldThrow<KlangScriptTypeError> { ks("Osc.ramp(x => { x.shapeMax(0.3) })") }
     }
 })

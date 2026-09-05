@@ -74,8 +74,8 @@ class KlangScriptOscSlotTest : StringSpec({
         evalIgnitorDsl("Osc.slot.analog") shouldBe IgnitorDsl.Param("analog", 0.0)
     }
 
-    "Osc.sine().analog(OscSlot.analog) opens the analog slot on a custom sound" {
-        val dsl = evalIgnitorDsl("Osc.sine().analog(OscSlot.analog)")
+    "Osc.sine(x => x.analog(OscSlot.analog)) opens the analog slot on a custom sound" {
+        val dsl = evalIgnitorDsl("Osc.sine(x => x.analog(OscSlot.analog))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.analog shouldBe IgnitorDsl.Param("analog", 0.0)
     }

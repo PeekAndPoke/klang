@@ -57,11 +57,11 @@ let guitar = (() => {
   let pHpQ        = Osc.param("hpq",          0.707, "Highpass resonance")
   // --------------------------------------------------------------------------------------------------------------
 
-  let saw = Osc.supersaw(freq = Osc.freq(), voices = 25, spread = 0.10)
+  let saw = Osc.supersaw(x => x.voices(25).spread(0.10)
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.60, kMax = 0.85, warmup = 0, selection = "normal")
-    // character knobs — plain scalars, SuperSaw-typed, must precede the filter
-    .analog(pAnalog).spreadPower(12.0).sideAtten(0.0).gainJitter(0.05).centerJitter(0.10)
+    // character knobs, plain scalars on the supersaw builder
+    .analog(pAnalog).spreadPower(12.0).sideAtten(0.0).gainJitter(0.05).centerJitter(0.10))
   
   let signal = saw //.mix(saw2, 1.0) 
     // Simulate plucked string

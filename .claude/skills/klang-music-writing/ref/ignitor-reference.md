@@ -93,22 +93,25 @@ Multiple detuned copies for thick, lush sounds.
 
 | Method                                     | Description             |
 |--------------------------------------------|-------------------------|
-| `Osc.supersaw(freq?, voices?, spread?)`    | Detuned sawtooth chorus |
-| `Osc.supersine(freq?, voices?, spread?)`   | Detuned sine chorus     |
-| `Osc.supersquare(freq?, voices?, spread?)` | Detuned square chorus   |
-| `Osc.supertri(freq?, voices?, spread?)`    | Detuned triangle chorus |
-| `Osc.superramp(freq?, voices?, spread?)`   | Detuned ramp chorus     |
+| `Osc.supersaw(freq?, configure?)`    | Detuned sawtooth chorus |
+| `Osc.supersine(freq?, configure?)`   | Detuned sine chorus     |
+| `Osc.supersquare(freq?, configure?)` | Detuned square chorus   |
+| `Osc.supertri(freq?, configure?)`    | Detuned triangle chorus |
+| `Osc.superramp(freq?, configure?)`   | Detuned ramp chorus     |
 
-**Constructor params** (all optional):
+**Every oscillator door is `Osc.name(freq?, configure?)`.** `freq` first (omit for the note's pitch, Hz for a
+fixed frequency, `Osc.sine(5)` is an LFO), then a `configure` lambda that receives the oscillator's BUILDER
+and returns it. The builder carries exactly that oscillator's knobs; processing (`.lowpass()`, `.adsr()`,
+`.mul()`, ...) goes on the returned sound, OUTSIDE the lambda:
 
-| Param    | Default | Description                     |
-|----------|---------|---------------------------------|
-| `voices` | 8       | Number of detuned voices        |
-| `spread` | 0.2     | Frequency spread between voices |
+```javascript
+Osc.supersaw(x => x.voices(9).spread(0.1).analog(0.2)).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
+```
 
-**Chained character knobs** (return the same super-osc subtype): `.analog(x)` (per-voice pitch drift),
-`.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`, and the combined phase-pool
-call `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — banded start-phase
+**Builder knobs of the super oscillators** (each returns the builder): `voices(x)` (default 8), `spread(x)`
+(default 0.2), `analog(x)` (per-voice pitch drift), `spreadPower(x)`, `sideAtten(x)`, `gainJitter(x)`,
+`centerJitter(x)`, and the combined phase-pool call
+`phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)`, banded start-phase
 selection for consistent low-note fundamentals, off by default. Every param is an optional literal,
 so named-arg subsets work: `.phasePool()` = on with family defaults,
 `.phasePool(kMin = 0.05, kMax = 0.25)` = the hollow-pad band (the band is a timbre control),
@@ -120,16 +123,18 @@ notes the old random draw was cancelling) — on a finished song, retrim the low
 switching it on.
 
 ```javascript
-// Chained knobs — override only what you want:
+// Configure only what you want, inside the lambda:
 
 // Thin 3-voice supersaw
-Osc.supersaw().voices(3).spread(0.1)
+Osc.supersaw(x => x.voices(3).spread(0.1))
 
-// Wide 12-voice pad with analog drift
-Osc.supersaw().voices(12).spread(0.3).analog(0.2)
+// Wide 12-voice pad with analog drift, then processing outside the lambda
+Osc.supersaw(x => x.voices(12).spread(0.3).analog(0.2)).lowpass(2000)
 
-// ⚠ Osc.supersaw(voices = 3) FAILS at runtime: the leading `freq` param has a complex default
-// the named-arg binder can't skip. Chain the knobs (above) or pass freq positionally first.
+// Fixed frequency goes first: a 55 Hz drone
+Osc.supersaw(55, x => x.voices(7))
+
+// There is NO .voices()/.analog() on the sound itself any more; they are builder knobs.
 ```
 
 ### Noise Sources
@@ -163,8 +168,8 @@ Osc.supersaw().voices(12).spread(0.3).analog(0.2)
 
 | Method                                    | Description                     |
 |-------------------------------------------|---------------------------------|
-| `Osc.pluck(freq?)`                        | Karplus-Strong plucked string   |
-| `Osc.superpluck(freq?, voices?, spread?)` | Unison plucked strings (chorus) |
+| `Osc.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `decay` (0.996), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
+| `Osc.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8) and `spread` (0.2): `Osc.superpluck(x => x.voices(6).decay(0.995))` |
 
 ### Utility
 
@@ -768,7 +773,7 @@ let koto = Osc.pluck()
     .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
     .highpass(200)
 
-let pad = Osc.supersine().analog(0.3)
+let pad = Osc.supersine(x => x.analog(0.3))
     .lowpass(Osc.sine(0.08).plus(1).times(300).plus(800))
     .adsr(0.8, 0.5, 0.9, 2.0)
 

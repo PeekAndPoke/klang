@@ -124,14 +124,14 @@ class StdLibOscTest : StringSpec({
     }
 
     "Osc.supersaw with voices=1 — degenerate single voice" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), 1)")
+        val dsl = evalIgnitorDsl("Osc.supersaw(x => x.voices(1))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices shouldBe IgnitorDsl.Constant(1.0)
     }
 
-    // Positional args: supersaw(freq, voices, detune). Use .analog() to opt in.
+    // Knobs live on the builder handed to the configure lambda.
     "Osc.supersaw with all params" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), 4, 0.1).analog(0.3)")
+        val dsl = evalIgnitorDsl("Osc.supersaw(x => x.voices(4).spread(0.1).analog(0.3))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
         dsl.spread shouldBe IgnitorDsl.Constant(0.1)
@@ -139,46 +139,41 @@ class StdLibOscTest : StringSpec({
     }
 
     "Osc.supersaw voices accepts IgnitorDsl" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), Osc.sine(0.5))")
+        val dsl = evalIgnitorDsl("Osc.supersaw(x => x.voices(Osc.sine(0.5)))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
-    // Positional args: supersine(freq, voices, detune). Use .analog() to opt in.
     "Osc.supersine with voices and detune" {
-        val dsl = evalIgnitorDsl("Osc.supersine(Osc.freq(), 6, 0.15)")
+        val dsl = evalIgnitorDsl("Osc.supersine(x => x.voices(6).spread(0.15))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSine>()
         dsl.voices shouldBe IgnitorDsl.Constant(6.0)
         dsl.spread shouldBe IgnitorDsl.Constant(0.15)
     }
 
-    // Positional args: supersquare(freq, voices, detune). Use .analog() to opt in.
     "Osc.supersquare with voices and analog" {
-        val dsl = evalIgnitorDsl("Osc.supersquare(Osc.freq(), 3, 0.2).analog(0.2)")
+        val dsl = evalIgnitorDsl("Osc.supersquare(x => x.voices(3).spread(0.2).analog(0.2))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSquare>()
         dsl.voices shouldBe IgnitorDsl.Constant(3.0)
         dsl.analog shouldBe IgnitorDsl.Constant(0.2)
     }
 
-    // Positional args: supertri(freq, voices, detune). Use .analog() to opt in.
     "Osc.supertri with voices" {
-        val dsl = evalIgnitorDsl("Osc.supertri(Osc.freq(), 12)")
+        val dsl = evalIgnitorDsl("Osc.supertri(x => x.voices(12))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperTri>()
         dsl.voices shouldBe IgnitorDsl.Constant(12.0)
     }
 
-    // Positional args: superramp(freq, voices, detune). Use .analog() to opt in.
     "Osc.superramp with all params" {
-        val dsl = evalIgnitorDsl("Osc.superramp(Osc.freq(), 5, 0.4).analog(0.1)")
+        val dsl = evalIgnitorDsl("Osc.superramp(x => x.voices(5).spread(0.4).analog(0.1))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperRamp>()
         dsl.voices shouldBe IgnitorDsl.Constant(5.0)
         dsl.spread shouldBe IgnitorDsl.Constant(0.4)
         dsl.analog shouldBe IgnitorDsl.Constant(0.1)
     }
 
-    // Positional args: superpluck(freq, voices, detune). Use .analog() to opt in.
     "Osc.superpluck with voices and detune" {
-        val dsl = evalIgnitorDsl("Osc.superpluck(Osc.freq(), 4, 0.05)")
+        val dsl = evalIgnitorDsl("Osc.superpluck(x => x.voices(4).spread(0.05))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperPluck>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
         dsl.spread shouldBe IgnitorDsl.Constant(0.05)
@@ -386,7 +381,7 @@ class StdLibOscTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "analog sets drift on oscillator" {
-        val dsl = evalIgnitorDsl("Osc.sine().analog(0.3)")
+        val dsl = evalIgnitorDsl("Osc.sine(x => x.analog(0.3))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.analog.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.analog as IgnitorDsl.Constant).value shouldBe 0.3
@@ -394,9 +389,10 @@ class StdLibOscTest : StringSpec({
 
     "analog on a type without drift FAILS LOUDLY (it used to be a silent no-op)" {
         // `analog` used to be one `when` over 17 oscillator types with `else -> self`, so
-        // asking a noise source or a wrapper for drift silently returned it unchanged — the
-        // knob did nothing and said nothing. It now lives on each oscillator type that HAS
-        // the field, so an unsupported receiver is a type error at compile time.
+        // asking a noise source or a wrapper for drift silently returned it unchanged; the
+        // knob did nothing and said nothing. It now lives on each oscillator's BUILDER
+        // (`Osc.sine(x => x.analog(3))`), so no sound has an `.analog()` any more and an
+        // unsupported receiver is a type error.
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
         shouldThrow<KlangScriptTypeError> {

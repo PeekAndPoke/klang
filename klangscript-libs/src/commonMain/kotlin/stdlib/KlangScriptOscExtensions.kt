@@ -10,17 +10,24 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 
 /**
  * Accepts [IgnitorDsl] or [Number]. Numbers are converted to [IgnitorDsl.Constant] automatically.
  */
 typealias IgnitorDslLike = Any
 
-/** Converts an [IgnitorDslLike] value to [IgnitorDsl]. Numbers become [IgnitorDsl.Constant] (not overridable by oscParams). */
+/**
+ * Converts an [IgnitorDslLike] value to [IgnitorDsl]. Numbers become [IgnitorDsl.Constant] (not
+ * overridable by oscParams). Anything else is a script-level type error naming what arrived, so a
+ * lambda that landed on a sound slot (`Osc.whitenoise(x => ...)`, which has no `configure`) reads
+ * as "got a function", not as an internal error.
+ */
 fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
     is IgnitorDsl -> this
     is Number -> IgnitorDsl.Constant(this.toDouble())
-    else -> error("Expected IgnitorDsl or Number, got ${this::class.simpleName}")
+    is Function<*> -> throw KlangScriptTypeError("expected a sound or a number, got a function", operation = "sound parameter")
+    else -> throw KlangScriptTypeError("expected a sound or a number, got ${this::class.simpleName}", operation = "sound parameter")
 }
 
 /**

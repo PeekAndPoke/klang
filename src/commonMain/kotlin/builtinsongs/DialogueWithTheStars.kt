@@ -31,8 +31,7 @@ let openGuitar = (() => {
   let pAttack     = Osc.param("attack",         0.005,  "Attack time in seconds")
   let pSustain    = Osc.param("sustain",        0.8,    "Sustain level")
 
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
-      .analog(pAnalog).mul(0.2)
+  let signal = Osc.supersaw(x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.2)
 
   return signal
     .lowpass(Osc.sine(0.40).plus(1).times(500).plus(pBrightness), 1.20)              // Pre-distortion sweep
@@ -52,8 +51,7 @@ let mutedGuitar = (() => {
   let pVoices     = Osc.param("voices",  8,    "Number of unison voices")
   let pDrive      = Osc.param("drive",   1.0,  "Primary distortion drive level")
 
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
-      .analog(pAnalog).mul(0.2)
+  let signal = Osc.supersaw(x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.2)
 
   let chugTop = signal
       .highpass(85).distort(pDrive, "tube", 4).lowpass(1800, 0.6)

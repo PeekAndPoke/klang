@@ -55,7 +55,7 @@ let brush = Osc.perlin(30).mul(0.5)
 let sub = Osc.sine().lowpass(200)
       .adsr(0.005, 0.4, 0.0, 0.05)
 
-let pad = Osc.supertri(freq = Osc.freq(), voices = 5).analog(5.0)
+let pad = Osc.supertri(x => x.voices(5).analog(5.0))
       .lowpass(freq = Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), q = 3, analog = Osc.slot.analog)
       .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve("scurve")
 

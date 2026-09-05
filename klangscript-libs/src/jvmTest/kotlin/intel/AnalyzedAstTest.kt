@@ -1124,6 +1124,18 @@ let a = placeholder("aa", Osc.sine())"""
         a.typeOf(a.topExpr())?.simpleName shouldBe "String"
     }
 
+    "real stdlib: Osc.supersaw(x => x.voices(9)).lowpass(800) types x as the builder and the result as IgnitorDsl" {
+        val code = "Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)"
+        val a = analyze(code)
+        a.receiverTypeBeforeDot(code.indexOf("x.voices") + 1)?.simpleName shouldBe "OscSuperSawBuilder"
+        a.receiverTypeBeforeDot(code.indexOf(".spread") )?.simpleName shouldBe "OscSuperSawBuilder"
+        a.typeOf(a.topExpr())?.simpleName shouldBe "IgnitorDsl"
+        // inside the lambda only the builder's knobs exist: the base wrapper is not a callable there
+        val builder = a.receiverTypeBeforeDot(code.indexOf("x.voices") + 1)!!
+        stdlibRegistry().getCallable("lowpass", builder) shouldBe null
+        stdlibRegistry().getCallable("voices", builder).shouldNotBeNull()
+    }
+
     "function type renders structurally in the callable signature" {
         val supersaw = builderRegistry().getCallable("supersaw", KlangType("Osc", fqcn = "test.Osc"))
         supersaw.shouldNotBeNull()

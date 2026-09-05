@@ -8,6 +8,13 @@
 
 ## Recent Work (2026-09)
 
+- **Configure-lambda doors, S2 (2026-09-06, `klangscript-libs`)**: the 16 oscillator doors are
+  `Osc.name(freq?, configure?)`, knobs live on immutable `Osc*Builder` value wrappers
+  (`IgnitorBuilders.kt`), the 17 sub-type extension objects are gone. Lesson: the old `pluck`/
+  `superpluck` doors baked SEALED `Constant` defaults while the nodes carry open `Slots.*` params;
+  a builder door that falls back to node defaults changes the tree. `BuiltInSongsSoundTreeBaselineSpec`
+  (root `jvmTest`) is the guard that caught it: every builtin song's sound trees, fingerprinted.
+
 - **Module split (2026-09-06)**: `stdlib/` (35 files + `PlatformConsole`) moved to the new
   `:klangscript-libs` module together with `stdlibLib` and `klangScript()`; the core gained
   `klangScriptEngine()` (bare engine) and dropped its `audio_bridge` dependency and its own KSP

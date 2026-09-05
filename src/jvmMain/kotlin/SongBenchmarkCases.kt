@@ -150,9 +150,9 @@ object SongBenchmarkCases {
           let pHpTrack    = Osc.param("hptrack",       1.000, "Highpass tracking")
           let pHpQ        = Osc.param("hpq",           0.707, "Highpass resonance")
 
-          let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread)
+          let signal = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
             .phasePool(on = 1, kMin = 0.50, kMax = 0.90)
-            .analog(pAnalog).spreadPower(1.0).sideAtten(0.1).gainJitter(0.20).centerJitter(0.20)
+            .analog(pAnalog).spreadPower(1.0).sideAtten(0.1).gainJitter(0.20).centerJitter(0.20))
             .pitchEnvelope(0.3, 0.001, 0.02)
             .plus(Osc.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.14))
             .distort(0.35, "hard", 4)

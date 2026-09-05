@@ -14,10 +14,10 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  *
  * Each slot is the same `IgnitorDsl.Param(name, default)` singleton that built-in
  * sounds use, exposed for custom sounds that want to opt in to sprudel
- * modulation (`.analog()`, `.voices()`, `.spread()`, etc).
+ * modulation (the `analog`, `voices`, `spread`, ... knobs on the oscillator builders).
  *
  * ```KlangScript(Executable)
- * let pad = Osc.sine().analog(OscSlot.analog).lowpass(2000)
+ * let pad = Osc.sine(x => x.analog(OscSlot.analog)).lowpass(2000)
  * note("c").sound(pad)
  * ```
  *

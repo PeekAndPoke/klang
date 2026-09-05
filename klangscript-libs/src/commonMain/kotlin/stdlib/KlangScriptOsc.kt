@@ -8,10 +8,6 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
-import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.pulze
-import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.ramp
-import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.square
-import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.supersaw
 
 /**
  * Osc object for KlangScript — builds IgnitorDsl signal graphs.
@@ -43,7 +39,14 @@ object KlangScriptOsc {
 
     // ── Oscillator Primitives ────────────────────────────────────────────────
     //
-    // freq default: Freq (voice note frequency). Pass a value in Hz for a fixed frequency (e.g. Osc.sine(5) = 5 Hz LFO).
+    // Every oscillator door has the same shape: `freq` first (omit it for the playing note's
+    // pitch, pass Hz for a fixed frequency, so `Osc.sine(5)` is a 5 Hz LFO), then an optional
+    // `configure` lambda that receives the oscillator's BUILDER and returns it. The builder
+    // carries exactly this oscillator's knobs and nothing else (see `IgnitorBuilders.kt`);
+    // processing (`.lowpass()`, `.adsr()`, `.mul()`, ...) happens on the returned sound, outside
+    // the lambda:
+    //
+    //     Osc.saw(x => x.analog(3).resetSamples(4)).lowpass(800)
 
     /** Returns the voice's note frequency (e.g. 440 Hz for A4). Usable anywhere a frequency value is needed. */
     @KlangScript.Method
@@ -51,104 +54,131 @@ object KlangScriptOsc {
 
     /**
      * Creates a sine wave oscillator.
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency (e.g. 5 for a 5 Hz LFO).
-     */
-    @KlangScript.Method
-    fun sine(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Sine(freq = freq.toIgnitorDsl())
-
-    /**
-     * Creates a sawtooth wave oscillator (analog flyback shape, no PolyBLEP — softens with pitch).
      *
-     * The shape is configurable via chained methods on the returned [IgnitorDsl.Sawtooth] —
-     * `.resetSamples(x)` (analog flyback time in samples) and `.shapeMax(x)` (max flyback fraction), plus
-     * `.analog(x)`. Put shape config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
-     *
-     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency (e.g. 5 for a 5 Hz LFO).
+     * @param configure receives the [OscSineBuilder] (knobs: `analog`) and returns it.
      *
      * ```KlangScript
-     * Osc.saw().resetSamples(4.0).analog(5.0)
+     * Osc.sine(x => x.analog(3)).lowpass(2000)
      * ```
      */
     @KlangScript.Method
-    fun saw(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl.Sawtooth =
-        IgnitorDsl.Sawtooth(freq = freq.toIgnitorDsl())
+    fun sine(freq: IgnitorDslLike? = null, configure: ((OscSineBuilder) -> OscSineBuilder)? = null): IgnitorDsl =
+        OscSineBuilder(IgnitorDsl.Sine(freq = freq.orNoteFreq())).configuredBy("Osc.sine", configure).node
 
     /**
-     * Creates a square wave oscillator — a variable-duty [pulze] (`square`/`pulse`/`pulze` are the one
-     * pulse oscillator; its `duty` defaults to 50%).
+     * Creates a sawtooth wave oscillator (analog flyback shape, no PolyBLEP, softens with pitch).
      *
-     * Configurable via chained methods on the returned [IgnitorDsl.Pulze] — `.duty(x)` (pulse width),
-     * `.flankSamples(x)` / `.riseFlank(x)` / `.fallFlank(x)` (edge shape), plus `.analog(x)`. Put shape
-     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
-     *
-     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscSawBuilder] (knobs: `analog`, `resetSamples`, `shapeMax`) and returns it.
      *
      * ```KlangScript
-     * Osc.square().duty(0.3).flankSamples(4.0)
+     * Osc.saw(x => x.resetSamples(4.0).analog(5.0))
      * ```
      */
     @KlangScript.Method
-    fun square(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl.Pulze =
-        IgnitorDsl.Pulze(freq = freq.toIgnitorDsl())
+    fun saw(freq: IgnitorDslLike? = null, configure: ((OscSawBuilder) -> OscSawBuilder)? = null): IgnitorDsl =
+        OscSawBuilder(IgnitorDsl.Sawtooth(freq = freq.orNoteFreq())).configuredBy("Osc.saw", configure).node
 
     /**
-     * Creates a triangle wave oscillator. No shape knobs (its flanks are fixed fully-open); use `.analog(x)`
-     * via the base osc methods if you want drift.
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * Creates a square wave oscillator: a variable-duty pulse whose `duty` defaults to 50%.
+     * `square`, `pulse` and `pulze` are one pulse oscillator; this door builds the flank-shaped [IgnitorDsl.Pulze],
+     * [pulze] the raw, aliased one.
+     *
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscSquareBuilder] (knobs: `duty`, `analog`, `flankSamples`, `riseFlank`, `fallFlank`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.square(x => x.duty(0.3).flankSamples(4.0))
+     * ```
      */
     @KlangScript.Method
-    fun triangle(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Triangle(freq = freq.toIgnitorDsl())
+    fun square(freq: IgnitorDslLike? = null, configure: ((OscSquareBuilder) -> OscSquareBuilder)? = null): IgnitorDsl =
+        OscSquareBuilder(IgnitorDsl.Pulze(freq = freq.orNoteFreq())).configuredBy("Osc.square", configure).node
+
+    /**
+     * Creates a triangle wave oscillator. Its flanks are fixed fully open; `analog` is the only knob.
+     *
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscTriangleBuilder] (knobs: `analog`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.triangle(x => x.analog(3))
+     * ```
+     */
+    @KlangScript.Method
+    fun triangle(freq: IgnitorDslLike? = null, configure: ((OscTriangleBuilder) -> OscTriangleBuilder)? = null): IgnitorDsl =
+        OscTriangleBuilder(IgnitorDsl.Triangle(freq = freq.orNoteFreq())).configuredBy("Osc.triangle", configure).node
 
     /**
      * Creates a ramp (reverse sawtooth) wave oscillator.
      *
-     * Configurable via `.resetSamples(x)` / `.shapeMax(x)` (analog flyback shape) and `.analog(x)` on the
-     * returned [IgnitorDsl.Ramp]. Put shape config first, then base wrappers last.
-     *
-     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscRampBuilder] (knobs: `analog`, `resetSamples`, `shapeMax`) and returns it.
      *
      * ```KlangScript
-     * Osc.ramp().resetSamples(4.0).analog(5.0)
+     * Osc.ramp(x => x.resetSamples(4.0).analog(5.0))
      * ```
      */
     @KlangScript.Method
-    fun ramp(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl.Ramp =
-        IgnitorDsl.Ramp(freq = freq.toIgnitorDsl())
+    fun ramp(freq: IgnitorDslLike? = null, configure: ((OscRampBuilder) -> OscRampBuilder)? = null): IgnitorDsl =
+        OscRampBuilder(IgnitorDsl.Ramp(freq = freq.orNoteFreq())).configuredBy("Osc.ramp", configure).node
 
     /**
-     * Creates a naive sawtooth without anti-aliasing (brighter/harsher).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * Creates a naive sawtooth without anti-aliasing (brighter, harsher).
+     *
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscZawtoothBuilder] (knobs: `analog`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.zawtooth(x => x.analog(3))
+     * ```
      */
     @KlangScript.Method
-    fun zawtooth(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Zawtooth(freq = freq.toIgnitorDsl())
+    fun zawtooth(freq: IgnitorDslLike? = null, configure: ((OscZawtoothBuilder) -> OscZawtoothBuilder)? = null): IgnitorDsl =
+        OscZawtoothBuilder(IgnitorDsl.Zawtooth(freq = freq.orNoteFreq())).configuredBy("Osc.zawtooth", configure).node
 
     /**
-     * Creates a raw ramp ("zamp") — naive reverse sawtooth without anti-aliasing (the raw [ramp]).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * Creates a raw ramp ("zamp"): a naive reverse sawtooth without anti-aliasing (the raw [ramp]).
+     *
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscZampBuilder] (knobs: `analog`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.zamp(x => x.analog(3))
+     * ```
      */
     @KlangScript.Method
-    fun zamp(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Zamp(freq = freq.toIgnitorDsl())
+    fun zamp(freq: IgnitorDslLike? = null, configure: ((OscZampBuilder) -> OscZampBuilder)? = null): IgnitorDsl =
+        OscZampBuilder(IgnitorDsl.Zamp(freq = freq.orNoteFreq())).configuredBy("Osc.zamp", configure).node
 
     /**
      * Creates an impulse (click) oscillator.
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     *
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscImpulseBuilder] (knobs: `analog`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.impulse(x => x.analog(3))
+     * ```
      */
     @KlangScript.Method
-    fun impulse(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Impulse(freq = freq.toIgnitorDsl())
+    fun impulse(freq: IgnitorDslLike? = null, configure: ((OscImpulseBuilder) -> OscImpulseBuilder)? = null): IgnitorDsl =
+        OscImpulseBuilder(IgnitorDsl.Impulse(freq = freq.orNoteFreq())).configuredBy("Osc.impulse", configure).node
 
     /**
-     * Creates a raw pulse ("pulze") — naive/aliased pulse with variable duty cycle (the raw
-     * counterpart of [square]).
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * Creates a raw pulse ("pulze"): a naive, aliased pulse with variable duty cycle (the raw counterpart of [square]).
+     *
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscPulzeBuilder] (knobs: `duty`, `analog`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.pulze(x => x.duty(0.3))
+     * ```
      */
     @KlangScript.Method
-    fun pulze(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.RawPulze(freq = freq.toIgnitorDsl())
+    fun pulze(freq: IgnitorDslLike? = null, configure: ((OscPulzeBuilder) -> OscPulzeBuilder)? = null): IgnitorDsl =
+        OscPulzeBuilder(IgnitorDsl.RawPulze(freq = freq.orNoteFreq())).configuredBy("Osc.pulze", configure).node
 
     /** Creates a silent ignitor (zero output). */
     @KlangScript.Method
@@ -242,214 +272,135 @@ object KlangScriptOsc {
 
     /**
      * Creates a supersaw (multiple detuned sawtooth voices).
+     * Unison and character knobs live on the builder; the combined `phasePool(...)` call takes optional literals, so named
+     * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
-     * The common settings are optional params; the rest are chained config methods on the returned
-     * [IgnitorDsl.SuperSaw] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
-     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
-     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
-     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
-     *
-     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param voices number of detuned voices (default 8).
-     * @param spread unison frequency spread between voices (default 0.2).
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscSuperSawBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.supersaw().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersaw(x => x.voices(9).spread(0.1).spreadPower(1.5).analog(5.0)).lowpass(800)
      * ```
      */
     @KlangScript.Method
-    fun supersaw(
-        freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
-        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
-    ): IgnitorDsl.SuperSaw =
-        IgnitorDsl.SuperSaw(
-            freq = freq.toIgnitorDsl(),
-            voices = voices.toIgnitorDsl(),
-            spread = spread.toIgnitorDsl(),
-        )
+    fun supersaw(freq: IgnitorDslLike? = null, configure: ((OscSuperSawBuilder) -> OscSuperSawBuilder)? = null): IgnitorDsl =
+        OscSuperSawBuilder(IgnitorDsl.SuperSaw(freq = freq.orNoteFreq())).configuredBy("Osc.supersaw", configure).node
 
     /**
      * Creates a supersine (multiple detuned sine oscillators).
+     * Unison and character knobs live on the builder; the combined `phasePool(...)` call takes optional literals, so named
+     * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
-     * The common settings are optional params; the rest are chained config methods on the returned
-     * [IgnitorDsl.SuperSine] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
-     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
-     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
-     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
-     *
-     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param voices number of detuned voices (default 8).
-     * @param spread unison frequency spread between voices (default 0.2).
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscSuperSineBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.supersine().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersine(x => x.voices(9).spread(0.1).analog(5.0))
      * ```
      */
     @KlangScript.Method
-    fun supersine(
-        freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
-        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
-    ): IgnitorDsl.SuperSine =
-        IgnitorDsl.SuperSine(
-            freq = freq.toIgnitorDsl(),
-            voices = voices.toIgnitorDsl(),
-            spread = spread.toIgnitorDsl(),
-        )
+    fun supersine(freq: IgnitorDslLike? = null, configure: ((OscSuperSineBuilder) -> OscSuperSineBuilder)? = null): IgnitorDsl =
+        OscSuperSineBuilder(IgnitorDsl.SuperSine(freq = freq.orNoteFreq())).configuredBy("Osc.supersine", configure).node
 
     /**
      * Creates a supersquare (multiple detuned square oscillators).
+     * Unison and character knobs live on the builder; the combined `phasePool(...)` call takes optional literals, so named
+     * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
-     * The common settings are optional params; the rest are chained config methods on the returned
-     * [IgnitorDsl.SuperSquare] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
-     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
-     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
-     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
-     *
-     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param voices number of detuned voices (default 8).
-     * @param spread unison frequency spread between voices (default 0.2).
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscSuperSquareBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.supersquare().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supersquare(x => x.voices(9).spread(0.1).analog(5.0))
      * ```
      */
     @KlangScript.Method
-    fun supersquare(
-        freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
-        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
-    ): IgnitorDsl.SuperSquare =
-        IgnitorDsl.SuperSquare(
-            freq = freq.toIgnitorDsl(),
-            voices = voices.toIgnitorDsl(),
-            spread = spread.toIgnitorDsl(),
-        )
+    fun supersquare(freq: IgnitorDslLike? = null, configure: ((OscSuperSquareBuilder) -> OscSuperSquareBuilder)? = null): IgnitorDsl =
+        OscSuperSquareBuilder(IgnitorDsl.SuperSquare(freq = freq.orNoteFreq())).configuredBy("Osc.supersquare", configure).node
 
     /**
      * Creates a supertri (multiple detuned triangle oscillators).
+     * Unison and character knobs live on the builder; the combined `phasePool(...)` call takes optional literals, so named
+     * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
-     * The common settings are optional params; the rest are chained config methods on the returned
-     * [IgnitorDsl.SuperTri] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
-     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
-     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
-     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
-     *
-     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param voices number of detuned voices (default 8).
-     * @param spread unison frequency spread between voices (default 0.2).
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscSuperTriBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.supertri().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
+     * Osc.supertri(x => x.voices(9).spread(0.1).analog(5.0))
      * ```
      */
     @KlangScript.Method
-    fun supertri(
-        freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
-        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
-    ): IgnitorDsl.SuperTri =
-        IgnitorDsl.SuperTri(
-            freq = freq.toIgnitorDsl(),
-            voices = voices.toIgnitorDsl(),
-            spread = spread.toIgnitorDsl(),
-        )
+    fun supertri(freq: IgnitorDslLike? = null, configure: ((OscSuperTriBuilder) -> OscSuperTriBuilder)? = null): IgnitorDsl =
+        OscSuperTriBuilder(IgnitorDsl.SuperTri(freq = freq.orNoteFreq())).configuredBy("Osc.supertri", configure).node
 
     /**
-     * Creates a superramp (multiple detuned ramp oscillators — the mirror of [supersaw]).
+     * Creates a superramp (multiple detuned ramp oscillators, the mirror of [supersaw]).
+     * Unison and character knobs live on the builder; the combined `phasePool(...)` call takes optional literals, so named
+     * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
-     * The common settings are optional params; the rest are chained config methods on the returned
-     * [IgnitorDsl.SuperRamp] — `.analog(x)`, `.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`,
-     * `.centerJitter(x)`, and the combined
-     * `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — all optional
-     * literals, so named-arg subsets work: `.phasePool()`, `.phasePool(kMin = 0.2)`
-     * (and `.freq/.voices/.spread` if you prefer chaining). Put the unison/character
-     * config first, then base wrappers (`.lowpass()`, `.adsr()`, …) last.
-     *
-     * @param freq frequency — omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param voices number of detuned voices (default 8).
-     * @param spread unison frequency spread between voices (default 0.2).
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscSuperRampBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.superramp().voices(9).spread(0.1).spreadPower(1.5).analog(5.0)
+     * Osc.superramp(x => x.voices(9).spread(0.1).analog(5.0))
      * ```
      */
     @KlangScript.Method
-    fun superramp(
-        freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = IgnitorDsl.Slots.voices,
-        spread: IgnitorDslLike = IgnitorDsl.Slots.spread,
-    ): IgnitorDsl.SuperRamp =
-        IgnitorDsl.SuperRamp(
-            freq = freq.toIgnitorDsl(),
-            voices = voices.toIgnitorDsl(),
-            spread = spread.toIgnitorDsl(),
-        )
+    fun superramp(freq: IgnitorDslLike? = null, configure: ((OscSuperRampBuilder) -> OscSuperRampBuilder)? = null): IgnitorDsl =
+        OscSuperRampBuilder(IgnitorDsl.SuperRamp(freq = freq.orNoteFreq())).configuredBy("Osc.superramp", configure).node
 
     // ── Physical Models ──────────────────────────────────────────────────────
 
     /**
      * Creates a Karplus-Strong plucked string model.
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
-     * @param decay loop decay per pass (default 0.996). Higher = longer sustain (0..1).
-     * @param brightness initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright.
-     * @param pickPosition relative pick position along the string (default 0.5). 0 = bridge, 1 = nut.
-     * @param stiffness string stiffness (default 0.0). Higher = more inharmonic, bell-like.
+     *
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscPluckBuilder] (knobs: `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.pluck(x => x.decay(0.99).brightness(0.45).pickPosition(0.5))
+     * ```
      */
     @KlangScript.Method
-    fun pluck(
-        freq: IgnitorDslLike = IgnitorDsl.Freq,
-        decay: IgnitorDslLike = 0.996,
-        brightness: IgnitorDslLike = 0.5,
-        pickPosition: IgnitorDslLike = 0.5,
-        stiffness: IgnitorDslLike = 0.0,
-    ): IgnitorDsl =
-        IgnitorDsl.Pluck(
-            freq = freq.toIgnitorDsl(),
-            decay = decay.toIgnitorDsl(),
-            brightness = brightness.toIgnitorDsl(),
-            pickPosition = pickPosition.toIgnitorDsl(),
-            stiffness = stiffness.toIgnitorDsl(),
-        )
+    fun pluck(freq: IgnitorDslLike? = null, configure: ((OscPluckBuilder) -> OscPluckBuilder)? = null): IgnitorDsl =
+        OscPluckBuilder(
+            // Sealed constants, not the node's open `Slots.*` params: a custom pluck ignores sprudel's
+            // per-note modulation unless the author opts in with `OscSlot.*` (see [KlangScriptOscSlot]).
+            // Same trees as before the builder door, verified by BuiltInSongsSoundTreeBaselineSpec.
+            IgnitorDsl.Pluck(
+                freq = freq.orNoteFreq(),
+                decay = IgnitorDsl.Constant(0.996),
+                brightness = IgnitorDsl.Constant(0.5),
+                pickPosition = IgnitorDsl.Constant(0.5),
+                stiffness = IgnitorDsl.Constant(0.0),
+            ),
+        ).configuredBy("Osc.pluck", configure).node
 
     /**
      * Creates a unison Karplus-Strong plucked string model.
-     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
-     * @param voices number of detuned voices (default 8).
-     * @param spread frequency spread between voices (default 0.2).
-     * @param decay loop decay per pass (default 0.996). Higher = longer sustain (0..1).
-     * @param brightness initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright.
-     * @param pickPosition relative pick position along the string (default 0.5). 0 = bridge, 1 = nut.
-     * @param stiffness string stiffness (default 0.0). Higher = more inharmonic, bell-like.
+     *
+     * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
+     * @param configure receives the [OscSuperPluckBuilder] (knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.superpluck(x => x.voices(6).spread(0.15).decay(0.995))
+     * ```
      */
     @KlangScript.Method
-    fun superpluck(
-        freq: IgnitorDslLike = IgnitorDsl.Freq,
-        voices: IgnitorDslLike = 8.0,
-        spread: IgnitorDslLike = 0.2,
-        decay: IgnitorDslLike = 0.996,
-        brightness: IgnitorDslLike = 0.5,
-        pickPosition: IgnitorDslLike = 0.5,
-        stiffness: IgnitorDslLike = 0.0,
-    ): IgnitorDsl =
-        IgnitorDsl.SuperPluck(
-            freq = freq.toIgnitorDsl(),
-            voices = voices.toIgnitorDsl(),
-            spread = spread.toIgnitorDsl(),
-            decay = decay.toIgnitorDsl(),
-            brightness = brightness.toIgnitorDsl(),
-            pickPosition = pickPosition.toIgnitorDsl(),
-            stiffness = stiffness.toIgnitorDsl(),
-        )
+    fun superpluck(freq: IgnitorDslLike? = null, configure: ((OscSuperPluckBuilder) -> OscSuperPluckBuilder)? = null): IgnitorDsl =
+        OscSuperPluckBuilder(
+            // Sealed constants like [pluck]; unlike the super oscillators, the unison pair is sealed too.
+            IgnitorDsl.SuperPluck(
+                freq = freq.orNoteFreq(),
+                voices = IgnitorDsl.Constant(8.0),
+                spread = IgnitorDsl.Constant(0.2),
+                decay = IgnitorDsl.Constant(0.996),
+                brightness = IgnitorDsl.Constant(0.5),
+                pickPosition = IgnitorDsl.Constant(0.5),
+                stiffness = IgnitorDsl.Constant(0.0),
+            ),
+        ).configuredBy("Osc.superpluck", configure).node
 
     // ── Parameter Slot ───────────────────────────────────────────────────────
 
@@ -506,3 +457,6 @@ object KlangScriptOsc {
     fun variants(vararg children: IgnitorDsl): IgnitorDsl =
         IgnitorDsl.Variants(children.toList())
 }
+
+/** The door convention for `freq`: null means "the playing note's pitch" ([IgnitorDsl.Freq]). */
+private fun IgnitorDslLike?.orNoteFreq(): IgnitorDsl = this?.toIgnitorDsl() ?: IgnitorDsl.Freq

@@ -21,10 +21,9 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
  * returned it unchanged: the knob did nothing and said nothing. Four shipped songs carried
  * such a call (IrishLament x3, Sakura, DialogueWithTheStars) and nobody could have known.
  *
- * It now lives on each oscillator type that actually HAS the field, which makes an
- * unsupported receiver a type error. This spec is what keeps it that way: delete one of the
- * per-type extension files and the matching row here goes red, instead of a song silently
- * losing its drift again.
+ * It now lives on each oscillator's BUILDER (`Osc.sine(x => x.analog(3))`), which makes an
+ * unsupported receiver a type error. This spec is what keeps it that way: drop the knob from one
+ * builder and the matching row here goes red, instead of a song silently losing its drift again.
  */
 class KlangScriptAnalogSurfaceSpec : StringSpec({
 
@@ -34,52 +33,56 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
         return engine.execute(code).toObjectOrNull<Any>()
     }
 
-    // Every SCRIPT constructor that produces a node with an `analog` field, and the type it
-    // returns. Note the two that do not read as you would guess: `Osc.square()` builds a
-    // Pulze (the flank-shaped pulse), and `Osc.pulze()` builds the RawPulze.
+    // Every SCRIPT door whose builder has an `analog` knob, and the node type it builds. Note the
+    // two that do not read as you would guess: `Osc.square()` builds a Pulze (the flank-shaped
+    // pulse), and `Osc.pulze()` builds the RawPulze.
     val supported = listOf(
-        """Osc.sine()""" to IgnitorDsl.Sine::class,
-        """Osc.saw()""" to IgnitorDsl.Sawtooth::class,
-        """Osc.triangle()""" to IgnitorDsl.Triangle::class,
-        """Osc.ramp()""" to IgnitorDsl.Ramp::class,
-        """Osc.zawtooth()""" to IgnitorDsl.Zawtooth::class,
-        """Osc.zamp()""" to IgnitorDsl.Zamp::class,
-        """Osc.impulse()""" to IgnitorDsl.Impulse::class,
-        """Osc.square()""" to IgnitorDsl.Pulze::class,
-        """Osc.pulze()""" to IgnitorDsl.RawPulze::class,
-        """Osc.pluck(Osc.freq())""" to IgnitorDsl.Pluck::class,
-        """Osc.superpluck(Osc.freq())""" to IgnitorDsl.SuperPluck::class,
-        """Osc.supersaw(Osc.freq())""" to IgnitorDsl.SuperSaw::class,
-        """Osc.supersine(Osc.freq())""" to IgnitorDsl.SuperSine::class,
-        """Osc.supersquare(Osc.freq())""" to IgnitorDsl.SuperSquare::class,
-        """Osc.supertri(Osc.freq())""" to IgnitorDsl.SuperTri::class,
-        """Osc.superramp(Osc.freq())""" to IgnitorDsl.SuperRamp::class,
+        """Osc.sine(x => x.analog(3))""" to IgnitorDsl.Sine::class,
+        """Osc.saw(x => x.analog(3))""" to IgnitorDsl.Sawtooth::class,
+        """Osc.triangle(x => x.analog(3))""" to IgnitorDsl.Triangle::class,
+        """Osc.ramp(x => x.analog(3))""" to IgnitorDsl.Ramp::class,
+        """Osc.zawtooth(x => x.analog(3))""" to IgnitorDsl.Zawtooth::class,
+        """Osc.zamp(x => x.analog(3))""" to IgnitorDsl.Zamp::class,
+        """Osc.impulse(x => x.analog(3))""" to IgnitorDsl.Impulse::class,
+        """Osc.square(x => x.analog(3))""" to IgnitorDsl.Pulze::class,
+        """Osc.pulze(x => x.analog(3))""" to IgnitorDsl.RawPulze::class,
+        """Osc.pluck(x => x.analog(3))""" to IgnitorDsl.Pluck::class,
+        """Osc.superpluck(x => x.analog(3))""" to IgnitorDsl.SuperPluck::class,
+        """Osc.supersaw(x => x.analog(3))""" to IgnitorDsl.SuperSaw::class,
+        """Osc.supersine(x => x.analog(3))""" to IgnitorDsl.SuperSine::class,
+        """Osc.supersquare(x => x.analog(3))""" to IgnitorDsl.SuperSquare::class,
+        """Osc.supertri(x => x.analog(3))""" to IgnitorDsl.SuperTri::class,
+        """Osc.superramp(x => x.analog(3))""" to IgnitorDsl.SuperRamp::class,
     )
 
-    "every oscillator that HAS analog drift accepts .analog() and keeps its own type" {
-        for ((ctor, type) in supported) {
-            withClue(ctor) {
-                val node = eval("$ctor.analog(3)")
+    "every oscillator that HAS analog drift takes .analog() on its builder and keeps its own type" {
+        for ((code, type) in supported) {
+            withClue(code) {
+                val node = eval(code)
                 (node != null && type.isInstance(node)) shouldBe true
+                (node as IgnitorDsl).analogOf() shouldBe IgnitorDsl.Constant(3.0)
             }
         }
     }
 
     "the surface is COMPLETE: every script-reachable drift-bearing type is covered above" {
-        // Guards the other direction — a new oscillator with an `analog` field that nobody
-        // gave an extension file would otherwise be a silent no-op all over again.
+        // Guards the other direction: a new oscillator with an `analog` field whose builder
+        // forgot the knob would otherwise be a silent no-op all over again.
         supported.size shouldBe 16
 
-        // The 17th, IgnitorDsl.Square, has an `analog` field and its own extension file, but
-        // NO script constructor builds one (`Osc.square()` returns a Pulze). It is reachable
-        // only from Kotlin or from a decoded wire tree, so it cannot be exercised from here.
+        // The 17th, IgnitorDsl.Square, has an `analog` field but NO script door builds one
+        // (`Osc.square()` returns a Pulze). It is reachable only from Kotlin or from a decoded
+        // wire tree, so it cannot be exercised from here.
         IgnitorDsl.Square(freq = IgnitorDsl.Constant(440.0)).analog shouldBe IgnitorDsl.Slots.analog
     }
 
     "a receiver WITHOUT drift is a type error, not a silent no-op" {
-        // noise sources
+        // there is no `.analog()` on any sound any more: drift is a BUILDER knob
         shouldThrow<KlangScriptTypeError> { eval("""Osc.whitenoise().analog(0.5)""") }
-        // wrappers — the four shapes that were actually sitting in shipped songs
+        shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().analog(0.5)""") }
+        // a noise source has no builder, so a lambda lands on its sound parameter and is refused
+        shouldThrow<KlangScriptTypeError> { eval("""Osc.whitenoise(x => x.analog(0.5))""") }
+        // wrappers, the four shapes that were actually sitting in shipped songs
         shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().lowpass(800).analog(2)""") }
         shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().highpass(120).analog(2)""") }
         shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().onepole(600).analog(2)""") }
@@ -88,9 +91,30 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
     }
 
     "analog actually reaches the node (it is not merely accepted and dropped)" {
-        val sine = eval("""Osc.sine().analog(7)""") as IgnitorDsl.Sine
+        val sine = eval("""Osc.sine(x => x.analog(7))""") as IgnitorDsl.Sine
         sine.analog shouldBe IgnitorDsl.Constant(7.0)
-        val saw = eval("""Osc.supersaw(Osc.freq()).analog(4)""") as IgnitorDsl.SuperSaw
+        val saw = eval("""Osc.supersaw(x => x.analog(4))""") as IgnitorDsl.SuperSaw
         saw.analog shouldBe IgnitorDsl.Constant(4.0)
     }
 })
+
+/** The `analog` field of every drift-bearing node, read without knowing the type up front. */
+private fun IgnitorDsl.analogOf(): IgnitorDsl? = when (this) {
+    is IgnitorDsl.Sine -> analog
+    is IgnitorDsl.Sawtooth -> analog
+    is IgnitorDsl.Triangle -> analog
+    is IgnitorDsl.Ramp -> analog
+    is IgnitorDsl.Zawtooth -> analog
+    is IgnitorDsl.Zamp -> analog
+    is IgnitorDsl.Impulse -> analog
+    is IgnitorDsl.Pulze -> analog
+    is IgnitorDsl.RawPulze -> analog
+    is IgnitorDsl.Pluck -> analog
+    is IgnitorDsl.SuperPluck -> analog
+    is IgnitorDsl.SuperSaw -> analog
+    is IgnitorDsl.SuperSine -> analog
+    is IgnitorDsl.SuperSquare -> analog
+    is IgnitorDsl.SuperTri -> analog
+    is IgnitorDsl.SuperRamp -> analog
+    else -> null
+}

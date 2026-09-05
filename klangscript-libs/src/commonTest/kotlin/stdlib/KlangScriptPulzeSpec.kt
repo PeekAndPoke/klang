@@ -5,16 +5,18 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Dual-language equivalence for the typed pulse shape DSL (Phase 2). `Osc.square()` returns
- * [IgnitorDsl.Pulze]. Mirrors [KlangScriptSawtoothSpec].
+ * Dual-language equivalence for the `Osc.square(freq, configure)` door and its [OscSquareBuilder]: script
+ * lambda vs Kotlin door / data class `.copy()`, structurally equal [IgnitorDsl.Pulze] nodes.
  */
 class KlangScriptPulzeSpec : StringSpec({
 
@@ -26,55 +28,53 @@ class KlangScriptPulzeSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun pulze() = KlangScriptOsc.square()
+    fun node() = KlangScriptOsc.square()
 
-    "Osc.square() — KlangScript == Kotlin builder" {
-        ks("Osc.square()") shouldBe pulze()
+    "Osc.square(): script == Kotlin door, all defaults" {
+        ks("Osc.square()") shouldBe node()
     }
 
-    "freq(220)" {
-        ks("Osc.square().freq(220)") shouldBe pulze().copy(freq = IgnitorDsl.Constant(220.0))
+    "freq is the door's first parameter: Osc.square(220)" {
+        ks("Osc.square(220)") shouldBe (node() as IgnitorDsl.Pulze).copy(freq = IgnitorDsl.Constant(220.0))
     }
 
     "duty(0.3)" {
-        ks("Osc.square().duty(0.3)") shouldBe pulze().copy(duty = IgnitorDsl.Constant(0.3))
+        ks("Osc.square(x => x.duty(0.3))") shouldBe (node() as IgnitorDsl.Pulze).copy(duty = IgnitorDsl.Constant(0.3))
     }
 
     "analog(5.0)" {
-        ks("Osc.square().analog(5.0)") shouldBe pulze().copy(analog = IgnitorDsl.Constant(5.0))
+        ks("Osc.square(x => x.analog(5.0))") shouldBe (node() as IgnitorDsl.Pulze).copy(analog = IgnitorDsl.Constant(5.0))
     }
 
     "flankSamples(4.0)" {
-        ks("Osc.square().flankSamples(4.0)") shouldBe pulze().copy(flankSamples = 4.0)
+        ks("Osc.square(x => x.flankSamples(4.0))") shouldBe (node() as IgnitorDsl.Pulze).copy(flankSamples = 4.0)
     }
 
     "riseFlank(0.5)" {
-        ks("Osc.square().riseFlank(0.5)") shouldBe pulze().copy(riseFlank = 0.5)
+        ks("Osc.square(x => x.riseFlank(0.5))") shouldBe (node() as IgnitorDsl.Pulze).copy(riseFlank = 0.5)
     }
 
     "fallFlank(0.5)" {
-        ks("Osc.square().fallFlank(0.5)") shouldBe pulze().copy(fallFlank = 0.5)
+        ks("Osc.square(x => x.fallFlank(0.5))") shouldBe (node() as IgnitorDsl.Pulze).copy(fallFlank = 0.5)
     }
 
-    "every typed config method in one chain" {
-        val code = "Osc.square().freq(110).duty(0.4).analog(4.0)" +
-                ".flankSamples(3.0).riseFlank(0.2).fallFlank(0.3)"
-
-        ks(code) shouldBe pulze().copy(
-            freq = IgnitorDsl.Constant(110.0),
-            duty = IgnitorDsl.Constant(0.4),
-            analog = IgnitorDsl.Constant(4.0),
-            flankSamples = 3.0,
-            riseFlank = 0.2,
-            fallFlank = 0.3,
-        )
+    "every knob in one lambda" {
+        ks("Osc.square(110, x => x.duty(0.3).analog(5.0).flankSamples(4.0).riseFlank(0.5).fallFlank(0.5))") shouldBe (node() as IgnitorDsl.Pulze).copy(freq = IgnitorDsl.Constant(110.0), duty = IgnitorDsl.Constant(0.3), analog = IgnitorDsl.Constant(5.0), flankSamples = 4.0, riseFlank = 0.5, fallFlank = 0.5)
     }
 
-    "square().lowpass(2000) — base wrapper applies to the narrowed subtype" {
-        val dsl = ks("Osc.square().flankSamples(4.0).lowpass(2000)")
+    "the Kotlin door takes the same lambda" {
+        ks("Osc.square(x => x.fallFlank(0.5))") shouldBe KlangScriptOsc.square(configure = { it.fallFlank(0.5) })
+    }
+
+    "processing goes OUTSIDE the lambda: the wrapper sees the configured node" {
+        val dsl = ks("Osc.square(x => x.fallFlank(0.5)).lowpass(2000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         val inner = dsl.inner
         inner.shouldBeInstanceOf<IgnitorDsl.Pulze>()
-        inner.flankSamples shouldBe 4.0
+        inner.fallFlank shouldBe 0.5
+    }
+
+    "a lambda that returns nothing is a script-level type error" {
+        shouldThrow<KlangScriptTypeError> { ks("Osc.square(x => { x.fallFlank(0.5) })") }
     }
 })

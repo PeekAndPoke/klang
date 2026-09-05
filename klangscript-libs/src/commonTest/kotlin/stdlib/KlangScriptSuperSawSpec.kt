@@ -5,27 +5,23 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Dual-language equivalence for the typed supersaw DSL (Phase 2).
+ * Dual-language equivalence for the `Osc.supersaw(freq, configure)` door and its [OscSuperSawBuilder].
  *
- * Each case expresses the SAME thing two ways — as KlangScript source run through the
- * full engine (parse → interpret → native interop), and as the Kotlin builder + data
- * class `.copy()` — then asserts the resulting [IgnitorDsl.SuperSaw] objects are
- * structurally equal. One `shouldBe` validates the whole binding chain: that each
- * fluent config method binds to the right field, in the right order, with the right
- * coercion (number → [IgnitorDsl.Constant]) and defaults.
- *
- * Comparing against `.copy()` (rather than re-calling the extension functions) makes the
- * check independent: a bug where e.g. `.spreadPower()` wrote `sideAtten` would be caught.
- *
- * This is the template every other typed oscillator subtype will copy.
+ * Each case expresses the SAME thing two ways, as KlangScript source run through the full engine
+ * (parse, interpret, native interop, the configure lambda floating into its slot) and as the
+ * Kotlin door with a Kotlin lambda or a data class `.copy()`, then asserts the resulting
+ * [IgnitorDsl.SuperSaw] nodes are structurally equal. Comparing against `.copy()` keeps the check
+ * independent of the builder: a knob writing the wrong field is caught.
  */
 class KlangScriptSuperSawSpec : StringSpec({
 
@@ -37,71 +33,68 @@ class KlangScriptSuperSawSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    // Kotlin side: the same builder the KlangScript interpreter dispatches `Osc.supersaw()` to.
-    fun superSaw() = KlangScriptOsc.supersaw()
+    fun node() = KlangScriptOsc.supersaw()
 
-    // ── default ──────────────────────────────────────────────────────────────────
-
-    "Osc.supersaw() — KlangScript == Kotlin builder" {
-        ks("Osc.supersaw()") shouldBe superSaw()
+    "Osc.supersaw(): script == Kotlin door, all defaults" {
+        ks("Osc.supersaw()") shouldBe node()
     }
 
-    // ── audio-rate params (number → Constant) ────────────────────────────────────
-
-    "freq(220)" {
-        ks("Osc.supersaw().freq(220)") shouldBe superSaw().copy(freq = IgnitorDsl.Constant(220.0))
+    "freq is the door's first parameter, not a knob: Osc.supersaw(220)" {
+        ks("Osc.supersaw(220)") shouldBe (node() as IgnitorDsl.SuperSaw).copy(freq = IgnitorDsl.Constant(220.0))
     }
 
-    "voices(9)" {
-        ks("Osc.supersaw().voices(9)") shouldBe superSaw().copy(voices = IgnitorDsl.Constant(9.0))
+    "voices(9) via the configure lambda" {
+        ks("Osc.supersaw(x => x.voices(9))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(voices = IgnitorDsl.Constant(9.0))
+    }
+
+    "voices accepts an Osc graph (control-rate)" {
+        ks("Osc.supersaw(x => x.voices(Osc.sine(0.5)))") shouldBe
+                (node() as IgnitorDsl.SuperSaw).copy(voices = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.5)))
     }
 
     "spread(0.3)" {
-        ks("Osc.supersaw().spread(0.3)") shouldBe superSaw().copy(spread = IgnitorDsl.Constant(0.3))
+        ks("Osc.supersaw(x => x.spread(0.3))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(spread = IgnitorDsl.Constant(0.3))
     }
 
     "analog(5.0)" {
-        ks("Osc.supersaw().analog(5.0)") shouldBe superSaw().copy(analog = IgnitorDsl.Constant(5.0))
+        ks("Osc.supersaw(x => x.analog(5.0))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(analog = IgnitorDsl.Constant(5.0))
     }
 
-    // ── character knobs (plain Double scalars) ───────────────────────────────────
-
     "spreadPower(1.5)" {
-        ks("Osc.supersaw().spreadPower(1.5)") shouldBe superSaw().copy(spreadPower = 1.5)
+        ks("Osc.supersaw(x => x.spreadPower(1.5))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(spreadPower = 1.5)
     }
 
     "sideAtten(0.25)" {
-        ks("Osc.supersaw().sideAtten(0.25)") shouldBe superSaw().copy(sideAtten = 0.25)
+        ks("Osc.supersaw(x => x.sideAtten(0.25))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(sideAtten = 0.25)
     }
 
     "gainJitter(0.0)" {
-        ks("Osc.supersaw().gainJitter(0.0)") shouldBe superSaw().copy(gainJitter = 0.0)
+        ks("Osc.supersaw(x => x.gainJitter(0.0))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(gainJitter = 0.0)
     }
 
     "centerJitter(1.0) maps to centerJitterScale" {
-        ks("Osc.supersaw().centerJitter(1.0)") shouldBe superSaw().copy(centerJitterScale = 1.0)
+        ks("Osc.supersaw(x => x.centerJitter(1.0))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(centerJitterScale = 1.0)
     }
 
-    // ── full chain ───────────────────────────────────────────────────────────────
-
-    "phasePool() - on with family defaults (sync guard: method defaults == node defaults)" {
-        ks("Osc.supersaw().phasePool()") shouldBe superSaw().copy(phasePool = 1.0)
+    "phasePool(): on with family defaults (sync guard: knob defaults == node defaults)" {
+        ks("Osc.supersaw(x => x.phasePool())") shouldBe (node() as IgnitorDsl.SuperSaw).copy(phasePool = 1.0)
     }
 
-    "phasePool(on = 0, kMin = 0.2) - all-named subset (mixing positional+named is a language error)" {
-        ks("Osc.supersaw().phasePool(on = 0, kMin = 0.2)") shouldBe superSaw().copy(phasePool = 0.0, kMin = 0.2)
+    "phasePool(on = 0, kMin = 0.2): all-named subset" {
+        ks("Osc.supersaw(x => x.phasePool(on = 0, kMin = 0.2))") shouldBe
+                (node() as IgnitorDsl.SuperSaw).copy(phasePool = 0.0, kMin = 0.2)
     }
 
-    "phasePool(refreshEvery = 0) - named arg skips the LEADING literal default" {
-        ks("Osc.supersaw().phasePool(refreshEvery = 0)") shouldBe superSaw().copy(phasePool = 1.0, refreshEvery = 0.0)
+    "phasePool(refreshEvery = 0): a named arg skips the leading literal defaults" {
+        ks("Osc.supersaw(x => x.phasePool(refreshEvery = 0))") shouldBe
+                (node() as IgnitorDsl.SuperSaw).copy(phasePool = 1.0, refreshEvery = 0.0)
     }
 
-    "every typed config method in one chain" {
-        val code = "Osc.supersaw().freq(110).voices(11).spread(0.12).analog(4.0)" +
+    "every knob in one lambda, freq on the door" {
+        val code = "Osc.supersaw(110, x => x.voices(11).spread(0.12).analog(4.0)" +
                 ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
-                ".phasePool(1, 0.2, 0.7, 8, 64, 5, \"random\", 8)"
-
-        ks(code) shouldBe superSaw().copy(
+                ".phasePool(1, 0.2, 0.7, 8, 64, 5, \"random\", 8))"
+        ks(code) shouldBe (node() as IgnitorDsl.SuperSaw).copy(
             freq = IgnitorDsl.Constant(110.0),
             voices = IgnitorDsl.Constant(11.0),
             spread = IgnitorDsl.Constant(0.12),
@@ -121,13 +114,29 @@ class KlangScriptSuperSawSpec : StringSpec({
         )
     }
 
-    // ── base IgnitorDsl methods still chain off the narrowed subtype ─────────────
+    "the Kotlin door takes the same lambda" {
+        ks("Osc.supersaw(x => x.voices(11).spread(0.12))") shouldBe
+                KlangScriptOsc.supersaw(configure = { it.voices(11).spread(0.12) })
+    }
 
-    "supersaw().lowpass(2000) — base wrapper applies to the narrowed subtype" {
-        val dsl = ks("Osc.supersaw().spreadPower(1.5).lowpass(2000)")
+    "named configure binds too" {
+        ks("Osc.supersaw(configure = x => x.voices(3))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(voices = IgnitorDsl.Constant(3.0))
+    }
+
+    "processing goes OUTSIDE the lambda: the wrapper sees the configured node" {
+        val dsl = ks("Osc.supersaw(x => x.spreadPower(1.5)).lowpass(2000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         val inner = dsl.inner
         inner.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         inner.spreadPower shouldBe 1.5
+    }
+
+    "a lambda that returns nothing is a script-level type error naming the door" {
+        val err = shouldThrow<KlangScriptTypeError> { ks("Osc.supersaw(x => { x.voices(3) })") }
+        err.message shouldBe "the configure lambda of Osc.supersaw returned nothing; return the builder it received (`x => x.analog(3)`)"
+    }
+
+    "a lambda that returns something else is a script-level type error, not a cast failure" {
+        shouldThrow<KlangScriptTypeError> { ks("Osc.supersaw(x => 5)") }
     }
 })

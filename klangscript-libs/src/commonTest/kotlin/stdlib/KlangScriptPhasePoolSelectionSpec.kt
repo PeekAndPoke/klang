@@ -32,17 +32,17 @@ class KlangScriptPhasePoolSelectionSpec : StringSpec({
     }
 
     "bare .phasePool() keeps the normal default" {
-        val saw = ks("""Osc.supersaw(Osc.freq()).phasePool()""") as IgnitorDsl.SuperSaw
+        val saw = ks("""Osc.supersaw(x => x.phasePool())""") as IgnitorDsl.SuperSaw
         saw.selection shouldBe "normal"
     }
 
     "the compound form travels verbatim: selection = \"normal:0.1:0.9\"" {
-        val saw = ks("""Osc.supersaw(Osc.freq()).phasePool(selection = "normal:0.1:0.9")""") as IgnitorDsl.SuperSaw
+        val saw = ks("""Osc.supersaw(x => x.phasePool(selection = "normal:0.1:0.9"))""") as IgnitorDsl.SuperSaw
         saw.selection shouldBe "normal:0.1:0.9"
     }
 
     "roundrobin is expressible — but only as an explicit opt-in" {
-        val saw = ks("""Osc.supersaw(Osc.freq()).phasePool(selection = "roundrobin")""") as IgnitorDsl.SuperSaw
+        val saw = ks("""Osc.supersaw(x => x.phasePool(selection = "roundrobin"))""") as IgnitorDsl.SuperSaw
         saw.selection shouldBe "roundrobin"
     }
 })

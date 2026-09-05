@@ -1603,7 +1603,7 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
 
-<span class="kw">let</span> pad = Osc.supertri(freq = Osc.freq(), voices = 5).analog(5.0)
+<span class="kw">let</span> pad = Osc.supertri(x =&gt; x.voices(5).analog(5.0))
       .lowpass(freq = Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()),
                q = 2, analog = Osc.slot.analog)
       .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve(<span class="st">"scurve"</span>)

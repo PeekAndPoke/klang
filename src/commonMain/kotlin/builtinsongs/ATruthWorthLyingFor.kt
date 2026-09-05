@@ -36,9 +36,9 @@ let guitar = (() => {
   let pAttack     = Osc.param("attack",        0.008, "Attack time in seconds")
   let pSustain    = Osc.param("sustain",       0.200, "Sustain level")
 
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = pVoices, spread = pSpread).analog(pAnalog).mul(0.10)
+  let signal = Osc.supersaw(x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.10)
     // Zawtooth overtones for more grit
-    .plus(Osc.superramp(freq = Osc.freq().mul(2), voices = pVoices, spread = pSpread).analog(pAnalog).mul(0.06))
+    .plus(Osc.superramp(Osc.freq().mul(2), x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.06))
    
   return signal
     .lowpass(Osc.sine(0.50).plus(1).times(1000).plus(pBrightness), 1.50)            // Pre-distortion: sweeping lowpass adds dynamic character

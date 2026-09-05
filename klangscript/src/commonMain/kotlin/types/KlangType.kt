@@ -25,9 +25,9 @@ package io.peekandpoke.klang.script.types
  * @param functionReturn For a function type: the return type. Null otherwise.
  * @param supertypes Transitive script-registered supertypes of this type (`kotlin.*`
  *   ancestors excluded), emitted by KSP for return/property types. Lets the static
- *   type-inferrer resolve a base-type method on a narrowed subtype receiver — e.g.
- *   `Osc.supersaw()` returns `IgnitorDsl.SuperSaw`, yet `.lowpass()`/`.adsr()` are
- *   registered on `IgnitorDsl`. Mirrors the runtime's reflective supertype walk
+ *   type-inferrer resolve a base-type method on a narrowed subtype receiver, e.g. sprudel's
+ *   `note()` returns `SprudelPattern`, which carries `KlangPattern`, so a method registered on
+ *   `KlangPattern` resolves on it. Mirrors the runtime's reflective supertype walk
  *   (`Environment.getAllRegisteredSupertypes`). Empty for primitives and types built
  *   by hand (e.g. in tests), so receiver matching is unchanged for those.
  */
