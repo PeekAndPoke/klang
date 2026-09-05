@@ -10,7 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.builder.registerFunction
 import io.peekandpoke.klang.script.builder.registerType
-import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.klangScriptEngine
 
 /** A registered, named type. */
 interface Shape {
@@ -34,7 +34,7 @@ class NamedShape : Shape {
  */
 class DisplayTypeNameSpec : StringSpec({
 
-    fun engine() = klangScript {
+    fun engine() = klangScriptEngine {
         registerFunction<Int, Shape>("namedShape") { NamedShape() }
         // Anonymous implementation, exactly the sprudel pattern idiom.
         registerFunction<Int, Shape>("anonShape") {

@@ -7,7 +7,9 @@ description: Use when working on the klangscript module, implementing klangscrip
 
 Loads context for working on the `klangscript` Kotlin/Multiplatform module — a JavaScript-like
 scripting language for live coding, built with a hand-rolled recursive descent parser and
-tree-walking interpreter.
+tree-walking interpreter. The standard library (`Osc`, `Master`, `Pipeline`, `Math`, ...) is the
+separate `klangscript-libs` module (read `klangscript-libs/CLAUDE.md` when the task touches the
+stdlib or a DSL door).
 
 ## Context to Read
 
@@ -31,8 +33,9 @@ tree-walking interpreter.
 ## Testing
 
 ```bash
-./gradlew :klangscript:jvmTest    # preferred (fast)
-./gradlew :klangscript:jsTest     # when testing JS-specific behavior
+./gradlew :klangscript:jvmTest         # language tests (fast)
+./gradlew :klangscript-libs:jvmTest    # stdlib / DSL door tests
+./gradlew :klangscript:jsTest          # when testing JS-specific behavior
 ```
 
 ## Notes

@@ -25,7 +25,7 @@ class ComparisonOperatorsTest : StringSpec({
     // ============================================================
 
     "should compare numbers for equality with ==" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("5 == 5").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -39,7 +39,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should compare numbers for inequality with !=" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("5 != 3").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -53,7 +53,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should compare strings for equality" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("\"hello\" == \"hello\"").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -72,7 +72,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should compare booleans for equality" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("true == true").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -91,7 +91,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should compare null for equality" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("null == null").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -105,7 +105,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should return false when comparing different types" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("5 == \"5\"").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -128,7 +128,7 @@ class ComparisonOperatorsTest : StringSpec({
     // ============================================================
 
     "should compare numbers with less than <" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("3 < 5").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -147,7 +147,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should compare numbers with less than or equal <=" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("3 <= 5").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -166,7 +166,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should compare numbers with greater than >" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("5 > 3").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -185,7 +185,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should compare numbers with greater than or equal >=" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("5 >= 3").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -208,7 +208,7 @@ class ComparisonOperatorsTest : StringSpec({
     // ============================================================
 
     "should have correct precedence: arithmetic before comparison" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // 2 + 3 == 5 should parse as (2 + 3) == 5, not 2 + (3 == 5)
         script.execute("2 + 3 == 5").let {
@@ -236,7 +236,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should allow parentheses to override precedence" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Compare result: 5 == (3 + 2)
         script.execute("5 == (3 + 2)").let {
@@ -253,7 +253,7 @@ class ComparisonOperatorsTest : StringSpec({
     // ============================================================
 
     "should use comparison in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Test the original use case: arrow function with equality check
         script.execute("((x) => x == 5)(5)").let {
@@ -268,7 +268,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should use numeric comparison in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("((x) => x > 10)(15)").let {
             it.shouldBeInstanceOf<BooleanValue>()
@@ -282,7 +282,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should use member access and comparison in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Test arrow function with member access and comparison
         // This mimics: note("a b").filter((x) => x.data.note == "a")
@@ -298,7 +298,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should use nested member access and comparison in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Test deeply nested member access with comparison
         script.execute("((x) => x.data.value == 10)({ data: { value: 10 } })").let {
@@ -317,7 +317,7 @@ class ComparisonOperatorsTest : StringSpec({
     // ============================================================
 
     "should handle complex expressions with multiple comparisons" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Note: This tests chaining, though in practice you'd use logical operators
         // 5 > 3 > 0 parses as (5 > 3) > 0, which is (true > 0), which is type error
@@ -330,7 +330,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should handle comparison with variables" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -359,7 +359,7 @@ class ComparisonOperatorsTest : StringSpec({
     // ============================================================
 
     "should parse original issue line 4: note(\"a b\").filter((x) => x + 1)" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             // Register minimal stubs for note() and filter() to make the code executable
             registerFunctionRaw("note") { args, _ ->
                 // Return an object with a filter method
@@ -380,7 +380,7 @@ class ComparisonOperatorsTest : StringSpec({
     }
 
     "should parse original issue line 5: note(\"a b\").filter((x) => x.data.note == \"a\")" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             // Register minimal stubs for note() and filter() to make the code executable
             registerFunctionRaw("note") { args, _ ->
                 // Return an object with a filter method

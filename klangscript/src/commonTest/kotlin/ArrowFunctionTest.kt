@@ -26,7 +26,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
 class ArrowFunctionTest : StringSpec({
 
     "should create and call simple arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Immediately invoked arrow function: (x => x + 1)(5)
         val result = script.execute("(x => x + 1)(5)")
@@ -35,7 +35,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with multiple parameters" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // (a, b) => a + b applied to (3, 4)
         val result = script.execute("((a, b) => a + b)(3, 4)")
@@ -44,7 +44,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with no parameters" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // () => 42
         val result = script.execute("(() => 42)()")
@@ -53,7 +53,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with multiplication" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // (x, y) => x * y
         val result = script.execute("((x, y) => x * y)(6, 7)")
@@ -62,7 +62,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle nested arrow functions" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // x => y => x + y (currying)
         // Applied as: (x => y => x + y)(10)(5) = 15
@@ -72,7 +72,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should pass arrow function as argument to native function" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             // Register a function that accepts a callback and calls it
             registerFunctionRaw("applyFunc") { args, _ ->
                 // Parse the callback call expression and execute it
@@ -88,7 +88,7 @@ class ArrowFunctionTest : StringSpec({
                     funcEnv.define(func.parameters[0], value)
                 }
 
-                val engine = klangScript()
+                val engine = klangScriptEngine()
 
                 // Create interpreter with that environment and execute the body
                 val executionContext = ExecutionContext(sourceName = "test")
@@ -126,7 +126,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with method chaining in body" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             // Register a function that returns an object
             registerFunctionRaw("createObj") { args, _ ->
                 val value = (args[0] as NumberValue).value
@@ -145,7 +145,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with string operations" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             registerFunctionRaw("concat") { args, _ ->
                 val a = (args[0] as StringValue).value
                 val b = (args[1] as StringValue).value
@@ -160,7 +160,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle complex expression in arrow function body" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // x => (x + 1) * 2 - 3
         val result = script.execute("(x => (x + 1) * 2 - 3)(5)")
@@ -170,7 +170,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function returning another arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // makeAdder that returns a function
         // x => (y => x + y)
@@ -185,7 +185,7 @@ class ArrowFunctionTest : StringSpec({
     // ========================================
 
     "should handle modulo in arrow function body" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // (t => t % 16)(18) should be 2
         val result = script.execute("(t => t % 16)(18)")
@@ -194,7 +194,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle modulo comparison in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // (t => t % 16 > 4)(20) -> 20 % 16 is 4. 4 > 4 is false.
         val resultFalse = script.execute("(t => t % 16 > 4)(20)")
@@ -208,7 +208,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle modulo in arrow function stored in variable" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Store arrow function with modulo in variable and call it
         val result = script.execute(
@@ -223,7 +223,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle complex modulo expression in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // (t => (t % 16) * 2 + 1)(20) -> (20 % 16) * 2 + 1 = 4 * 2 + 1 = 9
         val result = script.execute("(t => (t % 16) * 2 + 1)(20)")
@@ -232,7 +232,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle modulo with multiple parameters in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // (a, b) => a % b
         val result = script.execute("((a, b) => a % b)(17, 5)")

@@ -95,8 +95,9 @@ script-only surface forces raw constructor calls and splits the vocabulary.
 
 - A surface addition lands on BOTH doors in the same deliverable. A stdlib function without its
   Kotlin twin is a review finding (`docs/tasks/dsl-kotlin-surface-parity.md`).
-- Builders live in `audio_bridge` and are annotated for KlangScript directly (KSP runs on
-  `audio_bridge`): one implementation, one KDoc, no delegate objects in the stdlib.
+- Builders live in `klangscript-libs`, next to their doors, and are annotated for KlangScript
+  directly (KSP runs there like in sprudel): one implementation, one KDoc, no delegate objects.
+  `klangscript-libs` IS the Kotlin door for the builders; `audio_bridge` stays pure wire types.
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
   (`KlangScriptFilterDoorParitySpec` is the pattern).
 - Script-door param defaults are SAFE LITERALS (number, string, bool, null). A default like

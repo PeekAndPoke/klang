@@ -44,6 +44,7 @@ kotlin {
                 api(project(":common"))
                 api(project(":klang"))
                 api(project(":klangscript"))
+                api(project(":klangscript-libs"))
             }
         }
 

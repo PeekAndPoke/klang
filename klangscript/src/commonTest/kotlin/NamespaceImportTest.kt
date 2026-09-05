@@ -41,7 +41,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should create namespace object from exports" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -63,7 +63,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should access exports via namespace property" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                 let add = (a, b) => a + b
@@ -84,7 +84,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should access multiple exports via namespace" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -105,7 +105,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should not pollute current scope" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -128,7 +128,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should support multiple namespaces from different libraries" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -161,7 +161,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should handle namespace with nested function calls" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "ops", """
                     let double = (x) => x * 2
@@ -182,7 +182,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should namespace work with object properties" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "config", """
                     let settings = { value: 42, flag: true }
@@ -202,7 +202,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should allow different alias names for namespace" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "mathematics", """
                     let pi = 3.14159
@@ -222,7 +222,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should namespace only include exported symbols" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let public = (x) => x + 1
@@ -246,7 +246,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should error when combining namespace with selective import" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -268,7 +268,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should namespace work with backward compatible libraries" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             // Library without export statement - exports all
             registerLibrary(
                 "old", """
@@ -300,7 +300,7 @@ class NamespaceImportTest : StringSpec({
     }
 
     "should support namespace with native functions in library" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("nativeSquare") { values, _ ->
                 val value = values.first()
                 val num = (value as NumberValue).value

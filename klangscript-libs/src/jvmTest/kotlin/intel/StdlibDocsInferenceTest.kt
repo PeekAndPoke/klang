@@ -8,6 +8,7 @@ package io.peekandpoke.klang.script.intel
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveAtLeastSize
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.script.ast.Expression
@@ -216,15 +217,17 @@ class StdlibDocsInferenceTest : StringSpec({
     "real stdlib: Osc.sine method receiver FQCN matches KlangScriptOsc" {
         val reg = stdlibRegistry()
         val sine = reg.getCallable("sine", KlangType("Osc"))!!
-        sine.receiver!!.simpleName shouldBe "Osc"
-        sine.receiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
+        val sineReceiver = sine.receiver.shouldNotBeNull()
+        sineReceiver.simpleName shouldBe "Osc"
+        sineReceiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
     }
 
     "real stdlib: Math.sqrt method receiver FQCN matches KlangScriptMath" {
         val reg = stdlibRegistry()
         val sqrt = reg.getCallable("sqrt", KlangType("Math"))!!
-        sqrt.receiver!!.simpleName shouldBe "Math"
-        sqrt.receiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptMath"
+        val sqrtReceiver = sqrt.receiver.shouldNotBeNull()
+        sqrtReceiver.simpleName shouldBe "Math"
+        sqrtReceiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptMath"
     }
 
     "real stdlib: type inference of Osc.slot returns OscSlot KlangType with FQCN" {

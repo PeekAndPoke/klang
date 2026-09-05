@@ -8,6 +8,16 @@
 
 ## Recent Work (2026-09)
 
+- **Module split (2026-09-06)**: `stdlib/` (35 files + `PlatformConsole`) moved to the new
+  `:klangscript-libs` module together with `stdlibLib` and `klangScript()`; the core gained
+  `klangScriptEngine()` (bare engine) and dropped its `audio_bridge` dependency and its own KSP
+  processor run (the KSP *plugin* stays applied for kotest). Tests that need the real stdlib
+  (`stdlib/`, docs, `GeneratedRegistrationTest`, analyzer tests using `generatedStdlibDocs`)
+  moved with it. `sprudel` and `klangscript-ui` depend on the libs module. Plan and facts:
+  `docs/tasks/klangscript-libs-split.md`. Lesson: KSP-generated code in another module needs the
+  members it touches to be public (`NativeObjectExtensionsBuilder.builder/cls`), and Kotlin cannot
+  smart-cast a property declared in another module (two moved tests needed explicit casts).
+
 - **Configure-lambda foundation (S1 of `docs/tasks/dsl-configure-lambdas.md`)**:
   `runtime/ArgAlignment` (trailing-lambda rule, shared by interpreter and analyzer),
   `ParamSpec.isFunctionType`, `KlangType.functionParams/functionReturn` (KSP now emits the

@@ -35,7 +35,7 @@ class BooleanPrecedenceTest : StringSpec({
     // ============================================================
 
     "AND has higher precedence than OR: false || true && false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: false || (true && false)
         // = false || false
         // = false
@@ -45,7 +45,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "AND has higher precedence than OR: true || false && false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: true || (false && false)
         // = true || false
         // = true
@@ -55,7 +55,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "AND has higher precedence than OR: false && true || true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (false && true) || true
         // = false || true
         // = true
@@ -65,7 +65,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "AND has higher precedence than OR: true && false || false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (true && false) || false
         // = false || false
         // = false
@@ -75,7 +75,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "multiple AND/OR: a || b && c || d" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: a || (b && c) || d
         // false || (false && true) || true
         // = false || false || true
@@ -90,7 +90,7 @@ class BooleanPrecedenceTest : StringSpec({
     // ============================================================
 
     "comparison has higher precedence than AND: 5 > 3 && 2 < 4" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (5 > 3) && (2 < 4)
         // = true && true
         // = true
@@ -100,7 +100,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "comparison has higher precedence than AND: 5 > 3 && 4 < 2" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (5 > 3) && (4 < 2)
         // = true && false
         // = false
@@ -110,7 +110,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "comparison has higher precedence than OR: 5 > 10 || 2 < 4" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (5 > 10) || (2 < 4)
         // = false || true
         // = true
@@ -120,7 +120,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "equality has higher precedence than AND: 5 == 5 && 3 == 3" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (5 == 5) && (3 == 3)
         // = true && true
         // = true
@@ -130,7 +130,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "inequality has higher precedence than OR: 5 != 3 || 2 != 2" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (5 != 3) || (2 != 2)
         // = true || false
         // = true
@@ -144,7 +144,7 @@ class BooleanPrecedenceTest : StringSpec({
     // ============================================================
 
     "arithmetic and comparison with AND: 1 + 2 > 2 && 5 - 1 < 5" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: ((1 + 2) > 2) && ((5 - 1) < 5)
         // = (3 > 2) && (4 < 5)
         // = true && true
@@ -155,7 +155,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "complex precedence: 1 + 2 > 2 && 5 - 1 < 5 || false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (((1 + 2) > 2) && ((5 - 1) < 5)) || false
         // = ((3 > 2) && (4 < 5)) || false
         // = (true && true) || false
@@ -167,7 +167,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "multiplication with comparison and AND: 3 * 2 == 6 && 10 / 2 == 5" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: ((3 * 2) == 6) && ((10 / 2) == 5)
         // = (6 == 6) && (5 == 5)
         // = true && true
@@ -182,7 +182,7 @@ class BooleanPrecedenceTest : StringSpec({
     // ============================================================
 
     "NOT has higher precedence than AND: !false && true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (!false) && true
         // = true && true
         // = true
@@ -192,7 +192,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "NOT has higher precedence than OR: !false || false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (!false) || false
         // = true || false
         // = true
@@ -202,7 +202,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "NOT has higher precedence than AND: !true && false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (!true) && false
         // = false && false
         // = false
@@ -212,7 +212,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "multiple NOTs with AND: !false && !false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Should parse as: (!false) && (!false)
         // = true && true
         // = true
@@ -226,7 +226,7 @@ class BooleanPrecedenceTest : StringSpec({
     // ============================================================
 
     "parentheses override precedence: (false || true) && false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Explicit grouping: (false || true) && false
         // = true && false
         // = false
@@ -236,7 +236,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "parentheses override precedence: false || (true && false)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Explicit grouping: false || (true && false)
         // = false || false
         // = false
@@ -246,7 +246,7 @@ class BooleanPrecedenceTest : StringSpec({
     }
 
     "parentheses with comparison: (5 > 3) && (2 < 4)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // Explicit grouping (same as natural precedence)
         // = true && true
         // = true

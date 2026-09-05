@@ -9,12 +9,12 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.script.builder.registerLibrary
-import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.klangScriptEngine
 
 class ScopeIsolationTest : StringSpec({
 
     "Encapsulation: Function parameters should not leak to global scope" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let id = (param) => param
             id(42)
@@ -29,7 +29,7 @@ class ScopeIsolationTest : StringSpec({
     "Encapsulation: Lexical Scoping (Closure)" {
         // Verify that a function captures the variable from its definition scope,
         // not from the caller's scope.
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let x = "global"
             let getGlobalX = () => x
@@ -47,7 +47,7 @@ class ScopeIsolationTest : StringSpec({
     }
 
     "Encapsulation: Parameters shadow globals" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let x = "global"
             let identity = (x) => x
@@ -59,7 +59,7 @@ class ScopeIsolationTest : StringSpec({
     }
 
     "Encapsulation: Globals remain unchanged after parameter shadowing" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let x = "global"
             let identity = (x) => x
@@ -72,7 +72,7 @@ class ScopeIsolationTest : StringSpec({
     }
 
     "Encapsulation: Library internals are private (selective export)" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "secret_lib", """
                 let publicVal = "public"
@@ -96,7 +96,7 @@ class ScopeIsolationTest : StringSpec({
     }
 
     "Encapsulation: Library internals are private (aliased export)" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math_lib", """
                 let add = (a, b) => a + b
@@ -119,7 +119,7 @@ class ScopeIsolationTest : StringSpec({
     "Encapsulation: Libraries cannot see each other's globals" {
         // Lib A defines 'aVal'.
         // Lib B tries to use 'aVal' without importing it.
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib_a", """
                 let aVal = "A"
@@ -151,10 +151,10 @@ class ScopeIsolationTest : StringSpec({
         // This ensures that if we have two different engine instances or environments,
         // imports in one don't affect the other.
 
-        val engine1 = klangScript {
+        val engine1 = klangScriptEngine {
             registerLibrary("common", """let val = 1""")
         }
-        val engine2 = klangScript {
+        val engine2 = klangScriptEngine {
             registerLibrary("common", """let val = 2""")
         }
 
@@ -168,7 +168,7 @@ class ScopeIsolationTest : StringSpec({
     "Encapsulation: Closure captures variable reference (mutable)" {
         // Functions capture the environment, so they should see updates to variables
         // in that environment.
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let x = 10
             let getX = () => x
@@ -181,7 +181,7 @@ class ScopeIsolationTest : StringSpec({
     }
 
     "Encapsulation: Parameter isolation (Pass-by-value semantics)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // We verify that a parameter 'val' inside the function shadows the global 'val'.
         // And since we can't mutate it, we mostly check shadowing.
         val script = """
@@ -200,7 +200,7 @@ class ScopeIsolationTest : StringSpec({
 
     "Encapsulation: Object Literal Scope" {
         // Object keys are not variables.
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let a = 1
             let obj = { a: 2, b: a } // 'b' should see outer 'a' (1), not sibling property 'a' (2)
@@ -212,7 +212,7 @@ class ScopeIsolationTest : StringSpec({
     }
 
     "Encapsulation: Deeply nested shadowing" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let x = "global"
             // l1 takes x, immediately calls an inner arrow that also takes x
@@ -226,7 +226,7 @@ class ScopeIsolationTest : StringSpec({
 
     "Encapsulation: Sibling function isolation" {
         // Two functions defined in same scope should not see each other's parameters
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let f1 = (a) => a
             let f2 = (b) => a // Should fail, 'a' is local to f1
@@ -239,7 +239,7 @@ class ScopeIsolationTest : StringSpec({
     }
 
     "Encapsulation: Callbacks passed to native functions retain closure" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("runCallback") { args, _ ->
                 val fn = args[0] as FunctionValue
                 val kotlinFn: () -> Any? = fn.convertFunctionToKotlin()
@@ -259,7 +259,7 @@ class ScopeIsolationTest : StringSpec({
     }
 
     "Encapsulation: Variable not visible in its own initializer" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let a = 10
             let a = a + 5  // Should use OLD 'a' (10) then overwrite 'a' with 15

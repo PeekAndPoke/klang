@@ -16,7 +16,7 @@ class RegisterTypeDebugTest : StringSpec({
     }
 
     "Check what registerType returns" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunction<Double, TestPattern>("create") { value ->
                 TestPattern(value)
             }

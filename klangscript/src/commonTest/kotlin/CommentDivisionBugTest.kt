@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.runtime.NumberValue
 class CommentDivisionBugTest : StringSpec({
 
     "should handle inline comment after division" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("10 / 2 // divide by two")
 
@@ -26,7 +26,7 @@ class CommentDivisionBugTest : StringSpec({
     }
 
     "should handle division with comment on same line" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("100 / 5 // this is division")
 
@@ -35,7 +35,7 @@ class CommentDivisionBugTest : StringSpec({
     }
 
     "should handle multiple divisions with comment" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("20 / 4 / 2 // divide twice")
 
@@ -44,7 +44,7 @@ class CommentDivisionBugTest : StringSpec({
     }
 
     "should handle division in expression with comment" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("5 + 10 / 2 // mix operators")
 
@@ -53,7 +53,7 @@ class CommentDivisionBugTest : StringSpec({
     }
 
     "should handle comment immediately after division operator" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("10 //// comment without space")
 
@@ -62,7 +62,7 @@ class CommentDivisionBugTest : StringSpec({
     }
 
     "should handle division followed by whitespace and comment" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("15 /   // comment with extra spaces\n 3")
 
@@ -71,7 +71,7 @@ class CommentDivisionBugTest : StringSpec({
     }
 
     "should handle standalone division operator before comment on next line" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """

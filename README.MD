@@ -67,6 +67,11 @@ go: [docs/whitepaper/klang-whitepaper.html](docs/whitepaper/klang-whitepaper.htm
       │  │     │     ┌──┘    │   ┌──┘     │    ┌──┘  │       │  │  │  │
       v  v     v     v       v   v        v    v     v       v  v  v  v
    ┌─────────────────────────────────────────────────────────────────────┐
+   │                          klangscript-libs                           │
+   │   Standard library: Osc, Master, Pipeline, Math, Object, console    │
+   └──────────────────────────────────┬──────────────────────────────────┘
+                                      v
+   ┌─────────────────────────────────────────────────────────────────────┐
    │                         klangscript                                 │
    │              Scripting language: parser, interpreter                │
    └─────────────────────────────────────────────────────────────────────┘
@@ -122,6 +127,7 @@ go: [docs/whitepaper/klang-whitepaper.html](docs/whitepaper/klang-whitepaper.htm
 | `klang`                   | JS/JVM    | Main application — web UI, pages, routing, audio player integration                    |
 | `sprudel`                 | Common/JS | Pattern language — Kotlin sibling of strudel.cc for live coding music (own direction)  |
 | `klangscript`             | Common    | Scripting language — hand-rolled parser, tree-walking interpreter, type system         |
+| `klangscript-libs`        | Common    | KlangScript standard library (`Osc`, `Master`, `Pipeline`, `Math`, ...) and DSL builders; both doors |
 | `klangscript-annotations` | Common    | KlangScript binding annotations (`@Object`, `@Method`, `@TypeExtensions`, `@Function`) |
 | `klangscript-ksp`         | JVM       | KSP processor — generates stdlib registration + completion data from the annotations   |
 | `klangscript-ui`          | JS        | CodeMirror editor with code completion, hover docs, tool badges                        |

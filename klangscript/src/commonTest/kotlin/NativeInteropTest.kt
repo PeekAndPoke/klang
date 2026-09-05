@@ -50,7 +50,7 @@ class NativeInteropTest : StringSpec() {
 
         "Native object creation via registered function" {
             // Register factory function that returns native object
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -63,7 +63,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Extension method with one parameter" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -82,7 +82,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Extension method with no parameters" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -101,7 +101,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Extension method with two parameters" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -123,7 +123,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Method chaining - multiple calls" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -145,7 +145,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Method chaining - long chain" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -175,7 +175,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Error - method not found on native type" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -202,7 +202,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Error - wrong argument count" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -224,7 +224,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Native objects in variables" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -248,7 +248,7 @@ class NativeInteropTest : StringSpec() {
         "Native objects passed as function arguments" {
             val captured = mutableListOf<String>()
 
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -275,7 +275,7 @@ class NativeInteropTest : StringSpec() {
 
         "Multiple native types registered" {
             // Register first type
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
@@ -303,7 +303,7 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Native objects work with libraries and imports" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }

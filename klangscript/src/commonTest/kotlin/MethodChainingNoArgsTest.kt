@@ -82,7 +82,7 @@ class MethodChainingNoArgsTest : StringSpec() {
     init {
 
         "No-arg method in middle of chain" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<Double, ContinuousPattern>("sine2") { value ->
                     ContinuousPattern(value)
                 }
@@ -109,7 +109,7 @@ class MethodChainingNoArgsTest : StringSpec() {
         }
 
         "Multiple no-arg methods in chain" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<Double, ContinuousPattern>("sine2") { value ->
                     ContinuousPattern(value)
                 }
@@ -135,7 +135,7 @@ class MethodChainingNoArgsTest : StringSpec() {
         }
 
         "No-arg method at end of chain" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<Double, ContinuousPattern>("sine2") { value ->
                     ContinuousPattern(value)
                 }
@@ -160,7 +160,7 @@ class MethodChainingNoArgsTest : StringSpec() {
         }
 
         "Complete Strudel-like pattern: note().pan(sine2.fromBipolar().range())" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<String, NotePattern>("note") { notes ->
                     NotePattern(notes)
                 }
@@ -189,7 +189,7 @@ class MethodChainingNoArgsTest : StringSpec() {
         }
 
         "Inline chained no-arg method call" {
-            val engine = klangScript {
+            val engine = klangScriptEngine {
                 registerFunction<Double, ContinuousPattern>("sine2") { value ->
                     ContinuousPattern(value)
                 }

@@ -32,7 +32,7 @@ class ShortCircuitTest : StringSpec({
     "AND should not evaluate right if left is falsy" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -48,7 +48,7 @@ class ShortCircuitTest : StringSpec({
     "AND should not evaluate right if left is 0" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -64,7 +64,7 @@ class ShortCircuitTest : StringSpec({
     "AND should not evaluate right if left is null" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -80,7 +80,7 @@ class ShortCircuitTest : StringSpec({
     "AND should not evaluate right if left is empty string" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -96,7 +96,7 @@ class ShortCircuitTest : StringSpec({
     "AND should evaluate right if left is truthy" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -112,7 +112,7 @@ class ShortCircuitTest : StringSpec({
     "AND should evaluate right if left is non-zero number" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 BooleanValue(false)
@@ -132,7 +132,7 @@ class ShortCircuitTest : StringSpec({
     "OR should not evaluate right if left is truthy" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -148,7 +148,7 @@ class ShortCircuitTest : StringSpec({
     "OR should not evaluate right if left is non-zero number" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -164,7 +164,7 @@ class ShortCircuitTest : StringSpec({
     "OR should not evaluate right if left is non-empty string" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -180,7 +180,7 @@ class ShortCircuitTest : StringSpec({
     "OR should evaluate right if left is falsy" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 NumberValue(42.0)
@@ -196,7 +196,7 @@ class ShortCircuitTest : StringSpec({
     "OR should evaluate right if left is 0" {
         var rightEvaluated = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("sideEffect") { _, _ ->
                 rightEvaluated = true
                 BooleanValue(true)
@@ -214,7 +214,7 @@ class ShortCircuitTest : StringSpec({
     // ============================================================
 
     "safe division using short-circuit" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // b != 0 && a / b should only divide if b is not zero
         val result1 = engine.execute("let a = 10\nlet b = 0\nb != 0 && a / b")
         result1.shouldBeInstanceOf<BooleanValue>()
@@ -228,7 +228,7 @@ class ShortCircuitTest : StringSpec({
     "default value using short-circuit" {
         var defaultCalled = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("getValue") { _, _ -> NumberValue(0.0) }
             registerFunctionRaw("getDefault") { _, _ ->
                 defaultCalled = true
@@ -245,7 +245,7 @@ class ShortCircuitTest : StringSpec({
     "chained short-circuit: false || false || computeExpensive()" {
         var expensiveCalled = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("computeExpensive") { _, _ ->
                 expensiveCalled = true
                 NumberValue(42.0)
@@ -261,7 +261,7 @@ class ShortCircuitTest : StringSpec({
     "chained short-circuit: false || true || computeExpensive()" {
         var expensiveCalled = false
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("computeExpensive") { _, _ ->
                 expensiveCalled = true
                 NumberValue(42.0)

@@ -44,7 +44,7 @@ teaches nothing new. It also deletes the named-argument trap of the current form
 | D3 | Configure lambdas take a **builder type**, e.g. `Osc.sine(configure: (x: OscSineBuilder) -> OscSineBuilder)`. The knobs live on the builders ONLY. **`.analog()` and every other sub-type method disappear from `IgnitorDsl`.** (The `analog` *parameter* of the filter doors, `lowpass(freq, q, passes, analog)`, is a different thing and stays.) |
 | D4 | Parameter name: `configure`. |
 | D5 | `.phaser()` and `.shimmer()` get configure lambdas too. |
-| D6 | Builder knobs are annotated **directly on the builder classes in `audio_bridge`** (KSP runs on `audio_bridge`); no stdlib delegate objects. More explicit, and open for oscillator-specific extensions. |
+| D6 | Builder knobs are annotated **directly on the builder classes**; no delegate objects. More explicit, and open for oscillator-specific extensions. **Revised 2026-09-06:** the builders live in the new `klangscript-libs` module (not `audio_bridge`), after the module split of `klangscript-libs-split.md`; `audio_bridge` can never depend on the language runtime the generated registration needs. |
 | D7 | Door parameters: `freq` (oscillators) and the wrapper's own inputs stay on the door. **Anything with a default is a knob** and lives on the builder. |
 | D8 | `Master()` is the unity master and `Master(configure)` builds a chain. During the `invoke` rollout they are **aliases**: `Master(...) == Master.build(...)` and `Master() == Master.default()`, so the callable object can be tested against the method form. Same for `Pipeline`. |
 | D9 | **Everything is immutable.** Builders are value wrappers; every "mutating" call returns a new instance with the updated values. Composition falls out of this. **General principle for ALL DSLs**, not only builders. |
@@ -190,9 +190,9 @@ the type arguments are dropped, so the analyzer cannot know what `x` is.
 
 ## Builders
 
-Live in `audio_bridge` next to the nodes they wrap (the Kotlin door needs them; `audio_be`
-tests and Kotlin-written songs construct these nodes directly today, 21 `SuperSaw(` sites). One
-file per family: `IgnitorBuilders.kt`, `MasterBuilders.kt`, `PipelineBuilders.kt`. Naming
+Live in `klangscript-libs` next to the doors (`klangscript-libs/src/commonMain/kotlin/stdlib/`),
+which is also the Kotlin door for them (`audio_be` main code never needs builders; it consumes
+nodes). One file per family: `IgnitorBuilders.kt`, `MasterBuilders.kt`, `PipelineBuilders.kt`. Naming
 follows the door: `Osc<Name>Builder` for oscillators, `<Effect>Builder` for wrappers,
 `MasterBuilder` + `Master<Stage>Builder`, `PipelineBuilder` + `Pipeline<Stage>Builder`.
 
@@ -352,14 +352,13 @@ oscillator sub-types before; `dsl-kotlin-surface-parity.md` gap 2 closes here). 
 args. Door-parity spec per family, modelled on `KlangScriptFilterDoorParitySpec`: script lambda
 form vs Kotlin builder form produce equal nodes.
 
-**Registration (D6, decided):** the KSP processor runs on `audio_bridge`, and the builder
-methods are annotated directly (`@KlangScript.Library` + `@KlangScript.TypeExtensions` on the
-builder, or `@KlangScript.Function(receiver = ...)` on extension functions). One implementation,
-one KDoc, no delegate objects. Cost: `audio_bridge` gets `klangscript-annotations` and the KSP
-plugin in its build; the generated registration is picked up by the stdlib library like
-`GeneratedSprudelRegistration` is today. Check that `audio_bridge` compiling for the worklet
-target does not pull the registration into the audio thread bundle (registration is a separate
-generated file; verify with the bundle-size check from `reduce-js-bundle-size.md`).
+**Registration (D6, revised 2026-09-06):** the builders and their knobs live in
+`klangscript-libs`, where the KSP processor already runs; knobs are top-level extension
+functions on the builder (`@KlangScript.Function fun OscSuperSawBuilder.voices(...)`, the shape
+sprudel uses for `SprudelPattern`), one implementation, one KDoc, no delegate objects. The
+`audio_bridge` variant needed a cross-module generated-source arrangement and was dropped
+(`CLAUDE.md`, "Complexity is the enemy"); the module split that made this possible is
+`klangscript-libs-split.md`.
 
 A pleasant side effect: oscillator-specific extensions can be added next to the oscillator
 (a new knob on `OscSuperSawBuilder` is one annotated function in one file), without touching the
@@ -378,7 +377,7 @@ All decisions are closed; nothing is open for the maintainer at this point.
 |------|-------|------------|
 | S0 | ✅ **DONE 2026-09-05.** `klangscript-native-object-operators.md` gained a "Revision 2026-09-05" section: `invoke` via `@KlangScript.Method(name = "invoke")`, dispatch through the spec-aware call path, analyzer `invoke` fallback in `resolveCallable`, signature rendering, alias-first rollout, and the field-accessor consumer. | none |
 | S1 | ✅ **BUILT 2026-09-05, uncommitted, awaiting maintainer inspection.** R1 floating rule (`runtime/ArgAlignment`, applied in `resolveByParamSpec`), R2 function-type signatures (`KlangType.functionParams/functionReturn`, KSP emits them, aliases followed), R3 typed lambda params in `AnalyzedAst`. Extra hardening: a function value converting to a non-function target is now a `KlangScriptTypeError` on both platforms (was a JVM `ClassCastException`, silent garbage on JS). Tests: `ArgAlignmentTest`, `ConfigureLambdaBindingTest`, `AnalyzedAstTest` ("configure lambda" cases); JVM + JS suites green. | none |
-| S1b | Build graph: KSP + `klangscript-annotations` on `audio_bridge`, generated registration wired into the stdlib library, bundle-size check. | none |
+| S1b | ✅ **REPLACED by the module split** (`klangscript-libs-split.md`, done 2026-09-06): builders live in `klangscript-libs`; no build-graph change needed. | none |
 | S2 | Oscillator builders + doors, delete the 17 extension objects, `pluck`/`superpluck` knob audit, migrate songs/tests/docs/skills for oscillators, door-parity specs. | S1, S1b |
 | S3 | `EqBuilder`, `PhaserBuilder`, `ShimmerBuilder`; delete the Eq/WetKnob objects; migrate. | S1 |
 | S4 | `invoke` implementation per the revised plan. | S0, S1 |

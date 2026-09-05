@@ -314,8 +314,9 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
                 var current: AstNode? = node
                 var found: MemberAccess? = null
                 while (current != null) {
-                    if (current is CallExpression && (current.callee as? MemberAccess)?.property == "adsr") {
-                        found = current.callee; break
+                    val calleeAccess = (current as? CallExpression)?.callee as? MemberAccess
+                    if (calleeAccess?.property == "adsr") {
+                        found = calleeAccess; break
                     }
                     if (current is MemberAccess && current.property == "adsr") {
                         found = current; break
@@ -326,7 +327,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
             }
         }
         memberAccess shouldNotBe null
-        val receiverType = inferrer.inferType(memberAccess!!.obj)
+        val receiverType = inferrer.inferType((memberAccess as MemberAccess).obj)
         receiverType?.simpleName shouldBe "SprudelPattern"
     }
 
@@ -388,7 +389,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         memberAccess shouldNotBe null
 
         // Infer receiver type: should be SprudelPattern (from note() return type)
-        val receiverType = inferrer.inferType(memberAccess!!.obj)
+        val receiverType = inferrer.inferType((memberAccess as MemberAccess).obj)
         receiverType?.simpleName shouldBe "SprudelPattern"
 
         // Look up the correct variant
@@ -424,7 +425,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         memberAccess shouldNotBe null
 
         // Infer receiver type
-        val receiverType = inferrer.inferType(memberAccess!!.obj)
+        val receiverType = inferrer.inferType((memberAccess as MemberAccess).obj)
         receiverType?.simpleName shouldBe "IgnitorDsl"
 
         // Look up the correct symbol variant

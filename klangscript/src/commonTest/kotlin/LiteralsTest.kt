@@ -29,7 +29,7 @@ class LiteralsTest : StringSpec({
     // ============================================================
 
     "should parse true literal" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("true")
 
@@ -38,7 +38,7 @@ class LiteralsTest : StringSpec({
     }
 
     "should parse false literal" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("false")
 
@@ -47,7 +47,7 @@ class LiteralsTest : StringSpec({
     }
 
     "should use boolean in let declaration" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("let flag = true")
         val result = script.execute("flag")
@@ -57,7 +57,7 @@ class LiteralsTest : StringSpec({
     }
 
     "should use boolean in const declaration" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("const enabled = false")
         val result = script.execute("enabled")
@@ -67,7 +67,7 @@ class LiteralsTest : StringSpec({
     }
 
     "should use boolean in object literal" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ active: true, disabled: false }")
 
@@ -82,7 +82,7 @@ class LiteralsTest : StringSpec({
     // ============================================================
 
     "should parse null literal" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("null")
 
@@ -90,7 +90,7 @@ class LiteralsTest : StringSpec({
     }
 
     "should use null in let declaration" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("let value = null")
         val result = script.execute("value")
@@ -99,7 +99,7 @@ class LiteralsTest : StringSpec({
     }
 
     "should use null in const declaration" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("const empty = null")
         val result = script.execute("empty")
@@ -108,7 +108,7 @@ class LiteralsTest : StringSpec({
     }
 
     "should use null in object literal" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ value: null, name: null }")
 
@@ -119,7 +119,7 @@ class LiteralsTest : StringSpec({
     }
 
     "should handle uninitialized let as null" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("let x")
         val result = script.execute("x")
@@ -132,7 +132,7 @@ class LiteralsTest : StringSpec({
     // ============================================================
 
     "should handle object with all literal types" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """

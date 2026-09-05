@@ -32,7 +32,7 @@ class CommentsAndStringsTest : StringSpec({
     // ============================================================
 
     "should ignore single-line comments" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -46,7 +46,7 @@ class CommentsAndStringsTest : StringSpec({
     }
 
     "should handle inline single-line comments" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("10 + 20 // add numbers")
 
@@ -55,7 +55,7 @@ class CommentsAndStringsTest : StringSpec({
     }
 
     "should handle multiple single-line comments" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -75,7 +75,7 @@ class CommentsAndStringsTest : StringSpec({
     // ============================================================
 
     "should ignore multi-line comments" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -91,7 +91,7 @@ class CommentsAndStringsTest : StringSpec({
     }
 
     "should handle inline multi-line comments" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("5 /* comment */ + /* another */ 3")
 
@@ -100,7 +100,7 @@ class CommentsAndStringsTest : StringSpec({
     }
 
     "should handle multi-line comment with special characters" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -118,7 +118,7 @@ class CommentsAndStringsTest : StringSpec({
     // ============================================================
 
     "should parse simple backtick string" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("`hello world`")
 
@@ -127,7 +127,7 @@ class CommentsAndStringsTest : StringSpec({
     }
 
     "should parse multi-line backtick string" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -142,7 +142,7 @@ line three`
     }
 
     "should parse backtick string from Strudel example" {
-        val script = klangScript()
+        val script = klangScriptEngine()
         script.registerVariable("sound", script.createNativeFunction("sound") { args: List<RuntimeValue> ->
             val pattern = (args[0] as StringValue).value
             StringValue("sound:$pattern")
@@ -162,7 +162,7 @@ line three`
     }
 
     "should handle backtick string with embedded quotes" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("""`He said "hello" and she said 'hi'`""")
 
@@ -171,7 +171,7 @@ line three`
     }
 
     "should use backtick string as object key" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ `multi-line-key`: 100 }")
 
@@ -184,7 +184,7 @@ line three`
     // ============================================================
 
     "should handle double-quoted strings" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(""""hello world"""")
 
@@ -193,7 +193,7 @@ line three`
     }
 
     "should handle single-quoted strings" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("""'hello world'""")
 
@@ -206,7 +206,7 @@ line three`
     // ============================================================
 
     "should not treat comment markers inside strings as comments" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(""""This // is not a comment"""")
 
@@ -215,7 +215,7 @@ line three`
     }
 
     "should not treat comment markers inside backtick strings as comments" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("""`This /* is */ not a comment`""")
 

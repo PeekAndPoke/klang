@@ -90,7 +90,7 @@ class ExportDeclarationTest : StringSpec({
     // ── evaluation ───────────────────────────────────────────────────────────
 
     "should bind the value in the current scope" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         engine.execute("""export answer = 42""")
         val result = engine.execute("""answer""")
@@ -99,7 +99,7 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "should evaluate to the bound value (unlike let/const which return null)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         // The export declaration itself returns the bound value, so a script
         // that ends with `export song = stack(...)` returns the song without
@@ -110,7 +110,7 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "as last statement of a multi-line script: returns the bound value" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         // Mirrors the real Klangbuch shape: setup lines, intermediate bindings,
         // then `export song = ...` as the final line. Script returns the song.
@@ -127,23 +127,23 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "with a string value: returns the string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute("""export greeting = "hello"""") shouldBe StringValue("hello")
     }
 
     "with a computed expression value: returns the computed result" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute("""export sum = 1 + 2 + 3 + 4""") shouldBe NumberValue(10.0)
     }
 
     "let / const remain null-returning (regression — only export changed)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute("""let a = 42""") shouldBe NullValue
         engine.execute("""const b = 42""") shouldBe NullValue
     }
 
     "should be immutable like const (assignment throws)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         engine.execute("""export answer = 42""")
 
@@ -155,7 +155,7 @@ class ExportDeclarationTest : StringSpec({
     // ── as a library export ──────────────────────────────────────────────────
 
     "should be importable from another module" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "song", """
                     export bass = 42
@@ -174,7 +174,7 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "should expose multiple named parts" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "song", """
                     export lead = "lead-pattern"
@@ -195,7 +195,7 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "should support importing a single named part" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "song", """
                     let internalHelper = (x) => x * 2
@@ -215,7 +215,7 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "should keep non-exported declarations private" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "song", """
                     let internalHelper = (x) => x * 2
@@ -239,7 +239,7 @@ class ExportDeclarationTest : StringSpec({
 
     "should work alongside the existing export-block form" {
         // A library mixing both forms — the new declaration form and the old block form.
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "song", """
                     let oldStyle = 1
@@ -260,7 +260,7 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "should support a song-shaped library: parts plus an assembled 'song' export" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "der_schmetterling", """
                     export lead = "lead-line"
@@ -283,7 +283,7 @@ class ExportDeclarationTest : StringSpec({
     // ── namespaced URIs (Projekt Klangbuch forward-compat) ───────────────────
 
     "should import from a namespaced URI like 'peekandpoke/<name>'" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "peekandpoke/der-schmetterling", """
                     export bass = 42
@@ -302,7 +302,7 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "should import from a klang/builtin/* URI" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "klang/builtin/test-song", """
                     export song = "hello"
@@ -321,7 +321,7 @@ class ExportDeclarationTest : StringSpec({
     }
 
     "should produce a clean 'library not found' error for unknown namespaced URIs (forward-compat)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         // A namespaced/versioned URI that doesn't resolve must NOT be a parse error.
         // It must be a clean runtime "library not found" error.

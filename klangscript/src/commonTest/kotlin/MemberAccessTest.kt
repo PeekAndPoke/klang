@@ -19,7 +19,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
 class MemberAccessTest : StringSpec({
 
     "should access object property" {
-        val script = klangScript()
+        val script = klangScriptEngine()
         val obj = ObjectValue(
             mutableMapOf(
                 "name" to StringValue("Alice")
@@ -33,7 +33,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should access nested properties" {
-        val script = klangScript()
+        val script = klangScriptEngine()
         val innerObj = ObjectValue(
             mutableMapOf(
                 "city" to StringValue("Berlin")
@@ -52,7 +52,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should return NullValue for missing property" {
-        val script = klangScript()
+        val script = klangScriptEngine()
         val obj = ObjectValue()
         script.registerVariable("obj", obj)
 
@@ -61,7 +61,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should call method on object" {
-        val script = klangScript()
+        val script = klangScriptEngine()
         val obj = ObjectValue(
             mutableMapOf(
                 "getValue" to script.createNativeFunction("getValue") {
@@ -77,7 +77,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should access property after function call" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             registerFunctionRaw("getObject") { _, _ ->
                 ObjectValue(
                     mutableMapOf(
@@ -94,7 +94,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should support multiple chained property accesses" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val level3 = ObjectValue(mutableMapOf("value" to NumberValue(42.0)))
         val level2 = ObjectValue(mutableMapOf("c" to level3))
@@ -107,7 +107,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should support method call in middle of chain" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val innerObj = ObjectValue(
             mutableMapOf(
@@ -129,7 +129,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should evaluate complex expression with member access and arithmetic" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val obj = ObjectValue(
             mutableMapOf(

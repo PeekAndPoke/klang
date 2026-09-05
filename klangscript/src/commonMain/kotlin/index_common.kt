@@ -5,29 +5,22 @@
 
 package io.peekandpoke.klang.script
 
-import io.peekandpoke.klang.script.stdlib.KlangStdLib
 import kotlin.reflect.KClass
 
-/** Singleton standard library instance. */
-val stdlibLib: KlangScriptLibrary = KlangStdLib.create()
-
 /**
- * Create a [KlangScriptEngine] with the standard library pre-registered.
+ * Create a bare [KlangScriptEngine]: the language and runtime only, no libraries registered.
  *
- * Mutate `attrs` and call `registerLibrary(...)` from inside [builder] to configure the engine.
+ * The standard library lives in the `:klangscript-libs` module; hosts that want it call
+ * `klangScript()` from there (it registers `stdlibLib` and then applies [builder]). Use this
+ * factory for engines that assemble their own libraries, and in the language's own tests.
  *
- * @param builder Optional configuration block for additional registrations
+ * @param builder Optional configuration block for registrations
  * @return A fully configured engine
  */
-fun klangScript(
+fun klangScriptEngine(
     builder: KlangScriptEngine.Builder.() -> Unit = {},
 ): KlangScriptEngine {
-    val engineBuilder = KlangScriptEngine.Builder()
-    // Always register the standard library
-    engineBuilder.registerLibrary(stdlibLib)
-    engineBuilder.apply(builder)
-
-    return engineBuilder.build()
+    return KlangScriptEngine.Builder().apply(builder).build()
 }
 
 /**

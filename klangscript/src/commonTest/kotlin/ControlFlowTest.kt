@@ -27,25 +27,25 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "if-else: should evaluate then branch when condition is true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("if (true) { 42 } else { 0 }")
         (result as NumberValue).value shouldBe 42.0
     }
 
     "if-else: should evaluate else branch when condition is false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("if (false) { 42 } else { 99 }")
         (result as NumberValue).value shouldBe 99.0
     }
 
     "if-else: should return null when no else branch and condition is false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("if (false) { 42 }")
         result shouldBe NullValue
     }
 
     "if-else: should work as value in let declaration" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 10
@@ -57,7 +57,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if-else: should support else-if chain" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 0
@@ -68,7 +68,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if-else: should support else-if chain (positive branch)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 5
@@ -79,7 +79,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if-else: should support else-if chain (negative branch)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = -3
@@ -91,7 +91,7 @@ class ControlFlowTest : StringSpec({
 
     "if-else: should work with side effects (native function calls)" {
         val results = mutableListOf<String>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("record") { args, _ ->
                 results.add((args[0] as StringValue).value)
                 NullValue
@@ -107,7 +107,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if-else: should evaluate condition expression" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let a = 3
@@ -119,7 +119,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if-else: should support nested if expressions" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 5
@@ -139,7 +139,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "assignment: should assign value to existing variable" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 0
@@ -151,7 +151,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "assignment: should evaluate to the assigned value" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 0
@@ -163,7 +163,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "assignment: should support compound assignment via expression" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let count = 0
@@ -176,7 +176,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "assignment: should assign to object property" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let obj = { x: 1, y: 2 }
@@ -192,7 +192,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "while: should loop while condition is true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 0
@@ -208,7 +208,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "while: should not execute body if condition is initially false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 10
@@ -224,7 +224,7 @@ class ControlFlowTest : StringSpec({
 
     "while: should accumulate results" {
         val results = mutableListOf<Double>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("collect") { args, _ ->
                 results.add((args[0] as NumberValue).value)
                 NullValue
@@ -243,7 +243,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "while: break should exit loop early" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 0
@@ -259,7 +259,7 @@ class ControlFlowTest : StringSpec({
 
     "while: continue should skip to next iteration" {
         val results = mutableListOf<Double>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("collect") { args, _ ->
                 results.add((args[0] as NumberValue).value)
                 NullValue
@@ -280,7 +280,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "while: return inside loop should exit function" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let findFirst = (target) => {
@@ -302,7 +302,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "do-while: should execute body at least once" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 0
@@ -318,7 +318,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "do-while: should loop while condition holds" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 0
@@ -334,7 +334,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "do-while: break should exit loop" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 0
@@ -350,7 +350,7 @@ class ControlFlowTest : StringSpec({
 
     "do-while: continue should skip rest of body" {
         val results = mutableListOf<Double>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("collect") { args, _ ->
                 results.add((args[0] as NumberValue).value)
                 NullValue
@@ -375,7 +375,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "for: basic for loop" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let sum = 0
@@ -389,7 +389,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "for: for loop with postfix ++" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let sum = 0
@@ -404,7 +404,7 @@ class ControlFlowTest : StringSpec({
 
     "for: for loop collects values" {
         val results = mutableListOf<Double>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("collect") { args, _ ->
                 results.add((args[0] as NumberValue).value)
                 NullValue
@@ -421,7 +421,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "for: loop variable is scoped to the loop" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         // 'i' should not be visible after the loop
         var threw = false
         try {
@@ -438,7 +438,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "for: break exits for loop" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let result = 0
@@ -454,7 +454,7 @@ class ControlFlowTest : StringSpec({
 
     "for: continue skips to next iteration" {
         val results = mutableListOf<Double>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("collect") { args, _ ->
                 results.add((args[0] as NumberValue).value)
                 NullValue
@@ -473,7 +473,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "for: omitted init and update" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 0
@@ -489,7 +489,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "for: return inside for loop exits function" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let findFirst = (arr, target) => {
@@ -509,7 +509,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "nested: nested while loops" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let sum = 0
@@ -529,7 +529,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "nested: break only exits inner loop" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let count = 0
@@ -555,7 +555,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "postfix++: i++ increments variable" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 0
@@ -567,7 +567,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "postfix--: i-- decrements variable" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let i = 5
@@ -583,7 +583,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "while: let inside body does not leak into outer scope" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute(
             """
             let i = 0
@@ -605,7 +605,7 @@ class ControlFlowTest : StringSpec({
 
     "while: let inside body re-bound each iteration" {
         val collected = mutableListOf<Double>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("collect") { args, _ ->
                 collected.add((args[0] as io.peekandpoke.klang.script.runtime.NumberValue).value)
                 io.peekandpoke.klang.script.runtime.NullValue
@@ -625,7 +625,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "for: let inside body does not leak into outer scope" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute(
             """
             for (let i = 0; i < 3; i++) {
@@ -643,7 +643,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "do-while: let inside body does not leak into outer scope" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute(
             """
             let i = 0
@@ -667,7 +667,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "if: let in then-branch does not leak to outer scope" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute(
             """
             let outer = 1
@@ -687,7 +687,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if: let in then-branch does not shadow outer variable" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 1
@@ -701,7 +701,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if: let in else-branch does not leak to outer scope" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute(
             """
             if (false) {
@@ -721,7 +721,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if: assignment to outer variable works across branch boundary" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let counter = 0
@@ -735,7 +735,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if: branch returns value of last expression" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let result = if (true) { let tmp = 40; tmp + 2 } else { 0 }
@@ -746,7 +746,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if: nested ifs each have their own scope" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 0
@@ -764,7 +764,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "if: else-if chain has independent scopes" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 0
@@ -786,7 +786,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "const: defined in if-branch not visible outside" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute(
             """
             if (true) {
@@ -804,7 +804,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "const: defined in loop body not visible outside" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute(
             """
             for (let i = 0; i < 1; i++) {
@@ -826,7 +826,7 @@ class ControlFlowTest : StringSpec({
     // ============================================================
 
     "scope chain: inner scope reads outer let" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let base = 10
@@ -838,7 +838,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "scope chain: arrow function closes over outer let" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let factor = 3
@@ -850,7 +850,7 @@ class ControlFlowTest : StringSpec({
     }
 
     "scope chain: closure captures variable by reference" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let count = 0

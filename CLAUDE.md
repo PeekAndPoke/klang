@@ -4,6 +4,14 @@ Enjoy the ride. Errors happen, no worries, we find them, we fix them.
 We write exceptional software. We are an awesome team and we give our very best.
 Der Weg ist das Ziel. Sound first!
 
+## Complexity is the enemy
+
+Keep complexity as low as we can; that is what keeps future development smooth and our
+understanding of the whole project high. Before introducing build-time magic or anything of
+similar weight (cross-module generated sources, processor options, unusual Gradle wiring, clever
+indirection), STOP and consult the maintainer. Prefer the plain module boundary, the plain
+function, the plain data class. (Maintainer, 2026-09-06.)
+
 ## Memory lives in the repo
 
 Record decisions, status and lessons in the module memory files the skills load

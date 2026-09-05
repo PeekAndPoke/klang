@@ -9,7 +9,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.script.KlangScriptEngine
-import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.klangScriptEngine
 
 /**
  * End-to-end binding of a script lambda into a native's trailing function-typed parameter,
@@ -20,7 +20,7 @@ import io.peekandpoke.klang.script.klangScript
  */
 class ConfigureLambdaBindingTest : StringSpec({
 
-    fun engine(): KlangScriptEngine = klangScript {
+    fun engine(): KlangScriptEngine = klangScriptEngine {
         // door(freq: Double = 440, configure: ((Double) -> Any)? = null): applies configure to freq
         registerFunctionWithSpecs(
             name = "door",

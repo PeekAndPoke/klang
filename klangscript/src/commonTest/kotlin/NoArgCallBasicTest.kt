@@ -14,7 +14,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
 class NoArgCallBasicTest : StringSpec({
 
     "Basic no-arg function call" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("getValue") { _, _ ->
                 NumberValue(42.0)
             }
@@ -25,7 +25,7 @@ class NoArgCallBasicTest : StringSpec({
     }
 
     "Basic no-arg method call on object" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         // Create an object with a no-arg method
         val obj = ObjectValue(
@@ -42,7 +42,7 @@ class NoArgCallBasicTest : StringSpec({
     }
 
     "No-arg call without any member access" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("test") { _, _ ->
                 StringValue("works")
             }

@@ -25,7 +25,7 @@ class ChainDebugTest : StringSpec({
     }
 
     "Debug chain calculation" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunction<Double, ContinuousPattern>("sine2") { value ->
                 println("sine2($value)")
                 ContinuousPattern(value)

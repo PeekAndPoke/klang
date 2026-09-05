@@ -50,7 +50,7 @@ private fun Double.fmt(): String {
 class FunctionBuilderTest : StringSpec({
 
     "required + optional: positional call uses both supplied" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("filter")
                 .withParam<Double>("cutoff")
                 .withOptionalParam<Double>("q") { 1.0 }
@@ -60,7 +60,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "required + optional: positional call omits optional → default fires" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("filter")
                 .withParam<Double>("cutoff")
                 .withOptionalParam<Double>("q") { 1.0 }
@@ -70,7 +70,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "required + optional: named call any order" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("filter")
                 .withParam<Double>("cutoff")
                 .withOptionalParam<Double>("q") { 1.0 }
@@ -80,7 +80,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "required + optional: named call omits optional → default fires" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("filter")
                 .withParam<Double>("cutoff")
                 .withOptionalParam<Double>("q") { 1.0 }
@@ -90,7 +90,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "missing required parameter (named) → KlangScriptArgumentError" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("filter")
                 .withParam<Double>("cutoff")
                 .withOptionalParam<Double>("q") { 1.0 }
@@ -104,7 +104,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "unknown named parameter → KlangScriptArgumentError lists expected" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("filter")
                 .withParam<Double>("cutoff")
                 .body { cutoff: Double -> cutoff }
@@ -118,7 +118,7 @@ class FunctionBuilderTest : StringSpec({
 
     "default thunk runs lazily (only when arg is omitted)" {
         var thunkCalls = 0
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("snd")
                 .withOptionalParam<Double>("level") { thunkCalls++; 0.5 }
                 .body { level: Double -> level }
@@ -137,7 +137,7 @@ class FunctionBuilderTest : StringSpec({
     // ── Receiver-bound methods ────────────────────────────────────────────────
 
     "withReceiver: positional call routes through extension method" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerObject("Ignitor", IgnitorLike) {}
             createFunction("describe")
                 .withReceiver<IgnitorLike>()
@@ -148,7 +148,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "withReceiver: named call binds by name on the script-visible param" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerObject("Ignitor", IgnitorLike) {}
             createFunction("describe")
                 .withReceiver<IgnitorLike>()
@@ -161,7 +161,7 @@ class FunctionBuilderTest : StringSpec({
     // ── Vararg ────────────────────────────────────────────────────────────────
 
     "vararg: positional tail absorbed into List" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("stack")
                 .withParam<String>("orbit")
                 .withVararg<String>("samples")
@@ -173,7 +173,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "vararg: named call passes an array literal" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("stack")
                 .withParam<String>("orbit")
                 .withVararg<String>("samples")
@@ -185,7 +185,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "vararg: positional call with empty tail → empty List" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("stack")
                 .withParam<String>("orbit")
                 .withVararg<String>("samples")
@@ -197,7 +197,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "vararg: named call omits the vararg slot → empty List default" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("stack")
                 .withParam<String>("orbit")
                 .withVararg<String>("samples")
@@ -209,7 +209,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "vararg: named call with non-array value → strict error" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("stack")
                 .withParam<String>("orbit")
                 .withVararg<String>("samples")
@@ -224,7 +224,7 @@ class FunctionBuilderTest : StringSpec({
     // ── Cross-cutting ─────────────────────────────────────────────────────────
 
     "mixing positional and named at call site is rejected" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("filter")
                 .withParam<Double>("cutoff")
                 .withOptionalParam<Double>("q") { 1.0 }
@@ -237,7 +237,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "no params, no receiver: zero-arity body works" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("answer").body { 42.0 }
         }
         (engine.execute("answer()") as NumberValue).value shouldBe 42.0
@@ -246,7 +246,7 @@ class FunctionBuilderTest : StringSpec({
     // ── Regression coverage for the four code-review fixes ───────────────────
 
     "regression: zero-param builder rejects extra positional arguments" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("answer").body { 42.0 }
         }
         val err = shouldThrow<KlangScriptArgumentError> {
@@ -256,7 +256,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "regression: zero-param builder rejects single extra positional argument" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("answer").body { 42.0 }
         }
         val err = shouldThrow<KlangScriptArgumentError> {
@@ -269,7 +269,7 @@ class FunctionBuilderTest : StringSpec({
         // Phase 4 builder param types are constrained <reified T : Any>, so all
         // declared params are non-nullable. Passing null should error cleanly,
         // not NPE inside the body.
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("double")
                 .withParam<Double>("x")
                 .body { x: Double -> x * 2 }
@@ -284,7 +284,7 @@ class FunctionBuilderTest : StringSpec({
         // Simulates a KSP-emitted bridge where one optional param had its
         // default extracted but the second one didn't (no safe-literal thunk).
         // Build the spec list manually so we can register it via the low-level path.
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionWithSpecs(
                 name = "filter",
                 paramSpecs = listOf(
@@ -307,7 +307,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "regression: complex-default in middle of named call errors clearly" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionWithSpecs(
                 name = "fn",
                 paramSpecs = listOf(
@@ -327,7 +327,7 @@ class FunctionBuilderTest : StringSpec({
     // ── Reviewer-flagged coverage gaps ───────────────────────────────────────
 
     "vararg + receiver combined: positional tail works" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerObject("Ignitor", IgnitorLike) {}
             createFunction("stack")
                 .withReceiver<IgnitorLike>()
@@ -341,7 +341,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "vararg + receiver combined: named call with array" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerObject("Ignitor", IgnitorLike) {}
             createFunction("stack")
                 .withReceiver<IgnitorLike>()
@@ -355,7 +355,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "nullable rejection error message includes function name, not param name" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("double")
                 .withParam<Double>("x")
                 .body { x: Double -> x * 2 }
@@ -368,7 +368,7 @@ class FunctionBuilderTest : StringSpec({
     }
 
     "vararg non-array rejection error message includes function name" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             createFunction("stack")
                 .withParam<String>("orbit")
                 .withVararg<String>("samples")
