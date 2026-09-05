@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -33,26 +33,10 @@ sealed class MnNode {
     // ── Universal modifier bag ────────────────────────────────────────────────
 
     /**
-     * Inline attribute block `{key=value ...}` attached to a node.
-     *
-     * Values are stored as raw strings; Phase 2 resolves them via the existing
-     * DSL functions (gain(), velocity(), adsr(), etc.) for semantic consistency.
-     *
-     * Insertion order is preserved (LinkedHashMap) for round-trip stability.
-     */
-    data class Attrs(val entries: Map<String, String> = emptyMap()) {
-        val isEmpty: Boolean get() = entries.isEmpty()
-
-        companion object {
-            val None = Attrs()
-        }
-    }
-
-    /**
      * Modifiers that can be attached to any node type.
      *
      * Phase 2 applies them in a fixed order: euclidean → multiplier → divisor
-     * → probability → weight → attrs.  This order is consistent with the renderer,
+     * → probability → weight → tweaks.  This order is consistent with the renderer,
      * guaranteeing round-trip stability.
      */
     data class Mods(
@@ -61,11 +45,16 @@ sealed class MnNode {
         val weight: Double? = null,  // @n  — relative time weight in a sequence
         val probability: Double? = null,  // ?   or ?0.5 — random degradation probability
         val euclidean: Euclidean? = null, // (pulses, steps[, rotation])
-        val attrs: Attrs = Attrs.None,   // {key=value ...} — inline per-note properties
+        /**
+         * `{name name …}` — tweak names referencing transforms that `tweaks(…)` binds later.
+         *
+         * A list, not a set: tweaks apply in the order written and may repeat.
+         */
+        val tweaks: List<String> = emptyList(),
     ) {
         val isEmpty: Boolean
             get() = multiplier == null && divisor == null && weight == null &&
-                    probability == null && euclidean == null && attrs.isEmpty
+                    probability == null && euclidean == null && tweaks.isEmpty()
 
         companion object {
             val None = Mods()

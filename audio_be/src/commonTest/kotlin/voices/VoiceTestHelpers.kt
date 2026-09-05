@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -111,7 +111,6 @@ object VoiceTestHelpers {
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
             releaseFrames = releaseFrames,
-            voiceEndFrame = voiceDurationFrames + releaseFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 
@@ -125,7 +124,6 @@ object VoiceTestHelpers {
             sampleRate = sampleRate,
             startFrame = startFrame,
             endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
         ) + IgniteRenderer(
             signal = signal,
             signalCtx = signalCtx,
@@ -135,7 +133,6 @@ object VoiceTestHelpers {
             pipeline = PipelinePreset.Modern.dsl,
             modulators = filterModulators,
             startFrame = startFrame,
-            gateEndFrame = gateEndFrame,
             crush = crush,
             coarse = coarse,
             mainFilter = filter,
@@ -299,12 +296,23 @@ object VoiceTestHelpers {
 
         val processCalls = mutableListOf<ProcessCall>()
 
+        /**
+         * The first sample this filter was HANDED, per call. A counting spy can only say that a
+         * stage ran; recording what it saw is what makes stage ORDER observable, because a stage
+         * that runs after the VCA sees an enveloped signal and one that runs before sees the raw
+         * exciter. `VoicePipelineTest` had no way to check its own ordering claims without this
+         * (audit finding F13).
+         */
+        val seenAtProcess = mutableListOf<Double>()
+
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             processCalls.add(ProcessCall(offset, length, processCalls.size))
+            seenAtProcess.add(if (length > 0) buffer[offset] else 0.0)
         }
 
         open fun reset() {
             processCalls.clear()
+            seenAtProcess.clear()
         }
     }
 
@@ -316,6 +324,18 @@ object VoiceTestHelpers {
         val cutoffHistory = mutableListOf<Double>()
         var currentCutoff = 0.0
 
+        /**
+         * How many `setCutoff` calls had already landed when each `process` began. This is the only
+         * way to check "modulation updates the cutoff BEFORE the filter processes" — comparing two
+         * independent counters after the fact cannot distinguish the two orders.
+         */
+        val cutoffCountAtProcess = mutableListOf<Int>()
+
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+            cutoffCountAtProcess.add(cutoffHistory.size)
+            super.process(buffer, offset, length)
+        }
+
         override fun setCutoff(cutoffHz: Double) {
             currentCutoff = cutoffHz
             cutoffHistory.add(cutoffHz)
@@ -324,6 +344,7 @@ object VoiceTestHelpers {
         override fun reset() {
             super.reset()
             cutoffHistory.clear()
+            cutoffCountAtProcess.clear()
             currentCutoff = 0.0
         }
     }
@@ -383,7 +404,7 @@ object TestSamples {
 object TestIgnitors {
     val constant: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = 1.0
             }
@@ -392,7 +413,7 @@ object TestIgnitors {
 
     val ramp: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = (i - ctx.offset).toDouble() / ctx.length
             }
@@ -401,7 +422,7 @@ object TestIgnitors {
 
     val silence: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = 0.0
             }

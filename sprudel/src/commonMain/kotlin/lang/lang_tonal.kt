@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -395,7 +395,7 @@ private fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
- * @param-tool name SprudelSampleSequenceEditor
+ * @param-tool name SprudelSampleEditor, SprudelSampleSequenceEditor
  * @alias s
  * @category tonal
  * @tags sound, sample, instrument, s, pattern-creator
@@ -420,7 +420,7 @@ fun String.sound(name: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * Creates a pattern of sounds.
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
- * @param-tool name SprudelSampleSequenceEditor
+ * @param-tool name SprudelSampleEditor, SprudelSampleSequenceEditor
  */
 @KlangScript.Function
 fun sound(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
@@ -443,7 +443,7 @@ fun sound(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * ```
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
- * @param-tool name SprudelSampleSequenceEditor
+ * @param-tool name SprudelSampleEditor, SprudelSampleSequenceEditor
  * @alias sound
  * @category tonal
  * @tags sound, sample, instrument, s, pattern-creator
@@ -461,7 +461,7 @@ fun String.s(name: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatt
  * Alias for [sound]. Creates a sound pattern.
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
- * @param-tool name SprudelSampleSequenceEditor
+ * @param-tool name SprudelSampleEditor, SprudelSampleSequenceEditor
  */
 @KlangScript.Function
 fun s(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
@@ -707,8 +707,8 @@ fun PatternMapperFn.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): Pa
 // -- vibratoMod() -----------------------------------------------------------------------------------------------------
 
 private fun applyVibratoMod(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { depth ->
-        clone().also { it.vibratoMod = depth }
+    return source._liftOrReinterpretNumericalField(args) { semitones ->
+        clone().also { it.vibratoMod = semitones }
     }
 }
 
@@ -729,20 +729,19 @@ private fun applyVibratoMod(source: SprudelPattern, args: List<SprudelDslArg<Any
  * note("c4").vibratoMod("<0.2 1>")    // alternating subtle/wide vibrato depth
  * ```
  *
- * @param depth Vibrato depth in semitones. 0.0 = no vibrato, 0.2 = subtle,
+ * @param semitones Vibrato depth in SEMITONES. 0.0 = no vibrato, 0.2 = subtle,
  *   0.5 = standard, 1.0+ = wide wobble. Default: 0.0. Typical range: 0.1–2.0.
- * @alias vibmod
  * @category tonal
- * @tags vibratoMod, vibmod, vibrato depth, pitch modulation
+ * @tags vibratoMod, vibrato depth, pitch modulation
  */
 @KlangScript.Function
-fun SprudelPattern.vibratoMod(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyVibratoMod(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
+fun SprudelPattern.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyVibratoMod(this, listOfNotNull(semitones).asSprudelDslArgs(callInfo))
 
 /** Sets the vibrato depth on a string pattern. */
 @KlangScript.Function
-fun String.vibratoMod(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vibratoMod(depth, callInfo)
+fun String.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vibratoMod(semitones, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the vibrato depth in semitones.
@@ -752,48 +751,17 @@ fun String.vibratoMod(depth: PatternLike? = null, callInfo: CallInfo? = null): S
  * note("c4").apply(vibratoMod(0.5))   // mapper form
  * ```
  *
- * @alias vibmod
  * @category tonal
- * @tags vibratoMod, vibmod, vibrato depth, pitch modulation
+ * @tags vibratoMod, vibrato depth, pitch modulation
  */
 @KlangScript.Function
-fun vibratoMod(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.vibratoMod(depth, callInfo) }
+fun vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.vibratoMod(semitones, callInfo) }
 
 /** Chains a vibratoMod operation onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.vibratoMod(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vibratoMod(depth, callInfo) }
-
-/** Alias for [vibratoMod] on this pattern. Sets the vibrato depth. */
-@KlangScript.Function
-fun SprudelPattern.vibmod(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.vibratoMod(depth, callInfo)
-
-/** Alias for [vibratoMod] on a string pattern. */
-@KlangScript.Function
-fun String.vibmod(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vibratoMod(depth, callInfo)
-
-/**
- * Alias for [vibratoMod]. Returns a [PatternMapperFn] that sets the vibrato depth.
- *
- * ```KlangScript(Playable)
- * note("c4").apply(vibmod(0.5))   // mapper form
- * ```
- *
- * @alias vibratoMod
- * @category tonal
- * @tags vibratoMod, vibmod, vibrato depth, pitch modulation
- */
-@KlangScript.Function
-fun vibmod(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.vibratoMod(depth, callInfo) }
-
-/** Chains a vibmod operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.vibmod(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vibratoMod(depth, callInfo) }
+fun PatternMapperFn.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.vibratoMod(semitones, callInfo) }
 
 // -- pattack() / patt() -----------------------------------------------------------------------------------------------
 
@@ -1257,60 +1225,61 @@ fun PatternMapperFn.panc(anchor: PatternLike? = null, callInfo: CallInfo? = null
 // -- accelerate() -----------------------------------------------------------------------------------------------------
 
 private fun applyAccelerate(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { amount ->
-        clone().also { it.accelerate = amount }
+    return source._liftOrReinterpretNumericalField(args) { semitones ->
+        clone().also { it.accelerate = semitones }
     }
 }
 
 /**
- * Sets the playback acceleration (pitch ramp) for each event.
+ * Sets the playback acceleration (pitch ramp) for each event, in SEMITONES over the event's
+ * duration: `accelerate(12)` glides one octave up, `accelerate(-12)` one octave down.
  *
- * Controls a continuous pitch change during sample playback. Positive values pitch up over
- * the event's duration; negative values pitch down. Useful for creating pitched percussion
+ * Controls a continuous pitch change during sample playback. Useful for pitched percussion
  * or sweep effects. When called with no argument, reinterprets the current event value as
- * an acceleration amount.
+ * the semitone amount. (Unit changed from octaves to semitones in the pitch-param
+ * unification, 2026-08-24 — old scripts' values are 12× subtler now.)
  *
  * ```KlangScript(Playable)
- * s("cr").accelerate(2)              // crash pitches up during playback
+ * s("cr").accelerate(24)             // crash pitches two octaves up during playback
  * ```
  *
  * ```KlangScript(Playable)
- * s("hh").accelerate("<0 -2 2>")     // alternate: no ramp, down, up per cycle
+ * s("hh").accelerate("<0 -24 24>")   // alternate: no ramp, down, up per cycle
  * ```
  *
- * @param amount Pitch bend over the voice's duration. 0.0 = no bend, positive = pitch rises, negative = pitch falls. Default: 0.0. Typical range: -1.0 to 1.0.
+ * @param semitones Pitch bend over the voice's duration in SEMITONES. 0.0 = no bend, +12 = one octave up, -12 = one octave down. Default: 0.0. Typical range: -24 to 24.
  *
  * @category tonal
  * @tags accelerate, pitch ramp, pitch bend, playback speed
  */
 @KlangScript.Function
-fun SprudelPattern.accelerate(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyAccelerate(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.accelerate(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyAccelerate(this, listOfNotNull(semitones).asSprudelDslArgs(callInfo))
 
 /** Sets the playback acceleration on a string pattern. */
 @KlangScript.Function
-fun String.accelerate(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).accelerate(amount, callInfo)
+fun String.accelerate(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).accelerate(semitones, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the playback acceleration (pitch ramp).
  * When called with no argument, reinterprets the current event value as an acceleration amount.
  *
  * ```KlangScript(Playable)
- * s("hh").apply(accelerate(2))   // mapper form
+ * s("hh").apply(accelerate(24))  // mapper form
  * ```
  *
  * @category tonal
  * @tags accelerate, pitch ramp, pitch bend, playback speed
  */
 @KlangScript.Function
-fun accelerate(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.accelerate(amount, callInfo) }
+fun accelerate(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.accelerate(semitones, callInfo) }
 
 /** Chains an accelerate operation onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.accelerate(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.accelerate(amount, callInfo) }
+fun PatternMapperFn.accelerate(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.accelerate(semitones, callInfo) }
 
 // -- transpose() ------------------------------------------------------------------------------------------------------
 
@@ -1465,7 +1434,7 @@ private fun applyFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * reinterprets the current event value as a frequency in Hz.
  *
  * ```KlangScript(Playable)
- * freq("440 550 660")          // A4, roughly C#5, roughly E5 by raw Hz
+ * "440 550 660".freq()         // A4, roughly C#5, roughly E5 by raw Hz
  * ```
  *
  * ```KlangScript(Playable)

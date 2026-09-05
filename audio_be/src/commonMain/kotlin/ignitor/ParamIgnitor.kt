@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -25,9 +25,11 @@ class ParamIgnitor(
 
     private val defaultF = default
 
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double = defaultF
+    override val isBlockConstant: Boolean get() = true
+
+    override fun controlRateValueOrNull(freqHz: Double): Double = defaultF
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        buffer.fill(defaultF, ctx.offset, ctx.offset + ctx.length)
+        buffer.fill(defaultF, ctx.offset, ctx.windowEnd)
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -40,11 +40,9 @@ class CompositionPropertiesSpec : StringSpec({
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
         releaseFrames = 0,
-        voiceEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -196,18 +194,13 @@ class CompositionPropertiesSpec : StringSpec({
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Detune path should invalidate the memo cache for shared sources.
-    // Without this, `let s = sine; s.detune(0) + s.detune(7)` would yield `2·s.detune(0)`.
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // Independence of constructions — two distinct DSL instances of a stochastic
     // source produce two independent Ignitors that sum incoherently.
     //
-    // Uses Dust (a data class) rather than WhiteNoise (a data object singleton).
-    // Singleton DSL nodes are necessarily identity-equal and therefore collapse
-    // to a single Ignitor under memoisation — documented as a known consequence
-    // of the data-object choice; see the plan's decisions-locked-in section.
+    // Historical note: this row predates WhiteNoise growing a per-instance uid — it
+    // is a data CLASS now, and two WhiteNoise() calls are distinct nodes exactly like
+    // Dust (DetuneForkSpec relies on that). The old "data object singleton" caveat
+    // that used to live here no longer applies to any noise kind.
     // ═══════════════════════════════════════════════════════════════════════════
 
     "two separate Dust DSL instances yield independent Ignitors (identity check)" {
@@ -257,10 +250,10 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared source + vibrato: s + s.vibrato() produces two independent oscillators" {
         val s = IgnitorDsl.Sine()
-        val tree = IgnitorDsl.Plus(s, IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(1.0)))
+        val tree = IgnitorDsl.Plus(s, IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0)))
 
         val cache = IgnitorBuildCache()
-        val plus = tree.buildIgnitor(null, cache)
+        val plus = tree.buildIgnitor(null, cache).ignitor
 
         // The two arms should be independent (different cache entries due to different mods).
         // Verify by rendering over multiple blocks: if both were the same oscillator,
@@ -280,7 +273,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     "shared source + same vibrato: let v = s.vibrato(); v + v shares one oscillator" {
         val s = IgnitorDsl.Sine()
-        val v = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(1.0))
+        val v = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(1.0))
         val tree = IgnitorDsl.Plus(v, v)
 
         val ig = tree.toExciter()
@@ -297,8 +290,8 @@ class CompositionPropertiesSpec : StringSpec({
 
     "stacked mods: vibrato + accelerate combine correctly" {
         val tree = IgnitorDsl.Sine()
-            .let { IgnitorDsl.Vibrato(it, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(0.5)) }
-            .let { IgnitorDsl.Accelerate(it, amount = IgnitorDsl.Constant(2.0)) }
+            .let { IgnitorDsl.Vibrato(it, rate = IgnitorDsl.Constant(5.0), semitones = IgnitorDsl.Constant(0.5)) }
+            .let { IgnitorDsl.Accelerate(it, semitones = IgnitorDsl.Constant(2.0)) }
 
         val ig = tree.toExciter()
         val ctx = createCtx()
@@ -337,7 +330,7 @@ class CompositionPropertiesSpec : StringSpec({
         val sumVib = IgnitorDsl.Vibrato(
             inner = IgnitorDsl.Plus(a, b),
             rate = vibRate,
-            depth = vibDepth,
+            semitones = vibDepth,
         )
 
         val ig = sumVib.toExciter()
@@ -354,6 +347,9 @@ class CompositionPropertiesSpec : StringSpec({
         (diffs > 0) shouldBe true
     }
 
+    // Detuned references are independent INSTANCES since the D13 fork (the build-time
+    // detune context in IgnitorBuildCache); the memo's freqHz component is defensive
+    // against a regression here, not the mechanism. The full guard set is DetuneForkSpec.
     "detuned shared source: two detunes with different semitones do NOT collapse" {
         val s = IgnitorDsl.Sine()
         val tree = IgnitorDsl.Plus(

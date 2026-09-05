@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -39,14 +39,14 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * that don't have dedicated DSL functions.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("supersaw").oscparam("analog", 0.2)
+ * note("c3 e3").s("supersaw").oscparam("analog", 4)
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").oscparam("warmth", "<0.2 0.8>")    // pattern-cycle the value
+ * note("c3 e3").oscparam("onepole", "<12000 3700>") // pattern-cycle the value
  * ```
  *
- * @param key The oscillator parameter name (e.g. "analog", "warmth", "density").
+ * @param key The oscillator parameter name (e.g. "analog", "onepole", "density").
  * @param value The parameter value.
  * @return A new pattern with the oscillator parameter set.
  * @alias oscp
@@ -137,18 +137,23 @@ private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * perturbations to the oscillator's phase increment. For unison/super oscillators,
  * each voice drifts independently, creating lush analog-like chorusing.
  *
- * A value of `0.0` gives a perfectly stable digital sound; `1.0` gives maximum drift.
- * Typical values are `0.05`–`0.3` for subtle warmth.
+ * The amount is the **peak drift in cents**: `analog(1)` wobbles up to about a cent
+ * either side of the note, `analog(8)` up to eight. `0.0` is off (and costs nothing).
+ * Typical values run from `1` to `8`; the built-in songs live in that band.
+ *
+ * Two layers make it up: a fast jitter (~50 ms) and a slow wander (~10 s). The slow
+ * layer starts CENTRED, so notes attack in tune and the wander only develops on notes
+ * held long enough to hear it: short plucks stay put, pads breathe.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").analog(0.2)   // lush analog supersaw
+ * note("c3 e3 g3").s("supersaw").analog(4)   // lush analog supersaw
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").s("sine").analog("<0 0.1 0.3>")   // cycle through drift amounts
+ * note("c3*4").s("sine").analog("<0 2 6>")   // cycle through drift amounts
  * ```
  *
- * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
+ * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
  * @return A new pattern with analog drift applied.
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
@@ -161,10 +166,10 @@ fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * Parses this string as a pattern and sets the analog drift amount.
  *
  * ```KlangScript(Playable)
- * "c3 e3".analog(0.2).s("supersaw").note()
+ * "c3 e3".analog(4).s("supersaw").note()
  * ```
  *
- * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
+ * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
  * @return A new pattern with analog drift applied.
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
@@ -177,10 +182,10 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * Creates a [PatternMapperFn] that sets the analog drift amount.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(analog(0.2))
+ * note("c3 e3").apply(analog(4))
  * ```
  *
- * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
+ * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
  * @return A [PatternMapperFn] that sets analog drift.
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco, addon
@@ -193,10 +198,10 @@ fun analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * Chains an analog-drift-set onto this [PatternMapperFn].
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(gain(0.8).analog(0.2))
+ * note("c3 e3").apply(gain(0.8).analog(4))
  * ```
  *
- * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
+ * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
  */
 @KlangScript.Function
 fun PatternMapperFn.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -259,73 +264,83 @@ fun duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
 fun PatternMapperFn.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.duty(amount, callInfo) }
 
-// -- warmth() ---------------------------------------------------------------------------------------------------------
+// -- onepole() --------------------------------------------------------------------------------------------------------
 
-private val warmthMutation = voiceSetter {
-    putOscParam("warmth", it?.asDoubleOrNull())
+private val onepoleMutation = voiceSetter {
+    putOscParam("onepole", it?.asDoubleOrNull())
 }
 
-private fun applyWarmth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args, warmthMutation)
+private fun applyOnepole(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretStringField(args, onepoleMutation)
 }
 
 /**
- * Controls the oscillator warmth (low-pass filtering amount).
+ * Puts a one-pole lowpass on the oscillator at [freq] Hz — the gentlest filter there is
+ * (6 dB/oct, no resonance). Musically it is a "warmth" knob: lower frequencies are darker.
+ * `0` (or omitting the call) means no filter.
  *
- * A value of `0.0` gives a bright, unfiltered sound; `1.0` gives a muffled, warm sound.
+ * This is deliberately a DIFFERENT thing from [lpf]: `lpf` is the resonant 12 dB/oct SVF
+ * and never secretly swaps character, `onepole` is the soft tone control. (Renamed from
+ * `warmth(0..1)` in the pitch/unit unification, 2026-08-24 — the old value was the raw
+ * filter coefficient, sample-rate dependent; sites were converted via
+ * `freq = sr/π · atan((1−w)/w)` at 48 kHz — scalar sites sound-identical; the two
+ * patterned `saw.range` sites are endpoint-exact, mid-sweep the atan curve differs
+ * inaudibly.)
  *
  * ```KlangScript(Playable)
- * note("c d e f").warmth(0.8)          // warm, muffled sawtooth
+ * note("c d e f").onepole(3700)          // warm, muffled sawtooth
  * ```
  *
  * ```KlangScript(Playable)
- * note("c d e f").warmth("<0 0.5 1>")  // cycle through warmth values
+ * note("c d e f").onepole("<12000 3700 1700>")  // stepwise darker
  * ```
  *
- * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
  *
  * @category tonal
- * @tags warmth, oscillator, filter, low-pass, addon
+ * @tags onepole, warmth, oscillator, filter, low-pass, tone, addon
  */
 @KlangScript.Function
-fun SprudelPattern.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyWarmth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyOnepole(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
 
 /**
- * Parses this string as a pattern and sets the oscillator warmth.
+ * Parses this string as a pattern and sets the oscillator one-pole lowpass (see
+ * [SprudelPattern.onepole]).
  *
  * ```KlangScript(Playable)
- * note("c d e f").s("square").warmth("<0 0.5 1>")  // cycle through warmth values
+ * note("c d e f").s("square").onepole("<12000 3700 1700>")  // stepwise darker
  * ```
  *
- * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
  */
 @KlangScript.Function
-fun String.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).warmth(amount, callInfo)
+fun String.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).onepole(freq, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the oscillator warmth.
+ * Creates a [PatternMapperFn] that sets the oscillator one-pole lowpass.
  *
  * ```KlangScript(Playable)
- * note("c d e f").apply(warmth("<0 0.5 1>"))  // cycle through warmth values
+ * note("c d e f").apply(onepole("<12000 3700 1700>"))  // stepwise darker
  * ```
  *
- * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
  */
 @KlangScript.Function
-fun warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.warmth(amount, callInfo) }
+fun onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.onepole(freq, callInfo) }
 
 /**
- * Chains a warmth-set onto this [PatternMapperFn], applying oscillator warmth after the previous step.
+ * Chains a onepole-set onto this [PatternMapperFn], applying the one-pole lowpass after the
+ * previous step.
  *
  * ```KlangScript(Playable)
- * seq("0.2 0.4").apply(mul(2).warmth())  // mul doubles values, warmth() reads them as warmth: 0.4, 0.8
+ * seq("1700 3700").apply(mul(2).onepole())  // mul doubles values, onepole() reads them as Hz
  * ```
  *
- * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
  */
 @KlangScript.Function
-fun PatternMapperFn.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.warmth(amount, callInfo) }
+fun PatternMapperFn.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.onepole(freq, callInfo) }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -1392,7 +1392,6 @@ class KlangScriptProcessor(
                     val paramType = param.type.resolve()
                     val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ").escapeForRawString()
                     val paramUiTools = kdoc.paramTools[paramName] ?: emptyList()
-                    val paramSubFields = kdoc.paramSubs[paramName]
 
                     append("                    KlangParam(")
                     append("name = \"$paramName\", ")
@@ -1406,9 +1405,6 @@ class KlangScriptProcessor(
                     if (paramDesc.isNotEmpty()) append(", description = \"\"\"$paramDesc\"\"\"")
                     if (paramUiTools.isNotEmpty()) {
                         append(", uitools = listOf(${paramUiTools.joinToString(", ") { "\"$it\"" }})")
-                    }
-                    if (paramSubFields != null && paramSubFields.isNotEmpty()) {
-                        append(", subFields = mapOf(${paramSubFields.entries.joinToString(", ") { "\"${it.key}\" to \"\"\"${it.value}\"\"\"" }})")
                     }
                     appendLine("),")
                 }

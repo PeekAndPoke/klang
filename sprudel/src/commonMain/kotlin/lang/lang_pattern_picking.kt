@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -998,11 +998,11 @@ private fun applyInhabitTopLevel(args: List<SprudelDslArg<Any?>>, modulo: Boolea
  * Indices are clamped to valid bounds.
  *
  * ```KlangScript(Playable)
- * inhabit("bd sd hh", "rim cp", n("0 1 2 0"))   // picked pattern fills event duration
+ * "<0 1>".apply(inhabit("bd sd hh", "rim cp", n("0 1 2 0"))).s()   // picked pattern fills event duration
  * ```
  *
  * ```KlangScript(Playable)
- * inhabit(["c3 e3", "g3 b3"], n("0 1 0"))        // each chosen pattern is squeezed in
+ * "<0 1>".apply(inhabit(["c3 e3", "g3 b3"], n("0 1 0")))          // each chosen pattern is squeezed in
  * ```
  *
  * @alias pickSqueeze
@@ -2205,7 +2205,9 @@ fun PatternMapperFn.pickmodReset(lookup: Map<String, PatternLike>): PatternMappe
  * Apply functions from a list based on a pattern of indices.
  * Indices are clamped to the list size.
  *
- * Example: `s("bd [rim hh]").pickF("<0 1 2>", [rev, jux(rev), fast(2)])`
+ * Example: `s("bd [rim hh]").pickF("<0 1 2>", [rev, jux(rev()), fast(2)])`
+ * (`rev` takes optional arguments, so passing it ON to another function needs the call:
+ * `jux(rev())`, not `jux(rev)`. See docs/tasks/future/native-interop-function-values.md.)
  */
 private fun applyPickF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val lookupArg = args.getOrNull(0) ?: return pattern
@@ -2233,7 +2235,7 @@ private fun applyPickF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @return A pattern with the selected function applied.
  *
  * ```KlangScript(Playable)
- * s("bd rim hh").pickF("<0 1 2>", [rev, fast(2), jux(rev)])  // fn selected by index
+ * s("bd rim hh").pickF("<0 1 2>", [rev, fast(2), jux(rev())])  // fn selected by index
  * ```
  *
  * ```KlangScript(Playable)
@@ -2254,7 +2256,7 @@ fun SprudelPattern.pickF(vararg args: PatternLike, callInfo: CallInfo? = null): 
  * @return A pattern with the selected function applied.
  *
  * ```KlangScript(Playable)
- * "bd rim hh".pickF("<0 1 2>", [rev, fast(2), jux(rev)]).s()  // string source, fn by index
+ * "bd rim hh".pickF("<0 1 2>", [rev, fast(2), jux(rev())]).s()  // string source, fn by index
  * ```
  *
  * @category structural
@@ -2273,7 +2275,7 @@ fun String.pickF(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelP
  * @return A [PatternMapperFn] that applies the selected function to the source pattern.
  *
  * ```KlangScript(Playable)
- * s("bd rim hh").apply(pickF("<0 1 2>", [rev, fast(2), jux(rev)]))  // via mapper
+ * s("bd rim hh").apply(pickF("<0 1 2>", [rev, fast(2), jux(rev())]))  // via mapper
  * ```
  *
  * @category structural

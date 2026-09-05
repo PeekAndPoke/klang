@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -27,8 +27,9 @@ private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *
  * The body's resonances are at *fixed* frequencies that do **not** move with the played note,
  * so different notes get colored differently — the cue your ear reads as a real object. The
- * resonances are *added on top of* the dry source (never crossfaded away, so no highs/lows are
- * lost). Pair with [bodyMix] to set how much body is added; the default is a moderate amount.
+ * resonances blend on top of a dry that never drops below its physical floor (the shared C4
+ * wet/dry law with `BODY_FLOOR` — see [bodyFloor]), so no highs/lows are lost. Pair with
+ * [bodyWet] to set the balance; the default is a moderate amount.
  *
  * When called with no argument, reinterprets the current event value as the material name.
  *
@@ -41,15 +42,15 @@ private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * ```KlangScript(Playable)
- * note("c2 c3 c4").body("cedar").bodyMix(0.4) // warm cedar guitar top, played across octaves
+ * note("c2 c3 c4").body("cedar").bodyWet(0.4) // warm cedar guitar top, played across octaves
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").body("brass").bodyMix(0.4) // metallic horn colour
+ * note("c3 e3 g3").body("brass").bodyWet(0.4) // metallic horn colour
  * ```
  *
  * @param material The body material — one of `wood`, `cedar`, `tube`, `glass`, `membrane`, `brass`.
- * @param-tool material SprudelBodySequenceEditor
+ * @param-tool material SprudelBodyEditor, SprudelBodySequenceEditor
  * @category effects
  * @tags body, resonator, modal, formant, material, wood, cedar, spruce, mahogany, rosewood, maple, oak, violin, croon, voice, tube, glass, brass, steel, bell, metal, none
  */
@@ -72,48 +73,49 @@ fun body(material: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
 fun PatternMapperFn.body(material: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.body(material, callInfo) }
 
-// -- bodyMix() --------------------------------------------------------------------------------------------------------
+// -- bodyWet() --------------------------------------------------------------------------------------------------------
 
-private val bodyMixMutation = voiceSetter { bodyMix = it?.asDoubleOrNull() }
+private val bodyWetMutation = voiceSetter { bodyMix = it?.asDoubleOrNull() }
 
-private fun applyBodyMix(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args, bodyMixMutation)
+private fun applyBodyWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, bodyWetMutation)
 }
 
 /**
- * Sets how much body resonance is added on top of the dry source (0.0 = none). The dry signal
- * always passes through in full — the body is *added*, never crossfaded away — so no highs or
- * lows are lost.
+ * Sets the body resonator's wet/dry balance — the shared wet knob (C4), on the body it is
+ * prefixed because sprudel sets fields on one unordered voice. `0.0` = no body, `1.0` = the
+ * resonances at full level. The dry never drops below its physical floor ([bodyFloor], the
+ * correlated branch of the shared wet/dry law), so broadband content is never lost.
  *
- * Use with [body]. Higher values lay more resonance on top — start around 0.3–0.5; values above
- * 1 drive it harder. When omitted, the pattern's own numeric values are reinterpreted as the
- * amount.
+ * Use with [body]. Start around 0.3–0.5. The knob lives on `[0, 1]`: values above 1 behave
+ * as 1 (the old raw extension is a deleted capability). When omitted, the pattern's own
+ * numeric values are reinterpreted as the amount.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").body("glass").bodyMix(0.4)   // glassy body added at 0.4
+ * note("c3 e3 g3").body("glass").bodyWet(0.4)   // glassy body blended in at 0.4
  * ```
  *
  * @category effects
  * @tags body, resonator, mix, dry, wet
  */
 @KlangScript.Function
-fun SprudelPattern.bodyMix(mix: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyBodyMix(this, listOfNotNull(mix).asSprudelDslArgs(callInfo))
+fun SprudelPattern.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyBodyWet(this, listOfNotNull(wet).asSprudelDslArgs(callInfo))
 
-/** Sets the body resonator mix on a string pattern. */
+/** Sets the body resonator wet balance on a string pattern. */
 @KlangScript.Function
-fun String.bodyMix(mix: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).bodyMix(mix, callInfo)
+fun String.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bodyWet(wet, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the body resonator mix. */
+/** Returns a [PatternMapperFn] that sets the body resonator wet balance. */
 @KlangScript.Function
-fun bodyMix(mix: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bodyMix(mix, callInfo) }
+fun bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bodyWet(wet, callInfo) }
 
-/** Chains a bodyMix step onto this [PatternMapperFn]. */
+/** Chains a bodyWet step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.bodyMix(mix: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.bodyMix(mix, callInfo) }
+fun PatternMapperFn.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bodyWet(wet, callInfo) }
 
 // -- bodyFloor() ------------------------------------------------------------------------------------------------------
 
@@ -126,8 +128,8 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
 /**
  * Sets the body resonator's broadband dry floor — how much of the untouched dry source stays under
  * the resonances. Lower makes the body more audible (the resonances sit over less dry); higher is a
- * subtler colour. When omitted, the engine default is used. Independent of [bodyMix] (which is
- * uncapped above 1) — the floor sets the *dry* level, the mix drives the *resonances*.
+ * subtler colour. When omitted, the engine default is used. Independent of [bodyWet] (which
+ * lives on `[0, 1]`) — the floor sets the *dry* level, the wet drives the *resonances*.
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").body("brass").bodyFloor(0.2)  // brass forward over a thin dry floor

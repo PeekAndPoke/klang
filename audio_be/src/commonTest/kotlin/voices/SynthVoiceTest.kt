@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -11,6 +11,8 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
@@ -64,14 +66,14 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 receivedPhaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }
 
         val voice = createSynthVoice(
             signal = trackingSignal,
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
+            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
         )
 
         val ctx = createContext()
@@ -88,14 +90,14 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 receivedPhaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }
 
         val voice = createSynthVoice(
             signal = trackingSignal,
-            vibrato = Voice.Vibrato(rate = 0.0, depth = 0.0),
+            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         )
 
         val ctx = createContext()
@@ -104,11 +106,32 @@ class SynthVoiceTest : StringSpec({
         (receivedPhaseMod == null) shouldBe true
     }
 
-    "SynthVoice getBaseFrequency returns freqHz" {
-        val voice = createSynthVoice(freqHz = 440.0)
+    // RENAMED 2026-08-31. The old name was "SynthVoice getBaseFrequency returns freqHz", and there
+    // is no `getBaseFrequency` anywhere in the codebase — the test was named for a symbol that does
+    // not exist, and its body only called render(). The claim underneath it is real and worth
+    // guarding: the voice's freqHz is what reaches the oscillator.
+    "SynthVoice passes its freqHz to the ignitor" {
+        fun seenBy(freqHz: Double): Double {
+            var seen = -1.0
+            val probe = object : Ignitor {
+                override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                    seen = freqHz
+                    for (i in ctx.offset until ctx.windowEnd) {
+                        buffer[i] = 1.0
+                    }
+                }
+            }
 
-        val ctx = createContext()
-        voice.render(ctx)
+            val voice = createSynthVoice(freqHz = freqHz, signal = probe)
+            voice.render(createContext())
+
+            return seen
+        }
+
+        // TWO frequencies, not one: asserting a single 440.0 would still pass if the pitch were
+        // hard-coded, which is exactly the bug this guards against.
+        seenBy(440.0) shouldBe 440.0
+        seenBy(880.0) shouldBe 880.0
     }
 
     "SynthVoice with envelope modulates signal output" {
@@ -138,26 +161,36 @@ class SynthVoiceTest : StringSpec({
     }
 
     "SynthVoice with filter affects signal output" {
-        val voice = createSynthVoice(
-            signal = TestIgnitors.constant,
-            filter = VoiceTestHelpers.NoOpFilter,
-        )
+        // The old fixture passed VoiceTestHelpers.NoOpFilter — a filter that by definition cannot
+        // affect the signal — so the test asserted its own name false and then checked nothing.
+        // A one-pole highpass on a constant is the clearest possible case: DC is exactly what a
+        // highpass removes, so the output has to collapse away from the unfiltered 1.0.
+        fun render(filter: AudioFilter): AudioBuffer {
+            val voice = createSynthVoice(signal = TestIgnitors.constant, filter = filter)
+            val ctx = createContext()
+            voice.render(ctx)
 
-        val ctx = createContext()
-        voice.render(ctx)
+            return ctx.voiceBuffer
+        }
+
+        val unfiltered = render(VoiceTestHelpers.NoOpFilter)
+        val highpassed = render(LowPassHighPassFilters.OnePoleHPF(cutoffHz = 5000.0, sampleRate = 44100.0))
+
+        unfiltered.all { it == 1.0 } shouldBe true
+        kotlin.math.abs(highpassed[99]) shouldBe 0.0.plusOrMinus(0.05)
     }
 
     "SynthVoice with all modulations renders correctly" {
         val voice = createSynthVoice(
             signal = TestIgnitors.constant,
             freqHz = 440.0,
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
-            accelerate = Voice.Accelerate(amount = 1.0),
+            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
+            accelerate = Voice.Accelerate(semitones = 1.0),
             pitchEnvelope = Voice.PitchEnvelope(
                 attackFrames = 50.0,
                 decayFrames = 50.0,
                 releaseFrames = 0.0,
-                amount = 1.0,
+                semitones = 1.0,
                 curve = 0.0,
                 anchor = 0.0
             ),
@@ -176,6 +209,12 @@ class SynthVoiceTest : StringSpec({
 
         val ctx = createContext()
         voice.render(ctx)
+
+        // Vibrato + accelerate + a pitch envelope + FM all drive the same phase accumulator, which
+        // is where a non-finite pitch would surface. A NaN here propagates into the cylinder and
+        // kills the orbit silently, so "renders correctly" now means audible AND finite.
+        ctx.voiceBuffer.any { it != 0.0 } shouldBe true
+        ctx.voiceBuffer.all { it == it && kotlin.math.abs(it) <= 1.0e6 } shouldBe true
     }
 
     "SynthVoice signal receives correct buffer parameters" {
@@ -186,7 +225,7 @@ class SynthVoiceTest : StringSpec({
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 receivedOffset = ctx.offset
                 receivedLength = ctx.length
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }
@@ -210,7 +249,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 receivedLength = ctx.length
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }
@@ -233,7 +272,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 elapsedFrames.add(ctx.voiceElapsedFrames)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) buffer[i] = 1.0
             }
         }

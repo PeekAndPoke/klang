@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -359,7 +359,17 @@ class Compressor(
      * Uses precomputed [DB20_OVER_LN10] / [LN10_OVER_20] to skip per-sample `ln(10.0)` calls.
      */
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun envelopeStep(inputLevel: Double): Double {
+    private inline fun envelopeStep(level: Double): Double {
+        // Same non-finite guard the lookahead path carries at `lookaheadStep`, and for a
+        // sharper reason here: this path had NONE, so one +Inf sample latched the envelope
+        // and silently DISABLED the limiter for good. `ln(Inf)` gives `envelopeDb = Inf`, the
+        // next finite sample computes `Inf + releaseCoeff * -Inf` = NaN, and from then on
+        // `calculateGainReduction(NaN)` is NaN, `NaN < GAIN_SKIP_THRESHOLD_DB` is false, and
+        // this returns exactly 1.0 forever — a brickwall that has become a bit-exact
+        // pass-through with nothing to indicate it. Note the direction: a NaN SAMPLE never
+        // latched it (`NaN > SILENCE_LIN` is false); only +/-Inf did.
+        val inputLevel = if (abs(level) <= Double.MAX_VALUE) level else 0.0
+
         // Convert to dB (with silence floor to avoid log(0)).
         val inputDb = if (inputLevel > SILENCE_LIN) {
             DB20_OVER_LN10 * ln(inputLevel)
@@ -581,43 +591,6 @@ class Compressor(
         private fun guardOr(value: Double, fallback: Double): Double =
             if (value.isFinite()) value else fallback
 
-        /**
-         * Parse compressor settings from a string.
-         * Format: "threshold:ratio:knee:attack:release"
-         * Example: "-20:4:6:0.003:0.1"
-         *
-         * @return CompressorSettings or null if parsing fails
-         */
-        fun parseSettings(input: String): CompressorSettings? {
-            val parts = input.split(":").mapNotNull { it.toDoubleOrNull() }
-
-            return when (parts.size) {
-                5 -> CompressorSettings(
-                    thresholdDb = parts[0],
-                    ratio = parts[1],
-                    kneeDb = parts[2],
-                    attackSeconds = parts[3],
-                    releaseSeconds = parts[4]
-                )
-
-                2 -> CompressorSettings(
-                    thresholdDb = parts[0],
-                    ratio = parts[1],
-                    kneeDb = 6.0,
-                    attackSeconds = 0.003,
-                    releaseSeconds = 0.1
-                )
-
-                else -> null
-            }
-        }
     }
 
-    data class CompressorSettings(
-        val thresholdDb: Double,
-        val ratio: Double,
-        val kneeDb: Double,
-        val attackSeconds: Double,
-        val releaseSeconds: Double,
-    )
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -16,7 +16,7 @@ private val defaultNowMs: () -> Double = KlangTime.create()::internalMsNow
  *
  * GLOBAL state: there is one backend clock, so there is one offset. Owned by [KlangPlayer], corrected
  * from the system-wide [KlangCommLink.Feedback.Diagnostics] stream, and READ (read-only) by every
- * `KlangPlaybackController` for UI-signal latency compensation.
+ * `KlangPatternScheduler` for UI-signal latency compensation.
  *
  * Previously this lived per-controller and was effectively dead: `Diagnostics` carry
  * `SYSTEM_PLAYBACK_ID`, so [KlangPlayer] consumed them and they never reached a controller's handler —

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -58,7 +58,7 @@ let riser = Osc.pinknoise().highpass(300)
 let kickPat = note("a1*4").sound(kick).gain(0.95).orbit(0)
 let hatPat  = note("c5*16").sound(hat).gain(0.28).orbit(1)
 let ohatPat = note("~ c5 ~ c5 ~ c5 ~ c5").sound(ohat).gain(0.3).orbit(1)
-let clapPat = note("~ c4 ~ c4").sound(clap).gain(0.5).orbit(1).room(0.2).rsize(3)
+let clapPat = note("~ c4 ~ c4").sound(clap).gain(0.5).orbit(1).roomWet(0.2).rsize(3)
 
 let bassPat = note("<[~ b1 ~ b1 ~ b1 ~ b1] [~ g1 ~ g1 ~ g1 ~ g1] [~ d2 ~ d2 ~ d2 ~ d2] [~ a1 ~ a1 ~ a1 ~ a1]>")
     .sound(bass).legato(0.5).gain(saw.fast(4).range(0.65, 0.42)).orbit(2)
@@ -66,7 +66,7 @@ let bassPat = note("<[~ b1 ~ b1 ~ b1 ~ b1] [~ g1 ~ g1 ~ g1 ~ g1] [~ d2 ~ d2 ~ d2
 // Syncopated chord stabs — 3-3-2 tresillo gate (hits on 16ths 1,4,7), the
 // classic dance-floor pad rhythm. Swap the struct string to taste.
 let padPat = chord("<Bm G D A>").voicing().sound(pad).struct("x ~ ~ x ~ ~ x ~")
-    .legato(0.6).gain(0.20).orbit(3).room(0.35).rsize(6)
+    .legato(0.6).gain(0.20).orbit(3).roomWet(0.35).rsize(6)
 
 // The gated 16th-note hook (B minor). Each cycle = one bar; <...> rotates the 4 bars.
 let leadPat = note(`<[b4 b4 b4 b4 b4 b4 a4 b4 b4 b4 b4 b4 b4 b4 d5 b4]
@@ -75,7 +75,7 @@ let leadPat = note(`<[b4 b4 b4 b4 b4 b4 a4 b4 b4 b4 b4 b4 b4 b4 d5 b4]
                      [a4 a4 a4 a4 a4 a4 f#4 a4 a4 a4 a4 a4 a4 a4 c#5 a4]>`)
     .transpose(-36)
     .sound(lead).legato(0.55).gain(0.4).postgain(0.5).orbit(4)
-    .delay(0.14).delaytime(pure(3/16).div(cps)).delayfeedback(0.25).room(0.12).rsize(5)
+    .delayWet(0.14).delaytime(pure(3/16).div(cps)).delayfeedback(0.25).roomWet(0.12).rsize(5)
 
 let riserPat = note("c5").fast(2).sound(riser)
     .lpf(saw.range(300, 6000).slow(8)).gain(saw.range(0.0, 0.22).slow(8)).orbit(5)
@@ -94,10 +94,10 @@ arrange(
   [8, groove],
   [8, build],
   [16, drop]
-).compressor("-10:2:6:0.01:0.1").room(0.12).rsize(6)
+).compressor(-10, 2, 6, 0.01, 0.1).roomWet(0.12).rsize(6)
 
 // Inspired by: Darude — Sandstorm
-// Composed by: Claude, Motör, peekandpoke
+// Composed by: Claude, Motor, peekandpoke
 //
 // How the "du-du-du" lead was really made (distorted saw, NOT a supersaw):
 //   https://www.musicradar.com/artists/when-you-turn-on-the-roland-jp-8080-the-first-sound-that-comes-up-is-called-sandstorm-how-darude-created-the-era-defining-trance-anthem-thats-named-after-a-synth-preset

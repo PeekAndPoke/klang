@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -99,56 +99,26 @@ fun registerSprudelUiTools(registry: KlangUiToolRegistry = KlangUiToolRegistry) 
     registry.register("SprudelDustSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelDustEditorTool))
 
     // ── LP filter tools ──────────────────────────────────────────────────────
-    registry.register("SprudelLpCutoffEditor", SprudelLpCutoffEditorTool)
-    registry.register("SprudelLpCutoffSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpCutoffEditorTool))
     registry.register("SprudelLpResonanceEditor", SprudelLpResonanceEditorTool)
     registry.register("SprudelLpResonanceSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpResonanceEditorTool))
     registry.register("SprudelLpEnvEditor", SprudelLpEnvEditorTool)
     registry.register("SprudelLpEnvSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpEnvEditorTool))
-    registry.register("SprudelLpAttackEditor", SprudelLpAttackEditorTool)
-    registry.register("SprudelLpAttackSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpAttackEditorTool))
-    registry.register("SprudelLpDecayEditor", SprudelLpDecayEditorTool)
-    registry.register("SprudelLpDecaySequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpDecayEditorTool))
-    registry.register("SprudelLpSustainEditor", SprudelLpSustainEditorTool)
-    registry.register("SprudelLpSustainSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpSustainEditorTool))
-    registry.register("SprudelLpReleaseEditor", SprudelLpReleaseEditorTool)
-    registry.register("SprudelLpReleaseSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpReleaseEditorTool))
     registry.register("SprudelLpAdsrEditor", SprudelLpAdsrEditorTool)
     registry.register("SprudelLpAdsrSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpAdsrEditorTool))
 
     // ── HP filter tools ──────────────────────────────────────────────────────
-    registry.register("SprudelHpCutoffEditor", SprudelHpCutoffEditorTool)
-    registry.register("SprudelHpCutoffSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelHpCutoffEditorTool))
     registry.register("SprudelHpResonanceEditor", SprudelHpResonanceEditorTool)
     registry.register("SprudelHpResonanceSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelHpResonanceEditorTool))
     registry.register("SprudelHpEnvEditor", SprudelHpEnvEditorTool)
     registry.register("SprudelHpEnvSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelHpEnvEditorTool))
-    registry.register("SprudelHpAttackEditor", SprudelHpAttackEditorTool)
-    registry.register("SprudelHpAttackSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelHpAttackEditorTool))
-    registry.register("SprudelHpDecayEditor", SprudelHpDecayEditorTool)
-    registry.register("SprudelHpDecaySequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelHpDecayEditorTool))
-    registry.register("SprudelHpSustainEditor", SprudelHpSustainEditorTool)
-    registry.register("SprudelHpSustainSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelHpSustainEditorTool))
-    registry.register("SprudelHpReleaseEditor", SprudelHpReleaseEditorTool)
-    registry.register("SprudelHpReleaseSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelHpReleaseEditorTool))
     registry.register("SprudelHpAdsrEditor", SprudelHpAdsrEditorTool)
     registry.register("SprudelHpAdsrSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelHpAdsrEditorTool))
 
     // ── BP filter tools ──────────────────────────────────────────────────────
-    registry.register("SprudelBpFreqEditor", SprudelBpFreqEditorTool)
-    registry.register("SprudelBpFreqSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBpFreqEditorTool))
     registry.register("SprudelBpQEditor", SprudelBpQEditorTool)
     registry.register("SprudelBpQSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBpQEditorTool))
     registry.register("SprudelBpEnvEditor", SprudelBpEnvEditorTool)
     registry.register("SprudelBpEnvSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBpEnvEditorTool))
-    registry.register("SprudelBpAttackEditor", SprudelBpAttackEditorTool)
-    registry.register("SprudelBpAttackSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBpAttackEditorTool))
-    registry.register("SprudelBpDecayEditor", SprudelBpDecayEditorTool)
-    registry.register("SprudelBpDecaySequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBpDecayEditorTool))
-    registry.register("SprudelBpSustainEditor", SprudelBpSustainEditorTool)
-    registry.register("SprudelBpSustainSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBpSustainEditorTool))
-    registry.register("SprudelBpReleaseEditor", SprudelBpReleaseEditorTool)
-    registry.register("SprudelBpReleaseSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBpReleaseEditorTool))
     registry.register("SprudelBpAdsrEditor", SprudelBpAdsrEditorTool)
     registry.register("SprudelBpAdsrSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelBpAdsrEditorTool))
 

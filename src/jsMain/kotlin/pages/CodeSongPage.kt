@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -7,9 +7,6 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
-import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
@@ -27,7 +24,6 @@ import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
-import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
@@ -48,7 +44,6 @@ import kotlinx.css.Flex
 import kotlinx.css.FlexBasis
 import kotlinx.css.FlexDirection
 import kotlinx.css.JustifyContent
-import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
 import kotlinx.css.alignItems
@@ -70,14 +65,9 @@ import kotlinx.html.DIV
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.p
 import kotlinx.html.title
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
-import kotlin.js.Date
-
-/** View mode for the editor panel. */
-enum class EditorMode { CODE, BLOCKS }
 
 @Suppress("FunctionName")
 fun Tag.CodeSongPage(
@@ -134,20 +124,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val currentModals by subscribingTo(modals)
 
     private val codeEditorRef = ComponentRef.Tracker<KlangCodeEditorComp>()
-    private val blocksEditorRef = ComponentRef.Tracker<KlangBlocksEditorComp>()
-
-    private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
 
     private var highlightPerEvent by value(15) { newValue ->
         codeEditorRef { it.setMaxHighlightsPerEvent(newValue) }
-        blocksHighlightBuffer.cancelAll()
         ctrl.reemitVoiceSignals()
     }
 
     val isBuiltInModified get() = builtIn != null && builtIn.code != state.code
 
-    /** Current view: text editor or visual block editor. */
-    private var editorMode by value(EditorMode.CODE)
 
     private val hoverPopup: HoverPopupCtrl by lazy { HoverPopupCtrl(popups = popups) }
 
@@ -165,37 +149,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
-    // Feed voice-scheduled signals into the blocks highlight buffer.
-    // The code editor handles its own highlights via KlangCodeEditorComp.
-    @Suppress("unused")
-    private val blocksVoiceSub by subscribingTo(ctrl.signals) { signal ->
-        // Stop (the ctrl resets its stream to null) and live updates invalidate every
-        // highlight scheduled ahead for the old pattern
-        if (signal == null ||
-            signal is KlangPlaybackSignal.PlaybackStopped ||
-            signal is KlangPlaybackSignal.PatternUpdated
-        ) {
-            blocksHighlightBuffer.cancelAll()
-        }
-        if (signal is KlangPlaybackSignal.VoicesScheduled && currentModals.isEmpty()) {
-            signal.voices.forEach { voiceEvent ->
-                val chain = voiceEvent.sourceLocations ?: return@forEach
-                val now = Date.now()
-                val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
-                val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
-                chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
-                    blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
-                }
-            }
-        }
-    }
-
     // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
     private val rpmChange by subscribingTo(ctrl.state.map { it.rpm }.distinct()) { newRpm ->
         rpmStream(newRpm)
         codeEditorRef { editor -> editor.cancelHighlights() }
-        blocksHighlightBuffer.cancelAll()
     }
 
     // When playback stops by any path (button, unmount, exclusive takeover), drop pending highlights.
@@ -203,7 +161,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val playingChange by subscribingTo(ctrl.state.map { it.isPlaying }.distinct()) { isPlaying ->
         if (!isPlaying) {
             codeEditorRef { editor -> editor.cancelHighlights() }
-            blocksHighlightBuffer.cancelAll()
         }
     }
 
@@ -240,48 +197,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             ctrl.setTitle(b.title)
             codeStream(b.code)
             codeEditorRef { it.setCode(b.code) }
-            blocksEditorRef { it.setCode(b.code) }
         }
     }
 
-    /** True when the current code contains any comments (they would be lost on Code→Blocks). */
-    private fun codeHasComments(): Boolean = "//" in state.code || "/*" in state.code
-
-    /** Switch to Blocks mode — asks for confirmation first if the code has comments. */
-    @Suppress("unused") // referenced only by the temporarily hidden blocks toggle
-    private fun switchToBlocks(event: PointerEvent) {
-        if (codeHasComments()) {
-            popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomCenter) { handle ->
-                ui.compact.segment.with(laf.styles.popup()) {
-                    css {
-                        width = LinearDimension.maxContent
-                    }
-                    p { +"Comments will be lost when switching to Blocks mode." }
-
-                    ui.right.aligned.basic.fitted.segment {
-                        ui.mini.basic.inverted.button {
-                            onClick { handle.close() }
-                            icon.times()
-                            +"Cancel"
-                        }
-                        ui.mini.positive.button {
-                            onClick { handle.close(); editorMode = EditorMode.BLOCKS }
-                            icon.check()
-                            +"Switch anyway"
-                        }
-                    }
-                }
-            }
-        } else {
-            editorMode = EditorMode.BLOCKS
-        }
-    }
-
-    /** Switch to Code mode. The code state already reflects the latest workspace contents. */
-    @Suppress("unused")
-    private fun switchToCode() {
-        editorMode = EditorMode.CODE
-    }
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -339,7 +257,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             if (!state.isPlaying) {
                                 ui.circular.white.button {
                                     onClick { onPlay() }
-                                    if (state.isPlayerLoading) {
+                                    if (state.isPlayerFailed) {
+                                        // The engine did not start. Clicking retries: Player.ensure()
+                                        // drops its memoized deferred on failure.
+                                        icon.black.exclamation_triangle()
+                                        +"Retry"
+                                    } else if (state.isPlayerLoading) {
                                         icon.black.loading.spinner()
                                         +"Loading"
                                     } else {
@@ -439,34 +362,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             }
                         }
 
-                        // Code / Blocks toggle
-//                        noui.item {
-//                            val isCode = editorMode == EditorMode.CODE
-//                            css {
-//                                cursor = Cursor.pointer
-//                                display = Display.inlineBlock
-//                            }
-//                            onClick { switchToCode() }
-//                            title = "Switch to code editor"
-//                            icon.given(isCode) { inverted.white }
-//                                .givenNot(isCode) { grey }
-//                                .code()
-//                        }
-//
-//                         Blocks-editor toggle — hidden for now, the block editor
-//                         is not ready to show. Re-enable by uncommenting.
-//                         noui.item {
-//                             val isBlocks = editorMode == EditorMode.BLOCKS
-//                             css {
-//                                 cursor = Cursor.pointer
-//                                 display = Display.inlineBlock
-//                             }
-//                             onClick { switchToBlocks(it) }
-//                             title = "Switch to blocks editor"
-//                             icon.given(isBlocks) { inverted.white }
-//                                 .givenNot(isBlocks) { grey }
-//                                 .puzzle_piece()
-//                         }
 
                         // Fullscreen toggle
                         noui.item {
@@ -535,27 +430,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     private fun DIV.renderEditor() {
-        when (editorMode) {
-            EditorMode.CODE -> {
-                KlangCodeEditorComp(
-                    ctrl = ctrl,
-                    availableLibraries = listOf(stdlibLib, sprudelLib),
-                    maxHighlightsPerEvent = highlightPerEvent,
-                    pauseHighlightsWhen = { currentModals.isNotEmpty() },
-                ).track(codeEditorRef)
-            }
-
-            EditorMode.BLOCKS -> {
-                KlangBlocksEditorComp(
-                    availableLibraries = listOf(stdlibLib, sprudelLib),
-                    initialCode = state.code,
-                    onCodeChanged = { newCode -> ctrl.setCode(newCode) },
-                    onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
-                    highlights = blocksHighlightBuffer.highlights,
-                    hoverPopup = hoverPopup,
-                    hoverContent = hoverContent,
-                ).track(blocksEditorRef)
-            }
-        }
+        KlangCodeEditorComp(
+            ctrl = ctrl,
+            availableLibraries = listOf(stdlibLib, sprudelLib),
+            maxHighlightsPerEvent = highlightPerEvent,
+            pauseHighlightsWhen = { currentModals.isNotEmpty() },
+        ).track(codeEditorRef)
     }
 }

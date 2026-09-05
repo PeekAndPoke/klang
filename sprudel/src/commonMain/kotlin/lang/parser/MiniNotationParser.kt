@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -81,7 +81,6 @@ class MiniNotationParser(
         private val C_DOT = '.'.code
         private val C_LBRACE = '{'.code
         private val C_RBRACE = '}'.code
-        private val C_EQUALS = '='.code
         private val C_0 = '0'.code
         private val C_9 = '9'.code
     }
@@ -194,15 +193,14 @@ class MiniNotationParser(
 
                 match(TokenType.L_BRACE) -> {
                     val openPos = previous().start
-                    val entries = linkedMapOf<String, String>()
+                    val names = mutableListOf<String>()
                     while (!isAtEnd() && !check(TokenType.R_BRACE)) {
-                        val key = consume(TokenType.LITERAL, "Expected attribute key", fromPosition = openPos).text
-                        consume(TokenType.EQUALS, "Expected '=' after attribute key '$key'", fromPosition = openPos)
-                        val value = consume(TokenType.LITERAL, "Expected value after '$key='", fromPosition = openPos).text
-                        entries[key] = value
+                        val name = consume(TokenType.LITERAL, "Expected tweak name", fromPosition = openPos).text
+                        rejectEquals(name, openPos)
+                        names.add(name)
                     }
-                    consume(TokenType.R_BRACE, "Expected '}' after attribute block", fromPosition = openPos)
-                    node = node.withMod { copy(attrs = MnNode.Attrs(entries)) }
+                    consume(TokenType.R_BRACE, "Expected '}' after tweak block", fromPosition = openPos)
+                    node = node.withMod { copy(tweaks = tweaks + names) }
                 }
 
                 else -> break
@@ -234,6 +232,7 @@ class MiniNotationParser(
 
         match(TokenType.LITERAL) -> {
             val token = previous()
+            rejectEquals(token.text, token.start)
             MnNode.Atom(
                 value = token.text,
                 sourceRange = token.start until token.end,
@@ -257,6 +256,21 @@ class MiniNotationParser(
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
+
+    /**
+     * `=` is not a mini-notation character since the `{key=value}` attribute block was replaced by
+     * tweaks. It no longer breaks a literal either, so without this guard `c4{g=0.5}` would parse as
+     * one nonsense tweak name and `bd=2` as an atom named "bd=2" — both silently wrong.
+     */
+    private fun rejectEquals(text: String, position: Int) {
+        if (text.contains('=')) {
+            parseError(
+                "'=' is not valid here: '{key=value}' attribute blocks were replaced by tweaks, " +
+                        "write '{name}' and bind it with .tweaks({ name: x => … })",
+                fromPosition = position,
+            )
+        }
+    }
 
     private fun isModifier(): Boolean {
         if (isAtEnd()) return false
@@ -307,7 +321,7 @@ class MiniNotationParser(
 
     private enum class TokenType {
         L_BRACKET, R_BRACKET, L_ANGLE, R_ANGLE, L_PAREN, R_PAREN,
-        L_BRACE, R_BRACE, EQUALS,
+        L_BRACE, R_BRACE,
         COMMA, STAR, SLASH, TILDE, AT, PIPE, QUESTION, BANG, LITERAL, LINEBREAK
     }
 
@@ -422,10 +436,6 @@ class MiniNotationParser(
                     addToken(TokenType.R_BRACE, "}", i, i + 1, line, column); i++; column++
                 }
 
-                C_EQUALS -> {
-                    addToken(TokenType.EQUALS, "=", i, i + 1, line, column); i++; column++
-                }
-
                 C_SLASH -> {
                     if (i + 1 < input.length && codes[i + 1] == C_SLASH) {
                         // Skip comment until end of line
@@ -447,7 +457,7 @@ class MiniNotationParser(
                             ci == C_RANGLE || ci == C_COMMA || ci == C_STAR || ci == C_TILDE ||
                             ci == C_AT || ci == C_LPAREN || ci == C_RPAREN || ci == C_PIPE ||
                             ci == C_QUESTION || ci == C_BANG || ci == C_LBRACE || ci == C_RBRACE ||
-                            ci == C_EQUALS || ci == C_TAB || ci == C_LF || ci == C_CR
+                            ci == C_TAB || ci == C_LF || ci == C_CR
                         ) {
                             break
                         }

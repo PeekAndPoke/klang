@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
+import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -17,8 +18,10 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * [PlaybackEngine] / `VoiceScheduler`, instead of threading half a dozen separate parameters.
  *
  * Holds the shared services (sample cache, registries, IPC link, config) and the read-only
- * [clock]. Per-engine state (its own `Cylinders`, scheduling timeline, scratch buffers) is NOT here
- * — it is built inside each engine. See `docs/tasks/per-playback-engine.md`.
+ * [clock], and the [warehouse] every engine rents from — cylinders included: an engine's
+ * `Cylinders` map is its own, but the cylinders in it come from the warehouse's shelf and go back
+ * there when the engine is disposed. Per-engine state (that map, the scheduling timeline) is NOT
+ * here. See `docs/tasks-archive/2026-09/20260904-per-playback-engine.md`.
  *
  * Note: `performanceTimeMs` is transitional — once diagnostics emission moves up to the dispatcher
  * (D5), the per-scheduler wall-clock read leaves this context.
@@ -27,7 +30,6 @@ class AudioBackendContext(
     val sampleRate: Int,
     val blockFrames: Int,
     val commLink: KlangCommLink.BackendEndpoint,
-    val sampleStore: SampleStore,
     /** Parent ignitor registry — each engine's scheduler forks it per playback. */
     val ignitorRegistry: IgnitorRegistry,
     val pipelineRegistry: PipelineRegistry,
@@ -43,8 +45,21 @@ class AudioBackendContext(
      * so pool vocabularies reproduce.
      */
     val phasePoolSeed: Int? = null,
+    /**
+     * Where the backend's expensive buffers come from — one per backend, shared across playbacks and
+     * kept from the warmup engine rather than disposed with it. Owned here, not a Kotlin `object`,
+     * so specs and the offline renderer get their own. See `docs/plans/resource-warehouse.md`.
+     */
+    val warehouse: ResourceWarehouse = ResourceWarehouse(
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        samples = SampleStore(commLink),
+    ),
 ) {
     val sampleRateDouble: Double = sampleRate.toDouble()
+
+    /** The backend's sample PCM store — owned by the [warehouse] since the stats feed; same object, same behaviour. */
+    val sampleStore: SampleStore get() = warehouse.samples
 
     companion object {
         /**
@@ -57,7 +72,9 @@ class AudioBackendContext(
          *    constants (`AnalogDriftCoeffs`) are derived from it, so a different block size gives
          *    audibly different drift.
          *  - SVF cutoff smoothing / `FilterModRenderer` — per-block recompute granularity.
-         *  - `VoiceScheduler.oldestAllowedSec` = `now - 5 * blockDuration` — the late-voice drop window.
+         *  - `VoiceScheduler`'s startup epoch and admission both resolve to a BLOCK boundary (a
+         *    playback's zero point is the next block to be rendered; anything starting before the
+         *    block being promoted for is dropped, block-framing B1/B2).
          *  - `MasterBus` chain crossfades — start rounds to the current block.
          *
          * 128 because that is the Web Audio API render quantum: the browser worklet gets its block
@@ -83,7 +100,6 @@ class AudioBackendContext(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             commLink = commLink,
-            sampleStore = SampleStore(commLink),
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
             phasePoolSeed = phasePoolSeed,
             pipelineRegistry = PipelineRegistry(),

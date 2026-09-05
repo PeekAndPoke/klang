@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -10,6 +10,8 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
+import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
@@ -69,19 +71,21 @@ class MasterOrbitReverbParitySpec : StringSpec({
                 gateEndTime = 1.0,
                 playbackStartTime = 0.0,
             ),
-            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },
         ) ?: error("makeVoice returned null")
 
+        // Valid for authored >= 0.1 ONLY: below that the orbit door reads the config as OFF and
+        // never writes the DSP, so this helper would return the previous/default value, not the
+        // normalized one (drain lifecycle, review round 3).
         // ...and then through the cylinder, which is what actually writes the DSP. Reading
         // `voice.reverb.roomSize` here would stop one step short and miss a second /10 introduced
         // in `Cylinder` — exactly the class of bug this spec exists to catch.
         val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        return cylinder.reverb.reverb.roomSize
+        return cylinder.reverb.reverb!!.roomSize
     }
 
     /** What the MASTER path hands the Freeverb for the same authored room size. */
@@ -120,6 +124,28 @@ class MasterOrbitReverbParitySpec : StringSpec({
         // agree on where that boundary is.
         masterReverb(30.0).roomSize shouldBe 1.0
         orbitRoomSize(30.0) shouldBe 1.0
+    }
+
+    "a non-finite roomFade is UNSET on both buses, never a coerced room" {
+        // Review round 2: the master door coerced +Inf to 1.0 (the LONGEST room) while its own
+        // build gate already treated non-finite fade as absent — and the orbit door reads it as
+        // unset. One meaning now: non-finite fade = no override, roomSize governs the tail.
+        // The +Inf half is the mutant-killer (coerceIn alone turns it into 1.0); the NaN half
+        // documents the shared reading (the setter would drop a NaN write either way).
+        masterReverb(roomSize = 3.0, roomFade = Double.POSITIVE_INFINITY).roomFade shouldBe null
+        masterReverb(roomSize = 3.0, roomFade = Double.NaN).roomFade shouldBe null
+
+        val orbit = KatalystReverbEffect(Reverb(sampleRate), blockFrames)
+        // A finite fade first, so the +Inf outcome is provably "unset", not a fresh default.
+        orbit.configure(roomSize = 0.5, roomFade = 0.3, roomLp = null, roomDim = null, iResponse = null)
+        orbit.reverb!!.roomFade shouldBe 0.3
+
+        orbit.configure(
+            roomSize = 0.5, roomFade = Double.POSITIVE_INFINITY,
+            roomLp = null, roomDim = null, iResponse = null,
+        )
+        orbit.reverb!!.roomFade shouldBe null
+        orbit.reverb!!.roomSize shouldBe 0.5 // active via roomSize; the non-finite fade is no override
     }
 
     "the master exposes the orbit's tail/damping vocabulary, unchanged" {

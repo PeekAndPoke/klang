@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -33,6 +33,8 @@ data class SvdAdsr(
     var attackCurve: AdsrCurve? = null,
     var decayCurve: AdsrCurve? = null,
     var releaseCurve: AdsrCurve? = null,
+    /** Whether the VCA stage shapes this voice at all; `null` = unset, the pipeline's `Vca` decides. */
+    var on: Boolean? = null,
 )
 
 /**
@@ -49,10 +51,13 @@ data class SvdFilter(
     var sustain: Double? = null,
     var release: Double? = null,
     var env: Double? = null,
+    /** Cascade count (C5, `lpx`/`hpx`): null = 1. Only lp/hp surfaces exist. */
+    var passes: Double? = null,
 )
 
 /** Pitch modulation: glide ([accelerate]) + vibrato. */
 data class SvdPitchMod(
+    /** Pitch glide in SEMITONES over the event (converted from octaves, 2026-08-24). */
     var accelerate: Double? = null,
     var vibrato: Double? = null,
     var vibratoMod: Double? = null,
@@ -94,6 +99,8 @@ data class SvdPhaser(
     var phaserDepth: Double? = null,
     var phaserCenter: Double? = null,
     var phaserSweep: Double? = null,
+    /** Minimum dry coefficient of the C4 wet/dry law (`phaserFloor`); null = engine default 1.0 (additive). */
+    var phaserFloor: Double? = null,
 )
 
 /** Tremolo. */
@@ -170,6 +177,7 @@ fun mergeSvdAdsr(base: SvdAdsr?, over: SvdAdsr?): SvdAdsr? {
         attackCurve = over.attackCurve ?: base.attackCurve,
         decayCurve = over.decayCurve ?: base.decayCurve,
         releaseCurve = over.releaseCurve ?: base.releaseCurve,
+        on = over.on ?: base.on,
     )
 }
 
@@ -184,6 +192,7 @@ fun mergeSvdFilter(base: SvdFilter?, over: SvdFilter?): SvdFilter? {
         sustain = over.sustain ?: base.sustain,
         release = over.release ?: base.release,
         env = over.env ?: base.env,
+        passes = over.passes ?: base.passes,
     )
 }
 
@@ -244,6 +253,7 @@ fun mergeSvdPhaser(base: SvdPhaser?, over: SvdPhaser?): SvdPhaser? {
         phaserDepth = over.phaserDepth ?: base.phaserDepth,
         phaserCenter = over.phaserCenter ?: base.phaserCenter,
         phaserSweep = over.phaserSweep ?: base.phaserSweep,
+        phaserFloor = over.phaserFloor ?: base.phaserFloor,
     )
 }
 

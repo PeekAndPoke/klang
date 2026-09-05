@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -45,8 +45,9 @@ private fun applyPipeline(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * Each pipeline is a different topology for the voice's Filter stage. Currently:
  *
  * - `"modern"` (default) — classic subtractive `osc → VCF → VCA`. ADSR runs last so the filter
- *   and phaser see steady-amplitude signal — no attack smearing. Waveshapers still precede
- *   the filter so LP/HP can clean up their harmonics.
+ *   sees steady-amplitude signal — no attack smearing. Waveshapers still precede
+ *   the filter so LP/HP can clean up their harmonics. (The phaser is a BUS effect, not a
+ *   pipeline stage, since 2026-08-24.)
  * - `"pedal"` — guitar-pedal feel. ADSR runs first so the waveshapers respond to dynamics
  *   (quiet attack stays clean, hot sustain saturates, release tail fades through the drive).
  *

@@ -1,0 +1,9 @@
+# Known-broken sprudel KDoc examples, tolerated for now. CURRENTLY EMPTY - keep it that way.
+#
+# Format: one example per record, records separated by a line of exactly 8 dashes.
+# A record starting with '#' is a comment.
+#
+# An entry here is a to-do, not an exemption. DslDocExamplesSpec ratchets both ways: a new
+# broken example fails the build, and an entry that starts compiling fails until you delete it.
+# To refresh after a fix, copy build/reports/dsl-doc-examples-failing.txt over this file and
+# put this header back.

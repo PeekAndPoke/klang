@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -9,9 +9,14 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.master.MasterChain.Companion.buildReverb
+import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import kotlin.math.ceil
 
 /**
  * One stage of a built [MasterChain] — a thin shell over the **shared** DSP in
@@ -46,7 +51,23 @@ internal class MasterChain private constructor(
     val reverbs: Array<Reverb>,
     val delays: Array<DelayLine>,
     val limiters: Array<Compressor>,
+    /** One content ceiling per time-based stage, fed inside that stage's [MasterFx]. */
+    private val tails: Array<TailCeiling>,
+    /**
+     * Delay and reverb stages the warehouse REFUSED a ring or unit for (resource-warehouse steps
+     * 2e/2d). Each is built without its effect — the chain stays usable, the echo or room is
+     * simply absent — and counted here so the reporting step can surface it like a per-orbit
+     * `deniedRents`.
+     */
+    val deniedRents: Int,
 ) {
+    /**
+     * Set by [releaseUnits]: the chain's rings and networks belong to the shelf now, and any
+     * further [process] / [reset] would write into units another orbit may already have rented —
+     * cross-talk the double-return guard cannot see (review round 3). Both become no-ops.
+     */
+    private var released = false
+
     /** True when this chain does anything at all — an empty chain is a pure pass-through. */
     val isActive: Boolean = stages.isNotEmpty()
 
@@ -54,35 +75,66 @@ internal class MasterChain private constructor(
     val hasTail: Boolean = reverbs.isNotEmpty() || delays.isNotEmpty()
 
     fun process(bus: StereoBuffer, frames: Int) {
+        if (released) {
+            return
+        }
         for (i in stages.indices) {
             stages[i].process(bus, frames)
         }
     }
 
     /**
-     * True while any reverb/delay in this chain still holds audible energy.
+     * True while any reverb/delay in this chain still holds audible energy — a compare, not a scan.
      *
-     * Asks the DSP about its **internal** state rather than watching the chain's output — a delay's
-     * output is silent between echoes, so an output-based test would declare a 250 ms delay finished
-     * ~85 ms after the last note and cut every remaining echo. This is exactly how the orbit path
-     * decides (`Cylinder.tryDeactivate` → `DelayLine.hasTail()` / `Reverb.hasTail()`).
+     * Each time-based stage answers from a ceiling on its content (see [TailCeiling]) fed by ITS
+     * OWN input, the send as it reaches that stage: a delay ahead of a reverb keeps feeding the
+     * reverb its echoes after the bus went silent, so the reverb's ceiling decays only once the
+     * echoes end — one chain-wide measure at the bus was wrong by exactly that. Not
+     * decided from the chain's output either: a delay's output is silent between echoes, so an
+     * output-based test would declare a 250 ms delay finished ~85 ms after the last note and cut
+     * every remaining echo. Same closed form as the orbit path (`KatalystDelayEffect` /
+     * `KatalystReverbEffect`); the whole-ring `DelayLine.hasTail` scan it replaced had lost its
+     * bound when the ring ceiling went (2e).
      */
     fun hasActiveTail(): Boolean {
-        for (i in reverbs.indices) {
-            if (reverbs[i].hasTail()) {
-                return true
-            }
+        if (released) {
+            return false
         }
-        for (i in delays.indices) {
-            if (delays[i].hasTail()) {
+        for (i in tails.indices) {
+            if (tails[i].hasTail) {
                 return true
             }
         }
         return false
     }
 
+    /**
+     * Hands every delay ring back to [rings] and every reverb network back to [reverbs] — the
+     * return path of resource-warehouse steps 2e/2d. Call exactly once, when the chain leaves the
+     * cache ([MasterBus.evictIfNeeded]); the chain must not process afterwards (its units now
+     * belong to whoever rents them next).
+     */
+    fun releaseUnits(rings: SizedBuffers, reverbs: ReverbUnits) {
+        if (released) {
+            return
+        }
+        released = true
+        for (i in delays.indices) {
+            rings.giveBack(delays[i].ring)
+        }
+        for (i in this.reverbs.indices) {
+            reverbs.giveBack(this.reverbs[i])
+        }
+    }
+
     /** Clears every stateful unit, so a re-adopted chain cannot replay an earlier section. */
     fun reset() {
+        if (released) {
+            return
+        }
+        for (i in tails.indices) {
+            tails[i].reset()
+        }
         for (i in reverbs.indices) {
             reverbs[i].reset()
         }
@@ -95,18 +147,6 @@ internal class MasterChain private constructor(
     }
 
     companion object {
-        /** Head-room added to a delay ring on top of the declared time. */
-        private const val DELAY_RING_MARGIN_SECONDS = 0.05
-
-        /**
-         * Upper bound on a master delay ring.
-         *
-         * Matches the per-orbit delay (`Cylinder` builds its `DelayLine` with 10 s) so `delay` means
-         * the same thing on both buses — a lower cap here would silently re-time a long echo. Rings
-         * are sized to the *declared* time, so raising the cap costs nothing for short delays.
-         */
-        private const val MAX_DELAY_SECONDS = 10.0
-
         /**
          * Ceiling on limiter lookahead. `MasterBus.register` builds chains on the audio thread, so
          * an unbounded value would allocate there — 50 ms is ~77 KB stereo, 10 s would be ~7.7 MB.
@@ -117,20 +157,33 @@ internal class MasterChain private constructor(
         /** At or below this send level the effect is inaudible and is dropped from the chain. */
         private const val MIN_WET = 0.0001
 
-        /** Matches the Katalyst short-circuits (`roomSize < 0.01` / `delayTimeSeconds < 0.01`). */
+        /** Matches the Katalyst off-thresholds (`KatalystReverbEffect.MIN_ACTIVE_ROOM_SIZE` and
+         *  `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS`) — one contract, kept in prose sync
+         *  because importing a katalyst constant here would invert the layering. */
         private const val MIN_TIME_FX = 0.01
 
         /**
          * Builds the shells for [dsl] in declaration order.
          *
-         * **Allocates** (Freeverb buffers, delay rings) — call this at registration time, never while
-         * applying a swap.
+         * **Allocates** (Freeverb buffers; delay rings only when the shelf has none idle) — call
+         * this at registration time, never while applying a swap. Delay rings come from [rings],
+         * the backend's shelf, class-sized exactly as the per-orbit delay sizes its own (step 2e):
+         * `delay(20)` is the same 20 s echo on both buses, and a ring an evicted chain returns is
+         * what the next master delay of that class gets without allocating.
          */
-        fun build(dsl: MasterDsl, sampleRate: Int, blockFrames: Int): MasterChain {
+        fun build(
+            dsl: MasterDsl,
+            sampleRate: Int,
+            blockFrames: Int,
+            rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+            reverbs: ReverbUnits = ReverbUnits(sampleRate),
+        ): MasterChain {
             val stages = mutableListOf<MasterFx>()
-            val reverbs = mutableListOf<Reverb>()
+            val reverbUnits = mutableListOf<Reverb>()
             val delays = mutableListOf<DelayLine>()
             val limiters = mutableListOf<Compressor>()
+            val tails = mutableListOf<TailCeiling>()
+            var deniedRents = 0
 
             for (stage in dsl.stages) {
                 when (stage) {
@@ -142,28 +195,51 @@ internal class MasterChain private constructor(
                         stages.add(MasterFx { bus, frames -> limiter.process(bus.left, bus.right, frames) })
                     }
 
-                    is MasterStageDsl.Reverb -> buildReverb(stage, sampleRate, blockFrames)?.let { built ->
-                        reverbs.add(built.reverb)
-                        stages.add(built.fx)
+                    is MasterStageDsl.Reverb -> when (val built = buildReverb(stage, blockFrames, reverbs)) {
+                        null -> {} // inaudible: no stage
+                        BuiltReverb.Denied -> deniedRents++
+                        is BuiltReverb.Ready -> {
+                            reverbUnits.add(built.reverb)
+                            tails.add(built.tail)
+                            stages.add(built.fx)
+                        }
                     }
 
-                    is MasterStageDsl.Delay -> buildDelay(stage, sampleRate, blockFrames)?.let { built ->
-                        delays.add(built.delayLine)
-                        stages.add(built.fx)
+                    is MasterStageDsl.Delay -> when (val built = buildDelay(stage, sampleRate, blockFrames, rings)) {
+                        null -> {} // inaudible, or below the off-threshold: no stage
+                        BuiltDelay.Denied -> deniedRents++
+                        is BuiltDelay.Ready -> {
+                            delays.add(built.delayLine)
+                            tails.add(built.tail)
+                            stages.add(built.fx)
+                        }
                     }
                 }
             }
 
             return MasterChain(
                 stages = stages.toTypedArray(),
-                reverbs = reverbs.toTypedArray(),
+                reverbs = reverbUnits.toTypedArray(),
                 delays = delays.toTypedArray(),
                 limiters = limiters.toTypedArray(),
+                tails = tails.toTypedArray(),
+                deniedRents = deniedRents,
             )
         }
 
-        private class BuiltReverb(val reverb: Reverb, val fx: MasterFx)
-        private class BuiltDelay(val delayLine: DelayLine, val fx: MasterFx)
+        private sealed class BuiltReverb {
+            class Ready(val reverb: Reverb, val fx: MasterFx, val tail: TailCeiling) : BuiltReverb()
+
+            /** The shelf had no unit and could not allocate one: the stage is skipped, and counted. */
+            object Denied : BuiltReverb()
+        }
+
+        private sealed class BuiltDelay {
+            class Ready(val delayLine: DelayLine, val fx: MasterFx, val tail: TailCeiling) : BuiltDelay()
+
+            /** The shelf had no ring and could not allocate one: the stage is skipped, and counted. */
+            object Denied : BuiltDelay()
+        }
 
         /**
          * Finite-guards a user-supplied parameter, falling back to [fallback].
@@ -215,11 +291,13 @@ internal class MasterChain private constructor(
          * and adds its wet output to a target), so the shell owns the send buffer, fills it with the
          * bus scaled by `wet`, and lets the unchanged DSP mix the tail back in.
          *
-         * Skipped entirely when inaudible — mirrors `KatalystReverbEffect`'s `roomSize < 0.01`
-         * short-circuit, so an "off" master reverb costs nothing (Freeverb is the heaviest single
-         * DSP unit in the engine).
+         * Skipped entirely when inaudible — the same off-test as
+         * `KatalystReverbEffect.MIN_ACTIVE_ROOM_SIZE` (there an off-config starts a drain of the
+         * live tail; here the stage is decided at build time, so no tail exists to drain), so an
+         * "off" master reverb costs nothing (Freeverb is the heaviest single DSP unit in the
+         * engine).
          */
-        private fun buildReverb(stage: MasterStageDsl.Reverb, sampleRate: Int, blockFrames: Int): BuiltReverb? {
+        private fun buildReverb(stage: MasterStageDsl.Reverb, blockFrames: Int, units: ReverbUnits): BuiltReverb? {
             val wet = finite(stage.wet, 0.0)
             // The authored value is on the sprudel ~0..10 scale; ONE shared conversion for both
             // buses. The fallback must be the *authored* default, not the normalized one — a 0.5
@@ -241,42 +319,70 @@ internal class MasterChain private constructor(
             // feedback, so it carries the same 0..1 bound (past unity the combs run away to NaN —
             // see `Reverb.normalizeRoomSize`); damp is bounded because past 2.5 the comb one-pole
             // coefficient exceeds 1 and the filter diverges.
-            val reverb = Reverb(sampleRate = sampleRate).also {
+            val reverb = (units.rent() ?: return BuiltReverb.Denied).also {
                 it.roomSize = roomSize
                 it.damp = finite(stage.damp, 0.5).coerceIn(0.0, 1.0)
-                it.roomFade = stage.roomFade?.coerceIn(0.0, 1.0)
-                it.roomLp = stage.roomLp
+                it.roomFade = stage.roomFade?.takeIf { fade -> fade.isFinite() }?.coerceIn(0.0, 1.0)
+                it.roomLp = stage.roomLp?.takeIf { lp -> lp.isFinite() }
             }
             val send = StereoBuffer(blockFrames)
+            val tail = TailCeiling()
 
-            return BuiltReverb(
+            return BuiltReverb.Ready(
                 reverb = reverb,
+                tail = tail,
                 fx = MasterFx { bus, frames ->
                     fillSend(send, bus, frames, wet)
+                    // The ceiling reads what the unit is FED — the send, after `wet`, like the
+                    // orbit effects read their send buffers.
+                    tail.observe(
+                        inputPeak = TailCeiling.peakOf(send, frames),
+                        frames = frames,
+                        windowSamples = reverb.tailWindowSamples,
+                        feedback = reverb.tailFeedback,
+                        lapsPerWindow = reverb.tailLapsPerWindow,
+                    )
                     reverb.process(send, bus, frames)
                 },
             )
         }
 
         /**
-         * Delay as an *insert* — same send-copy trick as [buildReverb], same short-circuit as
-         * `KatalystDelayEffect` (`delayTimeSeconds < 0.01`). Without the skip, a "zero" time would
-         * be coerced up to the DSP's ~5-sample minimum and ring as a metallic comb.
+         * Delay as an *insert* — same send-copy trick as [buildReverb], same off-threshold as
+         * `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS` (decided at BUILD time here, at configure
+         * time there). Without the skip, a "zero" time would be coerced up to the DSP's ~5-sample
+         * minimum and ring as a metallic comb.
          *
-         * The ring is sized to the declared time (fixed per chain), not to a blanket maximum — a
-         * 0.25 s master delay costs ~190 KB instead of ~3 MB.
+         * The ring is rented from the shelf at the class that holds the declared time plus the
+         * interpolation margin — the SAME sizing rule as `KatalystDelayEffect.framesFor`, so a time
+         * means one ring on either bus. There is no ceiling on either (a 20 s master delay is a
+         * real 20 s echo, as it is on an orbit). A time past the Int range asks for
+         * `Int.MAX_VALUE`, which nothing serves: the stage is [BuiltDelay.Denied], like a refused
+         * allocation.
          */
-        private fun buildDelay(stage: MasterStageDsl.Delay, sampleRate: Int, blockFrames: Int): BuiltDelay? {
+        private fun buildDelay(
+            stage: MasterStageDsl.Delay,
+            sampleRate: Int,
+            blockFrames: Int,
+            rings: SizedBuffers,
+        ): BuiltDelay? {
             val wet = finite(stage.wet, 0.0)
-            val timeSeconds = finite(stage.timeSeconds, 0.25)
+            val time = finite(stage.timeSeconds, 0.25)
 
-            if (wet <= MIN_WET || timeSeconds < MIN_TIME_FX) {
+            if (wet <= MIN_WET || time < MIN_TIME_FX) {
                 return null
             }
 
-            val time = timeSeconds.coerceAtMost(MAX_DELAY_SECONDS)
+            val frames = ceil(time * sampleRate)
+            val needed = if (frames < Int.MAX_VALUE - ResourceWarehouse.RING_MARGIN_FRAMES) {
+                frames.toInt() + ResourceWarehouse.RING_MARGIN_FRAMES
+            } else {
+                Int.MAX_VALUE
+            }
+            val ring = rings.rent(needed) ?: return BuiltDelay.Denied
+
             val delayLine = DelayLine(
-                maxDelaySeconds = time + DELAY_RING_MARGIN_SECONDS,
+                ring = ring,
                 sampleRate = sampleRate,
                 delayTimeSeconds = time,
                 // A property initializer bypasses the class's own non-finite setter guard.
@@ -285,11 +391,22 @@ internal class MasterChain private constructor(
                 it.feedbackCap = finite(stage.cap, 1.0)
             }
             val send = StereoBuffer(blockFrames)
+            val tail = TailCeiling()
 
-            return BuiltDelay(
+            return BuiltDelay.Ready(
                 delayLine = delayLine,
+                tail = tail,
                 fx = MasterFx { bus, frames ->
                     fillSend(send, bus, frames, wet)
+                    // The ceiling reads what the unit is FED — the send, after `wet`, like the
+                    // orbit effects read their send buffers.
+                    tail.observe(
+                        inputPeak = TailCeiling.peakOf(send, frames),
+                        frames = frames,
+                        windowSamples = delayLine.tailWindowSamples,
+                        feedback = delayLine.feedback,
+                        lapsPerWindow = delayLine.tailLapsPerWindow,
+                    )
                     delayLine.process(send, bus, frames)
                 },
             )

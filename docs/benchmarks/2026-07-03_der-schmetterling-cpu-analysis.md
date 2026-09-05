@@ -139,7 +139,7 @@ Each rung adds one effect group to the voice; **Δ medRTF is that group's margin
 | os8                                   | 0.00427 |        +0.00206 |
 | **os4 × 2 (double distort, as song)** | 0.00321 |        +0.00100 |
 
-Oversampling scales ~linearly (os8 ≈ 2× os4's delta). **The song's double `.distort("1:tube:4").distort(0.80)`
+Oversampling scales ~linearly (os8 ≈ 2× os4's delta). **The song's double `.distort(1, "tube", 4).distort(0.80)`
 costs the same as a single os4** — the 2nd distort defaults to os1 (cheap). Distortion is a *modest* cost.
 
 ### Unison count (full GTR1 chain — body+pedal+super all present)

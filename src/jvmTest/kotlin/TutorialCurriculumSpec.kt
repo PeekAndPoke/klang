@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -37,6 +37,12 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
  * 8. Long pattern strings split into halves with a double space (readability rule).
  * 9. Visuals parse, and their parameter values appear verbatim in the same section's code —
  *    picture and code cannot drift.
+ * 10. Player-button names are bold in prose ("press **Update**") — the reader has to find that
+ *    button in the chrome, and B1's player tour introduces all of them in bold.
+ * 11. Inside one code block, every line comment starts at the same column — the comments are a
+ *    narration column, and a ragged one reads as sloppy code.
+ * 12. The commented-out alternatives compile too. Roughly a quarter of the corpus's code sits
+ *    behind a `//`, and every "Try it: swap the //" asks the reader to run it.
  *
  * Mini-notation symbols use these canonical names in `teaches`/`previews`:
  * "~" rest, "[]" group, "<>" alternation, "*" fast, "!" replicate, "@" weight,
@@ -64,6 +70,28 @@ class TutorialCurriculumSpec : StringSpec({
                     }
                 }
             }
+        }
+    }
+
+    "every commented-out alternative in a code block compiles too" {
+        val failures = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                for (code in section.klangScriptBlocks()) {
+                    for (alternative in commentedAlternatives(code)) {
+                        val compiled = runCatching { compileBlock(alternative) }.getOrNull()
+
+                        if (compiled == null) {
+                            failures.add("${tutorial.slug} (${section.heading}): $alternative")
+                        }
+                    }
+                }
+            }
+        }
+
+        withClue("every 'Try it: swap the //' asks the reader to RUN one of these lines") {
+            failures.shouldBeEmpty()
         }
     }
 
@@ -246,6 +274,52 @@ class TutorialCurriculumSpec : StringSpec({
         violations.shouldBeEmpty()
     }
 
+    "player-button names are bold in prose (press **Update**, not press Update)" {
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                for (prose in section.textBlocks()) {
+                    for (match in PLAYER_BUTTON_REGEX.findAll(prose)) {
+                        val before = prose.substring((match.range.first - 2).coerceAtLeast(0), match.range.first)
+                        val after = prose.substring(
+                            (match.range.last + 1).coerceAtMost(prose.length),
+                            (match.range.last + 3).coerceAtMost(prose.length),
+                        )
+                        if (before != "**" || after != "**") {
+                            violations.add(
+                                "${tutorial.slug} (${section.heading}): '${match.value}' is a player " +
+                                    "button — write it bold (**${match.value}**) so the reader can find it"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
+    "line comments inside one code block all start at the same column" {
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                for (code in section.klangScriptBlocks()) {
+                    val columns = code.lines().mapNotNull(::commentColumn).toSet()
+                    if (columns.size > 1) {
+                        violations.add(
+                            "${tutorial.slug} (${section.heading}): comments start at columns " +
+                                "${columns.sorted()} — align them into one column"
+                        )
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
     "visuals parse and their values appear in the same section's code (no drift)" {
         val violations = mutableListOf<String>()
 
@@ -263,11 +337,19 @@ class TutorialCurriculumSpec : StringSpec({
                                         "'${visual.value}' does not parse as four colon-separated numbers"
                                 )
                             }
-                            if (codes.isNotEmpty() && codes.none { visual.value in it }) {
+                            // The visual keeps its compact colon encoding; the DSL is per-param
+                            // since C0, so the code shows `.adsr(a, d, s, r)`. Match that form.
+                            val perParamCall = parts.joinToString(", ") { n ->
+                                if (n == n.toInt().toDouble()) n.toInt().toString() else n.toString()
+                            }
+                            val matchesCode = codes.any { code ->
+                                visual.value in code || perParamCall in code
+                            }
+                            if (codes.isNotEmpty() && !matchesCode) {
                                 violations.add(
                                     "${tutorial.slug} (${section.heading}): Adsr visual value " +
-                                        "'${visual.value}' does not appear in the section's code — " +
-                                        "picture and code must not drift"
+                                        "'${visual.value}' (per-param: '$perParamCall') does not appear " +
+                                        "in the section's code — picture and code must not drift"
                                 )
                             }
                         }
@@ -309,6 +391,34 @@ private fun TutorialSection.textBlocks(): List<String> =
 /** All runnable KlangScript blocks of a section. */
 private fun TutorialSection.klangScriptBlocks(): List<String> =
     blocks.filterIsInstance<Block.Code>().filter { it.lang == "KlangScript" }.map { it.code }
+
+/** Player buttons the lessons tell the reader to press; B1's tour names them all in bold. */
+private val PLAYER_BUTTON_REGEX = Regex("""\bUpdate\b""")
+
+/**
+ * The column a line's trailing comment starts at, or null when the line carries none. A line
+ * that is nothing but a comment (a commented-out code line in an A/B pair) has no trailing
+ * comment of its own, so only a `//` with code in front of it counts.
+ */
+private fun commentColumn(line: String): Int? {
+    val marker = line.indexOf("//", startIndex = line.indexOfFirst { !it.isWhitespace() }.coerceAtLeast(0) + 1)
+    if (marker <= 0 || !line[marker - 1].isWhitespace()) return null
+    if (line.take(marker).isBlank()) return null
+
+    return marker
+}
+
+/**
+ * The runnable alternatives a code block keeps behind `//`. Every A/B pair in the corpus is
+ * written as ONE whole statement per line precisely so a single `//` toggles it, and every
+ * "Try it: swap the `//`" tells the reader to run one of these — so they have to compile as
+ * surely as the live line does. Prose comments (no call in them) are narration, not code.
+ */
+private fun commentedAlternatives(code: String): List<String> = code.lines()
+    .map { it.trim() }
+    .filter { it.startsWith("//") }
+    .map { it.removePrefix("//").trim() }
+    .filter { CALL_REGEX.containsMatchIn(it) }
 
 /** Keywords the call-scan matches that are not vocabulary. */
 private val STRUCTURAL_KEYWORDS = setOf("if", "while", "for")

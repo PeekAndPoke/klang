@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -76,7 +76,7 @@ object KlangScriptMasterLimiterExtensions {
 @KlangScript.TypeExtensions(MasterStageDsl.Reverb::class)
 object KlangScriptMasterReverbExtensions {
 
-    /** How much of the bus is sent into the reverb (default 0.25; 0.0 = off). Orbit twin: `room()`. */
+    /** How much of the bus is sent into the reverb (default 0.25; 0.0 = off). Orbit twin: `roomWet()`. */
     @KlangScript.Method
     fun wet(self: MasterStageDsl.Reverb, wet: Double): MasterStageDsl.Reverb = self.copy(wet = wet)
 

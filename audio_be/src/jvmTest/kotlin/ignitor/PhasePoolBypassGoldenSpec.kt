@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -18,7 +18,9 @@ import kotlin.random.Random
  * engine — same rng consumption order (phases at voice creation, jitter in `computeVoiceGains`),
  * same samples. The golden values below were captured on the engine BEFORE the phase-pool
  * change (2026-08-11, commit fc05bf78) with a seeded rng and `analog = 0` (AnalogDrift seeds from
- * `Random.Default`, so drift cannot be part of a deterministic fixture).
+ * `Random.Default` when no stream is threaded; since seeded-voice-rng a fixture CAN pin
+ * drift by passing a seeded `IgniteContext.random` — this golden predates that and keeps
+ * drift out by design).
  *
  * Comparison is by TIGHT RELATIVE TOLERANCE (1e-9), not raw bits: the render goes through
  * `Math.pow`/`Math.sin`, which are 1-ulp-specified, not bit-reproducible across JDKs/CPUs —
@@ -29,6 +31,13 @@ import kotlin.random.Random
  * If this spec fails, the bypass is broken — that is a defect in the change, never a reason to
  * re-capture the goldens. Re-capture is legitimate only for a DELIBERATE sound change to the
  * legacy path itself.
+ *
+ * **Re-captured once, 2026-08-29 (maintainer decision), for exactly that reason:** the saw flyback
+ * was retuned from 2 samples to 1 (`SAW_RESET_SAMPLES`, a deliberate brightening — 2 samples put a
+ * null at Nyquist). Only the 8 `superSaw` / `superRamp` entries moved; `superSquare` / `superTri` /
+ * `superSine` re-measured bit-identical, which is what confirms the change was saw-shaped and the
+ * rng stream was untouched. The baseline is therefore "the engine as of that retune", and the
+ * bypass guarantee it defends is unchanged.
  */
 class PhasePoolBypassGoldenSpec : StringSpec({
 
@@ -39,14 +48,14 @@ class PhasePoolBypassGoldenSpec : StringSpec({
     // "name|voices|freq" -> (first sample, positionally-weighted sum), stored as the exact raw
     // bits captured on the pre-change engine and decoded via Double.fromBits for the comparison.
     val goldens = mapOf(
-        "superSaw|8|82.4069" to (-4631307293752131052L to 4668944552219627424L),
-        "superSaw|8|440.0" to (-4632288011870096446L to 4657319975947328143L),
-        "superSaw|11|82.4069" to (-4630733241765921432L to 4666242475224723113L),
-        "superSaw|11|440.0" to (-4631705577927693217L to 4652440672336574510L),
-        "superRamp|8|82.4069" to (4592064743102644756L to -4554427484635148384L),
-        "superRamp|8|440.0" to (4591084024984679362L to -4566052060907447665L),
-        "superRamp|11|82.4069" to (4592638795088854376L to -4557129561630052695L),
-        "superRamp|11|440.0" to (4591666458927082591L to -4570931364518201298L),
+        "superSaw|8|82.4069" to (-4631196170831095938L to 4668984362955846089L),
+        "superSaw|8|440.0" to (-4631681161308006552L to 4657100955607444449L),
+        "superSaw|11|82.4069" to (-4630623069204948262L to 4666261975792702351L),
+        "superSaw|11|440.0" to (-4631103912808725848L to 4651771550479462468L),
+        "superRamp|8|82.4069" to (4592175866023679870L to -4554387673898929719L),
+        "superRamp|8|440.0" to (4591690875546769256L to -4566271081247331359L),
+        "superRamp|11|82.4069" to (4592748967649827546L to -4557110061062073457L),
+        "superRamp|11|440.0" to (4592268124046049960L to -4571600486375313340L),
         "superSquare|8|82.4069" to (4598315725601515205L to -4550082607452518128L),
         "superSquare|8|440.0" to (4598315725601515205L to -4563260665614983060L),
         "superSquare|11|82.4069" to (4591372646541300384L to -4555375934017155196L),
@@ -68,14 +77,13 @@ class PhasePoolBypassGoldenSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             releaseFrames = blockFrames,
-            voiceEndFrame = sampleRate + blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         var weighted = 0.0
         var first = 0.0
         var idx = 0
         for (b in 0 until blocks) {
-            ctx.apply { offset = 0; length = blockFrames; voiceElapsedFrames = b * blockFrames }
+            ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
             sig.generate(buffer, freqHz, ctx)
             for (i in 0 until blockFrames) {
                 if (idx == 0) {

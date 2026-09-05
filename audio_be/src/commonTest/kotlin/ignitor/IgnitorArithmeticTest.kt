@@ -1,9 +1,12 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.ignitor
+
+import io.peekandpoke.klang.audio_be.SAFE_MAX
+import io.peekandpoke.klang.audio_be.SAFE_MIN
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -32,11 +35,9 @@ class IgnitorArithmeticTest : StringSpec({
         voiceDurationFrames = blockFrames * 4,
         gateEndFrame = blockFrames * 4,
         releaseFrames = 0,
-        voiceEndFrame = blockFrames * 4,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -32,23 +32,6 @@ class LangVibratoModSpec : StringSpec({
         }
     }
 
-    "vibmod dsl interface" {
-        val pat = "c4 e4"
-        val amount = 0.5
-
-        dslInterfaceTests(
-            "pattern.vibmod(depth)" to note(pat).vibmod(amount),
-            "script pattern.vibmod(depth)" to SprudelPattern.compile("""note("$pat").vibmod($amount)"""),
-            "string.vibmod(depth)" to pat.vibmod(amount),
-            "script string.vibmod(depth)" to SprudelPattern.compile(""""$pat".vibmod($amount)"""),
-            "vibmod(depth)" to note(pat).apply(vibmod(amount)),
-            "script vibmod(depth)" to SprudelPattern.compile("""note("$pat").apply(vibmod($amount))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.vibratoMod shouldBe amount
-        }
-    }
-
     "reinterpret voice data as vibratoMod | seq(\"0.1 0.5\").vibratoMod()" {
         val p = seq("0.1 0.5").vibratoMod()
         val events = p.queryArc(0.0, 1.0)
@@ -75,14 +58,6 @@ class LangVibratoModSpec : StringSpec({
 
     "vibratoMod() sets VoiceData.vibratoMod depth" {
         val p = note("a b").vibratoMod("0.1 0.5")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.vibratoMod } shouldBe listOf(0.1, 0.5)
-    }
-
-    "vibmod() alias sets VoiceData.vibratoMod depth" {
-        val p = note("a b").vibmod("0.1 0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

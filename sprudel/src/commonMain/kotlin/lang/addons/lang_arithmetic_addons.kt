@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -70,7 +70,7 @@ fun String.flipSign(callInfo: CallInfo? = null): SprudelPattern =
  * Flips the sign of numerical values as a [PatternMapperFn].
  *
  * ```KlangScript(Playable)
- * flipSign("<[1 2 3 4] [-1 -2 -3 -4]>").scale("C4:major").n()
+ * "<[1 2 3 4] [-1 -2 -3 -4]>".apply(flipSign).scale("C4:major").n()
  * ```
  */
 @KlangScript.Constant

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -155,7 +155,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private val chunkRows = 128
 
     /** Panel-grid cell size in texture px — shared by normal map and albedo seams. */
-    private val panelCell = 220.0
+    private val panelCell = 330.0
 
     /**
      * Builds the plate + title textures and meshes. The heavy per-pixel loops
@@ -243,7 +243,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             val d = this.asDynamic()
             d.map = titleAlbedo
             d.normalMap = titleNormal
-            d.normalScale = addon.createVector2(0.9, 0.9)
+            // Stronger than the plate's: the facets need to bend the reflection far
+            // enough that its structure reads, not just shimmer.
+            d.normalScale = addon.createVector2(1.4, 1.4)
             d.transparent = true
             d.opacity = 0.0             // fades in with the main light (see animate)
         })
@@ -564,6 +566,31 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         return (h and 0xffff).toDouble() / 0xffff.toDouble()
     }
 
+    /**
+     * Fractal Brownian motion over [grainNoise] — [octaves] Perlin layers at
+     * doubling frequency and halving amplitude, normalized back to ~`[-1, 1]`.
+     * Extra octaves add finer structure on top of the first layer's broad flow
+     * without speeding that flow up, so it composes with the base frequency
+     * instead of fighting it.
+     */
+    private fun fbm(x: Double, y: Double, octaves: Int): Double {
+        var sum = 0.0
+        var norm = 0.0
+        var amp = 1.0
+        var fx = x
+        var fy = y
+        repeat(octaves) {
+            sum += grainNoise.noise(fx, fy) * amp
+            norm += amp
+            amp *= 0.5
+            // Doubling the coordinates doubles the caller's fractional offset too,
+            // so no octave can land on a lattice node.
+            fx *= 2.0
+            fy *= 2.0
+        }
+        return if (norm > 0.0) sum / norm else 0.0
+    }
+
     private fun n2c(n: Double): Int = max(0.0, min(255.0, (n + 1.0) * 127.5)).toInt()
 
     /** Configures font, alignment and letter-spacing consistently for both text canvases. */
@@ -576,7 +603,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Renders "KLANGMOTÖR" flat (no perspective) at the title position.
+     * Renders "KLANGMOTOR" flat (no perspective) at the title position.
      *
      * Caller is responsible for clip / blur / fillStyle setup on `tctx`.
      */
@@ -589,7 +616,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val textCy = height * 0.18
         tctx.fillStyle = fillStyle
         applyTitleTextStyle(tctx, height)
-        tctx.fillText("KLANGMOTÖR", width / 2.0, textCy)
+        tctx.fillText("KLANGMOTOR", width / 2.0, textCy)
     }
 
     /**
@@ -602,14 +629,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         cnv.width = width
         cnv.height = height
         val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
-        // Near-black like the editor surface — but with just enough albedo for
-        // the moving light to sheen (a pure-black metal reflects nothing).
-        tctx.fillStyle = "#0e0f13"
+        // Dark like the editor surface, but with enough albedo for the moving
+        // light to sheen and for the plate to read as metal rather than void.
+        tctx.fillStyle = "#1b1d24"
         tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
 
         // Dark seam lines on the panel grid — albedo crispness on top of the
         // normal-map bevels.
-        tctx.strokeStyle = "#07080a"
+        tctx.strokeStyle = "#0d0f13"
         tctx.lineWidth = 2.0
         var gx = 0.0
         while (gx <= width) {
@@ -637,7 +664,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     /**
      * Albedo + normal map for the title overlay plane.
      *
-     * The albedo is "KLANGMOTÖR" on a TRANSPARENT background — the material's
+     * The albedo is "KLANGMOTOR" on a TRANSPARENT background — the material's
      * alpha masks the overlay down to the letters (plus a plate-colored halo
      * under the bevel ring), so the rest of this plane is invisible. The normal
      * map carries the hammered letter fill and the raised edge bevels that used
@@ -667,10 +694,12 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // letters has pixels to render on (its width matches the engrave mask blur).
         tctx.asDynamic().filter = "blur(3px)"
         drawTitleText(tctx, width, height, laf.menuBackground)
-        // Off-white text — with the noise normals and metallic reflection this reads
-        // as a faceted glass/crystal inlay; slightly dimmed so highlights don't blow out.
+        // Mid-grey text — with the noise normals and metallic reflection this reads
+        // as a faceted glass/crystal inlay. On a metal the albedo IS the reflectance,
+        // so this doubles as the brightness knob: dark enough that the facets keep
+        // their light/dark structure instead of blowing out into one bright blob.
         tctx.asDynamic().filter = "blur(1px)"
-        drawTitleText(tctx, width, height, "#b8b8b8")
+        drawTitleText(tctx, width, height, "#7d7d7d")
         tctx.restore()
 
         val albedoTex = addon.createCanvasTexture(cnv)
@@ -700,20 +729,38 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 var ny = 0.0
                 var nz = 1.0
                 if (maskVal > 0.5) {
-                    // Two-octave stepped surface: fine per-pixel grain + coarser patches.
-                    // Combined they give a finely granulated, high-variation metal texture.
+                    // Two-octave stepped surface: fine per-pixel grain + coarser facets.
+                    // The facets stay hard-edged (block-quantized), but their tilt is
+                    // drawn from 2D Perlin sampled once per block — so neighbouring
+                    // facets lean in related directions and the letters read as one
+                    // flowing surface instead of uncorrelated sparkle. The amplitudes
+                    // set how far a normal swings off-axis; lower means the letters
+                    // face the light more uniformly.
                     val fineBlock = 1
-                    val coarseBlock = 8
+                    val coarseBlock = 6
+                    val fineAmp = 0.34
+                    val coarseAmp = 0.15
+                    // Perlin lattice units per facet — how fast the direction field
+                    // turns. Higher means neighbouring facets diverge sooner.
+                    val coarseFreq = 0.0625
+                    // Layers stacked on that base flow, each half the amplitude at
+                    // twice the frequency.
+                    val coarseOctaves = 4
                     val fbc = px / fineBlock
                     val fbr = py / fineBlock
-                    val cbc = px / coarseBlock
-                    val cbr = py / coarseBlock
+                    val cbc = (px / coarseBlock) * coarseFreq
+                    val cbr = (py / coarseBlock) * coarseFreq
                     val f1 = hashCell(fbc + 17, fbr * 3 + 5)
                     val f2 = hashCell(fbr * 5 + 11, fbc + 23)
-                    val c1 = hashCell(cbc + 97, cbr * 7 + 41)
-                    val c2 = hashCell(cbr * 11 + 53, cbc + 79)
-                    nx = (f1 - 0.5) * 0.34 + (c1 - 0.5) * 0.22
-                    ny = (f2 - 0.5) * 0.34 + (c2 - 0.5) * 0.22
+                    // Two far-apart slices of the same field drive x and y independently.
+                    // The fractional offsets keep every sample off the lattice nodes,
+                    // where Perlin is 0 by construction — without them a coarseFreq that
+                    // divides 1.0 would stamp a regular grid of dead, flat facets.
+                    // Halved: Perlin is centred on 0 and spans ±1, the hash spans ±0.5.
+                    val c1 = fbm(cbc + 0.37, cbr + 0.61, coarseOctaves) * 0.5
+                    val c2 = fbm(cbc + 41.7, cbr - 23.3, coarseOctaves) * 0.5
+                    nx = (f1 - 0.5) * fineAmp + c1 * coarseAmp
+                    ny = (f2 - 0.5) * fineAmp + c2 * coarseAmp
                     nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
                 } else {
                     val left = engraveMask[if (px > 0) i1D - 1 else i1D]
@@ -751,7 +798,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Pre-renders "KLANGMOTÖR" into a soft-edged alpha mask the size of the
+     * Pre-renders "KLANGMOTOR" into a soft-edged alpha mask the size of the
      * normal map. Returns a DoubleArray where 1.0 = deep inside text, 0.0 = plain metal.
      * The gradient of this field is used to carve engraving bevels into the plate.
      */
@@ -792,7 +839,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
      * sharp V-groove seams and per-panel micro-tilts that react crisply to
      * the wandering light.
      *
-     * The "KLANGMOTÖR" engraving lives on the separate title overlay plane —
+     * The "KLANGMOTOR" engraving lives on the separate title overlay plane —
      * see [buildTitleOverlayMaps].
      */
     private fun generateMotorNormalMap(

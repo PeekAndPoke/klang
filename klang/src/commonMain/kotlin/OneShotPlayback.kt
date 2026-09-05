@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -34,11 +34,15 @@ internal class OneShotPlayback internal constructor(
     // Wrap the pattern to only return events within the target cycle range
     private val limitedPattern = CycleLimitedPattern(pattern, cyclesToPlay)
 
-    private val controller = KlangPlaybackController(
+    /** Inline-DSL bookkeeping belongs to the playback; the scheduler just uses it. */
+    private val registrar = context.registrarFor(playbackId)
+
+    private val controller = KlangPatternScheduler(
         playbackId = playbackId,
         pattern = limitedPattern,
         context = context,
         signals = _signals,
+        registrar = registrar,
         onStarted = onStarted,
         onStopped = onStopped,
     )

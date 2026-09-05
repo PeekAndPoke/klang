@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -8,20 +8,13 @@ package io.peekandpoke.klang.sprudel.lang.parser
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.lang.adsr
-import io.peekandpoke.klang.sprudel.lang.bank
+import io.peekandpoke.klang.sprudel.lang.addons.applyTweaks
 import io.peekandpoke.klang.sprudel.lang.degradeBy
 import io.peekandpoke.klang.sprudel.lang.fast
-import io.peekandpoke.klang.sprudel.lang.gain
-import io.peekandpoke.klang.sprudel.lang.legato
-import io.peekandpoke.klang.sprudel.lang.orbit
-import io.peekandpoke.klang.sprudel.lang.pan
-import io.peekandpoke.klang.sprudel.lang.postgain
 import io.peekandpoke.klang.sprudel.lang.seq
 import io.peekandpoke.klang.sprudel.lang.silence
 import io.peekandpoke.klang.sprudel.lang.slow
 import io.peekandpoke.klang.sprudel.lang.stack
-import io.peekandpoke.klang.sprudel.lang.velocity
 import io.peekandpoke.klang.sprudel.pattern.AlternationPattern
 import io.peekandpoke.klang.sprudel.pattern.ChoicePattern.Companion.choice
 import io.peekandpoke.klang.sprudel.pattern.EuclideanPattern
@@ -185,7 +178,7 @@ object MnPatternToSprudelPattern {
 
     /**
      * Applies [MnNode.Mods] to a [SprudelPattern] in the canonical order:
-     * euclidean → multiplier → divisor → probability → weight → attrs
+     * euclidean → multiplier → divisor → probability → weight → tweaks
      */
     private fun applyMods(pattern: SprudelPattern, mods: MnNode.Mods): SprudelPattern {
         if (mods.isEmpty) return pattern
@@ -200,32 +193,10 @@ object MnPatternToSprudelPattern {
         mods.probability?.let { result = result.degradeBy(it) }
         mods.weight?.let { result = PropertyOverridePattern(result, weightOverride = it) }
 
-        if (!mods.attrs.isEmpty) {
-            result = applyAttrs(result, mods.attrs)
-        }
+        // Only the NAMES are attached here. The transform each one refers to is bound later by
+        // `tweaks(…)`, so an unbound name rides along inert rather than failing.
+        result = applyTweaks(result, mods.tweaks)
 
-        return result
-    }
-
-    /**
-     * Applies inline `{key=value}` attributes by delegating to the existing DSL functions.
-     * This guarantees semantic consistency with the KlangScript DSL.
-     */
-    private fun applyAttrs(pattern: SprudelPattern, attrs: MnNode.Attrs): SprudelPattern {
-        var result = pattern
-        for ((key, value) in attrs.entries) {
-            result = when (key) {
-                "v", "vel", "velocity" -> result.velocity(value)
-                "g", "gain" -> result.gain(value)
-                "l", "legato" -> result.legato(value)
-                "pan" -> result.pan(value)
-                "pg", "postgain" -> result.postgain(value)
-                "adsr" -> result.adsr(value)
-                "o", "orbit", "cyl", "cylinder" -> result.orbit(value)
-                "bank" -> result.bank(value)
-                else -> result
-            }
-        }
         return result
     }
 

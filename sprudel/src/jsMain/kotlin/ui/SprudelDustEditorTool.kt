@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -211,7 +211,7 @@ private class SprudelDustEditorComp(ctx: Ctx<Props>) : Component<SprudelDustEdit
                         step(0.01)
                         label {
                             +"Density"
-                            subFieldInfoIcon("params", "density", props.toolCtx, infoPopup)
+                            paramInfoIcon("density", props.toolCtx, infoPopup)
                         }
                     }
                 }

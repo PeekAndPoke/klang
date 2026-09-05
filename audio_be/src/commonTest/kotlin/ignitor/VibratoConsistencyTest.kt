@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -50,7 +50,7 @@ class VibratoConsistencyTest : StringSpec({
             blockFrames = bf,
             sampleRate = sr,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = rate, depth = depthSemitones),
+            vibrato = Voice.Vibrato(rate = rate, semitones = depthSemitones),
         )
 
         val ctx = createContext(blockFrames = bf, sampleRate = sr)
@@ -70,7 +70,7 @@ class VibratoConsistencyTest : StringSpec({
             blockFrames = bf,
             sampleRate = sr,
             signal = signal,
-            vibrato = Voice.Vibrato(rate = 0.0, depth = 0.0),
+            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         )
 
         val ctx = createContext(blockFrames = bf, sampleRate = sr)
@@ -117,12 +117,12 @@ class VibratoConsistencyTest : StringSpec({
         val voiceWith = createSynthVoice(
             blockFrames = bf, sampleRate = sr,
             signal = signal,
-            vibrato = Voice.Vibrato(rate = 0.0, depth = 0.0),
+            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         )
         val voiceWithout = createSynthVoice(
             blockFrames = bf, sampleRate = sr,
             signal = IgnitorDsl.Sine().toExciter(),
-            vibrato = Voice.Vibrato(rate = 0.0, depth = 0.0),
+            vibrato = Voice.Vibrato(rate = 0.0, semitones = 0.0),
         )
 
         val ctxWith = createContext(blockFrames = bf, sampleRate = sr)

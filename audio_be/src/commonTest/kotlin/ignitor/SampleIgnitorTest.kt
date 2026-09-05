@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -19,11 +19,9 @@ class SampleIgnitorTest : StringSpec({
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
         releaseFrames = 4410,
-        voiceEndFrame = sampleRate + 4410,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -44,7 +42,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(5)
         val ctx = createCtx(5)
-        ctx.length = 5
+        ctx.updateLength(5)
         gen.generate(buffer, 440.0, ctx)
 
         // At rate=1.0, playhead lands exactly on integer indices
@@ -72,7 +70,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(4)
         val ctx = createCtx(4)
-        ctx.length = 4
+        ctx.updateLength(4)
         gen.generate(buffer, 440.0, ctx)
 
         // playhead: 0.0, 0.5, 1.0, 1.5
@@ -99,7 +97,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(6)
         val ctx = createCtx(6)
-        ctx.length = 6
+        ctx.updateLength(6)
         gen.generate(buffer, 440.0, ctx)
 
         // playhead: 0, 1, 2, 3->wraps to 1, 2, 3->wraps to 1
@@ -127,7 +125,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(4)
         val ctx = createCtx(4)
-        ctx.length = 4
+        ctx.updateLength(4)
         gen.generate(buffer, 440.0, ctx)
 
         // First two samples play, rest are silenced by stopFrame
@@ -156,7 +154,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(4)
         val ctx = createCtx(4)
-        ctx.length = 4
+        ctx.updateLength(4)
         ctx.phaseMod = phaseMod
         gen.generate(buffer, 440.0, ctx)
 
@@ -182,7 +180,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(4) { 999.0 } // prefill to detect changes
         val ctx = createCtx(4)
-        ctx.length = 4
+        ctx.updateLength(4)
         gen.generate(buffer, 440.0, ctx)
 
         // pcm.size - 1 = -1, so base >= pcmMax for all => silence
@@ -205,7 +203,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(4) { 999.0 }
         val ctx = createCtx(4)
-        ctx.length = 4
+        ctx.updateLength(4)
         gen.generate(buffer, 440.0, ctx)
 
         // playhead: -2.0, -1.0, 0.0, 1.0
@@ -231,7 +229,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(3) { 999.0 }
         val ctx = createCtx(3)
-        ctx.length = 3
+        ctx.updateLength(3)
         gen.generate(buffer, 440.0, ctx)
 
         // playhead: -0.5, 0.0, 0.5
@@ -257,7 +255,7 @@ class SampleIgnitorTest : StringSpec({
 
         val buffer = AudioBuffer(3)
         val ctx = createCtx(3)
-        ctx.length = 3
+        ctx.updateLength(3)
         gen.generate(buffer, 440.0, ctx)
 
         // playhead: 0.0 -> advance 10 -> 10.0 -> wrap to 10%4=2.0 -> advance 10 -> 12.0 -> wrap to 12%4=0.0
@@ -274,8 +272,8 @@ class SampleIgnitorTest : StringSpec({
 
         val buf1 = AudioBuffer(3)
         val buf2 = AudioBuffer(3)
-        val ctx1 = createCtx(3).apply { length = 3 }
-        val ctx2 = createCtx(3).apply { length = 3 }
+        val ctx1 = createCtx(3).apply { updateLength(3) }
+        val ctx2 = createCtx(3).apply { updateLength(3) }
 
         gen1.generate(buf1, 440.0, ctx1)
         gen2.generate(buf2, 880.0, ctx2)

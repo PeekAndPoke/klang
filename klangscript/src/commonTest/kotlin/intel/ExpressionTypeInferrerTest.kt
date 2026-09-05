@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -69,7 +69,7 @@ class ExpressionTypeInferrerTest : StringSpec({
                     KlangCallable(
                         name = "lowpass",
                         receiver = KlangType("IgnitorDsl"),
-                        params = listOf(KlangParam(name = "cutoffHz", type = KlangType("Number"))),
+                        params = listOf(KlangParam(name = "freq", type = KlangType("Number"))),
                         returnType = KlangType("IgnitorDsl"),
                     )
                 )

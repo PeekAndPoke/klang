@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -38,13 +38,11 @@ fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100) {
             voiceDurationFrames = buffer.size,
             gateEndFrame = buffer.size,
             releaseFrames = 0,
-            voiceEndFrame = buffer.size,
             scratchBuffers = ScratchBuffers(buffer.size),
         ),
         cylinders = Cylinders(blockFrames = buffer.size, sampleRate = sampleRate),
     )
-    ctx.offset = 0
-    ctx.length = buffer.size
+    ctx.updateOffsetAndLength(0, buffer.size)
     ctx.blockStart = 0.0
 
     render(ctx)

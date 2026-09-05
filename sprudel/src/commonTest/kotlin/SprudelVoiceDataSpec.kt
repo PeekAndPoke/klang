@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -52,6 +52,24 @@ class SprudelVoiceDataSpec : StringSpec({
         viaMergeFrom shouldBe viaMerge
     }
 
+    "merge() completeness has an INDEPENDENT oracle for the phaser group (incl. phaserFloor)" {
+        // The parity row above compares mergeFrom against merge, but both flow through the
+        // SAME mergeSvdPhaser helper — a field dropped from the helper changes both sides
+        // identically and stays green. These rows pin the helper against the inputs.
+        val a = populatedVoiceData(0)
+        val b = populatedVoiceData(1000)
+        val merged = a.merge(b)
+        merged.phaserRate shouldBe b.phaserRate
+        merged.phaserDepth shouldBe b.phaserDepth
+        merged.phaserCenter shouldBe b.phaserCenter
+        merged.phaserSweep shouldBe b.phaserSweep
+        merged.phaserFloor shouldBe b.phaserFloor
+
+        // and the base side survives an empty over side (the `?: base` half)
+        val kept = a.merge(createSprudelVoiceData { })
+        kept.phaserFloor shouldBe a.phaserFloor
+    }
+
     "can create SprudelVoiceData with basic fields" {
         val data = createSprudelVoiceData {
             note = "c4"
@@ -91,7 +109,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val lpf = voiceData.filters[0] as FilterDef.LowPass
-        lpf.cutoffHz shouldBe 1000.0
+        lpf.freq shouldBe 1000.0
         lpf.q shouldBe 1.5
     }
 
@@ -105,7 +123,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val hpf = voiceData.filters[0] as FilterDef.HighPass
-        hpf.cutoffHz shouldBe 500.0
+        hpf.freq shouldBe 500.0
         hpf.q shouldBe 2.0
     }
 
@@ -119,7 +137,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val bpf = voiceData.filters[0] as FilterDef.BandPass
-        bpf.cutoffHz shouldBe 750.0
+        bpf.freq shouldBe 750.0
         bpf.q shouldBe 1.2
     }
 
@@ -133,7 +151,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val notch = voiceData.filters[0] as FilterDef.Notch
-        notch.cutoffHz shouldBe 600.0
+        notch.freq shouldBe 600.0
         notch.q shouldBe 0.8
     }
 
@@ -153,15 +171,15 @@ class SprudelVoiceDataSpec : StringSpec({
 
         // Canonical chain order: HighPass → BandPass → LowPass (lowpass LAST).
         val hpf = voiceData.filters[0] as FilterDef.HighPass
-        hpf.cutoffHz shouldBe 500.0
+        hpf.freq shouldBe 500.0
         hpf.q shouldBe 2.0
 
         val bpf = voiceData.filters[1] as FilterDef.BandPass
-        bpf.cutoffHz shouldBe 750.0
+        bpf.freq shouldBe 750.0
         bpf.q shouldBe 1.2
 
         val lpf = voiceData.filters[2] as FilterDef.LowPass
-        lpf.cutoffHz shouldBe 1000.0
+        lpf.freq shouldBe 1000.0
         lpf.q shouldBe 1.5
     }
 
@@ -206,8 +224,8 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.filters.size shouldBe 1
         val lpf = voiceData.filters[0] as FilterDef.LowPass
-        lpf.cutoffHz shouldBe 1000.0
-        lpf.q shouldBe 1.0 // defaults to 1.0
+        lpf.freq shouldBe 1000.0
+        lpf.q shouldBe 0.707 // C1 (filter unification): ONE default q on every surface
     }
 
     "toVoiceData() maps all basic fields correctly" {
@@ -312,16 +330,17 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         oscParams = mapOf("k$seed" to b + 7)
         attack = b + 8; decay = b + 9; sustain = b + 10; release = b + 11
         attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
+            adsrOn = false
         accelerate = b + 12; vibrato = b + 13; vibratoMod = b + 14
         pAttack = b + 15; pDecay = b + 16; pRelease = b + 17; pEnv = b + 18; pCurve = b + 19; pAnchor = b + 20
         fmh = b + 21; fmAttack = b + 22; fmDecay = b + 23; fmSustain = b + 24; fmEnv = b + 25
         distort = b + 26; distortShape = "ds$seed"; distortOversample = seed + 27
         coarse = b + 28; coarseOversample = seed + 29; crush = b + 30; crushOversample = seed + 31
-        phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35
+        phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35; phaserFloor = b + 35.5
         tremoloSync = b + 36; tremoloDepth = b + 37; tremoloSkew = b + 38; tremoloPhase = b + 39
         tremoloShape = "ts$seed"
         duckCylinder = seed + 40; duckAttack = b + 41; duckDepth = b + 42
-        cutoff = b + 43; resonance = b + 44; hcutoff = b + 45; hresonance = b + 46
+        cutoff = b + 43; resonance = b + 44; hcutoff = b + 45; hresonance = b + 46; lpPasses = b + 46.2; hpPasses = b + 46.4
         bandf = b + 47; bandq = b + 48; notchf = b + 49; nresonance = b + 50
         lpattack = b + 51; lpdecay = b + 52; lpsustain = b + 53; lprelease = b + 54; lpenv = b + 55
         hpattack = b + 56; hpdecay = b + 57; hpsustain = b + 58; hprelease = b + 59; hpenv = b + 60
@@ -333,7 +352,12 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         iResponse = "ir$seed"
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
         loopBegin = b + 85; loopEnd = b + 86
-        vowel = "v$seed"; compressor = "comp$seed"; solo = b + 88; patternId = "pid$seed"; pipeline = PipelineValue.Named("eng$seed")
+        vowel = "v$seed"
+        compressorThreshold = b + 89; compressorRatio = b + 90; compressorKnee = b + 91
+        compressorAttack = b + 92; compressorRelease = b + 93
+        solo = b + 88; patternId = "pid$seed"; pipeline = PipelineValue.Named("eng$seed")
         value = SprudelVoiceValue.Num(b + 87)
+        tags = setOf("t$seed")
+        tweaks = listOf("tw$seed")
     }
 }

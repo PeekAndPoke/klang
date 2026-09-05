@@ -1,9 +1,12 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.ignitor
+
+import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
+import kotlin.random.Random
 
 /**
  * Context for Ignitor rendering. Created ONCE per voice, mutated per block.
@@ -16,23 +19,48 @@ class IgniteContext(
     // ── Static per voice (set at creation, never changes) ──────────────────────
     /** Audio sample rate in Hz */
     val sampleRate: Int,
-    /** Total gate duration in frames (scheduled, before release) */
+    /**
+     * Total gate duration in frames (scheduled, before release).
+     *
+     * Deliberately NOT moved by [io.peekandpoke.klang.audio_be.voices.Voice.releaseGate]: it is
+     * the `accelerate` glide base, and retro-shrinking it would jump the glide progress and leap
+     * the pitch. On held realtime voices `accelerate` is inert by decision
+     * (docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
+     */
     val voiceDurationFrames: Int,
-    /** Frame (relative to voice start) when gate ends and release begins */
-    val gateEndFrame: Int,
+    // ── Moved by Voice.releaseGate on a realtime note-off — do NOT bake copies ─
+    /**
+     * Frame (relative to voice start) when gate ends and release begins.
+     * `var`: a realtime note-off ([io.peekandpoke.klang.audio_be.voices.Voice.releaseGate])
+     * moves the gate earlier.
+     */
+    var gateEndFrame: Int,
+    // ── Static per voice (set at creation, never changes) ──────────────────────
     /** Release duration in frames */
     val releaseFrames: Int,
-    /** Frame (relative to voice start) when voice should be terminated */
-    val voiceEndFrame: Int,
     /** Shared scratch buffer pool for binary composition operators */
     val scratchBuffers: ScratchBuffers,
+    /**
+     * THE VOICE'S random stream — derived per voice from the playback's `coreRandom`
+     * (`PlaybackCtx`), shared by every draw in this voice's sub-graph (generate-time drift
+     * construction reads it here; build-time consumers get the SAME instance via
+     * `IgnitorBuildCache.random`). One instance per voice is safe because in-graph draw
+     * order is deterministic; deriving per voice is what makes draw order BETWEEN voices
+     * irrelevant and playback runs bit-reproducible. Default = the global (test/tool
+     * convenience; production always passes the voice's own).
+     */
+    val random: Random = Random,
 
     // ── Mutable per block (updated by caller before each generate() call) ──────
-    /** Start index in buffer for this block */
-    var offset: Int = 0,
-    /** Number of samples to generate */
-    var length: Int = 0,
-    /** Frames since voice start (monotonic, updated once per block) */
+    // NOTE: `offset` and `length` are NOT here — they live in the body, because they carry
+    // custom setters that keep [windowEnd] in sync, and a constructor property cannot have one.
+    /**
+     * Frames since voice start (monotonic, updated once per block), counted AT buffer index
+     * [offset] — NOT at index 0. A voice's first `generate` call sees 0. Every consumer adds its
+     * own `i - offset` on top (`AdsrIgnitor`, `IgnitorFilters`, `PitchModFactories`); computing it
+     * at index 0 made the first block of a mid-block onset run a negative clock, which clamped to
+     * silence and then stepped. See `IgniteOnsetOffsetSpec`.
+     */
     var voiceElapsedFrames: Int = 0,
     /**
      * Per-sample phase-increment multipliers (1.0 = no change), or null.
@@ -44,6 +72,54 @@ class IgniteContext(
      */
     var phaseMod: DoubleArray? = null,
 ) {
+    // ── Mutable per block (updated by caller before each generate() call) ──────
+
+    /** Start index in buffer for this block. Moved via [updateOffsetAndLength] / [updateOffset]. */
+    var offset: Int = 0
+        private set
+
+    /** Number of samples to generate. Moved via [updateOffsetAndLength] / [updateLength]. */
+    var length: Int = 0
+        private set
+
+    /**
+     * One past the last buffer index this block touches, i.e. `offset + length`.
+     *
+     * All three window fields are `private set` so this one CANNOT go stale: the only way in is
+     * the update functions below, which recompute it once. That matters more than the arithmetic
+     * it saves — a wrong render window is the block-framing bug class
+     * (`docs/plans/block-framing-invariance.md`), and a hand-maintained copy would invite it back.
+     *
+     * Read it instead of recomputing the sum: ~120 render methods used to open with
+     * `val end = ctx.offset + ctx.length`, once per node per block.
+     */
+    var windowEnd: Int = 0
+        private set
+
+    /**
+     * Moves the whole render window — the normal per-block update.
+     *
+     * [windowEnd] is recomputed ONCE here. Assigning the two fields separately would compute it
+     * twice and, in between, leave the context describing a window that never existed.
+     */
+    fun updateOffsetAndLength(offset: Int, length: Int) {
+        this.offset = offset
+        this.length = length
+        this.windowEnd = offset + length
+    }
+
+    /** Moves the window start, keeping [length]. */
+    fun updateOffset(offset: Int) {
+        this.offset = offset
+        this.windowEnd = offset + length
+    }
+
+    /** Resizes the window, keeping [offset]. */
+    fun updateLength(length: Int) {
+        this.length = length
+        this.windowEnd = offset + length
+    }
+
     // ── Computed properties (derived from above, no storage) ───────────────────
 
     /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */
@@ -52,23 +128,10 @@ class IgniteContext(
     /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */
     val voiceDurationFramesD: Double = voiceDurationFrames.toDouble()
 
-    /** Seconds since voice start */
-    val voiceElapsedSecs: Double get() = voiceElapsedFrames.toDouble() / sampleRate
-
-    /** Total gate duration in seconds */
-    val voiceDurationSecs: Double get() = voiceDurationFrames.toDouble() / sampleRate
-
-    /** Voice progress 0.0 → 1.0 relative to gate duration. Can exceed 1.0 during release. */
-    val voiceProgress: Double get() = voiceElapsedFrames.toDouble() / voiceDurationFrames
-
-    /** True when past gate end (in ADSR release phase) */
-    val isInRelease: Boolean get() = voiceElapsedFrames >= gateEndFrame
-
-    /** Release progress 0.0 → 1.0 (only meaningful when isInRelease is true) */
-    val releaseProgress: Double
-        get() {
-            if (!isInRelease) return 0.0
-            if (releaseFrames <= 0) return 1.0
-            return ((voiceElapsedFrames - gateEndFrame).toDouble() / releaseFrames).coerceIn(0.0, 1.0)
-        }
+    // Five block-start-only convenience accessors (voiceElapsedSecs, voiceDurationSecs,
+    // voiceProgress, isInRelease, releaseProgress) were DELETED here 2026-08-28 with zero callers
+    // (block-framing ledger E6). They were shaped exactly like the bug class this file's clock got
+    // burned by: a time value that silently means "at ctx.offset" but reads like "now". If a
+    // per-sample variant is ever needed, it must take the sample offset explicitly — name it
+    // `...At(sampleOffset)` — never a bare property.
 }

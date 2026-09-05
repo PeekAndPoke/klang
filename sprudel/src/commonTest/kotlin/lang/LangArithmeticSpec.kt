@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -598,8 +598,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "apply(add().band())" {
-        val p = seq("12 15").apply(add("3").band("10"))
+    "apply(add().bitAnd())" {
+        val p = seq("12 15").apply(add("3").bitAnd("10"))
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -609,8 +609,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "script apply(add().band())" {
-        val p = SprudelPattern.compile("""seq("12 15").apply(add("3").band("10"))""")!!
+    "script apply(add().bitAnd())" {
+        val p = SprudelPattern.compile("""seq("12 15").apply(add("3").bitAnd("10"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -622,8 +622,8 @@ class LangArithmeticSpec : StringSpec({
 
     // ========== Bitwise operations tests ==========
 
-    "band() performs bitwise AND" {
-        val p = seq("12 15").band("10")
+    "bitAnd() performs bitwise AND" {
+        val p = seq("12 15").bitAnd("10")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -631,8 +631,8 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 10 // 15 & 10 = 10
     }
 
-    "apply(add().bor())" {
-        val p = seq("8 4").apply(add("1").bor("2"))
+    "apply(add().bitOr())" {
+        val p = seq("8 4").apply(add("1").bitOr("2"))
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -642,8 +642,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "script apply(add().bor())" {
-        val p = SprudelPattern.compile("""seq("8 4").apply(add("1").bor("2"))""")!!
+    "script apply(add().bitOr())" {
+        val p = SprudelPattern.compile("""seq("8 4").apply(add("1").bitOr("2"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -653,8 +653,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "bor() performs bitwise OR" {
-        val p = seq("8 4").bor("2")
+    "bitOr() performs bitwise OR" {
+        val p = seq("8 4").bitOr("2")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -662,8 +662,8 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 6  // 4 | 2 = 6
     }
 
-    "apply(add().bxor())" {
-        val p = seq("12 10").apply(add("2").bxor("6"))
+    "apply(add().bitXor())" {
+        val p = seq("12 10").apply(add("2").bitXor("6"))
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -673,8 +673,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "script apply(add().bxor())" {
-        val p = SprudelPattern.compile("""seq("12 10").apply(add("2").bxor("6"))""")!!
+    "script apply(add().bitXor())" {
+        val p = SprudelPattern.compile("""seq("12 10").apply(add("2").bitXor("6"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -684,8 +684,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "bxor() performs bitwise XOR" {
-        val p = seq("12 10").bxor("6")
+    "bitXor() performs bitwise XOR" {
+        val p = seq("12 10").bitXor("6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -693,8 +693,8 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 12 // 10 ^ 6 = 12
     }
 
-    "apply(add().blshift())" {
-        val p = seq("1 2").apply(add("1").blshift("2"))
+    "apply(add().bitShl())" {
+        val p = seq("1 2").apply(add("1").bitShl("2"))
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -704,8 +704,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "script apply(add().blshift())" {
-        val p = SprudelPattern.compile("""seq("1 2").apply(add("1").blshift("2"))""")!!
+    "script apply(add().bitShl())" {
+        val p = SprudelPattern.compile("""seq("1 2").apply(add("1").bitShl("2"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -715,8 +715,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "blshift() performs bitwise left shift" {
-        val p = seq("1 2").blshift("2")
+    "bitShl() performs bitwise left shift" {
+        val p = seq("1 2").bitShl("2")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -724,8 +724,8 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 8 // 2 << 2 = 8
     }
 
-    "apply(mul().brshift())" {
-        val p = seq("8 16").apply(mul("2").brshift("3"))
+    "apply(mul().bitShr())" {
+        val p = seq("8 16").apply(mul("2").bitShr("3"))
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -735,8 +735,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "script apply(mul().brshift())" {
-        val p = SprudelPattern.compile("""seq("8 16").apply(mul("2").brshift("3"))""")!!
+    "script apply(mul().bitShr())" {
+        val p = SprudelPattern.compile("""seq("8 16").apply(mul("2").bitShr("3"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -746,8 +746,8 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
-    "brshift() performs bitwise right shift" {
-        val p = seq("8 12").brshift("2")
+    "bitShr() performs bitwise right shift" {
+        val p = seq("8 12").bitShr("2")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

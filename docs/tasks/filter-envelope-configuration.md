@@ -4,7 +4,7 @@
 
 The filter envelope (`lpadsr`) is only *partly* configurable today: you can set its **times** (`.lpadsr`),
 **depth** (`.lpe`), **Q** (`.lpq`) and base **cutoff** (`.lpf`) — but **not its curve shapes**. Unlike the amp
-ADSR (`.adsrCurves("a:d:r")`), there is no `lpadsrCurves`, and `FilterEnvDef` carries no curve fields, so the
+ADSR (`.adsrCurves("a", "d", "r")`), there is no `lpadsrCurves`, and `FilterEnvDef` carries no curve fields, so the
 filter sweep is locked to whatever `Voice.Envelope`'s defaults are.
 
 As of 2026-06-19 those defaults are **Exponential / Exponential / Exponential** for all envelopes (amp, filter,
@@ -56,7 +56,7 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 
 - `SprudelVoiceData.kt`: add `lpAttackCurve / lpDecayCurve / lpReleaseCurve` (nullable) to the `Svd*` filter
   group; thread into the `FilterEnvDef` construction (`:~772-782`).
-- New DSL function **`lpadsrCurves("a:d:r")`** (mirror of `adsrCurves`, parse `AdsrCurve` per stage) in
+- New DSL function **`lpadsrCurves(attack, decay, release)`** (mirror of the per-param `adsrCurves`, parse `AdsrCurve` per stage) in
   `lang_filters.kt` (or `lang_effects_addons.kt`); plus mapper/string-receiver overloads per the DSL
   conventions. Follow [[feedback_klangscript_no_named_params]] / `/sprudel-dev-knowhow` for the function shape.
 - KlangScript surface only if the amp `adsrCurves` is exposed there (match it).

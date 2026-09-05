@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.voices
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.SpyFilter
@@ -147,6 +148,11 @@ class VoicePipelineTest : StringSpec({
 
         // Filter should have been processed
         spyFilter.processCalls.size shouldBe 1
+
+        // The "before" in the name (audit finding F13). Two independent counters compared after the
+        // fact cannot distinguish the orders — both are 1 either way. This records how many
+        // setCutoff calls had landed WHEN process began, so it can only be 1 if modulation ran first.
+        spyFilter.cutoffCountAtProcess shouldBe listOf(1)
     }
 
     "envelope is applied after main filter" {
@@ -164,22 +170,56 @@ class VoicePipelineTest : StringSpec({
         voice.render(ctx)
 
         spyMainFilter.processCalls.size shouldBe 1
+
+        // The ordering claim itself (audit finding F13): the assertion above is identical to the one
+        // in "pipeline executes main filter" and says nothing about ORDER. A 100-frame attack means
+        // the VCA's gain at frame 0 is ~0, so what the filter was HANDED settles the sequence — the
+        // raw exciter (1.0) if the filter runs first, a near-silent signal if the VCA already ran.
+        spyMainFilter.seenAtProcess[0] shouldBe (1.0 plusOrMinus 1e-9)
+
+        // ...and the envelope did then apply, so this is not just a filter running on a dry chain.
+        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.05)
     }
 
     "voice renders correct number of samples" {
+        // Audit finding F15(a): this named a countable property and counted nothing — it rendered
+        // and asserted absolutely zero. A voice spanning exactly one block must fill exactly that
+        // block, so the sentinel makes "how many samples" literally countable.
         val voice = createSynthVoice(startFrame = 0.0, endFrame = 100.0)
 
         val ctx = createContext(blockStart = 0.0, blockFrames = 100)
+        val sentinel = 7.0
+        ctx.voiceBuffer.fill(sentinel)
+
         voice.render(ctx)
+
+        ctx.voiceBuffer.count { it != sentinel } shouldBe 100
     }
 
     "voice starting mid-block renders partial buffer" {
         val voice = createSynthVoice(startFrame = 50.0, endFrame = 150.0)
 
         val ctx = createContext(blockStart = 0.0, blockFrames = 100)
+
+        // A SENTINEL, not the default zeros. "Partial buffer" means the voice writes only
+        // [offset, offset+length) and leaves the rest alone — and against a pre-zeroed buffer that
+        // is indistinguishable from a voice that writes silence across the whole block. Checking
+        // for zeros first looked right and was toothless: a mutant that ignored the onset entirely
+        // (`vStart = ctx.blockStart`) still produced zeros there, because the ENVELOPE floors a
+        // negative position, so the zeros were never evidence of windowing.
+        val sentinel = 7.0
+        ctx.voiceBuffer.fill(sentinel)
+
         val result = voice.render(ctx)
 
         result shouldBe true
+
+        // Untouched before the onset...
+        (0 until 50).all { ctx.voiceBuffer[it] == sentinel } shouldBe true
+        // ...and written from it (audit finding F13: only the lifecycle boolean was ever checked
+        // here, while the identically-named rows in VoiceLifecycleTest DO inspect content — the two
+        // specs disagreed about what the name meant).
+        (50 until 100).all { ctx.voiceBuffer[it] != sentinel } shouldBe true
     }
 
     "voice ending mid-block renders partial buffer" {

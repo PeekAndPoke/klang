@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -25,6 +25,7 @@ class BackendClockSyncSpec : StringSpec({
             cylinders = emptyList(),
             backendNowMs = backendNowMs,
             outputLatencyMs = outputLatencyMs,
+            warehouse = KlangCommLink.Feedback.Diagnostics.WarehouseStats.empty,
         )
 
     "one Diagnostics within the threshold nudges the offset via EMA (α=0.05)" {

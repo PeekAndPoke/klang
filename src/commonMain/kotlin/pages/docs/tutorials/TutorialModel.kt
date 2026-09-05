@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -56,6 +56,8 @@ object Tut {
     const val scalesAndMelodies = "Scales and Melodies"
     const val theTransformToolkit = "The Transform Toolkit"
     const val gates = "Gates"
+    const val thickness = "Thickness"
+    const val spaceAndDirt = "Space and Dirt"
 }
 
 /**

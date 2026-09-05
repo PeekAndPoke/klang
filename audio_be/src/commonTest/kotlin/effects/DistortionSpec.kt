@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -11,7 +11,7 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.ClippingFuncs
+import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.voices.strip.filter.DistortionRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
 import kotlin.math.abs
@@ -21,40 +21,40 @@ class DistortionSpec : StringSpec({
     // ===== Waveshaper function tests =====
 
     "fastTanh clips input to [-1, 1] range" {
-        ClippingFuncs.fastTanh(0.0) shouldBe 0.0
-        ClippingFuncs.fastTanh(100.0) shouldBe (1.0 plusOrMinus 0.01)
-        ClippingFuncs.fastTanh(-100.0) shouldBe (-1.0 plusOrMinus 0.01)
+        ShapingFuncs.fastTanh(0.0) shouldBe 0.0
+        ShapingFuncs.fastTanh(100.0) shouldBe (1.0 plusOrMinus 0.01)
+        ShapingFuncs.fastTanh(-100.0) shouldBe (-1.0 plusOrMinus 0.01)
     }
 
     "hardClip strictly clips to [-1, 1]" {
-        ClippingFuncs.hardClip(0.5) shouldBe 0.5
-        ClippingFuncs.hardClip(2.0) shouldBe 1.0
-        ClippingFuncs.hardClip(-2.0) shouldBe -1.0
+        ShapingFuncs.hardClip(0.5) shouldBe 0.5
+        ShapingFuncs.hardClip(2.0) shouldBe 1.0
+        ShapingFuncs.hardClip(-2.0) shouldBe -1.0
     }
 
     "softClip is bounded" {
-        abs(ClippingFuncs.softClip(100.0)) shouldBeLessThan 1.01
-        abs(ClippingFuncs.softClip(-100.0)) shouldBeLessThan 1.01
+        abs(ShapingFuncs.softClip(100.0)) shouldBeLessThan 1.01
+        abs(ShapingFuncs.softClip(-100.0)) shouldBeLessThan 1.01
     }
 
     "cubicClip provides soft saturation" {
-        ClippingFuncs.cubicClip(0.0) shouldBe 0.0
-        ClippingFuncs.cubicClip(0.5).shouldBeGreaterThan(0.0)
-        abs(ClippingFuncs.cubicClip(10.0)) shouldBeLessThan 1.5
+        ShapingFuncs.cubicClip(0.0) shouldBe 0.0
+        ShapingFuncs.cubicClip(0.5).shouldBeGreaterThan(0.0)
+        abs(ShapingFuncs.cubicClip(10.0)) shouldBeLessThan 1.5
     }
 
     "diodeClip is asymmetric (passes positive, attenuates negative)" {
-        ClippingFuncs.diodeClip(1.0).shouldBeGreaterThan(0.0)
+        ShapingFuncs.diodeClip(1.0).shouldBeGreaterThan(0.0)
         // Negative values should be attenuated (closer to zero than positive)
-        abs(ClippingFuncs.diodeClip(-1.0)) shouldBeLessThan abs(ClippingFuncs.diodeClip(1.0))
+        abs(ShapingFuncs.diodeClip(-1.0)) shouldBeLessThan abs(ShapingFuncs.diodeClip(1.0))
     }
 
     "sineFold wraps around at boundaries" {
         // At zero, output should be near zero
-        ClippingFuncs.sineFold(0.0) shouldBe (0.0 plusOrMinus 0.001)
+        ShapingFuncs.sineFold(0.0) shouldBe (0.0 plusOrMinus 0.001)
         // At PI, should wrap back near zero
-        ClippingFuncs.sineFold(kotlin.math.PI) shouldBe (0.0 plusOrMinus 0.001)
-        ClippingFuncs.sineFold(kotlin.math.PI / 2.0) shouldBe (1.0 plusOrMinus 0.001)
+        ShapingFuncs.sineFold(kotlin.math.PI) shouldBe (0.0 plusOrMinus 0.001)
+        ShapingFuncs.sineFold(kotlin.math.PI / 2.0) shouldBe (1.0 plusOrMinus 0.001)
     }
 
     // ===== DistortionRenderer tests =====

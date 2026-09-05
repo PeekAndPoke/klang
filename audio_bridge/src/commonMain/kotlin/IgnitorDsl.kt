@@ -1,9 +1,77 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_bridge
+
+import io.peekandpoke.klang.audio_bridge.constants.PULSE_FALL_FLANK
+import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
+import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
+import io.peekandpoke.klang.audio_bridge.constants.RAMP_RESET_SAMPLES
+import io.peekandpoke.klang.audio_bridge.constants.RAMP_SHAPE_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SAW_RESET_SAMPLES
+import io.peekandpoke.klang.audio_bridge.constants.SAW_SHAPE_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 
@@ -145,9 +213,9 @@ sealed interface IgnitorDsl {
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
         /** Analog flyback time in samples — lower = brighter/sharper reset, higher = softer (default 2.0). */
-        val resetSamples: Double = 2.0,
+        val resetSamples: Double = SAW_RESET_SAMPLES,
         /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps very high notes sane. */
-        val shapeMax: Double = 0.5,
+        val shapeMax: Double = SAW_SHAPE_MAX,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -245,11 +313,11 @@ sealed interface IgnitorDsl {
         val duty: IgnitorDsl = Slots.duty,
         val analog: IgnitorDsl = Slots.analog,
         /** Minimum flank length in samples (a floor on every edge → softens with pitch). Default 2.0. */
-        val flankSamples: Double = 2.0,
+        val flankSamples: Double = PULSE_MIN_FLANK_SAMPLES,
         /** Rising-edge flank fraction of the plateau (0 = sharpest/min floor, 1 = full ramp). Default 0.0. */
-        val riseFlank: Double = 0.0,
+        val riseFlank: Double = PULSE_RISE_FLANK,
         /** Falling-edge flank fraction of the plateau (0 = sharpest/min floor, 1 = full ramp). Default 0.0. */
-        val fallFlank: Double = 0.0,
+        val fallFlank: Double = PULSE_FALL_FLANK,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); duty.collectParams(out); analog.collectParams(out)
@@ -354,15 +422,16 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Ramp oscillator. Reverse sawtooth (ramp up, opposite slope of [Sawtooth]). */
+    /** Ramp oscillator. Reverse sawtooth — FALLING, the negated [Sawtooth] (`Ignitors.ramp`
+     *  builds it at `polarity = -1.0`). */
     @WireName("ramp")
     data class Ramp(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
         /** Analog flyback time in samples — lower = brighter/sharper reset, higher = softer (default 2.0). */
-        val resetSamples: Double = 2.0,
+        val resetSamples: Double = RAMP_RESET_SAMPLES,
         /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps high notes sane. */
-        val shapeMax: Double = 0.5,
+        val shapeMax: Double = RAMP_SHAPE_MAX,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); analog.collectParams(out)
@@ -384,29 +453,41 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERSAW_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERSAW_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERSAW_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERSAW_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERSAW_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
-        val drawTries: Double = 5.0,
+        val drawTries: Double = SUPERSAW_DRAW_TRIES,
         /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
-        val kMin: Double = 0.30,
+        val kMin: Double = SUPERSAW_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.55,
+        val kMax: Double = SUPERSAW_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERSAW_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        val refreshEvery: Double = SUPERSAW_REFRESH_EVERY,
+        /**
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
+         * (default): normal-distribution serving over the vocabulary's rank order, median-
+         * centered — width sets the spread (`0` = always the median take, `0.1` tight,
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = SUPERSAW_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERSAW_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -422,31 +503,43 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERSINE_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERSINE_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERSINE_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERSINE_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERSINE_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64).
          *  Deeper than the saw's 5: the high band is rare per draw, and a missed band degrades to
          *  closest-candidate (= coherence maximization). */
-        val drawTries: Double = 40.0,
+        val drawTries: Double = SUPERSINE_DRAW_TRIES,
         /** Band lower edge — the supersine's K IS the note (no other harmonics), so it sits high. */
-        val kMin: Double = 0.50,
+        val kMin: Double = SUPERSINE_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.80,
+        val kMax: Double = SUPERSINE_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERSINE_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        val refreshEvery: Double = SUPERSINE_REFRESH_EVERY,
+        /**
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
+         * (default): normal-distribution serving over the vocabulary's rank order, median-
+         * centered — width sets the spread (`0` = always the median take, `0.1` tight,
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = SUPERSINE_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERSINE_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -462,29 +555,41 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERSQUARE_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERSQUARE_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERSQUARE_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERSQUARE_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERSQUARE_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
-        val drawTries: Double = 5.0,
+        val drawTries: Double = SUPERSQUARE_DRAW_TRIES,
         /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
-        val kMin: Double = 0.30,
+        val kMin: Double = SUPERSQUARE_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.55,
+        val kMax: Double = SUPERSQUARE_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERSQUARE_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        val refreshEvery: Double = SUPERSQUARE_REFRESH_EVERY,
+        /**
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
+         * (default): normal-distribution serving over the vocabulary's rank order, median-
+         * centered — width sets the spread (`0` = always the median take, `0.1` tight,
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = SUPERSQUARE_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERSQUARE_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -500,30 +605,42 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERTRI_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERTRI_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERTRI_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERTRI_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERTRI_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64).
          *  Deeper than the saw's 5 — the higher band is rarer per draw. */
-        val drawTries: Double = 16.0,
+        val drawTries: Double = SUPERTRI_DRAW_TRIES,
         /** Band lower edge — 1/k² harmonics put most of the note in the fundamental, so it sits high-ish. */
-        val kMin: Double = 0.40,
+        val kMin: Double = SUPERTRI_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.65,
+        val kMax: Double = SUPERTRI_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERTRI_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        val refreshEvery: Double = SUPERTRI_REFRESH_EVERY,
+        /**
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
+         * (default): normal-distribution serving over the vocabulary's rank order, median-
+         * centered — width sets the spread (`0` = always the median take, `0.1` tight,
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = SUPERTRI_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERTRI_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -539,29 +656,41 @@ sealed interface IgnitorDsl {
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
-        val spreadPower: Double = 1.2,
+        val spreadPower: Double = SUPERRAMP_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-        val sideAtten: Double = 0.1,
+        val sideAtten: Double = SUPERRAMP_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
-        val gainJitter: Double = 0.15,
+        val gainJitter: Double = SUPERRAMP_GAIN_JITTER,
         /** Fraction of [gainJitter] the on-pitch center voice gets (0 = stable center, 1 = jittered like sides). */
-        val centerJitterScale: Double = 0.4,
+        val centerJitterScale: Double = SUPERRAMP_CENTER_JITTER_SCALE,
         /** Banded start-phase selection (phase pool): 0 = off (bit-identical legacy random), 1 = on. */
-        val phasePool: Double = 0.0,
+        val phasePool: Double = SUPERRAMP_PHASE_POOL,
         /** Candidate phase sets scored per note-on when [phasePool] is on (best-of-M; engine caps at 64). */
-        val drawTries: Double = 5.0,
+        val drawTries: Double = SUPERRAMP_DRAW_TRIES,
         /** Accepted fundamental-coherence band K, lower edge (0 = cancelled, 1 = phase-aligned). */
-        val kMin: Double = 0.30,
+        val kMin: Double = SUPERRAMP_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
-        val kMax: Double = 0.55,
+        val kMax: Double = SUPERRAMP_K_MAX,
         /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
-        val poolSize: Double = 256.0,
+        val poolSize: Double = SUPERRAMP_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
-        val refreshEvery: Double = 10.0,
-        /** Pool entry selection: 0 = roundRobin (default), 1 = random. */
-        val selection: Double = 0.0,
+        val refreshEvery: Double = SUPERRAMP_REFRESH_EVERY,
+        /**
+         * Pool entry selection, `"name[:width[:outliers]]"` (value-colon form). `"normal"`
+         * (default): normal-distribution serving over the vocabulary's rank order, median-
+         * centered — width sets the spread (`0` = always the median take, `0.1` tight,
+         * `0.5` default, `1`+ near-uniform, e.g. `"normal:1.5"` ≈ random with a slight
+         * center edge); outliers (0..1, default 0) is the probability of serving an
+         * EXTREME take instead — the vocabulary's lowest- or highest-K entry, coin-flip
+         * side (with a reachable band those sit directly at kMin/kMax):
+         * `"normal:0.1:0.05"` = tight typical takes, 5% wild plucks. `"random"`: uniform
+         * vocabulary pick (band-accepted takes, not un-pooled legacy randomness).
+         * `"roundrobin"` (opt-in): cycle the vocabulary — can gargle audibly.
+         * Unrecognized names coerce to the default.
+         */
+        val selection: String = SUPERRAMP_SELECTION,
         /** Entries seeded eagerly at pool creation (work-capped; 0 = fully lazy). */
-        val warmup: Double = 16.0,
+        val warmup: Double = SUPERRAMP_WARMUP,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
@@ -617,6 +746,24 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
     // Dispatch / Selection
     // ═════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Disables the graph optimizer for the WHOLE registered definition this appears in, not just
+     * the subtree below it. Exists so a fusion can be ruled in or out BY EAR: wrap any sound,
+     * set `on = 0`, and the tree is rendered exactly as authored.
+     *
+     * [on] is a plain Int, structural on purpose: the optimizer runs once at registration, long
+     * before any note, so there is nothing to read a Param from. Coerced (`on != 0`), never
+     * required, per the house no-throw-on-user-input rule.
+     *
+     * Dissolves in the `buildIgnitor` prologue like [Variants], so it costs nothing at render.
+     */
+    @WireName("optimizerHint")
+    data class OptimizerHint(val inner: IgnitorDsl, val on: Int = 1) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
 
     /**
      * Selects one of several child ignitors based on the voice's `soundIndex`.
@@ -935,11 +1082,11 @@ sealed interface IgnitorDsl {
     // Filters
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Biquad lowpass filter. Attenuates frequencies above the cutoff. */
+    /** SVF lowpass filter. Attenuates frequencies above the cutoff; [passes] cascades the stage. */
     @WireName("lowpass")
     data class Lowpass(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(2000.0),
+        val freq: IgnitorDsl = Constant(2000.0),
         val q: IgnitorDsl = Constant(0.707),
         /**
          * Analog character amount. `0` = clean linear filter (default — bit-identical
@@ -948,23 +1095,31 @@ sealed interface IgnitorDsl {
          * Typical range 0..10; values around 1–3 give Diva-default warmth.
          */
         val analog: IgnitorDsl = Constant(0.0),
+        /**
+         * Cascade count (C5, structural): run the stage [passes] times — 2 = 24 dB/oct.
+         * Per-stage q is staggered (Butterworth ladder scaled by `q/0.707`) so the cascade
+         * stays -3 dB at [freq]; a resonant q's peak compounds across stages.
+         */
+        val passes: Int = 1,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
-    /** Biquad highpass filter. Attenuates frequencies below the cutoff. */
+    /** SVF highpass filter. Attenuates frequencies below the cutoff; [passes] cascades the stage. */
     @WireName("highpass")
     data class Highpass(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(200.0),
+        val freq: IgnitorDsl = Constant(200.0),
         val q: IgnitorDsl = Constant(0.707),
         /** See [Lowpass.analog] — same semantics for the HP tap. */
         val analog: IgnitorDsl = Constant(0.0),
+        /** Cascade count — see [Lowpass.passes]. */
+        val passes: Int = 1,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -972,10 +1127,10 @@ sealed interface IgnitorDsl {
     @WireName("one-pole-lowpass")
     data class OnePoleLowpass(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(2000.0),
+        val freq: IgnitorDsl = Constant(2000.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out)
         }
     }
 
@@ -983,8 +1138,8 @@ sealed interface IgnitorDsl {
     @WireName("bandpass")
     data class Bandpass(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(1000.0),
-        val q: IgnitorDsl = Constant(1.0),
+        val freq: IgnitorDsl = Constant(1000.0),
+        val q: IgnitorDsl = Constant(0.707),
         /**
          * Reserved for forward-compat — accepted but currently a no-op (BP saturation
          * not yet implemented; same pattern as the voice-strip `SvfBPF`).
@@ -993,7 +1148,7 @@ sealed interface IgnitorDsl {
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -1001,13 +1156,198 @@ sealed interface IgnitorDsl {
     @WireName("notch")
     data class Notch(
         val inner: IgnitorDsl,
-        val cutoffHz: IgnitorDsl = Constant(1000.0),
-        val q: IgnitorDsl = Constant(1.0),
+        val freq: IgnitorDsl = Constant(1000.0),
+        val q: IgnitorDsl = Constant(0.707),
         /** Reserved for forward-compat — accepted but currently a no-op (see [Bandpass.analog]). */
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Equalizer (unified-eq: one fused EqCore pass instead of chained filter nodes)
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * One section of an [Eq]. A sealed hierarchy, NOT an enum — the house wire rule (types
+     * over enums): each variant carries exactly its own params, `@WireName`-keyed variants
+     * are order-independent on the wire (no enum-ordinal append-only hazard), and every
+     * consumer dispatches through an exhaustive `when` (the runtime maps each variant to
+     * `EqCore`'s Int section types in ONE such `when` — a new variant without a mapping
+     * fails compilation). Every param is a full [IgnitorDsl], resolved per block by the
+     * runtime adapter (`EqIgnitor`) — which is the only layer where `Freq`-backed params
+     * (the tracking highpass) can exist; the planned Master/Katalyst surfaces pass scalars.
+     */
+    @WireFormat
+    sealed interface EqSection {
+
+        /**
+         * Per-variant param collection — declared HERE so a future field on any variant must
+         * be wired next to its declaration (an external `when` over variants matches old
+         * arms silently when a variant merely gains a field; this way the variant's own
+         * override is the single place to forget, right beside the field).
+         */
+        fun collectParams(out: MutableList<Param>)
+
+        /**
+         * SVF low-pass section — the linear path of [IgnitorDsl.Lowpass], as an Eq section.
+         * Defaults MATCH the chained node (parameter-parity rule: same param, same surface,
+         * same meaning — and the same omitted-field sound).
+         */
+        @WireName("eqLowpass")
+        data class Lowpass(
+            val freq: IgnitorDsl = Constant(2000.0),
+            val q: IgnitorDsl = Constant(0.707),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freq.collectParams(out); q.collectParams(out)
+            }
+        }
+
+        /**
+         * SVF high-pass section — the linear path of [IgnitorDsl.Highpass], as an Eq
+         * section. Defaults match the chained node.
+         */
+        @WireName("eqHighpass")
+        data class Highpass(
+            val freq: IgnitorDsl = Constant(200.0),
+            val q: IgnitorDsl = Constant(0.707),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freq.collectParams(out); q.collectParams(out)
+            }
+        }
+
+        /** SVF band-pass section — [IgnitorDsl.Bandpass] as an Eq section; same defaults. */
+        @WireName("eqBandpass")
+        data class Bandpass(
+            val freq: IgnitorDsl = Constant(1000.0),
+            val q: IgnitorDsl = Constant(0.707),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freq.collectParams(out); q.collectParams(out)
+            }
+        }
+
+        /** SVF notch section — [IgnitorDsl.Notch] as an Eq section; same defaults. */
+        @WireName("eqNotch")
+        data class Notch(
+            val freq: IgnitorDsl = Constant(1000.0),
+            val q: IgnitorDsl = Constant(0.707),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freq.collectParams(out); q.collectParams(out)
+            }
+        }
+
+        /**
+         * Simper peaking bell: [db] decibels of gain at [freq], [q] the PRE-GAIN bandwidth
+         * (see `computeSvfBellCoeffs` for math + limits). 0 dB is bit-transparent; db is
+         * COEFFICIENT-bearing (an LFO on it zippers like an LFO on cutoff, per-block snap).
+         *
+         * The [q] default is 0.707 and MUST stay equal to the `band()` default on both DSL
+         * doors (parameter-parity: one bell, one omitted-field sound). Since C1 every
+         * filter shares the 0.707 default — here it is a bell width, and musical bells sit
+         * wide (the tap-to-bell conversions of the voicings in the real song land at
+         * 0.33 to 0.70).
+         *
+         * ⚠ That conversion (`A² = 1 + g` since the C2 unity-peak taps, `q_bell = Q/A`) is exact for ONE tap in
+         * isolation ONLY. N parallel taps are NOT N serial bells: bells multiply, taps sum,
+         * and the cross term is what it leaves behind. Migrating a parallel boost
+         * bank to bells is a NEW mix, not a conversion — use [RawTap]. See [IgnitorDsl.Eq].
+         * (Worked example: two boosts of gain 1.7 @ 850 Hz/Q 0.707 and 5.0 @ 2500 Hz/Q 0.7 —
+         * the guitar's default voicing — overshot by +4.5 dB at 1200 Hz (measured pre-C2; re-measure under unity-peak taps) when run as serial
+         * bells instead of parallel taps. Wider/hotter voicings overshoot more; the term
+         * scales with `g₁·g₂`, so re-measure per patch rather than reusing this figure.)
+         */
+        @WireName("eqBell")
+        data class Bell(
+            val freq: IgnitorDsl = Constant(1000.0),
+            val q: IgnitorDsl = Constant(0.707),
+            val db: IgnitorDsl = Constant(0.0),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freq.collectParams(out); q.collectParams(out); db.collectParams(out)
+            }
+        }
+
+        /**
+         * Parallel boost tap: a bandpass of the Eq INPUT (never the running chain) added at
+         * this list position, scaled by [gain] — the fused form of
+         * `signal.add(signal.bandpass(freq, q).mul(gain))` WHEN [gain] is
+         * Constant/Param-backed: the adapter snaps it once per block, while the legacy Times
+         * node multiplies per SAMPLE — an expression-backed gain (an LFO) must never fuse
+         * (a 128-frame gain staircase instead of a smooth tremolo; the optimizer's R2
+         * precondition, same class as [Bell]'s coefficient-bearing `db`).
+         */
+        @WireName("eqRawTap")
+        data class RawTap(
+            val freq: IgnitorDsl = Constant(1000.0),
+            val q: IgnitorDsl = Constant(0.707),
+            val gain: IgnitorDsl = Constant(1.0),
+        ) : EqSection {
+            override fun collectParams(out: MutableList<Param>) {
+                freq.collectParams(out); q.collectParams(out); gain.collectParams(out)
+            }
+        }
+    }
+
+    /**
+     * Fused equalizer over [inner]: an ordered [sections] list rendered in ONE `EqCore` pass
+     * instead of a chain of per-filter nodes. Authored via the `.eq()` surface, and ALSO
+     * produced automatically by the graph optimizer (`IgnitorDsl.optimize`), which folds runs
+     * of ADJACENT chained filters into sections bit-identically at registration time. The
+     * chained syntax stays THE syntax for cutoff filters; nothing is ever reordered, so a
+     * nonlinear node or a gain multiply between two filters keeps them apart.
+     *
+     * ## Two section families, two topologies
+     *
+     * Sections are visited in list order, and each one rewrites the running buffer in place,
+     * so a section normally sees what the previous section produced. That is the SERIAL
+     * family: [EqSection.Lowpass], [EqSection.Highpass], [EqSection.Bandpass],
+     * [EqSection.Notch] and [EqSection.Bell] (`.band()`).
+     *
+     * [EqSection.RawTap] (`.tap()`) is the exception and the reason this node can replace a
+     * hand-built parallel boost chain: a tap reads the **Eq INPUT** (a per-block snapshot
+     * taken before any section runs) rather than the running buffer, and ADDS its band onto
+     * the chain at its list position instead of replacing it.
+     *
+     * ```
+     * input ──┬─────────────► [bell] ──► [notch] ──► [lowpass] ──► out
+     *         │                 ▲
+     *         └── bandpass ─────┘  (a tap: reads input, adds in at its position)
+     * ```
+     *
+     * The practical consequence, and it is audible: N bells MULTIPLY
+     * (`(1 + m1₁H₁)(1 + m1₂H₂)`), while N taps SUM (`1 + g₁H₁ + g₂H₂`). Converting a
+     * parallel tap bank into serial bells leaves the cross term `g₁g₂H₁H₂` behind. On Der
+     * Schmetterling's guitar (850 Hz and 2500 Hz boosts) that term measured **+4.5 dB around
+     * 1200 Hz** (pre-C2; the exact figure needs a re-measure under unity-peak taps), and more on wider or hotter voicings. Per-BAND the two forms convert
+     * exactly (`A² = 1 + g` since the C2 unity-peak taps, `q_bell = Q/A`); per-CHAIN they do not. Use [EqSection.RawTap]
+     * to reproduce a parallel bank, and [EqSection.Bell] for ordinary cascading EQ bands.
+     *
+     * ⚠ The consequence when the two are MIXED: a bell earlier in the list cannot shape a
+     * later tap, because the tap always reads the pre-section input. `.band(3000.0, db = -12.0)`
+     * followed by `.tap(3000.0, 1.0, 5.0)` re-injects the very 3 kHz the band just removed,
+     * taken from the uncut source. Put taps first (as the diagram shows) unless that
+     * re-injection is what you want.
+     *
+     * Cost note: the input snapshot is taken ONLY when the list contains a tap, so a
+     * bell-only Eq copies nothing.
+     */
+    @WireName("eq")
+    data class Eq(
+        val inner: IgnitorDsl,
+        val sections: List<EqSection> = emptyList(),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+
+            for (s in sections) {
+                s.collectParams(out)
+            }
         }
     }
 
@@ -1064,12 +1404,23 @@ sealed interface IgnitorDsl {
         val envDecaySec: IgnitorDsl = Constant(0.0),
         val envSustainLevel: IgnitorDsl = Constant(1.0),
         val envReleaseSec: IgnitorDsl = Constant(0.0),
+        /** The frequency the FM machinery runs on: the modulator is driven at `freq x ratio`
+         *  and the index is `depth / freq`. Defaults to [Freq] (the note), which makes FM
+         *  transpose under `detune` like any note-pitched oscillator; authored absolute
+         *  (`Constant(...)`) the patch is immune, like `Osc.sine(5)` — the same
+         *  musical/absolute separation every oscillator has (D13's Fm special case retired).
+         *  DELIBERATELY not exposed on the `fm(...)` builder or the script door (maintainer
+         *  decision 2026-08-30): a hidden internal of the pitch machinery, raw-door-only —
+         *  the default IS the semantics; absolute authoring stays a power-user construction. */
+        val freq: IgnitorDsl = Freq,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             carrier.collectParams(out); modulator.collectParams(out); ratio.collectParams(out); depth.collectParams(out)
+            freq.collectParams(out)
             envAttackSec.collectParams(out); envDecaySec.collectParams(out); envSustainLevel.collectParams(out); envReleaseSec.collectParams(
                 out
             )
+            freq.collectParams(out)
         }
     }
 
@@ -1078,7 +1429,7 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Pre-amplification stage. Boosts signal level before clipping.
+     * Pre-amplification stage. Boosts signal level before the waveshaper ([Shape]).
      * Types: "linear" (current gain curve).
      */
     @WireName("drive")
@@ -1104,8 +1455,8 @@ sealed interface IgnitorDsl {
      *  - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly),
      *    "stompbox" (diode pedal), "rectify" (full-wave).
      */
-    @WireName("clip")
-    data class Clip(
+    @WireName("shape")
+    data class Shape(
         val inner: IgnitorDsl,
         val shape: String = "soft",
         val oversample: Int = 0,
@@ -1117,8 +1468,12 @@ sealed interface IgnitorDsl {
 
     /**
      * Legacy distortion node. Kept for backward compatibility with serialized trees.
-     * New code should use [Drive] + [Clip] instead. The builder extension [IgnitorDsl.distort]
-     * creates a Clip(Drive(...)) chain.
+     * New code should use [Drive] + [Shape] instead. The builder extension [IgnitorDsl.distort]
+     * creates a Shape(Drive(...)) chain — and since the W5 decision (2026-08-30) the RUNTIME
+     * builds this node as that exact chain too: the fused DistortIgnitor is deleted, so a
+     * legacy tree renders through the modern Drive+Shape path (the shaper stays engaged at
+     * unity drive where the fused node's gate bypassed everything — the one nuance, recorded
+     * in the ledger).
      */
     @WireName("distort")
     data class Distort(
@@ -1157,20 +1512,31 @@ sealed interface IgnitorDsl {
     /**
      * Phaser effect. Sweeps a series of allpass filters to create notch comb filtering.
      *
-     * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
-     *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
+     * Wet/dry follows THE shared wet/dry law (`WetDryMix`, correlated branch, p = 2):
+     * `out = max(dryFloor, cos²(wet·π/2)) · dry + sin²(wet·π/2) · phased`. The phased path is
+     * the input through the allpass chain — fully correlated with the dry — so the crossfade
+     * holds constant AMPLITUDE across the knob.
+     *
+     * @param wet Wet/dry balance in [0, 1]. 0.0 = bit-exact bypass, 1.0 = phased signal only,
+     *   0.5 = equal mix (both coefficients 0.5). Default: 0.5. Set via the typed knob:
+     *   `.phaser(rate).wet(0.3)`.
+     * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade). Raising
+     *   it keeps at least that much dry at every [wet]; at 1.0 the phaser is purely additive,
+     *   like the orbit-side phaser. (Named `dryFloor`, not `floor`: `floor()` is already the
+     *   arithmetic round-down on patterns, and one word must not mean two things.)
      */
     @WireName("phaser")
     data class Phaser(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(0.5),
-        val blend: IgnitorDsl = Constant(0.5),
+        val wet: IgnitorDsl = Constant(0.5),
         val center: IgnitorDsl = Constant(1000.0),
         val sweep: IgnitorDsl = Constant(1000.0),
+        val dryFloor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); rate.collectParams(out); blend.collectParams(out)
-            center.collectParams(out); sweep.collectParams(out)
+            inner.collectParams(out); rate.collectParams(out); wet.collectParams(out)
+            center.collectParams(out); sweep.collectParams(out); dryFloor.collectParams(out)
         }
     }
 
@@ -1193,8 +1559,15 @@ sealed interface IgnitorDsl {
      * specified by [pitches] (in semitones), and feeds the wet output back into the grain buffer
      * through a one-pole lowpass at [tone] Hz.
      *
-     * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
-     *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
+     * Wet/dry follows THE shared wet/dry law (`WetDryMix`, decorrelated branch, p = 1):
+     * `out = max(dryFloor, cos(wet·π/2)) · dry + sin(wet·π/2) · cloud`. The grain cloud is
+     * decorrelated from the dry, so this equal-POWER crossfade holds 0 dB across the knob.
+     *
+     * @param wet Wet/dry balance in [0, 1]. 0.0 = bit-exact bypass REGARDLESS of [feedback]
+     *   (the grain state is cleared on bypass entry, so a modulated wet cannot resurrect a
+     *   stale tail), 1.0 = cloud only. Default: 0.5. Set via the typed knob: `.shimmer().wet(0.3)`.
+     * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade); see
+     *   [Phaser.dryFloor] for the name.
      * @param feedback Wet → grain-buffer feedback. 0.0 = no cascade, 0.9 = long tails.
      *   Hard-clamped to 0.95 internally for stability.
      * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]` (root + fifth + octave).
@@ -1205,13 +1578,15 @@ sealed interface IgnitorDsl {
     @WireName("shimmer")
     data class Shimmer(
         val inner: IgnitorDsl,
-        val blend: IgnitorDsl = Constant(0.5),
+        val wet: IgnitorDsl = Constant(0.5),
         val feedback: IgnitorDsl = Constant(0.5),
         val pitches: List<Double> = listOf(0.0, 7.0, 12.0),
         val tone: IgnitorDsl = Constant(4000.0),
+        val dryFloor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); blend.collectParams(out); feedback.collectParams(out); tone.collectParams(out)
+            inner.collectParams(out); wet.collectParams(out); feedback.collectParams(out)
+            tone.collectParams(out); dryFloor.collectParams(out)
         }
     }
 
@@ -1223,39 +1598,45 @@ sealed interface IgnitorDsl {
      * Vibrato effect. Modulates pitch with a sinusoidal LFO.
      *
      * @param rate LFO frequency in Hz (default 5.0)
-     * @param depth modulation depth in semitones (default 0.25 ≈ quarter-semitone wobble).
-     *   Matches the sprudel `vibratoMod()` unit: both specify depth in semitones.
+     * @param semitones modulation depth in SEMITONES (default 0.25 ≈ quarter-semitone wobble).
+     *   Matches the sprudel `vibratoMod()` unit; pitch params are named by their unit.
      */
     @WireName("vibrato")
     data class Vibrato(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(5.0),
-        val depth: IgnitorDsl = Constant(0.25),
+        val semitones: IgnitorDsl = Constant(0.25),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
+            inner.collectParams(out); rate.collectParams(out); semitones.collectParams(out)
         }
     }
 
-    /** Pitch acceleration. Continuously shifts pitch over the voice's duration using an exponential curve. */
+    /**
+     * Pitch acceleration. Continuously shifts pitch over the voice's duration using an
+     * exponential curve, by [semitones] total: `accelerate(12)` ends one octave up.
+     */
     @WireName("accelerate")
     data class Accelerate(
         val inner: IgnitorDsl,
-        val amount: IgnitorDsl = Constant(0.0),
+        val semitones: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); amount.collectParams(out)
+            inner.collectParams(out); semitones.collectParams(out)
         }
     }
 
     /**
      * Pitch envelope. Applies an attack-decay-release envelope to pitch, useful for
      * kick drum sweeps, laser effects, and other transient pitch gestures.
+     *
+     * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
+     *   +12 sweeps from an octave up, -24 from two octaves down.
      */
     @WireName("pitch-envelope")
     data class PitchEnvelope(
         val inner: IgnitorDsl,
-        val amount: IgnitorDsl = Constant(0.0),
+        val semitones: IgnitorDsl = Constant(0.0),
         val attackSec: IgnitorDsl = Constant(0.01),
         val decaySec: IgnitorDsl = Constant(0.1),
         val releaseSec: IgnitorDsl = Constant(0.0),
@@ -1263,7 +1644,7 @@ sealed interface IgnitorDsl {
         val anchor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); amount.collectParams(out); attackSec.collectParams(out)
+            inner.collectParams(out); semitones.collectParams(out); attackSec.collectParams(out)
             decaySec.collectParams(out); releaseSec.collectParams(out); curve.collectParams(out); anchor.collectParams(out)
         }
     }
@@ -1389,46 +1770,195 @@ fun IgnitorDsl.detune(semitones: Double) = IgnitorDsl.Detune(
 
 // Filters
 
-/** Applies a biquad lowpass filter at [cutoffHz] with resonance [q]. */
-fun IgnitorDsl.lowpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Lowpass(
+/**
+ * Applies an SVF lowpass filter at [freq] with resonance [q].
+ *
+ * @param passes Cascade count (C5): run the 12 dB/oct stage that many times — `2` = 24 dB/oct,
+ * `3` = 36. The per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at the
+ * default q the cascade is -3 dB AT [freq] — `lowpass(800, passes = 2)` still means 800.
+ * A resonant q compounds instead (`q = 1.0, passes = 2` is +3 dB at the cutoff). Coerced to
+ * 1..[FILTER_MAX_PASSES]. Third slot on EVERY door: `lpf(freq, q, passes)`.
+ */
+fun IgnitorDsl.lowpass(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    passes: Int = 1,
+    analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Lowpass = IgnitorDsl.Lowpass(
     inner = this,
-    cutoffHz = IgnitorDsl.Constant(cutoffHz),
-    q = IgnitorDsl.Constant(q),
+    freq = freq,
+    q = q,
+    analog = analog,
+    passes = passes,
 )
 
-/** Applies a biquad highpass filter at [cutoffHz] with resonance [q]. */
-fun IgnitorDsl.highpass(cutoffHz: Double, q: Double = 0.707) = IgnitorDsl.Highpass(
+/** Scalar convenience overload of [lowpass]. */
+fun IgnitorDsl.lowpass(
+    freq: Double,
+    q: Double = 0.707,
+    passes: Int = 1,
+    analog: Double = 0.0,
+): IgnitorDsl.Lowpass = lowpass(
+    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
+)
+
+/**
+ * Applies an SVF highpass filter at [freq] with resonance [q].
+ *
+ * @param passes Cascade count — see [lowpass].
+ */
+fun IgnitorDsl.highpass(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    passes: Int = 1,
+    analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Highpass = IgnitorDsl.Highpass(
     inner = this,
-    cutoffHz = IgnitorDsl.Constant(cutoffHz),
-    q = IgnitorDsl.Constant(q),
+    freq = freq,
+    q = q,
+    analog = analog,
+    passes = passes,
 )
 
-/** Applies a lightweight one-pole lowpass filter at [cutoffHz]. */
-fun IgnitorDsl.onePoleLowpass(cutoffHz: Double) = IgnitorDsl.OnePoleLowpass(
+/** Scalar convenience overload of [highpass]. */
+fun IgnitorDsl.highpass(
+    freq: Double,
+    q: Double = 0.707,
+    passes: Int = 1,
+    analog: Double = 0.0,
+): IgnitorDsl.Highpass = highpass(
+    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
+)
+
+/**
+ * Controls the graph optimizer for the whole definition this node ends up in.
+ *
+ * `optimizer(0)` turns it OFF, so the tree renders exactly as authored — that is the useful
+ * call, for A/B-ing a fusion by ear or as a hatch if one ever misbehaves. Any other value
+ * leaves it on, and the marker then dissolves without trace (so it is not a fusion wall).
+ * Note the default is 1: a bare `optimizer()` changes nothing. Same name and default as the
+ * KlangScript stdlib `optimizer()`.
+ */
+fun IgnitorDsl.optimizer(on: Int = 1): IgnitorDsl = IgnitorDsl.OptimizerHint(inner = this, on = on)
+
+/**
+ * Starts (or continues) a fused equalizer — see [IgnitorDsl.Eq]. Idempotent. Same names and
+ * defaults as the KlangScript stdlib `eq()` (dual-surface rule).
+ *
+ * ⚠ Idempotence composes badly with [tap] on a SHARED sound: if `base` already ends in an Eq,
+ * `base.eq().tap(...)` appends into THAT Eq, so the tap reads base's PRE-Eq input rather than
+ * its output — silently a different sound, with no error. Wrap deliberately when layering onto
+ * someone else's Eq. Harmless for [band] (an append at the end is a plain serial append).
+ */
+fun IgnitorDsl.eq(): IgnitorDsl.Eq = when (this) {
+    is IgnitorDsl.Eq -> this
+    else -> IgnitorDsl.Eq(inner = this)
+}
+
+/**
+ * Appends a Simper peaking bell ([db] dB at [freq], [q] = pre-gain bandwidth; 0 dB is
+ * bit-transparent). Only available ON an Eq: `.eq()` is the entry point. Same names and
+ * defaults as the KlangScript stdlib `band()` (dual-surface rule).
+ *
+ * The [q] width is INVARIANT in [db] while `q·A` stays unclamped (1.90 octaves at the default
+ * q); below about -34 dB the clamp engages and deeper cuts narrow. Second positional arg is
+ * [q], not gain: `band(1200.0, 6.0)` is a silent 0 dB band, `band(1200.0, db = 6.0)` is gain.
+ * (In KlangScript that mixed form is rejected outright — there it is `band(freq = ..., db = ...)`.)
+ *
+ * All three params are resolved ONCE PER BLOCK and are coefficient-bearing, [db] included
+ * (it moves the filter coefficients through `q·A`, while the resulting half-gain WIDTH stays
+ * put — see above), so an LFO on [db] zippers exactly like an LFO on a cutoff. For a smooth
+ * gain ride use a VCA, not a bell.
+ */
+fun IgnitorDsl.Eq.band(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    db: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.Bell(freq = freq, q = q, db = db))
+
+/** Scalar convenience overload of [band]. */
+fun IgnitorDsl.Eq.band(freq: Double, q: Double = 0.707, db: Double = 0.0): IgnitorDsl.Eq =
+    band(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(db))
+
+/**
+ * Appends a PARALLEL band: a bandpass of the Eq INPUT, scaled by [gain] and added onto the
+ * chain at this position. This is the fused form of
+ * `signal.add(signal.bandpass(freq, q).mul(gain))` **when [gain] is Constant/Param-backed**.
+ *
+ * ⚠ An EXPRESSION-backed [gain] (an LFO) is NOT equivalent: the adapter resolves it once per
+ * block, so a swept tap gain becomes a per-block staircase, where the chained `Times` node
+ * multiplies per SAMPLE and stays smooth. Unlike [freq]/[q] — which snap per block on the
+ * chained `SvfIgnitor` too, so those really are parity — [gain] is the one param where fusing
+ * changes the sound. For a smoothly swept parallel boost, keep the chained form.
+ *
+ * Unlike [band], which cascades, taps SUM with the dry signal, so overlapping taps do not
+ * multiply each other. [q] is the bandpass width and [gain] is a linear multiplier, NOT
+ * decibels. (Rewriting the same tap as a [band]: the bell needs `db = 20·log10(1 + gain)`
+ * and `q / sqrt(1 + gain)` — exact for one tap in isolation.)
+ *
+ * Since C2 of the filter unification the engine bandpass is UNITY-peak at fc, so [q] is a
+ * pure WIDTH control here too: a tap's peak lift is `1 + gain` for ANY q (the old
+ * constant-skirt engine made q level-bearing; that coupling is gone). To tighten a tap,
+ * just raise [q]; the level stays put. The defaults (q 0.707, gain 1.0) give `1 + 1 = 2` —
+ * a +6 dB lift, where a default [band] is transparent. Same names and defaults as the
+ * KlangScript stdlib `tap()` (dual-surface rule).
+ * See [IgnitorDsl.Eq] for the topology diagram.
+ */
+fun IgnitorDsl.Eq.tap(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    gain: IgnitorDsl = IgnitorDsl.Constant(1.0),
+): IgnitorDsl.Eq = copy(sections = sections + IgnitorDsl.EqSection.RawTap(freq = freq, q = q, gain = gain))
+
+/** Scalar convenience overload of [tap]. */
+fun IgnitorDsl.Eq.tap(freq: Double, q: Double = 0.707, gain: Double = 1.0): IgnitorDsl.Eq =
+    tap(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(gain))
+
+/**
+ * Applies a one-pole lowpass at [freq] Hz — 6 dB/oct, no resonance; musically a warmth/tone
+ * control. ONE name on every door (formerly `onePoleLowpass`; the sprudel door's `warmth`
+ * collapsed into this too).
+ */
+fun IgnitorDsl.onepole(freq: IgnitorDsl): IgnitorDsl.OnePoleLowpass = IgnitorDsl.OnePoleLowpass(
     inner = this,
-    cutoffHz = IgnitorDsl.Constant(cutoffHz),
+    freq = freq,
 )
 
-fun IgnitorDsl.bandpass(cutoffHz: Double, q: Double = 1.0) = IgnitorDsl.Bandpass(
-    this, IgnitorDsl.Constant(cutoffHz), IgnitorDsl.Constant(q),
-)
+/** Scalar convenience overload of [onepole]. */
+fun IgnitorDsl.onepole(freq: Double): IgnitorDsl.OnePoleLowpass = onepole(IgnitorDsl.Constant(freq))
 
-fun IgnitorDsl.notch(cutoffHz: Double, q: Double = 1.0) = IgnitorDsl.Notch(
-    this, IgnitorDsl.Constant(cutoffHz), IgnitorDsl.Constant(q),
-)
+fun IgnitorDsl.bandpass(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Bandpass = IgnitorDsl.Bandpass(inner = this, freq = freq, q = q, analog = analog)
+
+/** Scalar convenience overload of [bandpass]. */
+fun IgnitorDsl.bandpass(freq: Double, q: Double = 0.707, analog: Double = 0.0): IgnitorDsl.Bandpass =
+    bandpass(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog))
+
+fun IgnitorDsl.notch(
+    freq: IgnitorDsl,
+    q: IgnitorDsl = IgnitorDsl.Constant(0.707),
+    analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
+): IgnitorDsl.Notch = IgnitorDsl.Notch(inner = this, freq = freq, q = q, analog = analog)
+
+/** Scalar convenience overload of [notch]. */
+fun IgnitorDsl.notch(freq: Double, q: Double = 0.707, analog: Double = 0.0): IgnitorDsl.Notch =
+    notch(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog))
 
 fun IgnitorDsl.drive(amount: Double, driveType: String = "linear") =
     IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount), driveType)
 
 /**
- * Pure waveshaping without drive. See [IgnitorDsl.Clip] for the full list of supported [shape] values.
+ * Pure waveshaping without drive. See [IgnitorDsl.Shape] for the full list of supported [shape] values.
  *
  * Quick reference:
  *  - soft / gentle / softsat / cubic / exp / sineshaper — symmetric soft
  *  - hard / zerosquare / chebyshev / fold / linearfold — symmetric hard / wavefolding
  *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
  */
-fun IgnitorDsl.clip(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Clip(this, shape, oversample)
+fun IgnitorDsl.shape(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Shape(this, shape, oversample)
 
 // Envelope
 
@@ -1466,9 +1996,9 @@ fun IgnitorDsl.fm(
 // Effects
 
 /**
- * Applies waveshaping distortion with the given [amount] and clipping [shape].
+ * Applies waveshaping distortion with the given [amount] and waveshaper [shape].
  *
- * Equivalent to `this.drive(amount).clip(shape, oversample)`. See [IgnitorDsl.Clip] for the
+ * Equivalent to `this.drive(amount).shape(shape, oversample)`. See [IgnitorDsl.Shape] for the
  * full list of supported [shape] values.
  *
  * Quick reference:
@@ -1477,7 +2007,7 @@ fun IgnitorDsl.fm(
  *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
  */
 fun IgnitorDsl.distort(amount: Double, shape: String = "soft", oversample: Int = 0) =
-    IgnitorDsl.Clip(inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)), shape = shape, oversample = oversample)
+    IgnitorDsl.Shape(inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)), shape = shape, oversample = oversample)
 
 /** Applies bit-crush quantization at the given bit [amount]. */
 fun IgnitorDsl.crush(amount: Double) = IgnitorDsl.Crush(
@@ -1491,11 +2021,13 @@ fun IgnitorDsl.coarse(amount: Double) = IgnitorDsl.Coarse(
     amount = IgnitorDsl.Constant(amount),
 )
 
-/** Applies a phaser effect. [blend]: 0.0 = dry only, 1.0 = wet only (crossfade). */
-fun IgnitorDsl.phaser(rate: Double, blend: Double = 0.5, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
+/**
+ * Applies a phaser effect. The wet/dry balance is NOT a builder parameter — it is the shared
+ * wet knob, typed onto the node: `.phaser(rate).wet(0.3).dryFloor(0.2)` (defaults 0.5 / 0.0).
+ */
+fun IgnitorDsl.phaser(rate: Double, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
-    blend = IgnitorDsl.Constant(blend),
     center = IgnitorDsl.Constant(center),
     sweep = IgnitorDsl.Constant(sweep),
 )
@@ -1509,35 +2041,60 @@ fun IgnitorDsl.tremolo(rate: Double, depth: Double) = IgnitorDsl.Tremolo(
 
 /**
  * Applies a granular shimmer (pitch-shift cloud with feedback).
- * [blend]: 0.0 = dry only, 1.0 = wet only (crossfade). [pitches]: semitone transpositions.
- * [tone]: feedback-path LPF cutoff in Hz.
+ * [pitches]: semitone transpositions. [tone]: feedback-path LPF cutoff in Hz.
+ * The wet/dry balance is the shared wet knob, typed onto the node:
+ * `.shimmer().wet(0.4).dryFloor(0.2)` (defaults 0.5 / 0.0).
  */
 fun IgnitorDsl.shimmer(
-    blend: Double = 0.5,
     feedback: Double = 0.5,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
     tone: Double = 4000.0,
 ) = IgnitorDsl.Shimmer(
     inner = this,
-    blend = IgnitorDsl.Constant(blend),
     feedback = IgnitorDsl.Constant(feedback),
     pitches = pitches,
     tone = IgnitorDsl.Constant(tone),
 )
 
+// ── The shared wet knob (C4), typed per effect node ───────────────────────────
+
+/** Sets the wet/dry balance on a phaser node — the shared wet knob (see [IgnitorDsl.Phaser]). */
+fun IgnitorDsl.Phaser.wet(value: IgnitorDsl): IgnitorDsl.Phaser = copy(wet = value)
+
+/** Scalar convenience overload of [wet]. */
+fun IgnitorDsl.Phaser.wet(value: Double): IgnitorDsl.Phaser = wet(IgnitorDsl.Constant(value))
+
+/** Sets the minimum dry coefficient on a phaser node (see [IgnitorDsl.Phaser.dryFloor]). */
+fun IgnitorDsl.Phaser.dryFloor(value: IgnitorDsl): IgnitorDsl.Phaser = copy(dryFloor = value)
+
+/** Scalar convenience overload of [dryFloor]. */
+fun IgnitorDsl.Phaser.dryFloor(value: Double): IgnitorDsl.Phaser = dryFloor(IgnitorDsl.Constant(value))
+
+/** Sets the wet/dry balance on a shimmer node — the shared wet knob (see [IgnitorDsl.Shimmer]). */
+fun IgnitorDsl.Shimmer.wet(value: IgnitorDsl): IgnitorDsl.Shimmer = copy(wet = value)
+
+/** Scalar convenience overload of [wet]. */
+fun IgnitorDsl.Shimmer.wet(value: Double): IgnitorDsl.Shimmer = wet(IgnitorDsl.Constant(value))
+
+/** Sets the minimum dry coefficient on a shimmer node (see [IgnitorDsl.Shimmer.dryFloor]). */
+fun IgnitorDsl.Shimmer.dryFloor(value: IgnitorDsl): IgnitorDsl.Shimmer = copy(dryFloor = value)
+
+/** Scalar convenience overload of [dryFloor]. */
+fun IgnitorDsl.Shimmer.dryFloor(value: Double): IgnitorDsl.Shimmer = dryFloor(IgnitorDsl.Constant(value))
+
 // Pitch modulation
 
-/** Applies vibrato (pitch modulation) at the given LFO [rate] and [depth]. */
-fun IgnitorDsl.vibrato(rate: Double, depth: Double) = IgnitorDsl.Vibrato(
+/** Applies vibrato (pitch modulation) at the given LFO [rate], [semitones] deep. */
+fun IgnitorDsl.vibrato(rate: Double, semitones: Double) = IgnitorDsl.Vibrato(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
-    depth = IgnitorDsl.Constant(depth),
+    semitones = IgnitorDsl.Constant(semitones),
 )
 
 /** Applies continuous pitch acceleration over the voice's duration. */
-fun IgnitorDsl.accelerate(amount: Double) = IgnitorDsl.Accelerate(
+fun IgnitorDsl.accelerate(semitones: Double) = IgnitorDsl.Accelerate(
     inner = this,
-    amount = IgnitorDsl.Constant(amount),
+    semitones = IgnitorDsl.Constant(semitones),
 )
 
 /**
@@ -1559,101 +2116,3 @@ fun IgnitorDsl.getParamSlots(): List<IgnitorDsl.Param> {
     return result
 }
 
-/**
- * Walks the DSL tree and returns the maximum ADSR release time (in seconds)
- * found in any [IgnitorDsl.Adsr] node.
- *
- * Returns 0.0 if no Adsr nodes exist in the tree.
- * Only reads [IgnitorDsl.Constant] values and [IgnitorDsl.Param] defaults —
- * dynamically modulated release times use the static default.
- */
-fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
-    // Adsr: extract this node's release and recurse into inner
-    is IgnitorDsl.Adsr -> {
-        val thisRelease = when (releaseSec) {
-            is IgnitorDsl.Constant -> releaseSec.value
-            is IgnitorDsl.Param -> releaseSec.default
-            else -> 0.3
-        }
-        maxOf(thisRelease, inner.maxReleaseSec())
-    }
-    // Wrapper nodes with `inner`
-    is IgnitorDsl.Lowpass -> inner.maxReleaseSec()
-    is IgnitorDsl.Highpass -> inner.maxReleaseSec()
-    is IgnitorDsl.Bandpass -> inner.maxReleaseSec()
-    is IgnitorDsl.Notch -> inner.maxReleaseSec()
-    is IgnitorDsl.OnePoleLowpass -> inner.maxReleaseSec()
-    is IgnitorDsl.Distort -> inner.maxReleaseSec()
-    is IgnitorDsl.Drive -> inner.maxReleaseSec()
-    is IgnitorDsl.Clip -> inner.maxReleaseSec()
-    is IgnitorDsl.Crush -> inner.maxReleaseSec()
-    is IgnitorDsl.Coarse -> inner.maxReleaseSec()
-    is IgnitorDsl.Phaser -> inner.maxReleaseSec()
-    is IgnitorDsl.Tremolo -> inner.maxReleaseSec()
-    is IgnitorDsl.Shimmer -> inner.maxReleaseSec()
-    is IgnitorDsl.PitchMod -> inner.maxReleaseSec()
-    is IgnitorDsl.Vibrato -> inner.maxReleaseSec()
-    is IgnitorDsl.Accelerate -> inner.maxReleaseSec()
-    is IgnitorDsl.PitchEnvelope -> inner.maxReleaseSec()
-    is IgnitorDsl.Detune -> inner.maxReleaseSec()
-    // Binary nodes
-    is IgnitorDsl.Plus -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Times -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Div -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Minus -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Pow -> maxOf(base.maxReleaseSec(), exp.maxReleaseSec())
-    is IgnitorDsl.Min -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Max -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Neg -> inner.maxReleaseSec()
-    is IgnitorDsl.Abs -> inner.maxReleaseSec()
-    is IgnitorDsl.Clamp -> maxOf(inner.maxReleaseSec(), lo.maxReleaseSec(), hi.maxReleaseSec())
-    is IgnitorDsl.Exp -> inner.maxReleaseSec()
-    is IgnitorDsl.Log -> inner.maxReleaseSec()
-    is IgnitorDsl.Sqrt -> inner.maxReleaseSec()
-    is IgnitorDsl.Sign -> inner.maxReleaseSec()
-    is IgnitorDsl.Tanh -> inner.maxReleaseSec()
-    is IgnitorDsl.Lerp -> maxOf(left.maxReleaseSec(), right.maxReleaseSec(), t.maxReleaseSec())
-    is IgnitorDsl.Range -> maxOf(inner.maxReleaseSec(), lo.maxReleaseSec(), hi.maxReleaseSec())
-    is IgnitorDsl.Bipolar -> inner.maxReleaseSec()
-    is IgnitorDsl.Unipolar -> inner.maxReleaseSec()
-    is IgnitorDsl.Floor -> inner.maxReleaseSec()
-    is IgnitorDsl.Ceil -> inner.maxReleaseSec()
-    is IgnitorDsl.Round -> inner.maxReleaseSec()
-    is IgnitorDsl.Frac -> inner.maxReleaseSec()
-    is IgnitorDsl.Mod -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Recip -> inner.maxReleaseSec()
-    is IgnitorDsl.Sq -> inner.maxReleaseSec()
-    is IgnitorDsl.Select -> maxOf(cond.maxReleaseSec(), whenTrue.maxReleaseSec(), whenFalse.maxReleaseSec())
-    is IgnitorDsl.Fm -> maxOf(carrier.maxReleaseSec(), modulator.maxReleaseSec())
-    // Variants: voice lifetime must cover whichever child gets picked, so take the max.
-    is IgnitorDsl.Variants -> children.maxOfOrNull { it.maxReleaseSec() } ?: 0.0
-    // Leaf nodes — no release info
-    is IgnitorDsl.Freq -> 0.0
-    is IgnitorDsl.Param -> 0.0
-    is IgnitorDsl.Constant -> 0.0
-    is IgnitorDsl.Silence -> 0.0
-    is IgnitorDsl.WhiteNoise -> 0.0
-    is IgnitorDsl.BrownNoise -> 0.0
-    is IgnitorDsl.PinkNoise -> 0.0
-    is IgnitorDsl.PerlinNoise -> 0.0
-    is IgnitorDsl.BerlinNoise -> 0.0
-    is IgnitorDsl.Dust -> 0.0
-    is IgnitorDsl.Crackle -> 0.0
-    is IgnitorDsl.Sine -> 0.0
-    is IgnitorDsl.Sawtooth -> 0.0
-    is IgnitorDsl.Square -> 0.0
-    is IgnitorDsl.Triangle -> 0.0
-    is IgnitorDsl.Ramp -> 0.0
-    is IgnitorDsl.Zawtooth -> 0.0
-    is IgnitorDsl.Zamp -> 0.0
-    is IgnitorDsl.Impulse -> 0.0
-    is IgnitorDsl.Pulze -> 0.0
-    is IgnitorDsl.RawPulze -> 0.0
-    is IgnitorDsl.SuperSaw -> 0.0
-    is IgnitorDsl.SuperSine -> 0.0
-    is IgnitorDsl.SuperSquare -> 0.0
-    is IgnitorDsl.SuperTri -> 0.0
-    is IgnitorDsl.SuperRamp -> 0.0
-    is IgnitorDsl.Pluck -> 0.0
-    is IgnitorDsl.SuperPluck -> 0.0
-}

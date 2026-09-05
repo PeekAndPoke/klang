@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -42,7 +42,15 @@ import kotlin.math.exp
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing reverb parameters: room:size:fade:lowpass:dim. */
+/**
+ * [KlangUiToolEmbeddable] for the per-param roomWet(wet, size, fade, lowpass, dim) / reverb(wet, ...) call.
+ *
+ * Two modes (C0.3 two-tool-tier design):
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the reverb send (roomWet) and size
+ *   plus the optional fade/lowpass/dim params of the host call and commits the full argument
+ *   list. Unset optionals stay omitted (null slots).
+ * - Scalar fallback (embedded / sequence atom): edits a single wet (send) value.
+ */
 object SprudelReverbEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Reverb Editor"
 
@@ -78,21 +86,43 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
     private val formCtrl = formController()
 
+    private val call = props.toolCtx.call
+
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseInput(): List<Double?> {
-        val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
-        if (raw.isBlank()) return emptyList()
-        return raw.split(":").map { it.trim().toDoubleOrNull() }
-    }
+    private fun parseNum(text: String?, fallback: Double): Double =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
 
-    private val parsedParts = parseInput()
+    private fun parseNumOrNull(text: String?): Double? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
-    private var room by value(parsedParts.getOrNull(0) ?: 0.5)
-    private var size by value(parsedParts.getOrNull(1) ?: 1.0)
-    private var fade by value(parsedParts.getOrNull(2))
-    private var lowpass by value(parsedParts.getOrNull(3))
-    private var dim by value(parsedParts.getOrNull(4))
+    // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
+    private val parsedRoom
+        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
+
+    private val parsedSize
+        get() = parseNum(call?.args?.getOrNull(1), 1.0)
+
+    private val parsedFade
+        get() = parseNumOrNull(call?.args?.getOrNull(2))
+
+    private val parsedLowpass
+        get() = parseNumOrNull(call?.args?.getOrNull(3))
+
+    private val parsedDim
+        get() = parseNumOrNull(call?.args?.getOrNull(4))
+
+    private var room by value(parsedRoom)
+    private var size by value(parsedSize)
+    private var fade by value(parsedFade)
+    private var lowpass by value(parsedLowpass)
+    private var dim by value(parsedDim)
+
+    // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
+    // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
+    private val parseable: List<Boolean> = List(5) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val dirty = mutableSetOf<Int>()
+    private var hasCommitted = false
 
     private var resetCounter by value(0)
 
@@ -101,52 +131,83 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
     private fun Double.fmt(): String =
         toFixed(3).trimEnd('0').trimEnd('.')
 
-    private fun buildValue(): String {
-        val parts = mutableListOf(room.fmt(), size.fmt())
-
-        // Only include trailing optional fields if they are set
-        val optionals = listOf(fade, lowpass, dim)
-        val lastSetIndex = optionals.indexOfLast { it != null }
-
-        if (lastSetIndex >= 0) {
-            for (i in 0..lastSetIndex) {
-                parts.add(optionals[i]?.fmt() ?: "")
-            }
+    private fun buildValue(): String =
+        if (call != null) {
+            "${room.fmt()}, ${size.fmt()}, ${fade?.fmt() ?: "-"}, ${lowpass?.fmt() ?: "-"}, ${dim?.fmt() ?: "-"}"
+        } else {
+            room.fmt()
         }
 
-        return "\"${parts.joinToString(":")}\""
+    /**
+     * Writes a slot only when that is safe: the user touched it, or the original arg parses
+     * (rewriting it loses nothing). Untouched non-parseable args are preserved; untouched
+     * absent slots stay absent so the engine defaults apply.
+     */
+    private fun put(texts: MutableList<String?>, index: Int, text: String?) {
+        val original = call?.args?.getOrNull(index)
+        if (index in dirty || (original != null && parseable[index])) {
+            texts[index] = text
+        }
     }
 
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
+    private fun commitValue() {
+        val c = call
+        if (c != null) {
+            val texts = c.args.toMutableList()
+            while (texts.size < 5) texts.add(null)
+            put(texts, 0, room.fmt())
+            put(texts, 1, size.fmt())
+            put(texts, 2, fade?.fmt())
+            put(texts, 3, lowpass?.fmt())
+            put(texts, 4, dim?.fmt())
+            c.onCommitCall(texts)
+        } else {
+            props.toolCtx.onCommit(room.fmt())
+        }
+        hasCommitted = true
+        lastCommitted = buildValue()
+    }
+
+    // Built-state fingerprints: in whole-call mode [initialValue] is only the clicked arg's
+    // text, so the Reset/Update buttons compare built snapshots instead (initial state and
+    // last committed state); scalar mode keeps the plain text comparison.
+    private val initialBuiltValue = buildValue()
+    private var lastCommitted = initialBuiltValue
+
+    private val isInitialModified
+        get() = if (call != null) buildValue() != initialBuiltValue else initialValue != buildValue()
+
+    private val isCurrentModified
+        get() = if (call != null) buildValue() != lastCommitted else (props.toolCtx.currentValue ?: "") != buildValue()
 
     private fun liveUpdate() {
         if (props.embedded || autoUpdate) {
-            props.toolCtx.onCommit(buildValue())
+            commitValue()
         }
     }
 
     private fun onCancel() {
-        if (!props.embedded && autoUpdate && isInitialModified) {
-            props.toolCtx.onCommit(initialValue)
+        if (!props.embedded && autoUpdate && hasCommitted && isInitialModified) {
+            val c = call
+            if (c != null) c.onCommitCall(c.args) else props.toolCtx.onCommit(initialValue)
         }
         props.toolCtx.onCancel()
     }
 
     private fun onReset() {
-        val p = parseInput()
-        room = p.getOrNull(0) ?: 0.5
-        size = p.getOrNull(1) ?: 1.0
-        fade = p.getOrNull(2)
-        lowpass = p.getOrNull(3)
-        dim = p.getOrNull(4)
+        dirty.clear()
+        room = parsedRoom
+        size = parsedSize
+        fade = parsedFade
+        lowpass = parsedLowpass
+        dim = parsedDim
         formCtrl.resetAllFields()
-        props.toolCtx.onCommit(initialValue)
+        commitValue()
         resetCounter++
     }
 
     private fun onCommit() {
-        props.toolCtx.onCommit(buildValue())
+        commitValue()
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -177,25 +238,27 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
             ui.form {
                 ui.five.stackable.fields {
-                    UiInputField(room, { room = it; liveUpdate() }) {
+                    UiInputField(room, { room = it; dirty += 0; liveUpdate() }) {
                         domKey("room")
                         step(0.01)
                         label {
-                            +"Room (wet/dry)"
-                            subFieldInfoIcon("params", "room", props.toolCtx, infoPopup)
+                            +"Room (send)"
+                            paramInfoIcon("wet", props.toolCtx, infoPopup)
                         }
                     }
-                    UiInputField(size, { size = it; liveUpdate() }) {
-                        domKey("size")
-                        step(0.1)
-                        label {
-                            +"Size (0–10)"
-                            subFieldInfoIcon("params", "size", props.toolCtx, infoPopup)
+                    if (call != null) {
+                        UiInputField(size, { size = it; dirty += 1; liveUpdate() }) {
+                            domKey("size")
+                            step(0.1)
+                            label {
+                                +"Size (0–10)"
+                                paramInfoIcon("size", props.toolCtx, infoPopup)
+                            }
                         }
+                        nullableField("fade", "Fade (s)", 0.01, fade, subField = "fade") { fade = it; dirty += 2; liveUpdate() }
+                        nullableField("lowpass", "Lowpass (Hz)", 100.0, lowpass, subField = "lowpass") { lowpass = it; dirty += 3; liveUpdate() }
+                        nullableField("dim", "Dim (Hz)", 100.0, dim, subField = "dim") { dim = it; dirty += 4; liveUpdate() }
                     }
-                    nullableField("fade", "Fade (s)", 0.01, fade, subField = "fade") { fade = it; liveUpdate() }
-                    nullableField("lowpass", "Lowpass (Hz)", 100.0, lowpass, subField = "lowpass") { lowpass = it; liveUpdate() }
-                    nullableField("dim", "Dim (Hz)", 100.0, dim, subField = "dim") { dim = it; liveUpdate() }
                 }
             }
             ui.divider {}
@@ -220,7 +283,7 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
             if (subField != null) {
                 label {
                     +labelText
-                    subFieldInfoIcon("params", subField, props.toolCtx, infoPopup)
+                    paramInfoIcon(subField, props.toolCtx, infoPopup)
                 }
             } else {
                 label(labelText)

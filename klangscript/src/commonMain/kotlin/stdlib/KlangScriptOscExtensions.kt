@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -7,18 +7,9 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.bandpass
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.lerp
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.lowpass
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.minus
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.mod
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.neg
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.plus
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.pow
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.recip
-import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.times
 
 /**
  * Accepts [IgnitorDsl] or [Number]. Numbers are converted to [IgnitorDsl.Constant] automatically.
@@ -48,6 +39,20 @@ object KlangScriptOscExtensions {
     /**
      * Applies a resonant lowpass filter. Cutoff and Q accept Number or IgnitorDsl.
      *
+     * `passes` is the THIRD slot on every door (`lpf(freq, q, passes)` in sprudel,
+     * `lowpass(freq, q, passes)` from Kotlin), so the same positional call means the same
+     * filter everywhere. [analog] is fourth, and exists on this door only. KlangScript does
+     * not allow MIXING positional and named arguments, so reach for [analog] either fully
+     * positionally, `lowpass(800, 1.8, 1, 3)`, or all-named:
+     * `lowpass(freq = 800, q = 1.8, analog = 3)`.
+     *
+     * The cascade's per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at
+     * the DEFAULT q it stays -3 dB AT the cutoff: `lowpass(800, 0.707, 2)` still means 800.
+     * A resonant q keeps its character but COMPOUNDS across stages — gain at the cutoff is
+     * `(q*sqrt(2))^passes / sqrt(2)`, so `q = 1.0, passes = 2` sits +3 dB there, not -3. So
+     * does [analog]: every stage gets the full drive.
+     *
+     * @param passes Cascade count: `2` = 24 dB/oct, `3` = 36. Rounded, coerced to 1..16.
      * @param analog Analog character amount, 0..10. `0` = clean linear filter
      * (default — bit-identical to pre-analog behaviour). Higher values engage
      * OB-X-style state-dependent damping that compresses the resonance peak.
@@ -56,35 +61,36 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun lowpass(
         self: IgnitorDsl,
-        cutoffHz: IgnitorDslLike,
+        freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
+        passes: Double = 1.0,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Lowpass(
-        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
-        analog = analog.toIgnitorDsl(),
+        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
     )
 
-    /** Applies a resonant highpass filter. See [lowpass] for `analog` semantics. */
+    /** Applies a resonant highpass filter. See [lowpass] for `passes` and `analog` semantics. */
     @KlangScript.Method
     fun highpass(
         self: IgnitorDsl,
-        cutoffHz: IgnitorDslLike,
+        freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
+        passes: Double = 1.0,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Highpass(
-        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
-        analog = analog.toIgnitorDsl(),
+        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
     )
 
-    /** Applies a one-pole lowpass filter (gentle rolloff). Alias: onePoleLowpass. */
+    /**
+     * Applies a one-pole lowpass at [freq] Hz — the gentlest filter there is (6 dB/oct, no
+     * resonance); musically a warmth/tone control. ONE name on every door (formerly
+     * `warmth` / `onePoleLowpass`).
+     */
     @KlangScript.Method
-    fun warmth(self: IgnitorDsl, cutoffHz: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl())
-
-    /** Applies a one-pole lowpass filter (gentle rolloff). Alias for warmth. */
-    @KlangScript.Method
-    fun onePoleLowpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl())
+    fun onepole(self: IgnitorDsl, freq: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.OnePoleLowpass(inner = self, freq = freq.toIgnitorDsl())
 
     /**
      * SVF bandpass filter. Passes frequencies near the cutoff, attenuates others.
@@ -95,23 +101,64 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun bandpass(
         self: IgnitorDsl,
-        cutoffHz: IgnitorDslLike,
-        q: IgnitorDslLike = 1.0,
+        freq: IgnitorDslLike,
+        q: IgnitorDslLike = 0.707,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Bandpass(
-        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
         analog = analog.toIgnitorDsl(),
     )
+
+    /**
+     * Turns the graph optimizer off for this sound (`optimizer(0)`), so it renders exactly as
+     * written instead of having its filter chain fused.
+     *
+     * Fusing is meant to be inaudible, so this is a listening tool: put `.optimizer(0)` on a
+     * sound, compare by ear, and take it off again. Anything but 0 leaves the optimizer on.
+     */
+    @KlangScript.Method
+    fun optimizer(self: IgnitorDsl, on: Int = 1): IgnitorDsl =
+        IgnitorDsl.OptimizerHint(inner = self, on = on)
+
+    /**
+     * Opens an equalizer on [self]. Everything added to it runs in ONE pass instead of one node
+     * each, which drops the scratch buffer, the extra buffer traffic and the virtual call for
+     * every section after the first (the per-sample filter loop per section stays, by design). The saving grows with the section count and is much larger in the browser
+     * than on desktop JVM.
+     *
+     * Two kinds of section, and the difference is audible:
+     * - `.band(freq, q, db)` is an ordinary EQ band. Bands apply one after another, so two
+     *   overlapping boosts compound.
+     * - `.tap(freq, q, gain)` takes the sound going INTO the equalizer, filters that, and mixes
+     *   it back in. Taps mix with the original rather than stacking on each other.
+     *
+     * Both exist only on an equalizer, so `.eq()` comes first: `Osc.saw().eq().band(1200, 1.0, 6)`.
+     * Calling `.eq()` again right away changes nothing, but an `.eq()` written after other
+     * filters opens a SECOND equalizer. Plain filters written after it (`.lowpass()`,
+     * `.notch()`, ...) are folded into the same single pass automatically, so you do not have to
+     * write them as bands to get the saving — but only NEIGHBOURING filters merge: anything
+     * else in between (`.distort()`, `.mul()`, `.tremolo()`, ...) is a wall and starts a new
+     * pass. Use `.optimizer(0)` to render a sound exactly as written and compare by ear.
+     *
+     * ⚠ Careful when adding a `.tap()` onto a sound someone ELSE built: if that sound already
+     * ends in an equalizer, your `.eq()` continues theirs, and your tap then reads THEIR input
+     * rather than their output. Bands are unaffected.
+     */
+    @KlangScript.Method
+    fun eq(self: IgnitorDsl): IgnitorDsl.Eq = when (self) {
+        is IgnitorDsl.Eq -> self
+        else -> IgnitorDsl.Eq(inner = self)
+    }
 
     /** SVF notch (band-reject) filter. See [bandpass] for `analog` semantics (currently a no-op). */
     @KlangScript.Method
     fun notch(
         self: IgnitorDsl,
-        cutoffHz: IgnitorDslLike,
-        q: IgnitorDslLike = 1.0,
+        freq: IgnitorDslLike,
+        q: IgnitorDslLike = 0.707,
         analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.Notch(
-        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
         analog = analog.toIgnitorDsl(),
     )
 
@@ -134,8 +181,14 @@ object KlangScriptOscExtensions {
     )
 
     /**
-     * Sets per-stage ADSR shape curves. Each stage takes `"linear"` (straight ramp),
-     * `"square"` (default — fast initial drop, long tail), or `"cube"` (more aggressive).
+     * Sets per-stage ADSR shape curves. Each stage takes `"exp"` (the DEFAULT everywhere —
+     * analog-style curvature, see `expK`), `"linear"` (`lin`), `"square"` (`sq`/`quad`),
+     * `"cube"` (`cb`), `"scurve"` (`s`/`smooth`/`sigmoid`) or `"invsquare"` (`inv`/`concave`).
+     * An unrecognized name coerces to `"exp"`, the same as not setting it.
+     *
+     * ⚠ A PARTIAL call RESETS the omitted stages to `"exp"` (every param defaults to it) —
+     * unlike the sprudel door's `adsrCurves`, whose omitted stages keep their current curve
+     * (per-event control-pattern semantics). Set all three when you mean all three.
      *
      * If [self] is already an [IgnitorDsl.Adsr], the curves are set on it via copy.
      * Otherwise, a new [IgnitorDsl.Adsr] is wrapped around [self] with default times.
@@ -143,13 +196,13 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun adsrCurves(
         self: IgnitorDsl,
-        attackCurve: String = "square",
-        decayCurve: String = "square",
-        releaseCurve: String = "square",
+        attackCurve: String = "exp",
+        decayCurve: String = "exp",
+        releaseCurve: String = "exp",
     ): IgnitorDsl {
-        val a = parseAdsrCurveName(attackCurve) ?: AdsrCurve.Square
-        val d = parseAdsrCurveName(decayCurve) ?: AdsrCurve.Square
-        val r = parseAdsrCurveName(releaseCurve) ?: AdsrCurve.Square
+        val a = parseAdsrCurveName(attackCurve) ?: AdsrCurve.Default
+        val d = parseAdsrCurveName(decayCurve) ?: AdsrCurve.Default
+        val r = parseAdsrCurveName(releaseCurve) ?: AdsrCurve.Default
         return when (self) {
             is IgnitorDsl.Adsr -> self.copy(
                 attackCurve = a, decayCurve = d, releaseCurve = r,
@@ -162,9 +215,9 @@ object KlangScriptOscExtensions {
         }
     }
 
-    /** Applies the same ADSR shape curve to all three stages. Accepts `"linear"`, `"square"`, or `"cube"`. */
+    /** Applies the same ADSR shape curve to all three stages — same names as [adsrCurves] (`"exp"` default). */
     @KlangScript.Method
-    fun adsrCurve(self: IgnitorDsl, curve: String = "square"): IgnitorDsl =
+    fun adsrCurve(self: IgnitorDsl, curve: String = "exp"): IgnitorDsl =
         adsrCurves(self, curve, curve, curve)
 
     /**
@@ -226,11 +279,11 @@ object KlangScriptOscExtensions {
      * Oversample: user-facing factor (2 = 2x, 4 = 4x, 8 = 8x). 0/1 = off. Non-power-of-2 floored.
      */
     @KlangScript.Method
-    fun clip(self: IgnitorDsl, shape: String = "soft", oversample: Int = 0): IgnitorDsl =
-        IgnitorDsl.Clip(inner = self, shape = shape, oversample = oversample)
+    fun shape(self: IgnitorDsl, shape: String = "soft", oversample: Int = 0): IgnitorDsl =
+        IgnitorDsl.Shape(inner = self, shape = shape, oversample = oversample)
 
     /**
-     * Waveshaping distortion. Convenience for drive(amount) + clip(shape).
+     * Waveshaping distortion. Convenience for drive(amount) + shape(shape).
      *
      * Shapes:
      *  - **Symmetric soft:** "soft" (tanh), "gentle", "softsat", "cubic", "exp", "sineshaper".
@@ -241,7 +294,7 @@ object KlangScriptOscExtensions {
      */
     @KlangScript.Method
     fun distort(self: IgnitorDsl, amount: IgnitorDslLike, shape: String = "soft", oversample: Int = 0): IgnitorDsl =
-        IgnitorDsl.Clip(
+        IgnitorDsl.Shape(
             inner = IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl()),
             shape = shape,
             oversample = oversample,
@@ -257,18 +310,20 @@ object KlangScriptOscExtensions {
     fun coarse(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Coarse(inner = self, amount = amount.toIgnitorDsl())
 
-    /** Applies a multi-stage phaser effect. Blend: 0.0 = 100% dry (bypass), 1.0 = 100% wet (crossfade). */
+    /**
+     * Applies a multi-stage phaser effect. The wet/dry balance is not a parameter here — it is
+     * the shared wet knob, typed onto the node: `.phaser(rate).wet(0.3).dryFloor(0.2)`
+     * (defaults 0.5 / 0.0).
+     */
     @KlangScript.Method
     fun phaser(
         self: IgnitorDsl,
         rate: IgnitorDslLike,
-        blend: IgnitorDslLike = 0.5,
         center: IgnitorDslLike = 1000.0,
         sweep: IgnitorDslLike = 1000.0,
-    ): IgnitorDsl = IgnitorDsl.Phaser(
+    ): IgnitorDsl.Phaser = IgnitorDsl.Phaser(
         inner = self,
         rate = rate.toIgnitorDsl(),
-        blend = blend.toIgnitorDsl(),
         center = center.toIgnitorDsl(),
         sweep = sweep.toIgnitorDsl(),
     )
@@ -280,8 +335,9 @@ object KlangScriptOscExtensions {
 
     /**
      * Applies a granular shimmer cloud with configurable pitch transpositions and feedback.
+     * The wet/dry balance is the shared wet knob, typed onto the node:
+     * `.shimmer().wet(0.4).dryFloor(0.2)` (defaults 0.5 / 0.0).
      *
-     * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default 0.5.
      * @param feedback Cascade feedback (0..0.95). Default 0.5.
      * @param tone Feedback-path LPF cutoff in Hz. Default 4000.
      * @param pitches Array of semitone transpositions. Default [0, 7, 12]. Example: [0, 4, 7, 11] for maj7.
@@ -289,11 +345,10 @@ object KlangScriptOscExtensions {
     @KlangScript.Method
     fun shimmer(
         self: IgnitorDsl,
-        blend: IgnitorDslLike = 0.5,
         feedback: IgnitorDslLike = 0.5,
         tone: IgnitorDslLike = 4000.0,
         pitches: Any = listOf(0.0, 7.0, 12.0),
-    ): IgnitorDsl {
+    ): IgnitorDsl.Shimmer {
         @Suppress("UNCHECKED_CAST")
         val pitchList = when (pitches) {
             is List<*> -> pitches.map { (it as Number).toDouble() }
@@ -301,7 +356,6 @@ object KlangScriptOscExtensions {
         }
         return IgnitorDsl.Shimmer(
             inner = self,
-            blend = blend.toIgnitorDsl(),
             feedback = feedback.toIgnitorDsl(),
             pitches = pitchList,
             tone = tone.toIgnitorDsl(),
@@ -337,15 +391,15 @@ object KlangScriptOscExtensions {
     fun octaveDown(self: IgnitorDsl): IgnitorDsl =
         IgnitorDsl.Detune(inner = self, semitones = IgnitorDsl.Constant(-12.0))
 
-    /** Applies pitch vibrato. */
+    /** Applies pitch vibrato: [rate] Hz LFO, [semitones] deep. */
     @KlangScript.Method
-    fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, depth: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl())
+    fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, semitones: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), semitones = semitones.toIgnitorDsl())
 
-    /** Applies continuous pitch acceleration over the voice duration. */
+    /** Applies continuous pitch acceleration over the voice duration, by [semitones] total. */
     @KlangScript.Method
-    fun accelerate(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Accelerate(inner = self, amount = amount.toIgnitorDsl())
+    fun accelerate(self: IgnitorDsl, semitones: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Accelerate(inner = self, semitones = semitones.toIgnitorDsl())
 
     /**
      * Applies a custom pitch modulation from any Ignitor signal.
@@ -355,17 +409,21 @@ object KlangScriptOscExtensions {
     fun pitchMod(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.PitchMod(inner = self, mod = mod.toIgnitorDsl())
 
-    /** Applies a pitch envelope (pitch sweep over time). */
+    /**
+     * Applies a pitch envelope (pitch sweep over time). [semitones] is the shift at the
+     * envelope peak: `pitchEnvelope(semitones = 24, decaySec = 0.05)` sweeps a kick from
+     * two octaves up down to the note.
+     */
     @KlangScript.Method
     fun pitchEnvelope(
         self: IgnitorDsl,
-        amount: IgnitorDslLike,
+        semitones: IgnitorDslLike,
         attackSec: IgnitorDslLike = 0.01,
         decaySec: IgnitorDslLike = 0.1,
         releaseSec: IgnitorDslLike = 0.0,
     ): IgnitorDsl = IgnitorDsl.PitchEnvelope(
         inner = self,
-        amount = amount.toIgnitorDsl(),
+        semitones = semitones.toIgnitorDsl(),
         attackSec = attackSec.toIgnitorDsl(),
         decaySec = decaySec.toIgnitorDsl(),
         releaseSec = releaseSec.toIgnitorDsl(),
@@ -373,28 +431,6 @@ object KlangScriptOscExtensions {
 
     // ── Analog Drift ────────────────────────────────────────────────────────
 
-    /** Sets the analog drift amount (Perlin noise pitch jitter). */
-    @KlangScript.Method
-    fun analog(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl = when (self) {
-        is IgnitorDsl.Sine -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Sawtooth -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Square -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Triangle -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Ramp -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Zawtooth -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Zamp -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Impulse -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Pulze -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.RawPulze -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperSaw -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperSine -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperSquare -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperTri -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperRamp -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.Pluck -> self.copy(analog = amount.toIgnitorDsl())
-        is IgnitorDsl.SuperPluck -> self.copy(analog = amount.toIgnitorDsl())
-        else -> self // no-op for types without analog drift (noise sources, wrappers, etc.)
-    }
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 

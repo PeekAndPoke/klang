@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -87,7 +87,7 @@ class KlangScriptDocsPage(ctx: NoProps) : PureComponent(ctx) {
                 }
                 p {
                     css { color = Color(laf.textSecondary) }
-                    +"Welcome to KlangScript! It's the dedicated scripting language for the Klangmotör. "
+                    +"Welcome to KlangScript! It's the dedicated scripting language for the Klangmotor. "
                     +"While it feels a lot like JavaScript in many ways, it has its own special flavor and unique "
                     +"differences designed specifically for making music."
                 }

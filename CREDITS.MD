@@ -65,7 +65,7 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 - **Super-saw** after Adam Szabo's *"How to Emulate the Super Saw"* (Roland JP-8000)
 - **Chebyshev-polynomial waveshaping** — harmonic distortion
 - **Padé `tanh` approximation** `x(27+x²)/(27+9x²)` — the public-domain "27/9" fast-tanh from the
-  musicdsp.org / KVR community, used in Klang's soft-clipping (`ClippingFunctions.fastTanh`)
+  musicdsp.org / KVR community, used in Klang's soft-clipping (`ShapingFuncs.fastTanh`)
 - **Perlin noise** (Ken Perlin) — organic drift and noise textures
 - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
 - **Lookahead limiting** after **[Geraint Luff](https://signalsmith-audio.co.uk/writing/2022/limiter/)**
@@ -157,7 +157,7 @@ The performance and the richness of APIs available today are nothing short of am
 Visuals and editor effects are powered by these libraries (integrated via Kraft addons):
 
 - **[PixiJS](https://pixijs.com)** — WebGL-accelerated rendering of live playback highlights in the editor
-- **[Three.js](https://threejs.org)** — 3D graphics for the animated Motör background and visualizations
+- **[Three.js](https://threejs.org)** — 3D graphics for the animated Motor background and visualizations
 
 ## The Editor
 

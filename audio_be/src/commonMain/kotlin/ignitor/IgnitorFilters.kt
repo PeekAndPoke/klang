@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_be.filters.bilinearK
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.PI
 import kotlin.math.pow
@@ -37,8 +37,10 @@ enum class SvfMode {
 /**
  * Optional ADSR-style envelope that modulates filter cutoff at control rate (once per block).
  *
- * When applied, the effective cutoff becomes: `baseCutoff * (1.0 + depth * envValue)`
- * where `envValue` is 0.0..1.0 from the envelope shape.
+ * When applied, the effective cutoff becomes: `baseCutoff * 2^(depth/12 * envValue)` —
+ * depth is SEMITONES (C3 of the filter unification; +12 doubles the cutoff at full
+ * envelope, negative sweeps down, no dead zone) and `envValue` is 0.0..1.0 from the
+ * envelope shape. `depth = 0.0` stays the exact no-envelope identity.
  */
 data class FilterEnvDef(
     val depth: Double = 0.0,
@@ -78,8 +80,8 @@ data class FilterEnvDef(
  *   Typical: 200–8000 for LP, 100–2000 for HP, 300–5000 for BP/Notch.
  * @param q Resonance / Q factor. 0.707 = flat (Butterworth), higher = sharper peak.
  *   Clamped to [0.1, 200.0]. Default: 0.707. Typical range: 0.5–10.0.
- *   Note: BPF tap uses constant-skirt convention — peak gain at fc equals Q.
- *   `bandpass(q=10)` ⇒ ~+20 dB at the centre.
+ * BPF tap is unity-peak at fc since C2 (`k·v1`) — q is a pure width control;
+ * `bandpass(q=10)` gets narrower, not louder.
  * @param env Optional ADSR envelope to modulate cutoff over time. Default: none.
  */
 fun Ignitor.svf(
@@ -144,8 +146,11 @@ private class SvfIgnitor(
                     ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
                     sampleOffsetWithinBlock = length,
                 )
-                val cutoffStart = baseCutoff * (1.0 + env.depth * envStart)
-                val cutoffEnd = baseCutoff * (1.0 + env.depth * envEnd)
+                // C3 (filter unification): envelope depth is SEMITONES — the sweep is
+                // pitch-linear (cutoff = base * 2^(depth/12 * env)), negative depth sweeps
+                // down symmetrically, and there is no dead zone anywhere.
+                val cutoffStart = baseCutoff * 2.0.pow(env.depth / 12.0 * envStart)
+                val cutoffEnd = baseCutoff * 2.0.pow(env.depth / 12.0 * envEnd)
 
                 computeSvfCoeffs(cutoffStart, qVal, sr, coefs)
                 computeSvfCoeffs(cutoffEnd, qVal, sr, coefsEnd)
@@ -185,8 +190,8 @@ private class SvfIgnitor(
                             val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                             val vBp = g * vHp + ic1eq
                             val vLp = g * vBp + ic2eq
-                            ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
-                            ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                            ic1eq = (2.0 * vBp - ic1eq).flushState()
+                            ic2eq = (2.0 * vLp - ic2eq).flushState()
                             buffer[i] = vLp
                             a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                         }
@@ -196,8 +201,8 @@ private class SvfIgnitor(
                             val v3 = v0 - ic2eq
                             val v1 = a1 * ic1eq + a2 * v3
                             val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                            ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                            ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                            ic1eq = (2.0 * v1 - ic1eq).flushState()
+                            ic2eq = (2.0 * v2 - ic2eq).flushState()
                             buffer[i] = v2
                             a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                         }
@@ -214,8 +219,8 @@ private class SvfIgnitor(
                             val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                             val vBp = g * vHp + ic1eq
                             val vLp = g * vBp + ic2eq
-                            ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
-                            ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                            ic1eq = (2.0 * vBp - ic1eq).flushState()
+                            ic2eq = (2.0 * vLp - ic2eq).flushState()
                             buffer[i] = vHp
                             a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                         }
@@ -225,8 +230,8 @@ private class SvfIgnitor(
                             val v3 = v0 - ic2eq
                             val v1 = a1 * ic1eq + a2 * v3
                             val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                            ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                            ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                            ic1eq = (2.0 * v1 - ic1eq).flushState()
+                            ic2eq = (2.0 * v2 - ic2eq).flushState()
                             buffer[i] = v0 - k * v1 - v2
                             a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                         }
@@ -234,14 +239,18 @@ private class SvfIgnitor(
                 }
 
                 SvfMode.BANDPASS -> {
+                    // C2 (filter unification): k * v1 = unity peak at fc (k = 1/clampedQ) —
+                    // q is a pure width control, matching SvfBPF and the fused EqCore
+                    // BANDPASS arm bit-for-bit. Both env-path coefficient sets share one
+                    // per-block q, so kStep is structurally 0 — no mid-ramp mismatch.
                     for (i in ctx.offset until end) {
                         val v0 = input[i]
                         val v3 = v0 - ic2eq
                         val v1 = a1 * ic1eq + a2 * v3
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                        buffer[i] = v1
+                        ic1eq = (2.0 * v1 - ic1eq).flushState()
+                        ic2eq = (2.0 * v2 - ic2eq).flushState()
+                        buffer[i] = k * v1
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                     }
                 }
@@ -252,8 +261,8 @@ private class SvfIgnitor(
                         val v3 = v0 - ic2eq
                         val v1 = a1 * ic1eq + a2 * v3
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                        ic1eq = (2.0 * v1 - ic1eq).flushState()
+                        ic2eq = (2.0 * v2 - ic2eq).flushState()
                         buffer[i] = v0 - k * v1
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                     }
@@ -285,6 +294,26 @@ fun Ignitor.svf(
 // ═══════════════════════════════════════════════════════════════════════════════
 // Convenience wrappers — delegates to svf() with the appropriate mode
 // ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Staggers the per-stage q of a `passes` cascade (C5): stage k reads `userQ · ladderRel[k]`.
+ *
+ * The two arms mirror `IgnitorDslOptimizer.expandPasses` EXACTLY, which is what keeps the
+ * fused and the chained door bit-identical: a literal folds into the value on both sides
+ * (no `safeOut` on either), and anything else goes through [times] on both sides (so both
+ * get the same block-constant fold, the same `safeOut` scrubbing and the same
+ * `controlRateValueOrNull` contract). Folding a [ParamIgnitor]'s value here instead would
+ * be safe as far as `oscParams` goes — substitution already happened in `IgnitorDslRuntime`
+ * — but it would skip the `safeOut` the fused door applies, so a non-finite oscparam q would
+ * land on the SVF's Butterworth 0.7071 fallback on one door and on the scrubbed value's clamp
+ * on the other: the 0.1 floor for NaN and -Inf, the 200 ceiling for +Inf (safeOut clamps an
+ * infinity to a finite SAFE_MAX). Same program, two filters.
+ */
+internal fun Ignitor.scaledBy(factor: Double): Ignitor = when {
+    factor == 1.0 -> this
+    this is ConstantIgnitor -> ConstantIgnitor(value * factor)
+    else -> this * ConstantIgnitor(factor)
+}
 
 /**
  * Lowpass filter — lets low frequencies through, dulls the highs.
@@ -340,12 +369,12 @@ fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Fi
  * Bandpass filter — keeps only a frequency band, removes everything above and below.
  *
  * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
- * @param q Width of the pass band. 1.0 = moderate, higher = narrower band. Default: 1.0.
+ * @param q Width of the pass band (peak at fc is unity since C2). Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
 fun Ignitor.bandpass(
     cutoffHz: Ignitor,
-    q: Ignitor = ParamIgnitor("q", 1.0),
+    q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
 ): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
@@ -354,23 +383,23 @@ fun Ignitor.bandpass(
  * Bandpass filter (convenience overload with fixed values).
  *
  * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
- * @param q Width of the pass band. Default: 1.0. Clamped to [0.1, 200.0].
+ * @param q Width of the pass band (peak at fc is unity since C2). Default: 0.707. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  * @param analog Reserved — currently a no-op (BP saturation not implemented).
  */
-fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
+fun Ignitor.bandpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
     svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
 
 /**
  * Notch (band-reject) filter — removes one frequency band, keeps everything else.
  *
  * @param cutoffHz Center frequency of the notch in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
- * @param q Width of the notch. 1.0 = moderate, higher = narrower cut. Default: 1.0.
+ * @param q Width of the notch. Higher = narrower cut. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
 fun Ignitor.notch(
     cutoffHz: Ignitor,
-    q: Ignitor = ParamIgnitor("q", 1.0),
+    q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
 ): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
@@ -379,11 +408,11 @@ fun Ignitor.notch(
  * Notch (band-reject) filter (convenience overload with fixed values).
  *
  * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
- * @param q Width of the notch. Default: 1.0. Clamped to [0.1, 200.0].
+ * @param q Width of the notch. Higher = narrower cut. Default: 0.707. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  * @param analog Reserved — currently a no-op.
  */
-fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
+fun Ignitor.notch(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
     svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -419,10 +448,10 @@ private class OnePoleLowpassIgnitor(
             val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
             val a = onePoleLpfCoeff(fc, ctx.sampleRate.toDouble())
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 y += a * (input[i] - y)
-                y = y.flushDenormal()
+                y = y.flushState()
                 buffer[i] = y
             }
         }
@@ -472,11 +501,11 @@ private class OnePoleHighpassIgnitor(
             val b0 = invOnePlusK
             val a1 = (1.0 - k) * invOnePlusK
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 val x = input[i]
                 y = b0 * (x - xPrev) + a1 * y
-                y = y.flushDenormal()
+                y = y.flushState()
                 xPrev = x
                 buffer[i] = y
             }
@@ -529,7 +558,7 @@ private class FormantIgnitor(
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = 0.0
             }
@@ -551,8 +580,8 @@ private class FormantIgnitor(
                     val v3 = v0 - band.ic2eq
                     val v1 = band.a1 * band.ic1eq + band.a2 * v3
                     val v2 = band.ic2eq + band.a2 * band.ic1eq + band.a3 * v3
-                    band.ic1eq = (2.0 * v1 - band.ic1eq).flushDenormal()
-                    band.ic2eq = (2.0 * v2 - band.ic2eq).flushDenormal()
+                    band.ic1eq = (2.0 * v1 - band.ic1eq).flushState()
+                    band.ic2eq = (2.0 * v2 - band.ic2eq).flushState()
                     buffer[i] = (buffer[i] + v1 * band.linearGain)
                 }
             }
@@ -574,44 +603,7 @@ data class FormantBand(
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Warmth (one-pole low-pass based on alpha factor)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Wraps a [Ignitor] with a one-pole low-pass filter controlled by warmth factor.
- * One-pole LPF: `smoothed = raw + alpha * (lastSample - raw)`.
- *
- * @param warmthFactor Amount of filtering (0.0 = none/bypass, up to 0.99 = very muffled).
- */
-private class WithWarmthIgnitor(
-    private val upstream: Ignitor,
-    private val alpha: Double,
-) : Ignitor {
-    private var lastSample: Double = 0.0
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        ctx.scratchBuffers.use { input ->
-            upstream.generate(input, freqHz, ctx)
-
-            val a = alpha
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                val raw = input[i]
-                val smoothed = raw + a * (lastSample - raw)
-                buffer[i] = smoothed
-                lastSample = smoothed.flushDenormal()
-            }
-        }
-    }
-}
-
-fun Ignitor.withWarmth(warmthFactor: Double): Ignitor {
-    if (warmthFactor <= 0.0) return this
-    return WithWarmthIgnitor(this, warmthFactor.coerceIn(0.0, 0.99))
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Internal: Filter envelope computation (control rate)
+// Internal: filter/FM envelope computation — the ONE shared envelope law
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -642,7 +634,14 @@ private fun envelopeLevelAtPosition(
 
 /**
  * Computes a simple ADSR envelope value at the current block position.
- * Called once per block (control rate), not per sample.
+ * Sample-addressable via [sampleOffsetWithinBlock]. Two calling patterns exist and BOTH are
+ * load-bearing: `SvfIgnitor` evaluates it at a block's endpoints (its control-rate coefficient
+ * chord), and `FmModIgnitor` calls it PER SAMPLE (block-framing ledger E1). Do NOT memoize the
+ * result per block or hoist a call out of a per-sample loop — that reintroduces the zero-FM-head
+ * defect, and `BlockFramingInvarianceSpec`'s "fm with envelope" case goes red. If per-sample cost
+ * ever shows in a profile, the agreed shape is a per-block precompute (frames, rates,
+ * levelAtGateEnd) plus a thin `at(absPos)` body — ONE law with two entry points, never a second
+ * copy of this math.
  *
  * Release phase decays from the **actual level at gate-end**, not from sustainLevel.
  * This prevents discontinuous jumps (clicks) when gate-off occurs during attack or decay.
@@ -666,6 +665,11 @@ internal fun computeFilterEnvelope(
     val envValue = if (absPos >= gateEndPos) {
         val levelAtGateEnd = envelopeLevelAtPosition(gateEndPos, attackFrames, decayFrames, clampedSustain)
         val relPos = absPos - gateEndPos
+        // Divides by N, not N-1 like the CURVE evaluators (releaseProgressDenom), so this ramp
+        // ends at levelAtGateEnd/N rather than 0 on the last rendered frame. Deliberate: this is a
+        // straight LINEAR ramp with no curve endpoint to land on, and it drives a filter cutoff, so
+        // the residual ends a sweep a hair above its floor rather than leaving a gain step.
+        // Changing it would move filter-sweep sound in existing songs for no click benefit.
         val relRate = if (releaseFrames > 0) levelAtGateEnd / releaseFrames else 1.0
         levelAtGateEnd - (relPos * relRate)
     } else {

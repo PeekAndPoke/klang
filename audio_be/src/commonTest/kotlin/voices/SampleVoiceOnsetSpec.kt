@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -21,8 +21,8 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlin.math.abs
 
 /**
- * Sample voices must start **sample-accurately**, exactly like oscillator voices — and must still
- * clamp to the current block when they arrive late.
+ * Sample voices must start **sample-accurately**, exactly like oscillator voices — and a voice that
+ * arrives late is DROPPED at admission, never clamped (block-framing B2, 2026-09-03).
  *
  * `VoiceFactory` used to hand the sample branch `nowFrame` (the current block's first frame) as the
  * voice's `startFrame`, so every sample onset was rounded DOWN to a block boundary — firing early by
@@ -33,9 +33,10 @@ import kotlin.math.abs
  * The mechanism to do it right was always there: `Voice.render` clips the voice into the block via
  * `offset = max(blockStart, startFrame) - blockStart`. The sample branch just wasn't using it.
  *
- * The fix is `maxOf(startFrame, nowFrame)`, so this spec has to pin **both** halves of that `maxOf`:
- * the on-time case (sample-accurate onset) and the late case (the `nowFrame` floor). A plain
- * `startFrame` passes the on-time cases, so without the late case the floor is unguarded.
+ * The fix was `maxOf(startFrame, nowFrame)` — an on-time half (sample-accurate onset) and a late
+ * half (the `nowFrame` floor). The late half is history: since B2 the scheduler refuses any voice
+ * whose start is behind the block being promoted for, so the floor became an identity and was
+ * removed. This spec pins the on-time half, and that a late voice is dropped and counted.
  *
  * Drives a bare [PlaybackEngine] rather than the dispatcher:
  *  - `PlaybackEngine.renderInto` skips `MasterStage`, whose limiter lookahead would delay the onset
@@ -167,68 +168,47 @@ class SampleVoiceOnsetSpec : StringSpec({
         (firstAudibleFrame(b) - firstAudibleFrame(a)) shouldBe 1
     }
 
-    // ── Late: `nowFrame` is still the floor ──────────────────────────────────────────────────────
 
-    "a sample voice that arrives late starts its envelope at the onset, not partway in" {
-        // Guards the `maxOf`'s second half — and it has to assert the ENVELOPE, not the onset
-        // frame. `Voice.render` clamps the render window itself (`vStart = max(blockStart,
-        // startFrame)`), so with or without the floor the first audible frame is the same one.
-        // What differs is the envelope phase: built with a past `startFrame`, the voice's ADSR is
-        // already ~100 frames in while `SampleIgnitor`'s playhead still starts at the top of the
-        // PCM. Envelope and sample desynced — and the render STEPS from silence straight to a live
-        // envelope value instead of ramping. That step is the click the floor exists to prevent.
-        //
-        // The scheduling happens AFTER the cursor has advanced, which is the real-world shape of
-        // this: FE/BE clock skew, command latency, or a stalled worklet delivering a voice whose
-        // start has already gone by.
+    // ── Late voices: dropped, never admitted (block-framing B2, 2026-09-03) ──────────────────────
+    //
+    // Two rows used to live here: one guarding a VoiceFactory floor that clamped a LATE sample
+    // voice's start to the current block (so its envelope and playhead did not desync), and one
+    // guarding a 5-block tolerance window beyond which late voices were dropped. Both halves of
+    // that late-voice handling are gone. The DSP is written against the contract that a voice's
+    // first generate() has voiceElapsedFrames == 0, and the scheduler now GUARANTEES it: a voice
+    // whose start has already been rendered past is refused at admission and counted, whether it
+    // is one frame late or eight blocks. The floor became an identity and was removed.
+
+    "a sample voice whose start has already been rendered past is dropped, not admitted late" {
         val rig = Rig()
         rig.establishEpochAtZero()
+        rig.render(blocks = 2).count { it > 1e-12 } shouldBe 0
 
-        // Advance two blocks with nothing scheduled — this is the render that puts the voice's
-        // start time in the past.
-        val before = rig.render(blocks = 2)
-        before.count { it > 1e-12 } shouldBe 0
-
-        // Scheduled 100 frames behind the cursor (well inside `oldestAllowedSec` = 5 blocks, so it
-        // is clamped rather than dropped).
-        val lateStart = rig.clock.cursorFrame - 100
-        rig.schedule(lateStart)
-
-        val frames = rig.render(blocks = 6)
-        frames.max() shouldBeGreaterThan 1e-6
-
-        // It starts at the top of THIS block — at the cursor, not skipped forward.
-        firstAudibleFrame(frames) shouldBeLessThan 8
-
-        // And it starts at the BEGINNING of its envelope: the first frame is the attack at zero.
-        // Without the floor the voice is built with a startFrame 100 frames in the past, so the
-        // very first rendered frame already carries the envelope's value that far into the attack
-        // (≈0.032 with the current ADSR defaults) and the declick one-pole is seeded to it.
-        frames[0] shouldBeLessThan 1e-9
-
-        // The opening must also still be climbing, not already at level. Threshold 0.5% because
-        // the mutation lands at ≈4.6% — a 5% threshold sits only 9% away from passing on the
-        // broken code, and would silently stop discriminating if the ADSR defaults were retuned.
-        val peak = frames.max()
-        val openingPeak = (0 until 8).maxOf { frames[it] }
-        openingPeak shouldBeLessThan (peak * 0.005)
-    }
-
-    "a sample voice later than the drop window is dropped" {
-        // Guards `VoiceScheduler.oldestAllowedSec`, NOT the VoiceFactory floor — the drop happens
-        // in `promoteScheduled` before `makeVoice` is ever called, so this test is green whichever
-        // way `sampleStartFrame` is written. It is here because the floor and the drop window are
-        // the two halves of late-voice handling and it would be easy to "simplify" one into the
-        // other: without the drop, a stalled worklet would clamp a backlog of stale voices to the
-        // current block and fire them all at once.
-        val rig = Rig()
-        rig.establishEpochAtZero()
-        rig.render(blocks = 12).count { it > 1e-12 } shouldBe 0
-
-        // `oldestAllowedSec` is 5 blocks behind now; 8 blocks is comfortably past it.
-        rig.schedule(rig.clock.cursorFrame - (8 * blockFrames))
+        // 100 frames behind the cursor — well inside what the old 5-block window would have admitted
+        // LATE (and floored). Under no-late-voices it must never sound.
+        rig.schedule(rig.clock.cursorFrame - 100)
 
         val frames = rig.render(blocks = 6)
         frames.count { it > 1e-12 } shouldBe 0
+
+        // ...and it is COUNTED, which is the only trace a stalled link leaves now that nothing smears.
+        rig.engine.scheduler.droppedVoiceCount("song") shouldBe 1
+    }
+
+    "a sample voice scheduled exactly AT the cursor is on time — the boundary is inclusive" {
+        // The admission test is `absoluteStart < now`; a start equal to the block being promoted
+        // for is the earliest legal onset, not a late one. Off-by-one here would drop every voice
+        // the frontend schedules exactly on a block boundary.
+        val rig = Rig()
+        rig.establishEpochAtZero()
+        rig.render(blocks = 2).count { it > 1e-12 } shouldBe 0
+
+        rig.schedule(rig.clock.cursorFrame)
+
+        val frames = rig.render(blocks = 6)
+        frames.max() shouldBeGreaterThan 1e-6
+        // Same slack as the on-time rows above: the ADSR attack is exactly 0.0 on the onset frame.
+        firstAudibleFrame(frames) shouldBeLessThan 8
+        rig.engine.scheduler.droppedVoiceCount("song") shouldBe 0
     }
 })

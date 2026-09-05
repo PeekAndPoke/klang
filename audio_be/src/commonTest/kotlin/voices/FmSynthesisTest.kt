@@ -1,16 +1,21 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.voices
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -40,44 +45,32 @@ class FmSynthesisTest : StringSpec({
         return sqrt(sum / (to - from))
     }
 
-    "FM with depth 0 produces no modulation" {
-        val voiceWith = createSynthVoice(
-            blockFrames = bf,
-            freqHz = 440.0,
-            signal = Ignitors.sine(),
-            fm = Voice.Fm(ratio = 2.0, depth = 0.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
-        )
-        val voiceWithout = createSynthVoice(
-            blockFrames = bf,
-            freqHz = 440.0,
-            signal = Ignitors.sine(),
-            fm = null
-        )
+    "FM at depth 0 is the unmodulated carrier, and a real depth is not" {
+        // Audit F12, two tests merged into one because they were the same claim. "FM with
+        // depth 0 produces no modulation" compared depth-0 against null — identical by
+        // construction, since the pipeline gate builds no FmRenderer in either case — and
+        // "FM with null is disabled" only asserted the voice made SOME sound, which its name
+        // does not promise. Neither could be falsified.
+        //
+        // The three-way is what has teeth: null and depth-0 must agree (either one applying
+        // modulation breaks it), and a real depth must NOT agree with them (which is what
+        // makes the first half mean something).
+        fun render(fm: Voice.Fm?): AudioBuffer {
+            val voice = createSynthVoice(blockFrames = bf, freqHz = 440.0, signal = Ignitors.sine(), fm = fm)
+            val ctx = createContext(blockFrames = bf)
+            voice.render(ctx)
+            return ctx.voiceBuffer
+        }
 
-        val ctxWith = createContext(blockFrames = bf)
-        val ctxWithout = createContext(blockFrames = bf)
-        voiceWith.render(ctxWith)
-        voiceWithout.render(ctxWithout)
+        val env = Voice.Envelope(0.0, 0.0, 1.0, 0.0)
+        val none = render(null)
+        val zeroDepth = render(Voice.Fm(ratio = 2.0, depth = 0.0, envelope = env))
+        val realDepth = render(Voice.Fm(ratio = 2.0, depth = 100.0, envelope = env))
 
-        // FM with depth 0 should produce output identical to no-FM
-        val diff = diffRms(ctxWith.voiceBuffer, ctxWithout.voiceBuffer)
-        (diff < 1e-6) shouldBe true
-    }
-
-    "FM with null is disabled" {
-        val voice = createSynthVoice(
-            blockFrames = bf,
-            freqHz = 440.0,
-            signal = Ignitors.sine(),
-            fm = null
-        )
-
-        val ctx = createContext(blockFrames = bf)
-        voice.render(ctx)
-
-        // Should produce non-zero output (plain sine)
-        val outputRms = rms(ctx.voiceBuffer)
-        (outputRms > 0.0) shouldBe true
+        diffRms(zeroDepth, none) shouldBeLessThan 1e-6
+        diffRms(realDepth, none) shouldBeGreaterThan 1e-3
+        // and the carrier is actually sounding, so the comparisons are not all-silence
+        rms(none) shouldBeGreaterThan 0.0
     }
 
     "FM modulator ratio affects modulation frequency" {
@@ -231,27 +224,31 @@ class FmSynthesisTest : StringSpec({
         (diff > 1e-4) shouldBe true
     }
 
-    "FM modulator phase advances correctly" {
-        val fm = Voice.Fm(
-            ratio = 1.0,
-            depth = 100.0,
-            envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)
-        )
+    "FM modulator phase advances by the EXPECTED amount, not merely upward" {
+        // Audit F11, re-confirmed 2026-08-31 against the current tree: the assertion was
+        // `afterPhase > initialPhase` — the phase moved by SOME positive amount. Multiplying
+        // `modInc` by 0.001 in FmRenderer (a modulator running 1000x too slow: a different
+        // instrument, not a detuned patch) leaves the WHOLE audio_be suite green. The
+        // quantity IS the behaviour.
+        val ratio = 1.0
+        val freqHz = 440.0
+        val frames = 100
+        val sampleRate = 44100
 
-        val voice = createSynthVoice(
-            freqHz = 440.0,
-            fm = fm
-        )
+        val fm = Voice.Fm(ratio = ratio, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
+        val voice = createSynthVoice(freqHz = freqHz, fm = fm, sampleRate = sampleRate)
 
-        val initialPhase = fm.modPhase
+        fm.modPhase shouldBe 0.0
 
-        val ctx = createContext(blockFrames = 100)
+        val ctx = createContext(blockFrames = frames)
         voice.render(ctx)
 
-        val afterPhase = fm.modPhase
+        // Derived from the DEFINITION of an FM modulator rather than from the renderer: the
+        // modulator runs at freq x ratio, so its phase advances TWO_PI x modFreq / sr per
+        // sample, and the renderer wraps once at the end of the block.
+        val expected = (frames * TWO_PI * (freqHz * ratio) / sampleRate).wrapPhase(TWO_PI)
 
-        // Phase should have advanced
-        (afterPhase > initialPhase) shouldBe true
+        abs(fm.modPhase - expected) shouldBeLessThan 1e-9
     }
 
     "FM with very high ratio produces complex spectrum" {
@@ -308,7 +305,7 @@ class FmSynthesisTest : StringSpec({
             freqHz = 440.0,
             signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 1.5, depth = 50.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25)
+            vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25)
         )
         val voiceFmOnly = createSynthVoice(
             blockFrames = bf,

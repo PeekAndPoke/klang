@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -15,23 +15,22 @@ import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangAdsrCurvesSpec : StringSpec({
 
-    "adsrCurves dsl interface — sets per-stage curves from 'a:d:r'" {
+    "adsrCurves dsl interface — sets per-stage curves" {
         val pat = "0 1"
-        val ctrl = "linear:square:cube"
 
         dslInterfaceTests(
-            "pattern.adsrCurves(ctrl)" to
-                    seq(pat).adsrCurves(ctrl),
-            "script pattern.adsrCurves(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").adsrCurves("$ctrl")"""),
-            "string.adsrCurves(ctrl)" to
-                    pat.adsrCurves(ctrl),
-            "script string.adsrCurves(ctrl)" to
-                    SprudelPattern.compile(""""$pat".adsrCurves("$ctrl")"""),
-            "adsrCurves(ctrl)" to
-                    seq(pat).apply(adsrCurves(ctrl)),
-            "script adsrCurves(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(adsrCurves("$ctrl"))"""),
+            "pattern.adsrCurves(a, d, r)" to
+                    seq(pat).adsrCurves("linear", "square", "cube"),
+            "script pattern.adsrCurves(a, d, r)" to
+                    SprudelPattern.compile("""seq("$pat").adsrCurves("linear", "square", "cube")"""),
+            "string.adsrCurves(a, d, r)" to
+                    pat.adsrCurves("linear", "square", "cube"),
+            "script string.adsrCurves(a, d, r)" to
+                    SprudelPattern.compile(""""$pat".adsrCurves("linear", "square", "cube")"""),
+            "adsrCurves(a, d, r)" to
+                    seq(pat).apply(adsrCurves("linear", "square", "cube")),
+            "script adsrCurves(a, d, r)" to
+                    SprudelPattern.compile("""seq("$pat").apply(adsrCurves("linear", "square", "cube"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -43,7 +42,7 @@ class LangAdsrCurvesSpec : StringSpec({
     }
 
     "adsrCurves() partial input — leaves missing stages untouched" {
-        val p = "0 1".apply(adsrCurves(":square:cube"))
+        val p = "0 1".apply(adsrCurves(decay = "square", release = "cube"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -55,7 +54,7 @@ class LangAdsrCurvesSpec : StringSpec({
     }
 
     "adsrCurves() accepts case-insensitive names" {
-        val p = "0".apply(adsrCurves("LINEAR:Square:CUBE"))
+        val p = "0".apply(adsrCurves("LINEAR", "Square", "CUBE"))
         val events = p.queryArc(0.0, 1.0)
         with(events[0].data) {
             attackCurve shouldBe AdsrCurve.Linear
@@ -65,7 +64,7 @@ class LangAdsrCurvesSpec : StringSpec({
     }
 
     "adsrCurves() invalid name leaves stage untouched" {
-        val p = "0".apply(adsrCurves("xyz:square:cube"))
+        val p = "0".apply(adsrCurves("xyz", "square", "cube"))
         val events = p.queryArc(0.0, 1.0)
         with(events[0].data) {
             attackCurve shouldBe null

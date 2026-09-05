@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -8,6 +8,9 @@ package io.peekandpoke.klang.audio_be.effects
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb.Companion.FEEDBACK_OFFSET
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.ln
 
 /**
  * High-performance stereo reverb based on the Freeverb algorithm
@@ -45,9 +48,9 @@ import io.peekandpoke.klang.audio_be.effects.Reverb.Companion.FEEDBACK_OFFSET
  *   decaying into subnormal range during silence (which would cause FPU
  *   stalls at ~50–100 cycles each). The bias is well below audibility and
  *   matches the canonical Freeverb approach. With 24 IIR stores per sample,
- *   the per-sample `+ 1e-18` is dramatically cheaper than `flushDenormal()`
+ *   the per-sample `+ 1e-18` is dramatically cheaper than `flushState()`
  *   (24× ABS + compare + branch) — the rest of the engine uses
- *   `flushDenormal` because those components have only 1–2 IIR stages.
+ *   `flushState` because those components have only 1–2 IIR stages.
  *
  * **Parameter mapping — note the two different scales.** Everything a user authors goes through
  * [normalizeRoomSize] or lands here raw; both buses (per-orbit and master) MUST agree:
@@ -74,6 +77,10 @@ class Reverb(
     private val allPassTuning = intArrayOf(556, 441, 341, 225)
         .map { (it * srScale).toInt().coerceAtLeast(1) }.toIntArray()
     private val stereoSpread = (STEREO_SPREAD_44K1 * srScale).toInt().coerceAtLeast(1)
+
+    /** Longest comb revolution in samples (the right channel of the longest comb) — the
+     *  countdown period [drainSamplesUntilSilent] counts in. */
+    private val longestCombSamples = (combTuning.max() + stereoSpread).toDouble()
 
     // --- State (flattened for performance) ---
     private val numCombs = combTuning.size
@@ -137,7 +144,7 @@ class Reverb(
      * [threshold]. Used by cylinder cleanup to detect a tail that should keep
      * the cylinder alive.
      *
-     * **Cost**: O(numCombs × maxCombSize × 2 channels) — at 48 kHz ≈ 28k samples.
+     * **Cost**: O(numCombs × maxCombSize × 2 channels) — at 48 kHz ≈ 24k samples.
      * Not intended for per-block use; called from cleanup polling.
      *
      * **Conservative under stable feedback (≤ 0.98)**: if every stored sample
@@ -145,7 +152,8 @@ class Reverb(
      * threshold (steady-state bound is `threshold / (1 − fb) ≈ 50 · threshold`,
      * still well below audibility for typical thresholds).
      */
-    fun hasTail(threshold: Double = 0.00001): Boolean {
+    fun hasTail(threshold: Double = TAIL_THRESHOLD): Boolean {
+        // Test/diagnostic only since the content-ceiling tail (`TailCeiling`): no production caller.
         for (c in 0 until numCombs) {
             for (sample in combBufsL[c]) {
                 if (sample > threshold || sample < -threshold) {
@@ -159,6 +167,100 @@ class Reverb(
             }
         }
         return false
+    }
+
+    /**
+     * Highest absolute sample across ALL comb buffers, both channels — the drain-countdown
+     * analog of `DelayLine.tapWindowPeakAbs`. For a comb the whole buffer IS the tap window:
+     * the read position cycles through every cell and re-feeds it, so (unlike the delay ring)
+     * nothing is overwritten before it is emitted. Allpass buffers are deliberately excluded
+     * from the magnitude scan, matching [hasTail]'s own convention: the series chain holds
+     * ~1.66k samples of comb-sum history (round 2 corrected round 1's single-stage figure) —
+     * about one comb revolution, so once every comb cell is at the threshold the chain was fed
+     * `<= numCombs x threshold / fb` for its whole memory, and the [FIXED_GAIN]-scaled wet a
+     * cut leaves behind stays in the -100 dBFS class: the same inaudible cut the orbit teardown
+     * has always made. The one thing the scan DOES report about a cell besides magnitude is
+     * health: any non-finite cell returns [Double.POSITIVE_INFINITY] (a NaN spreads through the
+     * LPF store and an Inf never decays, and `NaN > peak` is false, so a plain magnitude scan
+     * would be BLIND to a NaN-poisoned network and let it drain garbage into the mix — review
+     * round 2). Comb-only stays sufficient for that too: the allpass chain is fed from comb
+     * reads, so allpass poison implies a poisoned comb cell first, and comb poison persists
+     * until a reset.
+     *
+     * **Cost**: one O(all comb cells) scan (~22k samples at 44.1 kHz) — the same class as
+     * [hasTail], intended for the off-transition (at most once per lease handoff), never
+     * per block.
+     */
+    fun combPeakAbs(): Double {
+        var peak = 0.0
+
+        for (c in 0 until numCombs) {
+            for (sample in combBufsL[c]) {
+                if (!sample.isFinite()) {
+                    return Double.POSITIVE_INFINITY
+                }
+
+                val mag = abs(sample)
+                if (mag > peak) {
+                    peak = mag
+                }
+            }
+            for (sample in combBufsR[c]) {
+                if (!sample.isFinite()) {
+                    return Double.POSITIVE_INFINITY
+                }
+
+                val mag = abs(sample)
+                if (mag > peak) {
+                    peak = mag
+                }
+            }
+        }
+
+        return peak
+    }
+
+    /**
+     * Closed-form upper bound on how many samples of silent-input processing it takes until
+     * every comb cell is provably below [threshold] — the countdown the bus effect's draining
+     * state runs on (the `DelayLine.drainSamplesUntilSilent` analog).
+     *
+     * One full revolution of a comb rewrites every cell as `feedback x lowpassed(history)`.
+     * The damping LPF is a convex combination of already-read cells whose pre-revolution memory
+     * weight is `damping^N` — indistinguishable from zero for every supported comb length
+     * (the SHORTEST comb is N ~ 558 at the 22.05 kHz support floor, damping <= 0.4 via
+     * DAMP_SCALE; the convexity additionally needs `damping < 1`, i.e. `damp < 2.5` — the orbit
+     * path never writes damp and the master clamps it to [0, 1], and a supra-unity damping
+     * diverges and self-limits at the terminal reset anyway) — so cell peaks
+     * contract by at least `|feedback|` per revolution REGARDLESS of damping (round 2 settled
+     * this after round 1's dominant-root stretch argument, which is real only for toy-sized
+     * combs where `damping^N` still matters). What makes the `+ 1` spare revolution
+     * LOAD-BEARING, not free margin: the LPF store carries ACROSS the off-transition and is
+     * bounded by `peak/|fb|`, not `peak`, so the first revolution may hold instead of contract
+     * — the spare revolution absorbs exactly that lag. Do not drop it.
+     * Counting revolutions of the LONGEST comb bounds every shorter one, which revolves more
+     * often: `n = ceil(ln(threshold/peak) / ln(|feedback|)) + 1` periods.
+     *
+     * The feedback is the same [effectiveFeedback] that [process] applies — structurally within
+     * `[0.7, 0.98]` through the production path ([normalizeRoomSize] clamps roomSize, the
+     * configure door coerces roomFade), so unlike the delay there is no self-oscillating regime
+     * to sentinel. The `|feedback| >= 1` arm exists only so the formula can never claim a
+     * (test-rigged, production-unreachable) growing network drains.
+     */
+    fun drainSamplesUntilSilent(peak: Double, threshold: Double = TAIL_THRESHOLD): Double {
+        if (peak <= threshold) {
+            return 0.0
+        }
+
+        val fbAbs = abs(effectiveFeedback())
+
+        if (fbAbs >= 1.0) {
+            return Double.POSITIVE_INFINITY
+        }
+
+        val periods = ceil(ln(threshold / peak) / ln(fbAbs)) + 1.0
+
+        return periods * longestCombSamples
     }
 
     /**
@@ -185,6 +287,38 @@ class Reverb(
     }
 
     /**
+     * Puts every parameter back to its constructor default — what a unit fresh from `Reverb(sampleRate)`
+     * carries. With [reset] this makes a shelved unit indistinguishable from a new one
+     * (`ReverbUnits.giveBack`). Keep in sync with the property initialisers above.
+     */
+    fun restoreDefaults() {
+        roomSize = 0.5
+        damp = 0.5
+        roomFade = null
+        roomLp = null
+        roomDim = null
+        iResponse = null
+    }
+
+    /** The comb feedback [process] runs at: `(roomFade ?: roomSize) x FEEDBACK_SCALE +
+     *  FEEDBACK_OFFSET` — one definition shared with [drainSamplesUntilSilent], so the drain
+     *  math can never diverge from the DSP it predicts. */
+    private fun effectiveFeedback(): Double = (roomFade ?: roomSize) * FEEDBACK_SCALE + FEEDBACK_OFFSET
+
+    /** The comb feedback right now, for [TailCeiling] — one definition with [process] and the drain. */
+    val tailFeedback: Double get() = effectiveFeedback()
+
+    /** The window for [TailCeiling]: the longest comb's revolution plus one sample. */
+    val tailWindowSamples: Double get() = longestCombSamples + 1.0
+
+    /**
+     * How many times a sample can pass the SHORTEST comb within [tailWindowSamples]: the comb
+     * lengths span 1116..1617 (+ spread), under 2×, so two. Computed, not assumed, so a retuning
+     * cannot silently break the ceiling's bound.
+     */
+    val tailLapsPerWindow: Int = ceil((longestCombSamples + 1.0) / combTuning.min().toDouble()).toInt()
+
+    /**
      * Process one block. Reads dry stereo from [input], adds the wet
      * (reverberated) signal additively into [output]. Caller is responsible
      * for placing the dry mix into [output] beforehand if a wet+dry result is
@@ -199,8 +333,7 @@ class Reverb(
         // --- 1. Control-rate calculations (once per block) ---
 
         // Comb feedback ← roomSize (or roomFade override)
-        val effectiveSize = roomFade ?: roomSize
-        val feedback = effectiveSize * FEEDBACK_SCALE + FEEDBACK_OFFSET
+        val feedback = effectiveFeedback()
 
         // Damping ← damp (or roomLp override). roomLp = nyquist → no damping;
         // roomLp = 0 → max damping. Then scale to the comb LPF range.
@@ -218,8 +351,20 @@ class Reverb(
         // --- 2. Audio-rate processing ---
 
         for (i in 0 until length) {
-            val inpL = inL[i]
-            val inpR = inR[i]
+            // Non-finite guard on the two INPUT taps rather than the 24 state stores. The
+            // stores keep `+ ANTI_DENORMAL` (converting them to `flushState` was measured at
+            // ~+11%/sample and reverted 2026-05-19), so they have no per-store guard of their
+            // own — but they do not need one: the comb/allpass network is a stable linear
+            // system (|feedback| < 1 via normalizeRoomSize, damping in [0,1], coefficients
+            // guarded at configure), so a FINITE input can never drive the state non-finite.
+            // Guarding the input is therefore equivalent and 12x cheaper. Without it, one Inf
+            // sample latched every comb and allpass for the life of the orbit.
+            // `abs(x) <= MAX_VALUE` rejects Inf AND NaN in one compare (NaN fails every
+            // comparison) and leaves no branch on the data — see `flushState`.
+            val rawL = inL[i]
+            val rawR = inR[i]
+            val inpL = if (abs(rawL) <= Double.MAX_VALUE) rawL else 0.0
+            val inpR = if (abs(rawR) <= Double.MAX_VALUE) rawR else 0.0
 
             var sumL = 0.0
             var sumR = 0.0
@@ -229,12 +374,12 @@ class Reverb(
             //
             // Denormal protection via `+ ANTI_DENORMAL` (1e-18) on every state
             // store — the canonical Freeverb approach. A previous revision
-            // (2026-05-08, Round 9) replaced this with `flushDenormal()` for
+            // (2026-05-08, Round 9) replaced this with `flushState()` for
             // engine-wide consistency, but that cost ~+11% per-sample because
             // Reverb has 24 IIR stores/sample (8 combs + 4 allpass × 2 ch),
             // vs 1–2 for other components. The ANTI_DENORMAL bias is well
             // below audibility (~250 dB below the noise floor); the engine's
-            // `flushDenormal` pattern remains canonical for low-state-count
+            // `flushState` pattern remains canonical for low-state-count
             // components. Reverted 2026-05-19.
             for (c in 0 until numCombs) {
                 // Left
@@ -344,6 +489,9 @@ class Reverb(
 
             return (authored / AUTHORED_ROOM_SIZE_SCALE).coerceIn(0.0, 1.0)
         }
+
+        /** The silence threshold [hasTail] and [drainSamplesUntilSilent] share (~-100 dBFS). */
+        const val TAIL_THRESHOLD: Double = 0.00001
 
         /** Reference sample rate the canonical Freeverb tunings were tuned for. */
         private const val REFERENCE_SAMPLE_RATE: Int = 44100

@@ -1,9 +1,70 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.ignitor
+
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_WARMUP
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_PHASE_POOL
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_POOL_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_REFRESH_EVERY
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SELECTION
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -19,12 +19,12 @@ class LangSndSuperPluckSpec : StringSpec({
 
     "sndSuperPluck() dsl interface" {
         dslInterfaceTests(
-            "pattern.sndSuperPluck()" to note("c3").sndSuperPluck("7:0.3:0.99:0.8"),
-            "string.sndSuperPluck()" to "c3".sndSuperPluck("7:0.3:0.99:0.8"),
-            "script pattern.sndSuperPluck()" to SprudelPattern.compile("""note("c3").sndSuperPluck("7:0.3:0.99:0.8")"""),
-            "script string.sndSuperPluck()" to SprudelPattern.compile(""""c3".sndSuperPluck("7:0.3:0.99:0.8")"""),
-            "apply(sndSuperPluck())" to note("c3").apply(sndSuperPluck("7:0.3:0.99:0.8")),
-            "script apply(sndSuperPluck())" to SprudelPattern.compile("""note("c3").apply(sndSuperPluck("7:0.3:0.99:0.8"))"""),
+            "pattern.sndSuperPluck()" to note("c3").sndSuperPluck(7, 0.3, 0.99, 0.8),
+            "string.sndSuperPluck()" to "c3".sndSuperPluck(7, 0.3, 0.99, 0.8),
+            "script pattern.sndSuperPluck()" to SprudelPattern.compile("""note("c3").sndSuperPluck(7, 0.3, 0.99, 0.8)"""),
+            "script string.sndSuperPluck()" to SprudelPattern.compile(""""c3".sndSuperPluck(7, 0.3, 0.99, 0.8)"""),
+            "apply(sndSuperPluck())" to note("c3").apply(sndSuperPluck(7, 0.3, 0.99, 0.8)),
+            "script apply(sndSuperPluck())" to SprudelPattern.compile("""note("c3").apply(sndSuperPluck(7, 0.3, 0.99, 0.8))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -46,7 +46,7 @@ class LangSndSuperPluckSpec : StringSpec({
     }
 
     "sndSuperPluck() with all six params" {
-        val p = note("c3").sndSuperPluck("7:0.3:0.996:0.5:0.2:0.4")
+        val p = note("c3").sndSuperPluck(7, 0.3, 0.996, 0.5, 0.2, 0.4)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -62,7 +62,7 @@ class LangSndSuperPluckSpec : StringSpec({
     }
 
     "sndSuperPluck() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").sndSuperPluck("5:0.2:0.99")""")
+        val p = SprudelPattern.compile("""note("c3").sndSuperPluck(5, 0.2, 0.99)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

@@ -26,7 +26,7 @@ tree-walking interpreter.
 | Hover / completion / docs popup / AnalyzedAst / Origin / scope tracking            | `klangscript/ref/intel-analyzer.md`   |
 | Adding a new language feature end-to-end                                           | `klangscript/ref/adding-features.md`  |
 | Running or writing tests                                                           | `klangscript/ref/testing-strategy.md` |
-| Checking which features exist, which tests cover them, and klangblocks sync status | `klangscript/ref/feature-catalog.md`  |
+| Checking which features exist and which tests cover them | `klangscript/ref/feature-catalog.md`  |
 
 ## Testing
 

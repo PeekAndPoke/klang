@@ -37,7 +37,7 @@ let clarinet = Osc.triangle().mul(0.7)
         )
         .lowpass(2800)
         .highpass(150)
-        .warmth(4000)
+        .onepole(4000)
         .vibrato(5, 0.003)
         .pitchEnvelope(0.5, 0.01, 0.06)
         .adsr(0.04, 0.08, 0.9, 0.1)
@@ -136,7 +136,7 @@ let steel = Osc.pluck()
 ```javascript
 let nylon = Osc.pluck()
         .lowpass(2000)
-        .warmth(3000)
+        .onepole(3000)
         .highpass(80)
 ```
 
@@ -156,7 +156,7 @@ let twelve = Osc.superpluck()
 let electric = Osc.pluck()
         .lowpass(6000)
         .highpass(200)
-        .phaser(0.3, 0.3)
+        .phaser(0.3).wet(0.3)
 ```
 
 ### Electric Distorted
@@ -232,7 +232,7 @@ let celesta = Osc.sine().mul(0.6)
         .lowpass(Osc.constant(5000).plus(
             Osc.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)
         ))
-        .warmth(6000)
+        .onepole(6000)
         .adsr(0.005, 1.2, 0.0, 0.4)
 ```
 
@@ -278,7 +278,7 @@ let marimba = Osc.sine().mul(0.7)
                 .adsr(0.001, 0.03, 0.0, 0.005)
         )
         .lowpass(2500)
-        .warmth(3000)
+        .onepole(3000)
         .pitchEnvelope(1, 0.001, 0.04)
         .adsr(0.005, 0.5, 0.0, 0.08)
 ```
@@ -297,7 +297,7 @@ let lowMarimba = Osc.sine().mul(0.8)
                 .adsr(0.001, 0.04, 0.0, 0.005)
         )
         .lowpass(1800)
-        .warmth(2000)
+        .onepole(2000)
         .pitchEnvelope(0.5, 0.001, 0.05)
         .adsr(0.005, 0.8, 0.0, 0.1)
 ```

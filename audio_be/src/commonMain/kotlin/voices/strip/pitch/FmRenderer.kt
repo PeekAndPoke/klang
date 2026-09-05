@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -24,7 +24,6 @@ class FmRenderer(
     private val sampleRate: Int,
         // Absolute backend frame — Double, see RenderClock.cursorFrame.
     private val startFrame: Double,
-    private val gateEndFrame: Double,
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
@@ -40,7 +39,8 @@ class FmRenderer(
         val modInc = (TWO_PI * modFreq) / sampleRate
         var modPhase = fm.modPhase
 
-        val envLevel = calculateControlRateEnvelope(fm.envelope, ctx.blockStart, startFrame, gateEndFrame)
+        // Gate read from the ctx per call — a realtime note-off may move it (Voice.releaseGate)
+        val envLevel = calculateControlRateEnvelope(fm.envelope, ctx.blockStart, startFrame, ctx.gateEndFrame)
         val effectiveDepth = fm.depth * envLevel
 
         for (i in 0 until ctx.length) {

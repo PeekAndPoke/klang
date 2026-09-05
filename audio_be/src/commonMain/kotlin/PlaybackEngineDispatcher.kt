@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -18,7 +18,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * `Map<playbackId, PlaybackEngine>` — one fully-isolated engine per playback, created lazily and
  * disposed once told to stop ([cleanup]) and fully drained. Both platform backends shrink to a thin
  * pump: drain commands → [renderBlock] → convert/output → forward feedback. See
- * `docs/tasks/per-playback-engine.md`.
+ * `docs/tasks-archive/2026-09/20260904-per-playback-engine.md`.
  */
 class PlaybackEngineDispatcher(
     private val context: AudioBackendContext,
@@ -67,6 +67,13 @@ class PlaybackEngineDispatcher(
         is KlangCommLink.Cmd.ScheduleVoices ->
             scheduleVoices(cmd.playbackId, cmd.voices)
 
+        is KlangCommLink.Cmd.StartRealtimeVoice ->
+            engineFor(cmd.playbackId).scheduler.startRealtimeVoice(cmd.playbackId, cmd.voice)
+
+        // Targets an EXISTING playback — a stop must never create (or revive) an engine.
+        is KlangCommLink.Cmd.StopRealtimeVoice ->
+            engines[cmd.playbackId]?.scheduler?.stopRealtimeVoice(cmd.playbackId, cmd.liveId) ?: Unit
+
         is KlangCommLink.Cmd.ReplaceVoices ->
             replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
 
@@ -113,7 +120,10 @@ class PlaybackEngineDispatcher(
 
     /** Immediate disposal (warmup teardown) — does not let voices ring out. */
     fun cleanupHard(playbackId: String) {
-        engines.remove(playbackId)?.scheduler?.cleanupHard(playbackId)
+        engines.remove(playbackId)?.let { engine ->
+            engine.scheduler.cleanupHard(playbackId)
+            engine.dispose()
+        }
         draining.remove(playbackId)
     }
 
@@ -135,6 +145,17 @@ class PlaybackEngineDispatcher(
         clock.cursorFrame = cursorFrame
         mix.clear()
 
+        try {
+            renderBlockAt(cursorFrame, out, startMs)
+        } finally {
+            // The clock convention (see RenderClock.cursorFrame): between renders it is the NEXT
+            // block. Advanced in `finally` so an exception mid-block cannot leave "now" in the past.
+            clock.cursorFrame = cursorFrame + context.blockFrames
+        }
+    }
+
+    private fun renderBlockAt(cursorFrame: Double, out: ShortArray, startMs: Double) {
+
         // processAndMix accumulates additively, so engines simply render into the same mix in turn.
         // (#11: with one engine this is a straight render into the final mix.) Per-engine master gain
         // in D6 will need a scratch buffer here for the ≥2 case.
@@ -145,6 +166,8 @@ class PlaybackEngineDispatcher(
         master.process(mix, out)
 
         disposeDrainedEngines()
+        // Deferred clearing of returned rings and networks, a bounded slice per block (round 3).
+        context.warehouse.housekeep()
         emitDiagnostics(startMs)
     }
 
@@ -165,13 +188,17 @@ class PlaybackEngineDispatcher(
         lastDiagnosticsTimeMs = endMs
 
         var voiceCount = 0
+        var droppedVoices = 0
+        var deniedRents = 0
         val cylinderStates = mutableListOf<KlangCommLink.Feedback.Diagnostics.CylinderState>()
         for (engine in engines.values) {
             voiceCount += engine.scheduler.getActiveVoiceCount()
+            droppedVoices += engine.scheduler.droppedVoicesTotal()
             for (cylinder in engine.cylinders.cylinders) {
                 cylinderStates.add(
                     KlangCommLink.Feedback.Diagnostics.CylinderState(id = cylinder.id, active = cylinder.isActive)
                 )
+                deniedRents += cylinder.delay.deniedRents + cylinder.reverb.deniedRents
             }
         }
 
@@ -183,6 +210,8 @@ class PlaybackEngineDispatcher(
                 activeVoiceCount = voiceCount,
                 cylinders = cylinderStates,
                 backendNowMs = endMs,
+                // The warehouse's own snapshot: rebuilt only when one of its parts changed.
+                warehouse = context.warehouse.stats(droppedVoices = droppedVoices, deniedRents = deniedRents),
             )
         )
     }
@@ -197,7 +226,7 @@ class PlaybackEngineDispatcher(
             val playbackId = iter.next()
             val engine = engines[playbackId]
             if (engine == null || engine.isIdle()) {
-                engines.remove(playbackId)
+                engines.remove(playbackId)?.dispose()
                 iter.remove()
             }
         }
@@ -206,8 +235,17 @@ class PlaybackEngineDispatcher(
     /** Reset the master post-chain (limiter envelope + DC blockers) after warmup. */
     fun resetPostChain() = master.reset()
 
+    /** True when every idle ring and network on the warehouse's shelves is zeroed (see [WarmupRunner.tick]). */
+    val isWarehouseClean: Boolean get() = context.warehouse.isClean
+
+    /** The real block size — the warmup buckets on it, not on a constant. */
+    val blockFrames: Int get() = context.blockFrames
+
     // ── Test / diagnostics inspection ────────────────────────────────────────────
     internal val activePlaybackIds: Set<String> get() = engines.keys
+
+    /** The render clock, for specs that must observe the between-renders convention (block-framing B1). */
+    internal val clockForTest: RenderClock get() = clock
     internal fun engine(playbackId: String): PlaybackEngine? = engines[playbackId]
 
     companion object {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -29,6 +29,9 @@ class KatalystFormantEffect(
 
     // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
     private val swap = KatalystFilterSwap(sampleRate)
+
+    /** Test seam: true while a formant bank is installed — the owner has a vowel. */
+    internal val isEngaged: Boolean get() = swap.active
 
     /** Configure from the OWNER voice's vowel. `null` (owner has no vowel) turns the resonator off. */
     fun configure(vowel: FilterDef.Formant?) {

@@ -83,7 +83,6 @@ kotlin {
 
                 api(project(":klang"))
                 api(project(":sprudel"))
-                api(project(":klangblocks"))
             }
         }
 

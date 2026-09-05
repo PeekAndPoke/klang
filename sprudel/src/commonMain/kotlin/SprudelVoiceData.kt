@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.uniqueId
 
 /**
@@ -66,7 +67,7 @@ data class SprudelVoiceData(
     /** Sound index */
     var soundIndex: Int?,
 
-    // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "warmth")
+    // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "onepole" [Hz])
     var oscParams: Map<String, Double>?,
 
     // ADSR amplitude envelope — grouped (see SvdAdsr). Flat fields (attack/decay/…) are accessors below.
@@ -122,9 +123,17 @@ data class SprudelVoiceData(
     // Body resonator — grouped (see SvdBody). Flat fields (body/bodyMix/bodyFloor) are accessors below.
     var bodyFx: SvdBody?,
 
-    // Dynamics / Compression
-    /** Dynamic range compression settings (threshold:ratio:knee:attack:release) */
-    var compressor: String?,
+    // Dynamics / Compression (per-param since C0.2)
+    /** Compressor threshold in dB (e.g. -20). */
+    var compressorThreshold: Double?,
+    /** Compression ratio (e.g. 4 = 4:1 above threshold). */
+    var compressorRatio: Double?,
+    /** Knee smoothness in dB (0 = hard knee). */
+    var compressorKnee: Double?,
+    /** Attack time in seconds. */
+    var compressorAttack: Double?,
+    /** Release time in seconds. */
+    var compressorRelease: Double?,
 
     // Playback control
     /** Solo value - 0.0 = disabled, 0.0..1.0 = enabled (amount), null = not set */
@@ -156,6 +165,28 @@ data class SprudelVoiceData(
 
     // Custom value
     var value: SprudelVoiceValue?,
+
+    /**
+     * Semantic tags accumulated via `.tag(...)`. A set by design: tags are unique and carry NO
+     * ordering guarantee — consumers must never rely on accumulation order. Copied into engine
+     * `VoiceData` by [toVoiceData] (and thus over the wire) for UI subscribers (visualizations)
+     * and analysis tools; the synthesis engine ignores them. Treated as immutable-replace like
+     * [oscParams] (shared reference in [clone], fresh set on write).
+     */
+    var tags: Set<String>?,
+
+    /**
+     * Tweak names attached in mini-notation (`e3{swell}`) or via `.tweak(...)`, referencing
+     * transforms that `tweaks(...)` binds later. A LIST by design, unlike [tags]: tweaks apply in
+     * the order written and may repeat, so neither ordering nor duplicates may be dropped.
+     *
+     * Deliberately NOT copied into engine `VoiceData` by [toVoiceData]: a tweak is a pattern-layer
+     * concern that never reaches synthesis, so it would be dead weight on the wire.
+     *
+     * Treated as immutable-replace like [tags] / [oscParams] (shared reference in [clone], fresh
+     * list on write).
+     */
+    var tweaks: List<String>?,
 ) {
     // --- Flat-field accessors over the grouped storage -------------------------------------------------
     // Bridge so the rest of the engine/DSL/tests keep using the flat names (data.attack, data.cutoff, …)
@@ -234,6 +265,11 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || adsr != null) adsrOrNew().release = v
         }
+    var adsrOn: Boolean?
+        get() = adsr?.on
+        set(v) {
+            if (v != null || adsr != null) adsrOrNew().on = v
+        }
     var attackCurve: AdsrCurve?
         get() = adsr?.attackCurve
         set(v) {
@@ -285,6 +321,11 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || lpf != null) lpfOrNew().env = v
         }
+    var lpPasses: Double?
+        get() = lpf?.passes
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().passes = v
+        }
 
     var hcutoff: Double?
         get() = hpf?.cutoff
@@ -295,6 +336,11 @@ data class SprudelVoiceData(
         get() = hpf?.resonance
         set(v) {
             if (v != null || hpf != null) hpfOrNew().resonance = v
+        }
+    var hpPasses: Double?
+        get() = hpf?.passes
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().passes = v
         }
     var hpattack: Double?
         get() = hpf?.attack
@@ -524,6 +570,12 @@ data class SprudelVoiceData(
             if (v != null || phaser != null) phaserOrNew().phaserSweep = v
         }
 
+    var phaserFloor: Double?
+        get() = phaser?.phaserFloor
+        set(v) {
+            if (v != null || phaser != null) phaserOrNew().phaserFloor = v
+        }
+
     var tremoloSync: Double?
         get() = tremolo?.tremoloSync
         set(v) {
@@ -720,7 +772,11 @@ data class SprudelVoiceData(
             sample = mergeSvdSample(sample, other.sample),
             vowelFx = mergeSvdVowel(vowelFx, other.vowelFx),
             bodyFx = mergeSvdBody(bodyFx, other.bodyFx),
-            compressor = other.compressor ?: compressor,
+            compressorThreshold = other.compressorThreshold ?: compressorThreshold,
+            compressorRatio = other.compressorRatio ?: compressorRatio,
+            compressorKnee = other.compressorKnee ?: compressorKnee,
+            compressorAttack = other.compressorAttack ?: compressorAttack,
+            compressorRelease = other.compressorRelease ?: compressorRelease,
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
             pipeline = other.pipeline ?: pipeline,
@@ -729,7 +785,9 @@ data class SprudelVoiceData(
             // a property of the carrier itself. Taking it from `other` would let a merged-in master
             // carrier silence real notes.
             control = control,
-            value = other.value ?: value
+            value = other.value ?: value,
+            tags = mergeTags(tags, other.tags),
+            tweaks = mergeTweaks(tweaks, other.tweaks),
         )
     }
 
@@ -771,13 +829,19 @@ data class SprudelVoiceData(
         sample = mergeSvdSample(sample, other.sample)
         vowelFx = mergeSvdVowel(vowelFx, other.vowelFx)
         bodyFx = mergeSvdBody(bodyFx, other.bodyFx)
-        compressor = other.compressor ?: compressor
+        compressorThreshold = other.compressorThreshold ?: compressorThreshold
+        compressorRatio = other.compressorRatio ?: compressorRatio
+        compressorKnee = other.compressorKnee ?: compressorKnee
+        compressorAttack = other.compressorAttack ?: compressorAttack
+        compressorRelease = other.compressorRelease ?: compressorRelease
         solo = other.solo ?: solo
         // patternId intentionally preserved (never taken from other) — matches merge()
         pipeline = other.pipeline ?: pipeline
         master = other.master ?: master
         // control intentionally NOT merged — see merge()
         value = other.value ?: value
+        tags = mergeTags(tags, other.tags)
+        tweaks = mergeTweaks(tweaks, other.tweaks)
     }
 
     fun isTruthy(): Boolean {
@@ -847,9 +911,10 @@ data class SprudelVoiceData(
 
                 add(
                     FilterDef.LowPass(
-                        cutoffHz = cutoffValue,
-                        q = resonance ?: 1.0,
-                        envelope = envelope
+                        freq = cutoffValue,
+                        q = resonance ?: 0.707,
+                        envelope = envelope,
+                        passes = coercePasses(lpPasses ?: 1.0),
                     )
                 )
             }
@@ -870,9 +935,10 @@ data class SprudelVoiceData(
 
                 add(
                     FilterDef.HighPass(
-                        cutoffHz = hcutoffValue,
-                        q = hresonance ?: 1.0,
-                        envelope = envelope
+                        freq = hcutoffValue,
+                        q = hresonance ?: 0.707,
+                        envelope = envelope,
+                        passes = coercePasses(hpPasses ?: 1.0),
                     )
                 )
             }
@@ -893,8 +959,8 @@ data class SprudelVoiceData(
 
                 add(
                     FilterDef.BandPass(
-                        cutoffHz = bandfValue,
-                        q = bandq ?: 1.0,
+                        freq = bandfValue,
+                        q = bandq ?: 0.707,
                         envelope = envelope
                     )
                 )
@@ -916,8 +982,8 @@ data class SprudelVoiceData(
 
                 add(
                     FilterDef.Notch(
-                        cutoffHz = notchfValue,
-                        q = nresonance ?: 1.0,
+                        freq = notchfValue,
+                        q = nresonance ?: 0.707,
                         envelope = envelope
                     )
                 )
@@ -986,6 +1052,7 @@ data class SprudelVoiceData(
                 attackCurve = attackCurve,
                 decayCurve = decayCurve,
                 releaseCurve = releaseCurve,
+                on = adsrOn,
             ),
             accelerate = accelerate,
             vibrato = vibrato,
@@ -1012,6 +1079,7 @@ data class SprudelVoiceData(
             phaserDepth = phaserDepth,
             phaserCenter = phaserCenter,
             phaserSweep = phaserSweep,
+            phaserFloor = phaserFloor,
             tremoloSync = tremoloSync,
             tremoloDepth = tremoloDepth,
             tremoloSkew = tremoloSkew,
@@ -1043,12 +1111,17 @@ data class SprudelVoiceData(
             cut = cut,
             loopBegin = loopBegin,
             loopEnd = loopEnd,
-            compressor = compressor,
+            compressorThreshold = compressorThreshold,
+            compressorRatio = compressorRatio,
+            compressorKnee = compressorKnee,
+            compressorAttack = compressorAttack,
+            compressorRelease = compressorRelease,
             solo = solo,
             sourceId = patternId,
             pipeline = pipelineName,
             master = masterName,
             control = control,
+            tags = tags,
         )
     }
 
@@ -1415,13 +1488,19 @@ internal val blueprint = SprudelVoiceData(
     sample = null,
     vowelFx = null,
     bodyFx = null,
-    compressor = null,
+    compressorThreshold = null,
+    compressorRatio = null,
+    compressorKnee = null,
+    compressorAttack = null,
+    compressorRelease = null,
     solo = null,
     patternId = null,
     pipeline = null,
     master = null,
     control = null,
     value = null,
+    tags = null,
+    tweaks = null,
 )
 
 /**
@@ -1437,6 +1516,73 @@ internal val blueprint = SprudelVoiceData(
  */
 inline fun createSprudelVoiceData(config: SprudelVoiceData.() -> Unit = {}): SprudelVoiceData =
     blueprint.clone().apply(config)
+
+/**
+ * Merges two tag sets (union). Null when both are null — a merge must not materialize an empty
+ * set on untagged data.
+ */
+private fun mergeTags(
+    base: Set<String>?,
+    other: Set<String>?,
+): Set<String>? = when {
+    base == null -> other
+    other == null -> base
+    else -> base + other
+}
+
+/**
+ * In-place tag add: no-op if [tag] is already present, else assigns a fresh set with [tag] added.
+ * `tags` is treated as immutable-replace like `oscParams` — no new [SprudelVoiceData] is
+ * allocated. Only safe on a single-owner instance (see [clone]).
+ */
+fun SprudelVoiceData.addTag(tag: String) {
+    val current = tags
+    if (current != null && tag in current) return
+    tags = current.orEmpty() + tag
+}
+
+/** Copy counterpart of [addTag]: returns this unchanged when [tag] is already present. */
+fun SprudelVoiceData.withTag(tag: String): SprudelVoiceData {
+    val current = tags
+    if (current != null && tag in current) return this
+    return copy(tags = current.orEmpty() + tag)
+}
+
+/**
+ * Concatenates two tweak lists: [base] first, then [other]. Null when both are null — a merge must
+ * not materialize an empty list on untweaked data.
+ *
+ * Concatenation, not union: order is significant and repeats are meaningful. [other] is the later
+ * (outer) modifier in every [SprudelVoiceData.merge] direction, so inner tweaks stay in front.
+ */
+private fun mergeTweaks(
+    base: List<String>?,
+    other: List<String>?,
+): List<String>? = when {
+    base == null -> other
+    other == null -> base
+    else -> base + other
+}
+
+/**
+ * In-place tweak append. Unlike [addTag] this is NOT idempotent: a repeated tweak applies twice,
+ * which is the whole point of `tweaks` being a list. `tweaks` is treated as immutable-replace like
+ * `oscParams` — no new [SprudelVoiceData] is allocated. Only safe on a single-owner instance
+ * (see [SprudelVoiceData.clone]).
+ */
+fun SprudelVoiceData.addTweak(tweak: String) {
+    tweaks = tweaks.orEmpty() + tweak
+}
+
+/** Copy counterpart of [addTweak]. Always allocates: appending is never a no-op. */
+fun SprudelVoiceData.withTweak(tweak: String): SprudelVoiceData =
+    copy(tweaks = tweaks.orEmpty() + tweak)
+
+/** Appends several tweaks in one copy, preserving [names]' order. Returns this when [names] is empty. */
+fun SprudelVoiceData.withTweaks(names: List<String>): SprudelVoiceData = when {
+    names.isEmpty() -> this
+    else -> copy(tweaks = tweaks.orEmpty() + names)
+}
 
 /** Merges two oscParams maps: other's values override this's values. */
 private fun mergeOscParams(

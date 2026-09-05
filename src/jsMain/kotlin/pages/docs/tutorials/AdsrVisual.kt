@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -37,7 +37,7 @@ fun Tag.AdsrVisual(
 
 /**
  * Schematic envelope diagram for a [Block.Visual.Adsr] block, drawn from the
- * same "a:d:s:r" colon string the neighbouring code uses (drift is lint-enforced
+ * compact "a:d:s:r" spec; the neighbouring code uses the per-param adsr(a, d, s, r) form (drift is lint-enforced
  * in TutorialCurriculumSpec). Deliberately schematic: straight segments and
  * proportional-ish widths draw the mental model — attack up, decay down to the
  * sustain level, hold, release out — never the engine's actual curves.

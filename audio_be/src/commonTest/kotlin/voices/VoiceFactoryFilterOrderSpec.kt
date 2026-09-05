@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -65,7 +65,6 @@ class VoiceFactoryFilterOrderSpec : StringSpec({
 
         val voice = factory.makeVoice(
             scheduled = scheduled,
-            nowFrame = 0.0,
             backendStartTimeSec = 0.0,
             playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
             getSample = { null },
@@ -75,14 +74,33 @@ class VoiceFactoryFilterOrderSpec : StringSpec({
         return chain.filters
     }
 
+    "C5: FilterDef.passes reaches the baked filter — the sprudel door's whole production path" {
+        // The wire between LangPassesSpec (which stops at FilterDef.passes) and
+        // PassesCascadeSpec (which starts at createLPF). Dropping `passes = passes` in
+        // VoiceFactory.toFilter left EVERY other spec in C5 green while every `lpf(f, q, 2)`
+        // and every `lpx`/`hpx` rendered a single 12 dB/oct stage.
+        val chain = bakedChainOf(
+            listOf(
+                FilterDef.LowPass(freq = 1000.0, q = 0.707, passes = 2),
+                FilterDef.HighPass(freq = 200.0, q = 0.707, passes = 3),
+                FilterDef.LowPass(freq = 1000.0, q = 0.707),
+            )
+        )
+        chain.size shouldBe 3
+        chain[0].shouldBeInstanceOf<LowPassHighPassFilters.PassCascadeFilter>()
+        chain[1].shouldBeInstanceOf<LowPassHighPassFilters.PassCascadeFilter>()
+        // ...and the default is still the plain single stage, not a one-element cascade.
+        chain[2].shouldBeInstanceOf<LowPassHighPassFilters.SvfLPF>()
+    }
+
     "VoiceFactory bakes the chain in the exact order received — it does NOT reorder" {
         // Deliberately NON-canonical order (LowPass first). VoiceFactory must keep it as-is;
         // the canonical highpass-first/lowpass-last sort lives upstream in SprudelVoiceData.
         val chain = bakedChainOf(
             listOf(
-                FilterDef.LowPass(cutoffHz = 1000.0, q = 1.0),
-                FilterDef.HighPass(cutoffHz = 200.0, q = 1.0),
-                FilterDef.BandPass(cutoffHz = 600.0, q = 1.0),
+                FilterDef.LowPass(freq = 1000.0, q = 1.0),
+                FilterDef.HighPass(freq = 200.0, q = 1.0),
+                FilterDef.BandPass(freq = 600.0, q = 1.0),
             )
         )
 
@@ -95,8 +113,8 @@ class VoiceFactoryFilterOrderSpec : StringSpec({
     "VoiceFactory preserves an already-canonical order too" {
         val chain = bakedChainOf(
             listOf(
-                FilterDef.HighPass(cutoffHz = 200.0, q = 1.0),
-                FilterDef.LowPass(cutoffHz = 1000.0, q = 1.0),
+                FilterDef.HighPass(freq = 200.0, q = 1.0),
+                FilterDef.LowPass(freq = 1000.0, q = 1.0),
             )
         )
 

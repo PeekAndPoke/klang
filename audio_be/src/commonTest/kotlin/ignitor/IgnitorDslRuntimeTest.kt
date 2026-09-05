@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.lowpass
-import io.peekandpoke.klang.audio_bridge.onePoleLowpass
+import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
 
 class IgnitorDslRuntimeTest : StringSpec({
@@ -29,11 +29,9 @@ class IgnitorDslRuntimeTest : StringSpec({
             voiceDurationFrames = sampleRate, // 1 second
             gateEndFrame = sampleRate,
             releaseFrames = (0.1 * sampleRate).toInt(),
-            voiceEndFrame = sampleRate + (0.1 * sampleRate).toInt(),
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            offset = 0
-            length = blockFrames
+            updateOffsetAndLength(0, blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -97,6 +95,16 @@ class IgnitorDslRuntimeTest : StringSpec({
         generateBlock(sig).all { it == 0.0 } shouldBe true
     }
 
+    "Eq DSL builds and produces non-zero output" {
+        val dsl = IgnitorDsl.Eq(
+            inner = IgnitorDsl.Sawtooth(),
+            sections = listOf(
+                IgnitorDsl.EqSection.Lowpass(IgnitorDsl.Constant(2000.0), IgnitorDsl.Constant(1.0)),
+            ),
+        )
+        generateBlock(dsl.toExciter()).hasNonZeroSamples() shouldBe true
+    }
+
     "Plus composition produces non-zero output" {
         val dsl = IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()
         val sig = dsl.toExciter()
@@ -106,7 +114,7 @@ class IgnitorDslRuntimeTest : StringSpec({
     "sgpad composition produces non-zero output" {
         val dsl = (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(0.1))
             .div(IgnitorDsl.Param("divisor", 2.0))
-            .onePoleLowpass(3000.0)
+            .onepole(3000.0)
         val sig = dsl.toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
@@ -119,6 +127,7 @@ class IgnitorDslRuntimeTest : StringSpec({
             envAttackSec = 0.001,
             envDecaySec = 0.5,
             envSustainLevel = 0.0,
+            envReleaseSec = 0.05,   // kept in sync with IgnitorDefaults (ledger E10)
         )
         val sig = dsl.toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
@@ -139,11 +148,9 @@ class IgnitorDslRuntimeTest : StringSpec({
             voiceDurationFrames = sr,
             gateEndFrame = sr,
             releaseFrames = (0.1 * sr).toInt(),
-            voiceEndFrame = sr + (0.1 * sr).toInt(),
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            offset = 0
-            length = blockFrames
+            updateOffsetAndLength(0, blockFrames)
             voiceElapsedFrames = 0
         }
 

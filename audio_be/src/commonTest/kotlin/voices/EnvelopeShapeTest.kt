@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -96,22 +97,66 @@ class EnvelopeShapeTest : StringSpec({
         }
     }
 
+    // Audit finding F8: the row above loops over all six curves and cannot distinguish them. Its
+    // guard is `absPos < attackFrames + decayFrames`, i.e. `200 < 200`, which is FALSE for every
+    // curve — so all six take the curve-agnostic `else -> sustain` branch and the loop is
+    // decoration. The boundary claim is still worth having (every curve must land exactly on
+    // sustain, which is a continuity claim), but the per-curve claim its shape implies needs a
+    // position INSIDE the decay window.
+    "mid-decay — the six curves are actually distinct there" {
+        val mid = 150 // attack 100 + half of decay 100, so p = 0.5 and shape(1 - p) = shape(0.5)
+        val levels = AdsrCurve.entries.map { curve ->
+            curve to envelopeLevelAtPosition(env(sustainLevel = 0.3, decayCurve = curve), mid)
+        }
+
+        // Every curve is strictly between sustain and the peak: it has left 1.0 and not yet arrived.
+        levels.forEach { (curve, level) ->
+            withClue("$curve at mid-decay") {
+                (level > 0.3 && level < 1.0) shouldBe true
+            }
+        }
+
+        // Linear/Square/Cube evaluate shape(0.5) as 0.5, 0.25 and 0.125, so through
+        // `sustain + (1 - sustain) * shape` they must land on 0.65, 0.475 and 0.3875 — different
+        // numbers, computed from the documented law rather than read off a run.
+        levels.toMap()[AdsrCurve.Linear] shouldBe (0.65 plusOrMinus 1e-9)
+        levels.toMap()[AdsrCurve.Square] shouldBe (0.475 plusOrMinus 1e-9)
+        levels.toMap()[AdsrCurve.Cube] shouldBe (0.3875 plusOrMinus 1e-9)
+
+        // NOT asserted at the midpoint: that all six differ. SCurve is defined piecewise around 0.5
+        // and evaluates to exactly 0.5 there, which is also Linear's value — an S-curve passes
+        // through its own midpoint by construction, so two of the six coincide here for a
+        // mathematical reason and no implementation choice can separate them.
+        // A quarter of the way in, they all part company:
+        val quarter = 125 // p = 0.25, so shape is evaluated at omp = 0.75
+        val quarterLevels = AdsrCurve.entries.map { curve ->
+            envelopeLevelAtPosition(env(sustainLevel = 0.3, decayCurve = curve), quarter)
+        }
+
+        quarterLevels.toSet().size shouldBe AdsrCurve.entries.size
+    }
+
     // ── Release via calculateControlRateEnvelope ──────────────────────────────
 
     "release midpoint via calculateControlRateEnvelope — Square = 0.25 of startLevel" {
-        // gateEnd = 0; at blockStart = 50.0, p = 50/100 = 0.5; Square gives 0.25.
+        // A release of N frames renders relPos 0..N-1, so p divides by N-1 (see
+        // releaseProgressDenom). With N = 101 the midpoint is exactly p = 50/100 = 0.5.
         val e = env(
             attackFrames = 0.0,
             decayFrames = 0.0,
             sustainLevel = 1.0,
-            releaseFrames = 100.0,
+            releaseFrames = 101.0,
             releaseCurve = AdsrCurve.Square,
         )
         calculateControlRateEnvelope(e, blockStart = 50.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
                 (0.25 plusOrMinus 0.001)
     }
 
-    "release endpoint reaches 0 for all curves" {
+    "release endpoint reaches 0 for all curves — ON THE LAST RENDERED FRAME" {
+        // This used to sample relPos = N, which the voice NEVER renders: it ends at N-1, and
+        // Voice.render stops at endFrame. So the old assertion passed while the real last frame
+        // still carried the envelope (exp at N=100: 3.4e-3, and 5.9e-2 at a 0.1 ms release) and
+        // teardown stepped that to zero. relPos = N-1 is the frame that matters.
         for (curve in AdsrCurve.entries) {
             val e = env(
                 attackFrames = 0.0,
@@ -120,8 +165,14 @@ class EnvelopeShapeTest : StringSpec({
                 releaseFrames = 100.0,
                 releaseCurve = curve,
             )
-            calculateControlRateEnvelope(e, blockStart = 100.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
-                    (0.0 plusOrMinus 0.001)
+            withClue("curve=$curve at the last rendered frame (relPos = N-1)") {
+                calculateControlRateEnvelope(e, blockStart = 99.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
+                        (0.0 plusOrMinus 1e-9)
+            }
+            withClue("curve=$curve past the end stays clamped at 0") {
+                calculateControlRateEnvelope(e, blockStart = 100.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
+                        (0.0 plusOrMinus 1e-9)
+            }
         }
     }
 })

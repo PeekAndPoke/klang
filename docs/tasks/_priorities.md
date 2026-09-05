@@ -1,5 +1,16 @@
 # docs/tasks — priorities (first pass)
 
+> ## ⚠️ SUPERSEDED 2026-08-31 by [`_v1-scope.md`](_v1-scope.md)
+>
+> That file is the current, decided V1 line. This one is the draft ranking from before the
+> August engine work (block-framing, unified EQ, filter unification, mini-notation tweaks,
+> the MIDI playground) and no longer describes reality: several items here have shipped,
+> the tutorial rows are stale (the 38 tutorials were wiped in `92f6d54f` and that workstream
+> is owned by a separate session), and the Katalyst sequencing question it flags was
+> answered by putting Katalyst in V1.
+>
+> Kept as the reasoning record. Do not plan from it.
+
 > **Draft for review.** Two axes here, kept separate on purpose:
 > - **Importance** — the release bar: **MUST** (non-negotiable) · **SHOULD** (strongly wanted, do
 >   before nice-to-haves) · **NICE** (opportunistic / polish).
@@ -44,16 +55,12 @@ The release-defining set, regardless of when they're sequenced:
    Author per-orbit effect chains from KlangScript — the counterpart to the Ignitor/Pipeline DSLs.
    ⚠️ Q3 lists Katalyzers in the *lower* track; you've flagged it must-have. Reads as an Act-1
    engine-authoring item. → wants its own task doc.
-4. **SHOULD** · **Resonator swing** — [`resonator-swing.md`](resonator-swing.md) 🔴 *(designed 2026-08-12)* — *cheap
-   win, sound first*
-   `body()` / `vowel()` are fully static — fixed freq/Q per band, a purely linear `SvfBPF`, and even
-   `ParallelMixFilter.dryGain` precomputed. A fixed EQ curve, identical for every note and every dynamic; the user's
-   words are *"these combs feel hard, they need some movement."* Fix: each band's centre frequency swings off-centre as
-   energy accumulates in it (measured from the band output already computed in the loop) and relaxes back. **Needs zero
-   filter changes** — `BaseSvf.setCutoff` already recomputes and 32-sample-ramps every coefficient, exactly as
-   `FilterModRenderer` drives the voice filter each block. One `tan()` per band per block, **once per orbit**. Strength
-   in cents via `ANALOG_CENT_PER_MUL`; `swing = 0` is a bit-identical opt-out. Sits directly under item 3 — body/vowel
-   are Katalyst effects, so the authoring surface lands there.
+4. ~~**SHOULD** · **Resonator swing**~~ — ❌ **WON'T IMPLEMENT** (closed 2026-08-20). Archived with the full
+   decision record: [`20260820-resonator-swing.md`](../tasks-archive/2026-08/20260820-resonator-swing.md).
+   The design discussion revealed a three-axis model family (source/target/weighting), too diverse to tune by
+   ear; and the original "filters feel hard" complaint re-diagnosed as mostly a **mixing** issue, not static
+   banks. Taste call: *taste is also what you do not do.* Replacement work: **tune the material tables by ear**
+   (the deferred "POC starting points" item in the body-resonator work).
 5. **SHOULD** · **Resource warehouse pool** — [`resource-warehouse-pool.md`](resource-warehouse-pool.md) 🔴
    Self-balancing pool for expensive per-engine resources (~7.68 MB delay rings, cylinders); kills the
    audible first-note alloc spike (the "Der Schmetterling" stutter). Q3 schedules it **last**. (Audible
@@ -109,10 +116,9 @@ The release-defining set, regardless of when they're sequenced:
 
 ## Lower / opportunistic (Q3 "likely, lower priority")
 
-15. **SHOULD** · **Soundfont looping bug** — [`soundfont-looping-investigation.md`](soundfont-looping-investigation.md)
-    🔴
-    Sustained soundfont instruments loop incorrectly (correctness bug); matters if they feature in tutorials.
-16. **SHOULD** · **Code-quality H3** (block-editor loop drop) — [`code-quality-review.md`](code-quality-review.md) 🟡
+15. ~~**SHOULD** · **Soundfont looping bug**~~ — ✅ DONE 2026-09-03, confirmed by ear; archived
+    [`20260903-soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md).
+    Three stacked defects; in the browser no soundfont had ever looped (the worklet dropped every sample's metadata).
     The only user-visible item on that list; blocks round-trip drops loop/break/continue.
 17. **NICE** · **Filter-envelope curve config** (`lpadsrCurves`) — [
     `filter-envelope-configuration.md`](filter-envelope-configuration.md) 🔴

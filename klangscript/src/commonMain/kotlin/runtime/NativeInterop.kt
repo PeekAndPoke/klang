@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -132,6 +132,13 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? 
                 if (it is NullValue) null else it.convertToKotlin(Any::class)
             }.toTypedArray()
 
+            else -> value
+        }
+
+        // A native function may take the ObjectValue itself, to read properties the generic
+        // `value` map has already flattened — script lambdas, for one, survive only on this path.
+        is ObjectValue -> when (cls) {
+            ObjectValue::class -> this
             else -> value
         }
 

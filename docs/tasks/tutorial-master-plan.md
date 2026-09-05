@@ -63,7 +63,7 @@ Filter envelopes, pitch envelope, FM synthesis, `compressor()`, `duckorbit()`, `
 ### Covered Well (no tutorial needed)
 
 `sound()`, `note()`, `stack()`, `fast()`/`slow()`, `every()`, `cat()`, `arrange()`, `scale()`, `chord()`, `voicing()`,
-`transpose()`, `lpf()`, `hpf()`, `gain()`, `pan()`, `delay()`, `room()`, `adsr()`, `shuffle()`/`scramble()`, `[]`
+`transpose()`, `lpf()`, `hpf()`, `gain()`, `pan()`, `delayWet()`, `roomWet()`, `adsr()`, `shuffle()`/`scramble()`, `[]`
 grouping, `<>` alternation
 
 ---

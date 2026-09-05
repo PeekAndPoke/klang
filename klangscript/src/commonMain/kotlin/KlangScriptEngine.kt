@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -203,6 +203,11 @@ class KlangScriptEngine private constructor(
      */
     fun getExtensionMethod(value: RuntimeValue, methodName: String): NativeExtensionMethod? {
         return environment.getExtensionMethod(value, methodName)
+    }
+
+    /** Human-readable type name for error messages. See [Environment.getDisplayTypeName]. */
+    fun getDisplayTypeName(value: RuntimeValue): String {
+        return environment.getDisplayTypeName(value)
     }
 
     /**

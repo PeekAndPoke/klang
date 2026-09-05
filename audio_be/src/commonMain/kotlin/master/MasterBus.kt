@@ -1,12 +1,15 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.master
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import kotlin.math.abs
 import io.peekandpoke.klang.audio_be.master.MasterBus.Companion.MAX_CACHED_CHAINS
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 
 /**
@@ -43,14 +46,19 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
  * than [MAX_CACHED_CHAINS] edits ago rebuilds it on the audio thread.
  *
  * Note that registration is *also* handled on the audio thread (both backends drain commands there),
- * so building still costs one allocation at that moment — bounded by sizing delay rings to their
- * declared time. That residual is the same class as the known cylinder allocation spike and belongs
- * to the resource-warehouse-pool work, not here.
+ * so building still costs at that moment: Freeverb buffers always, and a delay ring only when the
+ * backend's shelf has none of that class idle (resource-warehouse step 2e: master delays rent from
+ * the same class-sized shelf as the orbits, and an evicted chain's rings go back to it). The first
+ * master delay of a class on a backend still allocates in render, by decision (D2, 2026-09-04).
  */
 class MasterBus(
     private val sampleRate: Int,
     private val blockFrames: Int,
     private val registry: MasterRegistry,
+    /** The backend's ring shelf; master delays rent from it and evicted chains return to it. */
+    private val rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+    /** The backend's reverb-unit shelf, same contract. */
+    private val reverbs: ReverbUnits = ReverbUnits(sampleRate),
 ) {
     companion object {
         /** Crossfade length for a master swap. Tune by ear. */
@@ -90,6 +98,8 @@ class MasterBus(
         dsl = MasterDsl.default,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
+        rings = rings,
+        reverbs = reverbs,
     )
 
     /** The active chain. Unity until a `master(…)` event says otherwise. */
@@ -103,6 +113,27 @@ class MasterBus(
 
     /** Name of the currently active master — a repeat request for the same name is a no-op. */
     private var currentName: String? = null
+
+    /**
+     * True once the owning engine has rendered at least one block. Gates the first-master
+     * adoption in [requestSwap] (master round M1): before the first block nothing audible
+     * exists, so a chain is adopted at full weight; afterwards a swap must crossfade.
+     *
+     * Set by [markRendered] rather than inside [process], because [process] is exactly what
+     * does NOT run in the unmastered case — `PlaybackEngine.renderInto` takes a fast path
+     * while `isActive` is false, so a flag maintained here would still read false when a
+     * MID-SONG first master arrived and would wrongly hard-cut it over live audio.
+     */
+    private var hasRendered: Boolean = false
+
+    /**
+     * Called once per rendered block by the owning engine, after the scheduler has run and
+     * before any audio is produced — so a master arriving in the engine's FIRST block still
+     * sees `false`, and one arriving later sees `true`.
+     */
+    fun markRendered() {
+        hasRendered = true
+    }
 
     /** At most one queued swap: a request arriving mid-fade waits instead of cutting the fade. */
     private var pendingName: String? = null
@@ -152,7 +183,20 @@ class MasterBus(
         }
 
         evictIfNeeded()
-        chains[key] = MasterChain.build(dsl, sampleRate, blockFrames)
+        chains[key] = MasterChain.build(dsl, sampleRate, blockFrames, rings, reverbs)
+    }
+
+    /**
+     * Returns every cached chain's units to the warehouse and drops the cache — the owning engine
+     * is being disposed (resource warehouse, 2f). The bus must not process afterwards.
+     */
+    fun releaseAll() {
+        for (chain in chains.values) {
+            chain.releaseUnits(rings, reverbs)
+        }
+        chains.clear()
+        current = unity
+        previous = null
     }
 
     /**
@@ -169,6 +213,9 @@ class MasterBus(
             } ?: return
 
             chains.remove(victim.key)
+            // The chain is out of play (not current, not outgoing, not queued): its rings go back
+            // to the shelf, where the next master delay of that class finds them without allocating.
+            victim.value.releaseUnits(rings, reverbs)
         }
     }
 
@@ -213,6 +260,27 @@ class MasterBus(
             return
         }
 
+        // Ledger master round M1: adopt the FIRST master at full weight instead of fading up
+        // from unity. The crossfade exists to avoid a click when swapping between two AUDIBLE
+        // chains; before this bus has rendered a single block there is nothing to fade from
+        // and nothing that could click, while the fade itself was audible — it ramped the
+        // song's opening 60 ms up from unmastered, putting the first downbeat of every
+        // mastered song up to 8.3 dB down and swelling (DerSchmetterling's gain(2.6); also
+        // Tetris, StrangerThings, ATruthWorthLyingFor, IrishLamentTechno). MasterBusTest had
+        // already loosened an assertion to accommodate it.
+        //
+        // The discriminator is "this bus has never rendered" and NOT "no master yet": a
+        // mid-song first master arrives over audible signal and genuinely wants the fade.
+        if (!hasRendered) {
+            if (chain !== current) {
+                chain.reset()
+            }
+
+            current = chain
+            currentName = key
+            return
+        }
+
         beginFade(key, chain, outgoing = current)
     }
 
@@ -229,7 +297,7 @@ class MasterBus(
 
         evictIfNeeded()
 
-        return MasterChain.build(dsl, sampleRate, blockFrames).also { chains[key] = it }
+        return MasterChain.build(dsl, sampleRate, blockFrames, rings, reverbs).also { chains[key] = it }
     }
 
     /**
@@ -348,8 +416,19 @@ class MasterBus(
             val t = if (pos >= fadeFrames) 1.0 else pos / total
             val u = 1.0 - t
 
-            busL[i] = busL[i] * u + wetL[i] * t
-            busR[i] = busR[i] * u + wetR[i] * t
+            // Sterilised taps: at the fade's endpoints one weight is exactly 0.0, and
+            // `Inf * 0.0` is NaN — so a chain contributing NOTHING yet could still inject
+            // NaN into the bus, which used to latch the master DC blocker downstream. A
+            // large-but-finite chain output is untouched (that is the raw engine's business).
+            val bl = busL[i]
+            val br = busR[i]
+            val wl = wetL[i]
+            val wr = wetR[i]
+
+            busL[i] = (if (abs(bl) <= Double.MAX_VALUE) bl else 0.0) * u +
+                (if (abs(wl) <= Double.MAX_VALUE) wl else 0.0) * t
+            busR[i] = (if (abs(br) <= Double.MAX_VALUE) br else 0.0) * u +
+                (if (abs(wr) <= Double.MAX_VALUE) wr else 0.0) * t
 
             pos++
         }

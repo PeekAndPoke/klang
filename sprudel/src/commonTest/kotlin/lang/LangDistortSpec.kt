@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -146,10 +146,10 @@ class LangDistortSpec : StringSpec({
         events[0].data.distort shouldBe 3.0
     }
 
-    // -- combined "amount:shape" format -----------------------------------------------
+    // -- per-param (amount, shape, oversample) -----------------------------------------
 
-    "distort() combined sets amount and shape" {
-        val p = note("c").distort("0.5:hard")
+    "distort() per-param sets amount and shape" {
+        val p = note("c").distort(0.5, "hard")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -159,7 +159,7 @@ class LangDistortSpec : StringSpec({
         }
     }
 
-    "distort() combined with amount only (no colon) preserves backward compat" {
+    "distort() with amount only preserves backward compat" {
         val p = note("c").distort(0.7)
         val events = p.queryArc(0.0, 1.0)
 
@@ -168,8 +168,8 @@ class LangDistortSpec : StringSpec({
         events[0].data.distortShape shouldBe null
     }
 
-    "distort() combined works as string extension" {
-        val p = "c".distort("0.8:fold")
+    "distort() per-param works as string extension" {
+        val p = "c".distort(0.8, "fold")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -179,8 +179,8 @@ class LangDistortSpec : StringSpec({
         }
     }
 
-    "distort() combined works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").distort("0.5:soft")""")
+    "distort() per-param works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").distort(0.5, "soft")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {
@@ -189,8 +189,8 @@ class LangDistortSpec : StringSpec({
         }
     }
 
-    "dist() combined works" {
-        val p = note("c").dist("0.6:diode")
+    "dist() per-param works" {
+        val p = note("c").dist(0.6, "diode")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -200,8 +200,8 @@ class LangDistortSpec : StringSpec({
         }
     }
 
-    "distort() combined works with mini-notation patterns" {
-        val p = note("c3 e3").distort("<0.3:soft 0.6:hard>")
+    "distort() per-param mini-notation patterns" {
+        val p = note("c3 e3").distort("<0.3 0.6>", "<soft hard>")
         val cycle0 = p.queryArc(0.0, 1.0)
         val cycle1 = p.queryArc(1.0, 2.0)
 
@@ -216,8 +216,8 @@ class LangDistortSpec : StringSpec({
         }
     }
 
-    "distort() combined works chained with other effects" {
-        val p = note("c").apply(gain(0.8).distort("0.5:fold"))
+    "distort() per-param works chained with other effects" {
+        val p = note("c").apply(gain(0.8).distort(0.5, "fold"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -363,5 +363,16 @@ class LangDistortSpec : StringSpec({
             distort shouldBe 0.5
             distortShape shouldBe "fold"
         }
+    }
+
+    "distort(tail-only) does not touch the head field" {
+        // numeric receiver: without the tail-only guard the head apply would REINTERPRET
+        // the values ("3"/"4") into the distort field
+        val p = SprudelPattern.compile("""seq("3 4").distort(shape = "tube")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.distort shouldBe null
+        events[0].data.distortShape shouldBe "tube"
     }
 })

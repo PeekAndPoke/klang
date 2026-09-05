@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -30,12 +30,21 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
         if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     /**
-     * Bootstrap counter init:
-     * - Direct path: `0.0` — first sample fires via the `i == 0 && counter == 0.0` branch.
-     * - Oversampled path: `1.0` — first sample fires via the `counter >= 1.0` branch
-     *   (the direct-path bootstrap doesn't exist here).
+     * Bootstrap counter init: `1.0` on BOTH paths — "take a sample NOW" via the
+     * `counter >= 1.0` branch. The old direct-path `0.0` + `i == 0` block latch re-armed at
+     * note-relative sample `amount` for every power-of-two amount, so a block boundary landing
+     * there displaced the hold grid for the rest of the note (ledger W1, live in
+     * ATruthWorthLyingFor's `coarse(2)`); it also made the first hold `2 x amount` long where
+     * the oversampled path held `amount` from sample 0. One bootstrap, one grid, both paths.
+     * (Hold lengths are exact for dyadic amounts; non-dyadic ones drift by up to one sample as
+     * `1/amount` accumulates — pre-existing float behavior on every path.)
+     *
+     * The non-finite latch this comment used to flag as OPEN is CLOSED (ledger W4, strip
+     * half): see the bypass at the top of [render]. The audit's stated reach was wrong in both
+     * directions — NaN could never reach this class (`FilterPipelineBuilder` gates on
+     * `amount > 1.0`, which NaN fails), while +Inf could and did, freezing the voice.
      */
-    private var counter: Double = if (oversampler != null) 1.0 else 0.0
+    private var counter: Double = 1.0
 
     /**
      * Counter increment: when running at the oversampled rate, the hold period
@@ -50,7 +59,26 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
         }
 
     override fun render(ctx: BlockContext) {
-        if (amount <= 1.0) return
+        // Ledger W4 (strip half): passthrough-degenerate AND non-finite amounts bypass, so
+        // one parameter means one thing on both doors. +Inf CAN reach here (`Inf > 1.0` passes
+        // FilterPipelineBuilder's gate, and sprudel does not coerce, so any pattern value
+        // evaluating to Infinity lands here — no shipped song does, and no incident is on
+        // record); it gave `increment = 1.0 / Inf = 0.0`, so sample 0 was captured and the
+        // counter stuck at 0.0: frozen DC for the note's LIFE, because unlike the ignitor
+        // door's per-block readParam the strip amount is a per-note constant and nothing heals
+        // it. NaN never reached this class at all (the builder's `> 1.0` gate rejects it), but
+        // the same guard closes it for any direct constructor.
+        //
+        // The ignitor twin reads `!(amt > 0.0) || amt.isInfinite()`; the different threshold is
+        // deliberate, not drift. That door coerces `amt` to at least 1.0, which turns (0, 1]
+        // into an exact identity copy — the same OUTPUT this bypass gives. Do not "finish the
+        // parity" by lowering 1.0 to 0.0: on the direct path it would still look like a no-op,
+        // but (0, 1] would then be routed through the oversampler's up/downsample filters that
+        // the bypass skips, and the ignitor door has no oversampler to match.
+        // NaN-guard: the !(x > 1.0) form is what catches NaN.
+        if (!(amount > 1.0) || amount.isInfinite()) {
+            return
+        }
 
         val os = oversampler
         if (os != null) {
@@ -70,7 +98,7 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
 
-            if (counter >= 1.0 || (i == 0 && counter == 0.0)) {
+            if (counter >= 1.0) {
                 lastValue = buf[idx].nanGuard()
                 counter -= 1.0
             }

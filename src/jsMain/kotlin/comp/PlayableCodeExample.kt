@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -117,7 +117,11 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         if (!state.isPlaying) {
                             ui.small.circular.white.button {
                                 onClick { ctrl.play() }
-                                if (state.isPlayerLoading) {
+                                if (state.isPlayerFailed) {
+                                    // Clicking retries — Player.ensure() drops its memo on failure.
+                                    icon.exclamation_triangle()
+                                    +"Retry"
+                                } else if (state.isPlayerLoading) {
                                     icon.loading.spinner()
                                     +"Loading"
                                 } else {

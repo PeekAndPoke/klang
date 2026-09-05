@@ -24,8 +24,8 @@ A coefficient exposed here may already exist on sprudel, `IgnitorDsl`, the cylin
 field:
 
 1. **Grep the other surfaces for the concept**, not for the name — the same idea often ships under a different word (see
-   S3: the phaser's mix amount is `phaserdepth` in sprudel and `blend` on
-   `IgnitorDsl`, and they are not even the same mix law).
+   S3: the phaser's wet knob — `phaserWet`/`phaserFloor` in sprudel, `.wet()`/`.dryFloor()`
+on `IgnitorDsl` — was exactly this case until C4 unified it onto one law, `WetDryMix`).
 2. **Match the name where the surface conventions allow.** They differ deliberately:
    sprudel is lowercase-jammed strudel-style (`phasercenter`, `tremolodepth`, `bodyFloor`, `distos`), the pipeline DSL /
    KlangScript is camelCase methods (`cutoffOffset`, `drivePerAnalog`, `expK`). Parity means the *stem* matches
@@ -63,7 +63,7 @@ into `IgnitorFilters`. Full write-up: `docs/tasks/audio-bridge-constants.md` §6
 ### S1 — Oscillator analog-drift depths → an engine tuning object
 
 **The only sub-task that blocks a stated by-ear question.** Owned in detail by
-`docs/tasks/analog-drift-ratio-tuning.md` §4 — that doc is authoritative for scope, guard and the measurements that
+`docs/tasks/by-ear/analog-drift-ratio-tuning.md` §4 — that doc is authoritative for scope, guard and the measurements that
 already constrain the answer. Listed here so the tracker is complete.
 
 | coefficient                                               | default         | note                                                         |
@@ -128,16 +128,18 @@ scale (raw IIR pole) — match that name and scale, do not invent a "damping" or
 ⚠️ **This sub-task carries the worst parity situation in the codebase**, and it should be resolved before adding fields,
 not after. Three surfaces share `PhaserCore` and disagree:
 
-| surface             | mix param     | mix law                                   |
-|---------------------|---------------|-------------------------------------------|
-| sprudel             | `phaserdepth` | additive — `dry + wet·depth`              |
-| cylinder bus        | `depth`       | additive                                  |
-| `IgnitorDsl.Phaser` | `blend`       | **crossfade** — `0` = dry, `1` = wet only |
+| surface             | mix param            | mix law                                              |
+|---------------------|----------------------|------------------------------------------------------|
+| sprudel             | `phaserWet` + `phaserFloor` | shared C4 law, `floor = 1` default (additive) |
+| cylinder bus        | `depth` + `floor`    | shared C4 law (same knob, same law)                  |
+| `IgnitorDsl.Phaser` | `.wet()` + `.dryFloor()` | shared C4 law, `dryFloor = 0` default (crossfade) |
 
-Same concept, two names, two different maths. Also: `IgnitorDsl.Phaser` defaults `center = 1000.0`
-and `sweep = 1000.0` — the same two literals `FilterPipelineBuilder` hardcodes as its fallback, in a second place.
+RESOLVED by C4 (2026-08-24): one law (`WetDryMix`), one name per door; only the floor DEFAULT
+differs (additive on the orbit, crossfade on the ignitor). Still open here: `IgnitorDsl.Phaser`
+defaults `center = 1000.0` and `sweep = 1000.0` — the same two literals `FilterPipelineBuilder`
+hardcodes as its fallback, in a second place.
 
-Decide first whether `depth`/`blend` converge, then add `stages` + `feedback`, and decide whether those two also belong
+Remaining decision: add `stages` + `feedback`, and whether those two also belong
 on sprudel (`phaserfeedback`) or stay engine-only character.
 
 ---
@@ -152,7 +154,7 @@ no KDoc, no home. It sets how fast the perceptual drive curve climbs, so it is s
 Steps: name it in `audio_bridge/constants/`, add `StageDsl.Distort(driveExponent = …)` — which turns another marker
 object into a data class — thread it, add the KlangScript method.
 
-**Parity check:** sprudel has `distort(amount)` / the compound `distort("1:tube:4")` and `distos()`
+**Parity check:** sprudel has `distort(amount)` / the compound `distort(1, "tube", 4)` and `distos()`
 for oversampling. `amount` stays per-note; the exponent is per-engine. Make sure the KDoc on both sides states the
 relationship (`drive = 10^(amount × exponent)`) so nobody re-derives the scale wrongly — an author changing the exponent
 changes what every existing `distort(0.8)` in every song sounds like, which is worth a warning in the KDoc.
@@ -255,7 +257,7 @@ resonator coefficient with no authoring path at all, and its KDoc says it is tun
 ## Links
 
 - `docs/tasks/audio-bridge-constants.md` — the precursor (§6 = what was still missing; this doc is the answer)
-- `docs/tasks/analog-drift-ratio-tuning.md` — owns S1 in detail
+- `docs/tasks/by-ear/analog-drift-ratio-tuning.md` — owns S1 in detail
 - `docs/tasks/engine-tuning-profile.md` — Part B `EngineTuning`, which S1 starts and S5 unblocks
 - `docs/tasks/sprudel-sound-function-surface.md` — the compound-param blocker S6 would hit
 - `docs/tasks/katalyst-dsl.md` — where S7 lives

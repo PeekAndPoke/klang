@@ -1,6 +1,8 @@
 # Klang Project
 
-Enjoy the ride. Errors happen, no worries, we find them, we fix them. Der Weg ist das Ziel. Sound first!
+Enjoy the ride. Errors happen, no worries, we find them, we fix them. 
+We write exceptional software. We are an awesome team and we give our very best.
+Der Weg ist das Ziel. Sound first!
 
 ## Available Agent
 
@@ -17,7 +19,6 @@ Use `/skill-name` or describe what you need in natural language to invoke a skil
 | `/skill-builder`         | "create a skill", "build a skill", "audit a skill"                                             | Guide skill creation, optimization, and auditing following Claude Code best practices                     |
 | `/sprudel-dev-knowhow`   | "work on sprudel", "implement sprudel feature", "sprudel tests"                                | Load sprudel module architecture, critical rules, current status, and feature checklist                   |
 | `/klangscript-knowhow`   | "work on klangscript", "add language feature", "klangscript parser", "klangscript interpreter" | Load klangscript context incrementally (dispatcher + targeted ref files)                                  |
-| `/klangblocks-knowhow`   | "work on klangblocks", "block editor", "ast to blocks", "round-trip test", "code gen"          | Load klangblocks context incrementally (dispatcher + targeted ref files)                                  |
 | `/klangaudio-knowhow`    | "work on audio", "audio engine", "voice synthesis", "effects", "sample loading", "orbits"      | Load audio subsystem context (audio_bridge / audio_be / audio_fe / audio_jsworklet)                       |
 | `/code-style`            | "apply code style", "check code style", "clean up code style", "follow code conventions"       | Project code style rules (curly braces, formatting, etc.)                                                 |
 | `/review-loop`           | "review this change", "code review", "review loop", "mutation check", "apply review findings"  | Review standard: reviews loop until a clean round (fixes get re-reviewed); new tests are mutation-checked |

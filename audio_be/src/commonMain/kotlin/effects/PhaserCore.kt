@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.wrapPhase
 import kotlin.math.PI
 import kotlin.math.sin
@@ -36,7 +36,12 @@ import kotlin.math.tan
  * (collectively ~50–150 ns/sample on Kotlin/JS). For typical LFO rates (≤10 Hz)
  * and block sizes (≤512 samples) the per-sample α error vs. sample-accurate
  * recomputation is < 10⁻⁵ relative — inaudible. **Callers MUST call
- * [prepareBlock] before each block of [step] calls.**
+ * [prepareBlock] before each block of [step] calls.** Because the LFO waveform
+ * itself is only sampled at block boundaries, the sweep's effective Nyquist is
+ * `sampleRate / (2 · blockFrames)` (~187 Hz at 48 kHz / 128) — above that the
+ * LFO aliases at the block rate and the aliased sweep depends on the block
+ * size. `rate` is deliberately unclamped (raw engine); the bound is named here
+ * and at the user-facing doors instead.
  *
  * **Inlining**: [step] is `inline` so the per-sample filter math expands at the
  * call site. Without this, the previous (non-inline) method-call boundary cost
@@ -143,12 +148,22 @@ internal class PhaserCore(
         var signal = safeX + lastOutput * feedback
         for (s in 0 until stages) {
             val y = a * signal + z1[s]
-            z1[s] = (signal - a * y).flushDenormal()
+            z1[s] = (signal - a * y).flushState()
             signal = y
         }
-        lastOutput = signal.flushDenormal()
+        lastOutput = signal.flushState()
         alpha = a + alphaIncrement
         return signal
+    }
+
+    /**
+     * Zero the LFO phase — for ORBIT REUSE only ([reset] deliberately preserves it). A torn-down
+     * orbit's phase is "blocks the orbit happened to stay active x rate", which depends on the
+     * cleanup schedule (block size x allocated-cylinder count) — carrying it into the orbit's
+     * next life would make the reused orbit's sweep position framing-dependent (review round 2).
+     */
+    fun zeroPhase() {
+        lfoPhase = 0.0
     }
 
     /** Clear allpass state and `lastOutput`. LFO phase is preserved for cross-note continuity. */

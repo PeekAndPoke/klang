@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -38,6 +38,9 @@ class KatalystBodyEffect(
 
     // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
     private val swap = KatalystFilterSwap(sampleRate)
+
+    /** Test seam: true while a resonator bank is installed — the owner has a body. */
+    internal val isEngaged: Boolean get() = swap.active
 
     /** Configure from the OWNER voice's body. `null` (owner has no body) turns the resonator off. */
     fun configure(body: FilterDef.Body?) {

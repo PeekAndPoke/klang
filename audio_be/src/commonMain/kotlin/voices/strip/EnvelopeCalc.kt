@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.voices.strip
 
 import io.peekandpoke.klang.audio_be.adsrExpShape
+import io.peekandpoke.klang.audio_be.releaseProgressDenom
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
@@ -13,7 +14,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  * Shared control-rate envelope calculation for filter modulation and FM depth.
  *
  * Calculates a single envelope value (0.0–1.0) at the given block position.
- * Per-stage shape curves (Linear/Square/Cube) are read from [Voice.Envelope].
+ * Per-stage shape curves (Linear/Square/Cube/SCurve/InvSquare/Exponential; default exp) are read from [Voice.Envelope].
  * Uses the fixed release calculation: decays from the actual level at gate end,
  * not from sustainLevel.
  *
@@ -34,8 +35,22 @@ fun calculateControlRateEnvelope(
     val envValue = if (absPos >= gateEndPos) {
         val levelAtGateEnd = envelopeLevelAtPosition(env, gateEndPos)
         val relPos = absPos - gateEndPos
-        val relDenom = if (env.releaseFrames > 0) env.releaseFrames else 1.0
-        val p = (relPos / relDenom).coerceAtMost(1.0)
+        // The split between the two helpers is by DESTINATION, not by evaluator:
+        //  - the DENOMINATOR is unified everywhere a curve is evaluated, because it is a time-base
+        //    correction (a release of N frames spans relPos 0..N-1) and applies whatever the value
+        //    drives. `IgnitorFilters.computeFilterEnvelope` is exempt only because it is a straight
+        //    LINEAR ramp with no curve endpoint to land on. Note this site does NOT floor
+        //    releaseFrames the way EnvelopeRenderer does: this envelope's release is the FILTER's,
+        //    independent of the voice's rendered span, so there is no last-rendered-frame for it to
+        //    land on and nothing to floor against.
+        //  - the OFFSET is amplitude-only. It exists to stop a step when a release is too short
+        //    to ramp. NOT because modulation steps are inaudible — a depth step ticks audibly
+        //    (ledger E10, heard on sgbell). The real reason is compatibility: VoiceFactory always
+        //    builds the FM envelope with releaseFrames = 0, so applying the offset here would drop
+        //    FM depth to zero at gate end for every fmh voice in every song. That door's own
+        //    block-held envelope and missing release knob are tracked as ledger E11 (P4).
+        // `EnvelopeCalcNoOffsetSpec` guards that second bullet.
+        val p = (relPos / releaseProgressDenom(env.releaseFrames)).coerceAtMost(1.0)
         val omp = 1.0 - p
         val shape = when (env.releaseCurve) {
             AdsrCurve.Linear -> omp

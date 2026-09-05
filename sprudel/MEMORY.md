@@ -1,5 +1,20 @@
 # Sprudel — Memory
 
+## Recent Work (2026-08-20)
+
+- `tag(name)` addon (`lang_structural_addons.kt`): semantic event tags for visualizations/analysis.
+  Tags live in `SprudelVoiceData.tags: Set<String>?` (unique, NO ordering guarantee), accumulate by
+  chaining (`.tag("a").tag("b")`), union through `merge()`/`mergeFrom()`, and are copied into engine
+  `VoiceData.tags` by `toVoiceData()` — they cross the wire (deliberate; analysis tools may use them).
+  The wire-codec KSP gained general `Set<T>` support for this (`WireCodecProcessor` + `wireEncodeSet`/
+  `wireDecodeSet`).
+- ⚠️ The tag argument is a LITERAL — deliberately NOT routed through the lift helpers, which would
+  parse `"guitar 1"` as mini-notation into two events. `reinterpretVoice { }` is the literal path.
+- `LangTagSpec` includes a merge-overlay test because the `SprudelVoiceDataSpec` mergeFrom==merge
+  oracle cannot see a SYMMETRIC bug in the shared `mergeTags` helper (mutation-verified).
+- `ref/dsl-conventions.md` + `ref/dsl-addons.md` rewritten to current reality: the old delegate API
+  (`@SprudelDsl`, `dslFunction`, init sentinels) is gone; plain `fun` + `@KlangScript.Function`.
+
 ## Current Status
 
 - **Features**: ~263 / 303 implemented (~87%)
@@ -132,7 +147,7 @@ return applyCat(patterns)
 
 ### Bitwise Operators
 
-- `band()`, `bor()`, `bxor()`, `blshift()`, `brshift()`
+- `bitAnd()`, `bitOr()`, `bitXor()`, `bitShl()`, `bitShr()`
 
 ### Comparison & Logic
 
@@ -178,16 +193,16 @@ return applyCat(patterns)
 
 ### Audio Effects — Reverb
 
-- `room()`, `roomsize()` / `rsize` / `sz` / `size`
+- `roomWet()`, `roomsize()` / `rsize` / `sz` / `size`
 - `roomfade()` / `rfade`, `roomlp()` / `rlp`, `roomdim()` / `rdim`, `iresponse()` / `ir`
 
 ### Audio Effects — Delay
 
-- `delay()`, `delaytime()`, `delayfeedback()` / `delayfb` / `dfb`
+- `delayWet()`, `delaytime()`, `delayfeedback()` / `delayfb` / `dfb`
 
 ### Audio Effects — Phaser
 
-- `phaser()` / `ph`, `phaserdepth()` / `phd` / `phasdp`
+- `phaser()` / `ph`, `phaserWet()` / `phd` / `phasdp`, `phaserFloor()`
 - `phasercenter()` / `phc`, `phasersweep()` / `phs`
 
 ### Audio Effects — Duck / Sidechain
@@ -241,7 +256,7 @@ return applyCat(patterns)
 - `vibrato()` / `vib`, `vibratoMod()` / `vibmod`
 - `accelerate()`, `unison()` / `uni`, `detune()`, `spread()`, `density()` / `d`
 - `attack()`, `decay()`, `sustain()`, `release()`, `adsr()`
-- `warmth()` (Klang extension)
+- `onepole()` (Klang extension; formerly `warmth`, now Hz)
 - `velocity()`, `postgain()`
 - FM synthesis: `fmh()`, `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`
 - Pitch envelope: `pattack`, `pdecay`, `prelease`, `penv`

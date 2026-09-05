@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -10,7 +10,7 @@ import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.lowpass
-import io.peekandpoke.klang.audio_bridge.onePoleLowpass
+import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
 
 /**
@@ -175,7 +175,7 @@ fun IgnitorRegistry.registerDefaults() {
         name = "sgpad",
         dsl = (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(semitones = 0.1))
             .div(other = IgnitorDsl.Param(name = "divisor", default = 2.0))
-            .onePoleLowpass(cutoffHz = 3000.0)
+            .onepole(freq = 3000.0)
     )
 
     // FM bell: sine carrier with sine modulator
@@ -188,13 +188,43 @@ fun IgnitorRegistry.registerDefaults() {
             envAttackSec = 0.001,
             envDecaySec = 0.5,
             envSustainLevel = 0.0,
+            // Non-zero on purpose: with release 0 the depth collapses to zero in ONE sample at
+            // gate end — a hard frequency step that ticks on every note-off. Release 0 is raw
+            // engine semantics (maintainer, 2026-08-28: "0 means 0"), so the PRESET carries the
+            // ramp. Found when the per-sample depth envelope made the collapse deterministic.
+            envReleaseSec = 0.05,
         )
     )
 
     // Buzzy filtered square
     register(
         name = "sgbuzz",
-        dsl = IgnitorDsl.Square().lowpass(cutoffHz = 2000.0),
+        dsl = IgnitorDsl.Square().lowpass(freq = 2000.0),
+    )
+
+    // ─── Unified-EQ demo: the smallest sound that exercises the fused EqCore end to end
+    //     (the authoring surface for songs is `.eq().band(...)`; this preset stays as the
+    //     knob-per-param test sound) ─────────────────────────────────────────────────────
+
+    // Sawtooth through one fused Eq: a bell (0 dB by default = bit-transparent, so the
+    // sound equals a plain saw until "eqdb" moves) followed by a gentle cabinet lowpass.
+    // All knobs are osc-params — override per note via `.oscparam("eqdb", 9)` etc.
+    register(
+        name = "eqdemo",
+        dsl = IgnitorDsl.Eq(
+            inner = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq, analog = slots.analog),
+            sections = listOf(
+                IgnitorDsl.EqSection.Bell(
+                    freq = IgnitorDsl.Param(name = "eqhz", default = 1200.0, description = "Bell centre frequency"),
+                    q = IgnitorDsl.Param(name = "eqq", default = 0.707, description = "Bell pre-gain bandwidth"),
+                    db = IgnitorDsl.Param(name = "eqdb", default = 0.0, description = "Bell gain in dB (0 = transparent)"),
+                ),
+                IgnitorDsl.EqSection.Lowpass(
+                    freq = IgnitorDsl.Param(name = "eqlp", default = 12000.0, description = "Cabinet lowpass cutoff"),
+                    q = IgnitorDsl.Constant(0.707),
+                ),
+            ),
+        ),
     )
 }
 
@@ -216,14 +246,14 @@ fun IgnitorRegistry.registerDefaults() {
 //   Any.times(BerlinNoise(rate=0.3))                — random amplitude gating
 //
 // ── Noise as Modulation (in param slots) ─────────────────────────────────────
-//   Lowpass(cutoffHz = PerlinNoise(rate=0.5))       — wandering filter
+//   Lowpass(freq = PerlinNoise(rate=0.5))       — wandering filter
 //   SuperSaw(detune = BerlinNoise)              — evolving detune
 //   Tremolo(rate = PerlinNoise(rate=0.2))           — irregular tremolo speed
 //   Distort(amount = PerlinNoise(rate=2.0))         — breathing distortion
 //
 // ── Filtered Sources ─────────────────────────────────────────────────────────
-//   SuperSaw.lowpass(cutoffHz)                      — classic subtractive synth
-//   WhiteNoise.lowpass(cutoffHz)                    — wind / ocean / breath
+//   SuperSaw.lowpass(freq)                          — classic subtractive synth
+//   WhiteNoise.lowpass(freq)                        — wind / ocean / breath
 //   Square.lowpass(1000).distort(0.3)               — gritty bass
 //   Saw.highpass(200).lowpass(4000)                  — bandpass character
 //
@@ -236,7 +266,7 @@ fun IgnitorRegistry.registerDefaults() {
 //
 // ── Effects Chains ───────────────────────────────────────────────────────────
 //   SuperSaw.distort(0.4).lowpass(3000)             — heavy lead
-//   Pluck.phaser(0.3, 0.5)                          — spacey pluck
+//   Pluck.phaser(0.3).wet(0.5)                      — spacey pluck
 //   Square.crush(6.0)                               — retro / chiptune
 //   Saw.coarse(8.0)                                 — sample-rate reduced lo-fi
 //
@@ -244,7 +274,7 @@ fun IgnitorRegistry.registerDefaults() {
 //   WhiteNoise.adsr(0.001, 0.05, 0.0, 0.01)        — hi-hat
 //       .highpass(8000)
 //   Impulse.lowpass(200)                             — kick body
-//   Sine.pitchEnvelope(amount=24, decaySec=0.05)    — kick with pitch sweep
+//   Sine.pitchEnvelope(semitones=24, decaySec=0.05) — kick with pitch sweep
 //   Dust.mul(PinkNoise)                             — textured crackle
 //
 // ═════════════════════════════════════════════════════════════════════════════════

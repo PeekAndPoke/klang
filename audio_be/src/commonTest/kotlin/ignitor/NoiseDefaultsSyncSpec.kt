@@ -1,9 +1,15 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.ignitor
+
+import io.peekandpoke.klang.audio_bridge.constants.BROWN_LEAK_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_CHAOS_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.DUST_BIPOLAR_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.DUST_TAIL_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.NOISE_TILT_DEFAULT
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIFT_RELATIVE_TO_OSC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 
 /**
- * Declarative, data-driven voice engine (the "Motör" filter/VCA pipeline).
+ * Declarative, data-driven voice engine (the "Motor" filter/VCA pipeline).
  *
  * An engine is an ordered list of [StageDsl] slots — the topology — where each
  * stage also carries its own character constants (envelope curve, declick,
@@ -31,6 +31,12 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 @WireFormat
 data class PipelineDsl(val stages: List<StageDsl>) {
     companion object {
+        // NOTE (2026-08-24, maintainer decision): the built-in presets carry NO Phaser
+        // stage. The phaser is a BUS effect (one coherent sweep over the summed orbit —
+        // the DAW-insert model); running it per voice AND on the bus double-applied the
+        // same knobs (dry floored twice under the C4 law). StageDsl.Phaser stays available
+        // for custom pipelines that deliberately want per-voice phasing.
+
         /** Classic subtractive: osc → waveshaper → VCF → VCA. ADSR (VCA) last. */
         val modern: PipelineDsl = PipelineDsl(
             listOf(
@@ -40,7 +46,6 @@ data class PipelineDsl(val stages: List<StageDsl>) {
                 StageDsl.Distort,
                 StageDsl.Filter(),
                 StageDsl.Tremolo,
-                StageDsl.Phaser,
                 StageDsl.Vca(),
             )
         )
@@ -55,7 +60,6 @@ data class PipelineDsl(val stages: List<StageDsl>) {
                 StageDsl.Distort,
                 StageDsl.Filter(),
                 StageDsl.Tremolo,
-                StageDsl.Phaser,
             )
         )
     }
@@ -114,5 +118,17 @@ sealed interface StageDsl {
     data class Vca(
         val expK: Double = ADSR_EXP_K,
         val declickSeconds: Double = ENV_DECLICK_SECONDS,
+        /**
+         * Whether voices in this pipeline get an amp envelope by default. A SOFT default, the same
+         * status as [expK] and [declickSeconds]: a voice overrides it with `.adsrOn()` / `.adsrOff()`.
+         * The structural switch is a different mechanism and already exists, since [PipelineDsl] is an
+         * ordered list and a pipeline may simply omit this stage.
+         *
+         * Non-null unlike [AdsrDef.Std.on][io.peekandpoke.klang.audio_bridge.AdsrDef.Std.on], because
+         * this IS the fallback layer and has no "unset" to express. The built-in engines keep `true`:
+         * flipping them would change how every existing song sounds. Set `false` on an engine built
+         * around ignitors that carry their own envelope, so the two do not compound.
+         */
+        val on: Boolean = true,
     ) : StageDsl
 }

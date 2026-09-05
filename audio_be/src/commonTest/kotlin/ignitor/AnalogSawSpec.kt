@@ -1,9 +1,12 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.ignitor
+
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_GAIN_JITTER
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -89,9 +92,8 @@ class AnalogSawSpec : StringSpec({
             voiceDurationFrames = onsetSampleRate,
             gateEndFrame = onsetSampleRate,
             releaseFrames = blockFrames,
-            voiceEndFrame = onsetSampleRate + blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
         sig.generate(buffer, freqHz, ctx)
         return buffer
     }

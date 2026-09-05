@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -96,8 +96,8 @@ class LangVowelSpec : StringSpec({
         formant.mix shouldBe 0.5
     }
 
-    "vowelMix() overrides the formant dry/wet amount" {
-        val p = note("c3").vowel("a").vowelMix(0.3)
+    "vowelWet() overrides the formant dry/wet amount" {
+        val p = note("c3").vowel("a").vowelWet(0.3)
 
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -13,13 +13,19 @@ import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.FilterEnvDef
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.bandpass
+import io.peekandpoke.klang.audio_be.ignitor.highpass
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
+import io.peekandpoke.klang.audio_be.ignitor.mul
+import io.peekandpoke.klang.audio_be.ignitor.notch
+import io.peekandpoke.klang.audio_be.ignitor.plus
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
@@ -121,6 +127,17 @@ class EffectBenchmark(
 
     companion object {
 
+        /** The guitar-tail Eq (2 taps + 4 serial) — the full fused Der Schmetterling tail. */
+        private fun eqCoreGuitarTail(sr: Int): EqCore =
+            EqCore(6).also {
+                it.configureSection(0, EqCore.RAW_TAP, 1000.0, 0.8, 0.0, 2.0, sr.toDouble())
+                it.configureSection(1, EqCore.RAW_TAP, 4000.0, 0.85, 0.0, 5.5, sr.toDouble())
+                it.configureSection(2, EqCore.NOTCH, 210.0, 2.5, 0.0, 1.0, sr.toDouble())
+                it.configureSection(3, EqCore.HIGHPASS, 440.0, 0.707, 0.0, 1.0, sr.toDouble())
+                it.configureSection(4, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                it.configureSection(5, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+            }
+
         /** Sine wave source buffer. Refilled into the working buffer each block. */
         private fun sineSource(freqHz: Double, sampleRate: Int, blockFrames: Int): AudioBuffer {
             val out = AudioBuffer(blockFrames)
@@ -195,12 +212,11 @@ class EffectBenchmark(
                 voiceDurationFrames = Int.MAX_VALUE / 2,
                 gateEndFrame = Int.MAX_VALUE / 2,
                 releaseFrames = sr / 10,
-                voiceEndFrame = Int.MAX_VALUE / 2,
                 scratchBuffers = scratch,
-                offset = 0,
-                length = bf,
                 voiceElapsedFrames = 0,
-            )
+            ).apply {
+                updateOffsetAndLength(0, bf)
+            }
             val buffer = AudioBuffer(bf)
             val step: () -> Unit = {
                 ignitor.generate(buffer, 440.0, ctx)
@@ -305,10 +321,133 @@ class EffectBenchmark(
                 Ignitors.sine().lowpass(
                     cutoffHz = 1000.0,
                     q = 1.0,
-                    env = FilterEnvDef(depth = 0.5, attackSec = 0.05, decaySec = 0.1, sustainLevel = 0.7, releaseSec = 0.5),
+                    env = FilterEnvDef(depth = 7.0 /* C3: semitones */, attackSec = 0.05, decaySec = 0.1, sustainLevel = 0.7, releaseSec = 0.5),
                 )
             },
 
+            // ── EqCore baseline anchors (unified-equalizer plan, D0) ──
+            // Bare source: svfIgnitorCase times the sine INSIDE the step, unlike monoFilterCase
+            // (pre-rendered source). Subtract this case from the chained anchors below to get a
+            // source-free delta comparable to a pre-rendered-source EqCore case.
+            svfIgnitorCase("Ignitor sine (bare source baseline)") {
+                Ignitors.sine()
+            },
+            // ── EqCore (unified-equalizer plan; loop-shape bake-off CLOSED 2026-08-19,
+            // locals-state section-major won — see docs/benchmarks/2026-08-19_20*.md) ──
+            // Copy-only baseline: monoFilterCase-shaped steps pay a copyInto inside the timed
+            // step that svfIgnitorCase does not — subtract this case for copy-free deltas
+            // (the D0 comparability rule).
+            Case("Copy-only baseline (128f)") { sr, bf ->
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = { src.copyInto(buf) }
+                step
+            },
+            Case("EqCore 1-serial (LP 1k, q=1)") { sr, bf ->
+                // The single-node comparison the plan requires — decided D2b: 1-section
+                // EqCore >= single Ignitor SVF on both platforms (equal JVM, -38% Node), so
+                // optimizer rule R1 converts standalone filters. Counterpart anchor:
+                // "Ignitor.svf LPF (no env)". Subtract "Copy-only baseline".
+                val core = EqCore(1).also {
+                    it.configureSection(0, EqCore.LOWPASS, 1000.0, 1.0, 0.0, 1.0, sr.toDouble())
+                }
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    src.copyInto(buf)
+                    core.process(buf, 0, bf)
+                }
+                step
+            },
+            Case("EqCore 4-serial (guitar serial tail)") { sr, bf ->
+                // Fused counterpart of "Ignitor SVF x4 chain" below (subtract the bare-sine
+                // baseline there, the copy-only baseline here — the D0 comparability rule).
+                val core = EqCore(4).also {
+                    it.configureSection(0, EqCore.NOTCH, 210.0, 2.5, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(1, EqCore.HIGHPASS, 440.0, 0.707, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(2, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                    it.configureSection(3, EqCore.LOWPASS, 5300.0, 0.707, 0.0, 1.0, sr.toDouble())
+                }
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    src.copyInto(buf)
+                    core.process(buf, 0, bf)
+                }
+                step
+            },
+            // Coefficient-cached PLUMBING anchor: the Der Schmetterling guitar tail's shape as
+            // chained Ignitor SVFs. Each node pays its own generate() call + scratch pass — the
+            // plumbing the fused EqCore removes; EqCore's 4-section case is measured against this.
+            // NOTE: the Double overloads wrap cutoff/q in ParamIgnitor, so coefficients compute
+            // ONCE here — the real song's script literals become Constants, which recompute
+            // per block (SvfIgnitor cache predicate is Param-only). This anchor isolates
+            // per-sample plumbing; it underestimates the song chain by 4 per-block tan() calls.
+            svfIgnitorCase("Ignitor SVF x4 chain (notch+hp+lp+lp)") {
+                Ignitors.sine()
+                    .notch(210.0, 2.5)
+                    .highpass(440.0, 0.707)
+                    .lowpass(5300.0)
+                    .lowpass(5300.0)
+            },
+
+            // ── D2b: the FULL guitar tail — 2 parallel taps + 4 serial sections ──
+            // Chained anchor for the tap topology: signal.add(bp.mul()).add(bp.mul())
+            // .notch().highpass().lowpass().lowpass(). Each tap reads the input through its
+            // own per-block replay (a plain copy) — the real graph memoizes `signal`
+            // (1 render + 2 cached replays), so 1 root copy + 2 tap copies model the same
+            // buffer traffic — and those three copies ARE the production memo traffic:
+            // MemoizingIgnitor copies out for EVERY consumer once shared (1 render + 3
+            // copies), and after fusion the memo degenerates to bare delegation (single
+            // consumer, no copy). VALID subtraction: this anchor AS MEASURED vs "EqCore 6"
+            // minus 1x "Copy-only baseline" (its harness refill stands in for the source
+            // render the anchor omits) — the win is per-node plumbing plus TWO net copies;
+            // the fused side keeps exactly one internal captureInput copy. Do NOT diff this
+            // row against the sine-sourced "Ignitor SVF x4 chain" neighbor: it would mix a
+            // computed sine into a copy-fed number.
+            Case("Ignitor 2-tap + SVF x4 chain (guitar tail)") { sr, bf ->
+                val src = sineSource(440.0, sr, bf)
+
+                fun reader(): Ignitor = object : Ignitor {
+                    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                        src.copyInto(buffer, ctx.offset, ctx.offset, ctx.windowEnd)
+                    }
+                }
+
+                val graph = reader()
+                    .plus(reader().bandpass(1000.0, 0.8).mul(2.0))
+                    .plus(reader().bandpass(4000.0, 0.85).mul(5.5))
+                    .notch(210.0, 2.5)
+                    .highpass(440.0, 0.707)
+                    .lowpass(5300.0)
+                    .lowpass(5300.0)
+                val ctx = IgniteContext(
+                    sampleRate = sr,
+                    voiceDurationFrames = Int.MAX_VALUE / 2,
+                    gateEndFrame = Int.MAX_VALUE / 2,
+                    releaseFrames = sr / 10,
+                    scratchBuffers = ScratchBuffers(bf),
+                    voiceElapsedFrames = 0,
+                ).apply {
+                    updateOffsetAndLength(0, bf)
+                }
+                val buffer = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    graph.generate(buffer, 440.0, ctx)
+                    ctx.voiceElapsedFrames += bf
+                }
+                step
+            },
+            Case("EqCore 6 (2 taps + 4 serial)") { sr, bf ->
+                val core = eqCoreGuitarTail(sr)
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                val step: () -> Unit = {
+                    src.copyInto(buf)
+                    core.process(buf, 0, bf)
+                }
+                step
+            },
             // Stereo effects with separate input/output
             stereoIoCase("Reverb (default)") { sr ->
                 val r = Reverb(sr).apply {

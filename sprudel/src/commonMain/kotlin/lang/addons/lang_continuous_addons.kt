@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -20,7 +20,7 @@ import kotlin.math.sin
  * Returns the cycles per second at which playback is currently running as a continuous pattern.
  *
  * ```KlangScript(Playable)
- * sound("sd").delay(0.25).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)  // Dalay time based in CPS
+ * sound("sd").delayWet(0.25).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)  // Dalay time based in CPS
  * ```
  *
  * @category continuous
@@ -35,7 +35,7 @@ val cps: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() }
  * Returns the current revolutions per minute as a continuous pattern (RPM = CPS × 60).
  *
  * ```KlangScript(Playable)
- * sound("sd").delay(0.25).delaytime(pure(1).div(rpm)).delayfeedback(0.5)  // Delay time based in RPM
+ * sound("sd").delayWet(0.25).delaytime(pure(1).div(rpm)).delayfeedback(0.5)  // Delay time based in RPM
  * ```
  *
  * @category continuous
@@ -50,7 +50,7 @@ val rpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 }
  * Returns the current beats per minute as a continuous pattern (assuming 4/4 time, 4 beats per cycle).
  *
  * ```KlangScript(Playable)
- * sound("sd").delay(0.15).delaytime(pure(60).div(bpm)).delayfeedback(0.33)  // Dalay time based in BPM
+ * sound("sd").delayWet(0.15).delaytime(pure(60).div(bpm)).delayfeedback(0.33)  // Dalay time based in BPM
  * ```
  *
  * @category continuous
@@ -77,7 +77,7 @@ private fun getTimeOfDayFraction(kronos: Kronos): Double {
  * Returns the current time of day as a linear value: `0.0` (midnight) → `0.5` (noon) → `1.0` (midnight).
  *
  * ```KlangScript(Playable)
- * gain(timeOfDay)                   // gain rises through the day
+ * s("hh*8").gain(timeOfDay)         // gain rises through the day
  * ```
  *
  * ```KlangScript(Playable)
@@ -96,7 +96,7 @@ val timeOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * Returns the current time of day as a sine wave: `0.0` (midnight) → `1.0` (noon) → `0.0` (midnight).
  *
  * ```KlangScript(Playable)
- * gain(sinOfDay)                    // gain peaks at noon
+ * s("hh*8").gain(sinOfDay)          // gain peaks at noon
  * ```
  *
  * ```KlangScript(Playable)
@@ -120,7 +120,7 @@ val sinOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * ```
  *
  * ```KlangScript(Playable)
- * gain(sinOfDay2.range(0, 1))       // bipolar to unipolar conversion
+ * s("hh*8").gain(sinOfDay2.range(0, 1))  // bipolar to unipolar conversion
  * ```
  *
  * @category continuous
@@ -136,7 +136,7 @@ val sinOfDay2: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * Returns the current time of night (inverse of [timeOfDay]): `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
  *
  * ```KlangScript(Playable)
- * gain(timeOfNight)                 // gain is highest at midnight
+ * s("hh*8").gain(timeOfNight)       // gain is highest at midnight
  * ```
  *
  * ```KlangScript(Playable)
@@ -155,7 +155,7 @@ val timeOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * Returns the current time of night as a sine wave: `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
  *
  * ```KlangScript(Playable)
- * gain(sinOfNight)                  // gain peaks at midnight
+ * s("hh*8").gain(sinOfNight)        // gain peaks at midnight
  * ```
  *
  * ```KlangScript(Playable)
@@ -180,7 +180,7 @@ val sinOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * ```
  *
  * ```KlangScript(Playable)
- * gain(sinOfNight2.range(0, 1))     // bipolar night signal to unipolar gain
+ * s("hh*8").gain(sinOfNight2.range(0, 1))  // bipolar night signal to unipolar gain
  * ```
  *
  * @category continuous

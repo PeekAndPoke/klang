@@ -17,6 +17,9 @@ interface KlangUiToolEmbeddable : KlangUiTool {
 - **KlangUiTool**: opens in a `CodeToolModal` dialog.
 - **KlangUiToolEmbeddable**: also supports inline rendering without buttons.
   `renderEmbedded` must call `onCommit()` on every live change.
+- **prefersPopover** (C0.3): an embeddable tool that returns true opens as a small
+  anchored POPOVER with live commits instead of a modal (the inline tier for scalar
+  tools like gain/pan; `SprudelNumericEditorTool` opts in for all its instances).
 
 ## KlangUiToolContext
 
@@ -27,8 +30,29 @@ data class KlangUiToolContext(
     val currentValue: String?,   // raw source text of the argument
     val onCommit: (String) -> Unit,
     val onCancel: () -> Unit,
+    val call: KlangUiToolCall?,  // whole-call view (C0.3), null when unresolvable
 )
 ```
+
+## Whole-call editing (C0.3 MultiParam tier)
+
+Since the per-param DSL migration (docs/plans/filter-unification.md, C0), compound tools
+edit ALL parameters of the host call instead of one colon-string argument:
+
+```kotlin
+data class KlangUiToolCall(
+    val paramNames: List<String>,      // declared params, in order
+    val args: List<String?>,           // current raw text per param index, null = absent
+    val onCommitCall: (List<String?>) -> Unit,
+)
+```
+
+`onCommitCall` rewrites the entire argument list: a contiguous prefix of provided values
+serializes as positional args, anything with gaps as ALL-named args (KlangScript forbids
+mixing). Tools must start from `call.args.toMutableList()`, pad with nulls, and overwrite
+only the indices they manage. When `call == null` (e.g. as a sequence-atom editor) the
+tool falls back to editing its single argument as one scalar (the head param).
+String-typed slots (distort/tremolo shape) commit QUOTED literals; numbers commit bare.
 
 ## Registry
 
@@ -73,9 +97,9 @@ All tool source files are in `sprudel/src/jsMain/kotlin/ui/`.
 | `SprudelNumericEditorTool.kt`      | Configurable numeric editor with drag bar                               | Gain, Pan, RoomSize, DelayTime, DelayFeedback, all individual filter params (cutoff, resonance, env, attack, decay, sustain, release per filter type) |
 | `SprudelAdsrEditorTool.kt`         | ADSR envelope editor with interactive SVG curve                         | `SprudelAdsrEditorTool`                                                                                                                               |
 | `SprudelFilterAdsrEditorTool.kt`   | Configurable filter ADSR editor, reuses ADSR SVG                        | LP/HP/BP/Notch ADSR instances                                                                                                                         |
-| `SprudelFilterEditorTool.kt`       | Combined filter editor (freq:resonance:env) with frequency response SVG | LP/HP/BP/Notch filter instances                                                                                                                       |
+| `SprudelFilterEditorTool.kt`       | Whole-call filter editor (freq, q) with frequency response SVG | LP/HP/BP/Notch filter instances                                                                                                                       |
 | `SprudelCompressorEditorTool.kt`   | Compressor editor with transfer function SVG + 8 presets                | `SprudelCompressorEditorTool`                                                                                                                         |
-| `SprudelDelayEditorTool.kt`        | Delay editor (time:feedback) with decay curve SVG                       | `SprudelDelayEditorTool`                                                                                                                              |
+| `SprudelDelayEditorTool.kt`        | Delay editor (amount, time, feedback) with decay curve SVG                       | `SprudelDelayEditorTool`                                                                                                                              |
 | `SprudelReverbEditorTool.kt`       | Reverb amount editor                                                    | `SprudelReverbEditorTool`                                                                                                                             |
 | `SprudelNoteEditorTool.kt`         | Note picker with staff visualization                                    | `SprudelNoteEditorTool`                                                                                                                               |
 | `SprudelScaleEditorTool.kt`        | Scale picker (root + mode)                                              | `SprudelScaleEditorTool`                                                                                                                              |
@@ -138,46 +162,24 @@ label {
 }
 ```
 
-### Per-sub-field (i) for multi-field tools
+### Per-param (i) icons in whole-call tools
 
-Use `subFieldInfoIcon(paramName, subFieldName, ctx, popupCtrl)` next to each sub-field label.
-Data comes from `@param-sub` KDoc tags.
+Whole-call tools label each field with `paramInfoIcon(paramName, ctx, popupCtrl)` — the
+description comes from the parameter's own `@param` KDoc (the helper takes the first
+NON-BLANK description across the symbol's variants). There is no separate sub-field
+documentation mechanism any more: `@param-sub` and `KlangParam.subFields` were deleted in
+C0.3 together with the compound colon-strings they described.
 
-```kotlin
-label {
-    +"Amount"
-    subFieldInfoIcon("amount", "amount", props.toolCtx, infoPopup)
-}
-```
-
-All three only render when description text exists (no empty popups).
+Both helpers only render when description text exists (no empty popups).
 All helpers live in `sprudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`.
 
-## `@param-sub` KDoc Tag
-
-Syntax for documenting sub-fields within composite (colon-separated) parameters:
-
-```
-@param-sub <paramName> <subFieldName> <description>
-```
-
-- Used when a single `@param` is a colon-separated compound value (e.g. `"amount:shape"`)
-- Each sub-field gets its own `@param-sub` line
-- Parsed by KSP into `KlangParam.subFields: Map<String, String>`
-- Example from `distort()`:
-  ```kotlin
-  @param amount The distortion amount, or "amount:shape" compound string.
-  @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
-  @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
-  ```
 
 ## Key Files
 
 | File                                                    | Role                                        |
 |---------------------------------------------------------|---------------------------------------------|
 | `klangui/src/jsMain/kotlin/KlangUiTool.kt`              | Interfaces + registry                       |
-| `sprudel-ksp/src/main/kotlin/KDocParser.kt`             | Parses `@param-tool` and `@param-sub` tags  |
-| `klangscript/src/commonMain/kotlin/types/KlangParam.kt` | `uitools` + `subFields` fields              |
+| `klangscript/src/commonMain/kotlin/types/KlangParam.kt` | `uitools` field                             |
 | `sprudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`  | Info icon helpers + `HoverPopupCtrl`        |
 | `src/jsMain/kotlin/codemirror/ArgFinder.kt`             | Finds arg under cursor                      |
 | `src/jsMain/kotlin/codemirror/DslGoToDocsExtension.kt`  | Right-click → tool launch                   |

@@ -1,9 +1,40 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.ignitor
+
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SIDE_ATTEN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_CENTER_JITTER_SCALE
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_DRAW_TRIES
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_GAIN_JITTER
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MAX
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MIN
+import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
@@ -66,12 +97,11 @@ class PhasePoolSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             releaseFrames = blockFrames,
-            voiceEndFrame = sampleRate + blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         var sumSq = 0.0
         for (b in 0 until blocks) {
-            ctx.apply { offset = 0; length = blockFrames; voiceElapsedFrames = b * blockFrames }
+            ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
             sig.generate(buffer, freqHz, ctx)
             for (i in 0 until blockFrames) {
                 sumSq += buffer[i] * buffer[i]
@@ -132,7 +162,6 @@ class PhasePoolSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             releaseFrames = blockFrames,
-            voiceEndFrame = sampleRate + blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         var re = 0.0
@@ -140,7 +169,7 @@ class PhasePoolSpec : StringSpec({
         var idx = 0
         val w = TWO_PI * freqHz / sampleRate
         for (b in 0 until blocks) {
-            ctx.apply { offset = 0; length = blockFrames; voiceElapsedFrames = b * blockFrames }
+            ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
             sig.generate(buffer, freqHz, ctx)
             for (i in 0 until blockFrames) {
                 re += buffer[i] * cos(w * idx)
@@ -254,7 +283,8 @@ class PhasePoolSpec : StringSpec({
     // ── Bypass rng-stream position ───────────────────────────────────────────────────────────────
     // The JVM golden fixtures (PhasePoolBypassGoldenSpec) cannot see TRAILING rng consumption: an
     // extra draw after voice init changes no sample of THIS note, but reorders every later note in
-    // a session (all super-oscillators share Random.Default in production). This pins the stream
+    // a session (since seeded-voice-rng, super-oscillators share the VOICE'S stream — a
+    // trailing draw reorders the rest of that voice's draws). This pins the stream
     // position on the OFF path: note-on at v voices must consume exactly v phase draws + v jitter
     // draws, nothing more. Exact equality is safe — the rng is integer-based (xorwow), bit-exact
     // on JVM and JS alike, which is why this lives in commonTest.
@@ -279,9 +309,8 @@ class PhasePoolSpec : StringSpec({
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
                 releaseFrames = blockFrames,
-                voiceEndFrame = sampleRate + blockFrames,
                 scratchBuffers = ScratchBuffers(blockFrames),
-            ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
+            ).apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = 0 }
             sig.generate(buffer, freqHz, ctx)
             withClue(name) { rng.nextDouble() shouldBe expected }
         }
@@ -294,9 +323,9 @@ class PhasePoolSpec : StringSpec({
 
     "phasePool on - mid-note voice-count change keeps ringing voices' phases (no re-selection click)" {
         class VoicesParam(var value: Double) : Ignitor {
-            override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double = value
+            override fun controlRateValueOrNull(freqHz: Double): Double = value
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-                buffer.fill(value, ctx.offset, ctx.offset + ctx.length)
+                buffer.fill(value, ctx.offset, ctx.windowEnd)
             }
         }
 
@@ -319,7 +348,6 @@ class PhasePoolSpec : StringSpec({
                 voiceDurationFrames = sampleRate,
                 gateEndFrame = sampleRate,
                 releaseFrames = blockFrames,
-                voiceEndFrame = sampleRate + blockFrames,
                 scratchBuffers = ScratchBuffers(blockFrames),
             )
             var maxDelta = 0.0
@@ -329,7 +357,7 @@ class PhasePoolSpec : StringSpec({
                 if (b == 2) {
                     voicesParam.value = 13.0
                 }
-                ctx.apply { offset = 0; length = blockFrames; voiceElapsedFrames = b * blockFrames }
+                ctx.apply { updateOffsetAndLength(0, blockFrames); voiceElapsedFrames = b * blockFrames }
                 sig.generate(buffer, freqHz, ctx)
                 for (i in 0 until blockFrames) {
                     if (idx > 0) {

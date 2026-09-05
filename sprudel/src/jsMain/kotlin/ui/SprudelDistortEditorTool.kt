@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -53,7 +53,15 @@ import kotlin.math.sqrt
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing distort parameters: amount:shape. */
+/**
+ * [KlangUiToolEmbeddable] for the per-param distort(amount, shape, oversample) call.
+ *
+ * Two modes (C0.3 two-tool-tier design):
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits amount plus the optional
+ *   shape/oversample params of the host call and commits the full argument list. The shape is a
+ *   STRING param and commits as a quoted string literal; unset optionals stay omitted (null slots).
+ * - Scalar fallback (embedded / sequence atom): edits a single amount value.
+ */
 object SprudelDistortEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Distort Editor"
 
@@ -95,19 +103,42 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
 
     private val formCtrl = formController()
 
+    private val call = props.toolCtx.call
+
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseInput(): List<String> {
-        val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
-        if (raw.isBlank()) return emptyList()
-        return raw.split(":").map { it.trim() }
-    }
+    private fun parseNum(text: String?, fallback: Double): Double =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull() ?: fallback
 
-    private val parsedParts = parseInput()
+    private fun parseNumOrNull(text: String?): Double? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
-    private var amount by value(parsedParts.getOrNull(0)?.toDoubleOrNull() ?: 0.5)
-    private var shape by value(parsedParts.getOrNull(1)?.takeIf { it in shapes })
-    private var oversample by value(parsedParts.getOrNull(2)?.toIntOrNull())
+    private fun parseStr(text: String?): String? =
+        text?.trim()?.removePrefix("\"")?.removeSuffix("\"")
+
+    // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
+    private val parsedAmount
+        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
+
+    private val parsedShape
+        get() = parseStr(call?.args?.getOrNull(1))?.takeIf { it in shapes }
+
+    private val parsedOversample
+        get() = parseStr(call?.args?.getOrNull(2))?.toIntOrNull()
+
+    private var amount by value(parsedAmount)
+    private var shape by value(parsedShape)
+    private var oversample by value(parsedOversample)
+
+    // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
+    // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
+    private val parseable: List<Boolean> = listOf(
+        parseNumOrNull(call?.args?.getOrNull(0)) != null,
+        parseStr(call?.args?.getOrNull(1))?.let { it in shapes } == true,
+        parseStr(call?.args?.getOrNull(2))?.toIntOrNull() != null,
+    )
+    private val dirty = mutableSetOf<Int>()
+    private var hasCommitted = false
 
     private var resetCounter by value(0)
 
@@ -116,45 +147,81 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
     private fun Double.fmt(): String =
         toFixed(3).trimEnd('0').trimEnd('.')
 
-    private fun buildValue(): String {
-        val parts = mutableListOf(amount.fmt())
-        if (shape != null || oversample != null) {
-            parts.add(shape ?: "soft")
+    private fun buildValue(): String =
+        if (call != null) {
+            "${amount.fmt()}, ${shape ?: "-"}, ${oversample?.takeIf { it > 1 }?.toString() ?: "-"}"
+        } else {
+            amount.fmt()
         }
-        if (oversample != null && oversample!! > 1) {
-            parts.add(oversample.toString())
+
+    /**
+     * Writes a slot only when that is safe: the user touched it, or the original arg parses
+     * (rewriting it loses nothing). Untouched non-parseable args are preserved; untouched
+     * absent slots stay absent so the engine defaults apply.
+     */
+    private fun put(texts: MutableList<String?>, index: Int, text: String?) {
+        val original = call?.args?.getOrNull(index)
+        if (index in dirty || (original != null && parseable[index])) {
+            texts[index] = text
         }
-        return "\"${parts.joinToString(":")}\""
     }
 
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
+    private fun commitValue() {
+        val c = call
+        if (c != null) {
+            val texts = c.args.toMutableList()
+            while (texts.size < 3) texts.add(null)
+            put(texts, 0, amount.fmt())
+            // shape is a STRING param — commits as a quoted string literal; unset = null slot
+            put(texts, 1, shape?.let { "\"$it\"" })
+            // "Off" / 1x is the engine default — omit the arg
+            put(texts, 2, oversample?.takeIf { it > 1 }?.toString())
+            c.onCommitCall(texts)
+        } else {
+            props.toolCtx.onCommit(amount.fmt())
+        }
+        hasCommitted = true
+        lastCommitted = buildValue()
+    }
+
+    // Built-state fingerprints: in whole-call mode [initialValue] is only the clicked arg's
+    // text, so the Reset/Update buttons compare built snapshots instead (initial state and
+    // last committed state); scalar mode keeps the plain text comparison.
+    private val initialBuiltValue = buildValue()
+    private var lastCommitted = initialBuiltValue
+
+    private val isInitialModified
+        get() = if (call != null) buildValue() != initialBuiltValue else initialValue != buildValue()
+
+    private val isCurrentModified
+        get() = if (call != null) buildValue() != lastCommitted else (props.toolCtx.currentValue ?: "") != buildValue()
 
     private fun liveUpdate() {
         if (props.embedded || autoUpdate) {
-            props.toolCtx.onCommit(buildValue())
+            commitValue()
         }
     }
 
     private fun onCancel() {
-        if (!props.embedded && autoUpdate && isInitialModified) {
-            props.toolCtx.onCommit(initialValue)
+        if (!props.embedded && autoUpdate && hasCommitted && isInitialModified) {
+            val c = call
+            if (c != null) c.onCommitCall(c.args) else props.toolCtx.onCommit(initialValue)
         }
         props.toolCtx.onCancel()
     }
 
     private fun onReset() {
-        val p = parseInput()
-        amount = p.getOrNull(0)?.toDoubleOrNull() ?: 0.5
-        shape = p.getOrNull(1)?.takeIf { it in shapes }
-        oversample = p.getOrNull(2)?.toIntOrNull()
+        dirty.clear()
+        amount = parsedAmount
+        shape = parsedShape
+        oversample = parsedOversample
         formCtrl.resetAllFields()
-        props.toolCtx.onCommit(initialValue)
+        commitValue()
         resetCounter++
     }
 
     private fun onCommit() {
-        props.toolCtx.onCommit(buildValue())
+        commitValue()
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -185,19 +252,52 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
 
             ui.form {
                 ui.stackable.fields {
-                    UiInputField(amount, { amount = it; liveUpdate() }) {
+                    UiInputField(amount, { amount = it; dirty += 0; liveUpdate() }) {
                         domKey("amount")
                         step(0.01)
                         appear { three.wide }
                         label {
                             +"Amount"
-                            subFieldInfoIcon("amount", "amount", props.toolCtx, infoPopup)
+                            paramInfoIcon("amount", props.toolCtx, infoPopup)
                         }
                     }
 
-                    // Oversampling buttons
+                    // Oversampling buttons (whole-call mode only)
+                    if (call != null) {
+                        noui.field {
+                            label {
+                                +"Oversampling"
+                                paramInfoIcon("oversample", props.toolCtx, infoPopup)
+                            }
+                            div {
+                                css {
+                                    display = Display.flex
+                                    flexWrap = FlexWrap.wrap
+                                    gap = 6.px
+                                    marginTop = 6.px
+                                }
+                                for ((label, factor) in listOf("Off" to null, "2x" to 2, "4x" to 4, "8x" to 8)) {
+                                    val isSelected = oversample == factor
+                                    ui.small.givenNot(isSelected) { basic }
+                                        .given(isSelected) { with(laf.styles.goldButton()) }.button {
+                                            key = "os-${factor ?: "off"}"
+                                            onClick { oversample = factor; dirty += 2; liveUpdate() }
+                                            +label
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Shape buttons (whole-call mode only)
+                if (call != null) {
                     noui.field {
-                        label { +"Oversampling" }
+                        label {
+                            +"Shape"
+                            paramInfoIcon("shape", props.toolCtx, infoPopup)
+                        }
+
                         div {
                             css {
                                 display = Display.flex
@@ -205,49 +305,23 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
                                 gap = 6.px
                                 marginTop = 6.px
                             }
-                            for ((label, factor) in listOf("Off" to null, "2x" to 2, "4x" to 4, "8x" to 8)) {
-                                val isSelected = oversample == factor
+                            // "default" button — clears shape selection
+                            val isDefault = shape == null
+                            ui.small.givenNot(isDefault) { basic }
+                                .given(isDefault) { with(laf.styles.goldButton()) }.button {
+                                    key = "default"
+                                    onClick { shape = null; dirty += 1; liveUpdate() }
+                                    +"default"
+                                }
+                            for (s in shapes) {
+                                val isSelected = shape == s
                                 ui.small.givenNot(isSelected) { basic }
                                     .given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                        key = "os-${factor ?: "off"}"
-                                        onClick { oversample = factor; liveUpdate() }
-                                        +label
+                                        key = s
+                                        onClick { shape = s; dirty += 1; liveUpdate() }
+                                        +s
                                     }
                             }
-                        }
-                    }
-                }
-
-                // Shape buttons
-                noui.field {
-                    label {
-                        +"Shape"
-                        subFieldInfoIcon("amount", "shape", props.toolCtx, infoPopup)
-                    }
-
-                    div {
-                        css {
-                            display = Display.flex
-                            flexWrap = FlexWrap.wrap
-                            gap = 6.px
-                            marginTop = 6.px
-                        }
-                        // "default" button — clears shape selection
-                        val isDefault = shape == null
-                        ui.small.givenNot(isDefault) { basic }
-                            .given(isDefault) { with(laf.styles.goldButton()) }.button {
-                                key = "default"
-                                onClick { shape = null; liveUpdate() }
-                                +"default"
-                            }
-                        for (s in shapes) {
-                            val isSelected = shape == s
-                            ui.small.givenNot(isSelected) { basic }
-                                .given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                    key = s
-                                    onClick { shape = s; liveUpdate() }
-                                    +s
-                                }
                         }
                     }
                 }

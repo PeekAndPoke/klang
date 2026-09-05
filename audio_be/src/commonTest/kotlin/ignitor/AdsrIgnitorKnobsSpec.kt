@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -29,18 +29,16 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         voiceDurationFrames = blockFrames,
         gateEndFrame = blockFrames,
         releaseFrames = 0,
-        voiceEndFrame = blockFrames,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
     // Constant DC = 1.0 source: with it, `.adsr(...)` output equals the envelope gain per sample.
     val dc: Ignitor = object : Ignitor {
         override fun generate(buffer: AudioBuffer, freqHz: Double, c: IgniteContext) {
-            val end = c.offset + c.length
+            val end = c.windowEnd
             for (i in c.offset until end) buffer[i] = 1.0
         }
     }

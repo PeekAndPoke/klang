@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -324,6 +324,38 @@ class Environment(
             allTypes.firstNotNullOfOrNull { nativeExtensionMethods[it]?.get(methodName) }
                 ?: parent?.getExtensionMethod(value, methodName)
         }
+    }
+
+    /**
+     * A human-readable type name for error messages.
+     *
+     * [NativeObjectValue.qualifiedName] is computed at wrap time from `kClass.simpleName`, which
+     * is NULL for an anonymous or local class — sprudel builds patterns from 21 different
+     * `object : SprudelPattern { ... }` expressions, so a user calling a misspelled method on one
+     * of those got `Native type 'Unknown'`, which tells them nothing.
+     *
+     * The registered supertype is reachable from the anonymous class (that is how method
+     * dispatch already works), so use ITS name instead: a sprudel pattern reports as
+     * `SprudelPattern`. Falls back through the parent chain, then to "Unknown" only if nothing
+     * in the hierarchy was ever registered.
+     *
+     * Caveat worth knowing before relying on this for anything finer than a message:
+     * [getAllRegisteredSupertypes] filters `nativeTypes.keys` by `isInstance`, so the order is
+     * REGISTRATION order, not hierarchy distance. With two registered types on one hierarchy you
+     * get whichever was registered first, not the most specific.
+     */
+    fun getDisplayTypeName(value: RuntimeValue): String {
+        val obj = value.unpackForSupertypeLookup()
+
+        obj::class.simpleName?.let { return it }
+
+        // Anonymous/local class: getAllRegisteredSupertypes puts the concrete class first (whose
+        // simpleName we already know is null), then the registered supertypes in REGISTRATION
+        // order. So this picks the first REGISTERED supertype, which is good enough to name the
+        // thing in an error message but is not necessarily the most specific one.
+        getAllRegisteredSupertypes(obj).firstNotNullOfOrNull { it.simpleName }?.let { return it }
+
+        return parent?.getDisplayTypeName(value) ?: "Unknown"
     }
 
     /**

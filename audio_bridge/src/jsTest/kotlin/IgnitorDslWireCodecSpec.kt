@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -31,6 +31,10 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Freq" { check(IgnitorDsl.Freq) }
     "Silence" { check(IgnitorDsl.Silence) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
+
+    // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where
+    // it gets used; every field non-default so a dropped one shows up.
+    "OptimizerHint" { check(IgnitorDsl.Sine().lowpass(2000.0).optimizer(on = 0)) }
     "Param (with description)" { check(IgnitorDsl.Param("cutoff", 1000.0, "Filter cutoff")) }
 
     // --- oscillator primitives ------------------------------------------------------------------------------
@@ -56,7 +60,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
                 freq = IgnitorDsl.Constant(5.0),
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
             )
         )
     }
@@ -65,7 +69,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.SuperSine(
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
             )
         )
     }
@@ -74,7 +78,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.SuperSquare(
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
             )
         )
     }
@@ -83,7 +87,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.SuperTri(
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
             )
         )
     }
@@ -92,7 +96,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.SuperRamp(
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
-                poolSize = 123.0, refreshEvery = 3.0, selection = 1.0, warmup = 24.0,
+                poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
             )
         )
     }
@@ -142,10 +146,30 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- frequency / filters --------------------------------------------------------------------------------
     "Detune" { check(IgnitorDsl.Sine().detune(7.0)) }
     "Lowpass" { check(IgnitorDsl.Square().lowpass(2000.0)) }
+    "Lowpass with passes" { check(IgnitorDsl.Square().lowpass(2000.0, 1.2, passes = 3)) }
     "Highpass (custom q)" { check(IgnitorDsl.Sawtooth().highpass(500.0, 1.5)) }
-    "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onePoleLowpass(3000.0)) }
+    "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onepole(3000.0)) }
     "Bandpass" { check(IgnitorDsl.Sine().bandpass(1000.0, 2.0)) }
     "Notch" { check(IgnitorDsl.Sine().notch(1000.0, 2.0)) }
+    "Eq (every section variant, all fields non-default)" {
+        check(
+            IgnitorDsl.Eq(
+                inner = IgnitorDsl.Sawtooth(),
+                sections = listOf(
+                    IgnitorDsl.EqSection.RawTap(
+                        IgnitorDsl.Constant(4000.0), IgnitorDsl.Constant(0.8), IgnitorDsl.Param("tapGain", 2.0),
+                    ),
+                    IgnitorDsl.EqSection.Bell(
+                        IgnitorDsl.Constant(850.0), IgnitorDsl.Constant(0.9), IgnitorDsl.Constant(6.0),
+                    ),
+                    IgnitorDsl.EqSection.Notch(IgnitorDsl.Constant(210.0), IgnitorDsl.Constant(2.5)),
+                    IgnitorDsl.EqSection.Highpass(IgnitorDsl.Constant(440.0), IgnitorDsl.Constant(1.4)),
+                    IgnitorDsl.EqSection.Lowpass(IgnitorDsl.Constant(5300.0), IgnitorDsl.Constant(0.9)),
+                    IgnitorDsl.EqSection.Bandpass(IgnitorDsl.Param("bpFreq", 900.0), IgnitorDsl.Constant(1.2)),
+                ),
+            )
+        )
+    }
 
     // --- envelope / FM --------------------------------------------------------------------------------------
     "Adsr" { check(IgnitorDsl.Sine().adsr(0.01, 0.3, 0.5, 0.5)) }
@@ -163,22 +187,30 @@ class IgnitorDslWireCodecSpec : StringSpec({
         )
     }
     "Fm" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0, envDecaySec = 0.5)) }
+    "Fm with absolute freq" {
+        // freq NON-default per the file rule: a dropped emitted field would otherwise be
+        // filled by the Kotlin default and round-trip green (review round 1).
+        check(
+            IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0)
+                .let { it as IgnitorDsl.Fm }.copy(freq = IgnitorDsl.Constant(220.0))
+        )
+    }
     "Fm with Adsr" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0).adsr(0.01, 0.3, 0.5, 0.5)) }
 
     // --- effects --------------------------------------------------------------------------------------------
     "Drive" { check(IgnitorDsl.Sine().drive(0.5)) }
-    "Clip" { check(IgnitorDsl.Sine().clip("hard")) }
-    "Distort (Drive+Clip chain)" { check(IgnitorDsl.Sine().distort(0.5)) }
+    "Shape" { check(IgnitorDsl.Sine().shape("hard")) }
+    "Distort (Drive+Shape chain)" { check(IgnitorDsl.Sine().distort(0.5)) }
     "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
-    "Phaser" { check(IgnitorDsl.Sine().phaser(0.5, 0.5)) }
+    "Phaser" { check(IgnitorDsl.Sine().phaser(0.5).wet(0.4).dryFloor(0.25)) }
     "Tremolo" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5)) }
-    "Shimmer (pitches list)" { check(IgnitorDsl.Square().shimmer(pitches = listOf(0.0, 7.0, 12.0))) }
+    "Shimmer (pitches list)" { check(IgnitorDsl.Square().shimmer(pitches = listOf(0.0, 7.0, 12.0)).wet(0.3).dryFloor(0.1)) }
 
     // --- pitch modulation -----------------------------------------------------------------------------------
     "Vibrato" { check(IgnitorDsl.Sine().vibrato(5.0, 0.02)) }
     "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0)) }
-    "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), amount = IgnitorDsl.Constant(12.0))) }
+    "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0))) }
     "PitchMod" { check(IgnitorDsl.Sine().pitchMod(IgnitorDsl.Sine())) }
 
     // --- dispatch / deep composites -------------------------------------------------------------------------
@@ -202,7 +234,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
         check(
             (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(0.1))
                 .div(IgnitorDsl.Param("divisor", 2.0))
-                .onePoleLowpass(3000.0)
+                .onepole(3000.0)
         )
     }
 })

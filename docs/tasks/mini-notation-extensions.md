@@ -1,11 +1,16 @@
 # Mini-Notation Extensions: Attribute Blocks and MIDI Recording
 
-> **Status (2026-04-13)**: Phase 1 (`{key=value}` parser + AST + renderer + resolver) is **SHIPPED** (commit
-`b609e6af`).
-> `MnNode.Attrs` in `MnNode.kt`, `applyAttrs()` in `MnPatternToSprudelPattern.kt`,
-> tests in `MiniNotationAttrsSpec.kt`.
-> **Remaining work:** Phase 2 (tutorial docs — tracked in `tutorial-master-plan.md`) and
-> Phase 3 (MIDI recording, still future).
+> **Status (2026-08-30): Phase 1 is SUPERSEDED and REMOVED.** The `{key=value}` attribute block
+> shipped 2026-04-13 (commit `b609e6af`) and was deleted again on 2026-08-30 with zero recorded
+> usage in songs, tutorials or `sprudel/ref`. The `{…}` braces now carry bare **tweak names**:
+> see **`docs/tasks-archive/2026-08/20260831-mini-notation-tweaks.md`**, which supersedes everything below about attributes.
+> Do not restore `MnNode.Attrs` / `applyAttrs()` / `MiniNotationAttrsSpec.kt`.
+>
+> The attribute table below is kept only as the record of which per-note properties people wanted;
+> each of them is now expressed as a named tweak instead.
+>
+> **Remaining work:** Phase 3 (MIDI recording, still future). Phase 2 (tutorial docs) is moot for
+> attributes and folds into the tweaks plan.
 
 ## Context
 
@@ -101,7 +106,7 @@ Not in scope for immediate implementation. Design notes:
 | `klangscript-intellisense.md`            | Diagnostics/completion, different system   |
 | `completion-member-access-bug.md`        | Code editor bug, unrelated                 |
 | `code-quality-review.md`                 | General quality items                      |
-| `soundfont-looping-investigation.md`     | Audio playback bug                         |
+| `20260903-soundfont-looping-investigation.md` (archived) | Audio playback bug                         |
 | `audio-pipeline-open-topics.md`          | Future audio features                      |
 | `ignitor-dsl-open-items.md`              | Synthesis DSL features                     |
 
@@ -110,7 +115,6 @@ Not in scope for immediate implementation. Design notes:
 | Task                          | Relationship                                                                                                                                               |
 |-------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `sprudel-ui-tools.md`         | Proposes a **legato editor tool** (Tier 1). Once `{legato=N}` exists in mini-notation, the editor tool could generate/read it. Not blocking.               |
-| `klang-blocks-take-1.md`      | Block editor converts AST ↔ blocks. `Attrs` on `Mods` will eventually need block representations. Not blocking — blocks can ignore unknown mods initially. |
 | `klang-pattern-extraction.md` | Extracts playback to generic `KlangPattern`. Mini-notation changes are upstream (parser level) and don't conflict. Could be done in parallel.              |
 
 ### Sequencing recommendation

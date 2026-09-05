@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -70,47 +70,48 @@ fun vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
 fun PatternMapperFn.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.vowel(vowel, callInfo) }
 
-// -- vowelMix() -------------------------------------------------------------------------------------------------------
+// -- vowelWet() -------------------------------------------------------------------------------------------------------
 
-private val vowelMixMutation = voiceSetter { vowelMix = it?.asDoubleOrNull() }
+private val vowelWetMutation = voiceSetter { vowelMix = it?.asDoubleOrNull() }
 
-private fun applyVowelMix(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args, vowelMixMutation)
+private fun applyVowelWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, vowelWetMutation)
 }
 
 /**
- * Sets how much vowel/formant colour is blended over the dry source (0.0 = none).
+ * Sets the vowel/formant wet/dry balance — the shared wet knob (C4), prefixed because sprudel
+ * sets fields on one unordered voice. `0.0` = no vowel colour, `1.0` = formants at full level.
  *
  * Use with [vowel]. The vowel is a *source shaped by formants*, not replaced by them — the dry
- * always stays present (a broadband floor), so higher values add more vowel character without
- * losing the body of the sound. Start around 0.3–0.6. When omitted, the pattern's own numeric
- * values are reinterpreted as the amount.
+ * never drops below its broadband floor ([vowelFloor]), so higher values add vowel character
+ * without losing the body of the sound. The knob lives on `[0, 1]`; start around 0.3–0.6.
+ * When omitted, the pattern's own numeric values are reinterpreted as the amount.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").vowel("a").vowelMix(0.5)   // 'a' vowel blended over the source
+ * note("c3 e3 g3").vowel("a").vowelWet(0.5)   // 'a' vowel blended over the source
  * ```
  *
  * @category effects
  * @tags vowel, formant, mix, dry, wet, vocal
  */
 @KlangScript.Function
-fun SprudelPattern.vowelMix(mix: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyVowelMix(this, listOfNotNull(mix).asSprudelDslArgs(callInfo))
+fun SprudelPattern.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyVowelWet(this, listOfNotNull(wet).asSprudelDslArgs(callInfo))
 
-/** Sets the vowel formant mix on a string pattern. */
+/** Sets the vowel formant wet balance on a string pattern. */
 @KlangScript.Function
-fun String.vowelMix(mix: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vowelMix(mix, callInfo)
+fun String.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vowelWet(wet, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the vowel formant mix. */
+/** Returns a [PatternMapperFn] that sets the vowel formant wet balance. */
 @KlangScript.Function
-fun vowelMix(mix: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.vowelMix(mix, callInfo) }
+fun vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.vowelWet(wet, callInfo) }
 
-/** Chains a vowelMix step onto this [PatternMapperFn]. */
+/** Chains a vowelWet step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.vowelMix(mix: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vowelMix(mix, callInfo) }
+fun PatternMapperFn.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.vowelWet(wet, callInfo) }
 
 // -- vowelFloor() -----------------------------------------------------------------------------------------------------
 

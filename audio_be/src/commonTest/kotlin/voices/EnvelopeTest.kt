@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -222,7 +222,13 @@ class EnvelopeTest : StringSpec({
 
         // releaseFrames=0 is de-clicked: instead of a 1-sample cutoff (a click) the gain
         // fades over ~ENV_DECLICK_SECONDS, then settles at silence.
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.02)        // still at sustain at relPos 0
+        // A release too short to ramp targets 0 from its FIRST frame (releaseProgressOffset), so
+        // relPos 0 is already one de-click step down rather than still sitting at sustain.
+        // Tight on purpose: 1 - envDeclickCoeff(0.001, 44100) = 0.97758 — this helper's sample
+        // rate, not 48k. A band that still contained the OLD value (1.0) would stay green with
+        // releaseProgressOffset reverted. Note this state is stage-level only: with release = 0,
+        // endFrame == gateEndFrame, so a real Voice never renders it.
+        ctx.voiceBuffer[0] shouldBe (0.97758 plusOrMinus 0.002)
         (ctx.voiceBuffer[1] < ctx.voiceBuffer[0]) shouldBe true   // fading (declining), not a hard cut
         (ctx.voiceBuffer[1] > 0.5) shouldBe true                  // ...nowhere near gone in one sample
         ctx.voiceBuffer[550] shouldBe (0.0 plusOrMinus 0.02)      // settled at silence
@@ -255,6 +261,16 @@ class EnvelopeTest : StringSpec({
         ctx.voiceBuffer[700] shouldBe (0.5 plusOrMinus 0.02)         // sustain settled
         (ctx.voiceBuffer[850] < ctx.voiceBuffer[700]) shouldBe true  // release below sustain
         (ctx.voiceBuffer[899] < ctx.voiceBuffer[850]) shouldBe true  // ...and still falling
+
+        // Audit finding F8: the five rows above sample 20, 80, 90, 700, 850 and 899, and the decay
+        // window is frames 100-199. NOTHING was sampled inside it, and the post-decay plateau at 700
+        // is curve-independent — so a decay bug produced no failing assertion here and the test's
+        // name over-promised. These two sample inside the window and pin its direction.
+        // Both samples sit WELL inside the window rather than straddling its start: the gain
+        // smoother lags, so the rendered peak trails the raw envelope's and a 99-vs-120 comparison
+        // measures the smoother catching up, not the decay.
+        (ctx.voiceBuffer[150] > ctx.voiceBuffer[700]) shouldBe true  // mid-decay is above sustain
+        (ctx.voiceBuffer[190] < ctx.voiceBuffer[150]) shouldBe true  // ...and falling toward it
     }
 
     "envelope state is preserved across multiple renders" {
@@ -309,6 +325,42 @@ class EnvelopeTest : StringSpec({
         // Should be clamped at 0, not negative
         ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
         ctx.voiceBuffer[50] shouldBe (0.0 plusOrMinus 0.01)
+    }
+
+    // Audit finding F8: the row above is named for `EnvelopeRenderer`'s negative clamp but cannot
+    // observe it. It is a single first-ever render, so `env.releaseStartLevel` is still its default
+    // 0.0 when the release branch primes it, and every release output is `0.0 * shape` = 0.0 for any
+    // shape. Deleting the clamp left the whole spec green.
+    //
+    // Walking the branches shows why no amount of release tuning would help: attack has p in [0,1),
+    // decay has omp in (0,1], and release clamps p with `coerceAtMost(1.0)` so omp >= 0. Every path
+    // is non-negative — UNLESS `sustain` itself is negative, which the VCA path allows: `Voice.kt:247`
+    // passes `sustainLevel = adsr.sustain` straight through. The ignitor door coerces to [0,1]
+    // (`IgnitorEnvelopes.kt:75`), the strip VCA does not, and per the raw-Motor rule that is a choice,
+    // not an oversight. So a negative sustain is the clamp's actual reach.
+    "envelope clamps a NEGATIVE sustain to zero instead of inverting the signal" {
+        val voice = createSynthVoice(
+            startFrame = 0.0,
+            endFrame = 1000.0,
+            gateEndFrame = 800.0,
+            envelope = Voice.Envelope(
+                attackFrames = 0.0,
+                decayFrames = 0.0,
+                sustainLevel = -0.5,
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
+            )
+        )
+
+        val ctx = createContext(blockStart = 0.0, blockFrames = 200)
+        voice.render(ctx)
+
+        // Without the clamp the gain is -0.5 and the constant source renders PHASE-INVERTED at half
+        // level — audible, and silently wrong. With it the voice is simply silent.
+        ctx.voiceBuffer[100] shouldBe (0.0 plusOrMinus 1e-9)
+        (ctx.voiceBuffer.all { it >= -1e-9 }) shouldBe true
     }
 
     "envelope with very small attack works correctly" {

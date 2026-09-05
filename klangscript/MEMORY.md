@@ -9,8 +9,8 @@
 ## Recent Work (2026-05)
 
 - Added `ExportDeclaration` — new top-level form `export name = expr` (immutable binding +
-  auto-export under same name). Parser, AST, interpreter, klangblocks (`KBExportStmt` +
-  round-trip), feature catalog, and language docs all updated. Existing
+  auto-export under same name). Parser, AST, interpreter, feature catalog, and language docs
+  all updated. Existing
   `export { a, b as c }` form remains. Foundation for Projekt Klangbuch's named-part
   imports across modules.
 

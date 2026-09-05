@@ -12,7 +12,7 @@ new `body()` materials from real instruments instead of hand-tuning every mode b
 
 ## Background — what we have today
 
-The `body()` / `bodyMix()` resonator is a **parametric modal model**: a parallel bank of resonant SVF bandpasses
+The `body()` / `bodyWet()` resonator is a **parametric modal model**: a parallel bank of resonant SVF bandpasses
 (`BodyFilter`), one per mode, mixed over the dry source via `ParallelMixFilter` (floor + peaks). Materials are
 hand-authored tables:
 
@@ -112,5 +112,5 @@ the extractor should land near them for a comparable recording.
 
 ## Related
 
-- Memory: `project_body_resonator` (the `body()`/`bodyMix()`/`vowel()` POC), `feedback_raw_motor`.
+- Memory: `project_body_resonator` (the `body()`/`bodyWet()`/`vowel()` POC), `feedback_raw_motor`.
 - Code: `SprudelVoiceData.resolveBodyModes()`, `BodyFilter`, `ParallelMixFilter`, `FilterDef.Body`.

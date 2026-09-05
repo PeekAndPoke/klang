@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -9,6 +9,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.adsrExpNorm
 import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
+import io.peekandpoke.klang.audio_be.releaseProgressOffset
+import io.peekandpoke.klang.audio_be.releaseProgressDenom
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 
@@ -16,8 +18,9 @@ import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
  * ADSR amplitude envelope combinator.
  *
  * Multiplies the signal by a time-varying gain envelope. Each stage has its
- * own shape curve (Linear/Square/Cube):
+ * own shape curve (Linear/Square/Cube/SCurve/InvSquare/Exponential; default [AdsrCurve.Default] = exp):
  * - Attack:  ramps from 0.0 to 1.0 over [attackSec], shape via [attackCurve]
+ *   (curves: Linear/Square/Cube/SCurve/InvSquare/Exponential — default [AdsrCurve.Default] = exp)
  * - Decay:   ramps from 1.0 to [sustainLevel] over [decaySec], shape via [decayCurve]
  * - Sustain: holds at [sustainLevel] until gate ends
  * - Release: ramps from current level to 0.0 over [releaseSec], shape via [releaseCurve]
@@ -32,9 +35,9 @@ fun Ignitor.adsr(
     decaySec: Ignitor,
     sustainLevel: Ignitor,
     releaseSec: Ignitor,
-    attackCurve: AdsrCurve = AdsrCurve.Square,
-    decayCurve: AdsrCurve = AdsrCurve.Exponential,
-    releaseCurve: AdsrCurve = AdsrCurve.Square,
+    attackCurve: AdsrCurve = AdsrCurve.Default,
+    decayCurve: AdsrCurve = AdsrCurve.Default,
+    releaseCurve: AdsrCurve = AdsrCurve.Default,
     declickSeconds: Ignitor = ParamIgnitor("declickSeconds", 0.0),
     expK: Ignitor = ParamIgnitor("expK", ADSR_EXP_K),
 ): Ignitor = AdsrIgnitor(
@@ -87,7 +90,8 @@ private class AdsrIgnitor(
             val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
             val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
             val releaseFrames = (releaseSecVal * ctx.sampleRate).toInt()
-            val relDenom = if (releaseFrames > 0) releaseFrames.toDouble() else 1.0
+            val relDenom = releaseProgressDenom(releaseFrames.toDouble())
+            val relOffset = releaseProgressOffset(releaseFrames.toDouble())
 
             val attCurve = attackCurve
             val decCurve = decayCurve
@@ -95,7 +99,7 @@ private class AdsrIgnitor(
 
             var absPos = ctx.voiceElapsedFrames
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 if (absPos >= gateEndPos) {
                     if (!releaseStarted) {
@@ -103,7 +107,7 @@ private class AdsrIgnitor(
                         releaseStarted = true
                     }
                     val relPos = absPos - gateEndPos
-                    val p = (relPos / relDenom).coerceAtMost(1.0)
+                    val p = ((relPos + relOffset) / relDenom).coerceAtMost(1.0)
                     val omp = 1.0 - p
                     val shape = when (relCurve) {
                         AdsrCurve.Linear -> omp
@@ -176,9 +180,9 @@ fun Ignitor.adsr(
     decaySec: Double,
     sustainLevel: Double,
     releaseSec: Double,
-    attackCurve: AdsrCurve = AdsrCurve.Square,
-    decayCurve: AdsrCurve = AdsrCurve.Exponential,
-    releaseCurve: AdsrCurve = AdsrCurve.Square,
+    attackCurve: AdsrCurve = AdsrCurve.Default,
+    decayCurve: AdsrCurve = AdsrCurve.Default,
+    releaseCurve: AdsrCurve = AdsrCurve.Default,
     declickSeconds: Double = 0.0,
     expK: Double = ADSR_EXP_K,
 ): Ignitor = adsr(

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -25,6 +25,25 @@ inline fun <T> wireEncodeList(list: List<T>, enc: (T) -> dynamic): dynamic {
 inline fun <T> wireDecodeList(arr: dynamic, dec: (dynamic) -> T): List<T> {
     val n: Int = arr.length.unsafeCast<Int>()
     val out = ArrayList<T>(n)
+    var i = 0
+    while (i < n) {
+        out.add(dec(arr[i]))
+        i++
+    }
+    return out
+}
+
+/** Kotlin Set → JS array, element-encoded. */
+inline fun <T> wireEncodeSet(set: Set<T>, enc: (T) -> dynamic): dynamic {
+    val arr: dynamic = js("([])")
+    for (e in set) arr.push(enc(e))
+    return arr
+}
+
+/** JS array → Kotlin Set, element-decoded (insertion order preserved via LinkedHashSet). */
+inline fun <T> wireDecodeSet(arr: dynamic, dec: (dynamic) -> T): Set<T> {
+    val n: Int = arr.length.unsafeCast<Int>()
+    val out = LinkedHashSet<T>(n)
     var i = 0
     while (i < n) {
         out.add(dec(arr[i]))

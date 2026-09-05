@@ -11,14 +11,152 @@ list: [`FINDINGS.md`](FINDINGS.md) — **this is the list we go through together
 
 | Subsystem                  | Specs verified | Findings | State                                            |
 |----------------------------|---------------:|---------:|--------------------------------------------------|
-| `voices/` (pilot)          |        13 / 13 |       15 | 🟢 **analysis complete** — awaiting joint triage |
+| `voices/` (pilot)          |        13 / 13 |       21 | 🟢 **triage COMPLETE 2026-08-31** — every finding closed, withdrawn, parked or awaiting a maintainer call. Fixed: F3, F5, F6, F7(solo+cut), F8, F10, F11, F12, F13, F15(a), F18, F21. Withdrawn as wrong-when-written: F4, F14(Pedal + compressor), F5(drift), F7("unreached"). Parked to `docs/tasks/future/`: F19, ducking. **Awaiting a decision: F14's `VoiceTestHelpers` bypass, F15(c) GuitarClickHunt runtime, F17(a) `attackSeconds` naming.** |
 | root / lifecycle           |              — |        — | 🔴 not started                                   |
-| `cylinders/` + `katalyst/` |              — |        — | 🔴 not started                                   |
+| `cylinders/` + `katalyst/` |          1 / 11 |        1 | 🟡 **started 2026-08-31** — `KatalystFilterSwap` verified + [F20](FINDINGS.md#f20) closed; 10 katalyst files still unverified |
 | `effects/`                 |              — |        — | 🔴 not started                                   |
 | `filters/`                 |              — |        — | 🔴 not started                                   |
 | `ignitor/`                 |              — |        — | 🔴 not started                                   |
 | platform / audio thread    |              — |        — | 🔴 not started                                   |
 | `master/`                  |              — |        — | 🔴 not started (light pass)                      |
+
+## Triage log
+
+**2026-08-31 — `strip/pitch` cluster, done first because phaseMod part 2 of the block-framing
+workstream is about to change that package and these were its net.**
+
+| Finding | Outcome |
+|---------|---------|
+| F10 inverted glide | ✅ **CLOSED by later work** — `AccelerateSemitoneLawSpec` now kills the mutation. Did not reproduce. |
+| F11 FM 1000× slow | ✅ **FIXED** — re-confirmed live, then given a quantity oracle; the pilot's own mutation is killed. |
+| F12 tautological "disabled" tests | ✅ **FIXED** — positive controls added, two FM tests merged. One half stays unfalsifiable BY DESIGN (a depth-0 `FmRenderer` is a mathematical identity, so the gate is an optimisation, not a behaviour — as [F4](FINDINGS.md#f4)). |
+| F15(b) tremolo/phaser | 🟡 half closed — `TremoloRendererSpec` exists now; `StripPhaserRenderer` still has no behavioural test. |
+
+**Standing method note added by this session:** re-run every finding's mutation before spending a
+triage decision on it. Three of seventeen had moved in the four weeks the list sat unreviewed.
+
+---
+
+**2026-08-31 (second pass) — re-verification sweep over all ten remaining findings.** Static evidence
+only: the maintainer's frontend watcher (`:jsBrowserDevelopmentRun`) was running, so no Gradle, so no
+mutation could be re-run. Every finding whose evidence is a source count, a grep or a structural
+argument was re-checked against the current tree; the four whose evidence is a mutation
+([F3](FINDINGS.md#f3), [F4](FINDINGS.md#f4), [F8](FINDINGS.md#f8), and the measurement half of
+[F17](FINDINGS.md#f17)) had their **anchors** re-checked but still owe a re-run.
+
+| Finding | Re-verification verdict |
+|---------|--------------------------|
+| [F3](FINDINGS.md#f3) | anchor moved `EnvelopeCalc.kt:28` → `:31`, code unchanged. ⏳ mutation S1 not re-run. |
+| [F4](FINDINGS.md#f4) | anchor moved `FilterPipelineBuilder.kt:43-46` → `:47`, guard unchanged. ⏳ mutation S3 not re-run. |
+| [F5](FINDINGS.md#f5) | **CONFIRMED, all three holes.** `FilterModRenderer.kt:34` drift path, `VoiceFactory.toModulator()` at `:430`, Body/Formant exclusion at `:110`. |
+| [F6](FINDINGS.md#f6) | **CONFIRMED exactly — 9 tests**, by a comment-stripped per-test census. |
+| [F7](FINDINGS.md#f7) | **CONFIRMED and worse.** `VoiceScheduler.kt` 407 → **576 lines** (+41%), still zero specs; its two `commonTest` mentions are comments. solo/cut/choke still zero. |
+| [F8](FINDINGS.md#f8) | anchor moved `EnvelopeRenderer.kt:126` → `:147`, clamp unchanged. ⏳ mutation V1 not re-run. |
+| [F13](FINDINGS.md#f13) | **CONFIRMED.** Both `VoiceLifecycleTest` duplicates and all three unverified `VoicePipelineTest` ordering names still present. |
+| [F14](FINDINGS.md#f14) | **1 of 5 bullets WITHDRAWN** (Pedal — wrong when written, a `voices/`-scoped grep phrased suite-wide). Ducking re-checked and it holds as worded. The other three hold. |
+| [F15](FINDINGS.md#f15) | **RECOUNTED 25 → 21, class (a) 13 → 10.** Three "defects" assert through custom infix matchers. Four more hits are helper-delegated false positives. |
+| [F17](FINDINGS.md#f17) | **CONFIRMED open.** The deferred peak-detector RMS smoothing is still only a KDoc note at `Compressor.kt:41`. |
+
+**2026-08-31 (third pass) — [F7](FINDINGS.md#f7)'s zero-coverage half closed, and it paid out
+immediately.** `VoiceSchedulerSoloCutSpec` (11 rows) is the first spec to take the scheduler's own
+logic as its subject. **Its first run found a live production defect**, now filed as
+[F18](FINDINGS.md#f18): `VoiceFactory.buildVoice` takes `cut: Int? = null`, and of its two call sites
+only the sample branch passed it — so **cut/choke groups were silently inert on every synth voice**,
+which could choke sample voices while being immune to being choked themselves. One-argument fix,
+zero shipped songs affected, guarded by the spec's designated killer mutation.
+
+| | |
+|---|---|
+| rows | 11 (6 solo, 4 cut, 1 positive control) |
+| mutations run | 7 |
+| killed | **7** |
+| production defects found | **1** ([F18](FINDINGS.md#f18)) |
+| suite after | `:audio_be:jvmTest` green, `:audio_bridge:jvmTest` green, `:audio_be:compileKotlinJs` green |
+
+**2026-08-31 (fourth pass) — the three owed mutations, re-run against the WHOLE suite.** These were
+the findings whose evidence was a mutation from four weeks earlier that the re-verification could
+only re-anchor.
+
+| Finding | Mutation | Verdict |
+|---------|----------|---------|
+| [F3](FINDINGS.md#f3) | `maxOf(blockStart, startFrame)` → `blockStart` | **survived all 1373 tests** — stands, and is now known to be suite-wide, not file-wide |
+| [F4](FINDINGS.md#f4) | drop the `modulators.isNotEmpty()` guard | **KILLED** by `PipelinePresetSpec` — ❌ finding **WITHDRAWN** |
+| [F8](FINDINGS.md#f8) | disable the negative-envelope clamp | **survived all 1373 tests** — stands |
+
+**F4 was wrong when written, for the same reason F14's Pedal bullet was**, and `PipelinePresetSpec`
+(added 2026-06-29, five weeks *before* the pilot) is what falsifies both: the pilot ran mutation S3
+against `FilterModulationTest` alone and reported "**nothing** guards that it stays". That is a
+file-scoped result stated as a suite-wide absence — the single most common error in this list.
+**Standing rule from here: a mutation verdict is only as wide as the test selection it was run
+against. Run the whole suite, or phrase the finding as file-scoped.**
+
+Also filed this pass: [F19](FINDINGS.md#f19) — `cut(0)` is documented as "no choke" but the engine
+gates on `cut != null`, so group 0 chokes group 0. Found while explaining cut/choke; recorded
+unfixed, it needs a maintainer decision (change the engine, or change the doc).
+
+**2026-08-31 (fifth pass) — [F6](FINDINGS.md#f6) CLOSED.** All nine assertion-free tests in
+`SampleVoiceSpecificTest` and `SynthVoiceTest` now assert, each with a mutation that kills it
+(9 mutations run, 8 killed). Two fixtures were changed because the old ones could not show the
+behaviour the test was named for; three tests were renamed — two because `getBaseFrequency` does not
+exist anywhere in the codebase, and one because a mutation proved its name overstated its guard.
+
+**The one surviving mutation is the interesting result.** `modFreq = freqHz * ratio` → `= ratio`
+survives, because `FmRenderer` uses `freqHz` for two different jobs (the modulator's speed, and the
+depth normalisation `1 + modSignal/freqHz`), and no test separates them. Recorded as an open gap
+rather than papered over by leaving the test's original, wider-sounding name in place.
+
+**Method note earned the hard way this pass:** a mutation harness must restore from a **byte
+snapshot**, never by reverse string-replacement. Restoring `buffer[idxOut] = 0.0` → the lerp
+expression rewrote four *pre-existing* out-of-range branches that legitimately contained the
+replacement string, corrupting `SampleIgnitor.kt`. The byte-exact check caught it and `git checkout`
+repaired it, but a harness that can do that at all is a hazard in a campaign whose whole product is
+trustworthy verdicts.
+
+**2026-08-31 (sixth pass) — the two findings that needed the maintainer, settled.**
+
+| Finding | Outcome |
+|---------|---------|
+| [F17](FINDINGS.md#f17)(b) compressor detector | ✅ **CLOSED BY EAR** — *"at least when currently listening to the songs I cannot hear any issues."* No change; RMS smoothing stays deferred. The measurement stands, the mechanism is still there, and the file records what would make it resurface (a genuinely slow glue compressor). |
+| [F19](FINDINGS.md#f19) `cut(0)` semantics | 📋 **PARKED to design** — *"never used yet, needs some thinking and design, not an on-the-fly judgement."* → [`docs/tasks/future/cut-group-semantics.md`](../tasks/future/cut-group-semantics.md) |
+| [F17](FINDINGS.md#f17)(a) `attackSeconds` is a τ, not a rise time | 🔴 still open — a docs/naming question, not a sound one, and cheap |
+
+**F17(b) is the second time in this campaign that a correct measurement described something that did
+not matter** (the first is the master-limiter pump at the foot of `FINDINGS.md`). Worth stating as a
+rule rather than a coincidence: **a measurement finds the mechanism, an ear decides whether it
+counts.** The audit's job is to hand over a mechanism with its evidence, not to spend a fix on it.
+
+**2026-08-31 (seventh pass) — ducking removed from scope.** Maintainer: *"it is not used yet and was
+never really tested yet, so let us not waste our time right now."* [F14](FINDINGS.md#f14)'s ducking
+bullet is withdrawn to [`docs/tasks/future/ducking-unfinished.md`](../tasks/future/ducking-unfinished.md).
+The observation stands — the DSL, bus effect and DSP each have a spec while the join between them has
+none, the same shape that hid [F18](FINDINGS.md#f18) — but no shipped song uses ducking, so it is
+unfinished work, not a hole in something live. The doc carries the four design questions, of which
+the sharpest is that `duckattack` sets the **release** while `Compressor.attackSeconds` in the same
+directory means something else again.
+
+**2026-08-31 (eighth pass) — [F3](FINDINGS.md#f3) closed from the block-framing side, and a flaky
+test found.** Working block-framing **P4** (the strip renderers) surfaced the answer to F3's open
+question: the `maxOf(blockStart, startFrame)` clamp is **not** redundant with the trailing
+`coerceIn` — the two disagree whenever `attackFrames == 0`, which is the ordinary case for a filter
+or FM envelope. The clamp is the *offset compensation* for the two control-rate renderers that pass
+raw `blockStart`. `MidBlockOnsetControlRateSpec` now guards it, and F3's mutation is red.
+
+**[F21](FINDINGS.md#f21) — and this one is about the audit's own instrument.** A full-suite run went
+red on *"predefined 'dust' produces non-zero output"*, then passed alone. `dust` is a sparse
+stochastic generator: at its default density the spec's 4410-frame block expects ~4 impulses, so
+**P(silence) = e^-4 ≈ 1.8%, a failure about one run in fifty.** Every mutation verdict in this
+campaign is read off this suite, and a random red is indistinguishable from a killed mutant. Fixed by
+driving `dust` at full density (P(silence) ≈ 2e-9) without changing what the row claims.
+
+**Standing rule added:** a stochastic generator asserted over a finite window needs its silence
+probability computed, not assumed.
+
+**The lesson of this pass is the mirror of the first one.** The standing note warned that findings go
+*stale*. This sweep found the other failure: **four claims were wrong the day they were written** —
+three because the census matched one assertion dialect and this repo uses several, one because a grep
+scoped to `voices/` was reported as a suite-wide absence. A finding's evidence needs re-running not
+only because the code moved, but because the *measurement* may never have been sound. Both of the
+tools that misled here were greps standing in for reading the code.
 
 ## Baseline
 

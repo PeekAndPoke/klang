@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -26,6 +26,20 @@ class KlangAudioRendererSpec : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
     // Silent output
     // ═════════════════════════════════════════════════════════════════════════════
+
+    "renderBlock leaves the clock on the NEXT block — the same convention as the live dispatcher" {
+        // Block-framing B1: between renders the clock is the next block to be rendered. The live
+        // dispatcher and this offline renderer must agree, or a voice scheduled between two offline
+        // renders would land one block off from where the same schedule lands live. Review round 1
+        // noted this line had no spec: deleting it was green because offline schedules everything
+        // before block 0 — which is exactly why the two hosts could drift apart unnoticed.
+        val renderer = createRenderer()
+        renderer.clockForTest.cursorFrame shouldBe 0.0
+
+        renderer.renderBlock(cursorFrame = 0.0, out = ShortArray(blockFrames * 2))
+
+        renderer.clockForTest.cursorFrame shouldBe blockFrames.toDouble()
+    }
 
     "renderBlock with no voices produces all-zero output" {
         val renderer = createRenderer()

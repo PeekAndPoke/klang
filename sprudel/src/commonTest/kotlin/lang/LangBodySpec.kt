@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -71,17 +71,17 @@ class LangBodySpec : StringSpec({
         voiceData.filters.filters.size shouldBe 0
     }
 
-    "bodyMix() overrides the dry/wet mix" {
-        val events = note("c3").body("tube").bodyMix(0.6).queryArc(0.0, 1.0)
+    "bodyWet() overrides the dry/wet mix" {
+        val events = note("c3").body("tube").bodyWet(0.6).queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
 
         val bodyFilter = voiceData.filters.filters[0] as FilterDef.Body
         bodyFilter.mix shouldBe 0.6
     }
 
-    "bodyMix() accepts values > 1.0 without clamping (raw — if you want 100, you get 100)" {
+    "bodyWet() passes raw values to the wire (the [0, 1] coercion is the ENGINE's, since C4)" {
         listOf(1.5, 5.0, 100.0).forEach { mix ->
-            val events = note("c3").body("brass").bodyMix(mix).queryArc(0.0, 1.0)
+            val events = note("c3").body("brass").bodyWet(mix).queryArc(0.0, 1.0)
             val bodyFilter = events[0].data.toVoiceData().filters.filters[0] as FilterDef.Body
             bodyFilter.mix shouldBe mix
         }
@@ -97,11 +97,13 @@ class LangBodySpec : StringSpec({
         overridden.floor shouldBe 0.2
     }
 
-    "body params survive the grouped merge (body + bodyMix + bodyFloor)" {
-        val events = note("c3").body("brass").bodyMix(2.0).bodyFloor(0.15).queryArc(0.0, 1.0)
+    "body params survive the grouped merge (body + bodyWet + bodyFloor)" {
+        // The wire carries the raw value; the [0, 1] coercion is the ENGINE's
+        // (ParallelMixFilter, C4) — the surface knob is documented as [0, 1].
+        val events = note("c3").body("brass").bodyWet(0.8).bodyFloor(0.15).queryArc(0.0, 1.0)
         val bodyFilter = events[0].data.toVoiceData().filters.filters[0] as FilterDef.Body
         events[0].data.body shouldBe "brass"
-        bodyFilter.mix shouldBe 2.0
+        bodyFilter.mix shouldBe 0.8
         bodyFilter.floor shouldBe 0.15
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -10,8 +10,8 @@ package io.peekandpoke.klang.audio_be
  * string-based (sprudel / klangscript) and is mapped via [parseDistortionShape].
  *
  * Dispatch at the audio-rate per-sample loop uses [applyDistortionShape], which
- * is `inline` so each `when` case expands to a literal `ClippingFuncs.foo(x)`
- * call — letting the inline shape functions in `ClippingFunctions.kt` actually
+ * is `inline` so each `when` case expands to a literal `ShapingFuncs.foo(x)`
+ * call — letting the inline shape functions in `ShapingFuncs.kt` actually
  * inline. Storing a `(Double) -> Double` function reference would defeat that.
  */
 internal enum class DistortionShape {
@@ -44,7 +44,7 @@ internal fun parseDistortionShape(shape: String): DistortionShape = when (shape.
 
 /**
  * Applies the shape to a single sample. `inline` is load-bearing: it expands
- * the `when` at the call site and inlines each `ClippingFuncs.foo(x)`. Holding
+ * the `when` at the call site and inlines each `ShapingFuncs.foo(x)`. Holding
  * a `(Double) -> Double` function reference instead would force a virtual
  * Function1 dispatch + Double boxing per sample on Kotlin/JS.
  *
@@ -53,20 +53,20 @@ internal fun parseDistortionShape(shape: String): DistortionShape = when (shape.
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun applyDistortionShape(shape: DistortionShape, x: Double): Double = when (shape) {
-    DistortionShape.SOFT -> ClippingFuncs.fastTanh(x)
-    DistortionShape.HARD -> ClippingFuncs.hardClip(x)
-    DistortionShape.GENTLE -> ClippingFuncs.softClip(x) * 2.0
-    DistortionShape.CUBIC -> ClippingFuncs.cubicClip(x)
-    DistortionShape.DIODE -> ClippingFuncs.diodeClip(x)
-    DistortionShape.FOLD -> ClippingFuncs.sineFold(x)
-    DistortionShape.CHEBYSHEV -> ClippingFuncs.chebyshevT3(x)
-    DistortionShape.RECTIFY -> ClippingFuncs.rectify(x)
-    DistortionShape.EXP -> ClippingFuncs.expClip(x)
-    DistortionShape.SOFT_SAT -> ClippingFuncs.softSat(x)
-    DistortionShape.TUBE -> ClippingFuncs.tube(x)
-    DistortionShape.LINEAR_FOLD -> ClippingFuncs.linearFold(x)
-    DistortionShape.ZERO_SQUARE -> ClippingFuncs.zeroSquare(x)
-    DistortionShape.SINE_SHAPER -> ClippingFuncs.sineShaper(x)
-    DistortionShape.ASYM -> ClippingFuncs.asym(x)
-    DistortionShape.STOMP_BOX -> ClippingFuncs.stompBox(x)
+    DistortionShape.SOFT -> ShapingFuncs.fastTanh(x)
+    DistortionShape.HARD -> ShapingFuncs.hardClip(x)
+    DistortionShape.GENTLE -> ShapingFuncs.softClip(x) * 2.0
+    DistortionShape.CUBIC -> ShapingFuncs.cubicClip(x)
+    DistortionShape.DIODE -> ShapingFuncs.diodeClip(x)
+    DistortionShape.FOLD -> ShapingFuncs.sineFold(x)
+    DistortionShape.CHEBYSHEV -> ShapingFuncs.chebyshevT3(x)
+    DistortionShape.RECTIFY -> ShapingFuncs.rectify(x)
+    DistortionShape.EXP -> ShapingFuncs.expClip(x)
+    DistortionShape.SOFT_SAT -> ShapingFuncs.softSat(x)
+    DistortionShape.TUBE -> ShapingFuncs.tube(x)
+    DistortionShape.LINEAR_FOLD -> ShapingFuncs.linearFold(x)
+    DistortionShape.ZERO_SQUARE -> ShapingFuncs.zeroSquare(x)
+    DistortionShape.SINE_SHAPER -> ShapingFuncs.sineShaper(x)
+    DistortionShape.ASYM -> ShapingFuncs.asym(x)
+    DistortionShape.STOMP_BOX -> ShapingFuncs.stompBox(x)
 }

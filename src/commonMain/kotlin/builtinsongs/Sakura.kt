@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val sakuraSong = Song(
     id = "${BuiltInSongs.PREFIX}-synthkura",
     title = "Die Kirschblüte",
-    rpm = 30.0,
+    rpm = 28.0,
     icon = "globe asia",
     code = """
 import * from "stdlib"
@@ -24,15 +24,17 @@ let wait = 14
 let koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(cutoffHz = Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
+      .lowpass(freq = Osc.constant(2800).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
 
 let shaku = Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
-      .highpass(cutoffHz = 300, analog = Osc.slot.analog)
-      .lowpass(cutoffHz = 3800, q = 1.0, analog = Osc.slot.analog)
-      .analog(0.2).vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
+      .lowpass(freq = 3500, q = 1.0, analog = Osc.slot.analog)
+      .highpass(freq = 600, analog = Osc.slot.analog)
+      // NOTE: `.analog(0.2)` was here and INERT (receiver was the Lowpass wrapper). The
+      // filters above still get their own `analog = Osc.slot.analog` saturation.
+      .vibrato(2, Osc.perlin(1).mul(0.15).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
 
@@ -47,14 +49,14 @@ let rim = Osc.sine(800)
 
 let brush = Osc.perlin(30).mul(0.5)
       .plus(Osc.whitenoise().mul(0.3))
-      .highpass(2000).lowpass(8000)
+      .lowpass(12000).highpass(2000)
       .adsr(0.01, 0.08, 0.0, 0.02)
 
 let sub = Osc.sine().lowpass(200)
       .adsr(0.005, 0.4, 0.0, 0.05)
 
 let pad = Osc.supertri(freq = Osc.freq(), voices = 5).analog(5.0)
-      .lowpass(cutoffHz = Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()), q = 2, analog = Osc.slot.analog)
+      .lowpass(freq = Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), q = 3, analog = Osc.slot.analog)
       .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve("scurve")
 
 
@@ -65,8 +67,8 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body("mahogany")
-    .superimpose(fast(2).velocity(0.1).pan(0.3).superimpose(pan(0.7)))
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.55).body("mahogany").pan(0.66) // .struct()
+    .superimpose(fast(2).velocity(0.2).pan(0.2).superimpose(pan(0.8)))
 
   // Shakuhachi
   ,note(`
@@ -77,14 +79,14 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).orbit(1).sound(shaku).slow(14).gain(0.23).pan(perlin.range(0.3, 0.7).slow(8))
-    .lpf(perlin.range(3600, 3800).slow(2)).body("rosewood")
+  `).orbit(1).sound(shaku).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(8)).pan(0.33)
+    .lpf(perlin.range(3800, 4000).slow(2)).body("rosewood")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
   ,note("a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~").orbit(2).sound(kick).gain(0.7).hpf(100)
-  ,note("~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~").orbit(2).sound(rim).gain(0.45)
-  ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").orbit(2).sound(brush).gain(0.35)
+  ,note("~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~").orbit(2).sound(rim).gain(0.45).pan(0.6)
+  ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").orbit(2).sound(brush).gain(0.35).pan(0.4)
 
   // Sub-Bass
   ,note("a1 d2 a1 f1 c2 e1 a1").orbit(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
@@ -92,25 +94,25 @@ stack(
 
   ,stack(
     // Root
-    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.4).hpf(160)
+    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.4).hpf(100)
     // Third (minor/major character)
-    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.7).hpf(280)
+    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.55).hpf(280)
     // Fifth
-    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.2).hpf(400)
+    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.6).hpf(400)
     // Octave
-    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.8).hpf(600)
+    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.3).hpf(600)
     // High third
-    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.3).hpf(800)
+    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.45).hpf(800)
     // High fifth
-    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.6).hpf(1000)
-  ).orbit(4).coarse(3).filterWhen(x => x >= wait * 3).body("tube").bodyMix(0.3)
+    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.7).hpf(1000)
+  ).orbit(4).coarse(2).coarseos(2).filterWhen(x => x >= wait * 3).body("tube").bodyWet(0.3)
 
   // Noise
-  , sound("dust").gain(0.0200).vel(sine.range(0.500, 1.0).slow(21)).lpf(8000)
-  , sound("pink").gain(0.0050).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000)
-  , sound("brown").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
+  , sound("dust!2").gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr("0.1:1:1:0.1")
+  , sound("pink!3").gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr("0.1:1:1:0.1")
+  , sound("brown!4").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr("0.1:1:1:0.1")
  
-).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2").analog(8)
+).roomWet(0.35, 7, 0.75).delayWet(0.3).delaytime(pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
 
 
 

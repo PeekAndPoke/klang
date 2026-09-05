@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -32,6 +32,39 @@ class SprudelDocsSpec : StringSpec({
         seqDoc.category shouldBe "structural"
         seqDoc.getLibrary()?.name shouldBe "sprudel"
         seqDoc.tags shouldContain "sequence"
+    }
+
+    "tag documentation should be registered as an addon" {
+        val tagDoc = KlangDocsRegistry.global.get("tag")
+
+        tagDoc shouldNotBe null
+        tagDoc!!.name shouldBe "tag"
+        tagDoc.category shouldBe "structural"
+        tagDoc.getLibrary()?.name shouldBe "sprudel"
+        tagDoc.tags shouldContain "addon"
+        tagDoc.tags shouldContain "visualization"
+    }
+
+    "tweak documentation should be registered as an addon" {
+        val doc = KlangDocsRegistry.global.get("tweak")
+
+        doc shouldNotBe null
+        doc!!.name shouldBe "tweak"
+        doc.category shouldBe "structural"
+        doc.getLibrary()?.name shouldBe "sprudel"
+        doc.tags shouldContain "addon"
+        doc.tags shouldContain "modifier"
+    }
+
+    "tweaks documentation should be registered as an addon" {
+        val doc = KlangDocsRegistry.global.get("tweaks")
+
+        doc shouldNotBe null
+        doc!!.name shouldBe "tweaks"
+        doc.category shouldBe "structural"
+        doc.getLibrary()?.name shouldBe "sprudel"
+        doc.tags shouldContain "addon"
+        doc.tags shouldContain "modifier"
     }
 
     "seq should have 3 variants" {

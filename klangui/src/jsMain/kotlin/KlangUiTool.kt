@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -31,6 +31,7 @@ data class KlangUiToolContext(
     val onCommit: (String) -> Unit,
     val onCancel: () -> Unit,
     val attrs: TypedAttributes = TypedAttributes.empty,
+    val call: KlangUiToolCall? = null,
 ) {
     companion object {
         /** Typed key for the raw playback signal stream. UI components filter what they need. */
@@ -40,6 +41,27 @@ data class KlangUiToolContext(
         val BaseSourceLocation = TypedKey<SourceLocation>("BaseSourceLocation")
     }
 }
+
+
+/**
+ * Whole-call view for tools that edit several parameters of the SAME call at once
+ * (the MultiParam tier of the two-tool-tier design, see docs/plans/filter-unification.md C0).
+ *
+ * Present on [KlangUiToolContext.call] when the editor could resolve the host call's full
+ * argument list. Scalar tools ignore it; compound tools (filter, adsr, compressor, ...) read
+ * their sibling parameters from [args] and commit the whole argument list at once.
+ *
+ * @param paramNames   Declared user-facing parameter names, in declaration order.
+ * @param args         Current raw source text per parameter index; null = not provided.
+ * @param onCommitCall Commit the ENTIRE argument list. Pass the new per-param texts
+ *                     (null = omit). The editor serializes a contiguous prefix as positional
+ *                     args, anything with gaps as all-named args (KlangScript forbids mixing).
+ */
+data class KlangUiToolCall(
+    val paramNames: List<String>,
+    val args: List<String?>,
+    val onCommitCall: (List<String?>) -> Unit,
+)
 
 /**
  * A UI tool that can edit a function argument interactively.
@@ -51,6 +73,13 @@ fun interface KlangUiTool {
     val title: String? get() = null
 
     val iconFn: SemanticIconFn get() = { wrench }
+
+    /**
+     * Inline-popover tier (C0.3): when true AND the tool is [KlangUiToolEmbeddable], the editor
+     * opens it as a small anchored popover with live commits instead of a modal dialog.
+     * Scalar single-value tools (sliders, numeric drags) opt in; whole-call tools stay modal.
+     */
+    val prefersPopover: Boolean get() = false
 
     fun FlowContent.render(ctx: KlangUiToolContext)
 }

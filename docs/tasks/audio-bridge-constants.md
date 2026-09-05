@@ -237,7 +237,7 @@ depths are one of ~35 coefficients still lacking a DSL home, and that doc scopes
 carries §6.1 below as its S0 and the `IgnitorDsl` literal-duplication as its S5 — i.e. §1.1's defect is **still live**
 across ~30 oscillator constants that this task did not touch.
 
-➡️ **The drift ratio itself is owned by `docs/tasks/analog-drift-ratio-tuning.md`** (opened 2026-08-11), which also
+➡️ **The drift ratio itself is owned by `docs/tasks/by-ear/analog-drift-ratio-tuning.md`** (opened 2026-08-11), which also
 records the measurements
 that already constrain the answer. The design fork above is **resolved** there: the depths belong on an engine-level
 tuning object, not on `IgnitorDsl` per-instance — `engine-tuning-profile.md` Part A.3 had already made that call and it
@@ -288,8 +288,8 @@ weighted `.mul()` sums ≤ 1 or by a hard-bounded waveshaper:
 - `Sakura.kt:57` (pad) — the one tap the super-osc gain renormalisation (`Ignitors.kt:742`, Σ|gain| = 1) actually
   bounds.
 - `ATruthWorthLyingFor.kt:48,49` — bounded by `.distort(≈3.6–4.0, "tube", 8)` sitting immediately upstream of the
-  filter; `ClippingFuncs.tube` ≤ 1.0 plus the `softCap` at `IgnitorEffects.kt:109` (guarded by
-  `ClippingFuncsBoundsSpec.kt:148`). Voice-gain renormalisation is a waveshaper away and contributes nothing here.
+  filter; `ShapingFuncs.tube` ≤ 1.0 plus the `softCap` at `IgnitorEffects.kt:109` (guarded by
+  `ShapingFuncsBoundsSpec.kt:148`). Voice-gain renormalisation is a waveshaper away and contributes nothing here.
 
 ⚠️ **Nothing in the engine enforces any of this.** An added `.mul(3)` or `.drive()` ahead of an ignitor lowpass walks
 straight into the +0.3…+0.7 dB region while leaving every sentence above still true. An earlier draft credited the
@@ -297,8 +297,11 @@ super-osc renormalisation alone, which reads as a guarantee and is not one.
 
 ⚠️ **The first survey of this missed `ATruthWorthLyingFor` entirely** (its `Osc.freq()` nests a paren, defeating a regex
 sweep) — and that is the song sitting at the top of the analog range. The conclusion survived, but a sound change was
-justified on a one-song survey. Grep for `.lowpass(`/`.highpass(` with a third positional argument, not for a literal
-`analog =`.
+justified on a one-song survey. Sweep `.lowpass(`/`.highpass(` with a paren-depth-aware scan, not a regex, and not for a literal
+`analog =`. **Updated 2026-08-24 (C5):** the third positional argument is now `passes`; `analog` is the
+FOURTH, and because KlangScript forbids mixing positional and named arguments, real analog call sites are
+either all-named or four-positional. A survey that still flags "third positional" reads every cascade as a
+high-analog voice and misses the actual ones.
 
 Stability also moves the *safe* way. The diode-pair polynomial dips negative (`tCfb = -0.0034` at `ic1eq ≈ -1.55`), so
 the **instantaneous** `kEff` can go negative once `k < 2·driveScale·0.0034`. Halving the drive **doubles** the Q at

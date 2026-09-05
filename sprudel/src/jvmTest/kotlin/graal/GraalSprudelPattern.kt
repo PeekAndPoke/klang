@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -117,7 +117,7 @@ class GraalSprudelPattern(
             value.safeGetMember("unison").safeNumberOrNull()?.let { put("voices", it) }
             value.safeGetMember("spread").safeNumberOrNull()?.let { put("panSpread", it) }
             value.safeGetMember("spread").safeNumberOrNull()?.let { put("spread", it) }
-            value.safeGetMember("warmth").safeNumberOrNull()?.let { put("warmth", it) }
+            value.safeGetMember("onepole").safeNumberOrNull()?.let { put("onepole", it) }
         }.ifEmpty { null }
 
         // ///////////////////////////////////////////////////////////////////////////////////
@@ -436,8 +436,15 @@ class GraalSprudelPattern(
                 it.loopEnd = null
                 // Voice / Singing
                 it.vowel = vowel
-                // Dynamics / Compression
-                it.compressor = compressor
+                // Dynamics / Compression (JS oracle emits the legacy compound string; split it,
+                // keeping the OLD activation gate: only fully-parsable 5- or 2-slot forms count)
+                val compParts = compressor?.split(":")?.mapNotNull { d -> d.toDoubleOrNull() }
+                    ?.takeIf { parts -> parts.size == 5 || parts.size == 2 }
+                it.compressorThreshold = compParts?.getOrNull(0)
+                it.compressorRatio = compParts?.getOrNull(1)
+                it.compressorKnee = compParts?.getOrNull(2)
+                it.compressorAttack = compParts?.getOrNull(3)
+                it.compressorRelease = compParts?.getOrNull(4)
                 // Playback control
                 it.solo = null
                 // Value

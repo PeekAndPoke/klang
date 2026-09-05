@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 
 /**
@@ -201,5 +202,107 @@ class OrbitCleanupTest : StringSpec({
 
         // Should remain active
         cylinder.isActive shouldBe true
+    }
+
+    "an inaudibly-charged delay ring is cleared LITERALLY on deactivation" {
+        // hasTail() scans the WHOLE ring, so a charged drain keeps the orbit alive until the
+        // countdown\'s own terminal reset (old copies sit in the ring at full amplitude until the
+        // head wraps). The reachable case for the resetBusEffects wiring is therefore an ACTIVE
+        // delay whose ring only ever held sub-threshold content: the scan frees the orbit while
+        // literal nonzeros remain, and only resetBusEffects cleans those. Review round 2 found
+        // that wiring line unguarded.
+        val cylinder = createTestOrbit()
+
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                delay = Voice.Delay(amount = 1.0, time = 0.02, feedback = 0.4),
+            ),
+            blockStart = 0.0,
+        )
+
+        // Charge QUIETLY: everything in the ring stays below the 1e-5 audibility scan, yet > 0.
+        repeat(4) {
+            cylinder.clear()
+            cylinder.delaySendBuffer.left.fill(0.000005)
+            cylinder.delaySendBuffer.right.fill(0.000005)
+            cylinder.processEffects()
+        }
+
+        cylinder.clear()
+        cylinder.tryDeactivate()
+
+        cylinder.isActive shouldBe false
+        // Literally zero: any residue trips the strict > comparison.
+        cylinder.delay.delayLine!!.hasTail(0.0) shouldBe false
+        // Factory params too, not just the ring: a core-only reset would leave the dead owner's
+        // time for the next life's first non-finite param to inherit (round-2 retrofit).
+        cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.0
+    }
+
+    "an inaudibly-charged reverb network is cleared LITERALLY on deactivation" {
+        // The reverb sibling of the delay row above (reverb drain adoption, review round 1): an
+        // ACTIVE reverb whose combs only ever held sub-threshold content — the audibility scan
+        // frees the orbit while literal nonzeros remain, and only the resetBusEffects wiring
+        // cleans those (the anti-denormal bias guarantees such nonzeros on EVERY reverb orbit,
+        // so this is the normal state, not a corner). Also the row where an Active-state
+        // hasTail must genuinely answer false: a hard-true mutation makes every orbit that ever
+        // had reverb immortal, leaking one PlaybackEngine per stop.
+        val cylinder = createTestOrbit()
+
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                // roomFade set so the reset's `roomFade = null` line has something to clear —
+                // a fresh-default null would make that assert vacuous (review round 3).
+                reverb = Voice.Reverb(room = 1.0, roomSize = 0.5, roomFade = 0.3),
+            ),
+            blockStart = 0.0,
+        )
+
+        // Charge QUIETLY: 4 blocks never wrap a comb (>= 1116 samples), so every written cell
+        // is exactly the send level — below the 1e-5 audibility scan, yet > 0.
+        repeat(4) {
+            cylinder.clear()
+            cylinder.reverbSendBuffer.left.fill(0.000005)
+            cylinder.reverbSendBuffer.right.fill(0.000005)
+            cylinder.processEffects()
+        }
+
+        cylinder.clear()
+        cylinder.tryDeactivate()
+
+        cylinder.isActive shouldBe false
+        // Literally zero: any residue trips the strict > comparison.
+        cylinder.reverb.reverb!!.hasTail(0.0) shouldBe false
+        // Factory params too, not just the buffers: a network-only `reverb.reverb.reset()`
+        // passes the buffer assert while the dead owner's room survives into the next life
+        // (review round 2).
+        cylinder.reverb.reverb!!.roomSize shouldBe 0.0
+        cylinder.reverb.reverb!!.roomFade shouldBe null
+    }
+
+    "a draining self-oscillating delay with an EMPTY ring does not pin the orbit" {
+        val cylinder = createTestOrbit()
+
+        // Owner A configures a self-oscillating delay but never sends into it (amount 0).
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                delay = Voice.Delay(amount = 0.0, time = 0.5, feedback = 1.2),
+            ),
+            blockStart = 0.0,
+        )
+
+        // A lapses; a no-delay owner takes over. The ring never held anything, so the off-config
+        // lands in Off directly (the silent-window check outranks the |fb| >= 1 sentinel).
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(),
+            blockStart = 2.0 * blockFrames,
+        )
+
+        // Ring empty, mix silent: the orbit must free itself. Review round 1 found this shape
+        // pinning the cylinder forever (and through anyActive -> hasOwnSound -> isIdle leaking
+        // one whole PlaybackEngine per stop); the configure-door peak check is what closes it.
+        cylinder.tryDeactivate()
+
+        cylinder.isActive shouldBe false
     }
 })

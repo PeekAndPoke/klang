@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -41,7 +41,7 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * @param amount The control value to use for gain.
- * @param-tool amount SprudelGainSequenceEditor
+ * @param-tool amount SprudelGainEditor, SprudelGainSequenceEditor
  *
  * @category dynamics
  * @tags gain, volume, amplitude, dynamics
@@ -115,7 +115,7 @@ private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * ```
  *
  * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
- * @param-tool amount SprudelPanSequenceEditor
+ * @param-tool amount SprudelPanEditor, SprudelPanSequenceEditor
  *
  * @category dynamics
  * @tags pan, stereo, panning, position
@@ -304,7 +304,10 @@ private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 /**
  * Sets the post-gain (applied after voice processing) for each event in the pattern.
  *
- * Unlike `gain` which is applied before synthesis, `postgain` is a final output multiplier.
+ * `postgain` and `gain` are both output multipliers applied at the voice output (SendRenderer),
+ * so on a single voice they do the same arithmetic. The difference is what else touches them:
+ * `gain` is scaled by `velocity` and by the mute/solo/fade multiplier, while `postgain` is not.
+ * So `gain` is the per-note, performable level and `postgain` is the line's own final trim.
  *
  * ```KlangScript(Playable)
  * s("bd sd").postgain(1.5)                    // amplify after processing
@@ -364,15 +367,64 @@ fun PatternMapperFn.postgain(amount: PatternLike? = null, callInfo: CallInfo? = 
 
 // -- compressor() / comp() --------------------------------------------------------------------------------------------
 
-private val compressorMutation = voiceSetter { compressor = it?.toString() }
+private val compressorThresholdMutation = voiceSetter {
+    compressorThreshold = it?.toString()?.toDoubleOrNull() ?: compressorThreshold
+}
 
-private fun applyCompressor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args, compressorMutation)
+private val compressorRatioMutation = voiceSetter {
+    compressorRatio = it?.toString()?.toDoubleOrNull() ?: compressorRatio
+}
+
+private val compressorKneeMutation = voiceSetter {
+    compressorKnee = it?.toString()?.toDoubleOrNull() ?: compressorKnee
+}
+
+private val compressorAttackMutation = voiceSetter {
+    compressorAttack = it?.toString()?.toDoubleOrNull() ?: compressorAttack
+}
+
+private val compressorReleaseMutation = voiceSetter {
+    compressorRelease = it?.toString()?.toDoubleOrNull() ?: compressorRelease
+}
+
+private fun applyCompressorThreshold(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorThresholdMutation) { src, ctrl ->
+        src.compressorThreshold = ctrl.compressorThreshold ?: src.compressorThreshold
+        src
+    }
+}
+
+private fun applyCompressorRatio(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorRatioMutation) { src, ctrl ->
+        src.compressorRatio = ctrl.compressorRatio ?: src.compressorRatio
+        src
+    }
+}
+
+private fun applyCompressorKnee(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorKneeMutation) { src, ctrl ->
+        src.compressorKnee = ctrl.compressorKnee ?: src.compressorKnee
+        src
+    }
+}
+
+private fun applyCompressorAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorAttackMutation) { src, ctrl ->
+        src.compressorAttack = ctrl.compressorAttack ?: src.compressorAttack
+        src
+    }
+}
+
+private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, compressorReleaseMutation) { src, ctrl ->
+        src.compressorRelease = ctrl.compressorRelease ?: src.compressorRelease
+        src
+    }
 }
 
 /**
- * Sets dynamic range compression parameters as a colon-separated string
- * `"threshold:ratio:knee:attack:release"`.
+ * Sets dynamic range compression parameters. Each parameter is independent and patternable;
+ * omitted parameters use the classic defaults in the engine.
  *
  * **Threshold:** The volume level (in decibels) at which compression starts.
  * - Logic: Signals above this level are attenuated.
@@ -399,140 +451,170 @@ private fun applyCompressor(source: SprudelPattern, args: List<SprudelDslArg<Any
  *
  * | Use Case          | Configuration        | Description                                                                              |
  * | ----------------- | -------------------- | ---------------------------------------------------------------------------------------- |
- * | Gentle Leveling   | `-15:2:6:0.01:0.2`   | Low ratio and soft knee to subtly even out a melody or pad.                              |
- * | Punchy Drums      | `-20:4:3:0.03:0.1`   | Slightly slower attack to let the drum "hit" (transient) pass before squeezing the tail. |
- * | Brickwall Limiter | `-2:40:0:0.001:0.05` | High ratio and instant attack to prevent any signal from clipping above -2dB.            |
- * | Heavy Squeeze     | `-30:8:2:0.005:0.1`  | Low threshold and high ratio for that "pumping" aggressive sound.                        |
+ * | Gentle Leveling   | `(-15, 2, 6, 0.01, 0.2)`   | Low ratio and soft knee to subtly even out a melody or pad.                              |
+ * | Punchy Drums      | `(-20, 4, 3, 0.03, 0.1)`   | Slightly slower attack to let the drum "hit" (transient) pass before squeezing the tail. |
+ * | Brickwall Limiter | `(-2, 40, 0, 0.001, 0.05)` | High ratio and instant attack to prevent any signal from clipping above -2dB.            |
+ * | Heavy Squeeze     | `(-30, 8, 2, 0.005, 0.1)`  | Low threshold and high ratio for that "pumping" aggressive sound.                        |
  *
  * ```KlangScript(Playable)
- * s("bd sd").compressor("-20:4:3:0.03:0.1")  // standard compression
+ * s("bd sd").compressor(-20, 4, 3, 0.03, 0.1)  // standard compression
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * s("bd*4").compressor("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>")   // alternate settings
  * ```
  *
  * ```KlangScript(Playable)
  * // Shorthand: only threshold and ratio (defaults: knee=6.0, attack=0.003, release=0.1)
- * s("hh*8").compressor("-15:4")
+ * s("hh*8").compressor(-15, 4)
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  *
- * @param-tool params SprudelCompressorSequenceEditor
- * @param-sub params threshold Level in dB above which compression starts (e.g. -20)
- * @param-sub params ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold)
- * @param-sub params knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft)
- * @param-sub params attack How quickly compression engages, in seconds (e.g. 0.003)
- * @param-sub params release How quickly compression releases, in seconds (e.g. 0.1)
+ * @param-tool threshold SprudelCompressorEditor, SprudelCompressorSequenceEditor
  * @alias comp
  * @category dynamics
  * @tags compressor, comp, compression, threshold, ratio, dynamics
  */
 @KlangScript.Function
-fun SprudelPattern.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyCompressor(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+fun SprudelPattern.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    var p = this
+    if (threshold != null) p = applyCompressorThreshold(p, listOf<Any?>(threshold).asSprudelDslArgs(callInfo?.forParam(0)))
+    if (ratio != null) p = applyCompressorRatio(p, listOf<Any?>(ratio).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (knee != null) p = applyCompressorKnee(p, listOf<Any?>(knee).asSprudelDslArgs(callInfo?.forParam(2)))
+    if (attack != null) p = applyCompressorAttack(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(3)))
+    if (release != null) p = applyCompressorRelease(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(4)))
+    return p
+}
 
 /**
  * Parses this string as a pattern and sets dynamic range compression parameters.
  *
  * ```KlangScript(Playable)
- * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * s("bd*4").compressor("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>")   // alternate settings
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun String.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(params, callInfo)
+fun String.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(threshold, ratio, knee, attack, release, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
  *
  * ```KlangScript(Playable)
- * s("bd*4").apply(compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
+ * s("bd*4").apply(compressor("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>"))   // alternate settings
  * ```
 
  */
 @KlangScript.Function
-fun compressor(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.compressor(params, callInfo) }
+fun compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets compressor parameters after the previous mapper.
  *
  * ```KlangScript(Playable)
- * s("bd*4").apply(compressor("-20:4:3:0.03:0.1").gain(0.8))  // compress + gain chained
+ * s("bd*4").apply(compressor(-20, 4, 3, 0.03, 0.1).gain(0.8))  // compress + gain chained
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun PatternMapperFn.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.compressor(params, callInfo) }
+fun PatternMapperFn.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 /**
- * Alias for [compressor]. Sets dynamic range compression parameters as a colon-separated string
- * `"threshold:ratio:knee:attack:release"`.
+ * Alias for [compressor]. Sets dynamic range compression parameters; each parameter is
+ * independent and patternable.
  *
  * ```KlangScript(Playable)
- * s("bd sd").comp("-20:4:3:0.01:0.3")                        // standard compression
+ * s("bd sd").comp(-20, 4, 3, 0.01, 0.3)                        // standard compression
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * s("bd*4").comp("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>")   // alternate settings
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  *
- * @param-tool params SprudelCompressorSequenceEditor
+ * @param-tool threshold SprudelCompressorEditor, SprudelCompressorSequenceEditor
  * @alias compressor
  * @category dynamics
  * @tags comp, compressor, compression, threshold, ratio, dynamics
  */
 @KlangScript.Function
-fun SprudelPattern.comp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.compressor(params, callInfo)
+fun SprudelPattern.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.compressor(threshold, ratio, knee, attack, release, callInfo)
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
  *
  * ```KlangScript(Playable)
- * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * s("bd*4").comp("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>")   // alternate settings
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun String.comp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(params, callInfo)
+fun String.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(threshold, ratio, knee, attack, release, callInfo)
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
  *
  * ```KlangScript(Playable)
- * s("bd*4").apply(comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
+ * s("bd*4").apply(comp("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>"))   // alternate settings
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun comp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.compressor(params, callInfo) }
+fun comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 /**
  * Alias for [compressor]. Creates a chained [PatternMapperFn] that sets compressor parameters after the previous
  * mapper.
  *
  * ```KlangScript(Playable)
- * s("bd*4").apply(comp("-20:4:3:0.03:0.1").gain(0.8))  // compress + gain chained
+ * s("bd*4").apply(comp(-20, 4, 3, 0.03, 0.1).gain(0.8))  // compress + gain chained
  * ```
  *
- * @param params The compression parameters as a colon-separated string.
+ * @param threshold Level in dB above which compression starts (e.g. -20).
+ * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
+ * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
+ * @param attack How quickly compression engages, in seconds (e.g. 0.003).
+ * @param release How quickly compression releases, in seconds (e.g. 0.1).
  */
 @KlangScript.Function
-fun PatternMapperFn.comp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.compressor(params, callInfo) }
+fun PatternMapperFn.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 // -- unison() / uni() -------------------------------------------------------------------------------------------------
 
@@ -545,15 +627,15 @@ private fun applyUnison(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 /**
  * Sets the number of unison voices for oscillator stacking effects (e.g. supersaw).
  *
- * Higher values produce a thicker, chorus-like sound. Use with `detune` and `spread`
- * to control the detuning and panning spread of the voices.
+ * Higher values produce a thicker, chorus-like sound. Use with `spread` to set how far
+ * apart the stacked voices are detuned (in semitones).
  *
  * ```KlangScript(Playable)
  * note("c3").s("supersaw").unison(5)               // 5 stacked sawtooth oscillators
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").unison("<3 6 10 16>").detune(0.3)  // unison pattern
+ * note("c3 e3 g3").s("supersaw").unison("<3 6 10 16>").spread(0.3)  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -570,7 +652,7 @@ fun SprudelPattern.unison(voices: PatternLike? = null, callInfo: CallInfo? = nul
  * Parses this string as a pattern and sets the number of unison voices.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").unison("<1 5 10 16>").detune(0.3).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").unison("<1 5 10 16>").spread(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -583,7 +665,7 @@ fun String.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).spread(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -596,7 +678,7 @@ fun unison(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3").s("supersaw").apply(unison(5).detune(0.3))  // unison + detune chained
+ * note("c3").s("supersaw").apply(unison(5).spread(0.3))  // unison + spread chained
  * ```
  *
  * @param voices The number of unison voices.
@@ -613,7 +695,7 @@ fun PatternMapperFn.unison(voices: PatternLike? = null, callInfo: CallInfo? = nu
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").uni("<1 5 10 16>").detune(0.3)  // unison pattern
+ * note("c3 e3 g3").s("supersaw").uni("<1 5 10 16>").spread(0.3)  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -630,7 +712,7 @@ fun SprudelPattern.uni(voices: PatternLike? = null, callInfo: CallInfo? = null):
  * Alias for [unison]. Parses this string as a pattern and sets the number of unison voices.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").detune(0.3).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").spread(0.3).note()  // unison pattern
  * ```
  */
 @KlangScript.Function
@@ -641,7 +723,7 @@ fun String.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).spread(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -655,7 +737,7 @@ fun uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperF
  * mapper.
  *
  * ```KlangScript(Playable)
- * note("c3").s("supersaw").apply(uni(5).detune(0.3))  // unison + detune chained
+ * note("c3").s("supersaw").apply(uni(5).spread(0.3))  // unison + spread chained
  * ```
  *
  * @param voices The number of unison voices.
@@ -1266,80 +1348,88 @@ fun PatternMapperFn.release(time: PatternLike? = null, callInfo: CallInfo? = nul
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
-private val adsrMutation = voiceSetter {
-    val parts = it?.toString()?.split(":")
-        ?.mapNotNull { d -> d.toDoubleOrNull() } ?: emptyList()
-
-    attack = parts.getOrNull(0) ?: attack
-    decay = parts.getOrNull(1) ?: decay
-    sustain = parts.getOrNull(2) ?: sustain
-    release = parts.getOrNull(3) ?: release
-}
-
-private fun applyAdsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._applyControlFromParams(args, adsrMutation) { src, ctrl ->
-        src.attack = ctrl.attack ?: src.attack
-        src.decay = ctrl.decay ?: src.decay
-        src.sustain = ctrl.sustain ?: src.sustain
-        src.release = ctrl.release ?: src.release
-        src
-    }
-}
-
 /**
- * Sets all four ADSR envelope parameters at once via a colon-separated string
- * `"attack:decay:sustain:release"`.
+ * Sets the four ADSR envelope parameters. Each parameter is independent and patternable;
+ * omitted parameters keep their previous values.
  *
- * Each field is a number: attack/decay/release in seconds, sustain in 0–1 range.
- * Missing trailing fields keep their previous values.
+ * attack/decay/release are seconds, sustain is a 0-1 level.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("sine").adsr("0.01:0.2:0.7:0.5")          // standard ADSR
+ * note("c3 e3 g3").s("sine").adsr(0.01, 0.2, 0.7, 0.5)          // standard ADSR
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>")     // alternate envelopes
+ * note("c3*4").adsr("<0.01 0.5>", "<0.1 0.5>", "<0.5 0.8>", "<0.2 1.0>")  // alternate envelopes
  * ```
  *
- * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
- * @param-tool params SprudelAdsrSequenceEditor
- * @param-sub params attack Attack time in seconds — how quickly the note rises from silence to full volume
- * @param-sub params decay Decay time in seconds — how quickly the volume falls from peak to sustain level
- * @param-sub params sustain Sustain level (0–1) — the volume held while the note is pressed
- * @param-sub params release Release time in seconds — how long the note takes to fade to silence after note-off
+ * @param attack Attack time in seconds — how quickly the note rises from silence to full volume.
+ * @param decay Decay time in seconds — how quickly the volume falls from peak to sustain level.
+ * @param sustain Sustain level (0–1) — the volume held while the note is pressed.
+ * @param release Release time in seconds — how long the note takes to fade to silence after note-off.
+ * @param-tool attack SprudelAdsrEditor, SprudelAdsrSequenceEditor
  *
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope
  */
 @KlangScript.Function
-fun SprudelPattern.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyAdsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+fun SprudelPattern.adsr(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern {
+    var p = this
+    if (attack != null) p = p.attack(attack, callInfo?.forParam(0))
+    if (decay != null) p = p.decay(decay, callInfo?.forParam(1))
+    if (sustain != null) p = p.sustain(sustain, callInfo?.forParam(2))
+    if (release != null) p = p.release(release, callInfo?.forParam(3))
+    return p
+}
 
 /**
- * Parses this string as a pattern and sets all ADSR envelope parameters.
+ * Parses this string as a pattern and sets the ADSR envelope parameters.
  *
  * ```KlangScript(Playable)
- * "c3*4".adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>").note()    // alternate envelopes
+ * "c3*4".adsr(0.01, 0.1, 0.5, 0.2).note()
  * ```
  *
- * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ * @param attack Attack time in seconds.
+ * @param decay Decay time in seconds.
+ * @param sustain Sustain level (0–1).
+ * @param release Release time in seconds.
  */
 @KlangScript.Function
-fun String.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).adsr(params, callInfo)
+fun String.adsr(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).adsr(attack, decay, sustain, release, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets all ADSR envelope parameters for each event.
+ * Creates a [PatternMapperFn] that sets the ADSR envelope parameters for each event.
  *
  * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>"))  // alternate envelopes
+ * note("c3*4").s("sine").apply(adsr(0.01, 0.1, 0.5, 0.2))
  * ```
  *
- * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ * @param attack Attack time in seconds.
+ * @param decay Decay time in seconds.
+ * @param sustain Sustain level (0–1).
+ * @param release Release time in seconds.
  */
 @KlangScript.Function
-fun adsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.adsr(params, callInfo) }
+fun adsr(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    { p -> p.adsr(attack, decay, sustain, release, callInfo) }
 
 // -- ADSR curves ------------------------------------------------------------------------------------------------------
 
@@ -1353,20 +1443,34 @@ private fun parseAdsrCurveName(name: String?): AdsrCurve? = when (name?.trim()?.
     else -> null
 }
 
-private val adsrCurvesMutation = voiceSetter {
-    val parts = it?.toString()?.split(":") ?: emptyList()
-    val a = parts.getOrNull(0)?.let(::parseAdsrCurveName)
-    val d = parts.getOrNull(1)?.let(::parseAdsrCurveName)
-    val r = parts.getOrNull(2)?.let(::parseAdsrCurveName)
-    attackCurve = a ?: attackCurve
-    decayCurve = d ?: decayCurve
-    releaseCurve = r ?: releaseCurve
+private val attackCurveMutation = voiceSetter {
+    attackCurve = parseAdsrCurveName(it?.toString()) ?: attackCurve
 }
 
-private fun applyAdsrCurves(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._applyControlFromParams(args, adsrCurvesMutation) { src, ctrl ->
+private val decayCurveMutation = voiceSetter {
+    decayCurve = parseAdsrCurveName(it?.toString()) ?: decayCurve
+}
+
+private val releaseCurveMutation = voiceSetter {
+    releaseCurve = parseAdsrCurveName(it?.toString()) ?: releaseCurve
+}
+
+private fun applyAttackCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, attackCurveMutation) { src, ctrl ->
         src.attackCurve = ctrl.attackCurve ?: src.attackCurve
+        src
+    }
+}
+
+private fun applyDecayCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, decayCurveMutation) { src, ctrl ->
         src.decayCurve = ctrl.decayCurve ?: src.decayCurve
+        src
+    }
+}
+
+private fun applyReleaseCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, releaseCurveMutation) { src, ctrl ->
         src.releaseCurve = ctrl.releaseCurve ?: src.releaseCurve
         src
     }
@@ -1391,9 +1495,9 @@ private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?
 }
 
 /**
- * Sets per-stage ADSR shape curves via a colon-separated string `"attack:decay:release"`.
- * Empty/missing parts leave the corresponding curve untouched — e.g. `"::scurve"` changes
- * only the release.
+ * Sets per-stage ADSR shape curves. Each stage is an independent parameter; omitted
+ * stages keep their current curve — e.g. `adsrCurves(release = "scurve")` changes only
+ * the release.
  *
  * Available curves (aliases in parentheses):
  *  - `linear` (`lin`) — straight ramp.
@@ -1405,40 +1509,83 @@ private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?
  *    gently into the endpoint.
  *  - `exponential` (`exp`, `expo`) — a true exponential (convex, long tail).
  *
- * Defaults when unset: attack `square`, decay `exponential`, release `square`.
+ * Default when unset: `exp` on EVERY stage — the engine-wide default on every door
+ * (maintainer decision, 2026-08-24).
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurves("square:exponential:scurve")
+ * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).adsrCurves("square", "exponential", "scurve")
  * ```
  *
- * @param params Curve names separated by `:` — e.g. `"square:exponential:scurve"`. Empty parts keep the current curve.
+ * @param attack Curve name for the attack stage. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
  *
  * @category dynamics
  * @tags adsr, curve, envelope, shape
  */
 @KlangScript.Function
-fun SprudelPattern.adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyAdsrCurves(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+fun SprudelPattern.adsrCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern {
+    var p = this
+    if (attack != null) p = applyAttackCurve(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(0)))
+    if (decay != null) p = applyDecayCurve(p, listOf<Any?>(decay).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (release != null) p = applyReleaseCurve(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(2)))
+    return p
+}
 
 /**
  * Parses this string as a pattern and sets per-stage ADSR shape curves.
  *
- * @param params Curve names separated by `:` — `linear` / `square` / `cube` / `scurve` /
- *   `invsquare` / `exponential` per stage. Empty parts keep the current curve.
+ * @param attack Curve name for the attack stage — `linear` / `square` / `cube` / `scurve` /
+ *   `invsquare` / `exponential`. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
  */
 @KlangScript.Function
-fun String.adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).adsrCurves(params, callInfo)
+fun String.adsrCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).adsrCurves(attack, decay, release, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets per-stage ADSR shape curves for each event.
  *
- * @param params Curve names separated by `:` — `linear` / `square` / `cube` / `scurve` /
- *   `invsquare` / `exponential` per stage. Empty parts keep the current curve.
+ * @param attack Curve name for the attack stage — `linear` / `square` / `cube` / `scurve` /
+ *   `invsquare` / `exponential`. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
  */
 @KlangScript.Function
-fun adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.adsrCurves(params, callInfo) }
+fun adsrCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    { p -> p.adsrCurves(attack, decay, release, callInfo) }
+
+/**
+ * Creates a chained [PatternMapperFn] that sets per-stage ADSR shape curves after the previous mapper.
+ *
+ * @param attack Curve name for the attack stage. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
+ */
+@KlangScript.Function
+fun PatternMapperFn.adsrCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.chain { p -> p.adsrCurves(attack, decay, release, callInfo) }
 
 /**
  * Sets the same ADSR shape curve on all three stages (attack, decay, release).
@@ -1447,7 +1594,7 @@ fun adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): Pattern
  * `adsrCurves` docs for the aliases and the shape of each).
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurve("scurve")
+ * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).adsrCurve("scurve")
  * ```
  *
  * @param params Curve name — `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential`.
@@ -1482,14 +1629,23 @@ fun adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): PatternM
  * Creates a chained [PatternMapperFn] that sets all ADSR parameters after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(gain(0.8).adsr("0.01:0.2:0.7:0.5"))  // gain + adsr chained
+ * note("c3*4").s("sine").apply(gain(0.8).adsr(0.01, 0.2, 0.7, 0.5))  // gain + adsr chained
  * ```
  *
- * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ * @param attack Attack time in seconds.
+ * @param decay Decay time in seconds.
+ * @param sustain Sustain level (0–1).
+ * @param release Release time in seconds.
  */
 @KlangScript.Function
-fun PatternMapperFn.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.adsr(params, callInfo) }
+fun PatternMapperFn.adsr(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.chain { p -> p.adsr(attack, decay, sustain, release, callInfo) }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
@@ -1516,7 +1672,7 @@ private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").orbit(2).room(0.8).roomsize(4)  // melodic line on orbit 2 with reverb
+ * note("c3 e3").orbit(2).roomWet(0.8).roomsize(4)  // melodic line on orbit 2 with reverb
  * ```
  *
  * @param index The orbit index to route events to.
@@ -1576,7 +1732,7 @@ fun PatternMapperFn.orbit(index: PatternLike? = null, callInfo: CallInfo? = null
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").o(2).room(0.8)          // melodic line on orbit 2 with reverb
+ * note("c3 e3").o(2).roomWet(0.8)          // melodic line on orbit 2 with reverb
  * ```
  *
  * @param index The orbit index to route events to.

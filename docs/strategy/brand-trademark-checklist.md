@@ -18,9 +18,9 @@
 
 - **Brand architecture:**
     - **`Klang.art`** = the **consumer-facing / product / company** name (incl. `Klang.art GmbH`).
-    - **`Motör`** = the **engine soul, behind glass, dev-facing** (Cylinder, Ignitor, Katalyst). Stays **unregistered**.
-    - Engine reads as **"Klangmotör by Klang.art"** (renamed from "Klang Audio Motör" 2026-08-13; Motör survives
-      as the *trailing, non-dominant* morpheme of the compound; ASCII identifier form `klangmotor` is sanctioned).
+    - **`Motor`** = the **engine soul, behind glass, dev-facing** (Cylinder, Ignitor, Katalyst). Stays **unregistered**.
+    - Engine reads as **"Klangmotor by Klang.art"** (renamed from "Klang Audio Motör" 2026-08-13, de-umlauted to
+      plain **"Klangmotor"** 2026-08-25; Motor survives as the *trailing, non-dominant* morpheme of the compound).
     - Consumer app series = **"Klang Hits #1, #2, #3…"** (NOT "Motör Hits" — see §1).
 - **File the trademark as stylized `Klang.art`** (Class 9 + 41), **not** bare "Klang" (crowded/weak).
 - **File the EUTM before any big public announcement** (EU is first-to-file → announcing invites squatters).
@@ -44,6 +44,9 @@
 - ✅ **Resolution:** consumer apps are **"Klang Hits"**; "Motör" stays as the behind-glass engine metaphor,
   where the collision risk is **much lower** (different lead word "Klang", Motör reads descriptively as
   *motor/engine*, different goods/lane). Still a with-counsel call, but sound.
+- 🆕 **2026-08-25 update:** the umlaut was dropped project-wide; the brand is plain **"Klangmotor" / "Motor"** now.
+  The visual link to Motörhead's signature is gone, which only *lowers* the residual risk described above. §1 stays
+  as the record of why "Motör Hits" was rejected.
 
 ---
 
@@ -153,7 +156,7 @@ squatters; your own disclosure doesn't bar *you*, but it invites *them*):
   when the app-store push is real
 - [ ] Class 42 (SaaS), defensive domain variants, secondary marks (e.g. "Klang Hits")
 - [ ] **Skip Madrid / other countries** until traction justifies it
-- [ ] Standalone `Motör` / `Der Motör` — **likely never file**; keep as the unregistered behind-glass engine metaphor
+- [ ] Standalone `Motor` / `Der Motor` — **likely never file**; keep as the unregistered behind-glass engine metaphor
 
 **Realistic all-in to be properly protected before launch:** ≈ **€1,700–2,500** (GmbH costs separate) —
 potentially **~€900–1,400** if the SME Fund rebate is live.
@@ -165,8 +168,9 @@ potentially **~€900–1,400** if the SME Fund rebate is live.
 - The **"Klang = Kotlin-Lang"** backronym has **zero legal weight** (trademark judges consumer perception, not
   private etymology) — but it's **excellent dev-facing brand lore** for the "behind glass" ethos. Keep it as a
   *story*, not a legal claim.
-- Standing convention "**Motör** with the ö in all user-facing strings" is great for the engine's soul, but note the
-  tension the moment "Motör" would become a **consumer product name** — resolved here by keeping it behind glass.
+- The standing convention "**Motör** with the ö in all user-facing strings" was **retired 2026-08-25**: the brand
+  is plain **"Klangmotor" / "Motor"**. That removes the tension flagged here (the umlaut pointing at Motörhead)
+  outright; the behind-glass positioning still stands on its own merits.
 - Verify `klangart.io` availability; decide Tier-2 buys.
 
 ---

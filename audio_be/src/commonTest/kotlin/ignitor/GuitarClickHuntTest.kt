@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -9,7 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
@@ -106,7 +106,6 @@ class GuitarClickHuntTest : StringSpec({
             voiceDurationFrames = gateFrames,
             gateEndFrame = gateFrames,
             releaseFrames = releaseFrames,
-            voiceEndFrame = totalFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 
@@ -115,8 +114,7 @@ class GuitarClickHuntTest : StringSpec({
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
-            ctx.offset = 0
-            ctx.length = n
+            ctx.updateOffsetAndLength(0, n)
             ctx.voiceElapsedFrames = pos
             ig.generate(tmp, freqHz, ctx)
             for (i in 0 until n) out[pos + i] = tmp[i]
@@ -255,7 +253,7 @@ class GuitarClickHuntTest : StringSpec({
     fun chainWithSources(sourceMix: IgnitorDsl, distortShape: String = "chebyshev"): IgnitorDsl {
         val withBp = sourceMix.bandpass(1000.0, 0.1).plusDsl(lowEndBranch())
         val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-        val distorted = IgnitorDsl.Clip(
+        val distorted = IgnitorDsl.Shape(
             inner = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)),
             shape = distortShape, oversample = 8,
         )
@@ -372,7 +370,7 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(1000.0, 0.1).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val distorted = IgnitorDsl.Clip(
+            val distorted = IgnitorDsl.Shape(
                 inner = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)),
                 shape = shape, oversample = 4,
             )
@@ -407,7 +405,7 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(1000.0, 0.1).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val distorted = IgnitorDsl.Clip(
+            val distorted = IgnitorDsl.Shape(
                 inner = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(d)),
                 shape = "chebyshev", oversample = 8,
             )
@@ -609,13 +607,13 @@ internal fun Ignitor.distortVariant(
                 upstream.generate(work, freqHz, ctx)
 
                 if (amount <= 0.0) {
-                    val end = ctx.offset + ctx.length
+                    val end = ctx.windowEnd
                     for (i in ctx.offset until end) buffer[i] = work[i]
                     return@use
                 }
 
                 val driveGain = 10.0.pow(amount * 1.2)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
 
                 // Pre-shape DC block (PRE_BLOCK only).
                 if (variant == DistortVariant.PRE_BLOCK) {
@@ -623,7 +621,7 @@ internal fun Ignitor.distortVariant(
                         val xi = work[i]
                         val po = xi - px1 + a * py1
                         px1 = xi
-                        py1 = po.flushDenormal()
+                        py1 = po.flushState()
                         work[i] = po
                     }
                 }
@@ -646,7 +644,7 @@ internal fun Ignitor.distortVariant(
                         for (i in ctx.offset until end) {
                             val y = work[i]
                             val out = y - x1 + a * y1
-                            x1 = y; y1 = out.flushDenormal()
+                            x1 = y; y1 = out.flushState()
                             buffer[i] = out
                         }
                     }
@@ -655,7 +653,7 @@ internal fun Ignitor.distortVariant(
                         for (i in ctx.offset until end) {
                             val y = work[i]
                             val out = y - x1 + a * y1
-                            x1 = y; y1 = out.flushDenormal()
+                            x1 = y; y1 = out.flushState()
                             // Soft-cap at ±1: tanh of the DC-blocked signal. Bounds the
                             // 2× overshoot back to ~1, smooth knee → no aliasing introduced.
                             buffer[i] = tanh(out)
@@ -683,7 +681,7 @@ internal fun Ignitor.distortVariant(
                             val xi = work[i]
                             val out = b0 * xi + b1 * bx1 + b2 * bx2 - ar1 * by1 - ar2 * by2
                             bx2 = bx1; bx1 = xi
-                            by2 = by1; by1 = out.flushDenormal()
+                            by2 = by1; by1 = out.flushState()
                             buffer[i] = out
                         }
                     }
@@ -710,11 +708,11 @@ private fun IgnitorDsl.plusD(c: Double): IgnitorDsl = IgnitorDsl.Plus(this, Igni
 private fun IgnitorDsl.plusDsl(other: IgnitorDsl): IgnitorDsl = IgnitorDsl.Plus(this, other)
 
 private fun IgnitorDsl.lowpassMod(cutoff: IgnitorDsl, q: Double): IgnitorDsl =
-    IgnitorDsl.Lowpass(inner = this, cutoffHz = cutoff, q = IgnitorDsl.Constant(q))
+    IgnitorDsl.Lowpass(inner = this, freq = cutoff, q = IgnitorDsl.Constant(q))
 
 /** Mirrors `Osc.distort(amount, "chebyshev", 8)` — `factorToStages(8) = 3` (8x oversample). */
 private fun IgnitorDsl.distortChebyshev8(driveAmount: Double): IgnitorDsl =
-    IgnitorDsl.Clip(
+    IgnitorDsl.Shape(
         inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(driveAmount)),
         shape = "chebyshev",
         oversample = 8,

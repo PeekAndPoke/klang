@@ -1,11 +1,18 @@
 ---
 name: klangmotor-naming-decision
-description: DECIDED 2026-08-13 — the audio engine is "Klangmotör" (ASCII "klangmotor"), replacing "Klang Audio Motör"; reasoning, ruled-out alternatives, and open clearance items
+description: DECIDED 2026-08-13 — the audio engine is "Klangmotor" (spelled with a plain o since 2026-08-25, superseding the original "Klangmotör"), replacing "Klang Audio Motör"; reasoning, ruled-out alternatives, and open clearance items
 metadata:
   type: project
 ---
 
 # Engine renamed to "Klangmotör" — DECIDED 2026-08-13
+
+> **⚠️ SPELLING SUPERSEDED 2026-08-25.** The umlaut was dropped by founder decision: the name is now
+> **Klangmotor**, plain o, everywhere. Reason given: "this is an early name, and somehow carries too much ego."
+> The codebase, docs, whitepaper, licence headers and the whitepaper's ö-highlight were de-umlauted the same day;
+> diary, `docs/history/` and `docs/tasks-archive/` keep the old spelling as a record, as does this memory below.
+> Everything else in this file (the one-word law, the compound reasoning, the ruled-out variants) still stands,
+> and §"why the ö stays" is now **history, not guidance**. Write "Klangmotor" / "Motor" from here on.
 
 **The decision:** The audio engine is called **Klangmotör**. It replaces **"Klang Audio Motör"** everywhere.
 The ASCII spelling **`klangmotor`** is the sanctioned identifier form — for domains, handles, package names, search —

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
@@ -24,10 +25,20 @@ import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
+import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.routing.Router.Companion.router
+import io.peekandpoke.kraft.utils.Vector2D
 import io.peekandpoke.kraft.utils.windowCtrl
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onContextMenu
+import kotlinx.css.Padding
+import kotlinx.css.minWidth
+import kotlinx.css.padding
+import kotlinx.css.px
+import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -76,7 +87,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val maxHighlightsPerEvent: Int,
         /** Returning `true` suppresses the highlight buffer for the current voice event (e.g. while a modal is open). */
         val pauseHighlightsWhen: (() -> Boolean)?,
-        /** Called in addition to the internal highlight buffer — useful for parallel highlight surfaces (e.g. a block editor). */
+        /** Called in addition to the internal highlight buffer, for any parallel highlight surface. */
         val extraVoiceHandler: ((KlangPlaybackSignal.VoicesScheduled.VoiceEvent) -> Unit)?,
         /**
          * Source identity of the file shown in this editor. Highlight events whose
@@ -199,7 +210,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         }
     }
 
-    private fun openTool(toolName: String, toolCtx: KlangUiToolContext, argFrom: Int) {
+    private fun openTool(toolName: String, toolCtx: KlangUiToolContext, argFrom: Int, event: dynamic = null) {
         val tool = KlangUiToolRegistry.get(toolName) ?: return
 
         val baseLoc = offsetToSourceLocation(props.ctrl.state().code, argFrom)
@@ -207,6 +218,49 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
         props.ctrl.playback()?.let { pb ->
             attrs = attrs.plus(KlangUiToolContext.PlaybackVoiceEvents, pb.signals)
+        }
+
+        // Inline-popover tier (C0.3): scalar tools open as a small anchored popover with live
+        // commits; everything else opens in the classic tool modal.
+        val anchorX = (event?.clientX as? Number)?.toDouble()
+        val anchorY = (event?.clientY as? Number)?.toDouble()
+        if (tool.prefersPopover && tool is KlangUiToolEmbeddable && anchorX != null && anchorY != null) {
+            popups.showContextMenu(
+                anchor = Vector2D(anchorX, anchorY),
+                positioning = PopupsManager.Positioning.BottomLeft,
+            ) { handle ->
+                div {
+                    css {
+                        padding = Padding(0.75.rem)
+                        minWidth = 260.px
+                    }
+                    // The popups stage closes ALL popups on any document click — keep clicks
+                    // inside the popover from bubbling there (same trick as the context menu).
+                    onClick { it.stopPropagation() }
+                    onContextMenu { it.stopPropagation() }
+                    tool.apply {
+                        renderEmbedded(
+                            toolCtx.copy(
+                                attrs = attrs,
+                                onCommit = {
+                                    toolCtx.onCommit(it)
+                                    if (props.ctrl.state().isPlaying) props.ctrl.play()
+                                },
+                                onCancel = { handle.close(); toolCtx.onCancel() },
+                                call = toolCtx.call?.let { call ->
+                                    call.copy(
+                                        onCommitCall = {
+                                            call.onCommitCall(it)
+                                            if (props.ctrl.state().isPlaying) props.ctrl.play()
+                                        },
+                                    )
+                                },
+                            )
+                        )
+                    }
+                }
+            }
+            return
         }
 
         modals.show { handle ->
@@ -219,7 +273,15 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                                 toolCtx.onCommit(it)
                                 if (props.ctrl.state().isPlaying) props.ctrl.play()
                             },
-                            onCancel = { handle.close(); toolCtx.onCancel() }
+                            onCancel = { handle.close(); toolCtx.onCancel() },
+                            call = toolCtx.call?.let { call ->
+                                call.copy(
+                                    onCommitCall = {
+                                        call.onCommitCall(it)
+                                        if (props.ctrl.state().isPlaying) props.ctrl.play()
+                                    },
+                                )
+                            },
                         )
                     )
                 }
@@ -240,8 +302,8 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 hoverContent = hoverContent,
                 popups = popups,
                 onNavigate = ::navToDoc,
-                onOpenTool = { toolName, toolCtx, argFrom, _ ->
-                    openTool(toolName = toolName, toolCtx = toolCtx, argFrom = argFrom)
+                onOpenTool = { toolName, toolCtx, argFrom, event ->
+                    openTool(toolName = toolName, toolCtx = toolCtx, argFrom = argFrom, event = event)
                 },
             ).track(editorRef)
         }

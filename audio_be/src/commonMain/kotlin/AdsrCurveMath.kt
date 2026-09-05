@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -46,6 +46,49 @@ internal inline fun adsrExpShape(x: Double): Double = (exp(ADSR_EXP_K * x) - 1.0
 /** Parameterized exp shape at curvature [k] with precomputed [norm] = [adsrExpNorm]\(k\). */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (exp(k * x) - 1.0) * norm
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Release progress — the time base every release stage shares.
+//
+// A release of N frames renders relPos = 0 .. N-1. Dividing by N therefore tops
+// p out at (N-1)/N and the curve's exact endpoint g(0)=0 lands on the first frame
+// the voice does NOT render. The envelope is then still audible when the voice is
+// dropped: measured on the exp curve, 6.6e-5 (-84 dB) at a 50 ms release, but
+// 5.9e-2 (-25 dB) at 0.1 ms. That residual is a step straight to zero.
+//
+// Dividing by N-1 lands p = 1.0 exactly on the last rendered frame, so the CURVE
+// ends on 0.0. Both endpoints are then exact: p=0 at gate end, p=1 at the final frame.
+//
+// Scope, measured: on the ignitor envelope (AdsrIgnitor, where declickSeconds defaults
+// to 0 = off) the rendered gain reaches 0.0 too, and that is the path Der Schmetterling's
+// guitars clicked on. On the strip VCA the de-click one-pole sits DOWNSTREAM of the curve
+// and is on by default, lagging ~47 frames at ENV_DECLICK_SECONDS, so the gain on the last
+// frame only moves 3.38e-3 -> 3.31e-3 at a 50 ms release: the curve residual was never the
+// dominant term there. Fixing THAT is a separate question (it changes every song's note-off)
+// and is deliberately not attempted here.
+//
+// Returned as a hoistable (offset, denominator) pair so the hot loops hoist the
+// branch out and keep one divide per sample, exactly as before.
+//
+// It MUST stay a divide. Hoisting a reciprocal and multiplying looks free but is not
+// exact: 239 * (1.0/239.0) is 0.9999999999999999, so `omp` comes out 1.1e-16 instead
+// of 0 and the endpoint is missed all over again by a hair. Division of equal values
+// is exact. `ReleaseEndsAtZeroSpec` asserts `shouldBe 0.0` with no tolerance, and it
+// caught precisely this.
+//
+// The degenerate N<=1 case (a release too short to ramp) is folded into the pair as
+// offset=1, denom=1, making p=1 on its single frame instead of leaving the gain at full.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Hoisted denominator for the release ramp — `N-1`, see the note above. */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun releaseProgressDenom(releaseFrames: Double): Double =
+    if (releaseFrames > 1.0) releaseFrames - 1.0 else 1.0
+
+/** Hoisted offset partner of [releaseProgressDenom]; `p = ((relPos + offset) / denom).coerceAtMost(1.0)`. */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun releaseProgressOffset(releaseFrames: Double): Double =
+    if (releaseFrames > 1.0) 0.0 else 1.0
 
 // ─────────────────────────────────────────────────────────────────────────────
 // De-click smoother on the final amplitude-envelope gain.

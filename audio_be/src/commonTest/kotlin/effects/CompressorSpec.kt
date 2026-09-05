@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -58,34 +58,6 @@ class CompressorSpec : StringSpec({
         }
     }
 
-    "Compressor.parseSettings parses full format" {
-        val settings = Compressor.parseSettings("-20:4:6:0.003:0.1")
-
-        settings shouldBe Compressor.CompressorSettings(
-            thresholdDb = -20.0,
-            ratio = 4.0,
-            kneeDb = 6.0,
-            attackSeconds = 0.003,
-            releaseSeconds = 0.1
-        )
-    }
-
-    "Compressor.parseSettings parses short format (threshold:ratio only)" {
-        val settings = Compressor.parseSettings("-15:3")
-
-        settings shouldBe Compressor.CompressorSettings(
-            thresholdDb = -15.0,
-            ratio = 3.0,
-            kneeDb = 6.0,
-            attackSeconds = 0.003,
-            releaseSeconds = 0.1
-        )
-    }
-
-    "Compressor.parseSettings returns null for invalid input" {
-        val settings = Compressor.parseSettings("invalid")
-        settings shouldBe null
-    }
 
     "Compressor reset clears state" {
         val compressor = Compressor(
@@ -166,5 +138,46 @@ class CompressorSpec : StringSpec({
 
         avgHard shouldBeLessThan 0.15
         avgSoft shouldBeLessThan 0.15
+    }
+
+    "one +Inf sample does not silently disable the compressor forever" {
+        // Master round M3. The classic (lookahead-free) path had no non-finite guard, unlike
+        // its lookahead twin. `ln(Inf)` drove `envelopeDb` to +Inf; the NEXT finite sample
+        // computed `Inf + releaseCoeff * -Inf` = NaN, and from then on
+        // `calculateGainReduction(NaN)` was NaN, `NaN < GAIN_SKIP_THRESHOLD_DB` was false, and
+        // the gain returned EXACTLY 1.0 forever — a brickwall degraded to a bit-exact
+        // pass-through, with nothing to indicate it. Note the direction: a NaN sample never
+        // latched it (`NaN > SILENCE_LIN` is false); only +/-Inf did.
+        //
+        // Reference vs poisoned: same compressor settings, same loud input, one sample
+        // differing. If the guard is gone, the poisoned run stops attenuating and its output
+        // is strictly louder.
+        fun run(poison: Boolean): Double {
+            val c = Compressor(
+                sampleRate = sampleRate,
+                thresholdDb = -20.0,
+                ratio = 20.0,
+                kneeDb = 0.0,
+                attackSeconds = 0.001,
+                releaseSeconds = 0.1,
+            )
+            val warm = AudioBuffer(64) { if (poison && it == 0) Double.POSITIVE_INFINITY else 0.5 }
+            val other = AudioBuffer(64) { 0.5 }
+            c.process(warm, other, 64)
+
+            val loud = AudioBuffer(2000) { 0.5 }
+            val loudR = AudioBuffer(2000) { 0.5 }
+            c.process(loud, loudR, 2000)
+
+            return loud.takeLast(500).map { abs(it) }.average()
+        }
+
+        val clean = run(poison = false)
+        val poisoned = run(poison = true)
+
+        // The compressor is doing its job in both runs …
+        clean shouldBeLessThan 0.4
+        // … and the poisoned one is not measurably louder, i.e. it still limits.
+        poisoned shouldBeLessThan clean * 1.05
     }
 })

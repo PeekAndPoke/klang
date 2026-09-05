@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -90,9 +90,9 @@ object MnRenderer {
             mods.divisor?.let { append("/${renderNumber(it)}") }
             mods.probability?.let { append("?${renderNumber(it)}") }
             mods.weight?.let { append("@${renderNumber(it)}") }
-            if (!mods.attrs.isEmpty) {
+            if (mods.tweaks.isNotEmpty()) {
                 append("{")
-                append(mods.attrs.entries.entries.joinToString(" ") { (k, v) -> "$k=$v" })
+                append(mods.tweaks.joinToString(" "))
                 append("}")
             }
         }

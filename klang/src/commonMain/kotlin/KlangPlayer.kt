@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -15,6 +15,7 @@ import io.peekandpoke.klang.common.infra.KlangAtomicInt
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -89,7 +90,7 @@ class KlangPlayer(
     val backendReady = CompletableDeferred<Unit>()
 
     // The single FE↔BE clock offset (GLOBAL) — corrected from the SYSTEM Diagnostics, read by controllers.
-    // (Inline-osc/engine registries are playbackId-bound — they live on each KlangPlaybackController.)
+    // (Inline-osc/engine registries are playbackId-bound — they live on each playback now (InlineDslRegistrar), not the scheduler.)
     private val clockSync = BackendClockSync()
 
     // Context bundle for playback implementations (reduces constructor parameter lists)
@@ -218,6 +219,30 @@ class KlangPlayer(
     }
 
     /**
+     * Gets or creates the realtime voice playback for [name] — an always-on playback that plays
+     * voices "now" (MIDI keyboard & friends; see docs/tasks/midi-keyboard-playground.md).
+     *
+     * The id is mangled to `"custom-$name"` so caller-supplied names can never collide with the
+     * generated `"playback-N"` ids. Idempotent per name: a page remount reuses the existing
+     * instance instead of leaking engines.
+     */
+    fun createRealtimePlayback(name: String): KlangRealtimeVoicePlayback {
+        val playbackId = "custom-$name"
+
+        lock.withLock {
+            _activePlaybacks.filterIsInstance<KlangRealtimeVoicePlayback>()
+                .firstOrNull { it.playbackId == playbackId }
+                ?.let { return it }
+
+            return KlangRealtimeVoicePlayback(
+                player = this,
+                playbackId = playbackId,
+                registrar = playbackContext.registrarFor(playbackId),
+            ).also { _activePlaybacks.add(it) }
+        }
+    }
+
+    /**
      * Generate a unique playback ID.
      */
     fun generatePlaybackId(): String = Companion.generatePlaybackId()
@@ -228,6 +253,33 @@ class KlangPlayer(
      */
     fun sendControl(cmd: KlangCommLink.Cmd) {
         commLink.frontend.control.send(cmd)
+
+        // Hand it over immediately rather than leaving it for the backend's next poll. On JS that
+        // poll is a 10 ms `setTimeout`, which is invisible for scheduled voices (they carry their
+        // own start time) but is pure added latency for a realtime note-on, where the command IS
+        // the note. No-op until the backend exists, and on backends that drain every block anyway.
+        try {
+            _activeBackend?.pump()
+        } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
+
+            // sendControl MUST NOT throw; cancellation alone is RETHROWN above (said precisely
+            // because on Kotlin/JS CancellationException extends IllegalStateException, so the
+            // `catch (e: Exception)` call sites in KlangPatternScheduler would swallow it - the
+            // guarantee is about what sendControl does, not about what survives the stack).
+            // Before pump() existed it could not throw at all: the ring's send()
+            // reports overflow by returning false. pump() runs real delivery work on the caller's
+            // stack (postMessage can raise, and a Sample.Complete allocates a full second copy of
+            // the PCM), and callers are not written for that. The sharp one is
+            // KlangPatternScheduler.requestNextCyclesAndAdvanceCursor: it sends inside a try whose
+            // catch swallows, and advances its cursor only AFTER the send — so a throw there means
+            // the same batch is re-queried forever, freezing the main thread and killing playback.
+            // The command that was mid-flight is lost either way (drainControl already popped it);
+            // losing one is vastly better than a hung tab, and the drain continues on the next call.
+            println("[KlangPlayer] backend pump failed, command dropped: $t")
+        }
     }
 
     /**

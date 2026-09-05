@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -31,15 +31,15 @@ val chordsInOneStepTutorial = Tutorial(
 
                     Both lines below play `a2` and `e3` twice per cycle on the bright `saw` voice from ${Tut.theFourWaveforms}, wearing the pluck shape from ${Tut.shapeOfANote} so each hit starts and ends cleanly. (Two notes in one step add up, so the line sits at 0.4 instead of the usual 0.5.)
 
-                    **Try it:** swap the `//` and press Update. The same two notes, comma against space.
+                    **Try it:** swap the `//` and press **Update**. The same two notes, comma against space.
 
                     **Listen for:** struck together, the two notes fuse into one thicker sound; taking turns, they come apart into a quick roll. The comma is the difference between a chord and a very fast melody.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3] ~ [a2,e3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.4)    // comma: both notes strike together
-                    // note("[a2 e3] ~ [a2 e3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.4) // space: the same notes take turns, swap
+                    note("[a2,e3] ~ [a2,e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.4)    // comma: both notes strike together
+                    // note("[a2 e3] ~ [a2 e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.4) // space: the same notes take turns, swap
                     """.trimIndent(),
                 ),
             ),
@@ -60,8 +60,8 @@ val chordsInOneStepTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35)    // three-note stabs on steps one, four, seven
-                    // note("[a2,e3] ~ ~ [a2,e3]  ~ ~ [a2,e3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35)          // the two-note version, swap to compare
+                    note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)    // three-note stabs on steps one, four, seven
+                    // note("[a2,e3] ~ ~ [a2,e3]  ~ ~ [a2,e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)          // the two-note version, swap to compare
                     """.trimIndent(),
                 ),
             ),
@@ -83,7 +83,7 @@ val chordsInOneStepTutorial = Tutorial(
                 Block.Code(
                     code = """
                     note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~")  // the last stab: a random pick, A or the same shape on G
-                      .sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35)              // voice, pluck, and level unchanged
+                      .sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)             // voice, pluck, and level unchanged
                     """.trimIndent(),
                 ),
             ),
@@ -95,7 +95,7 @@ val chordsInOneStepTutorial = Tutorial(
                     markdown = """
                     The riff was built to land on drums. `stack()` from ${Tut.layers} puts the groove from ${Tut.spaceAndRests} underneath: the first stab strikes with the kick, the middle one falls into the drums' gap, and the gambling one lands right on the snare.
 
-                    **Try it:** give each layer a few loops alone. Put `//` in front of the other one. Then swap the G chord for a shape of your own: move all three notes down one more letter to `[f2,c3,f3]` and press Update.
+                    **Try it:** give each layer a few loops alone. Put `//` in front of the other one. Then swap the G chord for a shape of your own: move all three notes down one more letter to `[f2,c3,f3]` and press **Update**.
 
                     **Listen for:** what the steady beat does to the gamble. With drums framing it, the changing chord no longer sounds like an accident; it sounds like a band member making a choice. That contrast, something solid next to something loose, is what makes randomness musical.
                     """.trimIndent(),
@@ -103,8 +103,8 @@ val chordsInOneStepTutorial = Tutorial(
                 Block.Code(
                     code = """
                     stack(
-                      sound("bd ~ hh ~  ~ hh sd ~").gain(0.8),                                                                        // the groove, steady every cycle
-                      note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.35)  // the stab riff, unchanged
+                      sound("bd ~ hh ~  ~ hh sd ~").gain(0.8),                                                                         // the groove, steady every cycle
+                      note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)  // the stab riff, unchanged
                     )
                     """.trimIndent(),
                 ),

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -18,7 +18,7 @@ import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
  *
  * Extracted from [KlangAudioRenderer] so the per-playback mixdown can run it **once** on the summed
  * mix — the safety brick belongs on the final output, not per engine. See
- * `docs/tasks/per-playback-engine.md` (D2). Behaviour is identical to the old inline post-chain.
+ * `docs/tasks-archive/2026-09/20260904-per-playback-engine.md` (D2). Behaviour is identical to the old inline post-chain.
  */
 class MasterStage(
     sampleRate: Int,

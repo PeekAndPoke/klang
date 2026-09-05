@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -14,40 +14,40 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangDelaySpec : StringSpec({
 
-    "delay() sets VoiceData.delay" {
-        val p = note("a b").apply(delay("0.5 0.8"))
+    "delayWet() sets VoiceData.delay" {
+        val p = note("a b").apply(delayWet("0.5 0.8"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.delay } shouldBe listOf(0.5, 0.8)
     }
 
-    "delay() works as pattern extension" {
-        val p = note("c").delay("0.5")
+    "delayWet() works as pattern extension" {
+        val p = note("c").delayWet("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delay shouldBe 0.5
     }
 
-    "delay() works as string extension" {
-        val p = "c".delay("0.5")
+    "delayWet() works as string extension" {
+        val p = "c".delayWet("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delay shouldBe 0.5
     }
 
-    "delay() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delay("0.5")""")
+    "delayWet() works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").delayWet("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.delay shouldBe 0.5
     }
 
-    "delay() with continuous pattern sets delay correctly" {
+    "delayWet() with continuous pattern sets delay correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").delay(sine)
+        val p = note("a b c d").delayWet(sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -61,10 +61,10 @@ class LangDelaySpec : StringSpec({
         events[3].data.delay shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    // -- combined "wet:time:feedback" format -----------------------------------------------
+    // -- per-param (amount, time, feedback) --------------------------------------------
 
-    "delay() combined sets all three VoiceData fields" {
-        val p = note("c").delay("0.5:0.25:0.6")
+    "delayWet() per-param sets all three VoiceData fields" {
+        val p = note("c").delayWet(0.5, 0.25, 0.6)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -75,8 +75,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delay() combined with partial params sets only specified fields" {
-        val p = note("c").delay("0.8:0.125")
+    "delayWet() per-param with partial params sets only specified fields" {
+        val p = note("c").delayWet(0.8, 0.125)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -87,8 +87,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delay() combined works as string extension" {
-        val p = "c".delay("0.5:0.25:0.6")
+    "delayWet() per-param works as string extension" {
+        val p = "c".delayWet(0.5, 0.25, 0.6)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -99,8 +99,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delay() combined works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delay("0.5:0.25:0.6")""")
+    "delayWet() per-param works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").delayWet(0.5, 0.25, 0.6)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {
@@ -110,8 +110,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delay() combined works with mini-notation patterns" {
-        val p = note("c3 e3").delay("<0.3:0.125 0.6:0.25:0.8>")
+    "delayWet() per-param mini-notation patterns" {
+        val p = note("c3 e3").delayWet("<0.3 0.6>", "<0.125 0.25>", "<~ 0.8>")
         val cycle0 = p.queryArc(0.0, 1.0)
         val cycle1 = p.queryArc(1.0, 2.0)
 
@@ -119,6 +119,7 @@ class LangDelaySpec : StringSpec({
             cycle0.size shouldBe 2
             cycle0[0].data.delay shouldBe 0.3
             cycle0[0].data.delayTime shouldBe 0.125
+            cycle0[0].data.delayFeedback shouldBe null    // rest in the feedback pattern leaves it unset
 
             cycle1.size shouldBe 2
             cycle1[0].data.delay shouldBe 0.6
@@ -127,8 +128,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delay() combined works chained with other effects" {
-        val p = note("c").apply(gain(0.8).delay("0.5:0.25:0.6"))
+    "delayWet() per-param works chained with other effects" {
+        val p = note("c").apply(gain(0.8).delayWet(0.5, 0.25, 0.6))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -140,13 +141,24 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delay() single value still works (backward compat)" {
-        val p = note("c").delay(0.7)
+    "delayWet() single value still works (backward compat)" {
+        val p = note("c").delayWet(0.7)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delay shouldBe 0.7
         events[0].data.delayTime shouldBe null
         events[0].data.delayFeedback shouldBe null
+    }
+
+    "delayWet(tail-only) does not touch the head field" {
+        // numeric receiver: without the tail-only guard the head apply would REINTERPRET
+        // the values ("3"/"4") into the delay field
+        val p = SprudelPattern.compile("""seq("3 4").delayWet(time = 0.25)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.delay shouldBe null
+        events[0].data.delayTime shouldBe 0.25
     }
 })

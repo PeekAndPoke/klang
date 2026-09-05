@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -65,9 +65,14 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
                 position = Position.relative
             }
 
-            // Ambient accent light shining in from the screen's top and left
-            // edges — same character as the editor's glow. Sits above the
-            // columns (which have opaque backgrounds), ignores the mouse.
+            // Ambient accent light shining in from the screen's LEFT edge only —
+            // same character as the editor's glow. Sits above the columns (which
+            // have opaque backgrounds), ignores the mouse.
+            //
+            // Painted as a gradient rather than an inset box-shadow: an inset
+            // shadow whose blur exceeds its offset bleeds a faint band onto the
+            // three edges it is NOT aimed at, which is where the stray lights at
+            // the top and far right came from. A gradient lights one edge, full stop.
             div {
                 key = "edge-light"
                 css {
@@ -76,9 +81,10 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
                     put("pointer-events", "none")
                     zIndex = 5
                     put(
-                        "box-shadow",
-                        "inset 0 8px 30px color-mix(in srgb, var(--klang-accent-muted) 5%, transparent)," +
-                                " inset 8px 0 30px color-mix(in srgb, var(--klang-accent-muted) 5%, transparent)"
+                        "background-image",
+                        "linear-gradient(to right," +
+                                " color-mix(in srgb, var(--klang-accent-muted) 5%, transparent) 0," +
+                                " transparent 30px)"
                     )
                 }
             }
@@ -92,6 +98,20 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
 
                     height = 100.pct
                     overflowY = Overflow.hidden
+                    position = Position.relative
+                }
+
+                // The sidebar's background as its own layer, BELOW the content scroller's glow
+                // window (that scroller is z-index 1 with a 100px clip window over this column),
+                // while the menu content renders ABOVE it (`SidebarMenu`'s root is z-index 2). The
+                // glow lands on the background and the content stays clickable: `chrome-bg`
+                // isolates its own stacking, so it must not be on the content element itself.
+                div("chrome-bg") {
+                    key = "sidebar-background"
+                    css {
+                        position = Position.absolute
+                        put("inset", "0")
+                    }
                 }
 
                 SidebarMenu()

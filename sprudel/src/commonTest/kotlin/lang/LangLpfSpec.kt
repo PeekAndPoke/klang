@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -66,13 +66,6 @@ class LangLpfSpec : StringSpec({
         }
     }
 
-    "lpf() sets VoiceData.cutoff" {
-        val p = note("a b").apply(lpf("1000 500"))
-        val events = p.queryArc(0.0, 1.0)
-        events.size shouldBe 2
-        events[0].data.cutoff shouldBe 1000.0
-        events[1].data.cutoff shouldBe 500.0
-    }
 
     "lpf() works as pattern extension" {
         val p = note("c").lpf("1000")
@@ -95,103 +88,48 @@ class LangLpfSpec : StringSpec({
         events[0].data.cutoff shouldBe 1000.0
     }
 
-    "lpf() with continuous pattern sets cutoff correctly" {
-        val p = note("a b c d").lpf(sine)
+    // ---- C0 guard: per-param flow (docs/plans/filter-unification.md, C0) ----
+
+    "lpf(freq-sequence, q) gives per-event freq and constant q" {
+        val p = note("c e").lpf("200 800", 1.5)
         val events = p.queryArc(0.0, 1.0)
-        events.size shouldBe 4
-        events[0].data.cutoff shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].data.cutoff shouldBe (1.0 plusOrMinus EPSILON)
-        events[2].data.cutoff shouldBe (0.5 plusOrMinus EPSILON)
-        events[3].data.cutoff shouldBe (0.0 plusOrMinus EPSILON)
+
+        events.size shouldBe 2
+        events[0].data.cutoff shouldBe 200.0
+        events[1].data.cutoff shouldBe 800.0
+        events[0].data.resonance shouldBe 1.5
+        events[1].data.resonance shouldBe 1.5
     }
 
-    // ---- cutoff (alias) ----
+    "lpf(freq-alternation, q) selects freq per cycle, q stays" {
+        val p = note("c").lpf("<200 800>", 1.5)
+        val c0 = p.queryArc(0.0, 1.0)
+        val c1 = p.queryArc(1.0, 2.0)
 
-    "cutoff dsl interface" {
-        val pat = "a b"
-        val ctrl = "1000 500"
-
-        dslInterfaceTests(
-            "pattern.cutoff(ctrl)" to seq(pat).cutoff(ctrl),
-            "script pattern.cutoff(ctrl)" to SprudelPattern.compile("""seq("$pat").cutoff("$ctrl")"""),
-            "string.cutoff(ctrl)" to pat.cutoff(ctrl),
-            "script string.cutoff(ctrl)" to SprudelPattern.compile(""""$pat".cutoff("$ctrl")"""),
-            "cutoff(ctrl)" to seq(pat).apply(cutoff(ctrl)),
-            "script cutoff(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(cutoff("$ctrl"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.cutoff shouldBe 1000.0
-            events[1].data.cutoff shouldBe 500.0
-        }
+        c0.size shouldBe 1
+        c1.size shouldBe 1
+        c0[0].data.cutoff shouldBe 200.0
+        c1[0].data.cutoff shouldBe 800.0
+        c0[0].data.resonance shouldBe 1.5
+        c1[0].data.resonance shouldBe 1.5
     }
 
-    "reinterpret voice data as cutoff | seq(\"1000 500\").cutoff()" {
-        val p = seq("1000 500").cutoff()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.cutoff shouldBe 1000.0
-            events[1].data.cutoff shouldBe 500.0
-        }
+    "lpf(q = ...) alone sets only q, cutoff stays untouched" {
+        val p = SprudelPattern.compile("""seq("300 600").lpf(q = 2)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.cutoff shouldBe null
+        events[1].data.cutoff shouldBe null
+        events[0].data.resonance shouldBe 2.0
     }
 
-    // ---- ctf (alias) ----
+    "lpf(q = ...) does not clear a previously set cutoff" {
+        val p = SprudelPattern.compile("""note("c3").lpf(800).lpf(q = 12)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
-    "ctf dsl interface" {
-        val pat = "a b"
-        val ctrl = "1000 500"
-
-        dslInterfaceTests(
-            "pattern.ctf(ctrl)" to seq(pat).ctf(ctrl),
-            "script pattern.ctf(ctrl)" to SprudelPattern.compile("""seq("$pat").ctf("$ctrl")"""),
-            "string.ctf(ctrl)" to pat.ctf(ctrl),
-            "script string.ctf(ctrl)" to SprudelPattern.compile(""""$pat".ctf("$ctrl")"""),
-            "ctf(ctrl)" to seq(pat).apply(ctf(ctrl)),
-            "script ctf(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(ctf("$ctrl"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.cutoff shouldBe 1000.0
-            events[1].data.cutoff shouldBe 500.0
-        }
-    }
-
-    "reinterpret voice data as cutoff | seq(\"1000 500\").ctf()" {
-        val p = seq("1000 500").ctf()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.cutoff shouldBe 1000.0
-            events[1].data.cutoff shouldBe 500.0
-        }
-    }
-
-    // ---- lp (alias) ----
-
-    "lp dsl interface" {
-        val pat = "a b"
-        val ctrl = "1000 500"
-
-        dslInterfaceTests(
-            "pattern.lp(ctrl)" to seq(pat).lp(ctrl),
-            "script pattern.lp(ctrl)" to SprudelPattern.compile("""seq("$pat").lp("$ctrl")"""),
-            "string.lp(ctrl)" to pat.lp(ctrl),
-            "script string.lp(ctrl)" to SprudelPattern.compile(""""$pat".lp("$ctrl")"""),
-            "lp(ctrl)" to seq(pat).apply(lp(ctrl)),
-            "script lp(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(lp("$ctrl"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.cutoff shouldBe 1000.0
-            events[1].data.cutoff shouldBe 500.0
-        }
-    }
-
-    "reinterpret voice data as cutoff | seq(\"1000 500\").lp()" {
-        val p = seq("1000 500").lp()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.cutoff shouldBe 1000.0
-            events[1].data.cutoff shouldBe 500.0
-        }
+        events.size shouldBe 1
+        events[0].data.cutoff shouldBe 800.0
+        events[0].data.resonance shouldBe 12.0
     }
 })

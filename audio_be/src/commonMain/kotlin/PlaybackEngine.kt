@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
  * (own scheduling timeline, solo state, scratch, `RenderContext`, `VoiceFactory`) and its own
  * [Cylinders] (orbits + FX). The only thing it does NOT own is the shared backend state
  * ([AudioBackendContext]); in particular the audio timeline (clock) is read from there, never per
- * engine — see `docs/tasks/per-playback-engine.md` (D2·b/D2·d).
+ * engine — see `docs/tasks-archive/2026-09/20260904-per-playback-engine.md` (D2·b/D2·d).
  */
 class PlaybackEngine(
     val scheduler: VoiceScheduler,
@@ -66,6 +66,7 @@ class PlaybackEngine(
         if (!masterBus.isActive) {
             // Fast path — byte-identical to the pre-MasterDsl engine.
             cylinders.processAndMix(target)
+            markMasterBusRendered()
             return
         }
 
@@ -84,6 +85,24 @@ class PlaybackEngine(
             targetL[i] += busL[i]
             targetR[i] += busR[i]
         }
+
+        markMasterBusRendered()
+    }
+
+    /**
+     * Tells the master bus a block has now been produced (master round M1). Called from the END
+     * of each of [renderInto]'s two exits, so "this engine has rendered" is true from the next
+     * block onward and a `master(…)` promoted in the engine's FIRST block still sees `false` and
+     * is adopted at full weight instead of fading up from unmastered.
+     *
+     * The PLACEMENT is the contract, so it is deliberately at the end of the audio work rather
+     * than somewhere in the middle whose position a reader has to reason about: called before
+     * `scheduler.process` instead, the very first master would crossfade and M1 would be back.
+     * It cannot live inside `MasterBus.process` either — the fast path above skips that entirely
+     * while the bus is inactive, which is exactly the unmastered case being discriminated.
+     */
+    private fun markMasterBusRendered() {
+        masterBus.markRendered()
     }
 
     /** True while this engine still has sound of its own (voices or ringing orbit buses). */
@@ -102,6 +121,16 @@ class PlaybackEngine(
      * quiet — a delay with `feedback >= 1.0` recirculates without loss, so its ring never empties
      * and an unbounded hold would keep a stopped playback rendering (leaking one engine per stop).
      */
+    /**
+     * The engine's end: every rented unit (orbit delay rings, reverb networks, master chain units)
+     * goes back to the backend's warehouse (2f). Called by the dispatcher exactly once, after the
+     * engine has been removed from the render set; nothing renders through it afterwards.
+     */
+    fun dispose() {
+        cylinders.releaseAll()
+        masterBus.releaseAll()
+    }
+
     fun isIdle(): Boolean {
         if (hasOwnSound()) {
             return false
@@ -127,13 +156,19 @@ class PlaybackEngine(
 
         /** Builds an engine: its own [Cylinders] + a [VoiceScheduler] wired to the shared [context]. */
         fun create(context: AudioBackendContext): PlaybackEngine {
-            val cylinders = Cylinders(blockFrames = context.blockFrames, sampleRate = context.sampleRate)
+            val cylinders = Cylinders(
+                blockFrames = context.blockFrames,
+                sampleRate = context.sampleRate,
+                units = context.warehouse.cylinders,
+            )
             // The bus is built first and handed to the scheduler as the sink for `master(…)` events,
             // so neither has to know about the other's lifecycle.
             val masterBus = MasterBus(
                 sampleRate = context.sampleRate,
                 blockFrames = context.blockFrames,
                 registry = context.masterRegistry.fork(),
+                rings = context.warehouse.sized,
+                reverbs = context.warehouse.reverbs,
             )
             val scheduler = VoiceScheduler(
                 VoiceScheduler.Options(context = context, cylinders = cylinders, masterBus = masterBus)

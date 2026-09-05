@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -60,16 +60,16 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     // room
-    "top-level room() sets VoiceData.room correctly" {
-        val p = note("a b").apply(room("0.1 0.9"))
+    "top-level roomWet() sets VoiceData.room correctly" {
+        val p = note("a b").apply(roomWet("0.1 0.9"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.room } shouldBe listOf(0.1, 0.9)
     }
 
-    "control pattern room() sets VoiceData.room on existing pattern" {
+    "control pattern roomWet() sets VoiceData.room on existing pattern" {
         val base = note("c3 e3")
-        val p = base.room("0.3 0.6")
+        val p = base.roomWet("0.3 0.6")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
         events.map { it.data.room } shouldBe listOf(0.3, 0.6, 0.3, 0.6)
@@ -97,16 +97,16 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     // delay
-    "top-level delay() sets VoiceData.delay correctly" {
-        val p = note("a b").apply(delay("0.0 1.0"))
+    "top-level delayWet() sets VoiceData.delay correctly" {
+        val p = note("a b").apply(delayWet("0.0 1.0"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.delay } shouldBe listOf(0.0, 1.0)
     }
 
-    "control pattern delay() sets VoiceData.delay on existing pattern" {
+    "control pattern delayWet() sets VoiceData.delay on existing pattern" {
         val base = note("c3 e3")
-        val p = base.delay("0.25 0.5")
+        val p = base.delayWet("0.25 0.5")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
         events.map { it.data.delay } shouldBe listOf(0.25, 0.5, 0.25, 0.5)
@@ -214,8 +214,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.coarse } shouldBe listOf(1.0, 2.0)
     }
 
-    "room() works within compiled code as top-level PatternMapper" {
-        val p = SprudelPattern.compile("""note("a b").apply(room("0.1 0.9"))""")
+    "roomWet() works within compiled code as top-level PatternMapper" {
+        val p = SprudelPattern.compile("""note("a b").apply(roomWet("0.1 0.9"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -223,8 +223,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.room } shouldBe listOf(0.1, 0.9)
     }
 
-    "room() works within compiled code as chained-level function" {
-        val p = SprudelPattern.compile("""note("a b").room("0.1 0.9")""")
+    "roomWet() works within compiled code as chained-level function" {
+        val p = SprudelPattern.compile("""note("a b").roomWet("0.1 0.9")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -250,8 +250,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.roomSize } shouldBe listOf(0.2, 0.8)
     }
 
-    "delay() works within compiled code as top-level function" {
-        val p = SprudelPattern.compile("""note("a b").apply(delay("0.0 1.0"))""")
+    "delayWet() works within compiled code as top-level function" {
+        val p = SprudelPattern.compile("""note("a b").apply(delayWet("0.0 1.0"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -259,8 +259,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.delay } shouldBe listOf(0.0, 1.0)
     }
 
-    "delay() works within compiled code as chained-level function" {
-        val p = SprudelPattern.compile("""note("a b").delay("0.0 1.0")""")
+    "delayWet() works within compiled code as chained-level function" {
+        val p = SprudelPattern.compile("""note("a b").delayWet("0.0 1.0")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -323,8 +323,8 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     // PatternMapperFn chaining
-    "delay().delaytime().delayfeedback() can be chained as PatternMapperFn" {
-        val p = note("c3 e3").apply(delay(0.5).delaytime(0.25).delayfeedback(0.6))
+    "delayWet().delaytime().delayfeedback() can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(delayWet(0.5).delaytime(0.25).delayfeedback(0.6))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.delay shouldBe 0.5
@@ -332,16 +332,16 @@ class LangEffectsRoutingSpec : StringSpec({
         events[0].data.delayFeedback shouldBe 0.6
     }
 
-    "room().roomsize() can be chained as PatternMapperFn" {
-        val p = note("c3 e3").apply(room(0.5).roomsize(4.0))
+    "roomWet().roomsize() can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(roomWet(0.5).roomsize(4.0))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.room shouldBe 0.5
         events[0].data.roomSize shouldBe 4.0
     }
 
-    "phaser().phaserdepth() can be chained as PatternMapperFn" {
-        val p = note("c3 e3").apply(phaser(0.5).phaserdepth(0.8))
+    "phaser().phaserWet() can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(phaser(0.5).phaserWet(0.8))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.phaserRate shouldBe 0.5

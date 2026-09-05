@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -34,11 +34,9 @@ class OscShapeEffectSpec : StringSpec({
         voiceDurationFrames = sampleRate,
         gateEndFrame = sampleRate,
         releaseFrames = (0.1 * sampleRate).toInt(),
-        voiceEndFrame = sampleRate + (0.1 * sampleRate).toInt(),
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 

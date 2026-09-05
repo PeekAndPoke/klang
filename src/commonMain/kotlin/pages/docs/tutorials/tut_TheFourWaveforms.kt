@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -119,7 +119,7 @@ val theFourWaveformsTutorial = Tutorial(
 
                     **Try it:** swap the `//` to hear the melody vanish, then bring it back.
 
-                    **Listen for:** how much the pitches were carrying. This is also why noise lives in the drum department: drum machines build their hi-hats from exactly this, a short burst of shaped noise. The `hh` you have been playing is a recording of one; building your own from raw noise comes in the Motör track.
+                    **Listen for:** how much the pitches were carrying. This is also why noise lives in the drum department: drum machines build their hi-hats from exactly this, a short burst of shaped noise. The `hh` you have been playing is a recording of one; building your own from raw noise comes in the Motor track.
                     """.trimIndent(),
                 ),
                 Block.Code(

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -49,7 +49,7 @@ class LangFeedbackCapSpec : StringSpec({
         note("c3").dcap(2.0).queryArc(0.0, 1.0)[0].data.delayCap shouldBe 2.0
         "c3".dcap(2.0).queryArc(0.0, 1.0)[0].data.delayCap shouldBe 2.0
         note("c3").apply(dcap(2.0)).queryArc(0.0, 1.0)[0].data.delayCap shouldBe 2.0
-        note("c3").apply(delay(0.5).dcap(2.0)).queryArc(0.0, 1.0)[0].data.delayCap shouldBe 2.0
+        note("c3").apply(delayWet(0.5).dcap(2.0)).queryArc(0.0, 1.0)[0].data.delayCap shouldBe 2.0
     }
 
     "the cap reaches the wire and defaults to absent" {
@@ -65,12 +65,12 @@ class LangFeedbackCapSpec : StringSpec({
         // safe automatically, and the "mergeFrom matches merge" oracle compares two paths that call
         // the SAME helper, so neither notices an omission. This asserts the value directly.
         val withCap = note("c3").dcap(2.5).queryArc(0.0, 1.0)[0].data
-        val plain = note("c3").delay(0.4).queryArc(0.0, 1.0)[0].data
+        val plain = note("c3").delayWet(0.4).queryArc(0.0, 1.0)[0].data
 
         plain.merge(withCap).delayCap shouldBe 2.5
         withCap.merge(plain).delayCap shouldBe 2.5
 
-        val inPlace = note("c3").delay(0.4).queryArc(0.0, 1.0)[0].data
+        val inPlace = note("c3").delayWet(0.4).queryArc(0.0, 1.0)[0].data
         inPlace.mergeFrom(withCap)
         inPlace.delayCap shouldBe 2.5
     }

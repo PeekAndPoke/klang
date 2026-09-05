@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.WireFormat
 import io.peekandpoke.klang.audio_bridge.WireName
 import io.peekandpoke.klang.common.infra.KlangMessageReceiver
@@ -73,6 +74,28 @@ class KlangCommLink(capacity: Int = 8192) {
             val voices: List<ScheduledVoice>,
         ) : Cmd
 
+        /**
+         * Starts a realtime voice immediately — see [RealtimeVoice]. Unlike [ScheduleVoice] there
+         * is no start time on the wire: the backend stamps "now" at receipt and promotes the voice
+         * straight to active, bypassing the scheduled heap and epoch anchoring entirely.
+         */
+        @WireName("start-realtime-voice")
+        data class StartRealtimeVoice(
+            override val playbackId: String,
+            val voice: RealtimeVoice,
+        ) : Cmd
+
+        /**
+         * Releases the gate of every realtime voice with [liveId] — the voice enters its ADSR
+         * release from the current level (a note-off, NOT a cut). Unknown liveId is a no-op:
+         * releasing a key after a fixed-length voice already ended is normal.
+         */
+        @WireName("stop-realtime-voice")
+        data class StopRealtimeVoice(
+            override val playbackId: String,
+            val liveId: Int,
+        ) : Cmd
+
         /** Registers a custom IgnitorDsl in the backend's exciter registry. */
         @WireName("register-ignitor")
         data class RegisterIgnitor(
@@ -119,12 +142,31 @@ class KlangCommLink(capacity: Int = 8192) {
             ) : Sample {
                 override val playbackId: String = SYSTEM_PLAYBACK_ID
 
-                fun toChunks(chunkSizeBytes: Int = 16 * 1024): List<Chunk> {
-                    val numChunks = (sample.pcm.size / chunkSizeBytes) + 1
+                /**
+                 * Splits the PCM for upload.
+                 *
+                 * [chunkFrames] counts **DoubleArray elements** (mono frames), NOT bytes: at 8
+                 * bytes each, 64 * 1024 frames is a 512 KB message. The parameter used to be
+                 * called `chunkSizeBytes`, which read as 8× smaller than it is (64 KB believed,
+                 * 512 KB actual) and made the upload look far more throttled than it was.
+                 *
+                 * Chunking originally existed to keep kotlinx-serialization decode off the audio
+                 * thread in slices. That cost is gone (the KSP wire codec replaced it), and what
+                 * remains per chunk is one structured-clone plus the `copyInto` in
+                 * `SampleStore.addSample` — linear in [chunkFrames], so this still bounds the
+                 * worst-case audio-thread hiccup. It is a SIZE bound, not a rate limit; the rate
+                 * is set by how many chunks the host forwards per tick.
+                 *
+                 * NB: when the PCM length is an exact multiple of [chunkFrames] the last entry is
+                 * an empty chunk carrying `isLastChunk`. Harmless (an empty `copyInto` is a no-op)
+                 * and it still completes the sample, but it is one wasted message.
+                 */
+                fun toChunks(chunkFrames: Int = 64 * 1024): List<Chunk> {
+                    val numChunks = (sample.pcm.size / chunkFrames) + 1
 
                     return (0 until numChunks).map { i ->
-                        val startByte = i * chunkSizeBytes
-                        val endByte = minOf(sample.pcm.size, (i + 1) * chunkSizeBytes)
+                        val start = i * chunkFrames
+                        val end = minOf(sample.pcm.size, (i + 1) * chunkFrames)
 
                         Chunk(
                             req = req,
@@ -134,8 +176,8 @@ class KlangCommLink(capacity: Int = 8192) {
                             meta = sample.meta,
                             totalSize = sample.pcm.size,
                             isLastChunk = i == numChunks - 1,
-                            chunkOffset = i * chunkSizeBytes,
-                            data = sample.pcm.copyOfRange(startByte, endByte),
+                            chunkOffset = start,
+                            data = sample.pcm.copyOfRange(start, end),
                         )
                     }
                 }
@@ -167,10 +209,11 @@ class KlangCommLink(capacity: Int = 8192) {
         val playbackId: String
 
         /**
-         * Emitted once after the backend has completed its warmup pass (JIT + cache priming
-         * + cylinder pre-allocation). The frontend awaits this before starting the first
-         * playback so the first voice never hits an un-JITed audio render path or lazy
-         * cylinder allocation inside a block.
+         * Emitted once after the backend has completed its warmup pass: JIT + cache priming, AND the
+         * stocking of the resource warehouse — the warmup plays sixteen wet orbits, one per block,
+         * and its disposal returns their cylinders, delay rings and reverb networks to the shelves,
+         * so the first song's first frame builds nothing. The frontend awaits this before starting
+         * the first playback.
          */
         @WireName("backend-ready")
         data class BackendReady(
@@ -225,6 +268,12 @@ class KlangCommLink(capacity: Int = 8192) {
              * latency figures cannot see it.
              */
             val outputLatencyMs: Double = 0.0,
+            /**
+             * The resource warehouse's stats — what the backend holds and what happened to it.
+             * Maintained INCREMENTALLY on the backend (each shelf bumps a version when something
+             * changes; the snapshot is rebuilt only then), so reading is a plain read.
+             */
+            val warehouse: WarehouseStats,
         ) : Feedback {
             data class CylinderState(
                 /** Cylinder ID (0-15 typically) */
@@ -232,6 +281,60 @@ class KlangCommLink(capacity: Int = 8192) {
                 /** Whether this cylinder is currently active (processing audio or effect tails) */
                 val active: Boolean,
             )
+
+            /**
+             * One line per part of the warehouse. Counters are monotone since backend start;
+             * `idle*` are current. Bytes are Double (no Long on the wire or in audio paths).
+             */
+            data class WarehouseStats(
+                /** Delay rings: idle bytes on the shelf, idle count, dirty (not yet zeroed) count. */
+                val ringIdleBytes: Double,
+                val ringIdleCount: Int,
+                val ringDirtyCount: Int,
+                val ringAllocations: Int,
+                val ringHits: Int,
+                val ringFailures: Int,
+                val ringDropped: Int,
+                val ringSyncCleans: Int,
+                /** Reverb networks: one size each (~200 KB at 44.1 kHz). */
+                val reverbIdleCount: Int,
+                val reverbDirtyCount: Int,
+                val reverbAllocations: Int,
+                val reverbHits: Int,
+                val reverbFailures: Int,
+                val reverbDropped: Int,
+                /** Whole cylinders. */
+                val cylinderIdleCount: Int,
+                val cylinderAllocations: Int,
+                val cylinderHits: Int,
+                val cylinderDropped: Int,
+                /** Shared scratch: pre-sized capacity and the deepest nesting ever served. */
+                val scratchCapacity: Int,
+                val scratchHighWater: Int,
+                val scratchLateAllocations: Int,
+                val scratchUnbalancedReleases: Int,
+                /** Sample PCM resident in the store, and uploads whose PCM could not be allocated. */
+                val sampleBytes: Double,
+                val sampleCount: Int,
+                val sampleAllocationFailures: Int,
+                /** Across all live engines: voices dropped at admission (late), and refused unit rents. */
+                val droppedVoices: Int,
+                val deniedRents: Int,
+            ) {
+                companion object {
+                    /** A warehouse that holds nothing and has done nothing — for specs and placeholders. */
+                    val empty = WarehouseStats(
+                        ringIdleBytes = 0.0, ringIdleCount = 0, ringDirtyCount = 0, ringAllocations = 0, ringHits = 0,
+                        ringFailures = 0, ringDropped = 0, ringSyncCleans = 0,
+                        reverbIdleCount = 0, reverbDirtyCount = 0, reverbAllocations = 0, reverbHits = 0,
+                        reverbFailures = 0, reverbDropped = 0,
+                        cylinderIdleCount = 0, cylinderAllocations = 0, cylinderHits = 0, cylinderDropped = 0,
+                        scratchCapacity = 0, scratchHighWater = 0, scratchLateAllocations = 0, scratchUnbalancedReleases = 0,
+                        sampleBytes = 0.0, sampleCount = 0, sampleAllocationFailures = 0,
+                        droppedVoices = 0, deniedRents = 0,
+                    )
+                }
+            }
         }
     }
 

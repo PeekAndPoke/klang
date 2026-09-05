@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -20,15 +20,86 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     }
     private var nextFree = 0
 
+    /**
+     * Buffers created by [acquire] because the pool was exhausted — i.e. allocations that happened
+     * INSIDE render. The goal is that this stays at zero: size the pool at build with
+     * [ensureCapacity] (a voice's ignitor graph knows its own depth) so the hot path never allocates.
+     */
+    var lateAllocations: Int = 0
+        private set
+
+    /**
+     * Unbalanced [release] calls — more releases than acquires. Guarded rather than thrown (no
+     * exceptions in audio paths), and counted so the imbalance is visible instead of silently
+     * corrupting `nextFree` and handing out live buffers twice.
+     */
+    var unbalancedReleases: Int = 0
+        private set
+
+    /**
+     * Pre-grows the AudioBuffer pool to [depth] and the DoubleArray pool to [doubleDepth] buffers,
+     * OUTSIDE render, so neither acquire allocates inside it. Grow-only; never shrinks.
+     */
+    fun ensureCapacity(depth: Int, doubleDepth: Int = depth) {
+        while (pool.size < depth) {
+            pool.add(AudioBuffer(blockFrames))
+            version++
+        }
+        while (doublePool.size < doubleDepth) {
+            doublePool.add(DoubleArray(blockFrames))
+            version++
+        }
+    }
+
+    /** Buffers in the AudioBuffer pool right now, in use or not. */
+    val capacity: Int get() = pool.size
+
+    /** Bumped when a counter or a capacity changes (never on a plain acquire/release). */
+    var version: Int = 0
+        private set
+
+    /** Buffers in the DoubleArray pool right now, in use or not. */
+    val doubleCapacity: Int get() = doublePool.size
+
+    /**
+     * The deepest simultaneous nesting of AudioBuffer scratch this pool has ever served — i.e. the
+     * deepest ignitor graph that has rendered through it. Read it to know how much of
+     * [ensureCapacity]'s pre-size a real song actually uses. The DoubleArray stack is independent
+     * and has its own [doubleHighWater] (review round 2: one shared counter meant "deeper of either").
+     */
+    var highWater: Int = 0
+        private set
+
+    /** [highWater] for the DoubleArray stack — modulation-ratio scratch, `ModApplyingIgnitor`. */
+    var doubleHighWater: Int = 0
+        private set
+
+    /** Whether the sub-pool for [factor] already exists — i.e. its first use will NOT allocate. */
+    fun hasOversample(factor: Int): Boolean = factor <= 1 || factor in oversampleCache
+
     @PublishedApi
     internal fun acquire(): AudioBuffer {
-        if (nextFree >= pool.size) pool.add(AudioBuffer(blockFrames))
-        return pool[nextFree++]
+        if (nextFree >= pool.size) {
+            pool.add(AudioBuffer(blockFrames))
+            lateAllocations++
+            version++
+        }
+        val buf = pool[nextFree++]
+        if (nextFree > highWater) {
+            highWater = nextFree
+            version++
+        }
+        return buf
     }
 
     @PublishedApi
     internal fun release() {
-        nextFree--
+        if (nextFree > 0) {
+            nextFree--
+        } else {
+            unbalancedReleases++
+            version++
+        }
     }
 
     /** Scoped access — guarantees release even on exceptions. Never leak a buffer. */
@@ -41,10 +112,6 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
         }
     }
 
-    fun reset() {
-        nextFree = 0
-    }
-
     // ── DoubleArray pool (same stack discipline) ────────────────────────────────
 
     private val doublePool = ArrayList<DoubleArray>(2)
@@ -52,13 +119,29 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
 
     @PublishedApi
     internal fun acquireDouble(): DoubleArray {
-        if (doubleNextFree >= doublePool.size) doublePool.add(DoubleArray(blockFrames))
-        return doublePool[doubleNextFree++]
+        // Same discipline and the same counters as the AudioBuffer pool (review round 1: this half
+        // had been left un-hardened, and ModApplyingIgnitor's first render allocated here).
+        if (doubleNextFree >= doublePool.size) {
+            doublePool.add(DoubleArray(blockFrames))
+            lateAllocations++
+            version++
+        }
+        val buf = doublePool[doubleNextFree++]
+        if (doubleNextFree > doubleHighWater) {
+            doubleHighWater = doubleNextFree
+            version++
+        }
+        return buf
     }
 
     @PublishedApi
     internal fun releaseDouble() {
-        doubleNextFree--
+        if (doubleNextFree > 0) {
+            doubleNextFree--
+        } else {
+            unbalancedReleases++
+            version++
+        }
     }
 
     /** Scoped access for DoubleArray buffers — same guarantees as [use]. */

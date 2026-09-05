@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -89,19 +89,19 @@ class SprudelVoiceValueSpec : StringSpec({
         ("2".asVoiceValue() pow "3".asVoiceValue())?.asDouble shouldBe 8.0
     }
 
-    "VoiceValue bitwise operations: band" {
-        (3.asVoiceValue() band 1.asVoiceValue())?.asInt shouldBe 1
-        (3.asVoiceValue() band 0.asVoiceValue())?.asInt shouldBe 0
+    "VoiceValue bitwise operations: bitAnd" {
+        (3.asVoiceValue() bitAnd 1.asVoiceValue())?.asInt shouldBe 1
+        (3.asVoiceValue() bitAnd 0.asVoiceValue())?.asInt shouldBe 0
     }
 
-    "VoiceValue bitwise operations: bor" {
-        (1.asVoiceValue() bor 2.asVoiceValue())?.asInt shouldBe 3
-        (1.asVoiceValue() bor 0.asVoiceValue())?.asInt shouldBe 1
+    "VoiceValue bitwise operations: bitOr" {
+        (1.asVoiceValue() bitOr 2.asVoiceValue())?.asInt shouldBe 3
+        (1.asVoiceValue() bitOr 0.asVoiceValue())?.asInt shouldBe 1
     }
 
-    "VoiceValue bitwise operations: bxor" {
-        (3.asVoiceValue() bxor 1.asVoiceValue())?.asInt shouldBe 2
-        (3.asVoiceValue() bxor 3.asVoiceValue())?.asInt shouldBe 0
+    "VoiceValue bitwise operations: bitXor" {
+        (3.asVoiceValue() bitXor 1.asVoiceValue())?.asInt shouldBe 2
+        (3.asVoiceValue() bitXor 3.asVoiceValue())?.asInt shouldBe 0
     }
 
     "VoiceValue bitwise operations: shl" {
@@ -225,22 +225,22 @@ class SprudelVoiceValueSpec : StringSpec({
         (false.asVoiceValue() pow 5.asVoiceValue())?.asDouble shouldBe 0.0
     }
 
-    "VoiceValue.Bool: bitwise operations - band" {
-        (true.asVoiceValue() band true.asVoiceValue())?.asInt shouldBe 1
-        (true.asVoiceValue() band false.asVoiceValue())?.asInt shouldBe 0
-        (false.asVoiceValue() band false.asVoiceValue())?.asInt shouldBe 0
+    "VoiceValue.Bool: bitwise operations - bitAnd" {
+        (true.asVoiceValue() bitAnd true.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() bitAnd false.asVoiceValue())?.asInt shouldBe 0
+        (false.asVoiceValue() bitAnd false.asVoiceValue())?.asInt shouldBe 0
     }
 
-    "VoiceValue.Bool: bitwise operations - bor" {
-        (true.asVoiceValue() bor true.asVoiceValue())?.asInt shouldBe 1
-        (true.asVoiceValue() bor false.asVoiceValue())?.asInt shouldBe 1
-        (false.asVoiceValue() bor false.asVoiceValue())?.asInt shouldBe 0
+    "VoiceValue.Bool: bitwise operations - bitOr" {
+        (true.asVoiceValue() bitOr true.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() bitOr false.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() bitOr false.asVoiceValue())?.asInt shouldBe 0
     }
 
-    "VoiceValue.Bool: bitwise operations - bxor" {
-        (true.asVoiceValue() bxor true.asVoiceValue())?.asInt shouldBe 0
-        (true.asVoiceValue() bxor false.asVoiceValue())?.asInt shouldBe 1
-        (false.asVoiceValue() bxor false.asVoiceValue())?.asInt shouldBe 0
+    "VoiceValue.Bool: bitwise operations - bitXor" {
+        (true.asVoiceValue() bitXor true.asVoiceValue())?.asInt shouldBe 0
+        (true.asVoiceValue() bitXor false.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() bitXor false.asVoiceValue())?.asInt shouldBe 0
     }
 
     "VoiceValue.Bool: bitwise operations - shl" {

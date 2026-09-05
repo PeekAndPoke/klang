@@ -19,13 +19,14 @@ Pipeline/Stage, Master)?
 
 Known asymmetries already spotted, as a starting list:
 
-- **`room` (orbit) vs `wet` (master)** — same thing, two words. The master reuses `wet` across reverb and delay; sprudel
-  inherits `room` from Strudel.
+- ~~**`room` (orbit) vs `wet` (master)** — same thing, two words.~~ RESOLVED by C4.2
+  (2026-08-24): the orbit knob is `roomWet`/`delayWet` now; both doors say `wet`.
 - **`roomsize` is ~0..10 but `roomfade` is 0..1**, and `roomfade` silently makes `roomsize` inert. Inherited from the
-  `room("a:b:c")` packing; documented rather than fixed, because redefining it would retune shipped songs.
+  old `room("a:b:c")` colon packing (removed in C0, semantics kept); documented rather than fixed, because redefining it
+  would retune shipped songs.
 - **`damp` is master-only**; sprudel reaches damping through `roomlp` (Hz) instead.
-- **`delaycap`/`dcap` has no slot** in the `delay("wet:time:feedback")` compound string, while the reverb's compound
-  documents all five slots.
+- **`delaycap`/`dcap` is not a `delayWet()` parameter** (the per-param C0 form covers amount/time/feedback only), while
+  the reverb family exposes all five of its knobs.
 - **`roomDim` / `iResponse`** are stored but never read on **both** paths (`Reverb.kt` TODO) — dead vocabulary that
   still appears in the DSL and docs.
 
@@ -62,7 +63,7 @@ Returning to a master last used more than `MAX_CACHED_CHAINS` (8) edits ago is a
 Bounded and documented, but reachable by ordinary live-coding A/B ("was 2.0 better?").
 
 **Proper fix belongs to the resource warehouse pool** — already written up there, see
-[`resource-warehouse-pool.md`](resource-warehouse-pool.md) §"Master chains — the second customer".
+[`../plans/resource-warehouse.md`](../plans/resource-warehouse.md) §"Master chains — the second customer".
 
 ## 4. Delete-to-undo for `master(...)`
 
@@ -88,6 +89,13 @@ full parametric EQ.
   not gain shelves). If a per-orbit or per-voice shelf ever appears, names and units must match from day one — propose
   `eqLowDb/eqLowHz`, `eqHighDb/eqHighHz`, `eqMidDb/eqMidHz/eqMidQ` (dB gain + Hz corner, the industry-standard meaning)
   and record them in the parity table before shipping.
+  **UPDATE 2026-08-20 — the per-voice counterpart NOW EXISTS**, so this is no longer hypothetical:
+  the ignitor DSL ships `.eq()` plus `.band(freq, q, db)` (serial bell, dB gain, `q` = the ordinary
+  width scale, 0 dB transparent) and `.tap(freq, q, gain)` (parallel boost, LINEAR gain). Whoever
+  implements `MasterFx.eq()` must reconcile with those names and units rather than inventing a
+  parallel vocabulary — in particular `db` means the same thing on both, and a master `q` should
+  mean the same width it means on `.band()`. See also the (now settled, 2026-08-25) `freq`
+  unification in `docs/tasks-archive/2026-08/20260825-filter-frequency-param-naming.md`, which will touch these names.
 - **Implementation:** stereo biquad shelves from the existing SVF/biquad infra; plain `var` params (no buffer sizing —
   unlike `lookaheadSeconds` there is no constructor-val constraint); wire model + KSP codec + `MasterDefaultsSyncSpec`
   -style assertion for defaults (all gains 0 dB = bit-transparent, so existing songs are untouched).
@@ -106,8 +114,8 @@ full parametric EQ.
 
 - Shipped plan + full review history: [
   `../tasks-archive/2026-08/20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)
-- Foundation: [`per-playback-engine.md`](per-playback-engine.md) §H
+- Foundation: [`../tasks-archive/2026-09/20260904-per-playback-engine.md`](../tasks-archive/2026-09/20260904-per-playback-engine.md) §H
 - Next in the same family: [`katalyst-dsl.md`](katalyst-dsl.md) — follows this application-path and effect-reuse
   precedent
-- [`resource-warehouse-pool.md`](resource-warehouse-pool.md) — owns item 3
+- [`../plans/resource-warehouse.md`](../plans/resource-warehouse.md) — owns item 3
 - [`auto-mix-advisor.md`](auto-mix-advisor.md) — wants item 5 (`MasterFx.eq`) for its closed-loop phase

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -526,11 +526,11 @@ private fun applySignal(f: (Double) -> Double): SprudelPattern =
  * @return A continuous pattern driven by [f].
  *
  * ```KlangScript(Playable)
- * signal { t -> kotlin.math.sin(t * 2 * kotlin.math.PI) }.range(200, 2000).freq().segment(128)
+ * signal(t => Math.sin(t * 6.28318)).range(200, 2000).freq().segment(128)
  * ```
  *
  * ```KlangScript(Playable)
- * signal { t -> t % 1.0 }.range(0.0, 127.0).freq().segment(128)
+ * signal(t => t % 1.0).range(0.0, 127.0).freq().segment(128)
  * ```
  * @category continuous
  * @tags signal, continuous, lfo, function, custom, oscillator
@@ -554,7 +554,7 @@ fun signal(@Suppress("unused") callInfo: CallInfo? = null, f: (Double) -> Double
  * ```
  *
  * ```KlangScript(Playable)
- * steady("c").note().segment(128)  // constant note "c" on every event
+ * steady(60).note().segment(128)  // constant note c4 (MIDI 60) on every event
  * ```
  * @category continuous
  * @tags steady, constant, continuous, signal, dc
@@ -607,7 +607,7 @@ private val sine2Base: SprudelPattern by lazy { sineBase.toBipolar() }
  * ```
  *
  * ```KlangScript(Playable)
- * note("a!8").adsr("0.2:1.0:1.0:0.2").gain(sine.slow(4))  // gain modulation
+ * note("a!8").adsr(0.2, 1.0, 1.0, 0.2).gain(sine.slow(4))  // gain modulation
  * ```
  *
  * @category continuous
@@ -653,7 +653,7 @@ private val cosine2Base: SprudelPattern by lazy { cosineBase.toBipolar() }
  * ```
  *
  * ```KlangScript(Playable)
- * note("a!8").adsr("0.2:1.0:1.0:0.2").pan(cosine.slow(4))  // stereo panning with cosine
+ * note("a!8").adsr(0.2, 1.0, 1.0, 0.2).pan(cosine.slow(4))  // stereo panning with cosine
  * ```
  * @category continuous
  * @tags cosine, oscillator, lfo, continuous, wave

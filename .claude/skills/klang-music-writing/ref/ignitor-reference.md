@@ -25,8 +25,17 @@ let myPluck = Osc.saw()
     .lowpass(Osc.constant(2000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.1)))
     .adsr(0.005, 0.3, 0.0, 0.05)
 
-note("c3 e3 g3 c4").sound(myPluck).gain(0.5)
+note("c3 e3 g3 c4").sound(myPluck).adsrOff().gain(0.5)
 ```
+
+> ⚠️ **`.adsrOff()` is not decoration.** An `.adsr(...)` inside an ignitor shapes amplitude, and the
+> VOICE applies its own amplitude envelope on top — the two multiply, so every curve comes out with
+> twice the dB slope and the note dies faster and quieter than the numbers say. Add `.adsrOff()` on
+> the pattern whenever the instrument carries its own `.adsr(...)`, and the instrument owns
+> amplitude alone. Leave it off (i.e. keep the voice envelope) when the ignitor's `.adsr(...)` is
+> only modulating something, e.g. a filter cutoff.
+>
+> The examples below all follow this rule.
 
 ### Lush pad
 
@@ -36,7 +45,7 @@ let pad = Osc.supersaw()
     .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
     .adsr(0.3, 0.5, 0.8, 1.5)
 
-chord("<Am C F G>").voicing().sound(pad).gain(0.2).room(0.3).rsize(6)
+chord("<Am C F G>").voicing().sound(pad).adsrOff().gain(0.2).roomWet(0.3).rsize(6)
 ```
 
 ### FM bell
@@ -46,7 +55,7 @@ let bell = Osc.sine()
     .fm(Osc.sine(), 2.3, 400)
     .adsr(0.001, 1.5, 0.0, 0.5)
 
-note("c5 e5 g5 c6").sound(bell).gain(0.3).room(0.2)
+note("c5 e5 g5 c6").sound(bell).adsrOff().gain(0.3).roomWet(0.2)
 ```
 
 ---
@@ -105,7 +114,7 @@ so named-arg subsets work: `.phasePool()` = on with family defaults,
 `.phasePool(kMin = 0.05, kMax = 0.25)` = the hollow-pad band (the band is a timbre control),
 `.phasePool(refreshEvery = 0)` = frozen vocabulary. All-named or all-positional — KlangScript
 forbids mixing. Defaults: band 0.30–0.55 (saw family) / 0.40–0.65 (supertri) / 0.50–0.80
-(supersine), drawTries 5/16/40, poolSize 256 (cap 1024), refreshEvery 10, selection 0 = roundRobin, warmup 16 (eagerly seeded entries; 0 = fully lazy).
+(supersine), drawTries 5/16/40, poolSize 256 (cap 1024), refreshEvery 10, selection "normal[:width[:outliers]]" (default: median-centered serving over the pool vocabulary; width 0 = always the median take, 0.1 tight, 0.5 default, 1.5 ≈ random-with-center-edge; outliers 0..1 = chance of an EXTREME take at the vocabulary edge — directly at kMin/kMax when the band is reachable, "normal:0.1:0.05" = tight + 5% wild plucks; "random"; "roundrobin" opt-in — cycling can gargle), warmup 16 (eagerly seeded entries; 0 = fully lazy).
 ⚠️ Enabling the pool lifts the low-note fundamental (+2 dB measured on average — more on the
 notes the old random draw was cancelling) — on a finished song, retrim the low end once after
 switching it on.
@@ -216,12 +225,107 @@ modulation.
 
 | Method                      | Description                         |
 |-----------------------------|-------------------------------------|
-| `.lowpass(cutoffHz, q?)`    | Resonant lowpass (default q=0.707)  |
-| `.highpass(cutoffHz, q?)`   | Resonant highpass                   |
-| `.warmth(cutoffHz)`         | Gentle one-pole lowpass (-6 dB/oct) |
-| `.onePoleLowpass(cutoffHz)` | Same as warmth                      |
-| `.bandpass(cutoffHz, q?)`   | Bandpass filter                     |
-| `.notch(cutoffHz, q?)`      | Band-reject (notch) filter          |
+| `.lowpass(freq, q?, passes?, analog?)`  | Resonant lowpass (default q=0.707, passes=1)  |
+| `.highpass(freq, q?, passes?, analog?)` | Resonant highpass                            |
+| `.onepole(freq)`            | Gentle one-pole lowpass (-6 dB/oct) |
+| `.bandpass(freq, q?)`   | Bandpass filter                     |
+| `.notch(freq, q?)`      | Band-reject (notch) filter          |
+
+`passes` is the cascade count and sits in the SAME third slot on every door (`lpf(freq, q, passes)`
+in sprudel): `2` = 24 dB/oct, `3` = 36, coerced to 1..16. At the default q the cascade stays -3 dB
+AT the cutoff; a resonant q compounds across stages, and so does `analog` (every stage gets the
+full drive). KlangScript forbids mixing positional and named arguments, so combine with `analog`
+in the all-named form: `.lowpass(freq = 800, q = 1.8, analog = 3)`.
+
+### Equalizer
+
+All sections of one `.eq()` run in one pass instead of one node each, which removes the scratch
+buffer, the extra buffer read/write traffic and the virtual call for every section after the
+first. (The per-sample filter loop itself stays: the core runs one loop per section by design.) The saving grows with the
+section count and is much larger in the browser and on weak hardware than on desktop JVM, where
+it is small. Measure your own patch rather than assuming a rate.
+
+You write `.band()` and `.tap()` sections yourself, and plain `.lowpass()/.highpass()/
+.bandpass()/.notch()` are folded into the same pass automatically, so there is no need to
+rewrite them as bands.
+
+**Only NEIGHBOURING filters merge, and nothing is ever reordered.** Anything else between two
+filters is a wall: `.distort()`, `.drive()`, `.shape()`, `.crush()`, `.mul()`, `.shimmer()`,
+`.tremolo()`, `.vibrato()` and friends. So `.lowpass(5000).distort(0.4).lowpass(3000)` is two
+passes, not one. Moving the distort to the end of the chain would make it one, though that is a
+different patch and a different sound, so make that choice by ear rather than for the saving.
+
+Two kinds of filter are never folded at all: `.onepole()`, and any filter with a
+non-zero or osc-param `analog`. On `.lowpass()/.highpass()` that analog switches on a saturating
+character the fused EQ does not reproduce; on `.bandpass()/.notch()` it produces no sound of its
+own, and the filter stays out of the fusion for a subtler reason: reading the value each block is
+itself observable when it is an expression.
+
+A filter whose input is shared with another chain still folds, into its own pass; sharing only
+stops two chains merging into ONE pass, because that would compute the shared part twice.
+
+Fusing is meant to be inaudible. To check by ear, put `.optimizer(0)` on the sound to render it
+exactly as written, and compare.
+
+| Method                  | Description                                                                                        |
+|-------------------------|----------------------------------------------------------------------------------------------------|
+| `.eq()`                 | Opens the EQ; `.band()`/`.tap()` exist only on an EQ, so this comes first                          |
+| `.optimizer(0)`         | Renders a sound exactly as written, with no filter fusion; for A/B-ing the fusion by ear           |
+| `.band(freq, q?, db?)`  | **Serial** peaking band: `db` dB gain at `freq`, `q` = width (defaults q=0.707, db=0)             |
+| `.tap(freq, q?, gain?)` | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=0.707, gain=1.0)        |
+
+**The difference matters and it is audible.** `.band()` sections apply one after another, so
+they compound: two overlapping +6 dB bands give about +12 dB where they overlap, like any DAW EQ.
+`.tap()` sections all read the sound going INTO the eq and mix back onto it, so they add rather
+than compound. Converting a parallel tap bank into serial bands measured **+4.5 dB too hot around
+1200 Hz** on a real guitar patch (figure measured pre-C2; re-measure under the unity-peak taps).
+
+```javascript
+// EQ bands: shaping a sound, gains in dB
+Osc.saw().eq().band(3500, 0.7, 6).band(300, 1.0, -4)      // presence lift, mud cut
+
+// Parallel boosts: the classic guitar mids + presence lift, gains are plain multipliers
+Osc.saw().eq().tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0)
+```
+
+Use `.tap()` when you are stacking resonant boosts onto a sound, `.band()` when you are shaping
+with EQ bands. They mix freely in one `.eq()`, in written order.
+
+⚠ `.band(1200, 6)` sets **q**, not gain: the second positional arg is `q` and db stays 0, which
+is silent. Write `.band(freq = 1200, db = 6)` when you mean gain. KlangScript forbids MIXING
+positional and named arguments, so name them all or pass all three positionally.
+
+⚠ `.eq()` is only idempotent back-to-back. An `.eq()` written *after* other filters opens a
+SECOND eq, so the one-pass saving applies per eq, not across the whole line.
+
+⚠ Both `q` values are the ordinary width scale: `.band(f, 0.707)` and `.bandpass(f, 0.707)` span
+the same 1.90 octaves. What differs is CONVERSION. A tap keeps its numbers verbatim
+(`signal.add(signal.bandpass(f, Q).mul(g))` becomes `.tap(f, Q, g)`), but rewriting that tap as a
+`.band()` needs a WIDER setting, because a tap's audible bump is wider than the bandpass inside
+it: use `db = 20*log10(1 + g)` and `q = Q / sqrt(1 + g)` (since C2 the tap is unity-peak, so
+`q` is out of the level equation). Example: `.tap(850, 0.707, 1.7)` becomes
+`.band(850, 0.430, 8.63)`.
+
+⚠ Everything is control-rate (read once per block). For `.band()` that includes `db`, which
+moves filter coefficients, so an LFO on `db` zippers exactly like an LFO on a cutoff; use a VCA
+(`.mul(...)`) for a smooth gain ride. For `.tap()` the same applies to `gain`, which is a mix
+multiplier rather than a coefficient: a moving `gain` steps per block, whereas the chained
+`signal.add(signal.bandpass(...).mul(lfo))` is smooth per sample. Keep tap gains constant or
+osc-param driven.
+
+Since C2 of the filter unification the engine bandpass is **unity-peak**, so on a `.tap()` `q`
+is a pure WIDTH control: the boost at `freq` is `1 + gain` for ANY `q`. Tighten a tap by raising
+`q`; the level stays put, and `gain` alone decides how loud the band comes back. `.tap(freq)` at
+its defaults is still a **+6 dB lift** (`1 + 1 = 2`) while `.band(freq)` at its defaults is
+transparent.
+
+⚠ You cannot go back to a band after a chained filter: `.eq().band(...).lowpass(5000).band(...)`
+is an error, because `.lowpass()` returns a plain filter node. Open a new `.eq()` for more bands.
+
+⚠ Order matters when mixing them: a `.band()` earlier in the list cannot shape a later `.tap()`,
+because a tap always reads the sound entering the eq.
+`.band(freq = 3000, db = -12).tap(3000, 1.0, 5.0)` re-injects the 3 kHz the band just removed.
+Put taps first unless you want that.
 
 ### Envelope
 
@@ -234,17 +338,23 @@ modulation.
 | Method                                  | Description                                |
 |-----------------------------------------|--------------------------------------------|
 | `.drive(amount, driveType?)`            | Pre-amplification (type: "linear")         |
-| `.clip(shape?, oversample?)`            | Pure waveshaping without drive             |
-| `.distort(amount, shape?, oversample?)` | Drive + clip combined                      |
+| `.shape(shape?, oversample?)`           | The waveshaper curve alone, no gain        |
+| `.distort(amount, shape?, oversample?)` | `.drive()` + `.shape()` in one node        |
 | `.crush(amount)`                        | Bit-depth reduction                        |
 | `.coarse(amount)`                       | Sample-rate reduction                      |
-| `.phaser(rate, depth, center?, sweep?)` | Allpass phaser (center/sweep default 1000) |
+| `.phaser(rate, center?, sweep?).wet(w?).dryFloor(f?)` | Allpass phaser (center/sweep default 1000; wet 0.5, dryFloor 0 — the shared C4 wet knob) |
 | `.tremolo(rate, depth)`                 | Amplitude LFO modulation                   |
 
-Distortion/clip shapes: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
+`.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,
+`shape` is the curve with no gain, and `distort(amount, shape)` is exactly `drive(amount).shape(shape)`.
+Reach for the pair instead of the bundle only when something must sit BETWEEN them, e.g.
+`.drive(3).lowpass(800, 1.0, 1, 3).shape("tube")` — drive into a saturating filter, then shape.
+Sprudel has only `distort()`; its voice model cannot express a node between the two.
+
+Distort / shape curves: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
 `"rectify"`, `"exp"`
 
-Oversample factor (on `.distort` / `.clip`): user-facing factor, floored to power of 2. `0` or `1` = off,
+Oversample factor (on `.distort` / `.shape`): user-facing factor, floored to power of 2. `0` or `1` = off,
 `2` = 2x, `4` = 4x, `8` = 8x. Suppresses aliasing for heavy / bright distortion (e.g. `"exp"`, `"fold"`,
 `"hard"`). Example: `Osc.saw().distort(0.8, "exp", 4)`.
 
@@ -264,9 +374,9 @@ modulation amount in Hz.
 | `.detune(semitones)`                                | Shift pitch by semitones                   |
 | `.octaveUp()`                                       | +12 semitones                              |
 | `.octaveDown()`                                     | -12 semitones                              |
-| `.vibrato(rate, depth)`                             | Sinusoidal pitch LFO                       |
-| `.accelerate(amount)`                               | Exponential pitch ramp over voice duration |
-| `.pitchEnvelope(amount, attack?, decay?, release?)` | Pitch sweep envelope (amount in semitones) |
+| `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
+| `.accelerate(semitones)`                            | Exponential pitch ramp over the voice (12 = one octave) |
+| `.pitchEnvelope(semitones, attack?, decay?, release?)` | Pitch sweep envelope (SEMITONES at peak)  |
 
 ### Analog Drift
 
@@ -360,7 +470,7 @@ Osc.sine(Osc.freq().plus(Osc.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
 | `berlinnoise` | `berlin`                 | BerlinNoise(rate=1, octaves=1, persistence=0.5)                 |
 | `dust`        |                          | Dust(density=0.2, tail=1, bipolar=0)                            |
 | `crackle`     |                          | Crackle(chaos=1.5) — chaotic, NOT a dust alias                  |
-| `sgpad`       |                          | (Saw + Saw.detune(0.1)) / 2 -> onePoleLowpass(3000)             |
+| `sgpad`       |                          | (Saw + Saw.detune(0.1)) / 2 -> onepole(3000)             |
 | `sgbell`      |                          | Sine.fm(Sine, ratio=1.4, depth=300, decay=0.5)                  |
 | `sgbuzz`      |                          | Square.lowpass(2000)                                            |
 
@@ -391,7 +501,7 @@ let clarinet = Osc.triangle().mul(0.7)
         .plus(Osc.sine().mul(0.15))
         .plus(Osc.perlin(6).mul(0.02))
         .plus(Osc.perlin(10).mul(0.08).adsr(0.02, 0.1, 0.0, 0.01))
-        .lowpass(2800).highpass(150).warmth(4000)
+        .lowpass(2800).highpass(150).onepole(4000)
         .vibrato(5, 0.003)
         .pitchEnvelope(0.5, 0.01, 0.06)
         .adsr(0.04, 0.08, 0.9, 0.1)
@@ -498,7 +608,7 @@ let marimba = Osc.sine().mul(0.7)
         .plus(Osc.sine().detune(12).mul(0.15).adsr(0.001, 0.08, 0.0, 0.02))
         .plus(Osc.sine().detune(19.02).mul(0.08).adsr(0.001, 0.04, 0.0, 0.01))
         .plus(Osc.perlin(15).mul(0.12).lowpass(1500).highpass(200).adsr(0.001, 0.03, 0.0, 0.005))
-        .lowpass(2500).warmth(3000)
+        .lowpass(2500).onepole(3000)
         .pitchEnvelope(1, 0.001, 0.04)
         .adsr(0.005, 0.5, 0.0, 0.08)
 ```
@@ -553,7 +663,7 @@ let rim = Osc.sine(800)
         .adsr(0.001, 0.03, 0.0, 0.005)
 ```
 
-**Vinyl crackle** — old-record texture from primitives (no dedicated generator; the Motör stays raw)
+**Vinyl crackle** — old-record texture from primitives (no dedicated generator; the Motor stays raw)
 
 Layer dust through band/high-pass for the "tick" ring, plus a quiet hiss bed. The dust authenticity knobs
 do the heavy lifting: `bipolar` gives natural ±pops, and a high `tail` makes pops mostly-tiny / rare-loud
@@ -686,5 +796,5 @@ stack(
   note("a1 ~ ~ ~ ~ ~ ~ ~").sound(kick).gain(0.8),
   sound("~ ~ ~ ~ cp ~ ~ ~").gain(0.4),
   sound("hh*8").gain(0.3)
-).room(0.2).rsize(5).delay(0.15).delaytime(pure(1/8).div(cps))
+).roomWet(0.2).rsize(5).delayWet(0.15).delaytime(pure(1/8).div(cps))
 ```

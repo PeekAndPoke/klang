@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -18,25 +18,24 @@ class LangHpadsrSpec : StringSpec({
 
     "hpadsr dsl interface" {
         val pat = "c3"
-        val ctrl = "0.01:0.3:0.5:0.5"
-
+        
         dslInterfaceTests(
-            "pattern.hpadsr(ctrl)" to
-                    note(pat).hpadsr(ctrl),
-            "script pattern.hpadsr(ctrl)" to
-                    SprudelPattern.compile("""note("$pat").hpadsr("$ctrl")"""),
-            "string.hpadsr(ctrl)" to
-                    pat.hpadsr(ctrl),
-            "script string.hpadsr(ctrl)" to
-                    SprudelPattern.compile(""""$pat".hpadsr("$ctrl")"""),
-            "hpadsr(ctrl)" to
-                    note(pat).apply(hpadsr(ctrl)),
-            "script hpadsr(ctrl)" to
-                    SprudelPattern.compile("""note("$pat").apply(hpadsr("$ctrl"))"""),
-            "chained hpadsr(ctrl)" to
-                    note(pat).apply(hpadsr(ctrl).hpadsr(ctrl)),
-            "script chained hpadsr(ctrl)" to
-                    SprudelPattern.compile("""note("$pat").apply(hpadsr("$ctrl").hpadsr("$ctrl"))"""),
+            "pattern.hpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    note(pat).hpadsr(0.01, 0.3, 0.5, 0.5),
+            "script pattern.hpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    SprudelPattern.compile("""note("$pat").hpadsr(0.01, 0.3, 0.5, 0.5)"""),
+            "string.hpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    pat.hpadsr(0.01, 0.3, 0.5, 0.5),
+            "script string.hpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    SprudelPattern.compile(""""$pat".hpadsr(0.01, 0.3, 0.5, 0.5)"""),
+            "hpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    note(pat).apply(hpadsr(0.01, 0.3, 0.5, 0.5)),
+            "script hpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    SprudelPattern.compile("""note("$pat").apply(hpadsr(0.01, 0.3, 0.5, 0.5))"""),
+            "chained hpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    note(pat).apply(hpadsr(0.01, 0.3, 0.5, 0.5).hpadsr(0.01, 0.3, 0.5, 0.5)),
+            "script chained hpadsr(0.01, 0.3, 0.5, 0.5)" to
+                    SprudelPattern.compile("""note("$pat").apply(hpadsr(0.01, 0.3, 0.5, 0.5).hpadsr(0.01, 0.3, 0.5, 0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -49,7 +48,7 @@ class LangHpadsrSpec : StringSpec({
     }
 
     "hpadsr() sets all four params" {
-        val p = note("c3").hpadsr("0.02:0.4:0.6:0.8")
+        val p = note("c3").hpadsr(0.02, 0.4, 0.6, 0.8)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -62,7 +61,7 @@ class LangHpadsrSpec : StringSpec({
     }
 
     "hpadsr() with partial params sets only specified fields" {
-        val p = note("c3").hpadsr("0.01:0.3")
+        val p = note("c3").hpadsr(0.01, 0.3)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -75,7 +74,7 @@ class LangHpadsrSpec : StringSpec({
     }
 
     "hpadsr() works with control pattern" {
-        val p = note("c3 e3").hpadsr("0.01:0.2:0.5:0.3 0.05:0.4:0.7:0.6")
+        val p = note("c3 e3").hpadsr("0.01 0.05", "0.2 0.4", "0.5 0.7", "0.3 0.6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -86,7 +85,7 @@ class LangHpadsrSpec : StringSpec({
     }
 
     "hpadsr() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").hpadsr("0.01:0.3:0.5:0.5")""")
+        val p = SprudelPattern.compile("""note("c3").hpadsr(0.01, 0.3, 0.5, 0.5)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -8,9 +8,82 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.TWO_PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.ln
+import kotlin.math.round
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+/** How [PhasePool.next] serves entries. The user surface is a STRING (`selection`), value-colon
+ * compound form `"name[:width[:outliers]]"` — parsed by [parsePhasePoolSelection] at voice build. */
+enum class PhasePoolSelection {
+    /** Normal-distribution serving over the vocabulary's RANK ORDER (median-centered) — the
+     *  "guitar-like" default. Rank space makes it robust: even when the accept band is
+     *  unreachable and every stored K sits off-band, serving still spans the vocabulary
+     *  instead of collapsing onto one extreme entry. */
+    Normal,
+
+    /** Uniform random pick from the vocabulary. */
+    Random,
+
+    /** Cycle the vocabulary in order. OPT-IN: at short vocabularies the cycling period is
+     *  audible as a gargling pattern — that is why it is no longer the default. */
+    RoundRobin,
+}
+
+/** Parsed `selection`: the mode plus the Normal mode's two coefficients. */
+class PhasePoolSelectionParsed(val mode: PhasePoolSelection, val width: Double, val outliers: Double)
+
+/** Normal-mode width when no coeff is given: σ = width · filled/2 in RANK space, so the
+ *  default 0.5 keeps ~95% of targets within the vocabulary span (out-of-range targets are
+ *  REFLECTED back, not clamped - no edge piling). SMALLER =
+ *  tighter around the median entry: `"normal:0.1"` serves almost only the most typical
+ *  takes; larger loosens toward uniform. */
+const val PHASE_POOL_DEFAULT_WIDTH: Double = 0.5
+
+/** Normal-mode outlier probability when no second coeff is given: 0 = no forced extremes. */
+const val PHASE_POOL_DEFAULT_OUTLIERS: Double = 0.0
+
+/**
+ * Parses the `selection` string: `"name[:width[:outliers]]"` (the sanctioned VALUE-colon form,
+ * like `bd:2`). Names (aliases in parens): `"normal"` (`distribution`, `dist`, `gauss`,
+ * `gaussian`) — the default; `"random"` (`rnd`); `"roundrobin"` (`roundrobbin`, `rr`).
+ *
+ * Normal-mode coefficients (positional, either may be left empty — `"normal::0.05"`):
+ *  - width: center tightness in rank space (σ = width · vocabulary/2). 0 = always the
+ *    median take, 0.1 = tight, 0.5 = default, ≥ 1 ≈ uniform ("almost fully random with a
+ *    slight center edge" is just a LARGE width, e.g. `"normal:1.5"`).
+ *  - outliers: probability (0..1, default 0) that a serve is an EXTREME take instead —
+ *    the vocabulary's lowest- or highest-K entry (coin-flip side); with a reachable band
+ *    those sit directly at kMin/kMax. `"normal:0.1:0.05"` = tight typical takes with a
+ *    5% chance of a wild pluck.
+ *
+ * An unrecognized name or a bad coefficient COERCES to its default (never throws); modes
+ * without coefficients ignore them silently.
+ */
+fun parsePhasePoolSelection(raw: String?): PhasePoolSelectionParsed {
+    val parts = (raw ?: "").trim().lowercase().split(':')
+    val mode = when (parts.getOrNull(0)?.trim()) {
+        "random", "rnd" -> PhasePoolSelection.Random
+        "roundrobin", "roundrobbin", "rr" -> PhasePoolSelection.RoundRobin
+        else -> PhasePoolSelection.Normal // incl. "normal"/aliases, "" and typos: coerce
+    }
+    val c1 = parts.getOrNull(1)?.trim()?.toDoubleOrNull()
+    // width 0 is meaningful ("no spread - always the median take"), so only NEGATIVE and
+    // non-finite values coerce to the default.
+    val width = if (c1 != null && c1.isFinite() && c1 >= 0.0) {
+        c1
+    } else {
+        PHASE_POOL_DEFAULT_WIDTH
+    }
+    val c2 = parts.getOrNull(2)?.trim()?.toDoubleOrNull()
+    val outliers = if (c2 != null && c2.isFinite()) {
+        c2.coerceIn(0.0, 1.0)
+    } else {
+        PHASE_POOL_DEFAULT_OUTLIERS
+    }
+    return PhasePoolSelectionParsed(mode = mode, width = width, outliers = outliers)
+}
 
 /**
  * Per-playback registry of unison start-phase pools (docs/tasks/unison-phase-pool.md §3.3–§3.6).
@@ -201,6 +274,16 @@ class PhasePool(
     private val entries: Array<DoubleArray?> =
         arrayOfNulls(poolSize.toInt().coerceIn(1, MAX_POOL_SIZE))
 
+    /** Fundamental-coherence K of each stored entry (parallel to [entries]) — what the
+     *  Normal mode's rank order sorts by. One eager Double per slot (≤ 8 KB at the cap). */
+    private val kOf = DoubleArray(entries.size)
+
+    /** Entry indices sorted by [kOf] ascending over `[0, filled)` — the Normal mode's rank
+     *  space. Preallocated; re-sorted lazily (insertion sort — the array is nearly sorted
+     *  after a single top-up or refresh redraw, so the pass is ~O(filled)). */
+    private val rankIdx = IntArray(entries.size)
+    private var ranksDirty = true
+
     // Both growth terms are bounded: by poolSize (close in ~TOP_UP_DIVISOR..2x notes) AND by
     // draw cost (a deep-tries × many-voices config tops up fewer entries per note — the same
     // work budget the constructor prefix uses, so no knob combination stalls a block).
@@ -229,19 +312,41 @@ class PhasePool(
         repeat(prefix) {
             topUpOne()
         }
+        // Sort the warmup prefix now: the first Normal serve would otherwise pay a full
+        // O(prefix^2) insertion sort on the audio callback (the warmup budget exists
+        // precisely to keep the first note inside a block).
+        ensureRanks()
     }
 
     private fun topUpOne() {
-        entries[filled] = DoubleArray(voices).also { drawBandedInto(it) }
+        val e = DoubleArray(voices)
+        kOf[filled] = drawBandedInto(e)
+        entries[filled] = e
+        rankIdx[filled] = filled
         filled++
+        ranksDirty = true
     }
 
     /**
-     * Serve one entry for a note-on. `selection`: 0 = roundRobin (cycle the array — settled
-     * §9.2), anything > 0.5 = random. The returned array is pool-owned — COPY from it, never
-     * mutate or retain it.
+     * Serve one entry for a note-on ([mode]/[width]/[outliers] from [parsePhasePoolSelection]).
+     * The returned array is pool-owned — COPY from it, never mutate or retain it.
+     *
+     * [PhasePoolSelection.Normal] (the default) draws a target RANK from a normal centered on
+     * the vocabulary's median entry (entries sorted by K; σ = width·filled/2) and serves that
+     * rank — center-heavy, extremes rare, no cycling period, and robust to unreachable bands
+     * (rank space always spans the vocabulary; a K-space target would collapse onto one
+     * extreme entry whenever the stored Ks don't straddle the band center — review finding,
+     * 2026-08-24). [outliers] is the probability of serving an EXTREME take instead — the
+     * vocabulary's lowest- or highest-K entry, coin-flip side (with a reachable band those
+     * sit directly at kMin/kMax). [PhasePoolSelection.RoundRobin] (the
+     * pre-2026-08-24 default, §9.2) is opt-in now: its cycling gargles audibly at short
+     * vocabularies.
      */
-    fun next(selection: Double): DoubleArray {
+    fun next(
+        mode: PhasePoolSelection,
+        width: Double = PHASE_POOL_DEFAULT_WIDTH,
+        outliers: Double = PHASE_POOL_DEFAULT_OUTLIERS,
+    ): DoubleArray {
         if (filled < entries.size) {
             // Growing phase: a few ~µs top-ups per note stand in for refresh (the vocabulary is
             // already churning by construction) and close the pool in ~TOP_UP_DIVISOR notes.
@@ -254,23 +359,76 @@ class PhasePool(
             served++
             if (served >= refreshN) {
                 served = 0
-                drawBandedInto(entries[rng.nextInt(filled)]!!) // random eviction, never worst
+                val j = rng.nextInt(filled) // random eviction, never worst
+                kOf[j] = drawBandedInto(entries[j]!!)
+                ranksDirty = true
             }
         }
 
-        if (selection > 0.5) {
-            return entries[rng.nextInt(filled)]!!
+        return when (mode) {
+            PhasePoolSelection.Random -> entries[rng.nextInt(filled)]!!
+
+            PhasePoolSelection.RoundRobin -> {
+                if (rr >= filled) {
+                    rr = 0
+                }
+                val e = entries[rr]!!
+                rr++
+                e
+            }
+
+            PhasePoolSelection.Normal -> {
+                ensureRanks()
+                if (outliers > 0.0 && rng.nextDouble() < outliers) {
+                    // an extreme take: the lowest- or highest-K entry, coin-flip side
+                    val edge = if (rng.nextDouble() < 0.5) 0 else filled - 1
+                    return entries[rankIdx[edge]]!!
+                }
+                val median = (filled - 1) / 2.0
+                val sigma = width * filled / 2.0
+                var t = median + gaussian() * sigma
+                // REFLECT out-of-range targets instead of clamping: a clamp piles both
+                // gaussian tails onto the two extreme entries (~4x over-serving the least
+                // and most coherent takes at shipped defaults - review finding). One
+                // reflection covers everything up to 3x the vocabulary; coerce catches the rest.
+                val top = (filled - 1).toDouble()
+                if (t < 0.0) {
+                    t = -t
+                }
+                if (t > top) {
+                    t = 2.0 * top - t
+                }
+                val rank = round(t).toInt().coerceIn(0, filled - 1)
+                entries[rankIdx[rank]]!!
+            }
         }
-
-        if (rr >= filled) {
-            rr = 0
-        }
-
-        val e = entries[rr]!!
-        rr++
-
-        return e
     }
+
+    /** Re-sorts [rankIdx] by [kOf] when stale — insertion sort, ~O(filled) when nearly sorted. */
+    private fun ensureRanks() {
+        if (!ranksDirty) {
+            return
+        }
+        for (i in 1 until filled) {
+            val idx = rankIdx[i]
+            val k = kOf[idx]
+            var j = i - 1
+            while (j >= 0 && kOf[rankIdx[j]] > k) {
+                rankIdx[j + 1] = rankIdx[j]
+                j--
+            }
+            rankIdx[j + 1] = idx
+        }
+        ranksDirty = false
+    }
+
+    /** Spec-only read access to a stored entry's coherence K (no serving side effects). */
+    internal fun peekK(index: Int): Double = kOf[index]
+
+    /** One standard-normal draw (Box–Muller). `1.0 - nextDouble()` keeps the log argument in
+     *  (0, 1] — never ln(0). Allocation-free. */
+    private fun gaussian(): Double =
+        sqrt(-2.0 * ln(1.0 - rng.nextDouble())) * cos(TWO_PI * rng.nextDouble())
 
     /** Spec-only read access to a stored entry (no serving side effects). */
     internal fun peek(index: Int): DoubleArray = entries[index]!!
@@ -278,10 +436,12 @@ class PhasePool(
     /**
      * One banded best-of-[tries] draw into [target] — same acceptance logic as the engine's
      * stateless `selectBandedPhases`, scored against the base profile. Early exit on the first
-     * in-band candidate is accept-reject sampling, unbiased within the band.
+     * in-band candidate is accept-reject sampling, unbiased within the band. Returns the
+     * accepted candidate's K (stored in [kOf] — the Normal mode's rank order sorts by it).
      */
-    private fun drawBandedInto(target: DoubleArray) {
+    private fun drawBandedInto(target: DoubleArray): Double {
         var bestDist = Double.MAX_VALUE
+        var bestK = 0.0
 
         for (t in 0 until tries) {
             var re = 0.0
@@ -299,15 +459,17 @@ class PhasePool(
             val dist = if (k < lo) lo - k else if (k > hi) k - hi else 0.0
 
             if (dist == 0.0) {
-                return // target already holds the accepted candidate; scratch not needed
+                return k // target already holds the accepted candidate; scratch not needed
             }
 
             if (dist < bestDist) {
                 bestDist = dist
+                bestK = k
                 target.copyInto(scratch)
             }
         }
 
         scratch.copyInto(target)
+        return bestK
     }
 }

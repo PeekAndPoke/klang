@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -69,19 +69,19 @@ sealed interface SprudelVoiceValue {
         return Num(a.pow(b))
     }
 
-    infix fun band(other: SprudelVoiceValue?): SprudelVoiceValue? {
+    infix fun bitAnd(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val i1 = asInt ?: return null
         val i2 = other?.asInt ?: return null
         return Num((i1 and i2).toDouble())
     }
 
-    infix fun bor(other: SprudelVoiceValue?): SprudelVoiceValue? {
+    infix fun bitOr(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val i1 = asInt ?: return null
         val i2 = other?.asInt ?: return null
         return Num((i1 or i2).toDouble())
     }
 
-    infix fun bxor(other: SprudelVoiceValue?): SprudelVoiceValue? {
+    infix fun bitXor(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val i1 = asInt ?: return null
         val i2 = other?.asInt ?: return null
         return Num((i1 xor i2).toDouble())

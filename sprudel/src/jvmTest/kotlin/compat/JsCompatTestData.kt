@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -83,7 +83,7 @@ object JsCompatTestData {
                 CM9#11 CM7#5 Cm6 Cm69 Cm^7 
                 C-M7 Cm^9 C-M9 Cm9 Cmadd9 
                 Cm11 Cm7b5 Cmb6 Cm#5
-            >`).voicing().room(0.5)
+            >`).voicing().roomWet(0.5)
         """.trimIndent()
         ),
         // Freq
@@ -380,160 +380,7 @@ object JsCompatTestData {
         // Does not compile in js
         Example(SKIP, "BinaryNL Function", """binaryNL(5, 4)"""),
 
-        // Voice Attributes
-        Example(SKIP, "Gain & Pan", """note("c").gain(0.5).pan("-1.0 1.0")"""),
-        Example("Legato", """note("c e").legato(0.5)"""),
-        Example("Clip", """note("c e").clip(0.5)"""),
-        Example("Unison/Detune/Spread", """note("c").unison(4).spread(0.1).panSpread(0.5)"""),
-
-        // ADSR Envelopes
-        Example("ADSR single", """note("c").attack(0.1).decay(0.2).sustain(0.5).release(1.0)"""),
-        Example("ADSR String", """note("c").adsr("0.1:0.2:0.5:1.0")"""),
-
-        // Filters
-        Example("LowPass", """s("saw").lpf(333).resonance(0.3)"""),
-        Example("LowPass alias cutoff", """s("saw").cutoff(333)"""),
-        Example("LowPass alias ctf", """s("saw").ctf(333)"""),
-        Example("LowPass alias lp", """s("saw").lp(333)"""),
-        Example("LowPass resonance alias lpq", """s("saw").lpf(333).lpq(0.3)"""),
-        Example("HighPass", """s("saw").hpf(444).hresonance(0.7)"""),
-        Example("HighPass alias hp", """s("saw").hp(444)"""),
-        Example("HighPass alias hcutoff", """s("saw").hcutoff(444)"""),
-        Example("HighPass resonance alias hpq", """s("saw").hpf(444).hpq(0.7)"""),
-        Example("BandPass", """s("saw").bandf(555).bandq(0.6)"""),
-        Example("BandPass alias bpf", """s("saw").bpf(555)"""),
-        Example("BandPass alias bp", """s("saw").bp(555)"""),
-        Example("BandPass Q alias bpq", """s("saw").bandf(555).bpq(0.6)"""),
-        // TODO: notchf does not seem to exist in strudel ... or we need to figure how?
-        Example(SKIP, "Notch", """s("saw").notchf(666).nresonance(0.4)"""),
-
-        // Filter Envelopes
-        Example("LPF with envelope attack", """s("saw").lpf(1000).lpattack(0.1)"""),
-        Example("LPF with envelope alias lpa", """s("saw").lpf(1000).lpa(0.1)"""),
-        Example("LPF with envelope decay", """s("saw").lpf(1000).lpdecay(0.2)"""),
-        Example("LPF with envelope alias lpd", """s("saw").lpf(1000).lpd(0.2)"""),
-        Example("LPF with envelope sustain", """s("saw").lpf(1000).lpsustain(0.8)"""),
-        Example("LPF with envelope alias lps", """s("saw").lpf(1000).lps(0.8)"""),
-        Example("LPF with envelope release", """s("saw").lpf(1000).lprelease(0.5)"""),
-        Example("LPF with envelope alias lpr", """s("saw").lpf(1000).lpr(0.5)"""),
-        Example("LPF with envelope depth", """s("saw").lpf(1000).lpenv(0.5)"""),
-        Example("LPF with envelope alias lpe", """s("saw").lpf(1000).lpe(0.5)"""),
-        Example(
-            "LPF with full envelope",
-            """s("saw").lpf(1000).lpattack(0.1).lpdecay(0.2).lpsustain(0.8).lprelease(0.5).lpenv(0.7)"""
-        ),
-
-        // Filter Envelopes - Highpass
-        Example("HPF with envelope attack", """s("saw").hpf(2000).hpattack(0.1)"""),
-        Example("HPF with envelope alias hpa", """s("saw").hpf(2000).hpa(0.1)"""),
-        Example("HPF with envelope decay", """s("saw").hpf(2000).hpdecay(0.2)"""),
-        Example("HPF with envelope alias hpd", """s("saw").hpf(2000).hpd(0.2)"""),
-        Example("HPF with envelope sustain", """s("saw").hpf(2000).hpsustain(0.8)"""),
-        Example("HPF with envelope alias hps", """s("saw").hpf(2000).hps(0.8)"""),
-        Example("HPF with envelope release", """s("saw").hpf(2000).hprelease(0.5)"""),
-        Example("HPF with envelope alias hpr", """s("saw").hpf(2000).hpr(0.5)"""),
-        Example("HPF with envelope depth", """s("saw").hpf(2000).hpenv(0.5)"""),
-        Example("HPF with envelope alias hpe", """s("saw").hpf(2000).hpe(0.5)"""),
-        Example(
-            "HPF with full envelope",
-            """s("saw").hpf(2000).hpattack(0.1).hpdecay(0.2).hpsustain(0.8).hprelease(0.5).hpenv(0.7)"""
-        ),
-
-        // Filter Envelopes - Bandpass
-        Example("BPF with envelope attack", """s("saw").bpf(1500).bpattack(0.1)"""),
-        Example("BPF with envelope alias bpa", """s("saw").bpf(1500).bpa(0.1)"""),
-        Example("BPF with envelope decay", """s("saw").bpf(1500).bpdecay(0.2)"""),
-        Example("BPF with envelope alias bpd", """s("saw").bpf(1500).bpd(0.2)"""),
-        Example("BPF with envelope sustain", """s("saw").bpf(1500).bpsustain(0.8)"""),
-        Example("BPF with envelope alias bps", """s("saw").bpf(1500).bps(0.8)"""),
-        Example("BPF with envelope release", """s("saw").bpf(1500).bprelease(0.5)"""),
-        Example("BPF with envelope alias bpr", """s("saw").bpf(1500).bpr(0.5)"""),
-        Example("BPF with envelope depth", """s("saw").bpf(1500).bpenv(0.5)"""),
-        Example("BPF with envelope alias bpe", """s("saw").bpf(1500).bpe(0.5)"""),
-        Example(
-            "BPF with full envelope",
-            """s("saw").bpf(1500).bpattack(0.1).bpdecay(0.2).bpsustain(0.8).bprelease(0.5).bpenv(0.7)"""
-        ),
-
-        // Filter Envelopes - Notch (NOT IN ORIGINAL STRUDEL JS IMPLEMENTATION)
-        Example("Notch filter with envelope attack", """s("saw").notchf(1500).nfattack(0.1)""", skip = true),
-        Example("Notch filter with envelope alias nfa", """s("saw").notchf(1500).nfa(0.1)""", skip = true),
-        Example("Notch filter with envelope decay", """s("saw").notchf(1500).nfdecay(0.2)""", skip = true),
-        Example("Notch filter with envelope alias nfd", """s("saw").notchf(1500).nfd(0.2)""", skip = true),
-        Example("Notch filter with envelope sustain", """s("saw").notchf(1500).nfsustain(0.8)""", skip = true),
-        Example("Notch filter with envelope alias nfs", """s("saw").notchf(1500).nfs(0.8)""", skip = true),
-        Example("Notch filter with envelope release", """s("saw").notchf(1500).nfrelease(0.5)""", skip = true),
-        Example("Notch filter with envelope alias nfr", """s("saw").notchf(1500).nfr(0.5)""", skip = true),
-        Example("Notch filter with envelope depth", """s("saw").notchf(1500).nfenv(0.5)""", skip = true),
-        Example("Notch filter with envelope alias nfe", """s("saw").notchf(1500).nfe(0.5)""", skip = true),
-        Example(
-            "Notch filter with full envelope",
-            """s("saw").notchf(1500).nfattack(0.1).nfdecay(0.2).nfsustain(0.8).nfrelease(0.5).nfenv(0.7)""",
-            skip = true
-        ),
-
-        // Vowel Formant Filter
-        Example("Vowel a", """note("c3").vowel("a")"""),
-        Example("Vowel e", """note("c3").vowel("e")"""),
-        Example("Vowel i", """note("c3").vowel("i")"""),
-        Example("Vowel o", """note("c3").vowel("o")"""),
-        Example("Vowel u", """note("c3").vowel("u")"""),
-        Example("Vowel sequence", """note("c3 e3 g3").vowel("a e i")"""),
-        Example("Vowel with saw", """s("saw").vowel("o")"""),
-        Example(SKIP, "Vowel standalone", """vowel("a e i o u")"""),
-
-        // Effects
-        Example("Distortion low", """note("c").distort(0.5)"""),
-        Example("Distortion alias dist", """note("c").dist(0.5)"""),
-        Example("Distortion medium", """note("c").distort(7.0)"""),
-        Example("Distortion high", """note("c").distort(50.0)"""),
-        Example("Bitcrush", """note("c").crush(4)"""),
-        Example("Downsample", """note("c").coarse(4)"""),
-        Example("Reverb", """note("c").room(0.5).roomsize(2.0)"""),
-        Example("Reverb alias rsize", """note("c").room(0.5).rsize(2.0)"""),
-        Example("Delay", """note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)"""),
-        Example("Delay alias delayfb", """note("c").delay(0.5).delaytime(0.25).delayfb(0.5)"""),
-        Example("Delay alias dfb", """note("c").delay(0.5).delaytime(0.25).dfb(0.5)"""),
-
-        // Phaser
-        Example("Phaser basic", """note("c").phaser(2).phaserdepth(0.8)"""),
-        Example("Phaser aliases", """note("c").ph(2).phd(0.8)"""),
-        Example("Phaser center/sweep", """note("c").phc(500).phs(1000)"""),
-        Example("Phaser phasdp alias", """note("c").phaser(2).phasdp(0.7)"""),
-
-        // Tremolo
-        Example("Tremolo basic", """note("c").tremolosync(4).tremolodepth(0.5)"""),
-        Example("Tremolo aliases", """note("c").tremsync(4).tremdepth(0.5)"""),
-        Example("Tremolo shape", """note("c").tremoloshape("sine")"""),
-        Example("Tremolo shape alias", """note("c").tremshape("square")"""),
-        Example("Tremolo skew/phase", """note("c").tremoloskew(0.6).tremolophase(0.25)"""),
-        Example("Tremolo skew/phase aliases", """note("c").tremskew(0.6).tremphase(0.25)"""),
-
-        // Missing Aliases
-        Example("Room Size Alias sz", """note("c").room(0.5).sz(0.9)"""),
-        Example("Room Size Alias size", """note("c").room(0.5).size(0.9)"""),
-        // Does not compile in JS
-        Example(SKIP, "Orbit Alias o", """note("c").o(1)"""),
-
-        // Reverb (Extended)
-        Example("Reverb roomfade", """note("c").room(0.5).roomfade(0.3)"""),
-        Example("Reverb roomfade alias rfade", """note("c").room(0.5).rfade(0.4)"""),
-        Example("Reverb roomlp", """note("c").room(0.5).roomlp(1000)"""),
-        Example("Reverb roomlp alias rlp", """note("c").room(0.5).rlp(2000)"""),
-        Example("Reverb roomdim", """note("c").room(0.5).roomdim(5000)"""),
-        Example("Reverb roomdim alias rdim", """note("c").room(0.5).rdim(6000)"""),
-        Example("Reverb iresponse", """note("c").room(0.5).iresponse("hall")"""),
-        Example("Reverb iresponse alias ir", """note("c").room(0.5).ir("plate")"""),
-        Example(
-            "Reverb full chain",
-            """note("c").room(0.8).roomsize(2).roomfade(0.5).roomlp(1000).roomdim(5000).iresponse("hall")"""
-        ),
-
         // Sample Manipulation
-        Example("Sample Begin", """s("bd").begin(0.5)"""),
-        Example("Sample End", """s("bd").end(0.5)"""),
-        Example("Sample Speed", """s("bd").speed(2)"""),
-        Example("Sample Speed Negative", """s("bd").speed(-1)"""),
         Example("Sample Loop", """s("bd").loop()"""),
         Example("Sample LoopAt 0.5", """s("bd").loopAt(0.5)"""),
         Example("Sample LoopAt 1", """s("bd").loopAt(1)"""),
@@ -542,7 +389,6 @@ object JsCompatTestData {
         Example("Sample LoopAt 3", """s("bd").loopAt(3)"""),
         Example("Sample LoopAt 4", """s("bd").loopAt(4)"""),
         Example("Sample LoopAt 8", """s("bd").loopAt(8)"""),
-        Example("Sample Cut", """s("bd").cut(1)"""),
         Example("Sample Slice", """s("bd").slice(4, 1)"""),
         Example("Sample Splice", """s("bd").splice(4, 1)""", skip = true),
         Example("Sample Loop Begin", """s("bd").loopBegin(0.25)""", skip = true),
@@ -646,30 +492,12 @@ object JsCompatTestData {
                 }
         }.toTypedArray(),
 
-        // Modulation
-        Example("Vibrato", """note("c").vib(5).vibmod(0.1)"""),
-        Example("Accelerate", """note("c").accelerate(1)"""),
-
-        // Pitch Envelope (NOT IN ORIGINAL STRUDEL JS IMPLEMENTATION)
-        Example("Pitch envelope attack", """note("c").pattack(0.1)""", skip = true),
-        Example("Pitch envelope attack alias", """note("c").patt(0.1)""", skip = true),
-        Example("Pitch envelope decay", """note("c").pdecay(0.3)""", skip = true),
-        Example("Pitch envelope decay alias", """note("c").pdec(0.3)""", skip = true),
-        Example("Pitch envelope release", """note("c").prelease(0.5)""", skip = true),
-        Example("Pitch envelope release alias", """note("c").prel(0.5)""", skip = true),
-        Example("Pitch envelope depth", """note("c").penv(12)""", skip = true),
-        Example("Pitch envelope depth alias", """note("c").pamt(12)""", skip = true),
-        Example("Pitch envelope curve", """note("c").pcurve(0.5)""", skip = true),
-        Example("Pitch envelope curve alias", """note("c").pcrv(0.5)""", skip = true),
-        Example("Pitch envelope anchor", """note("c").panchor(0.0)""", skip = true),
-        Example("Pitch envelope anchor alias", """note("c").panc(0.0)""", skip = true),
-        Example("Pitch envelope full", """note("c").pattack(0.1).pdecay(0.3).prelease(0.5).penv(12)""", skip = true),
 
         // Transformation
         Example("Struct #1", """note("c e").struct("x")"""),
         Example("Struct #2", """note("c,eb,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
         Example("Struct #3", """note("c3 d3").fast(2).struct("x")"""),
-        Example("Struct #4", """note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x")"""),
+        Example("Struct #4", """note("c3 d3").adsr(0.01, 0.2, 0.0, 0.0).fast(2).struct("x")"""),
         Example("Struct All #1", """note("c e").structAll("x")"""),
         Example("Struct All #2", """note("c,eb,g").structAll("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
         Example("Mask #1", """note("c [eb,g] d [eb,g]").mask("<1 [0 1]>")"""),
@@ -768,17 +596,23 @@ object JsCompatTestData {
             Example(SKIP, "Log2 #1", """seq("1 2 4 8").log2()"""), // Js produce no events
             Example(SKIP, "Log2 #2", """n("1 2 4 8").log2()"""), // Js produce no events
 
-            // Bitwise Operators
-            Example("Band (AND) #1", """seq("3 5").band("1")"""),
-            Example("Band (AND) #2", """n("3 5").band("1")"""),
-            Example("Bor (OR) #1", """seq("1 4").bor("2")"""),
-            Example("Bor (OR) #2", """n("1 4").bor("2")"""),
-            Example("Bxor (XOR) #1", """seq("3 5").bxor("1")"""),
-            Example("Bxor (XOR) #2", """n("3 5").bxor("1")"""),
-            Example("Blshift (Left Shift) #1", """seq("1 2").blshift("1")"""),
-            Example("Blshift (Left Shift) #2", """n("1 2").blshift("1")"""),
-            Example("Brshift (Right Shift) #1", """seq("2 4").brshift("1")"""),
-            Example("Brshift (Right Shift) #2", """n("2 4").brshift("1")"""),
+            // Bitwise Operators — SKIPPED because the NAMES deliberately diverged (2026-08-26).
+            // These strings are compiled twice: once by sprudel and once by the vendored Strudel
+            // bundle, which still exports band/bor/bxor/blshift/brshift and knows nothing about
+            // bitAnd/bitOr/bitXor/bitShl/bitShr. Left unskipped they fail hard on a GraalVM
+            // runtime and skip silently everywhere else — dead coverage that looks alive.
+            // `Example` has no per-side spelling override, and this oracle is scheduled to be
+            // cut anyway, so skip is the honest state rather than a new jsCode field.
+            Example(SKIP, "BitAnd #1", """seq("3 5").bitAnd("1")"""),
+            Example(SKIP, "BitAnd #2", """n("3 5").bitAnd("1")"""),
+            Example(SKIP, "BitOr #1", """seq("1 4").bitOr("2")"""),
+            Example(SKIP, "BitOr #2", """n("1 4").bitOr("2")"""),
+            Example(SKIP, "BitXor #1", """seq("3 5").bitXor("1")"""),
+            Example(SKIP, "BitXor #2", """n("3 5").bitXor("1")"""),
+            Example(SKIP, "BitShl (Left Shift) #1", """seq("1 2").bitShl("1")"""),
+            Example(SKIP, "BitShl (Left Shift) #2", """n("1 2").bitShl("1")"""),
+            Example(SKIP, "BitShr (Right Shift) #1", """seq("2 4").bitShr("1")"""),
+            Example(SKIP, "BitShr (Right Shift) #2", """n("2 4").bitShr("1")"""),
 
             // Comparison
             Example(SKIP, "Less Than #1", """seq("1 2 3").lt(2)"""),

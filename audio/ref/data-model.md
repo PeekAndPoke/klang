@@ -27,7 +27,7 @@ data class ScheduledVoice(
 | `note`       | `Double?`    | MIDI note number (e.g. 60 = C4)           |
 | `freqHz`     | `Double?`    | Direct frequency in Hz (overrides `note`) |
 | `scale`      | `List<Int>?` | Scale degrees for quantization            |
-| `accelerate` | `Double?`    | Pitch ramp rate (semitones/cycle)         |
+| `accelerate` | `Double?`    | Pitch glide in SEMITONES over the event (12 = one octave; was octaves pre-2026-08-24) |
 
 ### Gain & Dynamics
 
@@ -56,7 +56,7 @@ data class ScheduledVoice(
 | `panSpread`  | `Double?` | Stereo spread of unison voices              |
 | `freqSpread` | `Double?` | Frequency detune amount for unison          |
 | `voices`     | `Int?`    | Alias for `density`                         |
-| `warmth`     | `Double?` | Subtle pitch drift per unison voice         |
+| `onepole`    | `Double?` | One-pole lowpass cutoff in Hz on the oscillator (ex `warmth` 0..1 coefficient) |
 
 ### Filters
 
@@ -78,8 +78,8 @@ data class ScheduledVoice(
 
 | Field        | Type      | Meaning                          |
 |--------------|-----------|----------------------------------|
-| `vibrato`    | `Double?` | Vibrato depth (semitones)        |
-| `vibratoMod` | `Double?` | Vibrato rate                     |
+| `vibrato`    | `Double?` | Vibrato LFO rate in Hz           |
+| `vibratoMod` | `Double?` | Vibrato depth in SEMITONES       |
 | `pAttack`    | `Double?` | Pitch envelope attack (s)        |
 | `pDecay`     | `Double?` | Pitch envelope decay (s)         |
 | `pRelease`   | `Double?` | Pitch envelope release (s)       |
@@ -167,10 +167,10 @@ data class FilterDefs(val filters: List<FilterDef>)
 
 sealed class FilterDef {
     // Cutoff filters — q + optional dynamic envelope. Applied PER VOICE.
-    data class LowPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
-    data class HighPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
-    data class BandPass(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
-    data class Notch(val cutoffHz: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class LowPass(val freq: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class HighPass(val freq: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class BandPass(val freq: Double, val q: Double?, val envelope: FilterEnvDef?)
+    data class Notch(val freq: Double, val q: Double?, val envelope: FilterEnvDef?)
 
     // Resonators — parallel modal BPF banks blended over the dry via ParallelMixFilter(mix, floor).
     // Applied at the ORBIT level (KatalystFormantEffect / KatalystBodyEffect), NOT per voice.

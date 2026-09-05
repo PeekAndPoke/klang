@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -48,8 +48,9 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             oscParams = mapOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
             attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
             attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
-            cutoff = 1625.0; resonance = 1.2; lpattack = 0.01; lpdecay = 0.1; lpsustain = 0.5; lprelease = 0.2; lpenv = 1.0
-            hcutoff = 1350.0; hresonance = 0.8; hpattack = 0.02; hpenv = 0.7
+            adsrOn = false   // non-default: `Boolean?` is the shape a dynamic codec can confuse with undefined
+            cutoff = 1625.0; resonance = 1.2; lpattack = 0.01; lpdecay = 0.1; lpsustain = 0.5; lprelease = 0.2; lpenv = 1.0; lpPasses = 2.0
+            hcutoff = 1350.0; hresonance = 0.8; hpattack = 0.02; hpenv = 0.7; hpPasses = 3.0
             bandf = 800.0; bandq = 1.0; bpenv = 0.5
             notchf = 500.0; nresonance = 0.7; nfenv = 0.4
             vowel = "a"; vowelMix = 0.45; vowelFloor = 0.15; body = "wood"; bodyMix = 0.4; bodyFloor = 0.25
@@ -58,14 +59,16 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             fmh = 2.0; fmAttack = 0.01; fmDecay = 0.1; fmSustain = 0.5; fmEnv = 0.8
             distort = 0.3; distortShape = "tube"; distortOversample = 4; coarse = 2.0; coarseOversample = 2; crush = 8.0; crushOversample =
             2
-            phaserRate = 0.5; phaserDepth = 0.6; phaserCenter = 1800.0; phaserSweep = 1000.0
+            phaserRate = 0.5; phaserDepth = 0.6; phaserCenter = 1800.0; phaserSweep = 1000.0; phaserFloor = 0.3
             tremoloSync = 4.0; tremoloDepth = 0.4; tremoloSkew = 0.5; tremoloPhase = 0.0; tremoloShape = "sine"
             duckCylinder = 0; duckAttack = 0.05; duckDepth = 0.5
             cylinder = 1; pan = 0.3
             delay = 0.3; delayTime = 0.25; delayFeedback = 0.4; delayCap = 2.5
             room = 0.5; roomSize = 0.8; roomFade = 0.3; roomLp = 8000.0; roomDim = 2000.0; iResponse = "hall"
             begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1; loopBegin = 0.1; loopEnd = 0.9
-            compressor = "0.3:4:0.1:0.01:0.1"; solo = 1.0; pipeline = PipelineValue.Named("pedal")
+            compressorThreshold = -12.0; compressorRatio = 4.0; compressorKnee = 2.5
+            compressorAttack = 0.01; compressorRelease = 0.31
+            solo = 1.0; pipeline = PipelineValue.Named("pedal")
         }.toVoiceData()
 
         // Sanity: the conversion produced the full canonical filter chain (HP → BP → Notch → Formant → Body → LP).
@@ -118,7 +121,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
         adsr.release shouldBe 0.3
 
         val lpf = decoded.filters[0].shouldBeInstanceOf<FilterDef.LowPass>()
-        lpf.cutoffHz shouldBe 1000.0
+        lpf.freq shouldBe 1000.0
         lpf.q shouldBe 1.5
         lpf.envelope?.attack shouldBe 0.02
         lpf.envelope?.depth shouldBe 0.9

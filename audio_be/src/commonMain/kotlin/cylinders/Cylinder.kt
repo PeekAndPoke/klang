@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -17,10 +17,10 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystPhaserEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.VoiceLease
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
-import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**
@@ -31,7 +31,25 @@ import io.peekandpoke.klang.audio_be.voices.Voice
  *
  * Ducking runs in a separate pass after all orbits are processed (cross-orbit dependency).
  */
-class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val silentBlocksBeforeTailCheck: Int = 10) {
+// Block-framing ledger D11 (named Class 2 knob): the silence grace before the tail scan is counted
+// in BLOCKS, and `Cylinders` visits ONE cylinder per block round-robin, so the wall-clock grace is
+// `silentBlocksBeforeTailCheck × allocatedCylinders × blockFrames` — it shrinks with block size and
+// grows with orbit count. No audio is cut (the scan itself protects tails), but everything a
+// TEARDOWN does rides this schedule: the moment the ring/combs are cleared moves, and so does the
+// phaser's clean-slate restart (`Phaser.resetForReuse` zeroes sweep phase AND rate) — a sparse
+// pattern whose gaps straddle the grace at one block size but not another re-enters the sweep
+// differently (review round 4). `PlaybackEngine` shows the seconds-derived pattern if this ever
+// needs pinning to wall time.
+class Cylinder(
+    id: Int,
+    val blockFrames: Int,
+    private val sampleRate: Int,
+    silentBlocksBeforeTailCheck: Int = 10,
+    /** The ring shelf this orbit's delay rents from. Production passes the backend's one warehouse. */
+    rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
+    /** The reverb-unit shelf this orbit's reverb rents from. Same warehouse. */
+    reverbs: ReverbUnits = ReverbUnits(sampleRate),
+) {
 
     // ════════════════════════════════════════════════════════════════════════════
     // Bus pipeline effects
@@ -43,12 +61,18 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
     val vowel = KatalystFormantEffect(sampleRate.toDouble())
 
+    // No ring until a voice asks for one (resource warehouse, 2b). This used to construct a
+    // 10-second DelayLine here — 7.68 MB, 97 % of the cylinder — for every orbit, delay or not.
     val delay = KatalystDelayEffect(
-        delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
+        rings = rings,
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
     )
 
+    // No network until a voice asks for room (resource warehouse, 2d): ~200 KB per orbit otherwise.
     val reverb = KatalystReverbEffect(
-        reverb = Reverb(sampleRate),
+        units = reverbs,
+        blockFrames = blockFrames,
     )
 
     val phaser = KatalystPhaserEffect(
@@ -92,6 +116,12 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
     // State
     // ════════════════════════════════════════════════════════════════════════════
 
+    /** The orbit this cylinder serves. Re-labelled by [adopt] when a shelved cylinder is rented for another. */
+    var id: Int = id
+        private set
+
+    private var silentBlocksBeforeTailCheck: Int = silentBlocksBeforeTailCheck
+
     var isActive = false
         private set
 
@@ -112,6 +142,11 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
      * Update orbit settings from a voice. [blockStart] is the current block's start frame, used by the
      * orbit ownership [lease] to tell voices apart across blocks (production passes it via
      * `Cylinders.getOrInit`). Only the OWNER voice's settings are applied; other voices are ignored.
+     *
+     * Block-framing ledger D14 (named Class 2 knob): bus params apply at BLOCK granularity, never
+     * at the onset sample — a new owner's settings also govern the `ctx.offset` samples before its
+     * own first sample (the previous owner's still-decaying tail), and the transition frame moves
+     * with alignment. Inherent to a block-continuous bus driven by per-voice triggers.
      */
     // blockStart is an ABSOLUTE backend frame — Double, see RenderClock.cursorFrame.
     fun updateFromVoice(voice: Voice, blockStart: Double) {
@@ -135,28 +170,48 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
         body.configure(voice.body)
         vowel.configure(voice.vowel)
 
-        // Delay
-        delay.delayLine.delayTimeSeconds = voice.delay.time
-        delay.delayLine.feedbackCap = voice.delay.cap
-        delay.delayLine.feedback = voice.delay.feedback
+        // Delay — routed through the effect's lifecycle: an off-config drains the tail out on its
+        // own timeline instead of freezing the ring (see KatalystDelayEffect).
+        delay.configure(
+            timeSeconds = voice.delay.time,
+            feedback = voice.delay.feedback,
+            cap = voice.delay.cap,
+        )
 
-        // Reverb (reverb.room is used by SendRenderer for send amount)
-        // Already normalized (and clamped) by `Reverb.normalizeRoomSize` in VoiceFactory — a comb
-        // network above unity has no steady state, it runs away to Inf/NaN.
-        reverb.reverb.roomSize = voice.reverb.roomSize
-        // roomFade overrides roomSize for the comb feedback, so it lives on the same axis and
-        // needs the same bound (it is authored 0..1 directly, not on the /10 scale).
-        reverb.reverb.roomFade = voice.reverb.roomFade?.coerceIn(0.0, 1.0)
-        reverb.reverb.roomLp = voice.reverb.roomLp
-        reverb.reverb.roomDim = voice.reverb.roomDim
-        reverb.reverb.iResponse = voice.reverb.iResponse
+        // Reverb (reverb.room is used by SendRenderer for send amount) — routed through the
+        // effect's lifecycle like the delay: an off-config drains the tail out on its own
+        // timeline instead of freezing the combs (see KatalystReverbEffect).
+        // roomSize is already normalized (and clamped) by `Reverb.normalizeRoomSize` in
+        // VoiceFactory — a comb network above unity has no steady state, it runs away to
+        // Inf/NaN. roomFade lives on the same axis and gets the same bound INSIDE configure
+        // (review round 1 moved it to the door, so every caller shares one conversion).
+        reverb.configure(
+            roomSize = voice.reverb.roomSize,
+            roomFade = voice.reverb.roomFade,
+            roomLp = voice.reverb.roomLp,
+            roomDim = voice.reverb.roomDim,
+            iResponse = voice.reverb.iResponse,
+        )
 
-        // Phaser — always update parameters (not just when depth > 0) to avoid stale state
-        phaser.phaser.rate = voice.phaser.rate
+        // Phaser — depth (the on/off + amount knob) is always the owner's; the KERNEL params are
+        // written only by an owner whose phaser is engaged. A no-phaser owner must not zero the
+        // sweep CLOCK (ledger D2, completed in review round 1): VoiceFactory defaults rate to 0.0,
+        // and a rate of 0 freezes the LFO as surely as a skipped prepareBlock — the retained rate
+        // is what keeps the sweep on its own timeline across owner handoffs, mirroring the delay's
+        // retained drain config. An owner that EXPLICITLY sets rate 0 with an engaged depth still
+        // gets its static notch: depth >= the gate means its kernel params are written.
+        // Gate on the STORED depth, not the raw voice value: the setter silently rejects
+        // non-finite input, and the two gates (this one and Phaser.process's) must never disagree
+        // about whether the phaser is engaged (review round 2).
         phaser.phaser.depth = voice.phaser.depth
-        phaser.phaser.center = if (voice.phaser.center > 0) voice.phaser.center else 1000.0
-        phaser.phaser.sweep = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
-        phaser.phaser.feedback = 0.5
+
+        if (phaser.phaser.depth >= Phaser.MIN_ACTIVE_DEPTH) {
+            phaser.phaser.rate = voice.phaser.rate
+            phaser.phaser.center = if (voice.phaser.center > 0) voice.phaser.center else 1000.0
+            phaser.phaser.sweep = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
+            phaser.phaser.floor = voice.phaser.floor
+            phaser.phaser.feedback = 0.5
+        }
 
         // Ducking / Sidechain — reuse instance to preserve envelope state; clear when the owner has none.
         val voiceDucking = voice.ducking
@@ -165,7 +220,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
             val existing = ducking.ducking
             if (existing == null) {
                 ducking.ducking = Ducking(
-                    sampleRate = reverb.reverb.sampleRate,
+                    sampleRate = sampleRate,
                     attackSeconds = voiceDucking.attackSeconds,
                     depth = voiceDucking.depth,
                 )
@@ -184,7 +239,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
             val existing = compressor.compressor
             if (existing == null) {
                 compressor.compressor = Compressor(
-                    sampleRate = reverb.reverb.sampleRate,
+                    sampleRate = sampleRate,
                     thresholdDb = compSettings.thresholdDb,
                     ratio = compSettings.ratio,
                     kneeDb = compSettings.kneeDb,
@@ -208,12 +263,9 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
     private fun resetBusEffects() {
         body.reset()
         vowel.reset()
-        delay.delayLine.delayTimeSeconds = 0.0
-        delay.delayLine.feedback = 0.0
-        delay.delayLine.reset() // clear the delay ring, not just the params
-        reverb.reverb.roomSize = 0.0
-        reverb.reverb.reset() // clear the comb/allpass tail, not just the params
-        phaser.phaser.depth = 0.0
+        delay.reset() // clears the delay ring AND its drain lifecycle, not just the params
+        reverb.reset() // clears the comb/allpass tail AND its drain lifecycle, not just the params
+        phaser.phaser.resetForReuse() // cascade + latch + LFO phase + kernel params — full clean slate
         compressor.compressor = null
         ducking.clear()
     }
@@ -262,6 +314,39 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
      * 2. After N silent blocks, scan effect internal buffers. If they still have audio, reset
      *    the counter and keep processing. If silent, deactivate.
      */
+    /**
+     * Retires this cylinder for the shelf (resource warehouse, cylinders): every bus effect off and
+     * cleared, the lease freed, the send buffers zeroed, and the rented units (delay ring, reverb
+     * network) handed back to THEIR shelves — a shelved cylinder holds nothing. The same clean slate
+     * [tryDeactivate] reaches, plus the return. Only for a cylinder that will never render again
+     * on its current orbit: `CylinderUnits.giveBack` is the one caller.
+     */
+    fun retire() {
+        // NOT resetBusEffects(): that would zero the ring and the network here, on the audio thread,
+        // and the shelves zero them again on return (review round 3: sixteen warmup cylinders
+        // retired in one block were ~19 MB of stores, twice). The units go back DIRTY and the
+        // warehouse's housekeeping zeroes them a block at a time; only the small effects reset here.
+        body.reset()
+        vowel.reset()
+        phaser.phaser.resetForReuse()
+        compressor.compressor = null
+        ducking.clear()
+        delay.release()
+        reverb.release()
+        lease.reset()
+        mixBuffer.clear()
+        delaySendBuffer.clear()
+        reverbSendBuffer.clear()
+        isActive = false
+        silentBlockCount = 0
+    }
+
+    /** Re-labels a retired cylinder for orbit [id] under the renting `Cylinders`' settings. */
+    fun adopt(id: Int, silentBlocksBeforeTailCheck: Int) {
+        this.id = id
+        this.silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck
+    }
+
     fun tryDeactivate() {
         if (!isActive) return
 
@@ -274,12 +359,12 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
 
         if (silentBlockCount < silentBlocksBeforeTailCheck) return
 
-        fun delayHasTail() = delay.delayLine.delayTimeSeconds > 0.001 && delay.delayLine.hasTail()
+        fun delayHasTail() = delay.hasTail()
 
-        // Same effective-size question as the render gate — a roomfade-only orbit has roomSize 0.0
-        // and would otherwise report "no tail" while its combs still hold energy.
-        fun reverbHasTail() =
-            (reverb.reverb.roomFade != null || reverb.reverb.roomSize > 0.001) && reverb.reverb.hasTail()
+        // State-aware like the delay's: a draining reverb reports its tail BY CONSTRUCTION, so
+        // the orbit stays alive until the countdown's terminal reset — the old param-gated scan
+        // hid a still-charged network the moment a no-reverb owner zeroed roomSize.
+        fun reverbHasTail() = reverb.hasTail()
 
         if (reverbHasTail() || delayHasTail()) {
             silentBlockCount = 0

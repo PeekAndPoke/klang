@@ -6,16 +6,6 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 
 ## OPEN — HIGH PRIORITY
 
-### H3. `AstToKBlocks.convertStmt()` silently drops loop statements
-
-- **File:** `klangblocks/.../AstToKBlocks.kt:105` — `else -> null` (in `convertStmt`, :68)
-- **Impact:** `WhileStatement`, `DoWhileStatement`, `ForStatement`, `BreakStatement`, `ContinueStatement` are silently
-  lost on round-trip through the block editor
-- **Fix:** Add block representations for these statements, or at minimum surface a warning
-- **Note:** This is a feature gap, not a cleanup. Requires designing block representations for loops.
-
----
-
 ## OPEN — MEDIUM PRIORITY
 
 ### M9. Sprudel `Pair` allocations in pattern query hot paths

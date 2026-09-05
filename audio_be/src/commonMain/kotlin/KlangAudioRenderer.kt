@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -63,7 +63,17 @@ class KlangAudioRenderer private constructor(
         mix.clear()
         engine.renderInto(mix, cursorFrame)
         master.process(mix, out)
+        // The same per-block housekeeping as the live dispatcher: offline is not realtime, but
+        // "every render loop housekeeps" keeps the shelf contract a renderer contract, not a host one.
+        context.warehouse.housekeep()
+        // Same convention as the live dispatcher (RenderClock.cursorFrame): the clock is the NEXT
+        // block between renders. Offline, everything is scheduled before the first render at
+        // cursor 0, so this changes nothing about where a render starts.
+        clock.cursorFrame = cursorFrame + context.blockFrames
     }
+
+    /** The render clock, for the spec that pins the between-renders convention offline (block-framing B1). */
+    internal val clockForTest: RenderClock get() = clock
 
     companion object {
         fun create(

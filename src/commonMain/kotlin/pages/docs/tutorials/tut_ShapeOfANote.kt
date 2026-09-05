@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -31,7 +31,7 @@ val shapeOfANoteTutorial = Tutorial(
                     code = """
                     note("a3 ~ c4 ~")              // the melody's opening leap, stretched long
                       .sound("saw")                // the bright voice from ${Tut.theFourWaveforms}
-                      .adsr("0.01:0.1:1:0.05")     // the default shape, written out: on, hold, off
+                      .adsr(0.01, 0.1, 1, 0.05)    // the default shape, written out: on, hold, off
                       .gain(0.5)                   // kept modest, the stages are easier to hear
                     """.trimIndent(),
                 ),
@@ -52,8 +52,8 @@ val shapeOfANoteTutorial = Tutorial(
                 Block.Visual.Adsr("0.3:0.1:1:0.05"),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("saw").adsr("0.3:0.1:1:0.05").gain(0.5)      // slow attack: the note swells in
-                    // note("a3 ~ c4 ~").sound("saw").adsr("0.001:0.1:1:0.05").gain(0.5) // instant attack: switched on
+                    note("a3 ~ c4 ~").sound("saw").adsr(0.3, 0.1, 1, 0.05).gain(0.5)      // slow attack: the note swells in
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.1, 1, 0.05).gain(0.5) // instant attack: switched on
                     """.trimIndent(),
                 ),
             ),
@@ -73,8 +73,8 @@ val shapeOfANoteTutorial = Tutorial(
                 Block.Visual.Adsr("0.001:0.4:0:0.05"),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("saw").adsr("0.001:0.4:0:0.05").gain(0.5)    // sustain 0: dies away while held
-                    // note("a3 ~ c4 ~").sound("saw").adsr("0.001:0.4:1:0.05").gain(0.5) // sustain 1: holds steady
+                    note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.4, 0, 0.05).gain(0.5)    // sustain 0: dies away while held
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.4, 1, 0.05).gain(0.5) // sustain 1: holds steady
                     """.trimIndent(),
                 ),
             ),
@@ -94,8 +94,8 @@ val shapeOfANoteTutorial = Tutorial(
                 Block.Visual.Adsr("0.001:0.1:0.8:1.2"),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("saw").adsr("0.001:0.1:0.8:1.2").gain(0.5)     // long release: rings into the rest
-                    // note("a3 ~ c4 ~").sound("saw").adsr("0.001:0.1:0.8:0.05").gain(0.5) // short release: stops almost dead
+                    note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.1, 0.8, 1.2).gain(0.5)     // long release: rings into the rest
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.1, 0.8, 0.05).gain(0.5) // short release: stops almost dead
                     """.trimIndent(),
                 ),
             ),
@@ -116,9 +116,9 @@ val shapeOfANoteTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("saw").adsr("0.001:0.3:0:0.1").gain(0.5)      // pluck: struck, then gone
-                    // note("a3 ~ c4 ~").sound("saw").adsr("0.01:0.1:1:0.05").gain(0.5)   // organ: on while held
-                    // note("a3 ~ c4 ~").sound("saw").adsr("0.25:0.15:0.8:1.2").gain(0.5) // pad: swells in, rings out
+                    note("a3 ~ c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)      // pluck: struck, then gone
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.01, 0.1, 1, 0.05).gain(0.5)   // organ: on while held
+                    // note("a3 ~ c4 ~").sound("saw").adsr(0.25, 0.15, 0.8, 1.2).gain(0.5) // pad: swells in, rings out
                     """.trimIndent(),
                 ),
             ),

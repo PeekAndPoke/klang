@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -191,7 +191,7 @@ class KlangOfflineRendererTest : StringSpec({
         // A more complex DSL: sine with lowpass filter
         val composedDsl = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sine(),
-            cutoffHz = IgnitorDsl.Constant(2000.0),
+            freq = IgnitorDsl.Constant(2000.0),
         )
 
         renderer.render(

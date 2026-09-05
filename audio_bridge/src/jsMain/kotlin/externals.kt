@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -44,7 +44,24 @@ external interface AudioTimestamp {
 
 external interface AudioContextOptions {
     var sampleRate: Int?
-    var latencyHint: String?  // "interactive", "balanced", or "playback"
+
+    /**
+     * Either one of the three coarse presets ("interactive", "balanced", "playback") **or a number
+     * of SECONDS** (not milliseconds - `0.02` is 20 ms; `20` asks for a twenty-second buffer).
+     * The numeric form is the useful one: it asks for an output buffer of at least that long
+     * rather than making you pick between presets an order of magnitude apart.
+     *
+     * `Any?` rather than `String?` so the numeric form is expressible at all, and rather than
+     * `dynamic` so reads cannot silently become unchecked member access. Whatever is set here
+     * shows up in `AudioContext.baseLatency`, reported as `Diagnostics.baseLatencyMs`, so the
+     * effect is directly measurable.
+     *
+     * ⚠️ Raising it costs more than output buffering. The browser renders several quanta per
+     * device callback and the worklet's `port.onmessage` only runs between callbacks, so a bigger
+     * buffer also coarsens COMMAND DELIVERY, re-adding as note-on quantization exactly the latency
+     * `AudioBackend.pump()` exists to remove.
+     */
+    var latencyHint: Any?
 }
 
 external class AudioBuffer {

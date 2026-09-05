@@ -24,15 +24,15 @@ know which of its 943 tests would fail if the thing they name were broken.
 ## 2. Why this is NOT automated
 
 Investigated and rejected **with evidence**, not preference. Disassembling all 251 compiled classes in
-`audio_be/build/classes/kotlin/jvm/main` found **zero bytecode invokes** to `ClippingFuncs.*` or
+`audio_be/build/classes/kotlin/jvm/main` found **zero bytecode invokes** to `ShapingFuncs.*` or
 `PhaserCore.step`. The entire DSP hot path is inlined — 71 `inline` sites, plus 19 `@PublishedApi`
 constants that exist *solely* to serve inlining. `DistortionRenderer` holds 32 references to
-`ClippingFuncs` and every one is a vestigial `getstatic INSTANCE`; the arithmetic is inlined in place.
+`ShapingFuncs` and every one is a vestigial `getstatic INSTANCE`; the arithmetic is inlined in place.
 
 So a bytecode mutator (pitest is the only realistic candidate) would:
 
-1. mutate `ClippingFuncs.fastTanh` and friends — **dead bytecode nothing calls** — and report a wall of surviving "no
-   coverage" mutants on exactly the code we care about most (`ClippingFuncsBoundsSpec`, 44 tests, would score 0% on its
+1. mutate `ShapingFuncs.fastTanh` and friends — **dead bytecode nothing calls** — and report a wall of surviving "no
+   coverage" mutants on exactly the code we care about most (`ShapingFuncsBoundsSpec`, 44 tests, would score 0% on its
    own subject);
 2. attribute the mutations that *do* execute to the **caller** class at SMAP-shifted line numbers that match no real
    line in the caller's source.
@@ -159,6 +159,16 @@ the set — start there, big specs with few tests are where padding hides.
 - **solo/mute and cut/choke — zero tests anywhere.** Grepping the whole test tree for `solo` and
   `choke` returns nothing, yet `VoiceScheduler.process` computes solo gain and runs a `soloMuteRamp`, and
   `promoteScheduled` implements cut-group hard-kill.
+- **Four specs pin a context production can no longer produce** (added 2026-08-31, from
+  [`../tasks-archive/2026-08/20260831-voice-elapsed-frames-offset-mismatch.md`](../tasks-archive/2026-08/20260831-voice-elapsed-frames-offset-mismatch.md)).
+  `IgnitorDslOptimizerRenderSpec.kt:64`, `ConstantFoldParitySpec.kt:64`, `EqCoreSpec.kt:546` and
+  `EqIgnitorSpec.kt:648` set `voiceElapsedFrames = -offset` for their mid-block-onset rows, and the
+  first three state in a comment that this is the production shape. It was, until `IgniteRenderer`
+  gained `+ ctx.offset` on 2026-08-27; a voice's first block now lands on `voiceElapsedFrames == 0`.
+  They still PASS, because both sides of each A/B get the same context — but a negative clock clamps
+  any envelope in them to zero, so those rows compare near-silence and the comments teach the wrong
+  contract. Re-pin to `offset = 37, voiceElapsedFrames = 0` and re-run: an envelope-bearing parity
+  row that only starts exercising its envelope after the change is the point of doing it.
 - Zero direct coverage: `strip/filter/TremoloRenderer`, `strip/filter/StripPhaserRenderer`,
   `strip/pitch/{FmRenderer, AccelerateRenderer, PitchEnvelopeRenderer, VibratoRenderer}`,
   `strip/BlockContext`, `PlaybackCtx`. (The pitch ones are covered end-to-end by
@@ -324,8 +334,8 @@ extracted. Where that is impractical, prove wrap-safety by inspection and record
 The module carries a large body of **deliberate** decisions. An auditor who "fixes" one of these makes things worse.
 Full list: `audio/MEMORY.md` + `docs/tasks-archive/`.
 
-- **Raw Motör** — no defensive checks in the inner math, no safety clamps on user-facing params; defend at integration
-  points (`ClippingFunctions.kt:14-23`).
+- **Raw Motor** — no defensive checks in the inner math, no safety clamps on user-facing params; defend at integration
+  points (`ShapingFuncs.kt:14-23`).
 - **Reverb's `+ ANTI_DENORMAL` is a deliberate exception** to the engine-wide `flushDenormal()`
   convention; the consistent version cost ~+11%/sample and was reverted 2026-05-19.
 - **The SVF is purely linear by design.** Two saturation attempts failed and were reverted; the
@@ -370,7 +380,7 @@ Full list: `audio/MEMORY.md` + `docs/tasks-archive/`.
 - Worked example of the loop paying off:
   [`../tasks-archive/2026-08/20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)
 - Overlapping open work: [`master-dsl-followups.md`](master-dsl-followups.md) (§2 shared orbit+master tail hole), [
-  `resource-warehouse-pool.md`](resource-warehouse-pool.md) (audio-thread allocation),
+  `../plans/resource-warehouse.md`](../plans/resource-warehouse.md) (audio-thread allocation),
   [`audio-pipeline-open-topics.md`](audio-pipeline-open-topics.md), [`voice-culling.md`](voice-culling.md)
 - Orientation for a fresh reviewer — signal flow + file-by-file map:
   [`../audio-backend-file-map.md`](../audio-backend-file-map.md)

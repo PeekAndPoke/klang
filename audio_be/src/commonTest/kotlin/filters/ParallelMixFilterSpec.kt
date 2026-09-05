@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.filters
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.FilterDef
@@ -53,48 +54,43 @@ class ParallelMixFilterSpec : StringSpec({
         for (i in 0 until blockFrames) buf[i] shouldBe original[i]
     }
 
-    "ParallelMixFilter - blend math: out = dryGain*dry + amount*wet (floor path)" {
+    "ParallelMixFilter - C4 law: out = dryCoeff*dry + wetCoeff*wet (floor path)" {
         val buf = sine(440.0, blockFrames)
         val dry = AudioBuffer(blockFrames) { buf[it] }
 
-        // amount=0.5, floor=0.6 → dryGain = max(0.6, 1 − 0.5·0.4) = max(0.6, 0.8) = 0.8.
-        // wet = 2·dry → out = 0.8·dry + 0.5·(2·dry) = 1.8·dry.
+        // C4 shared law, p = 2: dryCoeff = max(0.6, cos^2(0.25*pi)) = max(0.6, 0.5) = 0.6,
+        // wetCoeff = sin^2(0.25*pi) = 0.5. wet = 2*dry -> out = 0.6*dry + 0.5*(2*dry).
         ParallelMixFilter(doubler, amount = 0.5, floor = 0.6).process(buf, 0, buf.size)
 
         for (i in 0 until blockFrames) {
-            buf[i] shouldBe (dry[i] * 0.8 + (2.0 * dry[i]) * 0.5)
+            buf[i] shouldBe (dry[i] * 0.6 + (2.0 * dry[i]) * 0.5 plusOrMinus 1e-12)
         }
     }
 
-    "ParallelMixFilter - floor path reduces to a crossfade at floor=0" {
+    "ParallelMixFilter - floor=0 is an amplitude-complementary crossfade (p = 2)" {
         val buf = sine(440.0, blockFrames)
         val dry = AudioBuffer(blockFrames) { buf[it] }
 
-        // floor=0, amount=0.5 → dryGain = max(0, 0.5) = 0.5 → out = 0.5·dry + 0.5·(2·dry) = 1.5·dry.
+        // p = 2: cos^2 + sin^2 = 1 for every w — constant amplitude for the correlated wet.
+        // At amount 0.5 both coefficients are exactly 0.5.
         ParallelMixFilter(doubler, amount = 0.5, floor = 0.0).process(buf, 0, buf.size)
 
         for (i in 0 until blockFrames) {
-            buf[i] shouldBe (dry[i] * 0.5 + (2.0 * dry[i]) * 0.5)
+            buf[i] shouldBe (dry[i] * 0.5 + (2.0 * dry[i]) * 0.5 plusOrMinus 1e-12)
         }
     }
 
-    "ParallelMixFilter - amount > 1 is accepted and keeps scaling the wet (uncapped, floor path)" {
+    "ParallelMixFilter - amount clamps to 1 (the raw > 1 extension is a DELETED capability)" {
+        // C4 (plan: Helper domain): the shared law lives on w in [0, 1]; past 1 the cos/sin
+        // curves would fold back, so > 1 now behaves as exactly 1. Decided in the plan, not
+        // by accident - no song ever used > 1.
         val buf3 = sine(440.0, blockFrames)
-        val buf100 = sine(440.0, blockFrames)
-        val dry = AudioBuffer(blockFrames) { buf3[it] }
-
-        // floor=0.4. At amount >= 1 the dry is pinned at the floor; the wet keeps scaling with amount.
-        // amount=3   → out = 0.4·dry + 3·(2·dry)   = 6.4·dry
-        // amount=100 → out = 0.4·dry + 100·(2·dry) = 200.4·dry
+        val buf1 = sine(440.0, blockFrames)
         ParallelMixFilter(doubler, amount = 3.0, floor = 0.4).process(buf3, 0, buf3.size)
-        ParallelMixFilter(doubler, amount = 100.0, floor = 0.4).process(buf100, 0, buf100.size)
-
+        ParallelMixFilter(doubler, amount = 1.0, floor = 0.4).process(buf1, 0, buf1.size)
         for (i in 0 until blockFrames) {
-            buf3[i] shouldBe (dry[i] * 0.4 + (2.0 * dry[i]) * 3.0)
-            buf100[i] shouldBe (dry[i] * 0.4 + (2.0 * dry[i]) * 100.0)
+            buf3[i] shouldBe (buf1[i] plusOrMinus 1e-12)
         }
-        // The big value genuinely does more — never silently clamped to amount = 1.
-        rms(buf100) shouldBeGreaterThan (rms(buf3) * 10.0)
     }
 
     "ParallelMixFilter wrapping BodyFilter - boosts on-mode AND keeps off-mode at the floor (never thins)" {

@@ -1,6 +1,10 @@
 # Tutorial Curriculum — Rework Plan
 
-Status: DRAFT 2026-08-15 — three-track structure confirmed; lesson ladder below is the proposal to react to.
+Status: **ACTIVE**, last updated 2026-08-31. **17 lessons shipped**: the Stage-1 onramp (B1-B3), all of
+Stage 2 (A1-A4, B4-B7), and Stage 3 so far (A5, A6, A7, B8, B9, B10). The ladder below is no longer a
+proposal, it is the contract; the obligations register is the debt ledger against it. Next slots: **A8
+Body** and **B11 Chords & voicing**, which close Stage 3. Stage 4 (C1-C10, the Motor track) is unwritten.
+A6 and A7 are authored but have NOT been through the review loop, and the by-ear pass is owed on both.
 
 ## Why (diagnosis, short version)
 
@@ -14,7 +18,7 @@ Ignitor / Master / Pipeline (they weren't on the generator's function allow-list
 Ground truth from the 14 built-in songs (full tally in session analysis, key facts):
 
 - Used by **all 14** songs: `stack`, `note`/`n`, `sound`/`s`, `gain`, `adsr`. Second tier (10+):
-  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `room`, `postgain`, `distort`, `warmth`, `analog`.
+  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `roomWet`, `postgain`, `distort`, `onepole`, `analog`.
 - Signals-as-modulators is the highest-value intermediate concept: 72 `.range(` calls across 7 songs.
 - Mini-notation actually used: sequences, `~`, `[]`, `<>`, `*`, `!`, `@`, comma-chords, `|`, `` >/n `` suffix,
   `struct` gates. Never used: polymeter. `.euclid()` in one song only.
@@ -32,6 +36,10 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
    earlier in the path. Anything else must be a labeled **preview** with a link to the lesson that teaches it.
    → *Lintable:* parse code blocks, check identifiers against (carrier ∪ taught-so-far ∪ declared previews).
 4. **Every lesson has at least one "listen for …" A/B moment.** Same code twice, one change, directed ear.
+   Write each side of the pair as ONE whole statement on its own line, so a single `//` toggles it and the
+   reader can swap without editing anything else. The commented-out side is real code the lesson tells the
+   reader to run, so it is compiled by the spec exactly like the live line (lint-enforced): roughly a
+   quarter of the corpus's runnable code sits behind a `//`, and none of it was checked until 2026-08-31.
 5. **The finale consolidates, never introduces.** Closing example = this lesson's topic + earlier material only.
 6. **No template headings, no mandated metaphors.** Structure grows from the topic.
 7. **Short path, fat reference.** The ladder stays lean; exhaustive parameter lists live in the Lexikon, cross-linked.
@@ -66,6 +74,11 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
    narration, never decoration (no mood/metaphor comments — that rule produced the sculptor slop). Comment
    vocabulary follows the same taught-so-far rule as code. Familiar carrier boilerplate may go bare once
    it has been commented in earlier lessons.
+   **Inside one code block, every line comment starts at the same column** (lint-enforced): the comments
+   are a narration column running down the right, and a ragged one reads as sloppy code. The column is
+   set by the longest code line in the block; the gap after it is free (the corpus uses one or two
+   spaces). A line that is nothing but a commented-out A/B alternative has no trailing comment of its
+   own unless it carries one, in which case it aligns with the rest.
 13. **Concepts before use — including WITHIN a lesson (user notice to content reviewers, 2026-08-18).**
    A concept may only be used after it has been explained: earlier in the SAME lesson (section order
    counts — the vocab lint only checks lesson order, so reviewers must check section order by hand),
@@ -81,7 +94,7 @@ Strudel workshop (short path + separate reference, inline "try it" nudges), SoS 
 
 ## The three tracks, braided
 
-Track A = Sound (synthesis ear). Track B = Pattern (sprudel hand). Track C = Motör (Klang engine).
+Track A = Sound (synthesis ear). Track B = Pattern (sprudel hand). Track C = Motor (Klang engine).
 The published Prev/Next path interleaves them; each lesson lists main / touches / running example / listen-for.
 
 ### Stage 1 — Onramp (carrier kit)
@@ -105,7 +118,7 @@ stages must not carry it.
 | B5 | Alternation & repetition | `<>`, `!`, `@` | — | Bassline that changes per cycle (Sandsturm's `<bar1 bar2 bar3 bar4>` idiom). *Listen for: the 4-bar rotation.* |
 | A3 | Filters — LPF & HPF | `lpf`, `hpf`, `lpq` | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |
 | A4 | The filter envelope | `lpadsr`, `lpe` | `lpq` | The classic synth pluck: cutoff rides its own envelope. *Listen for: the "öw" the filter sweep adds to each note.* (Zero coverage today.) |
-| B6 | Layers — stack & orbit | `stack`, `orbit` | `room`+`rsize` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
+| B6 | Layers — stack & orbit | `stack`, `orbit` | `roomWet`+`rsize` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
 | B7 | Chords in one step | comma-chords `[0,7,12]`, random pick `\|` | — | Power-chord stabs; a step that gambles. *Listen for: which variant played this cycle.* |
 
 ### Stage 3 — Where the tracks meet
@@ -116,12 +129,12 @@ stages must not carry it.
 | B8 | Scales & melodies | `n()`, `scale()`, `transpose` | — | Numbers instead of note names; same line, swap the scale. *Listen for: major vs. minor mood flip.* |
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
-| A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: 1 voice → 9 voices → spread out → drift. *Listen for: mono vs. wide on headphones.* |
-| A7 | Space & dirt | `room`/`rsize`, `delay` family, `distort`, `warmth`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/warmth), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
-| A8 | Body | `body()`, `bodyMix` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
+| A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
+| A7 | Space & dirt | `roomWet`/`rsize`, `delayWet` family, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
+| A8 | Body | `body()`, `bodyWet` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
 
-### Stage 4 — Track C: the Motör
+### Stage 4 — Track C: the Motor
 
 | # | Lesson | Main | Touches | Running example / Listen for |
 |---|--------|------|---------|------------------------------|
@@ -145,7 +158,7 @@ stages must not carry it.
   shaping attack/fade to "its own lesson: The Shape of a Note". A2 opens from that fact (default
   sustain is organ-like).
 - **C1 (caricature drums):** A1's noise section promises "building your own [hi-hat] from raw
-  noise comes in the Motör track" and frames drum-machine hats as "a short burst of shaped noise" —
+  noise comes in the Motor track" and frames drum-machine hats as "a short burst of shaped noise" —
   C1 must deliver exactly that recipe (noise + shaping), and may echo A1's "the hh you have been
   playing is a recording of one".
 - **A3 (filters):** A2's finale promises "loudness is only half of a note's life; the other half is
@@ -164,16 +177,34 @@ stages must not carry it.
 - **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
   literally; redeems B1's mixing promise by name in §2. ⚠️ Engine truth learned in its review
   (recorded in the lesson's KDoc + docs/tasks/orbit-level-effect-docs.md): reverb processor is
-  per-orbit but `room` is a per-voice SEND; bare `room()` is SILENT (gate needs roomsize); orbit
+  per-orbit but `roomWet` is a per-voice SEND; bare `roomWet()` is SILENT (gate needs roomsize); orbit
   bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
-- **A7 (space & dirt):** B6 previews `room` + `rsize` ("how much goes in" / "how big the room is")
+- **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
+  `roomWet` + `rsize` preview under its own intuitions, plus the delay family, `distort`,
+  `onepole` and `postgain`. Biggest `teaches` list in the corpus (8) and the only `Standard`
+  scope; if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
+  (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
+  (a) BOTH space effects are sends WITH A GATE and the gate is the SECOND number, not the
+  send: reverb is inactive unless `roomSize >= 0.01` (defaults to 0.0) and delay is Off
+  unless `time >= 0.01` (defaults to 0.0), so a bare `roomWet(0.4)` and a bare
+  `delayWet(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
+  three silent `KlangScript(Playable)` KDoc examples were fixed at source in `lang_effects.kt`.
+  (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
+  distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
+  (c) `gain` and `postgain` are BOTH applied at the voice output in SendRenderer, so `gain`
+  does NOT drive the distortion and on one line the two are the same arithmetic; the draft's
+  "dropping gain feeds the distortion less" was also FALSE. The real split is that `velocity`
+  and mute/solo scale `gain` only, which is now what §6 teaches (and the misleading
+  "applied before synthesis" line in the `postgain` KDoc was corrected at source too).
+  Open: review loop not run; the dry-vs-distorted pair is a render-QA level item by nature.
+- **A7 (space & dirt):** B6 previews `roomWet` + `rsize` ("how much goes in" / "how big the room is")
   and points to "a Sound-track lesson still to come" — A7 must deliver both under those intuitions.
 - **B11 (chords & voicing):** B7 defers harmony ("Which notes agree like this, and which clash …
   a chords lesson still to come takes that up properly") and licenses only the power chord; B11
   must pick that up. B7 also glossed "riff" ("a short figure that repeats") — reuse, don't re-gloss.
 - **A8 (body resonator):** A3 spends **"body"** as the standing term for the low half of the
-  spectrum ("body below, sparkle above"). A8 teaches `body()`/`bodyMix` — the cabinet resonator —
+  spectrum ("body below, sparkle above"). A8 teaches `body()`/`bodyWet` — the cabinet resonator —
   and must disambiguate the collision explicitly at first use, the way A6 must for "voice".
 - **B5 re-licences "bar" (decided in review):** B1 retired the word; B5 brings it back with a
   split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth
@@ -196,6 +227,20 @@ stages must not carry it.
   `n("0 ~ ~ 0  ~ ~ -3 ~").scale("a2:minor")` — later lessons may lean on both. §1's numbers-vs-
   note-names A/B is identical by design — sanctioned render-QA audibility exception (KDoc). B8
   licenses "ladder/rung" for scale degrees and "semitone" (with the vs-walking-step caveat).
+- **A6 (Thickness) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers `supersaw`
+  (A1's promise) and disambiguates "voice" by calling the count **unison layers** throughout.
+  ⚠️ Engine truths learned while writing it (all recorded in the lesson KDoc): `unison`/`spread`
+  are INERT on the plain voices (only the `super` family carries the `voices`/`spread` slots);
+  the stack is SUM-NORMALIZED, so layer-count A/Bs are level-matched by construction; defaults
+  are `voices` 8, `spread` 0.2, `analog` 0.0, so a bare `sound("supersaw")` is already eight
+  layers; `spread` is in SEMITONES and `analog` is peak drift in CENTS (the sprudel KDoc claimed
+  0.0-1.0 and was WRONG, corrected at source in `lang_osc_addons.kt` the way A4's `lpe` was, and
+  eight stale `.detune(0.3)` examples on `unison`/`uni`/`voices` were repaired at the same time,
+  since sprudel's `detune()` no longer exists); the slow drift layer is seeded at CENTRE, so
+  drift only develops on HELD notes, which is why the lesson's drift section wears A2's pad
+  shape plus B9's `.slow(2)`. Licensed term: "unison layers". Open: the compile gate has not
+  run (build lock held elsewhere), the review loop has not run, and §1's `saw` vs `supersaw`
+  pair is the first render-QA level measurement item.
 - **A6 (unison/thickness):** the word "voice" is taken — B3 introduced and A1 formalized it as the
   term for oscillator timbre ("not a recording ... a sound Klang builds on the spot"). A6 must
   disambiguate explicitly: the `unison`/`voices` parameter counts internal copies — call them
@@ -234,7 +279,7 @@ course could express is lost.
   per-track vocabulary lint then checks: every lesson's vocabulary ∈ (teaches of buildsOn tracks)
   ∪ (taught earlier in this track) ∪ (declared previews). The main track builds on nothing and
   stays the strictest check (today's global lint, unchanged).
-- The `TutorialTrack` enum (Sound/Pattern/Motör) dissolves — membership defines flavour. The
+- The `TutorialTrack` enum (Sound/Pattern/Motor) dissolves — membership defines flavour. The
   `GettingStarted` tag rule likewise retires; the tag was a proxy for track membership.
 
 **UI/state model (user-specified):**
@@ -256,7 +301,7 @@ course could express is lost.
   full ladder as it grows.
 - *Sound Design Basics*: A1 A2 A3 A4 (later + A5–A8); buildsOn: The Klang Path onramp.
 - *The Pattern Language*: B1–B3 B4 B5 (later + B6–B11).
-- *The Klangmotör*: C1–C10 when written; buildsOn: The Klang Path.
+- *The Klangmotor*: C1–C10 when written; buildsOn: The Klang Path.
 
 ## Section blocks + visuals (user design 2026-08-17 — BUILT; markdown since 2026-08-18)
 
@@ -274,6 +319,9 @@ compatibility). Authoring contract for ALL new/edited prose:
 - `${'$'}{Tut.x}` interpolations stay plain.
 - B1 §1 carries the player-UI bullet tour (order matches the chrome) + the hover-help tip;
   B1 §4 lists drum names as bullets. Bullet lists are for enumerations prose would bury.
+- **Player-button names are bold**: `press **Update**` (lint-enforced), never `press Update`. B1's
+  player tour introduces **Play**, **Stop**, **Reset** and **Update** in bold, and every later
+  instruction to press one has to look like the thing the reader is hunting for in the chrome.
 - **NO EM-DASHES (user ruling 2026-08-18): never "—" or "–" in any user-facing text** (prose,
   descriptions, code comments). They read as an AI tell; rewrite with commas, colons,
   semicolons, parentheses, or a new sentence. The A/B comment suffix is ", swap" /

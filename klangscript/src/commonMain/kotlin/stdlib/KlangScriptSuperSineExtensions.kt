@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -69,13 +69,27 @@ object KlangScriptSuperSineExtensions {
      * or all-positional — KlangScript forbids mixing). Defaults mirror the
      * `SUPERSINE`-family engine constants (guarded by the dual-language spec).
      *
+     * **Selection modes** (`selection`, value-colon form `"name[:width[:outliers]]"`):
+     * - `"normal"` (default) — normal-distribution serving over the pool's vocabulary,
+     *   centered on the median (most typical) take.
+     *   `width` sets the spread: `0` = always the median take, `0.1` = tight,
+     *   `0.5` = default, `1`+ ≈ uniform (`"normal:1.5"` ≈ random with a slight center edge).
+     *   `outliers` (0..1, default 0) = probability of serving an EXTREME take instead —
+     *   the vocabulary's lowest- or highest-K entry (coin-flip side; with a reachable band
+     *   those sit directly at kMin/kMax). `"normal:0.1:0.05"` = tight, 5% wild plucks.
+     * - `"random"` — a uniformly random vocabulary entry each note (still band-accepted
+     *   takes, NOT the un-pooled legacy randomness).
+     * - `"roundrobin"` (opt-in) — cycle the vocabulary; can gargle audibly.
+     *
+     * Unrecognized names/coefficients coerce to their defaults.
+     *
      * @param on 1 = banded start-phase selection on, 0 = off (the engine default).
      * @param kMin accepted coherence band, lower edge (0 = cancelled, 1 = phase-aligned).
      * @param kMax accepted coherence band, upper edge. The band is also a timbre control.
      * @param drawTries candidate phase sets scored per draw (engine caps at 64).
      * @param poolSize vocabulary size per pool key (engine caps at 1024).
      * @param refreshEvery notes between fresh pool draws; 0 = frozen pool.
-     * @param selection 0 = roundRobin (default), 1 = random.
+     * @param selection serving mode, `"name[:width[:outliers]]"` — see **Selection modes** above.
      * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
      */
     @KlangScript.Method
@@ -87,7 +101,7 @@ object KlangScriptSuperSineExtensions {
         drawTries: Double = 40.0,
         poolSize: Double = 256.0,
         refreshEvery: Double = 10.0,
-        selection: Double = 0.0,
+        selection: String = "normal",
         warmup: Double = 16.0,
     ): IgnitorDsl.SuperSine = self.copy(
         phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,

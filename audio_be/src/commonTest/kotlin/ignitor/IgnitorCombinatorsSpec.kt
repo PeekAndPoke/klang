@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -37,11 +37,9 @@ class ExciterCombinatorsSpec : StringSpec({
             voiceDurationFrames = blockFrames,
             gateEndFrame = blockFrames,
             releaseFrames = 0,
-            voiceEndFrame = blockFrames,
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
-            offset = 0
-            length = blockFrames
+            updateOffsetAndLength(0, blockFrames)
             voiceElapsedFrames = 0
         }
     }
@@ -136,9 +134,9 @@ class ExciterCombinatorsSpec : StringSpec({
     // Effects: phaser
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "phaser(rate, blend) - output differs from dry signal" {
+    "phaser(rate, wet) - output differs from dry signal" {
         val dry = generate(Ignitors.sine())
-        val wet = generate(Ignitors.sine().phaser(rate = 2.0, blend = 0.5))
+        val wet = generate(Ignitors.sine().phaser(rate = 2.0, wet = 0.5))
 
         // Phaser should modify the signal
         var differs = false
@@ -188,7 +186,7 @@ class ExciterCombinatorsSpec : StringSpec({
         val dcOffsetExciter: Ignitor = object : Ignitor {
             override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
                 Ignitors.sine().generate(buffer, freqHz, ctx)
-                val end = ctx.offset + ctx.length
+                val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
                     buffer[i] = buffer[i] + 0.5 // Add DC offset
                 }
@@ -405,9 +403,9 @@ class ExciterCombinatorsSpec : StringSpec({
     // Pitch Mod: accelerate
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "accelerate(amount) - pitch changes over time" {
+    "accelerate(semitones) - pitch changes over time" {
         val blockFrames = 44100 // 1 second
-        val wet = generate(IgnitorDsl.Sine().accelerate(2.0).toExciter(), freqHz = 440.0, blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().accelerate(24.0).toExciter(), freqHz = 440.0, blockFrames = blockFrames)
 
         // Count zero crossings in first half vs second half
         fun zeroCrossingsInRange(buf: AudioBuffer, start: Int, end: Int): Int {

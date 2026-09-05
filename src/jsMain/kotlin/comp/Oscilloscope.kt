@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -586,12 +586,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         }
 
         // Stroke shadow behind for contrast
-        ctx.strokeStyle = KlangTheme.good.withAlpha(0.15).toString()
+        ctx.strokeStyle = Color.black.withAlpha(0.33).toString()
         ctx.lineWidth = strokeWidth + 5.0
         ctx.stroke()
 
         // Gold highlight
-        ctx.strokeStyle = KlangTheme.bronze.withAlpha(0.25).toString()
+        ctx.strokeStyle = KlangTheme.critical.withAlpha(0.25).toString()
         ctx.lineWidth = strokeWidth + 3
         ctx.stroke()
 

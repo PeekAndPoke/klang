@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -24,7 +24,7 @@ import kotlin.random.Random
  * permanent silent no-op — no other spec would notice (`PhasePoolSpec` calls the factories
  * directly; the KlangScript specs stop at DSL object equality; the codec spec stops at the wire).
  *
- * The runtime does not thread an rng (production uses `Random.Default`), so this is statistical:
+ * Production now threads the voice's stream (seeded-voice-rng), but this spec predates it and stays statistical by design:
  * with the pool ON at a high band ([0.85, 0.95], 64 tries) the mean fundamental across notes sits
  * ≈ 0.63, versus ≈ 0.27 for honest random draws — an ~8σ separation at 60 notes per side, immune
  * to seed luck for any practical purpose. Three probes per node, each killing a different dropped
@@ -47,9 +47,8 @@ class PhasePoolDslSeamSpec : StringSpec({
             voiceDurationFrames = sampleRate,
             gateEndFrame = sampleRate,
             releaseFrames = n,
-            voiceEndFrame = sampleRate + n,
             scratchBuffers = ScratchBuffers(n),
-        ).apply { offset = 0; length = n; voiceElapsedFrames = 0 }
+        ).apply { updateOffsetAndLength(0, n); voiceElapsedFrames = 0 }
         dsl.toExciter(phasePools = pools, orbit = orbit).generate(buffer, freqHz, ctx)
         var re = 0.0
         var im = 0.0
@@ -73,6 +72,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
         "SuperRamp" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
@@ -80,6 +81,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
         "SuperSquare" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
@@ -87,6 +90,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
         "SuperTri" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
@@ -94,6 +99,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
         "SuperSine" to { pool, lo, hi, tries, poolSize, refreshEvery, warmup ->
@@ -101,6 +108,8 @@ class PhasePoolDslSeamSpec : StringSpec({
                 voices = voices, spread = spread, analog = analog, gainJitter = 0.0,
                 phasePool = pool, drawTries = tries, kMin = lo, kMax = hi,
                 poolSize = poolSize, refreshEvery = refreshEvery, warmup = warmup,
+                // the alternation rows REQUIRE cycling (node default is "normal" since 2026-08-24)
+                selection = "roundrobin",
             )
         },
     )

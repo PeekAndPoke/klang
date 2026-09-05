@@ -1,10 +1,13 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.peekandpoke.klang.audio_be.warehouse.CylinderUnits
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.voices.Voice
 
@@ -16,6 +19,16 @@ class Cylinders(
     private val sampleRate: Int,
     private val silentBlocksBeforeTailCheck: Int = 10,
     maxCylinders: Int = MAX_CYLINDERS,
+    /**
+     * The cylinder shelf this engine rents from and returns to. Production passes the backend's one
+     * warehouse; the default is a private shelf over private unit shelves, for specs.
+     */
+    private val units: CylinderUnits = CylinderUnits(
+        blockFrames = blockFrames,
+        sampleRate = sampleRate,
+        rings = SizedBuffers.forRings(sampleRate),
+        reverbs = ReverbUnits(sampleRate),
+    ),
 ) {
     companion object {
         const val MAX_CYLINDERS = 256
@@ -41,31 +54,22 @@ class Cylinders(
     /**
      * Clear all cylinders
      */
+    /**
+     * Returns every cylinder to the warehouse (which retires it: units back to their shelves,
+     * state to a clean slate) and forgets them — the engine is being disposed (resource warehouse,
+     * 2f + cylinders). The next playback's first voice on an orbit takes a shelved cylinder, and its
+     * first delay or room a shelved ring or network: nothing is built in render.
+     */
+    fun releaseAll() {
+        for (cylinder in id2cylinder.values) {
+            units.giveBack(cylinder)
+        }
+        id2cylinder.clear()
+    }
+
     fun clearAll() {
         for (cylinder in id2cylinder.values) {
             cylinder.clear()
-        }
-    }
-
-    /**
-     * Force-allocate every cylinder `0..maxCylinders-1`.
-     *
-     * Used by the backend warmup handshake to avoid lazy-allocation hitches on the first
-     * note of a song that references an orbit we haven't seen before. The cylinder
-     * constructor allocates delay / reverb / phaser / compressor buffers — doing 5+ of
-     * them in one audio block on first play was blowing the block deadline and
-     * swallowing the first kick.
-     */
-    fun preallocateAll() {
-        for (id in 0 until maxCylinders) {
-            id2cylinder.getOrPut(id) {
-                Cylinder(
-                    id = id,
-                    blockFrames = blockFrames,
-                    sampleRate = sampleRate,
-                    silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
-                )
-            }
         }
     }
 
@@ -143,12 +147,7 @@ class Cylinders(
         val safeId = id % maxCylinders
 
         return id2cylinder.getOrPut(safeId) {
-            Cylinder(
-                id = safeId,
-                blockFrames = blockFrames,
-                sampleRate = sampleRate,
-                silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck
-            )
+            units.rent(id = safeId, silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck)
         }.also {
             it.updateFromVoice(voice, blockStart)
         }

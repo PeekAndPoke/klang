@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -25,28 +25,11 @@ import io.peekandpoke.klang.sprudel.lang.voiceSetter
 
 private val notchfMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
-    if (":" in str) {
-        val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
-        notchf = parts.getOrNull(0) ?: notchf
-        nresonance = parts.getOrNull(1) ?: nresonance
-        nfenv = parts.getOrNull(2) ?: nfenv
-    } else {
-        notchf = str.toDoubleOrNull()
-    }
+    notchf = str.toDoubleOrNull()
 }
 
 private fun applyNotchf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val str = args.firstOrNull()?.value?.toString() ?: ""
-    return if (":" in str) {
-        source._applyControlFromParams(args, notchfMutation) { src, ctrl ->
-            src.notchf = ctrl.notchf ?: src.notchf
-            src.nresonance = ctrl.nresonance ?: src.nresonance
-            src.nfenv = ctrl.nfenv ?: src.nfenv
-            src
-        }
-    } else {
-        source._liftOrReinterpretNumericalField(args, notchfMutation)
-    }
+    return source._liftOrReinterpretNumericalField(args, notchfMutation)
 }
 
 /**
@@ -72,13 +55,20 @@ private fun applyNotchf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * seq("500 1000 2000").notchf()        // reinterpret values as notch centre
  * ```
  *
- * @param-tool freq SprudelNotchFilterSequenceEditor
+ * @param-tool freq SprudelNotchFilterEditor, SprudelNotchFilterSequenceEditor
  * @category effects
  * @tags notchf, notch filter, filter, frequency
  */
 @KlangScript.Function
-fun SprudelPattern.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyNotchf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
+fun SprudelPattern.notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch freq: reinterpret runs only on a fully bare call.
+    val withFreq = if (freq != null || q == null) {
+        applyNotchf(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
+    } else {
+        this
+    }
+    return if (q != null) withFreq.notchq(q, callInfo?.forParam(1)) else withFreq
+}
 
 /**
  * Parses this string as a pattern, then applies a Notch Filter.
@@ -94,8 +84,8 @@ fun SprudelPattern.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null)
  * @tags notchf, notch filter, filter, frequency
  */
 @KlangScript.Function
-fun String.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).notchf(freq, callInfo)
+fun String.notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).notchf(freq, q, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a Notch Filter.
@@ -115,8 +105,7 @@ fun String.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags notchf, notch filter, filter, frequency
  */
 @KlangScript.Function
-fun notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.notchf(freq, callInfo) }
+fun notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.notchf(freq, q, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies a Notch Filter after the previous mapper.
@@ -133,8 +122,8 @@ fun notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * ```
  */
 @KlangScript.Function
-fun PatternMapperFn.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.notchf(freq, callInfo) }
+fun PatternMapperFn.notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.notchf(freq, q, callInfo) }
 
 // -- nresonance() / nres() - Notch Filter resonance ------------------------------------------------------------------
 
@@ -167,7 +156,7 @@ private fun applyNresonance(source: SprudelPattern, args: List<SprudelDslArg<Any
  * seq("1 5 15").nresonance()               // reinterpret values as notch Q
  * ```
  *
- * @param-tool q SprudelNResonanceSequenceEditor
+ * @param-tool q SprudelNResonanceEditor, SprudelNResonanceSequenceEditor
  * @alias nres
  * @category effects
  * @tags nresonance, nres, notch filter, Q, resonance
@@ -241,14 +230,14 @@ fun PatternMapperFn.nresonance(q: PatternLike? = null, callInfo: CallInfo? = nul
  * @return A new pattern with notch resonance applied.
  *
  * ```KlangScript(Playable)
- * note("c4").notchf(500).nres(10)   // alias for nresonance
+ * note("c4").notchf(500).notchq(10)   // alias for nresonance
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").nres("<5 20>")         // sweeping notch Q
+ * note("c4").notchq("<5 20>")       // sweeping notch Q
  * ```
  *
- * @param-tool q SprudelNotchQSequenceEditor
+ * @param-tool q SprudelNotchQEditor, SprudelNotchQSequenceEditor
  * @alias nresonance
  * @category effects
  * @tags nres, nresonance, notch filter, Q
@@ -264,7 +253,7 @@ fun SprudelPattern.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): S
  * @return A new pattern with notch resonance applied.
  *
  * ```KlangScript(Playable)
- * "c4".notchf(500).nres(10)         // alias for String.nresonance
+ * "c4".notchf(500).notchq(10)       // alias for String.nresonance
  * ```
  */
 @KlangScript.Function
@@ -278,11 +267,11 @@ fun String.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @return A [PatternMapperFn] that applies notch resonance.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(notchf(1000).nres(10))  // alias for nresonance()
+ * note("c4 e4").apply(notchf(1000).notchq(10))  // alias for nresonance()
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, nres(15))           // narrow notch on first cycle
+ * note("c3*4").firstOf(4, notchq(15))         // narrow notch on first cycle
  * ```
  *
  * @alias nresonance
@@ -300,11 +289,11 @@ fun notchq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn 
  * @return A new [PatternMapperFn] chaining notch resonance after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(notchf(500).nres(10))   // notchf then nres
+ * note("c4 e4").apply(notchf(500).notchq(10)) // notchf then notchq
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, notchf(1000).nres(15))  // chain
+ * note("c3*4").firstOf(4, notchf(1000).notchq(15))  // chain
  * ```
  */
 @KlangScript.Function
@@ -335,7 +324,7 @@ private fun applyNfattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  *
  * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter attack time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds SprudelNfAttackSequenceEditor
+ * @param-tool seconds SprudelNfAttackEditor, SprudelNfAttackSequenceEditor
  * @alias nfa
  * @category effects
  * @tags nfattack, nfa, notch filter, envelope, attack
@@ -372,7 +361,7 @@ fun PatternMapperFn.nfattack(seconds: PatternLike? = null, callInfo: CallInfo? =
  *
  * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter attack time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds SprudelNfAttackSequenceEditor
+ * @param-tool seconds SprudelNfAttackEditor, SprudelNfAttackSequenceEditor
  * @alias nfattack
  * @category effects
  * @tags nfa, nfattack, notch filter, envelope, attack
@@ -420,7 +409,7 @@ private fun applyNfdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *
  * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter decay time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds SprudelNfDecaySequenceEditor
+ * @param-tool seconds SprudelNfDecayEditor, SprudelNfDecaySequenceEditor
  * @alias nfd
  * @category effects
  * @tags nfdecay, nfd, notch filter, envelope, decay
@@ -457,7 +446,7 @@ fun PatternMapperFn.nfdecay(seconds: PatternLike? = null, callInfo: CallInfo? = 
  *
  * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter decay time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds SprudelNfDecaySequenceEditor
+ * @param-tool seconds SprudelNfDecayEditor, SprudelNfDecaySequenceEditor
  * @alias nfdecay
  * @category effects
  * @tags nfd, nfdecay, notch filter, envelope, decay
@@ -506,7 +495,7 @@ private fun applyNfsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
  *
  * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter sustain level, or [SprudelPattern] when called on a pattern.
- * @param-tool level SprudelNfSustainSequenceEditor
+ * @param-tool level SprudelNfSustainEditor, SprudelNfSustainSequenceEditor
  * @alias nfs
  * @category effects
  * @tags nfsustain, nfs, notch filter, envelope, sustain
@@ -543,7 +532,7 @@ fun PatternMapperFn.nfsustain(level: PatternLike? = null, callInfo: CallInfo? = 
  *
  * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter sustain level, or [SprudelPattern] when called on a pattern.
- * @param-tool level SprudelNfSustainSequenceEditor
+ * @param-tool level SprudelNfSustainEditor, SprudelNfSustainSequenceEditor
  * @alias nfsustain
  * @category effects
  * @tags nfs, nfsustain, notch filter, envelope, sustain
@@ -591,7 +580,7 @@ private fun applyNfrelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  *
  * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter release time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds SprudelNfReleaseSequenceEditor
+ * @param-tool seconds SprudelNfReleaseEditor, SprudelNfReleaseSequenceEditor
  * @alias nfr
  * @category effects
  * @tags nfrelease, nfr, notch filter, envelope, release
@@ -628,7 +617,7 @@ fun PatternMapperFn.nfrelease(seconds: PatternLike? = null, callInfo: CallInfo? 
  *
  * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter release time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds SprudelNfReleaseSequenceEditor
+ * @param-tool seconds SprudelNfReleaseEditor, SprudelNfReleaseSequenceEditor
  * @alias nfrelease
  * @category effects
  * @tags nfr, nfrelease, notch filter, envelope, release
@@ -664,10 +653,12 @@ private fun applyNfenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * Sets the notch filter envelope depth (modulation amount).
  *
  * Controls how far above the base [notchf] centre frequency the notch sweeps when the ADSR envelope
- * is fully open. The depth is a multiplier applied to the base cutoff:
+ * is fully open. The depth is in SEMITONES: the sweep is pitch-linear, the way DAW
+ * filter envelopes work: +12 doubles the cutoff at full envelope, -12 halves it, and
+ * negative depths are first-class (no dead zone).
  *
  * ```
- * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * newCutoff = baseCutoff × 2^(depth/12 × envelopeValue)
  * ```
  *
  * ### How cutoff, ADSR, and depth work together
@@ -678,26 +669,26 @@ private fun applyNfenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * | `nfattack / nfdecay / nfsustain / nfrelease` | Shapes the **envelope curve** over time (0→1→sustain→0) |
  * | `nfenv(depth)` | Scales **how far** the envelope moves the centre frequency |
  *
- * Example with `notchf(500).nfenv(3.0).nfattack(0.01).nfdecay(0.5).nfsustain(0.2).nfrelease(0.3)`:
+ * Example with `notchf(500).nfenv(24).nfattack(0.01).nfdecay(0.5).nfsustain(0.2).nfrelease(0.3)`:
  *
  * | Phase | envValue | Centre freq |
  * |-------|----------|-------------|
  * | Note start | 0.0 | 500 Hz |
- * | Attack peak | 1.0 | 500 × (1 + 3 × 1) = **2000 Hz** |
- * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
+ * | Attack peak | 1.0 | 500 × 2^(24/12 × 1.0) = **2000 Hz** (2 octaves up) |
+ * | Sustain | 0.2 | 500 × 2^(24/12 × 0.2) = **660 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
  * ```KlangScript(Playable)
- * note("c4").notchf(1000).nfenv(3.0)              // notch sweeps up to 4000 Hz at peak
+ * note("c4").notchf(1000).nfenv(24)              // notch sweeps up to 4000 Hz at peak
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd").notchf(500).nfenv("<1.0 5.0>")           // subtle vs dramatic sweep per cycle
+ * s("bd").notchf(500).nfenv("<7 36>")              // subtle (a fifth) vs dramatic (3 octaves) per cycle
  * ```
  *
- * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth SprudelNfEnvSequenceEditor
+ * @param-tool depth SprudelNfEnvEditor, SprudelNfEnvSequenceEditor
  * @alias nfe
  * @category effects
  * @tags nfenv, nfe, notch filter, envelope, depth, modulation
@@ -725,16 +716,16 @@ fun PatternMapperFn.nfenv(depth: PatternLike? = null, callInfo: CallInfo? = null
  * Alias for [nfenv]. Sets the notch filter envelope depth.
  *
  * ```KlangScript(Playable)
- * note("c4").notchf(500).nfe(3.0)   // alias for nfenv()
+ * note("c4").notchf(500).nfe(24)   // alias for nfenv()
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").apply(notchf(500).nfe(3.0))   // chained PatternMapperFn
+ * note("c4").apply(notchf(500).nfe(24))   // chained PatternMapperFn
  * ```
  *
- * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth in semitones (+12 = one octave up at full envelope); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth SprudelNfEnvSequenceEditor
+ * @param-tool depth SprudelNfEnvEditor, SprudelNfEnvSequenceEditor
  * @alias nfenv
  * @category effects
  * @tags nfe, nfenv, notch filter, envelope, depth, modulation
@@ -757,3 +748,104 @@ fun nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn
 @KlangScript.Function
 fun PatternMapperFn.nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.nfenv(depth, callInfo)
+
+// -- notch() / ntf() / ntq() -------------------------------------------------------------------------------------
+
+/**
+ * Applies a Notch (band-reject) filter — the CANONICAL name. `notchf` is the long-standing
+ * spelling and stays first-class; both are the same function.
+ *
+ * @param freq The centre frequency in Hz to reject. Omit to reinterpret the pattern's values.
+ * @param q The filter Q factor (notch width). Omit to leave it unchanged.
+ * @return A new pattern with the notch applied.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").notch(1000)
+ * ```
+ *
+ * @category effects
+ * @tags notch, notchf, ntf, band reject, filter, frequency, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    notchf(freq, q, callInfo)
+
+/** Applies a Notch filter to a string pattern (see [SprudelPattern.notch]). */
+@KlangScript.Function
+fun String.notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.notchf(freq, q, callInfo)
+
+/** Returns a [PatternMapperFn] that applies a Notch filter (see [SprudelPattern.notch]). */
+@KlangScript.Function
+fun notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    notchf(freq, q, callInfo)
+
+/** Chains a notch step onto this [PatternMapperFn] (see [SprudelPattern.notch]). */
+@KlangScript.Function
+fun PatternMapperFn.notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.notchf(freq, q, callInfo)
+
+/**
+ * Sets the notch centre frequency — the short form, completing the `xxf`/`xxq` family that
+ * `lpf`/`lpq`, `hpf`/`hpq` and `bpf`/`bpq` already had.
+ *
+ * @param freq The centre frequency in Hz to reject. Omit to reinterpret the pattern's values.
+ * @return A new pattern with the notch frequency applied.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").ntf(1000).ntq(8)
+ * ```
+ *
+ * @category effects
+ * @tags ntf, notch, notchf, band reject, filter, frequency, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    notchf(freq, null, callInfo)
+
+/** Sets the notch centre frequency on a string pattern (see [SprudelPattern.ntf]). */
+@KlangScript.Function
+fun String.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.notchf(freq, null, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the notch centre frequency (see [SprudelPattern.ntf]). */
+@KlangScript.Function
+fun ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    notchf(freq, null, callInfo)
+
+/** Chains an ntf step onto this [PatternMapperFn] (see [SprudelPattern.ntf]). */
+@KlangScript.Function
+fun PatternMapperFn.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.notchf(freq, null, callInfo)
+
+/**
+ * Sets the notch Q (width) — the short form, completing the `xxf`/`xxq` family.
+ *
+ * @param q The filter Q factor (notch width). Omit to reinterpret the pattern's values.
+ * @return A new pattern with the notch Q applied.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").ntf(1000).ntq(8)
+ * ```
+ *
+ * @category effects
+ * @tags ntq, notch, notchq, band reject, filter, resonance, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    notchq(q, callInfo)
+
+/** Sets the notch Q on a string pattern (see [SprudelPattern.ntq]). */
+@KlangScript.Function
+fun String.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.notchq(q, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the notch Q (see [SprudelPattern.ntq]). */
+@KlangScript.Function
+fun ntq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    notchq(q, callInfo)
+
+/** Chains an ntq step onto this [PatternMapperFn] (see [SprudelPattern.ntq]). */
+@KlangScript.Function
+fun PatternMapperFn.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.notchq(q, callInfo)

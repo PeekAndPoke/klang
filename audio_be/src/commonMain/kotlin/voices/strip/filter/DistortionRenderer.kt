@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -28,11 +28,11 @@ import kotlin.math.pow
  * - Optional oversampling to reduce aliasing from nonlinear processing.
  *
  * Shape dispatch goes through the `inline` [applyDistortionShape] — the per-
- * sample `when` is expanded at the call site and each `ClippingFuncs.foo(x)`
+ * sample `when` is expanded at the call site and each `ShapingFuncs.foo(x)`
  * inlines. No `(Double) -> Double` function reference is held.
  *
  * Note: this renderer does NOT apply `softCap` after the DC blocker, unlike
- * `Ignitor.distort()` and `Ignitor.clip()`. The voice-strip pipeline has its
+ * `Ignitor.distort()` and `Ignitor.shape()`. The voice-strip pipeline has its
  * own downstream bounding stages.
  */
 class DistortionRenderer(
@@ -68,7 +68,7 @@ class DistortionRenderer(
         } else {
             // Direct path: NaN guard inline — a NaN escaping here would permanently
             // corrupt the downstream IIR DcBlocker.
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buf[i] = applyDistortionShape(s, buf[i] * d).nanGuard()
             }

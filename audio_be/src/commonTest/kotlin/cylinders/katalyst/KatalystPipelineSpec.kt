@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -37,8 +37,12 @@ class BusPipelineSpec : StringSpec({
         phaserDepth: Double = 0.0,
         compressorThreshold: Double? = null,
     ): List<KatalystEffect> {
-        val delay = KatalystDelayEffect(DelayLine(10.0, sampleRate).apply { delayTimeSeconds = delayTime })
-        val reverb = KatalystReverbEffect(Reverb(sampleRate).apply { roomSize = reverbRoom })
+        val delay = KatalystDelayEffect(DelayLine(10.0, sampleRate), blockFrames).apply {
+            configure(timeSeconds = delayTime, feedback = 0.0, cap = 1.0)
+        }
+        val reverb = KatalystReverbEffect(Reverb(sampleRate), blockFrames).apply {
+            configure(roomSize = reverbRoom, roomFade = null, roomLp = null, roomDim = null, iResponse = null)
+        }
         val phaser = KatalystPhaserEffect(Phaser(sampleRate).apply {
             depth = phaserDepth
             rate = 2.0

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -183,6 +183,9 @@ private class SprudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
             currentValue = "\"${atom.value}\"",
             onCancel = onCancel,
             onCommit = onCommit,
+            // Atom editing is SCALAR by definition: never hand the whole-call view to the
+            // atom tool, or it would rewrite the host call instead of this one atom (C0.3).
+            call = null,
         )
 
     private fun FlowContent.renderEmbeddedAtomTool(atom: MnNode.Atom, atomTool: KlangUiToolEmbeddable) {

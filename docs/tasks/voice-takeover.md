@@ -55,7 +55,7 @@ sharing one onset).
 **send** stage stops it *feeding* those resonators while their own high-Q state keeps ringing out.
 
 That is exactly the acoustic caricature we want, for free: **the string stops, the body does not.**
-Der Schmetterling already runs `.body("violin").bodyMix(0.3)`, so it benefits immediately.
+Der Schmetterling already runs `.body("violin").bodyWet(0.3)`, so it benefits immediately.
 
 ### Why the fade can be short
 
@@ -65,7 +65,7 @@ slope-corner click documented in the VCA de-click work (`audio/MEMORY.md`, `ENV_
 expect to hear the difference.
 
 **Practical note:** the tail is often still *loud* when the next note lands (e.g. `clip(0.86)` with
-`adsr("0.005:3.5:0.0:0.05")` leaves only ~14 % of a step of decay). Loud tails need longer than 5 ms — expect to tune
+`adsr(0.005, 3.5, 0.0, 0.05)` leaves only ~14 % of a step of decay). Loud tails need longer than 5 ms — expect to tune
 5–40 ms by ear per patch. `takeover` is patternable from day one.
 
 ## Rejected alternatives (do not re-litigate)
@@ -99,7 +99,7 @@ so it reads as consistent. No rename needed.
 ### Surface
 
 ```kotlin
-note("c3 e3 g3 e3").s("gtr").adsr("0.005:3.5:0.0:0.05").takeover(0.005)
+note("c3 e3 g3 e3").s("gtr").adsr(0.005, 3.5, 0.0, 0.05).takeover(0.005)
 s("hh*4 oh").cut(1).takeover(0.003)                      // explicit group, now click-free
 note("c3 e3").s("gtr").takeover("<0.005 0.03>")          // patternable
 ```
@@ -262,5 +262,5 @@ compound param — is designed, or we just grow the debt.
 - `docs/tasks/sprudel-sound-function-surface.md` — **the Phase 2 blocker.** Compound-string vs per-param surface; needs
   widening from `snd*` to all compound params.
 - `docs/tasks/sprudel-ui-tools.md` — the `@param-tool` editor catalogue that the UI question lands in.
-- `docs/tasks/per-playback-engine.md` — the per-playback `PlaybackEngine` / `VoiceScheduler` model Phase 1 plugs into.
+- `docs/tasks-archive/2026-09/20260904-per-playback-engine.md` — the per-playback `PlaybackEngine` / `VoiceScheduler` model Phase 1 plugs into.
 - `audio/ref/data-model.md` — `VoiceData` field catalogue (update when the field lands).

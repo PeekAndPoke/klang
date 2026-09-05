@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -38,7 +38,9 @@ class WireCodecRoundTripSpec : StringSpec({
                 listOf(
                     StageDsl.FilterMod,
                     StageDsl.Filter(cutoffOffsetPerAnalog = 0.01, drivePerAnalog = 0.7, driftRelToOsc = 4.0),
-                    StageDsl.Vca(expK = 2.5, declickSeconds = 0.002),
+                    // on = false, not the default true: with the default, this case passes even
+                    // if the codec drops the field entirely.
+                    StageDsl.Vca(expK = 2.5, declickSeconds = 0.002, on = false),
                 )
             ),
         ).forEach { decode_PipelineDsl(encode_PipelineDsl(it)) shouldBe it }
@@ -83,13 +85,17 @@ class WireCodecRoundTripSpec : StringSpec({
             adsr = AdsrDef.Std(
                 attack = 0.005, decay = 0.2, sustain = 0.6, release = 0.05,
                 attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
+                // Non-default on purpose (default is null): `Boolean?` through a `dynamic` codec is
+                // exactly the shape where `false` and `undefined` can be confused.
+                on = false,
             ),
             filters = FilterDefs(
                 listOf(
-                    FilterDef.HighPass(cutoffHz = 500.0, q = 2.0, envelope = null),
+                    FilterDef.HighPass(freq = 500.0, q = 2.0, envelope = null, passes = 3),
                     FilterDef.LowPass(
-                        cutoffHz = 1000.0, q = 1.5,
+                        freq = 1000.0, q = 1.5,
                         envelope = FilterEnvDef(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2, depth = 0.9),
+                        passes = 2,
                     ),
                     FilterDef.Formant(bands = listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 5.0)), mix = 0.5),
                 )
@@ -120,6 +126,21 @@ class WireCodecRoundTripSpec : StringSpec({
                     KlangCommLink.Feedback.Diagnostics.CylinderState(id = 1, active = false),
                 ),
                 backendNowMs = 1234.5,
+                warehouse = KlangCommLink.Feedback.Diagnostics.WarehouseStats.empty,
+            ),
+            // The warehouse snapshot rides the same message.
+            KlangCommLink.Feedback.Diagnostics(
+                playbackId = "pb", sampleRate = 44100, renderHeadroom = 0.5, activeVoiceCount = 0,
+                cylinders = emptyList(), backendNowMs = 1.0,
+                warehouse = KlangCommLink.Feedback.Diagnostics.WarehouseStats(
+                    ringIdleBytes = 6_160_384.0, ringIdleCount = 16, ringDirtyCount = 2, ringAllocations = 16, ringHits = 8,
+                    ringFailures = 0, ringDropped = 0, ringSyncCleans = 1,
+                    reverbIdleCount = 16, reverbDirtyCount = 0, reverbAllocations = 16, reverbHits = 4, reverbFailures = 0, reverbDropped = 0,
+                    cylinderIdleCount = 8, cylinderAllocations = 16, cylinderHits = 8, cylinderDropped = 0,
+                    scratchCapacity = 64, scratchHighWater = 30, scratchLateAllocations = 0, scratchUnbalancedReleases = 0,
+                    sampleBytes = 12_345_678.0, sampleCount = 7, sampleAllocationFailures = 0,
+                    droppedVoices = 3, deniedRents = 1,
+                ),
             ),
         )
         cases.forEach { decode_KlangCommLink_Feedback(encode_KlangCommLink_Feedback(it)) shouldBe it }
@@ -139,6 +160,10 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Cmd.ScheduleVoice("pb", voice),
             KlangCommLink.Cmd.ScheduleVoices("pb", listOf(voice, voice)),
             KlangCommLink.Cmd.ReplaceVoices("pb", listOf(voice), afterTimeSec = 2.0),
+            // Both gateDurSec variants: fixed length AND the held case (null must survive the trip)
+            KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 7, data = voice.data, gateDurSec = 0.4)),
+            KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 8, data = voice.data, gateDurSec = null)),
+            KlangCommLink.Cmd.StopRealtimeVoice("pb", liveId = 8),
             KlangCommLink.Cmd.RegisterIgnitor("pb", "mysynth", dsl),
             KlangCommLink.Cmd.RegisterMaster("pb", "master-0", MasterDsl.of(MasterStageDsl.Gain(2.0))),
             KlangCommLink.Cmd.Sample.NotFound(SampleRequest("b", "s", 1, "c3")),

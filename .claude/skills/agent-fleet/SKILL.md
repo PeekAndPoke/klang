@@ -87,8 +87,10 @@ console/with-build-lock.sh bash -c 'apply-mutation && ./gradlew ... ; restore-mu
 ```
 
 **For a mutation check the critical section is `mutate → build → restore`, not just the build** — wrap all three.
-`.claude/BUILD-LOCK.md` is the advisory half (holder + handover note across sessions); read it as its own step, never
-chained into the build with `&&`.
+`.claude/BUILD-LOCK.md` is the advisory half: the holder record plus one row per workstream that is uncommitted right
+now. Read it as its own step, never chained into the build with `&&`. It is coordination only, not a ledger, so keep it
+short: a row dies when its work is committed, and old handover notes go to `.claude/build-lock-log.md`, which nobody
+reads to take the lock.
 
 ### Rules for the fan-out
 
@@ -132,7 +134,7 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   of patching around bad output.
 - **Don't use `haiku`** for anything whose output the coordinator can't cheaply sanity-check.
 - **Give workers the constraints, not just the task.** Klang carries a large body of *deliberate*
-  decisions (raw Motör no-clamping, reverb's `ANTI_DENORMAL` exception, the linear SVF, documented HPF bias). A reviewer
+  decisions (raw Motor no-clamping, reverb's `ANTI_DENORMAL` exception, the linear SVF, documented HPF bias). A reviewer
   without that list files findings that would make the engine worse. Paste the relevant constraint list into the
   prompt — `/review-loop` has templates, and
   `docs/tasks/audio-backend-audit.md` §7 has the audio-backend list.

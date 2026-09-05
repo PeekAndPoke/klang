@@ -1,15 +1,20 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.flushState
+import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sqrt
 import kotlin.math.tan
 
 // ─────────────────────────────────────────────────────────────────────────────────────
@@ -47,18 +52,21 @@ import kotlin.math.tan
 // (no input-scaling `b0`). Cheaper than `OnePoleHPF` by 1 mul/sample, parameterized
 // by the raw IIR pole `a` instead of cutoffHz (kept this way for back-compat with
 // the public `Ignitor.dcBlock(coefficient)` API). Replaced 9 open-coded inline copies
-// of the same recurrence in `IgnitorEffects.distort()`, `Ignitor.clip()`, and
+// of the same recurrence in `IgnitorEffects.distort()`, `Ignitor.shape()`, and
 // `voices/strip/filter/DistortionRenderer` with a single source of truth.
 //
 // **2× edge transient**: rail-to-rail input produces a ~2× peak transient through
 // the raw-pole topology (railed input − railed previous + nearly-railed feedback).
-// `Ignitor.distort()` and `Ignitor.clip()` pair `DcBlocker` with `ClippingFuncs.softCap()`
+// `Ignitor.distort()` and `Ignitor.shape()` pair `DcBlocker` with `ShapingFuncs.softCap()`
 // downstream to bound output to ±1. The master-out DcBlocker in `KlangAudioRenderer`
 // runs on post-limiter samples (already ±1-bounded), so no softCap needed there.
 //
-// **NaN/Inf guard**: `Double.coerceIn` returns NaN if input is NaN, which would corrupt
-// IIR state forever (`flushDenormal` only catches sub-denormal magnitudes). Guarded
-// explicitly in both `bilinearK` and `DcBlocker` constructor.
+// **NaN/Inf guard**: `Double.coerceIn` returns NaN if input is NaN, which would give the
+// filter a NaN COEFFICIENT — guarded explicitly in both `bilinearK` and the `DcBlocker`
+// constructor, because a poisoned coefficient re-poisons the state every sample and so is
+// not something a state guard can heal. (A poisoned STATE is a different problem and is
+// handled: `flushState` rejects non-finite carries as well as sub-denormal ones since the
+// master round, so no IIR here can latch on a hostile SAMPLE.)
 //
 // **Block-based API**: all filters use `process(buffer, offset, length)` so JIT keeps
 // state in registers across the loop. State load/store happens at function entry/exit,
@@ -90,8 +98,8 @@ import kotlin.math.tan
 // - `BaseSvf.q` stays construction-time immutable; `Ignitor.svf` supports audio-rate
 //   `q: Ignitor`. Different surfaces, intentional. The strip pipeline only modulates
 //   cutoff, never Q.
-// - BPF tap is the constant-skirt form (`v1` direct), peak gain = Q at fc. Standard
-//   SVF convention. `bandpass(q=10)` ⇒ +20 dB at fc — documented in `IgnitorFilters.kt`.
+// - BPF tap is UNITY-peak since C2 of the filter unification (`k·v1`): q is a pure
+//   width control. `bandpass(q=10)` gets narrower, not louder — see `IgnitorFilters.kt`.
 //
 // **Round 4 (2026-04-29) — Q clamp widened from [0.1, 50] to [0.1, 200]:**
 //
@@ -101,7 +109,7 @@ import kotlin.math.tan
 // finite Q (`The Art of VA Filter Design` ch. 5.3), so widening the clamp is safe.
 // The pole gets very close to the unit circle at extreme Q (e.g. Q=130, fc=600,
 // fs=48k → |p|≈0.99996, settling time ~Q/(π·fc) ≈ 70 ms) but never on/outside it.
-// `flushDenormal` threshold (1e-15) won't false-trigger because legitimate state
+// `flushState` threshold (1e-15) won't false-trigger because legitimate state
 // stays well above that for many seconds at musical fc/Q ranges.
 // ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -153,18 +161,21 @@ internal const val SAT_STATE_SCALE: Double = 0.0876
 
 /**
  * Default raw IIR pole for [LowPassHighPassFilters.DcBlocker]. `≈ 35 Hz @ 44.1k, 38 Hz @ 48k`.
- * Used by `Ignitor.distort()` and `Ignitor.clip()` to suppress DC accumulation from
+ * Used by `Ignitor.distort()` and `Ignitor.shape()` to suppress DC accumulation from
  * asymmetric waveshapers. Matches the historic `0.995` literal that lived inline.
  */
 internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
 /**
  * Broadband transmission floor for the body resonator (see [LowPassHighPassFilters.createBody]).
- * At `bodyMix >= 1` the dry is held at this fraction (it never drops below it), so the body
- * emphasizes its resonant modes over a broadband floor instead of collapsing to a few isolated
- * tones — the way a real passive body behaves. A LOWER floor makes the body more audible at a
- * given mix (the resonances sit over less dry); a higher floor is subtler. `bodyMix` itself is
- * uncapped above 1, so the resonances can always be pushed further regardless of the floor.
+ * Under the C4 law the floor PINS the dry from `w* = (2/pi)*acos(sqrt(floor))` upward
+ * (~0.56 for 0.4), i.e. from the middle of the knob, not just at the top (it never drops
+ * below the floor anywhere). That floor is what lets the body emphasize its resonant modes
+ * over a broadband bed instead of collapsing to a few isolated tones — the way a real
+ * passive body behaves. A LOWER floor makes the body more audible at a
+ * given mix (the resonances sit over less dry); a higher floor is subtler. `bodyWet` (wire spelling: `bodyMix`) itself is
+ * clamped to [0, 1] since C4 (the shared wet/dry law lives on that domain; the old raw
+ * extension above 1 is a deleted capability - plan: Helper domain).
  * Tunable by ear.
  */
 internal const val BODY_FLOOR: Double = 0.4
@@ -187,9 +198,10 @@ internal const val VOWEL_FLOOR: Double = 0.2
 internal const val VOWEL_TAME: Double = 0.05
 
 /**
- * Bundled TPT-SVF coefficient set: `a1, a2, a3, k`. Mutable holder, allocated once per
- * filter instance (not per call) so [computeSvfCoeffs] can write all four without
- * returning a tuple. Used by both `BaseSvf` and `Ignitor.svf`.
+ * Bundled TPT-SVF coefficient set (`a1, a2, a3, k`, plus the exposed angle [g] and the bell
+ * mix [m1]). Mutable holder, allocated once per filter instance (not per call) so the
+ * compute helpers can write the whole bundle without returning a tuple. Consumers:
+ * `BaseSvf`, `Ignitor.svf`, and `EqCore`.
  */
 internal class SvfCoeffs {
     var a1: Double = 0.0
@@ -205,6 +217,14 @@ internal class SvfCoeffs {
      * use `kEff + g` for the per-sample closed-form solve.
      */
     var g: Double = 0.0
+
+    /**
+     * BELL mix coefficient — non-zero ONLY when written by [computeSvfBellCoeffs]; plain
+     * [computeSvfCoeffs] writes 0.0 so a SHARED per-instance holder can never carry one
+     * section's bell gain into the next configured section (harmless for today's readers —
+     * only the bell tap reads it — but a trap for future shelf sections without the guard).
+     */
+    var m1: Double = 0.0
 }
 
 /**
@@ -228,9 +248,113 @@ internal inline fun computeSvfCoeffs(cutoffHz: Double, q: Double, sampleRate: Do
     out.a2 = g * out.a1
     out.a3 = g * out.a2
     out.g = g
+    out.m1 = 0.0 // stale-holder guard: only computeSvfBellCoeffs sets a bell mix (see SvfCoeffs)
+}
+
+/**
+ * Computes the Simper-SVF BELL coefficient bundle: `db` decibels of peaking gain at
+ * [cutoffHz], bandwidth set by [q]. Reuses [computeSvfCoeffs] at `q·A` (with
+ * `A = 10^(db/40)`) and derives the bell mix `m1 = safeOut(k · (A² − 1))` from the CLAMPED
+ * `k` that [computeSvfCoeffs] actually wrote — NEVER from a recomputed `1/(q·A)`: with the
+ * q·A clamp active the two differ by tens of dB (q=10, db=+120 → the clamped k gives exactly
+ * +120 dB peak; a recomputed m1 lands ~34 dB off). The bell TAP is `v0 + m1·v1` on the same
+ * recurrence every other section type runs.
+ *
+ * Peak gain at fc is exactly `A² = 10^(db/20)` — for ANY effective k, so the q·A clamp
+ * NEVER moves the peak, only the bandwidth (unclamped, q·A holds the half-gain width at
+ * exactly 1/q for ANY gain — that constancy is the point of the parameterization; once q·A
+ * hits the 0.1 floor — at q=0.707, below ≈ −34 dB — the width becomes 10·A and the cut
+ * narrows as it deepens). Cut and boost are reciprocal at EVERY
+ * frequency while both q·A and q/A are unclamped. What DOES cap the peak is the safeOut on
+ * m1: once m1 saturates at SAFE_MAX the peak stops rising — db stops doing anything above
+ * ≈ 346 (at safeQ = 200; from ≈ 280 at the q-floor 0.1), saturating near
+ * `1 + SAFE_MAX·safeQ`. Far beyond that (db ≈ 12330) `A` itself overflows and q·A inherits
+ * the Butterworth fallback, DROPPING the peak — the composite db → gain map is monotone
+ * only below the cap.
+ *
+ * Non-finite [db] falls back to 0.0 (transparent bell). // NaN-guard
+ * The safeOut on m1 is the house output-clamp contract, closing the finite-but-astronomical
+ * window (db ∈ [346, 6165) yields finite m1 up to ~9e305 — unbounded, that ducks the master
+ * limiter for seconds or lands NaN → full-scale DC downstream) and the non-finite case in
+ * ONE guard. It is applied to the COEFFICIENT at configure time — the per-sample path stays
+ * untouched — and it does NOT shorten the limiter-duck symptom at extreme db (raw Motor:
+ * no musical clamp on db).
+ *
+ * [db] is COEFFICIENT-bearing: it moves bandwidth through `q·A`, so an LFO on db zippers
+ * exactly like an LFO on cutoff — the same per-block snap class as the rest of the SVF
+ * surface. [q] is the PRE-GAIN bandwidth parameter.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun computeSvfBellCoeffs(
+    cutoffHz: Double,
+    q: Double,
+    db: Double,
+    sampleRate: Double,
+    out: SvfCoeffs,
+) {
+    val safeDb = if (db.isFinite()) db else 0.0 // NaN-guard
+    val a = 10.0.pow(safeDb / 40.0)
+    computeSvfCoeffs(cutoffHz, q * a, sampleRate, out)
+    out.m1 = safeOut(out.k * (a * a - 1.0))
+}
+
+private val SQRT2 = sqrt(2.0)
+
+/**
+ * Per-stage q values for a [passes]-deep cascade of 12 dB/oct SVF stages (C5).
+ *
+ * The ladder is the classic Butterworth pole arrangement for a 2·[passes]-order filter —
+ * `q_k = 1/(2·cos((2k+1)π/(4N)))` — SCALED by `userQ/0.7071`, so:
+ *  - at the default q the cascade is exactly Butterworth: flat passband, −3 dB AT fc —
+ *    `lpf(800, passes = 2)` still means 800 (staggering was the maintainer's C5 decision;
+ *    a plain q-per-stage cascade is −6 dB at fc with the knee drifting to ~0.64·fc);
+ *  - a resonant userQ keeps its character but the peak COMPOUNDS across stages (raw
+ *    engine, documented, no clamp). So does `analog`: every stage gets the full drive,
+ *    so `passes = 3, analog = 3` is three helpings of state-dependent damping, not one
+ *    steeper filter with the same character.
+ *
+ * `passes = 1` returns `[userQ]` verbatim — the single-stage path stays bit-identical.
+ *
+ * ASSOCIATION IS LOAD-BEARING: `userQ · (√2 / 2cosθ)` — the RELATIVE factor first, exactly as
+ * the bridge's `passesLadderRel` computes it. Written as `(userQ · √2) / 2cosθ` the two differ
+ * by 1 ULP and the optimizer's fused sections stop being bit-identical to the authored tree;
+ * `PassesLadderParitySpec` asserts raw bits.
+ */
+internal fun butterworthQLadder(passes: Int, userQ: Double): DoubleArray {
+    val n = coercePasses(passes)
+    if (n == 1) {
+        return doubleArrayOf(userQ)
+    }
+    return DoubleArray(n) { k ->
+        userQ * (SQRT2 / (2.0 * cos((2.0 * k + 1.0) * PI / (4.0 * n))))
+    }
 }
 
 object LowPassHighPassFilters {
+
+    /**
+     * A `passes`-deep serial cascade of identical-cutoff stages (C5). Not [ChainAudioFilter]:
+     * that one is a plain chain of arbitrary filters and deliberately NOT [AudioFilter.Tunable]
+     * — making it tunable would silently hand filter-envelope sweeps to every baked voice chain.
+     * This cascade forwards the cutoff to every stage, which is exactly what a cascade of ONE
+     * filter split into N sections must do.
+     */
+    internal class PassCascadeFilter(private val stages: List<AudioFilter>) : AudioFilter, AudioFilter.Tunable {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+            for (i in stages.indices) {
+                stages[i].process(buffer, offset, length)
+            }
+        }
+
+        override fun setCutoff(cutoffHz: Double) {
+            for (i in stages.indices) {
+                val stage = stages[i]
+                if (stage is AudioFilter.Tunable) {
+                    stage.setCutoff(cutoffHz)
+                }
+            }
+        }
+    }
 
     fun createLPF(
         cutoffHz: Double,
@@ -248,9 +372,22 @@ object LowPassHighPassFilters {
         // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
         // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
-    ): AudioFilter = when (q) {
-        null -> OnePoleLPF(cutoffHz, sampleRate, cutoffOffsetMul)
-        else -> SvfLPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+        passes: Int = 1,
+    ): AudioFilter {
+        // No secret effect swap (maintainer decision, 2026-08-24): an absent q means the
+        // DEFAULT q, not a different filter topology. The one-pole is its own named thing
+        // (`onepole(freq)`), never what `lpf` quietly becomes.
+        val userQ = q ?: 0.707
+        // The default path allocates nothing extra: no ladder array, no wrapper.
+        if (coercePasses(passes) == 1) {
+            return SvfLPF(cutoffHz, userQ, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+        }
+        val ladder = butterworthQLadder(passes, userQ)
+        return PassCascadeFilter(
+            List(ladder.size) { k ->
+                SvfLPF(cutoffHz, ladder[k], sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+            }
+        )
     }
 
     fun createHPF(
@@ -269,9 +406,20 @@ object LowPassHighPassFilters {
         // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
         // zeroing it "since production always passes the stage value" — are silent.
         drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
-    ): AudioFilter = when (q) {
-        null -> OnePoleHPF(cutoffHz, sampleRate, cutoffOffsetMul)
-        else -> SvfHPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+        passes: Int = 1,
+    ): AudioFilter {
+        // Same rule as createLPF: absent q = default q, never a topology swap.
+        val userQ = q ?: 0.707
+        // See createLPF: the passes = 1 path allocates nothing extra.
+        if (coercePasses(passes) == 1) {
+            return SvfHPF(cutoffHz, userQ, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+        }
+        val ladder = butterworthQLadder(passes, userQ)
+        return PassCascadeFilter(
+            List(ladder.size) { k ->
+                SvfHPF(cutoffHz, ladder[k], sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
+            }
+        )
     }
 
     fun createBPF(
@@ -279,14 +427,14 @@ object LowPassHighPassFilters {
         q: Double?,
         sampleRate: Double,
         cutoffOffsetMul: Double = 1.0,
-    ): AudioFilter = SvfBPF(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
+    ): AudioFilter = SvfBPF(cutoffHz, q ?: 0.707, sampleRate, cutoffOffsetMul)
 
     fun createNotch(
         cutoffHz: Double,
         q: Double?,
         sampleRate: Double,
         cutoffOffsetMul: Double = 1.0,
-    ): AudioFilter = SvfNotch(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
+    ): AudioFilter = SvfNotch(cutoffHz, q ?: 0.707, sampleRate, cutoffOffsetMul)
 
     fun createFormant(
         bands: List<FilterDef.Formant.Band>,
@@ -315,6 +463,11 @@ object LowPassHighPassFilters {
      * `y[ n ] = α·x[ n ] + (1−α)·y[n-1]`. DC gain = 1, monotonic, stable.
      * Cutoff is accurate (−3 dB at `fc`) up to ~fs/4 — beyond that all bilinear
      * designs warp. See file header for review history.
+     *
+     * ⚠ TEST/BENCHMARK-ONLY since 2026-08-24 (the null-q secret swap was removed): no
+     * production path constructs this — the live one-pole is `OnePoleLowpassIgnitor`
+     * behind `onepole(freq)`. Kept for the benchmark and as reference DSP; do not "fix"
+     * behaviours documented on these classes — deliberate history on dormant code.
      */
     class OnePoleLPF(
         cutoffHz: Double,
@@ -337,7 +490,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 val x = buffer[i]
                 y += a * (x - y)
-                y = y.flushDenormal()
+                y = y.flushState()
                 buffer[i] = y
             }
         }
@@ -349,6 +502,9 @@ object LowPassHighPassFilters {
      * DC gain = 0, Nyquist gain = 1, true −3 dB at `fc`, stable. See file header for
      * the review history (replaced the old `y = a·(y + x − xPrev)` topology in 2026-04
      * because that one had Nyquist droop at high cutoffs).
+     *
+     * ⚠ TEST/BENCHMARK-ONLY since 2026-08-24 — see [OnePoleLPF]; no one-pole highpass
+     * door exists.
      */
     class OnePoleHPF(
         cutoffHz: Double,
@@ -376,7 +532,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 val x = buffer[i]
                 y = b0 * (x - xPrev) + a1 * y
-                y = y.flushDenormal()
+                y = y.flushState()
                 xPrev = x
                 buffer[i] = y
             }
@@ -387,7 +543,7 @@ object LowPassHighPassFilters {
      * Lightweight DC blocker — degenerate first-order HPF with raw pole and
      * no input scaling: `y[ n ] = x[ n ] − x[n-1] + a·y[n-1]`. One mul/sample cheaper than
      * [OnePoleHPF]. Produces a ~2× edge transient on rail-to-rail input — call sites
-     * post-distort/post-clip pair this with `ClippingFuncs.softCap()` to bound output to ±1.
+     * post-distort/post-clip pair this with `ShapingFuncs.softCap()` to bound output to ±1.
      *
      * Coefficient is the raw IIR pole: `a ≈ 1 − 2π·fc/fs`. At `a = 0.995, fs = 44.1k`
      * the −3 dB knee is ~35 Hz; at `a = 0.999`, ~7 Hz. NaN/Inf and out-of-range values
@@ -415,7 +571,7 @@ object LowPassHighPassFilters {
                 val x = buffer[i]
                 val out = x - xp + a * yc
                 xp = x
-                yc = out.flushDenormal()
+                yc = out.flushState()
                 buffer[i] = out
             }
             xPrev = xp
@@ -432,7 +588,7 @@ object LowPassHighPassFilters {
                 val x = input[i]
                 val out = x - xp + a * yc
                 xp = x
-                yc = out.flushDenormal()
+                yc = out.flushState()
                 output[i] = out
             }
             xPrev = xp
@@ -622,8 +778,8 @@ object LowPassHighPassFilters {
                     val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                     val vBp = g * vHp + ic1eq
                     val vLp = g * vBp + ic2eq
-                    ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                    ic1eq = (2.0 * vBp - ic1eq).flushState()
+                    ic2eq = (2.0 * vLp - ic2eq).flushState()
                     // OB-X-style filters output a morph `mc = (1−mm)·vLp + mm·vHp` (LP↔HP blend).
                     // With `mm = 0` (pure LP) this collapses to `vLp`.
                     buffer[i] = vLp
@@ -640,8 +796,8 @@ object LowPassHighPassFilters {
                     val v3 = v0 - ic2eq
                     val v1 = a1 * ic1eq + a2 * v3
                     val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                    ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                    ic1eq = (2.0 * v1 - ic1eq).flushState()
+                    ic2eq = (2.0 * v2 - ic2eq).flushState()
                     buffer[i] = v2
                 }
             }
@@ -698,8 +854,8 @@ object LowPassHighPassFilters {
                     val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                     val vBp = g * vHp + ic1eq
                     val vLp = g * vBp + ic2eq
-                    ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                    ic1eq = (2.0 * vBp - ic1eq).flushState()
+                    ic2eq = (2.0 * vLp - ic2eq).flushState()
                     buffer[i] = vHp
                 }
             } else {
@@ -714,8 +870,8 @@ object LowPassHighPassFilters {
                     val v3 = v0 - ic2eq
                     val v1 = a1 * ic1eq + a2 * v3
                     val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                    ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                    ic1eq = (2.0 * v1 - ic1eq).flushState()
+                    ic2eq = (2.0 * v2 - ic2eq).flushState()
                     buffer[i] = (v0 - k * v1 - v2)
                 }
             }
@@ -742,9 +898,12 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                buffer[i] = v1
+                ic1eq = (2.0 * v1 - ic1eq).flushState()
+                ic2eq = (2.0 * v2 - ic2eq).flushState()
+                // C2 (filter unification): k * v1 normalises the peak at fc to unity, so q is
+                // a pure width control. k belongs to the ramped coefficient set; q is fixed per
+                // instance, so kInc is structurally 0 — no mid-ramp k/a mismatch can occur.
+                buffer[i] = k * v1
             }
             transitionSamples = trans
         }
@@ -769,8 +928,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                ic1eq = (2.0 * v1 - ic1eq).flushState()
+                ic2eq = (2.0 * v2 - ic2eq).flushState()
                 buffer[i] = (v0 - k * v1)
             }
             transitionSamples = trans

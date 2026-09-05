@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -30,7 +30,7 @@ data class VoiceData(
     /** Sound index */
     val soundIndex: Int?,
 
-    // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "warmth")
+    // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "onepole" [Hz])
     val oscParams: Map<String, Double>?,
 
     // Filters
@@ -40,6 +40,11 @@ data class VoiceData(
     val adsr: AdsrDef,
 
     // Pitch / Glisando
+    /**
+     * Pitch glide over the event's duration, in SEMITONES (P unit unification, 2026-08-24:
+     * converted from octaves — a second wire producer must send semitones; 12 = one octave,
+     * engine law `ratio = 2^((semitones/12)·progress)`).
+     */
     val accelerate: Double?,
 
     // Vibrato
@@ -79,6 +84,8 @@ data class VoiceData(
     val phaserDepth: Double?,
     val phaserCenter: Double?,
     val phaserSweep: Double?,
+    /** Minimum dry coefficient of the phaser wet/dry law; null = engine default 1.0 (purely additive). */
+    val phaserFloor: Double? = null,
 
     // Tremolo
     val tremoloSync: Double?,
@@ -132,8 +139,12 @@ data class VoiceData(
     val loopBegin: Double?,
     val loopEnd: Double?,
 
-    // Dynamics / Compression
-    val compressor: String?,
+    // Dynamics / Compression (per-param since C0.2; audio_be applies defaults for missing values)
+    val compressorThreshold: Double?,
+    val compressorRatio: Double?,
+    val compressorKnee: Double?,
+    val compressorAttack: Double?,
+    val compressorRelease: Double?,
 
     // Solo
     /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. */
@@ -174,6 +185,13 @@ data class VoiceData(
      * registry resolves a null sound to the default oscillator.
      */
     val control: Boolean? = null,
+
+    /**
+     * Semantic tags accumulated via the pattern language's `.tag(...)`. A set: tags are unique and
+     * carry NO ordering guarantee. Consumed by UI subscribers (visualizations) and analysis tools;
+     * the synthesis engine ignores them.
+     */
+    val tags: Set<String>? = null,
 ) {
     companion object {
         val empty = VoiceData(
@@ -212,6 +230,7 @@ data class VoiceData(
             phaserDepth = null,
             phaserCenter = null,
             phaserSweep = null,
+            phaserFloor = null,
             tremoloSync = null,
             tremoloDepth = null,
             tremoloSkew = null,
@@ -242,7 +261,11 @@ data class VoiceData(
             cut = null,
             loopBegin = null,
             loopEnd = null,
-            compressor = null,
+            compressorThreshold = null,
+            compressorRatio = null,
+            compressorKnee = null,
+            compressorAttack = null,
+            compressorRelease = null,
             solo = null,
             sourceId = null,
         )

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -9,31 +9,20 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.max
 
 /**
- * Dry/wet mix wrapper for a wet-producing [AudioFilter], modelling a resonator the signal
- * passes *through* — a broadband floor plus the inner filter's (resonant) peaks:
+ * Parallel wet path with a dry floor: copies the input, runs [inner] on the copy, and blends
+ * the result back via the shared wet/dry law (C4 of the filter unification):
  *
  * ```
- * dryGain = max(floor, 1 − amount·(1 − floor))
- * out     = dryGain·dry + amount·wet
+ * out = max(floor, cos(w*pi/2)^2) * dry  +  sin(w*pi/2)^2 * wet      (p = 2, correlated)
  * ```
  *
- * The one formula spans the whole useful range via [floor]:
- * - `floor = 0` → pure **crossfade** `dry·(1−amount) + wet·amount`.
- * - `floor = 1` → pure **additive** `dry + wet·amount`.
- * - `0 < floor < 1` → **physical body**: the dry never drops below `floor`, so the broadband is
- *   never stripped (no "lost highs/lows"), and the total stays bounded (no volume crank as
- *   `amount` rises). This matches a real passive resonator — it emphasizes the resonant bands
- *   relative to a broadband transmission floor, it does not add energy on top.
- *
- * `amount > 1` keeps the dry pinned at `floor` while the resonances keep rising (stays raw — no
- * upper clamp). `amount = 0` short-circuits to a bit-identical dry bypass.
- *
- * Keeps the resonator and the blend as separate concerns: [inner] (e.g. [BodyFilter]) is a pure
- * wet filter with the standard `AudioFilter` API, and this wrapper is the one place the dry/wet
- * math lives — reusable for any wet-only filter (the formant/vowel filter can wrap the same way).
- *
- * `amount` is coerced `>= 0` and `floor` to `[0, 1]` (user-facing → coerce, never throw). One
- * per-instance scratch buffer, resized on growth (no per-block allocation).
+ * The p = 2 (equal-AMPLITUDE) branch applies because the wet is the dry through a resonator
+ * bank — coherent in the passbands, so amplitudes add. `floor` is the minimum dry
+ * coefficient (the body's physical floor is 0.4, the vowel's 0.2); above the pinning
+ * threshold the dry stays at the floor while the wet keeps rising — that is what a floor is
+ * for. `amount` (the w knob) lives on [0, 1]; the pre-C4 raw extension above 1 is a
+ * DELETED capability (plan: Helper domain — no song used it), values above 1 behave as 1.
+ * `amount <= 0` bypasses bit-identically (the inner filter never runs).
  */
 class ParallelMixFilter(
     private val inner: AudioFilter,
@@ -41,11 +30,16 @@ class ParallelMixFilter(
     floor: Double = 0.0,
 ) : AudioFilter {
 
-    private val amount: Double = if (amount.isFinite()) amount.coerceAtLeast(0.0) else 0.0
+    // C4: the shared law lives on w in [0, 1]; the old amount > 1 raw extension is a
+    // deliberately DELETED capability (plan: Helper domain) — no song used it.
+    private val amount: Double = if (amount.isFinite()) amount.coerceIn(0.0, 1.0) else 0.0
     private val floor: Double = if (floor.isFinite()) floor.coerceIn(0.0, 1.0) else 0.0
 
-    // Block-constant (amount/floor are fixed at construction) — precompute the dry coefficient.
-    private val dryGain: Double = max(this.floor, 1.0 - this.amount * (1.0 - this.floor))
+    // Block-constant (amount/floor are fixed at construction) — precompute both coefficients
+    // via the shared wet/dry law (C4), correlated branch (p = 2): the wet is the dry through a
+    // resonator bank, coherent in the passbands, so amplitudes add.
+    private val dryGain: Double = WetDryMix.dryCoeff(this.amount, this.floor, p = 2)
+    private val wetGain: Double = WetDryMix.wetCoeff(this.amount, p = 2)
 
     private var wetBuffer: AudioBuffer = AudioBuffer(0)
 
@@ -63,7 +57,7 @@ class ParallelMixFilter(
 
         // 2. Blend: dry attenuated to dryGain (≥ floor) + the resonant peaks on top.
         for (i in 0 until length) {
-            buffer[offset + i] = buffer[offset + i] * dryGain + wetBuffer[i] * amount
+            buffer[offset + i] = buffer[offset + i] * dryGain + wetBuffer[i] * wetGain
         }
     }
 }

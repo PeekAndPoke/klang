@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -20,11 +20,9 @@ class MemoizingIgnitorSpec : StringSpec({
         voiceDurationFrames = blockFrames * 16,
         gateEndFrame = blockFrames * 16,
         releaseFrames = 0,
-        voiceEndFrame = blockFrames * 16,
         scratchBuffers = ScratchBuffers(blockFrames),
     ).apply {
-        offset = 0
-        length = blockFrames
+        updateOffsetAndLength(0, blockFrames)
         voiceElapsedFrames = 0
     }
 
@@ -38,7 +36,7 @@ class MemoizingIgnitorSpec : StringSpec({
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             calls++
             val stamp = calls.toDouble()
-            val end = ctx.offset + ctx.length
+            val end = ctx.windowEnd
             for (i in ctx.offset until end) {
                 buffer[i] = stamp
             }
@@ -121,12 +119,11 @@ class MemoizingIgnitorSpec : StringSpec({
         val ctx = createCtx()
         val out = AudioBuffer(blockFrames * 2)
 
-        ctx.offset = 0
-        ctx.length = blockFrames
+        ctx.updateOffsetAndLength(0, blockFrames)
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 1
 
-        ctx.offset = blockFrames
+        ctx.updateOffset(blockFrames)
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 2
     }
@@ -149,5 +146,25 @@ class MemoizingIgnitorSpec : StringSpec({
         a[0] shouldBe 1.0
         b[0] shouldBe 1.0
         c[0] shouldBe 1.0
+    }
+
+    "a node shared between a NOISE PARAM and the spine runs once per block (ledger O6)" {
+        // The noise family used to hardcode freqHz = 0.0 into its param reads while the spine
+        // passes the voice's real freqHz. freqHz is part of this cache's key, so the shared node
+        // got two keys and ran TWICE per block: double state advance, disjoint sample windows —
+        // the E8 shape, family-wide. All reads now share the voice freqHz.
+        val counter = CountingIgnitor()
+        val shared = MemoizingIgnitor(counter).also { it.incConsumers() }
+        val sig = Ignitors.whiteNoise(kotlin.random.Random(1), color = shared) + shared
+
+        val ctx = createCtx()
+        val buf = AudioBuffer(blockFrames)
+        val blocks = 8
+        for (b in 0 until blocks) {
+            ctx.updateOffsetAndLength(0, blockFrames)
+            ctx.voiceElapsedFrames = b * blockFrames
+            sig.generate(buf, 220.0, ctx)
+        }
+        counter.calls shouldBeExactly blocks
     }
 })

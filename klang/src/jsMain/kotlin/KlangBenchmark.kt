@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -48,7 +48,7 @@ class KlangBenchmark(
             activeVoices = 0,
             currentRtf = 0.0,
             currentIteration = 0,
-            totalIterations = 5,
+            totalIterations = 3,
             isComplete = false
         )
     )
@@ -190,7 +190,7 @@ class KlangBenchmark(
 
         while (currentVoices < maxVoicesCap) {
             // Calculate current time in seconds for scheduling
-            val currentTimeSec = cursorFrame.toDouble() / sampleRate
+            val currentTimeSec = cursorFrame / sampleRate
 
             // Clear scheduled voices and add ALL voices starting at current time
             scheduler.clearScheduled("benchmark")
@@ -284,7 +284,7 @@ class KlangBenchmark(
                 // Add a filter to make it realistic load
                 filters = FilterDefs(
                     listOf(
-                        FilterDef.LowPass(cutoffHz = 1000.0, q = 1.0)
+                        FilterDef.LowPass(freq = 1000.0, q = 1.0)
                     )
                 ),
                 adsr = AdsrDef.defaultSynth,

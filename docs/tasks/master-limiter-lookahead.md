@@ -258,7 +258,7 @@ house ratio. +20 dB over threshold is a lot of drive, and the engine is delibera
 get the rail. **The bound must go in the KDoc and in
 `LimiterLookaheadSpec`**, so the limit is stated rather than discovered. Reversible later: the alternative was to raise
 `LIMITER_RATIO` toward ∞ **for the safety limiter only** (the authored `MasterFx.limiter()`
-keeps 20:1 as its musical character). Note `ratio` stays user-facing and unclamped — raw Motör — so
+keeps 20:1 as its musical character). Note `ratio` stays user-facing and unclamped — raw Motor — so
 "∞:1" would mean the house default is ∞, not that the user may not choose 20. **The bound belongs in the KDoc and in
 `LimiterLookaheadSpec`.** (The rejected alternative would also have created a *third* `MasterDefaultsSyncSpec`
 asymmetry — another reason it is not worth it.)
@@ -375,7 +375,7 @@ only unconditional one:
 | `MasterStage.kt:61-62`              | master out, post-limiter, pre-clip | 0.999 (~7 Hz) | **unconditional**          |
 | `DistortionRenderer.kt:47`          | voice-strip distortion             | 0.995         | only when `amount > 0`     |
 | `IgnitorEffects.kt:73` (`distort`)  | per-voice                          | 0.995         | only on the driven path    |
-| `IgnitorEffects.kt:211` (`clip`)    | per-voice                          | 0.995         | whenever `.clip()` is used |
+| `IgnitorEffects.kt:211` (`shape`)    | per-voice                          | 0.995         | whenever `.shape()` is used |
 | `IgnitorEffects.kt:728` (`dcBlock`) | per-voice, explicit                | user          | whenever used              |
 
 **Recommendation: keep the master pair unconditional in `MasterStage`, and move it BEFORE the limiter.** DC removal is a
@@ -847,7 +847,7 @@ by `MasterStageSpec`, mutation-checked against both a lying `latencyFrames` and 
 
 *Context, as it stood before:* there was **no delay-compensation concept anywhere in the DSP path** (confirmed — the
 only
-"latency compensation" in the tree is FE↔BE *clock* sync in `KlangPlaybackController.kt:107`, a different thing). A
+"latency compensation" in the tree is FE↔BE *clock* sync in `KlangPatternScheduler.kt:107`, a different thing). A
 lookahead limiter is the first deliberate signal-path latency. Decide whether it must be:
 
 - reported to the FE for scheduling/visual alignment (probably yes — it shifts audio vs. the playhead), and

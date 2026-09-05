@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -24,7 +24,7 @@ class VibratoRenderer(
     override fun render(ctx: BlockContext) {
         val buf = ctx.freqModBuffer
         val phaseInc = (TWO_PI * vibrato.rate) / sampleRate
-        val depthSemitones = vibrato.depth
+        val depthSemitones = vibrato.semitones
         var phase = vibrato.phase
 
         if (ctx.freqModBufferWritten) {

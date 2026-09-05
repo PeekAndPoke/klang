@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -1048,7 +1048,7 @@ fun SprudelPattern._liftOrReinterpretNumericalField(
  *
  * **Example:**
  * ```
- * note("a b c d").compressor("1:1:1 2:2:2")
+ * note("a b c d").vowel("a e i o")
  * ```
  *
  * @param args DSL arguments to convert to control pattern

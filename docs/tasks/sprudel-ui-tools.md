@@ -99,49 +99,37 @@ All tools are registered in `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`.
 
 | DSL Function                      | Editor                       | Sequence Editor                      | Format          |
 |-----------------------------------|------------------------------|--------------------------------------|-----------------|
-| `delay()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | `time:feedback` |
+| `delayWet()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | per-param `(wet, time, feedback)` |
 | `delaytime()`                     | `SprudelDelayTimeEditor`     | `SprudelDelayTimeSequenceEditor`     | single value    |
 | `delayfeedback()` / `delayfb()`   | `SprudelDelayFeedbackEditor` | `SprudelDelayFeedbackSequenceEditor` | single value    |
-| `reverb()` / `room()`             | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
+| `roomWet()`                          | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
 | `roomsize()` / `rsize()` / `sz()` | `SprudelRoomSizeEditor`      | `SprudelRoomSizeSequenceEditor`      | single value    |
 
 ## Low Pass Filter
 
 | DSL Function                            | Editor                     | Sequence Editor                    | Format               |
 |-----------------------------------------|----------------------------|------------------------------------|----------------------|
-| `lpf()` / `lp()` / `cutoff()` / `ctf()` | `SprudelLpFilterEditor`    | `SprudelLpFilterSequenceEditor`    | `freq:resonance:env` |
-| `resonance()` / `res()` / `lpq()`       | `SprudelLpResonanceEditor` | `SprudelLpResonanceSequenceEditor` | single value         |
-| `lpenv()` / `lpe()`                     | `SprudelLpEnvEditor`       | `SprudelLpEnvSequenceEditor`       | single value         |
-| `lpattack()` / `lpa()`                  | `SprudelLpAttackEditor`    | `SprudelLpAttackSequenceEditor`    | single value         |
-| `lpdecay()` / `lpd()`                   | `SprudelLpDecayEditor`     | `SprudelLpDecaySequenceEditor`     | single value         |
-| `lpsustain()` / `lps()`                 | `SprudelLpSustainEditor`   | `SprudelLpSustainSequenceEditor`   | single value         |
-| `lprelease()` / `lpr()`                 | `SprudelLpReleaseEditor`   | `SprudelLpReleaseSequenceEditor`   | single value         |
+| `lpf()` | `SprudelLpFilterEditor`    | `SprudelLpFilterSequenceEditor`    | `freq:resonance:env` |
+| `lpq()` | `SprudelLpResonanceEditor` | `SprudelLpResonanceSequenceEditor` | single value         |
+| `lpe()` | `SprudelLpEnvEditor`       | `SprudelLpEnvSequenceEditor`       | single value         |
 | `lpadsr()`                              | `SprudelLpAdsrEditor`      | `SprudelLpAdsrSequenceEditor`      | `a:d:s:r`            |
 
 ## High Pass Filter
 
 | DSL Function                        | Editor                     | Sequence Editor                    | Format               |
 |-------------------------------------|----------------------------|------------------------------------|----------------------|
-| `hpf()` / `hp()` / `hcutoff()`      | `SprudelHpFilterEditor`    | `SprudelHpFilterSequenceEditor`    | `freq:resonance:env` |
-| `hresonance()` / `hres()` / `hpq()` | `SprudelHpResonanceEditor` | `SprudelHpResonanceSequenceEditor` | single value         |
-| `hpenv()` / `hpe()`                 | `SprudelHpEnvEditor`       | `SprudelHpEnvSequenceEditor`       | single value         |
-| `hpattack()` / `hpa()`              | `SprudelHpAttackEditor`    | `SprudelHpAttackSequenceEditor`    | single value         |
-| `hpdecay()` / `hpd()`               | `SprudelHpDecayEditor`     | `SprudelHpDecaySequenceEditor`     | single value         |
-| `hpsustain()` / `hps()`             | `SprudelHpSustainEditor`   | `SprudelHpSustainSequenceEditor`   | single value         |
-| `hprelease()` / `hpr()`             | `SprudelHpReleaseEditor`   | `SprudelHpReleaseSequenceEditor`   | single value         |
+| `hpf()` | `SprudelHpFilterEditor`    | `SprudelHpFilterSequenceEditor`    | `freq:resonance:env` |
+| `hpq()` | `SprudelHpResonanceEditor` | `SprudelHpResonanceSequenceEditor` | single value         |
+| `hpe()` | `SprudelHpEnvEditor`       | `SprudelHpEnvSequenceEditor`       | single value         |
 | `hpadsr()`                          | `SprudelHpAdsrEditor`      | `SprudelHpAdsrSequenceEditor`      | `a:d:s:r`            |
 
 ## Band Pass Filter
 
 | DSL Function                 | Editor                   | Sequence Editor                  | Format       |
 |------------------------------|--------------------------|----------------------------------|--------------|
-| `bandf()` / `bpf()` / `bp()` | `SprudelBpFilterEditor`  | `SprudelBpFilterSequenceEditor`  | `freq:q:env` |
-| `bandq()` / `bpq()`          | `SprudelBpQEditor`       | `SprudelBpQSequenceEditor`       | single value |
-| `bpenv()` / `bpe()`          | `SprudelBpEnvEditor`     | `SprudelBpEnvSequenceEditor`     | single value |
-| `bpattack()` / `bpa()`       | `SprudelBpAttackEditor`  | `SprudelBpAttackSequenceEditor`  | single value |
-| `bpdecay()` / `bpd()`        | `SprudelBpDecayEditor`   | `SprudelBpDecaySequenceEditor`   | single value |
-| `bpsustain()` / `bps()`      | `SprudelBpSustainEditor` | `SprudelBpSustainSequenceEditor` | single value |
-| `bprelease()` / `bpr()`      | `SprudelBpReleaseEditor` | `SprudelBpReleaseSequenceEditor` | single value |
+| `bpf()` | `SprudelBpFilterEditor`  | `SprudelBpFilterSequenceEditor`  | `freq:q:env` |
+| `bpq()` | `SprudelBpQEditor`       | `SprudelBpQSequenceEditor`       | single value |
+| `bpe()` | `SprudelBpEnvEditor`     | `SprudelBpEnvSequenceEditor`     | single value |
 | `bpadsr()`                   | `SprudelBpAdsrEditor`    | `SprudelBpAdsrSequenceEditor`    | `a:d:s:r`    |
 
 ## Notch Filter

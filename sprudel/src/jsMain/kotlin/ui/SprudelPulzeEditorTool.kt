@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -212,7 +212,7 @@ private class SprudelPulzeEditorComp(ctx: Ctx<Props>) : Component<SprudelPulzeEd
                         step(0.05)
                         label {
                             +"Duty"
-                            subFieldInfoIcon("params", "duty", props.toolCtx, infoPopup)
+                            paramInfoIcon("duty", props.toolCtx, infoPopup)
                         }
                     }
                 }

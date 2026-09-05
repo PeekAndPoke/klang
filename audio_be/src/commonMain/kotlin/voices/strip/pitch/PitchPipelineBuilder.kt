@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -29,14 +29,15 @@ fun buildPitchPipeline(
     sampleRate: Int,
     // Absolute backend frame — Double, see RenderClock.cursorFrame. Relative offsets stay Int.
     startFrame: Double,
+    // Baked deliberately: the accelerate glide base must NOT move on a realtime note-off
+    // (decided semantics, docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
     endFrame: Double,
-    gateEndFrame: Double,
 ): List<BlockRenderer> = buildList {
-    if (vibrato.depth > 0.0) {
+    if (vibrato.semitones > 0.0) {
         add(VibratoRenderer(vibrato, sampleRate))
     }
 
-    if (accelerate.amount != 0.0 && endFrame > startFrame) {
+    if (accelerate.semitones != 0.0 && endFrame > startFrame) {
         add(AccelerateRenderer(accelerate, startFrame, endFrame))
     }
 
@@ -45,6 +46,6 @@ fun buildPitchPipeline(
     }
 
     if (fm != null && fm.depth != 0.0) {
-        add(FmRenderer(fm, freqHz, sampleRate, startFrame, gateEndFrame))
+        add(FmRenderer(fm, freqHz, sampleRate, startFrame))
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -165,7 +165,7 @@ val rand: SprudelPattern = ContinuousPattern { from, _, ctx ->
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").sound("supersaw").detune(rand2.range(-10, 10))   // slight random detune
+ * note("c4*8").transpose(rand2.range(-2, 2))   // pitch wobble centred on the note
  * ```
  *
  * @category random
@@ -1141,12 +1141,10 @@ private fun applyRandL(args: List<SprudelDslArg<Any?>>): SprudelPattern {
 /**
  * Creates a pattern that produces a list (array) of `n` random numbers (0–1).
  *
- * The list is resampled each cycle. Useful for passing multiple random values to
- * parameters that accept lists, such as `partials`.
+ * The list is resampled each cycle, for parameters that accept a list of values.
  *
- * ```KlangScript(Playable)
- * s("saw").n(irand(12)).scale("F1:minor").partials(randL(8))   // 8 random partials
- * ```
+ * No example: the only documented consumer was `partials`, which does not exist in the
+ * codebase. See docs/tasks/sprudel-function-testing.md.
  *
  * @param n Number of random values to produce in each list. Any positive integer.
  * @category random
@@ -1664,11 +1662,11 @@ private fun applyWchoose(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sp
  * Uses `rand` as the selector so choices vary within a cycle.
  *
  * ```KlangScript(Playable)
- * note("c2 g2 d2 f1").s(wchoose(listOf("sine", 10), listOf("triangle", 1)))
+ * note("c2 g2 d2 f1").s(wchoose(["sine", 10], ["triangle", 1]))
  * ```
  *
  * ```KlangScript(Playable)
- * s(wchoose(listOf("bd", 8), listOf("sd", 2), listOf("hh", 5))).fast(8)
+ * s(wchoose(["bd", 8], ["sd", 2], ["hh", 5])).fast(8)
  * ```
  *
  * @param args `[value, weight]` pairs — higher weight means more likely selection.
@@ -1717,7 +1715,7 @@ private fun applyWchooseCyclesPattern(p: SprudelPattern, args: List<SprudelDslAr
  * plays the same chosen value. Each choice is a `[value, weight]` pair.
  *
  * ```KlangScript(Playable)
- * wchooseCycles(listOf("bd", 10), listOf("hh", 1)).s().fast(8)   // bd much more likely
+ * wchooseCycles(["bd", 10], ["hh", 1]).s().fast(8)   // bd much more likely
  * ```
  *
  * @param args `[value, weight]` pairs — higher weight means more likely selection. One is chosen per cycle.

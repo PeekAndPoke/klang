@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import kotlin.random.Random
 
 /**
  * Ignitor that plays back pre-recorded PCM audio samples.
@@ -30,9 +31,11 @@ class SampleIgnitor(
     private val stopFrame: Double,
     analog: Double = 0.0,
     sampleRate: Int,
+    /** The voice's random stream (seeded-voice-rng) — wow/flutter drift seeds from it. */
+    rng: Random = Random,
 ) : Ignitor {
 
-    private val drift = AnalogDrift(analog, sampleRate)
+    private val drift = AnalogDrift(analog, sampleRate, rng)
     private val loopLength = if (isLooping && loopEnd > loopStart) loopEnd - loopStart else 0.0
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {

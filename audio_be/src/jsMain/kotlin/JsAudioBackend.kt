@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -17,8 +17,10 @@ import io.peekandpoke.klang.common.infra.KlangRingBuffer
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.await
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.w3c.dom.MessageEvent
 import org.w3c.dom.get
 
@@ -32,6 +34,10 @@ class JsAudioBackend(
     // AnalyserNode for visualization
     private var analyserNode: AnalyserNode? = null
 
+    // The worklet node, held as a field (not just a local in [run]) so [pump] can reach the port
+    // from outside the render loop. Null before the worklet is created and after teardown.
+    private var workletNode: AudioWorkletNode? = null
+
     // Implement AudioVisualizer interface with zero-copy methods
     override val analyzer = JsAudioAnalyzer { analyserNode }
 
@@ -44,6 +50,7 @@ class JsAudioBackend(
         val contextOpts = jsObject<AudioContextOptions> {
             sampleRate = config.sampleRate
             latencyHint = "playback"  // Prioritize stable, glitch-free playback over minimal latency
+//            latencyHint = "interactive"  // Prioritize stable, glitch-free playback over minimal latency
         }
         val ctx = AudioContext(contextOpts)
 
@@ -60,8 +67,6 @@ class JsAudioBackend(
             console.log("AudioContext is suspended - this is normal before user interaction")
             console.log("It will auto-resume when audio playback starts")
         }
-
-        lateinit var node: AudioWorkletNode
 
         try {
             console.log("JsAudioBackend loading worklet")
@@ -80,7 +85,8 @@ class JsAudioBackend(
                 outputChannelCount = arrayOf(2)
             }
 
-            node = AudioWorkletNode(ctx, "klang-audio-processor", nodeOpts)
+            val node = AudioWorkletNode(ctx, "klang-audio-processor", nodeOpts)
+            workletNode = node
 
             console.log("JsAudioBackend AudioWorkletNode created successfully", node)
 
@@ -146,45 +152,50 @@ class JsAudioBackend(
             node.port.start()
             console.log("JsAudioBackend MessagePort started")
 
-            fun loop() {
-                // console.log("JsAudioBackend running feedback loop")
-
-                // Upload the next sample chunk ... we send them one at a time
-                sampleUploadBuffer.receive()?.let { cmd ->
-                    node.port.sendCmd(cmd)
+            fun pumpTimerTick() {
+                // Upload the next sample chunk ... we send them one at a time.
+                //
+                // This drip is why the timer still exists. One chunk is ~512 KB (`toChunks`
+                // counts DoubleArray elements, so 64 * 1024 frames is 512 KB), i.e. ~51 MB/s of
+                // structured clone onto the same MessagePort the audio thread services between
+                // render callbacks. Draining the whole upload buffer here would hand the audio
+                // thread an unbounded burst mid-load. Control commands do not go through this
+                // valve, see [pump].
+                //
+                // Read through the FIELD, not the captured local: a timer already scheduled when
+                // teardown runs fires once more afterwards, and the field is null by then. Check
+                // before receiving, so a chunk is never popped and then dropped.
+                workletNode?.let { live ->
+                    sampleUploadBuffer.receive()?.let { cmd -> live.port.sendCmd(cmd) }
                 }
 
-                // Drain comm link cmd buffer
-                while (true) {
-                    val cmd = commLink.control.receive() ?: break
+                // Kept for commands queued before the worklet exists: [pump] is inert while
+                // [workletNode] is null. NOT a fallback for a second writer - `sendControl` is the
+                // only writer of this ring in the tree.
+                //
+                // Nothing reaches that window today, because `klangPlayer()` awaits BackendReady
+                // before handing the player out. It is one gating change away from live though
+                // (drop that await, give it a timeout, or hand a player out earlier), and the
+                // failure would be a self-deadlock rather than late delivery: `preloadSamples`
+                // blocks on the sample ack before the first ScheduleVoices, so the only code that
+                // could trigger the next pump() is the code waiting on this drain.
+                drainControl()
+            }
 
-                    when (cmd) {
-                        // Special handling for Samples ... we split the data for big samples
-                        is KlangCommLink.Cmd.Sample -> when (cmd) {
-                            // Direct forwarding
-                            is KlangCommLink.Cmd.Sample.NotFound,
-                            is KlangCommLink.Cmd.Sample.Chunk,
-                                -> node.port.sendCmd(cmd)
-
-                            is KlangCommLink.Cmd.Sample.Complete -> {
-                                // Complete samples will be split and put into the [cmdBuffer]
-                                val chunks = cmd.toChunks(64 * 1024)
-
-                                chunks.forEach { chunk -> sampleUploadBuffer.send(chunk) }
-                            }
-                        }
-
-                        // Direct forwarding for control commands
-                        is KlangCommLink.Cmd.Cleanup,
-                        is KlangCommLink.Cmd.ClearScheduled,
-                        is KlangCommLink.Cmd.RegisterIgnitor,
-                        is KlangCommLink.Cmd.RegisterPipeline,
-                        is KlangCommLink.Cmd.RegisterMaster,
-                        is KlangCommLink.Cmd.ReplaceVoices,
-                        is KlangCommLink.Cmd.ScheduleVoice,
-                        is KlangCommLink.Cmd.ScheduleVoices,
-                            -> node.port.sendCmd(cmd)
-                    }
+            fun loop() {
+                // Guarded, and the reschedule is deliberately OUTSIDE the guard: it is the only
+                // thing keeping this chain alive, so an escaping throw kills the timer forever.
+                //
+                // That used to be loud - it killed control delivery too, so all audio stopped at
+                // once. Now pump() keeps control flowing, so an unguarded throw here would leave
+                // the music playing while sample uploads silently stall: every later
+                // Sample.Complete still lands in [sampleUploadBuffer] and is never sent, so
+                // SampleStore never acks, SamplePreloader never completes, and Play on any
+                // sample-based pattern hangs with no error anywhere.
+                try {
+                    pumpTimerTick()
+                } catch (t: Throwable) {
+                    console.error("JsAudioBackend timer tick failed, chain continues", t)
                 }
 
                 if (scope.isActive) {
@@ -203,12 +214,95 @@ class JsAudioBackend(
             console.error("AudioWorklet Error:", e)
             throw e
         } finally {
-            // Cleanup when the coroutine is cancelled (Player.stop())
+            // Cleanup when the coroutine is cancelled (Player.stop()). Drop the node reference
+            // FIRST: BOTH post paths (drainControl and the timer's chunk drip) read the field, so
+            // after this nothing can post to a port that is about to be disconnected.
+            val liveNode = workletNode
+            workletNode = null
+
             try {
-                node.disconnect()
-                ctx.close().await()
+                liveNode?.disconnect()
+            } catch (e: Throwable) {
+                console.error("Error disconnecting AudioWorkletNode", e)
+            }
+
+            // Separate try, deliberately: a failed disconnect must never skip the context close.
+            // This used to be one block over a `lateinit` local, so when addModule() rejected (a
+            // stale cache-buster against a redeployed worklet) the disconnect threw
+            // UninitializedPropertyAccessException and close() was never reached - every failed
+            // start leaked a live AudioContext until the browser's budget ran out and the player
+            // could not start again without a page reload.
+            // NonCancellable because this runs in a `finally` during cancellation:
+            // `suspendCancellableCoroutine` has already made the job cancelled, so a bare
+            // `await()` throws CancellationException immediately. `ctx.close()` itself would
+            // still fire (the receiver evaluates first), but every ordinary Player.stop() logged
+            // an "Error closing AudioContext" that was only the cancellation, and any cleanup
+            // added below this line would be skipped every time.
+            try {
+                withContext(NonCancellable) { ctx.close().await() }
             } catch (e: Throwable) {
                 console.error("Error closing AudioContext", e)
+            }
+        }
+    }
+
+    /**
+     * Forward everything queued on the control link to the worklet, right now.
+     *
+     * The frontend and this backend both live on the main thread, so a command can be handed to
+     * the audio thread in the same task that produced it instead of waiting for the next timer
+     * tick. That wait used to be up to 10 ms (`setTimeout`, longer under main-thread load) and it
+     * was pure latency on the realtime path.
+     *
+     * The whole ring is drained in order, so CONTROL commands cannot overtake each other: a
+     * `StartRealtimeVoice` still arrives after the `RegisterIgnitor` that names its sound. Sample
+     * PCM is a different story and always was - `Cmd.Sample.Complete` leaves here into
+     * [sampleUploadBuffer] and is dripped out by the timer, so a voice queued behind a sample
+     * still reaches the engine long before that sample's bytes do.
+     *
+     * Must not throw; see [AudioBackend.pump]. Re-entrancy is not a concern (`sendCmd` is an async
+     * postMessage and nothing here calls back into the link), and a second call finds the ring
+     * empty.
+     */
+    override fun pump() {
+        drainControl()
+    }
+
+    /** Drain the control ring into the worklet port. No-op before the worklet exists. */
+    private fun drainControl() {
+        val node = workletNode ?: return
+
+        while (true) {
+            val cmd = commLink.control.receive() ?: break
+
+            when (cmd) {
+                // Special handling for Samples ... we split the data for big samples
+                is KlangCommLink.Cmd.Sample -> when (cmd) {
+                    // Direct forwarding
+                    is KlangCommLink.Cmd.Sample.NotFound,
+                    is KlangCommLink.Cmd.Sample.Chunk,
+                        -> node.port.sendCmd(cmd)
+
+                    is KlangCommLink.Cmd.Sample.Complete -> {
+                        // Complete samples will be split and put into the [cmdBuffer]
+                        val chunks = cmd.toChunks(128 * 1024)
+
+                        chunks.forEach { chunk -> sampleUploadBuffer.send(chunk) }
+                    }
+                }
+
+                // Direct forwarding for control commands
+                is KlangCommLink.Cmd.Cleanup,
+                is KlangCommLink.Cmd.ClearScheduled,
+                is KlangCommLink.Cmd.RegisterIgnitor,
+                is KlangCommLink.Cmd.RegisterPipeline,
+                is KlangCommLink.Cmd.RegisterMaster,
+                is KlangCommLink.Cmd.ReplaceVoices,
+                is KlangCommLink.Cmd.ScheduleVoice,
+                is KlangCommLink.Cmd.ScheduleVoices,
+                is KlangCommLink.Cmd.StartRealtimeVoice,
+                is KlangCommLink.Cmd.StopRealtimeVoice,
+                    -> node.port.sendCmd(cmd)
             }
         }
     }

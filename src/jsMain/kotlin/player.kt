@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 package io.peekandpoke.klang
 
-import io.peekandpoke.klang.Player.nowPlaying
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
@@ -28,12 +27,17 @@ import kotlinx.coroutines.Deferred
 object Player {
 
     enum class Status {
+        /** Initial state */
         NOT_LOADED,
+        /** Player loading */
         LOADING,
+        /** Player ready */
         READY,
+        /** Engine startup threw. [ensure] drops its memoized deferred on this path, so calling it again RETRIES */
+        FAILED,
     }
 
-    private val _status = StreamSource<Status>(Status.NOT_LOADED)
+    private val _status = StreamSource(Status.NOT_LOADED)
     val status: Stream<Status> = _status.readonly
 
     private val _player = StreamSource<KlangPlayer?>(null)
@@ -130,9 +134,11 @@ object Player {
         }
 
         val engineBuilder = KlangScriptEngine.Builder()
+
         engineBuilder.registerLibrary(stdlib)
         engineBuilder.registerLibrary(sprudelLib)
         engineBuilder.registerBuiltInSongsAsModules()
+
         return engineBuilder.build()
     }
 
@@ -144,16 +150,31 @@ object Player {
         launch {
             _status(Status.LOADING)
 
-            val samples = samplesDeferred.await()
-            _samples(samples)
+            try {
+                val samples = samplesDeferred.await()
 
-            val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = 48000)
+                val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = 48000)
+                val playerInstance = klangPlayer(playerOptions)
 
-            val playerInstance = klangPlayer(playerOptions)
-            console.log("KlangPlayer ready", playerInstance)
-            _status(Status.READY)
-            _player(playerInstance)
-            def.complete(playerInstance)
+                console.log("KlangPlayer ready", playerInstance)
+
+                _samples(samples)
+                _player(playerInstance)
+                _status(Status.READY)
+
+                def.complete(playerInstance)
+            } catch (t: Throwable) {
+                // Without this the deferred never completes: status would sit at LOADING forever
+                // and every awaiter would hang — a Play button spinning with no explanation.
+                console.error("KlangPlayer failed to start", t)
+
+                _status(Status.FAILED)
+
+                // Drop the memo so a later ensure() actually retries instead of handing out the
+                // same dead deferred.
+                deferred = null
+                def.completeExceptionally(t)
+            }
         }
 
         return def

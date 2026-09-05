@@ -36,7 +36,91 @@ if (condition) {
 }
 ```
 
-### 2. File Naming Conventions
+**Exception — expression form (decided 2026-08-28):** an `if`/`else` used as an EXPRESSION (its
+value is consumed) may stay brace-free on one line. The same applies to `when` arms in expression
+position (`X -> value`).
+
+```kotlin
+val x = if (a) b else c
+phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+```
+
+Two limits: statement-position `if`s (value discarded) always get braces, even one-liners; and the
+moment ANY branch of an expression `if` needs braces or multiple lines, brace ALL its branches —
+no `} else 0.0` mixing.
+
+### 2. Blank Lines Around `if` Blocks
+
+Leave a blank line before and after an `if` statement (and other block statements like `for`/
+`when`) when it is not the first or last statement in its enclosing block. Especially in
+early-return ladders (e.g. fast-path branches falling through to a general case), the blank
+lines make each branch read as its own step.
+
+The same spacing applies to variable declarations (added 2026-08-28): leave a blank line after a
+block of `val`/`var` declarations, and before a declaration that follows other statements.
+Consecutive declarations stay together as one group.
+
+```kotlin
+val step = readParam(rate, freqHz, ctx) * PERLIN_STEP
+val end = ctx.offset + ctx.length
+
+for (i in ctx.offset until end) {
+    val white = rng.nextDouble() * 2.0 - 1.0
+
+    out = (out + k * white) / denom
+    buffer[i] = out
+}
+```
+
+And a blank line before every `return` (added 2026-08-31), unless the `return` is the only
+statement in its block. Early-return ladders read as steps that way, and the final `return` of a
+function separates from the work that produced its value. A comment attached to the `return` stays
+attached: the blank goes above the comment, not between comment and `return`.
+
+```kotlin
+if (kw != null) {
+    val kwInv = 1.0 - kw
+
+    from.generate(buffer, freqHz, ctx)
+
+    return
+}
+
+// fine as-is — the return is the whole block
+fun Ignitor.mul(factor: Ignitor): Ignitor = this * factor
+```
+
+**Wrong:**
+
+```kotlin
+if (bConst) {
+    // ...
+    return
+}
+if (aConst) {
+    // ...
+    return
+}
+a.generate(buffer, freqHz, ctx)
+```
+
+**Correct:**
+
+```kotlin
+if (bConst) {
+    // ...
+    return
+}
+
+if (aConst) {
+    // ...
+    return
+}
+
+a.generate(buffer, freqHz, ctx)
+```
+
+### 3. File Naming Conventions
 
 - **Files containing a class/object/interface:** PascalCase matching the primary declaration.
 - **Files containing only utility/helper/extension functions:** `lower_case.kt`.
@@ -46,9 +130,9 @@ if (condition) {
 - **Utility file names must be unique and descriptive.** Generic names like `_utils.kt` make it
   impossible to tell what's inside without opening the file.
 
-**Wrong:** `ClippingFunctions.kt` (class inside is `ClippingFuncs` — name mismatch)
+**Wrong:** `ShapingFunctions.kt` (class inside is `ShapingFuncs` — name mismatch)
 **Wrong:** `_utils.kt` (not unique, not descriptive)
-**Correct:** `ClippingFuncs.kt` (matches class)
+**Correct:** `ShapingFuncs.kt` (matches class — this pair was the real offender, fixed 2026-08-26)
 **Correct:** `_staff_pos_helpers.kt` (utility file alongside class files — `_` groups it at top)
 **Correct:** `math.kt`, `chain_rendering.kt` (utility-only folder — no `_` prefix needed)
 
@@ -58,7 +142,7 @@ if (condition) {
 
 ### 3. No Duplicated Utility Functions
 
-Shared DSP utilities (`flushDenormal`, shape resolution, etc.) must live in exactly one place
+Shared DSP utilities (`flushState`, shape resolution, etc.) must live in exactly one place
 and be imported. Never copy a utility function into another file as a `private` copy.
 
 **Canonical location:** `DspUtil.kt` in the module root package.
@@ -165,17 +249,25 @@ These allocate strings and can kill the AudioWorklet thread.
 
 ## DSP Rules
 
-### 8. Flush Denormals in All IIR Filter State
+### 8. Flush IIR Filter State
 
-Every IIR filter (SVF, one-pole, allpass, DC blocker) must flush denormals from its
-state variables after each update. Use the shared `flushDenormal()` from `DspUtil.kt`.
+Every IIR filter (SVF, one-pole, allpass, DC blocker) must flush its state variables after
+each update. Use the shared `flushState()` from `DspUtil.kt`.
 
-**Why:** Denormal floats can cause 10-100x CPU spikes on some platforms.
+**Why, two reasons:** denormal floats cause 10-100x CPU spikes on some platforms, and a
+NON-FINITE carry latches the filter permanently — an IIR whose state goes NaN can never
+recover, and one `Inf` is enough (the next sample computes `-Inf + Inf`). The master round
+measured where that ends: one such sample silenced the whole backend until a page reload.
+`flushState` rejects both, so following this rule is what makes a filter unable to latch.
 
 ```kotlin
-ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+ic1eq = (2.0 * v1 - ic1eq).flushState()
+ic2eq = (2.0 * v2 - ic2eq).flushState()
 ```
+
+**Exception:** `Reverb` uses `+ ANTI_DENORMAL` instead (deliberate, documented at the class —
+its comb/allpass count makes the per-sample add cheaper). That exception is about DENORMALS
+only; it does not protect against a non-finite carry.
 
 ### 9. Band-Limit Discontinuous Waveforms
 
@@ -215,7 +307,7 @@ avoiding call overhead is intentional. The suppression is accepted.
 
 ### 14. `@Suppress("unused")` Is Accepted on API Surface Libraries
 
-Collections of utility functions (e.g., `ClippingFuncs`) may have members that aren't all
+Collections of utility functions (e.g., `ShapingFuncs`) may have members that aren't all
 currently referenced but form a coherent API. The suppression is accepted.
 
 ---
@@ -252,7 +344,7 @@ Every `.kt` source file must begin with the project license header as its very f
 
 ```kotlin
 /*
- * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 ```
@@ -261,7 +353,9 @@ Every `.kt` source file must begin with the project license header as its very f
   `.idea/copyright/`. When creating files outside the IDE, add the header manually.
 - **Year:** the end year tracks the current year — IntelliJ's "Update copyright" before-commit
   action keeps it current. Don't hand-edit the year per file.
-- **Brand:** always "Motör" with the ö — never "Motor".
+- **Brand:** always "Klangmotor" / "Motor" with a plain o. The old metal-umlaut spelling "Motör"
+  was retired 2026-08-25; it survives only in historical records (`DEV-DIARY.MD`, `docs/history/`,
+  `docs/tasks-archive/`), which are never "fixed".
 - **Exempt:** `.kts` build scripts, and any third-party / vendored file that carries its own
   copyright notice (never overwrite someone else's notice with ours).
 - **`tones/` module is MIT, not AGPL.** It is a Kotlin port of tonal.js (MIT) and is licensed MIT
@@ -270,7 +364,7 @@ Every `.kt` source file must begin with the project license header as its very f
 
   ```kotlin
   /*
-   * Copyright (C) 2025-2026 The Klangmotör Authors (see AUTHORS.MD)
+   * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
    * Portions derived from tonal.js — Copyright (c) 2015 danigb.
    * SPDX-License-Identifier: MIT
    * Full license: tones/LICENSE
