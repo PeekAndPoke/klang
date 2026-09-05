@@ -74,7 +74,7 @@ class LangMasterSpec : StringSpec({
     "master() is available from KlangScript with the same result" {
         val kotlinEvents = master(MasterDsl.of(MasterStageDsl.Gain(gain = 2.5))).queryArc(0.0, 1.0)
         val scriptEvents = SprudelPattern
-            .compile("""master(Master.of(MasterFx.gain(2.5)))""")!!
+            .compile("""master(Master(m => m.gain(2.5)))""")!!
             .queryArc(0.0, 1.0)
 
         scriptEvents.size shouldBe kotlinEvents.size
@@ -82,13 +82,13 @@ class LangMasterSpec : StringSpec({
         scriptEvents[0].data.control shouldBe true
     }
 
-    "chained MasterFx config reaches the dsl (KlangScript == Kotlin)" {
+    "stage configure lambdas reach the dsl (KlangScript == Kotlin)" {
         val expected = MasterDsl.of(
             MasterStageDsl.Gain(gain = 1.5),
             MasterStageDsl.Limiter(thresholdDb = -0.5),
         )
         val scriptEvents = SprudelPattern
-            .compile("""master(Master.of(MasterFx.gain(1.5), MasterFx.limiter().thresholdDb(-0.5)))""")!!
+            .compile("""master(Master(m => m.gain(1.5).limiter(l => l.thresholdDb(-0.5))))""")!!
             .queryArc(0.0, 1.0)
 
         scriptEvents[0].data.master shouldBe MasterValue.Dsl(expected)
@@ -152,9 +152,9 @@ class LangMasterSpec : StringSpec({
             MasterStageDsl.Delay(wet = 0.2, timeSeconds = 0.5, feedback = 1.0, cap = 3.0),
         )
         val script = SprudelPattern.compile(
-            """master(Master.of(
-                 MasterFx.reverb().wet(0.3).roomSize(8).damp(0.4).roomFade(0.12).roomLp(6000),
-                 MasterFx.delay().wet(0.2).time(0.5).feedback(1.0).cap(3.0)
+            """master(Master(m => m
+                 .reverb(r => r.wet(0.3).roomSize(8).damp(0.4).roomFade(0.12).roomLp(6000))
+                 .delay(d => d.wet(0.2).time(0.5).feedback(1.0).cap(3.0))
                ))"""
         )!!.queryArc(0.0, 1.0)
 

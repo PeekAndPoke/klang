@@ -156,7 +156,7 @@ let twelve = Osc.superpluck()
 let electric = Osc.pluck()
         .lowpass(6000)
         .highpass(200)
-        .phaser(0.3).wet(0.3)
+        .phaser(0.3, x => x.wet(0.3))
 ```
 
 ### Electric Distorted

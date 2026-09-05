@@ -965,7 +965,7 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * | 5 | `roomdim` | currently unused by the engine |
  *
  * So `roomWet(0.3, 5, 0.1)` is send 0.3 with a **0.1** tail — the `5` is inert, because slot 3
- * wins. The master bus takes the same values as `MasterFx.reverb().wet(0.3).roomFade(0.1)`.
+ * wins. The master bus takes the same values as `Master(m => m.reverb(r => r.wet(0.3).roomFade(0.1)))`.
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").clip(0.5).s("sine").roomWet(0.5).rsize(4)   // 50% reverb send (rsize gates it)
@@ -4147,7 +4147,7 @@ private fun applyDelayCap(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * **self-oscillates** forever. This decides how loud that runaway sits — it does not forbid it.
  * Below the ceiling the signal is untouched, so the default changes nothing.
  *
- * The master bus has the same knob as `MasterFx.delay().cap(...)`.
+ * The master bus has the same knob as `Master(m => m.delay(d => d.cap(...)))`.
  *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the cap.
  *

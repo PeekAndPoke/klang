@@ -39,7 +39,7 @@ private fun applyMaster(source: SprudelPattern, master: MasterDsl): SprudelPatte
  * stack(
  *   note("c2 g2").s("supersaw"),
  *   s("bd*4"),
- *   master(Master.of(MasterFx.gain(2.5), MasterFx.limiter())),
+ *   master(Master(m => m.gain(2.5).limiter())),
  * )
  * ```
  *
@@ -67,7 +67,7 @@ fun master(master: MasterDsl, @Suppress("unused") callInfo: CallInfo? = null): S
  * or on real notes to align it with the music.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").master(Master.of(MasterFx.gain(1.8)))
+ * note("c3 e3 g3").s("supersaw").master(Master(m => m.gain(1.8)))
  * ```
  *
  * @param master The master chain to apply.
@@ -84,7 +84,7 @@ fun SprudelPattern.master(master: MasterDsl, @Suppress("unused") callInfo: CallI
  * Parses this string as a pattern and sets the master chain from its events onward.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".master(Master.of(MasterFx.gain(1.8))).s("supersaw")
+ * "c3 e3 g3".master(Master(m => m.gain(1.8))).s("supersaw")
  * ```
  *
  * @param master The master chain to apply.

@@ -145,7 +145,7 @@ mismatch. So the control-resampler is needed for exactly that subset, not everyt
 7. **Where do regions live in presets?** The `pedal`/`modern` `PipelineDsl` presets define stage order
    (FilterMod→Vca→Crush→Coarse→Distort→Filter→…). Decide whether presets bake a **default oversample region**
    around their nonlinear cluster (Crush/Coarse/Distort) so existing sounds keep oversampling, while custom
-   `Pipeline.of(...)` chains place `oversample()` explicitly.
+   `Pipeline(p => ...)` chains place `oversample()` explicitly.
 8. **DC-blocker placement.** Nonlinear stages generate DC (distort has a DC blocker). Decide where DC-blocking
    sits relative to the region — likely at base rate after the down-convert, or once per region — not per
    effect.

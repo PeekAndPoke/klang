@@ -648,6 +648,39 @@ class Interpreter(
                 }
             }
 
+            // A native object is callable when its type registers an `invoke` method
+            // (`Master(m => ...)`). It runs through the SAME spec-aware path as a member call, so
+            // named arguments, default thunks and the trailing-lambda rule all apply.
+            is NativeObjectValue<*> -> {
+                val invoke = engine.getExtensionMethod(callee, NativeOperatorNames.INVOKE)
+                    ?: throw KlangScriptTypeError(
+                        message = "Cannot call non-function value: ${callee.toDisplayString()}. " +
+                                "A native object is callable only when its type registers a method named " +
+                                "'${NativeOperatorNames.INVOKE}'.",
+                        operation = "function call",
+                        location = call.location,
+                        astNode = call,
+                        callStackTrace = getStackTrace(),
+                    )
+                // calleeName already reads `Master.invoke` (see resolveCalleeName), so every error
+                // raised for this call site, mixed-style or unknown-parameter, names the same thing.
+                val fnName = calleeName
+                callStack.push(fnName, call.location)
+
+                val previousLocation = executionContext.currentLocation
+                executionContext.currentLocation = call.location
+
+                try {
+                    val positional = positionalArgsForNative(fnName, invoke.paramSpecs, callArgs, call)
+                    guardNativeCall(fnName, positional, call.location) {
+                        invoke.invoker(callee.value, positional, call.location, engine)
+                    }
+                } finally {
+                    executionContext.currentLocation = previousLocation
+                    callStack.pop()
+                }
+            }
+
             else -> {
                 throw KlangScriptTypeError(
                     message = "Cannot call non-function value: ${callee.toDisplayString()}",
@@ -668,6 +701,13 @@ class Interpreter(
             is Identifier -> calleeExpr.name
             is MemberAccess -> calleeExpr.property
             else -> "<anonymous function>"
+        }
+
+        // A callable object: `Master(...)` dispatches to `Master.invoke`.
+        is NativeObjectValue<*> -> when (calleeExpr) {
+            is Identifier -> "${calleeExpr.name}.${NativeOperatorNames.INVOKE}"
+            is MemberAccess -> "${calleeExpr.property}.${NativeOperatorNames.INVOKE}"
+            else -> "<object>.${NativeOperatorNames.INVOKE}"
         }
 
         else -> when (calleeExpr) {

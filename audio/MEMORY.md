@@ -126,7 +126,7 @@ The `audio_be` oscillator code was consolidated (branch `dedicated-cycle-time`) 
 - **Cylinders = effect buses**: up to 16 mixing channels, each with independent delay/reverb/phaser/compressor/ducking.
 - **Master limiter**: −1 dB threshold, 20:1 ratio, **5 ms lookahead + 5 ms gain-smoothing**, 100 ms release — always
   last in chain, on the summed mix. The lookahead delays the whole output by 5 ms (uniform, so nothing desyncs). The
-  *authored* `MasterFx.limiter()` differs on purpose: no lookahead, 1 ms one-pole attack, because it is per-playback.
+  *authored* `limiter` stage (`Master(m => m.limiter(...))`) differs on purpose: no lookahead, 1 ms one-pole attack, because it is per-playback.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
 - **Every DSL is immutable at construction time (maintainer principle, 2026-09-05)**: nodes,
   builders, `MasterDsl`, `PipelineDsl`, patterns. A "mutating" call returns a new instance; never
@@ -135,11 +135,11 @@ The `audio_be` oscillator code was consolidated (branch `dedicated-cycle-time`) 
   explaining; composition falls out of it. Runtime data may be mutable for performance
   (single-owner `SprudelVoiceData`), that is engine-internal and stays. Receiver lambdas were
   parked for exactly this reason (they need mutable builders).
-- **Configure lambdas + builder types (decided 2026-09-05, not started)**: sub-type knobs
+- **Configure lambdas + builder types (decided 2026-09-05, BUILT 2026-09-06, steps S1 to S7)**: sub-type knobs
   (`analog`, `voices`, `spread`, `phasePool`, `band`/`tap`, `wet`/`dryFloor`, master stage and
   pipeline stage knobs) move OFF `IgnitorDsl`/`MasterStageDsl`/`StageDsl` onto immutable
-  `Osc*Builder`/`EqBuilder`/`Master*Builder`/`Pipeline*Builder` classes in `audio_bridge`,
-  annotated for KlangScript directly (KSP runs on `audio_bridge`). `MasterFx`, `Stage`,
+  `Osc*Builder`/`EqBuilder`/`Master*Builder`/`Pipeline*Builder` classes in `klangscript-libs`,
+  annotated for KlangScript directly in `klangscript-libs` (module split 2026-09-06). `MasterFx`, `Stage`,
   `Master.of`, `Pipeline.of` and all 17 sub-type extension objects are DELETED, no back-compat.
   Plan: `docs/tasks/dsl-configure-lambdas.md`.
 

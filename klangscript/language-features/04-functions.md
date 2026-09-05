@@ -173,3 +173,23 @@ refuses a function-typed parameter preceded by a non-literal optional default.
 
 Tests: `ArgAlignmentTest.kt`, `ConfigureLambdaBindingTest.kt` (runtime), `AnalyzedAstTest.kt`
 ("configure lambda" cases, analyzer). Plan: `docs/tasks/dsl-configure-lambdas.md`.
+
+### 4.11 Callable native objects (`invoke`) ✅
+
+A native object registered from Kotlin becomes callable when its type registers a method named
+`invoke` (`@KlangScript.Method(name = "invoke")` on an `@KlangScript.Object` member, or a hand
+registration under `NativeOperatorNames.INVOKE`). `Master(m => m.gain(2.5))` then dispatches to
+that method through the SAME spec-aware path as `Master.build(m => ...)`: named arguments,
+default thunks and the trailing-lambda rule all apply. An object without `invoke` stays a plain
+value; calling it is a type error that names the missing method. The analyzer resolves the call
+to the `invoke` callable (return type, typed lambda parameter, hover signature rendered as
+`Master(...)`), and `invoke` never appears as a member completion.
+
+```javascript
+master(Master(m => m.reverb(r => r.wet(0.05)).gain(2.5)))   // == Master.build(m => ...)
+master(Master())                                            // == Master.default()
+```
+
+Tests: `NativeObjectInvokeTest.kt` (runtime), `InvokeAnalysisTest.kt` (analyzer). Design:
+`docs/tasks/klangscript-native-object-operators.md` (revision 2026-09-05). The arithmetic and
+comparison operators of that plan are designed, not built.

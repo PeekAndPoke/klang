@@ -78,16 +78,15 @@ let guitar = (() => {
     .distort(0.50, "tube", 4).highpass(100)
     // drive amp
     .distort(0.50, "soft", 4).highpass(100)
-    .eq()
+    .eq(e => e
       .band(freq = pLowHz,  q = pLowQ,  db = pLow)       // low
       .band(freq = pMidHz,  q = pMidQ,  db = pMid)       // mid
-      .band(freq = pHighHz, q = pHighQ, db = pHigh)      // high      
+      .band(freq = pHighHz, q = pHighQ, db = pHigh))     // high      
     // power amp
     //.distort(0.30, "gentle", 2)
      .drive(0.3)
     // cabinet
-    .eq()
-      .band(freq = snareHz, q = 3.0, db   = -2)          // let the snare cut through
+    .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
       .lowpass(5000).lowpass(5000)                       // cabinet speaker sim    
       .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)  // follow freq to avoid low mud ... again
  
@@ -296,7 +295,7 @@ export song = stack(
   , // Song body
   song_body.apply(song_arrange)
   , // Master
-  master(Master.of(MasterFx.reverb().wet(0.00).damp(0.2).roomSize(8), MasterFx.gain(2.8)))
+  master(Master(m => m.reverb(r => r.wet(0.00).damp(0.2).roomSize(8)).gain(2.8)))
 )
 
 

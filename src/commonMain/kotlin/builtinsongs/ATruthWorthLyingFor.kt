@@ -98,7 +98,7 @@ stack( // Gitarre! -------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
     .orbit(7).late(0.001).adsr(0.007, 0.2, 0.9, 0.7).gain(0.85).hpf(800).lpf(12500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
   , // Master -----------------------------------------------------------------------------------------------------------------------------------------------
-  master(Master.of(MasterFx.reverb().wet(0.01).roomSize(3), MasterFx.gain(1.5), MasterFx.limiter()))
+  master(Master(m => m.reverb(r => r.wet(0.01).roomSize(3)).gain(1.5).limiter()))
 
 ).analog(feel) /*
 

@@ -1,5 +1,19 @@
 # Tutorial Curriculum — Rework Plan
 
+> **Hand-off from the DSL work, 2026-09-06.** The authoring surface changed under this plan before
+> any Ignitor/Master/Pipeline tutorial was written; teach the NEW forms only
+> (`docs/tasks/dsl-configure-lambdas.md`, `/dsl-design`):
+> - Oscillator knobs live in a configure lambda: `Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)`.
+>   There is no `Osc.supersaw().voices(9)` and no `.analog()` on a sound any more.
+> - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer wet knobs:
+>   `.phaser(0.3, x => x.wet(0.3))`.
+> - Master: `master(Master(m => m.reverb(r => r.wet(0.05)).gain(2.5).limiter()))`, `master(Master())`
+>   for unity. `Master.of` and `MasterFx` are gone.
+> - Pipeline: `Pipeline(p => p.filterMod().vca().distort().filter().vca())`,
+>   `Pipeline.modern(p => p.tuneVca(v => v.expK(2.5)))`. `Pipeline.of` and `Stage` are gone.
+> The song-usage counts below (line "Master: 5/14 songs ...") predate this; the five songs now use
+> the `Master(m => ...)` form.
+
 Status: **ACTIVE**, last updated 2026-08-31. **17 lessons shipped**: the Stage-1 onramp (B1-B3), all of
 Stage 2 (A1-A4, B4-B7), and Stage 3 so far (A5, A6, A7, B8, B9, B10). The ladder below is no longer a
 proposal, it is the contract; the obligations register is the debt ledger against it. Next slots: **A8

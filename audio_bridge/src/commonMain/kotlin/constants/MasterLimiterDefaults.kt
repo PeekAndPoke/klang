@@ -33,7 +33,7 @@ const val LIMITER_KNEE_DB: Double = 2.0
 /** Envelope release, shared by both limiters. */
 const val LIMITER_RELEASE_SECONDS: Double = 0.1
 
-// ── Authored-limiter defaults (the opt-in `MasterFx.limiter()` stage) ────────────────
+// ── Authored-limiter defaults (the opt-in authored `limiter` stage, `Master(m => m.limiter(...))`) ────────────────
 // These deliberately DIFFER from the house timing in `MasterStage`, and the difference is
 // the point: that stage is per-playback, upstream of the summed mix.
 

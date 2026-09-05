@@ -12,10 +12,12 @@ in the same deliverable.
   extensions in `audio_bridge` (`.notch()/.highpass()/.lowpass()/.bandpass()/.adsr()/.fm()/
   .drive()/.detune()/...` — the audio_be parity specs use them daily). **Gaps:**
   - ~~`Eq` has NO fluent builder on either surface~~ **DONE (D5, 2026-08-20)**: `.eq()` on
-    the base type plus TWO section methods typed onto `IgnitorDsl.Eq` (the supersaw
-    config-method shape) — `.band(freq, q, db)` (serial bell) and `.tap(freq, q, gain)`
-    (parallel boost, the form Der Schmetterling's guitar uses). Both shipped on BOTH doors
-    with identical names and defaults. Future Eq section methods land on the same receiver.
+    the base type plus TWO section methods, `band(freq, q, db)` (serial bell) and
+    `tap(freq, q, gain)` (parallel boost, the form Der Schmetterling's guitar uses). Both shipped
+    on BOTH doors with identical names and defaults. Since 2026-09-06 (S3 of
+    `dsl-configure-lambdas.md`) the script door is `.eq(e => e.band(...).tap(...))` on an
+    `EqBuilder` in `klangscript-libs`, which delegates to the audio_bridge Kotlin extensions
+    `IgnitorDsl.Eq.band/tap`; future Eq section methods land on both.
   - **Known gap (D5 round 3):** the Kotlin door ships HOMOGENEOUS overloads (all-IgnitorDsl or
     all-Double), while the script door takes `IgnitorDslLike` per parameter — so the mixed
     `band(someDsl, 0.7, 6.0)` shape compiles in script but not in Kotlin, where the scalars

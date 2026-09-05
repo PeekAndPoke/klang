@@ -253,9 +253,9 @@ Raised independently by both reviewers, 2026-08-11. `IgnitorFilters.kt:119` read
 val driveScale = analogVal * FILTER_DRIVE_PER_ANALOG
 ```
 
-while the pipeline path threads `stage.drivePerAnalog`, which **is** authorable — `Stage.filter().drive(x)` exists in
+while the pipeline path threads `stage.drivePerAnalog`, which **is** authorable — `Pipeline(p => p.filter(f => f.drive(x)))` exists in
 KlangScript today. So the moment anyone sets it, the two paths diverge again by exactly the §1.2 defect:
-`Pipeline.of(Stage.filter().drive(1.0))` on a patch that also uses an ignitor-level `lowpass(analog = 3)` gives the
+`Pipeline(p => p.filter(f => f.drive(1.0)))` on a patch that also uses an ignitor-level `lowpass(analog = 3)` gives the
 sprudel filter a driveScale of 3.0 and the ignitor filter 0.75 — a 4:1 split.
 
 The move fixed the *stale duplicate*; it cannot fix this, because the ignitor filter has no pipeline stage to carry the

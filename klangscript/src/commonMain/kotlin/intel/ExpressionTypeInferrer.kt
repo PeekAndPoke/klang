@@ -17,6 +17,7 @@ import io.peekandpoke.klang.script.ast.ObjectLiteral
 import io.peekandpoke.klang.script.ast.StringLiteral
 import io.peekandpoke.klang.script.ast.TemplateLiteral
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.runtime.NativeOperatorNames.INVOKE
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangType
@@ -99,13 +100,18 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
                 if (scope != null && scope.contains(callee.name)) {
                     return null
                 }
+                // A plain function, or a callable OBJECT (`Master(...)`): the object's type
+                // registers an `invoke` method, the same way the interpreter dispatches it.
                 registry.getCallable(callee.name, receiverType = null)
+                    ?: inferIdentifier(callee, scope)?.let { registry.getCallable(INVOKE, it) }
             }
 
             is MemberAccess -> {
-                // Method call: Osc.sine(), pattern.gain(0.5), signal.lowpass(...)
+                // Method call: Osc.sine(), pattern.gain(0.5), signal.lowpass(...); or a callable
+                // object reached through a member (`Foo.Bar(...)`).
                 val objType = inferType(callee.obj, scope) ?: return null
                 registry.getCallable(callee.property, objType)
+                    ?: inferMemberAccess(callee, scope)?.let { registry.getCallable(INVOKE, it) }
             }
 
             else -> null

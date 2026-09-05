@@ -71,7 +71,10 @@ master(Master(m => m.reverb(r => r.wet(0.05).roomSize(9)).gain(2.5).limiter()))
 - **Anything with a default is a knob** and lives on the builder. Construction inputs stay on the
   door: `freq` on oscillators (`Osc.sine(0.5)` as an LFO is the most common modulator idiom), the
   wrapper's own inputs (`phaser(rate, center, sweep)`).
-- `configure` is always the LAST parameter, always named `configure`, always optional.
+- `configure` is always the LAST parameter, always named `configure`, and optional on a DOOR
+  (no lambda = defaults). The one exception: an operation whose whole purpose is the lambda, like
+  `tuneVca(configure)` on a pipeline preset, takes it REQUIRED, because an optional lambda there
+  would make `tuneVca()` a silent no-op.
 - The lambda is called ONCE at construction; the tree it produces is bit-identical to hand-built
   nodes. No new node kinds, no wire change.
 - Callable objects (`Master(...)`, `Pipeline(...)`) go through the `invoke` operator

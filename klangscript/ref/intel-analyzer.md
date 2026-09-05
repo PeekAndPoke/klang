@@ -77,6 +77,10 @@ The scope parameter is optional — callers without one (e.g. standalone tests t
 walking statements) still get registry-only inference. `AnalyzedAst.TypeMapBuilder` passes
 its current scope on every call so the typeMap reflects shadowing as the walk progresses.
 
+`resolveCallable` (used by `inferCallExpression` and by the typed-lambda binding) falls back to
+the `invoke` callable registered on the callee's type when no plain callable matches, so a
+callable object (`Master(...)`) gets its return type and typed lambda params like a method call.
+
 For `inferCallExpression` on `Identifier(name)`: if `name` is locally bound, returns null
 (we don't infer return types of locally-bound arrow functions yet). Crucially, it does NOT
 fall through to `registry.getCallable(name, null)` in that case — otherwise `f()` on a

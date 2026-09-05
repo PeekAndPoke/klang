@@ -225,7 +225,7 @@ class Compressor(
      *
      * ⚠️ **The by-ear verdict on the pump itself was "really subtle"** — and that was on material
      * built to be maximally unkind (a sustained saw pad under a hard four-on-the-floor at
-     * `MasterFx.gain(2.2)`, level-matched A/B). On real songs it is likely inaudible. **So this is
+     * `Master(m => m.gain(2.2))`, level-matched A/B). On real songs it is likely inaudible. **So this is
      * NOT kept for the pumping.**
      *
      * It is kept because of the second, non-subtle consequence: at an identical peak (−0.34 dBFS in

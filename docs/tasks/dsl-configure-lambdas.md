@@ -245,8 +245,9 @@ equalizer); the lambda receives the merged node's builder. Nothing else in the b
 file returns a sub-type with knobs (checked).
 
 The Kotlin door already has `IgnitorDsl.eq/band/tap` extension functions
-(`audio_bridge/IgnitorDsl.kt` lines 1853 to 1914). `band`/`tap` move onto `EqBuilder`; the
-`IgnitorDsl.eq(...)` Kotlin extension gains the same `configure` parameter.
+(`audio_bridge/IgnitorDsl.kt` lines 1853 to 1914). They STAY as the engine-level Kotlin API
+(`audio_be` uses them) and `EqBuilder.band/tap` delegate to them; `audio_bridge` cannot see the
+builder, so the Kotlin `eq()` gets no `configure` parameter (revised 2026-09-06).
 
 ### Master (`stdlib/KlangScriptMaster.kt`)
 
@@ -274,7 +275,7 @@ master(Master())          // the unity master, alias of Master.default() (D8)
   of today's `of`, taking the lambda instead of a stage list. The spec asserts equality of the
   two forms node-for-node.
 - **Removed**: `Master.of`, the `MasterFx` object, the four `KlangScriptMaster*Extensions`
-  objects. `MasterDsl.of(...)` on the Kotlin companion is replaced by `MasterBuilder`;
+  objects. `MasterDsl.of(...)` on the Kotlin companion STAYS as the engine-level Kotlin API;
   `MasterDsl.default` stays (the engine uses it).
 - Sprudel doors `master(...)` (`lang_master.kt`) and `SprudelPattern.master(...)` take a
   `MasterDsl`; unchanged. Their KDoc examples migrate.
@@ -288,17 +289,19 @@ Target:
 
 ```javascript
 .pipeline(Pipeline(p => p.filter(f => f.drive(2)).vca(v => v.expK(3)).distort()))
-.pipeline(Pipeline.pedal(p => p.vca(v => v.expK(3))))     // preset as the starting point
+.pipeline(Pipeline.pedal(p => p.tuneVca(v => v.expK(3))))  // preset as the starting point, its VCA tuned
 .pipeline("pedal")                                         // by name, unchanged
 ```
 
 - `PipelineBuilder` knobs: `filterMod() crush() coarse() distort() tremolo() phaser()` (append
   the parameterless stage), `filter(configure)`, `vca(configure)`. Stage order = call order =
-  topology, as `of` today. `PipelineFilterStageBuilder` (`cutoffOffset drive drift`),
-  `PipelineVcaStageBuilder` (`expK declick on`).
-- On a preset-filled builder, `vca(configure)` configures the EXISTING VCA stage instead of
-  appending a second one (that is what the deleted `PipelineDsl.expK/declick/vcaOn` did via
-  `tweakVca`). Same for `filter(configure)` on a preset. Record this rule in the builder KDoc.
+  topology, as `of` today. `PipelineFilterBuilder` (`cutoffOffset drive drift`),
+  `PipelineVcaBuilder` (`expK declick on`). `tuneVca`/`tuneFilter` take a REQUIRED lambda: an
+  optional one would make `tuneVca()` a silent no-op (the one exception to "configure is optional").
+- Stage knobs ALWAYS append (the whitepaper's double-VCA chain needs two `vca()` calls). Tuning
+  a preset's existing stage is a separately named operation, `tuneVca(configure)` /
+  `tuneFilter(configure)`, which errors when no such stage exists. Decided 2026-09-06 over an
+  append-or-tune rule: one word per operation, no guessing.
 - `Pipeline(configure)` via `invoke`, with the same alias pair as Master:
   `Pipeline(...) == Pipeline.build(...)`, `Pipeline() == Pipeline.modern()` (the engine default).
   `Pipeline.modern(configure)`/`Pipeline.pedal(configure)` stay as methods with the new lambda.
@@ -325,8 +328,9 @@ Stdlib files: `KlangScriptSuperSawExtensions.kt`, `...SuperSine...`, `...SuperSq
 `KlangScriptStageExtensions.kt`; the `MasterFx` and `Stage` objects; `Master.of`,
 `Pipeline.of`.
 
-Every caller migrates in the same change set (the grep on 2026-09-05, counts are upper bounds
-because `.band(`/`.tap(`/`.spread(` also exist as sprudel pattern methods):
+Every caller migrated in the same change set as its step (S2, S3, S5, S6; the grep of 2026-09-05
+gave the upper bounds, `.band(`/`.tap(`/`.spread(` also exist as sprudel pattern methods). The
+table is the record of what was found:
 
 | Location | Sites | Note |
 |----------|-------|------|
@@ -379,11 +383,11 @@ All decisions are closed; nothing is open for the maintainer at this point.
 | S1 | ✅ **BUILT 2026-09-05, uncommitted, awaiting maintainer inspection.** R1 floating rule (`runtime/ArgAlignment`, applied in `resolveByParamSpec`), R2 function-type signatures (`KlangType.functionParams/functionReturn`, KSP emits them, aliases followed), R3 typed lambda params in `AnalyzedAst`. Extra hardening: a function value converting to a non-function target is now a `KlangScriptTypeError` on both platforms (was a JVM `ClassCastException`, silent garbage on JS). Tests: `ArgAlignmentTest`, `ConfigureLambdaBindingTest`, `AnalyzedAstTest` ("configure lambda" cases); JVM + JS suites green. | none |
 | S1b | ✅ **REPLACED by the module split** (`klangscript-libs-split.md`, done 2026-09-06): builders live in `klangscript-libs`; no build-graph change needed. | none |
 | S2 | ✅ **BUILT 2026-09-06, awaiting review.** `IgnitorBuilders.kt` (16 immutable builders, knobs as `@KlangScript.Function` extension functions), `Configure.kt` (`configuredBy`, the error contract), all 16 oscillator doors `(freq?, configure?)` returning `IgnitorDsl`, 17 extension objects deleted, `toIgnitorDsl()` refuses a function with a script-level error. `pluck`/`superpluck` keep their SEALED constant defaults (the old doors baked `Constant`s, the nodes carry open `Slots.*` params; the sound-tree baseline caught the difference). Migrated: 6 songs + `SongBenchmarkCases`, 8 oscillator specs rewritten in builder form, analog-surface / phase-pool / osc / slot / docs / analyzer tests, whitepaper, music-writing skill, `OscSlot` KDoc. New guard: `BuiltInSongsSoundTreeBaselineSpec` (root `jvmTest`) fingerprints every builtin song's `SoundValue.Osc` trees over 256 cycles (every arrangement fits) against `src/jvmTest/resources/builtin-songs-sound-trees-baseline.txt`, bit-identical before and after. | S1, split |
-| S3 | `EqBuilder`, `PhaserBuilder`, `ShimmerBuilder`; delete the Eq/WetKnob objects; migrate. | S1 |
-| S4 | `invoke` implementation per the revised plan. | S0, S1 |
-| S5 | `MasterBuilder` + stage builders, `Master.build`/`Master.default` first, then `Master(...)` via invoke with the alias spec; delete `MasterFx`/`of`; migrate. | S4 |
-| S6 | `PipelineBuilder` + stage builders, `Pipeline(...)`, delete `Stage`/`of`/tweak knobs; migrate. | S4 |
-| S7 | Sweep: language-features, feature catalog, intel ref, whitepaper, memory cleanup, hand-off note to the tutorial session. | S2..S6 |
+| S3 | ✅ **BUILT 2026-09-06, awaiting review.** `EffectBuilders.kt`: `EqBuilder` (`band`, `tap`, delegating to the audio_bridge Kotlin extensions, which stay as the engine-level API used by `audio_be`), `PhaserBuilder`, `ShimmerBuilder` (`wet`, `dryFloor`). Doors `.eq(configure)`, `.phaser(rate, center, sweep, configure)`, `.shimmer(feedback, tone, pitches?, configure)` all return `IgnitorDsl`; `shimmer.pitches` default became `null` (literal) so the lambda can float. Eq/WetKnob objects deleted. Migrated: Der Schmetterling (two eq blocks), osc test eq block, `KlangScriptEffectBuilderSpec` (new parity spec), two sprudel specs, skill reference, instrument prototypes. Sound-tree baseline unchanged. | S1 |
+| S4 | ✅ **BUILT 2026-09-06 (core), awaiting review with S5.** Interpreter branch for `NativeObjectValue` callees (spec-aware path, error names `invoke`), analyzer fallback in `resolveCallable`, signature rendering `Master(...)`, `invoke` hidden from member completion. Tests `NativeObjectInvokeTest`, `InvokeAnalysisTest`, both mutation-checked. | S0, S1 |
+| S5 | ✅ **BUILT 2026-09-06, awaiting review with S4.** `MasterBuilders.kt` (`MasterBuilder`: gain/limiter/reverb/delay append stages; `MasterLimiterBuilder`, `MasterReverbBuilder`, `MasterDelayBuilder`), `Master.build(configure)`, `Master.default()`, `Master(configure)` via `invoke` (alias spec pins `Master(...) == Master.build(...)`, `Master() == Master.default()`). `Master.of` and `MasterFx` deleted. Migrated: 5 songs, whitepaper, `LangMasterSpec`, sprudel KDoc samples and prose, engine comments, music-writing skill. Baseline (now covering master chains) unchanged. | S4 |
+| S6 | ✅ **BUILT 2026-09-06, awaiting review.** `PipelineBuilders.kt` (`PipelineBuilder`: marker stages + `filter(configure)`/`vca(configure)` APPEND; `tuneVca`/`tuneFilter` configure the stages already present, error when none; `PipelineVcaBuilder`, `PipelineFilterBuilder`). `Pipeline(configure)` via `invoke`, `Pipeline.build`, `Pipeline.modern(configure)`, `Pipeline.pedal(configure)`; `Pipeline()` == `modern()`. `Pipeline.of`, `Stage`, and the three stage knob objects deleted. No song used them; whitepaper and one task doc migrated. | S4 |
+| S7 | ✅ **DONE 2026-09-06** (pending the S4/S5/S6 review round): language-features 4.10/4.11, feature catalog, intel ref, whitepaper (three examples), music-writing skill (ignitor + sprudel refs), every live task doc that quoted a deleted form (`master-dsl-followups`, `master-limiter-lookahead`, `auto-mix-advisor`, `realtime-analytics-meters`, `audio-bridge-constants`, `ignitor-optimizer-followups`, `dsl-kotlin-surface-parity`, `future/pipeline-oversampling-regions`), engine comments, `audio/`+`klangscript/`+`sprudel/MEMORY.md`, and a dated hand-off note at the top of `tutorial-curriculum.md` for the session that owns it. Home-directory memories: the maintainer's housekeeping session. | S2..S6 |
 
 Each step lands as its own reviewed diff (stop before commit, maintainer inspects). Because there
 is no back-compat, S2, S5 and S6 each remove and migrate in ONE diff so the tree never has a

@@ -39,6 +39,7 @@ import io.peekandpoke.klang.script.ast.TernaryExpression
 import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.runtime.NativeOperatorNames.INVOKE
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangType
 
@@ -223,10 +224,19 @@ class NamedArgumentChecker(
     // resolve receiver types, avoiding a redundant second inference pass.
 
     private fun resolveCallable(call: CallExpression): KlangCallable? = when (val callee = call.callee) {
+        // A plain function, or a callable object (`Master(...)`) through its type's `invoke`,
+        // the same fallback `ExpressionTypeInferrer.resolveCallable` applies.
         is Identifier -> docs.getCallable(callee.name, receiverType = null)
+            ?: typeMap[callee]?.let { docs.getCallable(INVOKE, it) }
+
         is MemberAccess -> {
             val objType = typeMap[callee.obj]
-            if (objType != null) docs.getCallable(callee.property, objType) else null
+            if (objType != null) {
+                docs.getCallable(callee.property, objType)
+                    ?: typeMap[callee]?.let { docs.getCallable(INVOKE, it) }
+            } else {
+                null
+            }
         }
 
         else -> null

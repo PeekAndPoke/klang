@@ -20,7 +20,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * C6 finished the job: `phd`/`phasdp` are deleted, and so are `reverb` (a full-signature
  * duplicate of `roomWet`) and `vibmod` (of `vibratoMod`). All four join the list below.
  *
- * NOTE for anyone reading a song: `MasterFx.reverb()` is a DIFFERENT function on the Master
+ * NOTE for anyone reading a song: `Master(m => m.reverb(...))` is a DIFFERENT function on the Master
  * door and is untouched — only the sprudel pattern-level `reverb` went away. The wire
  * fields (`room`, `delay`, `phaserDepth`, `bodyMix`, `vowelMix`) keep their old
  * spelling on purpose; only the DSL surface renamed.

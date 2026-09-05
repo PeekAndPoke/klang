@@ -99,7 +99,7 @@ special casing: the constant's value is a `NativeObjectValue`, the interpreter f
 its class. The only difference is the analyzer fallback above resolving through a registry
 PROPERTY (the constant) rather than an object; that is the same code path.
 
-### Steps for `invoke` (this is what `dsl-configure-lambdas.md` S4 builds)
+### Steps for `invoke` (built 2026-09-06 as `dsl-configure-lambdas.md` S4; steps 1 to 4 ✅, step 5 lands with S5)
 
 1. `Interpreter.evaluateCall`: the `NativeObjectValue` branch through the spec-aware path.
 2. `ExpressionTypeInferrer.resolveCallable`: the `invoke` fallback for identifier (and member)

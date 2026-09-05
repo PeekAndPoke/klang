@@ -1,14 +1,14 @@
 builtin-song-final-synthasy-7-prelude	0	
-builtin-song-stranger-synths	0	
-builtin-song-synthkura	7	4ac7e17,e9980008,c31b9418,2ead7fa4,4f056c8,3ec137a6,67b2572b
-builtin-song-der-schmetterling	2	cb4249d3,94bd3afd
-builtin-song-synthris	0	
+builtin-song-stranger-synths	1	6ae1d202
+builtin-song-synthkura	7	5e8333ec,e1a8c65d,ea780a2d,e961deb9,d045df9d,9b942db1,9ab3b976
+builtin-song-der-schmetterling	3	e72469de,594e27e8,3ff016c8
+builtin-song-synthris	1	9482f92a
 builtin-song-synth-of-the-sea	0	
 builtin-song-synthris-echo	0	
-builtin-song-a-synth-worth-lying-for	1	1c4583ad
-builtin-song-the-synthsale-pipers-last-rave	0	
-builtin-song-synthsturm	8	5f7481f1,caa51ce9,d56ec43b,5fe3a09,16992880,f3c7d47,b3ba0d92,63599e1
-builtin-song-the-synthsale-pipers-farewell	3	5620aea4,f1f835d4,63f1121c
+builtin-song-a-synth-worth-lying-for	2	cf5580d5,8c570042
+builtin-song-the-synthsale-pipers-last-rave	1	5d239129
+builtin-song-synthsturm	8	327c0d46,a13550be,d0e50b06,1c4784d4,7616ff95,ae980f12,681cbe27,61835f6
+builtin-song-the-synthsale-pipers-farewell	3	efd835b9,1a4203e9,9bc92a31
 builtin-song-smalltown-synth	0	
 builtin-song-drunken-synthlor	0	
-builtin-song-dialogue-with-the-synths	1	d453134f
+builtin-song-dialogue-with-the-synths	1	6b8d9d24

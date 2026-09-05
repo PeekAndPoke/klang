@@ -18,10 +18,13 @@ script registration). Split out of `:klangscript` on 2026-09-06
 | `src/commonMain/kotlin/stdlib/KlangStdLib.kt`     | Assembles the `"stdlib"` library: generated registration + console         |
 | `src/commonMain/kotlin/stdlib/KlangScriptOsc.kt`  | The `Osc` doors (oscillators, noise, super-oscillators, pluck)             |
 | `src/commonMain/kotlin/stdlib/KlangScriptOscExtensions.kt` | Base `IgnitorDsl` wrappers (`lowpass`, `adsr`, `eq`, `phaser`, ...) and `IgnitorDslLike` |
-| `src/commonMain/kotlin/stdlib/KlangScriptMaster.kt`, `KlangScriptPipeline.kt` | Master and Pipeline doors                              |
+| `src/commonMain/kotlin/stdlib/KlangScriptMaster.kt` | `Master(m => ...)` (`invoke`), `Master.build`, `Master.default`               |
+| `src/commonMain/kotlin/stdlib/MasterBuilders.kt` | `MasterBuilder` (gain, limiter, reverb, delay) and the three stage builders     |
+| `src/commonMain/kotlin/stdlib/KlangScriptPipeline.kt` | `Pipeline(p => ...)` (`invoke`), `Pipeline.build`, `Pipeline.modern`, `Pipeline.pedal` |
+| `src/commonMain/kotlin/stdlib/PipelineBuilders.kt` | `PipelineBuilder` (stage knobs append; `tuneVca`/`tuneFilter` configure existing stages) and the two stage builders |
 | `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |
-| `src/commonMain/kotlin/stdlib/KlangScript*Extensions.kt` | Remaining knob objects: Eq, Phaser/Shimmer (S3), Master stages (S5), Pipeline stages (S6) |
+| `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `EqBuilder` (band, tap), `PhaserBuilder`, `ShimmerBuilder` (wet, dryFloor) |
 | `src/{jvmMain,jsMain}/kotlin/stdlib/PlatformConsole.kt` | Platform console output                                              |
 | `build/generated/ksp/metadata/commonMain/kotlin/`  | `GeneratedStdlibRegistration.kt` (KSP output, never edit)                 |
 

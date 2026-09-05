@@ -257,7 +257,7 @@ reachable.
 house ratio. +20 dB over threshold is a lot of drive, and the engine is deliberately raw — if you push that hard, you
 get the rail. **The bound must go in the KDoc and in
 `LimiterLookaheadSpec`**, so the limit is stated rather than discovered. Reversible later: the alternative was to raise
-`LIMITER_RATIO` toward ∞ **for the safety limiter only** (the authored `MasterFx.limiter()`
+`LIMITER_RATIO` toward ∞ **for the safety limiter only** (the authored `limiter` stage
 keeps 20:1 as its musical character). Note `ratio` stays user-facing and unclamped — raw Motor — so
 "∞:1" would mean the house default is ∞, not that the user may not choose 20. **The bound belongs in the KDoc and in
 `LimiterLookaheadSpec`.** (The rejected alternative would also have created a *third* `MasterDefaultsSyncSpec`
@@ -277,7 +277,7 @@ already 10–30 ms, 5 ms costs nothing musically and buys ~15 dB. Default to the
 for anyone who wants the latency back.
 
 ⚠️ **Consequence: `HOUSE_LIMITER_ATTACK_SECONDS` now diverges from the authored default too.** The house limiter needs
-`B = 2.5 ms` to deliver the 5 ms window's benefit, but the *authored* `MasterFx.limiter()`
+`B = 2.5 ms` to deliver the 5 ms window's benefit, but the *authored* `limiter` stage
 has `lookahead = 0`, so its `attackSeconds` is still the **one-pole attack** and must stay at **0.001** — raising it to
 2.5 ms would make every authored limiter grab transients far more slowly. So `MasterDefaultsSyncSpec` now documents a
 deliberate asymmetry on **two** constants (`lookaheadSeconds` and `attackSeconds`), not one. Same reasoning as §Phase 3:
@@ -360,7 +360,7 @@ reasoning ("seeding a limiter here would put two limiters in series") is still e
 |                            | Where                | Scope                  | On by default | Lookahead                       |
 |----------------------------|----------------------|------------------------|---------------|---------------------------------|
 | **Final safety limiter**   | `MasterStage`        | the summed mix, global | **always**    | **yes** — this is the knock fix |
-| **Musical master limiter** | `MasterFx.limiter()` | per playback, authored | no            | yes, for parity                 |
+| **Musical master limiter** | `Master(m => m.limiter(...))` | per playback, authored | no            | yes, for parity                 |
 
 An authored master limiter sits *upstream* of the final one, so the two compose without desync. Two limiters in series
 is the normal mastering arrangement (musical, then safety) and is fine as long as the musical one is doing the work.
@@ -585,7 +585,7 @@ for orbits, one level up and shipped by default. **Parity by availability, not b
 | Wire model         | `audio_bridge/MasterDsl.kt:79-86`                                                                     | `Limiter` gains `lookaheadSeconds: Double = 0.0`; schema hash auto-shifts (`WireCodecProcessor.kt:101`)                                                                                                        |
 | Builder            | `MasterChain.kt:191-198`                                                                              | pass through **via `finite(stage.lookaheadSeconds, 0.0)`** and bound it — see below                                                                                                                            |
 | Visibility         | `MasterChain.kt:48`                                                                                   | `private val limiters` → **`internal val`**, matching `reverbs`/`delays` at `:46-47`, which are internal *specifically* so specs can assert what reached the DSP. Without this the wire→DSP hop is untestable. |
-| KlangScript        | `KlangScriptMasterFxExtensions.kt:25-54`                                                              | add `fun lookahead(self, seconds)` beside the existing 5                                                                                                                                                       |
+| KlangScript        | `klangscript-libs/.../stdlib/MasterBuilders.kt` (`MasterLimiterBuilder`)                                                              | add `fun lookahead(self, seconds)` beside the existing 5                                                                                                                                                       |
 | House constants    | `MasterStage.kt:27-46`                                                                                | add `HOUSE_LIMITER_LOOKAHEAD_SECONDS = 0.005`; `HOUSE_LIMITER_ATTACK_SECONDS` changes meaning — see below                                                                                                      |
 | Authored constants | `MasterStage.kt:27-46`                                                                                | **add `AUTHORED_LIMITER_LOOKAHEAD_SECONDS = 0.0` and `AUTHORED_LIMITER_ATTACK_SECONDS = 0.001`** — see below                                                                                                   |
 | Sync spec          | `MasterDefaultsSyncSpec.kt:34-38`                                                                     | rewrite per below                                                                                                                                                                                              |
@@ -672,8 +672,8 @@ Naming: **`.lookahead(...)`, lowercase** — the siblings are `thresholdDb`, `ra
 "sidechain".
 
 ```kotlin
-master(Master.of(MasterFx.limiter()))                            // house defaults: 5 ms window, 5 ms smoothing
-master(Master.of(MasterFx.limiter().lookahead(0.008).attack(0.008)))  // smoother, 8 ms latency
+master(Master(m => m.limiter()))                                 // house defaults: 5 ms window, 5 ms smoothing
+master(Master(m => m.limiter(l => l.lookahead(0.008).attack(0.008))))  // smoother, 8 ms latency
 ```
 
 ⚠️ **The documentation burden this option carries — do not skip it.** Peak performance is *invariant*
@@ -1005,7 +1005,7 @@ The constants this doc describes were split when the shared limiter defaults mov
 - **no prefix** — `LIMITER_THRESHOLD_DB` / `RATIO` / `KNEE_DB` / `RELEASE_SECONDS`: shared by both limiters, declared
   once in `audio_bridge`.
 - **`HOUSE_LIMITER_*`** — the house limiter's own lookahead + attack. Stays in `MasterStage`: no DSL field carries it.
-- **`AUTHORED_LIMITER_*`** — the opt-in `MasterFx.limiter()` defaults, in `audio_bridge` (they *are* wire defaults).
+- **`AUTHORED_LIMITER_*`** — the opt-in authored `limiter` stage defaults, in `audio_bridge` (they *are* wire defaults).
 
 References above were renamed accordingly. ⚠️ Under this rule an unprefixed `LIMITER_*` means **shared** — the opposite
 of what it meant when this doc was written, so treat any surviving unprefixed mention in quoted historical output as the

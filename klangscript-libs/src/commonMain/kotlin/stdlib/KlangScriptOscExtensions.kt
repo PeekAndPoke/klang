@@ -128,33 +128,43 @@ object KlangScriptOscExtensions {
         IgnitorDsl.OptimizerHint(inner = self, on = on)
 
     /**
-     * Opens an equalizer on [self]. Everything added to it runs in ONE pass instead of one node
-     * each, which drops the scratch buffer, the extra buffer traffic and the virtual call for
-     * every section after the first (the per-sample filter loop per section stays, by design). The saving grows with the section count and is much larger in the browser
-     * than on desktop JVM.
+     * Opens an equalizer on [self] and configures its sections in the lambda. Everything in one
+     * equalizer runs in ONE pass instead of one node each, which drops the scratch buffer, the
+     * extra buffer traffic and the virtual call for every section after the first (the per-sample
+     * filter loop per section stays, by design). The saving grows with the section count and is
+     * much larger in the browser than on desktop JVM.
      *
-     * Two kinds of section, and the difference is audible:
-     * - `.band(freq, q, db)` is an ordinary EQ band. Bands apply one after another, so two
+     * Two kinds of section on the [EqBuilder], and the difference is audible:
+     * - `band(freq, q, db)` is an ordinary EQ band. Bands apply one after another, so two
      *   overlapping boosts compound.
-     * - `.tap(freq, q, gain)` takes the sound going INTO the equalizer, filters that, and mixes
+     * - `tap(freq, q, gain)` takes the sound going INTO the equalizer, filters that, and mixes
      *   it back in. Taps mix with the original rather than stacking on each other.
      *
-     * Both exist only on an equalizer, so `.eq()` comes first: `Osc.saw().eq().band(1200, 1.0, 6)`.
-     * Calling `.eq()` again right away changes nothing, but an `.eq()` written after other
-     * filters opens a SECOND equalizer. Plain filters written after it (`.lowpass()`,
-     * `.notch()`, ...) are folded into the same single pass automatically, so you do not have to
-     * write them as bands to get the saving — but only NEIGHBOURING filters merge: anything
-     * else in between (`.distort()`, `.mul()`, `.tremolo()`, ...) is a wall and starts a new
-     * pass. Use `.optimizer(0)` to render a sound exactly as written and compare by ear.
+     * Plain filters written after it (`.lowpass()`, `.notch()`, ...) are folded into the same
+     * single pass automatically, so you do not have to write them as bands to get the saving,
+     * but only NEIGHBOURING filters merge: anything else in between (`.distort()`, `.mul()`,
+     * `.tremolo()`, ...) is a wall and starts a new pass. Use `.optimizer(0)` to render a sound
+     * exactly as written and compare by ear.
      *
-     * ⚠ Careful when adding a `.tap()` onto a sound someone ELSE built: if that sound already
-     * ends in an equalizer, your `.eq()` continues theirs, and your tap then reads THEIR input
-     * rather than their output. Bands are unaffected.
+     * An `.eq()` directly on an equalizer continues it (the lambda appends to its sections); an
+     * `.eq()` written after other filters opens a SECOND equalizer. Careful when adding a `tap`
+     * onto a sound someone ELSE built: if that sound already ends in an equalizer, your `.eq()`
+     * continues theirs, and your tap then reads THEIR input rather than their output. Bands are
+     * unaffected.
+     *
+     * @param configure receives the [EqBuilder] (knobs: `band`, `tap`) and returns it.
+     *
+     * ```KlangScript
+     * Osc.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7)).lowpass(5000)
+     * ```
      */
     @KlangScript.Method
-    fun eq(self: IgnitorDsl): IgnitorDsl.Eq = when (self) {
-        is IgnitorDsl.Eq -> self
-        else -> IgnitorDsl.Eq(inner = self)
+    fun eq(self: IgnitorDsl, configure: ((EqBuilder) -> EqBuilder)? = null): IgnitorDsl {
+        val opened = when (self) {
+            is IgnitorDsl.Eq -> self
+            else -> IgnitorDsl.Eq(inner = self)
+        }
+        return EqBuilder(opened).configuredBy("eq", configure).node
     }
 
     /** SVF notch (band-reject) filter. See [bandpass] for `analog` semantics (currently a no-op). */
@@ -318,9 +328,13 @@ object KlangScriptOscExtensions {
         IgnitorDsl.Coarse(inner = self, amount = amount.toIgnitorDsl())
 
     /**
-     * Applies a multi-stage phaser effect. The wet/dry balance is not a parameter here — it is
-     * the shared wet knob, typed onto the node: `.phaser(rate).wet(0.3).dryFloor(0.2)`
-     * (defaults 0.5 / 0.0).
+     * Applies a multi-stage phaser effect. The wet/dry balance is a knob on the [PhaserBuilder]
+     * the lambda receives: `.phaser(rate, x => x.wet(0.3).dryFloor(0.2))` (defaults 0.5 / 0.0).
+     *
+     * @param rate sweep rate in Hz.
+     * @param center sweep center frequency in Hz (default 1000).
+     * @param sweep sweep width in Hz (default 1000).
+     * @param configure receives the [PhaserBuilder] (knobs: `wet`, `dryFloor`) and returns it.
      */
     @KlangScript.Method
     fun phaser(
@@ -328,12 +342,15 @@ object KlangScriptOscExtensions {
         rate: IgnitorDslLike,
         center: IgnitorDslLike = 1000.0,
         sweep: IgnitorDslLike = 1000.0,
-    ): IgnitorDsl.Phaser = IgnitorDsl.Phaser(
-        inner = self,
-        rate = rate.toIgnitorDsl(),
-        center = center.toIgnitorDsl(),
-        sweep = sweep.toIgnitorDsl(),
-    )
+        configure: ((PhaserBuilder) -> PhaserBuilder)? = null,
+    ): IgnitorDsl = PhaserBuilder(
+        IgnitorDsl.Phaser(
+            inner = self,
+            rate = rate.toIgnitorDsl(),
+            center = center.toIgnitorDsl(),
+            sweep = sweep.toIgnitorDsl(),
+        ),
+    ).configuredBy("phaser", configure).node
 
     /** Applies amplitude tremolo. */
     @KlangScript.Method
@@ -342,31 +359,34 @@ object KlangScriptOscExtensions {
 
     /**
      * Applies a granular shimmer cloud with configurable pitch transpositions and feedback.
-     * The wet/dry balance is the shared wet knob, typed onto the node:
-     * `.shimmer().wet(0.4).dryFloor(0.2)` (defaults 0.5 / 0.0).
+     * The wet/dry balance is a knob on the [ShimmerBuilder] the lambda receives:
+     * `.shimmer(0.5, 4000, [0, 7, 12], x => x.wet(0.4).dryFloor(0.2))` (defaults 0.5 / 0.0).
      *
      * @param feedback Cascade feedback (0..0.95). Default 0.5.
      * @param tone Feedback-path LPF cutoff in Hz. Default 4000.
      * @param pitches Array of semitone transpositions. Default [0, 7, 12]. Example: [0, 4, 7, 11] for maj7.
+     * @param configure receives the [ShimmerBuilder] (knobs: `wet`, `dryFloor`) and returns it.
      */
     @KlangScript.Method
     fun shimmer(
         self: IgnitorDsl,
         feedback: IgnitorDslLike = 0.5,
         tone: IgnitorDslLike = 4000.0,
-        pitches: Any = listOf(0.0, 7.0, 12.0),
-    ): IgnitorDsl.Shimmer {
-        @Suppress("UNCHECKED_CAST")
+        pitches: Any? = null,
+        configure: ((ShimmerBuilder) -> ShimmerBuilder)? = null,
+    ): IgnitorDsl {
         val pitchList = when (pitches) {
             is List<*> -> pitches.map { (it as Number).toDouble() }
             else -> listOf(0.0, 7.0, 12.0)
         }
-        return IgnitorDsl.Shimmer(
-            inner = self,
-            feedback = feedback.toIgnitorDsl(),
-            pitches = pitchList,
-            tone = tone.toIgnitorDsl(),
-        )
+        return ShimmerBuilder(
+            IgnitorDsl.Shimmer(
+                inner = self,
+                feedback = feedback.toIgnitorDsl(),
+                pitches = pitchList,
+                tone = tone.toIgnitorDsl(),
+            ),
+        ).configuredBy("shimmer", configure).node
     }
 
     // ── FM Synthesis ─────────────────────────────────────────────────────────

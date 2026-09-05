@@ -6,88 +6,73 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
-import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
- * `Pipeline` object for KlangScript — builds [PipelineDsl] voice-pipeline configs.
+ * `Pipeline` for KlangScript: builds [PipelineDsl] voice-pipeline configs.
  *
- * Use a built-in (`Pipeline.modern()` / `Pipeline.pedal()`) and tweak its character, or author a
- * custom pipeline with `Pipeline.of(Stage.…)`. Pass the result to a pattern's `.pipeline(…)`:
+ * Start from a built-in (`Pipeline.modern(...)` / `Pipeline.pedal(...)`) and tune it, or build a
+ * custom one by CALLING `Pipeline` with a configure lambda; the lambda receives a
+ * [PipelineBuilder] whose stage knobs append stages in written order. Pass the result to a
+ * pattern's `.pipeline(...)`:
  *
  * ```
- * let warm  = Pipeline.modern().expK(2.5).declick(0.0008)
- * let dirty = Pipeline.of(Stage.vca().expK(2.0), Stage.distort(), Stage.filter().drift(8.0))
+ * let warm  = Pipeline.modern(p => p.tuneVca(v => v.expK(2.5).declick(0.0008)))
+ * let dirty = Pipeline(p => p.vca(v => v.expK(2.0)).distort().filter(f => f.drift(8.0)))
  * note("c e g").pipeline(dirty)
  * ```
+ *
+ * `Pipeline()` with no lambda is the engine default, [modern]; `Pipeline(p => ...)` is the same
+ * as [build]. The method forms exist so the callable form can be tested against them.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("Pipeline")
 object KlangScriptPipeline {
-
     override fun toString(): String = "[Pipeline object]"
 
-    /** The default subtractive engine: `osc → waveshaper → VCF → VCA` (ADSR last). */
-    @KlangScript.Method
-    fun modern(): PipelineDsl = PipelineDsl.modern
-
-    /** Guitar-pedal engine: VCA first, so the waveshapers respond to dynamics. */
-    @KlangScript.Method
-    fun pedal(): PipelineDsl = PipelineDsl.pedal
-
     /**
-     * Builds a custom engine from an ordered list of stages. Stages may be omitted freely —
-     * a slot only renders if the note's matching amount (distort/crush/cutoff…) is active.
-     *
-     * @param stages the pipeline, in order (e.g. `Stage.filterMod(), Stage.vca(), Stage.filter()`)
+     * The default subtractive engine: `osc, waveshaper, VCF, VCA` (ADSR last).
+     * @param configure receives a [PipelineBuilder] holding the preset's stages; tune them with `tuneVca` / `tuneFilter`, or append more.
      */
     @KlangScript.Method
-    fun of(vararg stages: StageDsl): PipelineDsl = PipelineDsl(stages.toList())
-}
+    fun modern(configure: ((PipelineBuilder) -> PipelineBuilder)? = null): PipelineDsl =
+        PipelineBuilder(PipelineDsl.modern).configuredBy("Pipeline.modern", configure).node
 
-/**
- * `Stage` object for KlangScript — builds the [StageDsl] slots of a [PipelineDsl] pipeline.
- *
- * Marker stages (`filterMod`/`crush`/`coarse`/`distort`/`tremolo`/`phaser`) carry no config.
- * `filter()` and `vca()` return *configurable* stages — chain their tuning right after, before
- * adding the next stage: `Stage.vca().expK(2.0).declick(0.5)`, `Stage.filter().drive(1.0)`.
- */
-@KlangScript.Library(KlangScriptLibraries.STDLIB)
-@KlangScript.Object("Stage")
-object KlangScriptStage {
-
-    override fun toString(): String = "[Stage object]"
-
-    /** Control-rate filter-cutoff modulation (belongs first in the pipeline). */
+    /**
+     * Guitar-pedal engine: VCA first, so the waveshapers respond to dynamics.
+     * @param configure receives a [PipelineBuilder] holding the preset's stages; tune them with `tuneVca` / `tuneFilter`, or append more.
+     */
     @KlangScript.Method
-    fun filterMod(): StageDsl = StageDsl.FilterMod
+    fun pedal(configure: ((PipelineBuilder) -> PipelineBuilder)? = null): PipelineDsl =
+        PipelineBuilder(PipelineDsl.pedal).configuredBy("Pipeline.pedal", configure).node
 
-    /** Bit-crusher waveshaper. */
+    /**
+     * Builds a custom engine from scratch: the lambda receives an EMPTY [PipelineBuilder] and
+     * appends stages in order. Stages may be omitted freely; a slot only renders if the note's
+     * matching amount (distort/crush/cutoff...) is active. No lambda is the engine default ([modern]).
+     *
+     * ```
+     * Pipeline.build(p => p.filterMod().vca().distort().filter().vca())   // double-VCA sandwich
+     * ```
+     *
+     * @param configure receives the [PipelineBuilder] and returns it.
+     */
     @KlangScript.Method
-    fun crush(): StageDsl = StageDsl.Crush
+    fun build(configure: ((PipelineBuilder) -> PipelineBuilder)? = null): PipelineDsl {
+        if (configure == null) {
+            return PipelineDsl.modern
+        }
+        return PipelineBuilder(PipelineDsl(emptyList())).configuredBy("Pipeline", configure).node
+    }
 
-    /** Sample-rate reducer ("coarse") waveshaper. */
-    @KlangScript.Method
-    fun coarse(): StageDsl = StageDsl.Coarse
-
-    /** Distortion waveshaper. */
-    @KlangScript.Method
-    fun distort(): StageDsl = StageDsl.Distort
-
-    /** Tremolo (post-filter amplitude LFO). */
-    @KlangScript.Method
-    fun tremolo(): StageDsl = StageDsl.Tremolo
-
-    /** Phaser (post-filter all-pass sweep). */
-    @KlangScript.Method
-    fun phaser(): StageDsl = StageDsl.Phaser
-
-    /** Main filter + its per-voice "feel" (`cutoffOffset` / `drive` / `drift` — chain to tune). */
-    @KlangScript.Method
-    fun filter(): StageDsl.Filter = StageDsl.Filter()
-
-    /** Amplitude VCA (ADSR) + its envelope character (`expK` / `declick` — chain to tune). */
-    @KlangScript.Method
-    fun vca(): StageDsl.Vca = StageDsl.Vca()
+    /**
+     * `Pipeline(p => ...)`: the callable form of [build]. `Pipeline()` is [modern].
+     *
+     * ```
+     * note("c e g").pipeline(Pipeline(p => p.filterMod().vca().distort().filter().vca()))
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    fun invoke(configure: ((PipelineBuilder) -> PipelineBuilder)? = null): PipelineDsl = build(configure)
 }

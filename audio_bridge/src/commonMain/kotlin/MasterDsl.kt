@@ -39,7 +39,7 @@ data class MasterDsl(val stages: List<MasterStageDsl>) {
          */
         val default: MasterDsl = MasterDsl(emptyList())
 
-        /** Builds a master chain from an ordered list of stages. Kotlin mirror of `Master.of(…)`. */
+        /** Builds a master chain from an ordered list of stages. Kotlin, engine-level; the script door is `Master(m => ...)`. */
         fun of(vararg stages: MasterStageDsl): MasterDsl = MasterDsl(stages.toList())
     }
 }

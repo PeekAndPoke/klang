@@ -162,7 +162,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 | `n(pat)`                   | Play by scale index                                                                                              | `n("0 2 4 7").scale("C4:major")`                                               |
 | `chord(pat)`               | Play chord names                                                                                                 | `chord("<Am C F G>")`                                                          |
 | `stack(p1, p2, ...)`       | Layer simultaneously                                                                                             | `stack(s("bd sd"), s("hh*4"))`                                                 |
-| `master(chain)`            | Set the song's master bus (silent control layer — put it in the `stack`)                                         | `stack(lead, bass, master(Master.of(MasterFx.gain(2.0), MasterFx.limiter())))` |
+| `master(chain)`            | Set the song's master bus (silent control layer — put it in the `stack`)                                         | `stack(lead, bass, master(Master(m => m.gain(2.0).limiter())))` |
 | `master(Master.default())` | Switch the master back **off** — deleting the `master(...)` line does not, since a master means "change to this" | `master(Master.default())`                                                     |
 | `cat(p1, p2, ...)`         | Sequence across cycles                                                                                           | `cat(s("bd sd"), s("cp cp"))`                                                  |
 | `fastcat(p1, p2, ...)`     | Sequence within one cycle                                                                                        | `fastcat(s("bd"), s("sd"))`                                                    |
@@ -186,13 +186,13 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > |-------|---------|
 > | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
-> | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master.of(...))` with `MasterFx.gain` (make-up level), `MasterFx.limiter`, `MasterFx.reverb`, `MasterFx.delay` |
+> | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 
-**Master limiter knobs.** `MasterFx.limiter()` chains: `.thresholdDb(db)` `.ratio(x)` `.kneeDb(db)`
-`.attack(seconds)` `.release(seconds)` `.lookahead(seconds)`.
+**Master limiter knobs.** `m.limiter(l => l...)` takes: `thresholdDb(db)` `ratio(x)` `kneeDb(db)`
+`attack(seconds)` `release(seconds)` `lookahead(seconds)`.
 
 - An **always-on safety limiter** already runs on the summed mix (−1 dB, 20:1, 5 ms lookahead), so every song is delayed
-  5 ms and peaks are already caught. An authored `MasterFx.limiter()` is for *shaping*, not peak-catching.
+  5 ms and peaks are already caught. An authored `limiter` stage is for *shaping*, not peak-catching.
 - **`.lookahead()` defaults to 0 and is opt-in**, because it costs exactly that much latency and stages stack — three
   limiters with lookahead are three delay lines, and the delay is per-playback, so it shifts this song against anything
   else playing.

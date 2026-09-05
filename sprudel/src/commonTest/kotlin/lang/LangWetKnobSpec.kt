@@ -95,16 +95,16 @@ class LangWetKnobSpec : StringSpec({
         sh.dryFloor shouldBe IgnitorDsl.Constant(0.0)
     }
 
-    "ignitor script door: .wet()/.dryFloor() typed onto the node" {
+    "ignitor script door: wet()/dryFloor() are knobs on the configure builder" {
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
         fun eval(code: String): Any? = engine.execute(code).toObjectOrNull<Any>()
 
-        val p = eval("""Osc.saw().phaser(1.0).wet(0.25).dryFloor(0.1)""") as IgnitorDsl.Phaser
+        val p = eval("""Osc.saw().phaser(1.0, x => x.wet(0.25).dryFloor(0.1))""") as IgnitorDsl.Phaser
         p.wet shouldBe IgnitorDsl.Constant(0.25)
         p.dryFloor shouldBe IgnitorDsl.Constant(0.1)
 
-        val sh = eval("""Osc.saw().shimmer().wet(0.3)""") as IgnitorDsl.Shimmer
+        val sh = eval("""Osc.saw().shimmer(x => x.wet(0.3))""") as IgnitorDsl.Shimmer
         sh.wet shouldBe IgnitorDsl.Constant(0.3)
     }
 

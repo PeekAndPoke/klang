@@ -1136,6 +1136,24 @@ let a = placeholder("aa", Osc.sine())"""
         stdlibRegistry().getCallable("voices", builder).shouldNotBeNull()
     }
 
+    "real stdlib: Master(m => m.gain(2)) resolves through invoke; m is the MasterBuilder" {
+        val code = "Master(m => m.reverb(r => r.wet(0.05)).gain(2))"
+        val a = analyze(code)
+        a.typeOf(a.topExpr())?.simpleName shouldBe "MasterDsl"
+        a.receiverTypeBeforeDot(code.indexOf("m.reverb") + 1)?.simpleName shouldBe "MasterBuilder"
+        a.receiverTypeBeforeDot(code.indexOf("r.wet") + 1)?.simpleName shouldBe "MasterReverbBuilder"
+        stdlibRegistry().getCallable("invoke", KlangType("Master"))!!.signature shouldBe
+                "Master(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl"
+    }
+
+    "real stdlib: Pipeline(p => p.vca(v => v.expK(2))) resolves through invoke; p and v are typed" {
+        val code = "Pipeline(p => p.vca(v => v.expK(2)).distort())"
+        val a = analyze(code)
+        a.typeOf(a.topExpr())?.simpleName shouldBe "PipelineDsl"
+        a.receiverTypeBeforeDot(code.indexOf("p.vca") + 1)?.simpleName shouldBe "PipelineBuilder"
+        a.receiverTypeBeforeDot(code.indexOf("v.expK") + 1)?.simpleName shouldBe "PipelineVcaBuilder"
+    }
+
     "function type renders structurally in the callable signature" {
         val supersaw = builderRegistry().getCallable("supersaw", KlangType("Osc", fqcn = "test.Osc"))
         supersaw.shouldNotBeNull()

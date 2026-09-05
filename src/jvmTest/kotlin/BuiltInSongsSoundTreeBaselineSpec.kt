@@ -9,6 +9,8 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.MasterValue
+import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -16,11 +18,12 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import java.io.File
 
 /**
- * Structural fingerprint of every sound tree the builtin songs produce.
+ * Structural fingerprint of every DSL tree the builtin songs produce: sounds (`SoundValue.Osc`),
+ * master chains (`MasterValue.Dsl`) and inline pipelines (`PipelineValue.Dsl`).
  *
- * Each song is compiled and queried over its first [CYCLES] cycles; every `SoundValue.Osc`
- * on an event is rendered with the data class `toString()` (noise `uid`s normalised away:
- * they come from a global counter) and hashed. The sorted set of hashes per song is the
+ * Each song is compiled and queried over its first [CYCLES] cycles; every DSL tree on an event
+ * is rendered with the data class `toString()`, prefixed with its kind (noise `uid`s normalised
+ * away: they come from a global counter) and hashed. The sorted set of hashes per song is the
  * fingerprint. A DSL migration that rewrites how a song SPELLS its sounds (the
  * configure-lambda builders, `docs/tasks/dsl-configure-lambdas.md`) must leave every
  * fingerprint untouched: same trees, bit-identical audio.
@@ -40,8 +43,14 @@ class BuiltInSongsSoundTreeBaselineSpec : StringSpec({
         val pattern = SprudelPattern.compile(engine(), song.code)
         withClue(song.id) { pattern.shouldNotBeNull() }
         val trees = pattern!!.queryArc(0.0, CYCLES.toDouble())
-            .mapNotNull { (it.data.sound as? SoundValue.Osc)?.osc }
-            .map { it.toString().replace(UID_REGEX, "uid=#") }
+            .flatMap { event ->
+                listOfNotNull(
+                    (event.data.sound as? SoundValue.Osc)?.osc?.let { "sound:$it" },
+                    (event.data.master as? MasterValue.Dsl)?.master?.let { "master:$it" },
+                    (event.data.pipeline as? PipelineValue.Dsl)?.pipeline?.let { "pipeline:$it" },
+                )
+            }
+            .map { it.replace(UID_REGEX, "uid=#") }
             .toSortedSet()
         val hashes = trees.map { it.hashCode().toUInt().toString(16) }
         return "${song.id}\t${trees.size}\t${hashes.joinToString(",")}"

@@ -250,9 +250,9 @@ first. (The per-sample filter loop itself stays: the core runs one loop per sect
 section count and is much larger in the browser and on weak hardware than on desktop JVM, where
 it is small. Measure your own patch rather than assuming a rate.
 
-You write `.band()` and `.tap()` sections yourself, and plain `.lowpass()/.highpass()/
-.bandpass()/.notch()` are folded into the same pass automatically, so there is no need to
-rewrite them as bands.
+You write `band()` and `tap()` sections yourself inside the `.eq(e => e...)` lambda, and plain
+`.lowpass()/.highpass()/.bandpass()/.notch()` written after it are folded into the same pass
+automatically, so there is no need to rewrite them as bands.
 
 **Only NEIGHBOURING filters merge, and nothing is ever reordered.** Anything else between two
 filters is a wall: `.distort()`, `.drive()`, `.shape()`, `.crush()`, `.mul()`, `.shimmer()`,
@@ -274,10 +274,10 @@ exactly as written, and compare.
 
 | Method                  | Description                                                                                        |
 |-------------------------|----------------------------------------------------------------------------------------------------|
-| `.eq()`                 | Opens the EQ; `.band()`/`.tap()` exist only on an EQ, so this comes first                          |
+| `.eq(e => e...)`        | Opens the EQ and configures its sections in the lambda; `band`/`tap` exist only on that builder    |
 | `.optimizer(0)`         | Renders a sound exactly as written, with no filter fusion; for A/B-ing the fusion by ear           |
-| `.band(freq, q?, db?)`  | **Serial** peaking band: `db` dB gain at `freq`, `q` = width (defaults q=0.707, db=0)             |
-| `.tap(freq, q?, gain?)` | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=0.707, gain=1.0)        |
+| `band(freq, q?, db?)`   | **Serial** peaking band: `db` dB gain at `freq`, `q` = width (defaults q=0.707, db=0)             |
+| `tap(freq, q?, gain?)`  | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=0.707, gain=1.0)        |
 
 **The difference matters and it is audible.** `.band()` sections apply one after another, so
 they compound: two overlapping +6 dB bands give about +12 dB where they overlap, like any DAW EQ.
@@ -287,20 +287,20 @@ than compound. Converting a parallel tap bank into serial bands measured **+4.5 
 
 ```javascript
 // EQ bands: shaping a sound, gains in dB
-Osc.saw().eq().band(3500, 0.7, 6).band(300, 1.0, -4)      // presence lift, mud cut
+Osc.saw().eq(e => e.band(3500, 0.7, 6).band(300, 1.0, -4))      // presence lift, mud cut
 
 // Parallel boosts: the classic guitar mids + presence lift, gains are plain multipliers
-Osc.saw().eq().tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0)
+Osc.saw().eq(e => e.tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0))
 ```
 
-Use `.tap()` when you are stacking resonant boosts onto a sound, `.band()` when you are shaping
-with EQ bands. They mix freely in one `.eq()`, in written order.
+Use `tap()` when you are stacking resonant boosts onto a sound, `band()` when you are shaping
+with EQ bands. They mix freely in one `.eq(e => e...)` lambda, in written order.
 
-⚠ `.band(1200, 6)` sets **q**, not gain: the second positional arg is `q` and db stays 0, which
-is silent. Write `.band(freq = 1200, db = 6)` when you mean gain. KlangScript forbids MIXING
+⚠ `band(1200, 6)` sets **q**, not gain: the second positional arg is `q` and db stays 0, which
+is silent. Write `band(freq = 1200, db = 6)` when you mean gain. KlangScript forbids MIXING
 positional and named arguments, so name them all or pass all three positionally.
 
-⚠ `.eq()` is only idempotent back-to-back. An `.eq()` written *after* other filters opens a
+⚠ `.eq(...)` directly on an eq continues it. An `.eq(...)` written *after* other filters opens a
 SECOND eq, so the one-pass saving applies per eq, not across the whole line.
 
 ⚠ Both `q` values are the ordinary width scale: `.band(f, 0.707)` and `.bandpass(f, 0.707)` span
@@ -308,8 +308,8 @@ the same 1.90 octaves. What differs is CONVERSION. A tap keeps its numbers verba
 (`signal.add(signal.bandpass(f, Q).mul(g))` becomes `.tap(f, Q, g)`), but rewriting that tap as a
 `.band()` needs a WIDER setting, because a tap's audible bump is wider than the bandpass inside
 it: use `db = 20*log10(1 + g)` and `q = Q / sqrt(1 + g)` (since C2 the tap is unity-peak, so
-`q` is out of the level equation). Example: `.tap(850, 0.707, 1.7)` becomes
-`.band(850, 0.430, 8.63)`.
+`q` is out of the level equation). Example: `tap(850, 0.707, 1.7)` becomes
+`band(850, 0.430, 8.63)`.
 
 ⚠ Everything is control-rate (read once per block). For `.band()` that includes `db`, which
 moves filter coefficients, so an LFO on `db` zippers exactly like an LFO on a cutoff; use a VCA
@@ -324,8 +324,8 @@ is a pure WIDTH control: the boost at `freq` is `1 + gain` for ANY `q`. Tighten 
 its defaults is still a **+6 dB lift** (`1 + 1 = 2`) while `.band(freq)` at its defaults is
 transparent.
 
-⚠ You cannot go back to a band after a chained filter: `.eq().band(...).lowpass(5000).band(...)`
-is an error, because `.lowpass()` returns a plain filter node. Open a new `.eq()` for more bands.
+⚠ `band`/`tap` exist only inside the `.eq(e => e...)` lambda; `.eq()` returns the plain sound, so
+`.eq().band(...)` is an error. To add bands after a chained filter, open a new `.eq(e => e...)`.
 
 ⚠ Order matters when mixing them: a `.band()` earlier in the list cannot shape a later `.tap()`,
 because a tap always reads the sound entering the eq.
@@ -347,7 +347,7 @@ Put taps first unless you want that.
 | `.distort(amount, shape?, oversample?)` | `.drive()` + `.shape()` in one node        |
 | `.crush(amount)`                        | Bit-depth reduction                        |
 | `.coarse(amount)`                       | Sample-rate reduction                      |
-| `.phaser(rate, center?, sweep?).wet(w?).dryFloor(f?)` | Allpass phaser (center/sweep default 1000; wet 0.5, dryFloor 0 — the shared C4 wet knob) |
+| `.phaser(rate, center?, sweep?, x => x.wet(w).dryFloor(f))` | Allpass phaser (center/sweep default 1000; wet 0.5, dryFloor 0 are knobs on the configure builder) |
 | `.tremolo(rate, depth)`                 | Amplitude LFO modulation                   |
 
 `.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,

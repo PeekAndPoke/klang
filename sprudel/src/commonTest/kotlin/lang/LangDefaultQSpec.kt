@@ -83,7 +83,7 @@ class LangDefaultQSpec : StringSpec({
         val nt = eval("""Osc.saw().notch(1000)""") as IgnitorDsl.Notch
         nt.q shouldBe IgnitorDsl.Constant(0.707)
 
-        val eqd = eval("""Osc.saw().eq().tap(850)""") as IgnitorDsl.Eq
+        val eqd = eval("""Osc.saw().eq(e => e.tap(850))""") as IgnitorDsl.Eq
         (eqd.sections.single() as IgnitorDsl.EqSection.RawTap).q shouldBe IgnitorDsl.Constant(0.707)
     }
 })

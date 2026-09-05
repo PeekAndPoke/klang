@@ -8,6 +8,25 @@
 
 ## Recent Work (2026-09)
 
+- **Pipeline builders, S6 (2026-09-06)**: `Pipeline(p => p.filterMod().vca(v => v.expK(2)).distort())`,
+  presets `Pipeline.modern(p => p.tuneVca(...))`; stage knobs append, `tuneVca`/`tuneFilter` configure
+  existing stages (error when none). `Pipeline.of`, `Stage` and the stage knob objects deleted.
+
+- **Effect and master builders, S3 + S5 (2026-09-06, `klangscript-libs`)**: `.eq(e => e.band().tap())`,
+  `.phaser(rate, center, sweep, x => x.wet())`, `.shimmer(..., x => x.wet())` on `EqBuilder`/
+  `PhaserBuilder`/`ShimmerBuilder` (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
+  Kotlin `Eq.band/tap`, which stay as the engine-level API). `Master(m => m.reverb(r => ...).gain(2.5)
+  .limiter(l => ...))` via the `invoke` operator, aliases `Master.build`/`Master.default`;
+  `Master.of` and `MasterFx` deleted. The sound-tree baseline spec now fingerprints master and inline
+  pipeline chains too. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to
+  float; any door parameter with a non-literal default blocks the trailing lambda (KSP guard).
+
+- **`invoke` operator (S4, 2026-09-06)**: a `NativeObjectValue` callee dispatches to the `invoke`
+  extension method of its type through the spec-aware member-call path (`Interpreter.evaluateCall`);
+  `ExpressionTypeInferrer.resolveCallable` falls back to `getCallable("invoke", type)`;
+  `KlangCallable.signature` renders it as `Master(...)`; member completion hides `invoke`.
+  `NativeOperatorNames` holds the name. Arithmetic operators of the same plan: not built.
+
 - **Configure-lambda doors, S2 (2026-09-06, `klangscript-libs`)**: the 16 oscillator doors are
   `Osc.name(freq?, configure?)`, knobs live on immutable `Osc*Builder` value wrappers
   (`IgnitorBuilders.kt`), the 17 sub-type extension objects are gone. Lesson: the old `pluck`/

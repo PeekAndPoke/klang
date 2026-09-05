@@ -41,7 +41,7 @@ Preconditions, all mandatory and all learned the hard way:
 
 ## 2. Merging adjacent `Eq` nodes — WITH A REAL TRAP
 
-`Eq(Eq(x, s1), s2)` arises from `.eq().band(a).lowpass(b).eq().band(c)` and similar. Merging the
+`Eq(Eq(x, s1), s2)` arises from `.eq(e => e.band(a)).lowpass(b).eq(e => e.band(c))` and similar. Merging the
 section lists looks trivially safe for serial sections, and is.
 
 **It is NOT safe when `s2` contains a `RawTap`.** A tap reads the input of ITS OWN Eq. In the

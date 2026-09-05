@@ -526,6 +526,18 @@ sealed class CallArgs {
 }
 
 /**
+ * Canonical names of the operator methods a native object may register. Registering an extension
+ * method under one of these names makes the object take part in the corresponding KlangScript
+ * syntax; the interpreter looks them up like any other extension method (supertype walk included).
+ * Only [INVOKE] is wired today; the arithmetic and comparison operators of
+ * `docs/tasks/klangscript-native-object-operators.md` are designed but not built.
+ */
+object NativeOperatorNames {
+    /** `obj(a, b)`: a callable object, e.g. `Master(m => m.gain(2))`. */
+    const val INVOKE = "invoke"
+}
+
+/**
  * Declares one parameter of a native callable.
  *
  * @property name Parameter name used for named-arg binding.
