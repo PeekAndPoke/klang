@@ -40,7 +40,7 @@ even when they are valuable.
 | ~~8~~ | ~~`per-playback-engine` **D4** cylinder eviction~~ | same, step 2f | ✅ **DONE 2026-09-04** as engine disposal: the end of a playback returns every unit. Idle cylinders inside a live engine stay (maintainer, settled) |
 | ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
 
-## Layer 2: widen and harden the interface (11 open, 1 done)
+## Layer 2: widen and harden the interface (11 open, 2 done)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
@@ -56,6 +56,8 @@ even when they are valuable.
 | 19 | Unknown-tweak diagnostic | [`future/mini-notation-tweaks-followups.md`](future/mini-notation-tweaks-followups.md) §1 | A misspelled tweak is silently inert today. Tutorials will teach `{swell}` |
 | 20 | Silent shape-discard, query-time gap | [`silent-shape-discard-on-error.md`](silent-shape-discard-on-error.md) | A typo in a shape function discards the whole shape, silently |
 | 21 | Effect scope (per-orbit vs per-voice) in the docs | [`orbit-level-effect-docs.md`](orbit-level-effect-docs.md) | Cheap and load-bearing: the tutorial round already shipped a **wrong** ground truth about `room` and had to re-author two sections |
+
+| ~~22~~ | ~~**Configure lambdas + builder types on every DSL door**~~ | [`20260906-dsl-configure-lambdas.md`](../tasks-archive/2026-09/20260906-dsl-configure-lambdas.md), [`20260906-klangscript-libs-split.md`](../tasks-archive/2026-09/20260906-klangscript-libs-split.md) | ✅ **DONE 2026-09-06.** Every sub-typed door (16 oscillators, eq/phaser/shimmer, Master, Pipeline) takes `configure: x => x.knob()` on an immutable builder; the stdlib moved to `klangscript-libs`; every song, doc and skill migrated; no backward compatibility kept. Standing rules in `/dsl-design`. |
 
 **Applied as a gate, not as its own item:** [`dsl-kotlin-surface-parity.md`](dsl-kotlin-surface-parity.md).
 Every surface addition above lands on **both doors** (script stdlib + Kotlin extensions) in the same

@@ -1,7 +1,7 @@
 # Split `klangscript` into language core and `klangscript-libs`
 
-> Status: **DONE 2026-09-06** (L1 to L6 green; see the notes under each step). Branch `dsl-adjustments`.
-> Prerequisite for step S2 of [`dsl-configure-lambdas.md`](dsl-configure-lambdas.md) (the builders).
+> Archived 2026-09-06. Status: **DONE 2026-09-06** (L1 to L6 green; see the notes under each step). Branch `dsl-adjustments`.
+> Prerequisite for step S2 of [`20260906-dsl-configure-lambdas.md`](20260906-dsl-configure-lambdas.md) (the builders).
 > Each step ends green and is committed on its own.
 
 ## Why
@@ -69,14 +69,14 @@ libraries themselves.
 | L2 ✅ | `git mv` the 35 `stdlib/` files + the two `PlatformConsole.kt` into `klangscript-libs`; move `stdlibLib` and `klangScript()` there (`index_libs.kt`, package `io.peekandpoke.klang.script`); core keeps `getUniqueClassName` and gains `klangScriptEngine()`; core build drops `audio_bridge` and all KSP wiring. | `./gradlew :klangscript:compileKotlinJvm :klangscript-libs:compileKotlinJvm` |
 | L3 ✅ | Tests: `git mv` the stdlib-dependent tests (incl. `docs/` and `intel/` ones using `generatedStdlibDocs`, `GeneratedRegistrationTest`) to `klangscript-libs/src/{commonTest,jvmTest}`; in the remaining core tests replace `klangScript(` with `klangScriptEngine(`; run the core suite, move whatever still fails for a missing stdlib symbol. | `./gradlew :klangscript:jvmTest :klangscript-libs:jvmTest`, then `:klangscript:jsTest :klangscript-libs:jsTest` |
 | L4 ✅ | Dependents: `sprudel` and `klangscript-ui` add `api(project(":klangscript-libs"))`; root app compiles through sprudel. | `./gradlew :sprudel:jvmTest :klangscript-ui:compileKotlinJs :compileKotlinJs` and the two app jvm specs |
-| L5 ✅ | Docs: `klangscript/CLAUDE.md` + `MEMORY.md` + `ref/*` (paths, "stdlib is a separate module"), new `klangscript-libs/CLAUDE.md` (dispatcher: what lives here, how to add a door, KSP), `.claude/skills/klangscript-knowhow` and `dsl-design` (builders live in `klangscript-libs`, the Kotlin door is that module), `README.MD` module map, `dsl-configure-lambdas.md` (S1b replaced by this split; builder location). | read-through |
+| L5 ✅ | Docs: `klangscript/CLAUDE.md` + `MEMORY.md` + `ref/*` (paths, "stdlib is a separate module"), new `klangscript-libs/CLAUDE.md` (dispatcher: what lives here, how to add a door, KSP), `.claude/skills/klangscript-knowhow` and `dsl-design` (builders live in `klangscript-libs`, the Kotlin door is that module), `README.MD` module map, `20260906-dsl-configure-lambdas.md` (S1b replaced by this split; builder location). | read-through |
 | L6 ✅ | Full verification and commit. Worklet bundle untouched by construction (nothing below `klangscript` changed), so no bundle measurement needed. | `./gradlew :klangscript:jvmTest :klangscript-libs:jvmTest :sprudel:jvmTest :klangscript:jsTest :klangscript-libs:jsTest` |
 
 ## Non-goals
 
 - No package renames, no API changes to the doors, no behaviour change in any script.
 - No new processor options, no shared generated directories, no Gradle tricks.
-- The builders themselves are S2 of `dsl-configure-lambdas.md`, after this lands.
+- The builders themselves are S2 of `20260906-dsl-configure-lambdas.md`, after this lands.
 
 ## Notes from execution (2026-09-06)
 

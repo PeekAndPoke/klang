@@ -48,7 +48,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Two doors, one DSL: every surface addition lands in KlangScript stdlib AND Kotlin in the same deliverable, with a door-parity spec. | 2026-08 | `/dsl-design` §3                                |
 | Parameter parity: same name, meaning and scale on every surface; conversions in one place; asymmetries recorded with a reason. | 2026-08-02 | `/dsl-design` §4                              |
 | One word per concept end to end; a replaced surface is removed, not deprecated.                                              | 2026-08    | `/dsl-design` §5                                |
-| Door shape: knobs on a builder behind a `configure` lambda, construction inputs on the door, `configure` last and optional. | 2026-09-05 | `/dsl-design` §2, `docs/tasks/dsl-configure-lambdas.md` |
+| Door shape: knobs on a builder behind a `configure` lambda, construction inputs on the door, `configure` last and optional. | 2026-09-05 | `/dsl-design` §2, `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md` |
 | Wire types over enums: sealed `@WireName` hierarchies for wire-visible distinctions; enum only for a closed param-less set.  | 2026-08    | `/dsl-design` §7                                |
 | KlangScript stdlib follows Kotlin conventions, not JavaScript (naming, argument style, `name = value` named args).           | 2026-05    | `klangscript/MEMORY.md` Design Decisions        |
 | Code style: braces always, blank lines around `if`, flat directories, no FQCN, exhaustive `when`, NaN-guard comment, no allocation or exceptions in hot paths, flush IIR state, copyright header. | 2026-04 | `/code-style` |

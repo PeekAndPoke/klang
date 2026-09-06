@@ -33,7 +33,7 @@
 
 **Immutable at construction, mutable at runtime, both deliberate.** Every combinator returns a new
 pattern (the project-wide DSL principle, see `audio/MEMORY.md` Architecture Decisions and
-`docs/tasks/dsl-configure-lambdas.md`). The query/render path uses mutable single-owner
+`docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`). The query/render path uses mutable single-owner
 `SprudelVoiceData` on purpose (leaf clone ~17x faster). Do not "fix" either side toward the other.
 
 **`.scale()` applies exactly once per chain** (decided 2026-08-20 on Der Schmetterling):

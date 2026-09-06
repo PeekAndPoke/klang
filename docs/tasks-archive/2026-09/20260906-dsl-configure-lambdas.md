@@ -1,5 +1,6 @@
 # Configure lambdas + builder types on every sub-typed DSL door
 
+> Archived 2026-09-06 after the repo-wide sweep for retired forms found nothing left to migrate.
 > Status: **COMPLETE 2026-09-06.** Every step S0 to S7 is built, review-looped and committed on
 > branch `dsl-adjustments` (commits e889f388, b1f37514, 644886dc, 998a735b, 7572773a). Kept as the
 > record of the decisions and of what was migrated; the standing rules live in `/dsl-design`.
@@ -46,7 +47,7 @@ teaches nothing new. It also deletes the named-argument trap of the current form
 | D3 | Configure lambdas take a **builder type**, e.g. `Osc.sine(configure: (x: OscSineBuilder) -> OscSineBuilder)`. The knobs live on the builders ONLY. **`.analog()` and every other sub-type method disappear from `IgnitorDsl`.** (The `analog` *parameter* of the filter doors, `lowpass(freq, q, passes, analog)`, is a different thing and stays.) |
 | D4 | Parameter name: `configure`. |
 | D5 | `.phaser()` and `.shimmer()` get configure lambdas too. |
-| D6 | Builder knobs are annotated **directly on the builder classes**; no delegate objects. More explicit, and open for oscillator-specific extensions. **Revised 2026-09-06:** the builders live in the new `klangscript-libs` module (not `audio_bridge`), after the module split of `klangscript-libs-split.md`; `audio_bridge` can never depend on the language runtime the generated registration needs. |
+| D6 | Builder knobs are annotated **directly on the builder classes**; no delegate objects. More explicit, and open for oscillator-specific extensions. **Revised 2026-09-06:** the builders live in the new `klangscript-libs` module (not `audio_bridge`), after the module split of `20260906-klangscript-libs-split.md`; `audio_bridge` can never depend on the language runtime the generated registration needs. |
 | D7 | Door parameters: `freq` (oscillators) and the wrapper's own inputs stay on the door. **Anything with a default is a knob** and lives on the builder. |
 | D8 | `Master()` is the unity master and `Master(configure)` builds a chain. During the `invoke` rollout they are **aliases**: `Master(...) == Master.build(...)` and `Master() == Master.default()`, so the callable object can be tested against the method form. Same for `Pipeline`. |
 | D9 | **Everything is immutable.** Builders are value wrappers; every "mutating" call returns a new instance with the updated values. Composition falls out of this. **General principle for ALL DSLs**, not only builders. |
@@ -364,7 +365,7 @@ functions on the builder (`@KlangScript.Function fun OscSuperSawBuilder.voices(.
 sprudel uses for `SprudelPattern`), one implementation, one KDoc, no delegate objects. The
 `audio_bridge` variant needed a cross-module generated-source arrangement and was dropped
 (`CLAUDE.md`, "Complexity is the enemy"); the module split that made this possible is
-`klangscript-libs-split.md`.
+`20260906-klangscript-libs-split.md`.
 
 A pleasant side effect: oscillator-specific extensions can be added next to the oscillator
 (a new knob on `OscSuperSawBuilder` is one annotated function in one file), without touching the
@@ -383,7 +384,7 @@ All decisions are closed; nothing is open for the maintainer at this point.
 |------|-------|------------|
 | S0 | ✅ **DONE 2026-09-05.** `klangscript-native-object-operators.md` gained a "Revision 2026-09-05" section: `invoke` via `@KlangScript.Method(name = "invoke")`, dispatch through the spec-aware call path, analyzer `invoke` fallback in `resolveCallable`, signature rendering, alias-first rollout, and the field-accessor consumer. | none |
 | S1 | ✅ **BUILT 2026-09-05, four review rounds, committed b1f37514.** R1 floating rule (`runtime/ArgAlignment`, applied in `resolveByParamSpec`), R2 function-type signatures (`KlangType.functionParams/functionReturn`, KSP emits them, aliases followed), R3 typed lambda params in `AnalyzedAst`. Extra hardening: a function value converting to a non-function target is now a `KlangScriptTypeError` on both platforms (was a JVM `ClassCastException`, silent garbage on JS). Tests: `ArgAlignmentTest`, `ConfigureLambdaBindingTest`, `AnalyzedAstTest` ("configure lambda" cases); JVM + JS suites green. | none |
-| S1b | ✅ **REPLACED by the module split** (`klangscript-libs-split.md`, done 2026-09-06): builders live in `klangscript-libs`; no build-graph change needed. | none |
+| S1b | ✅ **REPLACED by the module split** (`20260906-klangscript-libs-split.md`, done 2026-09-06): builders live in `klangscript-libs`; no build-graph change needed. | none |
 | S2 | ✅ **BUILT 2026-09-06, one clean review round, committed 998a735b.** `IgnitorBuilders.kt` (16 immutable builders, knobs as `@KlangScript.Function` extension functions), `Configure.kt` (`configuredBy`, the error contract), all 16 oscillator doors `(freq?, configure?)` returning `IgnitorDsl`, 17 extension objects deleted, `toIgnitorDsl()` refuses a function with a script-level error. `pluck`/`superpluck` keep their SEALED constant defaults (the old doors baked `Constant`s, the nodes carry open `Slots.*` params; the sound-tree baseline caught the difference). Migrated: 6 songs + `SongBenchmarkCases`, 8 oscillator specs rewritten in builder form, analog-surface / phase-pool / osc / slot / docs / analyzer tests, whitepaper, music-writing skill, `OscSlot` KDoc. Migration guard (removed 2026-09-06 once the migration was done): a spec fingerprinting every builtin song's DSL trees over 256 cycles against a checked-in baseline, bit-identical before and after. | S1, split |
 | S3 | ✅ **BUILT 2026-09-06, reviewed (doc findings fixed), committed 7572773a.** `EffectBuilders.kt`: `EqBuilder` (`band`, `tap`, delegating to the audio_bridge Kotlin extensions, which stay as the engine-level API used by `audio_be`), `PhaserBuilder`, `ShimmerBuilder` (`wet`, `dryFloor`). Doors `.eq(configure)`, `.phaser(rate, center, sweep, configure)`, `.shimmer(feedback, tone, pitches?, configure)` all return `IgnitorDsl`; `shimmer.pitches` default became `null` (literal) so the lambda can float. Eq/WetKnob objects deleted. Migrated: Der Schmetterling (two eq blocks), osc test eq block, `KlangScriptEffectBuilderSpec` (new parity spec), two sprudel specs, skill reference, instrument prototypes. Sound-tree baseline unchanged. | S1 |
 | S4 | ✅ **BUILT 2026-09-06 (core), reviewed with S5 and S6, committed 7572773a.** Interpreter branch for `NativeObjectValue` callees (spec-aware path, error names `invoke`), analyzer fallback in `resolveCallable`, signature rendering `Master(...)`, `invoke` hidden from member completion. Tests `NativeObjectInvokeTest`, `InvokeAnalysisTest`, both mutation-checked. | S0, S1 |

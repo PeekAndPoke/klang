@@ -2,7 +2,7 @@
 
 > **Hand-off from the DSL work, 2026-09-06.** The authoring surface changed under this plan before
 > any Ignitor/Master/Pipeline tutorial was written; teach the NEW forms only
-> (`docs/tasks/dsl-configure-lambdas.md`, `/dsl-design`):
+> (`docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`, `/dsl-design`):
 > - Oscillator knobs live in a configure lambda: `Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)`.
 >   There is no `Osc.supersaw().voices(9)` and no `.analog()` on a sound any more.
 > - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer wet knobs:

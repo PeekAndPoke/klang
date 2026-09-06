@@ -8,7 +8,7 @@ The language itself lives in `:klangscript` and knows nothing about this module.
 to `:klangscript` what `:sprudel` is: a library on top of the language, registered by KSP from
 `@KlangScript.*` annotations, with BOTH doors of every DSL in one place (the Kotlin API and its
 script registration). Split out of `:klangscript` on 2026-09-06
-(`docs/tasks/klangscript-libs-split.md`).
+(`docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`).
 
 ## Layout
 
@@ -31,7 +31,7 @@ script registration). Split out of `:klangscript` on 2026-09-06
 ## Rules
 
 - Every DSL surface follows `/dsl-design` (immutability, configure lambdas on builder types, two
-  doors, parity, one word per concept). The builders of `docs/tasks/dsl-configure-lambdas.md`
+  doors, parity, one word per concept). The builders of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`
   land HERE, next to their doors; this module is the Kotlin door for them as well.
 - Script-door parameter defaults are safe literals (number, string, boolean, null); KSP refuses a
   door that invites a trailing lambda but carries a non-literal optional default.

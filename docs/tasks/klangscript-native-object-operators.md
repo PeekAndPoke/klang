@@ -20,14 +20,14 @@ checks for these names during operator and call dispatch. No new storage infrast
 
 ---
 
-## Revision 2026-09-05 (step S0 of `dsl-configure-lambdas.md`)
+## Revision 2026-09-05 (step S0 of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`)
 
 > This plan was written in the hand-registration era (`registerMethod` helpers in Kotlin). Since
 > then every native surface is emitted by KSP from `@KlangScript.*` annotations, native calls
 > are spec-aware (named arguments, default thunks, and since S1 the trailing-lambda rule in
 > `runtime/ArgAlignment`), and the editor analyzer resolves callables from the KSP-emitted
 > docs registry. The `invoke` operator is now a prerequisite of two consumers:
-> `dsl-configure-lambdas.md` (`Master(m => ...)`, `Pipeline(p => ...)`, later `Katalyst(...)`)
+> `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md` (`Master(m => ...)`, `Pipeline(p => ...)`, later `Katalyst(...)`)
 > and `sprudel-field-accessors.md` (`gain(0.5)` on a callable accessor constant). This revision
 > supersedes Steps 1 to 3a for `invoke`; Steps 3b/3c (arithmetic, comparison, unary) remain
 > valid designs but are NOT part of the configure-lambda work and stay unscheduled.
@@ -50,7 +50,7 @@ the builder path keeps `registerMethod(NativeOperatorNames.INVOKE, ...)` for han
 types, no dedicated helper needed. Verified 2026-09-05: no registration in the stdlib or sprudel
 output uses the name `invoke` today, so the name is free.
 
-**Aliases first, operator second (decision D8 of `dsl-configure-lambdas.md`).** Every callable
+**Aliases first, operator second (decision D8 of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`).** Every callable
 object ships the method form and the operator as aliases of each other, so the operator can be
 tested against a form that already works:
 
@@ -99,7 +99,7 @@ special casing: the constant's value is a `NativeObjectValue`, the interpreter f
 its class. The only difference is the analyzer fallback above resolving through a registry
 PROPERTY (the constant) rather than an object; that is the same code path.
 
-### Steps for `invoke` (built 2026-09-06 as `dsl-configure-lambdas.md` S4; steps 1 to 4 ✅, step 5 lands with S5)
+### Steps for `invoke` (built 2026-09-06 as `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md` S4; steps 1 to 5 ✅, step 5 landed with S5 on 2026-09-06)
 
 1. `Interpreter.evaluateCall`: the `NativeObjectValue` branch through the spec-aware path.
 2. `ExpressionTypeInferrer.resolveCallable`: the `invoke` fallback for identifier (and member)

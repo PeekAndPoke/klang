@@ -9,7 +9,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 
 /**
  * Applies a door's `configure` lambda to the builder it just created and enforces the contract
- * of `docs/tasks/dsl-configure-lambdas.md`: the lambda receives the builder and must return it
+ * of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`: the lambda receives the builder and must return it
  * (or a builder of the same type, since every knob returns a new one).
  *
  * The lambda arrives from KlangScript as a Kotlin function whose declared return type is a
