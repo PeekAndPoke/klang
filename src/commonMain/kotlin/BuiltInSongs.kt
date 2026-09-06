@@ -59,6 +59,7 @@ object BuiltInSongs {
         tetris,
         soundOfTheSea,
         tetrisRemix,
+        greensleeves,
         aTruthWorthLyingFor,
         irishLamentTechno,
         sandsturm,
@@ -66,6 +67,5 @@ object BuiltInSongs {
         smallTownBoy,
         drunkenSailor,
         dialogueWithTheStars,
-        greensleeves,
     )
 }

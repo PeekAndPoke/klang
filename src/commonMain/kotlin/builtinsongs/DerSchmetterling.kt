@@ -21,7 +21,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -0    // -2 .. D | 0 .. E | 2 .. F#
+let transposition =   -1    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    1    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 let leadHz        = 3200    // Where does the lead sit?
@@ -138,10 +138,10 @@ export guitarDecay = "<0.700!32 0.600!16 2.000!16>"
 export lead_pat =  
   `<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-4 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
 
-export lead_shape = x => x.gain(0.50).sound("supertri").voices(9).spread(0.1)
+export lead_shape = x => x.gain(0.45).sound("supertri").voices(9).spread(0.1)
   .unison(9).spread(0.20).hpf(2000).distort(1.5, "softsat", 4).adsr(0.01, 0.25, 0.3, 0.1)
   .clip(0.95).velocity(guitarDyna).body("rosewood")
-  .hpf(1500).lpf(1500).lpe(8.0).lpadsr(0.01, 0.3, 0.5, 0.1).lpq(5.0)
+  .hpf(1600).lpf(1400).lpe(8.0).lpadsr(0.01, 0.3, 0.5, 0.1).lpq(6.0)
   .pan(0.2).superimpose(pan(0.8))
 
 export lead_arrange = x => x.orbit(0) // .mute()
@@ -180,9 +180,9 @@ export guitar2_pat =
 
 export guitar2_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(13).spread(0.05)
   .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 0.7)
-  .oscp("mid", 3.0).oscp("midHz", 800).oscp("midQ", 0.7)
+  .oscp("low", 3.0).oscp("lowHz", 900).oscp("lowQ", 0.7)
   .oscp("mid", 6.0).oscp("midHz", 1300).oscp("midQ", 0.7)
-  .oscp("high", 5.0).oscp("highHz", 2500).oscp("highQ", 0.7)
+  .oscp("high", 5.0).oscp("highHz", 2000).oscp("highQ", 0.7)
   .clip(guitarClip.fast(2)).pan(0.33).body("cedar").bodyWet(0.3)
 
 export guitar2_arrange = x => x.orbit(2) //  . solo()
@@ -200,7 +200,7 @@ export guitar3_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guita
   .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 0.7)
   .oscp("low", 3.0).oscp("lowHz", 700).oscp("lowQ", 0.7)
   .oscp("mid", 6.0).oscp("midHz", 1100).oscp("midQ", 0.7)
-  .oscp("high", 5.0).oscp("highHz", 2350).oscp("highQ", 0.7)
+  .oscp("high", 5.0).oscp("highHz", 1650).oscp("highQ", 0.7)
   .clip(guitarClip.fast(2)).pan(0.66)
 
 export guitar3_arrange = x => x.orbit(2) //  . solo()
@@ -298,7 +298,7 @@ export song = stack(
   , // Song body
   song_body.apply(song_arrange)
   , // Master
-  master(Master(m => m.reverb(r => r.wet(0.00).damp(0.2).roomSize(8)).gain(2.5)))
+  master(Master(m => m.reverb(r => r.wet(0.00).damp(0.2).roomSize(8)).gain(2.8)))
 )
 
 
