@@ -17,8 +17,7 @@
   `PhaserBuilder`/`ShimmerBuilder` (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
   Kotlin `Eq.band/tap`, which stay as the engine-level API). `Master(m => m.reverb(r => ...).gain(2.5)
   .limiter(l => ...))` via the `invoke` operator, aliases `Master.build`/`Master.default`;
-  `Master.of` and `MasterFx` deleted. The sound-tree baseline spec now fingerprints master and inline
-  pipeline chains too. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to
+  `Master.of` and `MasterFx` deleted. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to
   float; any door parameter with a non-literal default blocks the trailing lambda (KSP guard).
 
 - **`invoke` operator (S4, 2026-09-06)**: a `NativeObjectValue` callee dispatches to the `invoke`

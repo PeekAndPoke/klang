@@ -41,7 +41,7 @@ The release-defining set, regardless of when they're sequenced:
 ## Act 1 — Finish & polish the engine
 
 1. ✅ **DONE 2026-08-03** · **Master / loudness stage** — the point of the whole backend rework. Shipped as
-   **master-in-pattern**: `master(Master.of(MasterFx.gain(2.5), MasterFx.limiter()))`
+   **master-in-pattern**: `master(Master(m => m.gain(2.5).limiter()))` (spelled `Master.of(MasterFx...)` until 2026-09-06)
    rides the voice stream (Ignitor/Pipeline registration playbook), crossfades on swap, works offline, and
    `Master.default()` switches it back off. Plus the reverb/delay **parameter-parity**
    fix (`d78ff3da`) — the same word now means the same thing on the orbit and master buses. Archived: [
