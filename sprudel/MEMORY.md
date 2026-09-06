@@ -1,5 +1,13 @@
 # Sprudel — Memory
 
+## Recent Work (2026-09-07)
+
+- **Field accessors, batch one** (`docs/tasks/sprudel-field-accessors.md`): fourteen objects on the
+  new `FieldAccessor` base (`lang.kt`): `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq, hpq,
+  bpq, attack, decay, sustain, release`. Recipe in `ref/dsl-conventions.md`. Null rule decided:
+  on the mapper path a `null` result leaves the field unchanged (`_mapNumericField`).
+  Specs: `LangFieldAccessorsSpec` (two rows per accessor, both doors), `FreqAccessorIntelSpec`.
+
 ## Recent Work (2026-09-06)
 
 - **Field accessors, pilot on `freq`** (`docs/tasks/sprudel-field-accessors.md`). Two rules:

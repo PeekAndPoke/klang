@@ -65,6 +65,18 @@ class FreqAccessorIntelSpec : StringSpec({
         names shouldNotContain "invoke"
     }
 
+    "every batch-one accessor is an object with a call form and the first-step operators" {
+        listOf("gain", "velocity", "pan", "postgain", "lpf", "hpf", "bpf", "lpq", "hpq", "bpq",
+            "attack", "decay", "sustain", "release").forEach { name ->
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+            type.simpleName shouldBe name
+            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
+            analyze("$name(0.5)").diagnostics.size shouldBe 0
+            analyze("$name.mul(2)").typeOf(analyze("$name.mul(2)").top()).shouldNotBeNull()
+        }
+    }
+
     "named-argument diagnostics reach the setter through invoke" {
         val bad = analyze("freq(hzz = 440)")
         bad.diagnostics.size shouldBe 1

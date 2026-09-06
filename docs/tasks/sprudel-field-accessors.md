@@ -5,7 +5,10 @@ Rewritten 2026-09-06 after a design session; the previous draft (context-key bin
 
 ## Status
 
-Pilot on ONE field, `freq`. Nothing else until the pilot is green, reviewed and heard.
+- 2026-09-06: pilot on `freq` green, reviewed (two rounds), heard. Greensleeves built on it.
+- 2026-09-07: batch one, fourteen accessors: `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq,
+  hpq, bpq, attack, decay, sustain, release`, on the `FieldAccessor` base. Remaining numeric
+  setters (effects, sample, synthesis, tonal, addons; about 70) follow in later batches.
 
 ## Goal
 
@@ -210,19 +213,23 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
 
 ## Phase 2 (after the pilot)
 
-- More fields, one object each: `gain, velocity, pan, lpf, hpf, bpf` (with their aliases as
-  `val cutoff = lpf`-style constants), `lpq, hpq, bpq, attack, decay, sustain, release`. Compound
-  setters (`lpf(freq, q, passes)`) keep their signature on `invoke`; only the first parameter takes
-  a mapper.
+- DONE (batch one, 2026-09-07): `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq, hpq, bpq,
+  attack, decay, sustain, release`, each `object X : FieldAccessor({ it.field })` with the setter
+  as `invoke`; compound setters (`lpf(freq, q, passes)`) keep their signature on `invoke`, only
+  the first parameter takes a mapper. Specs: `LangFieldAccessorsSpec` (one mapped row and one
+  read row per accessor, both doors, 12 cycles), `FreqAccessorIntelSpec` (all objects).
+- NEXT batches: effects (`lang_effects.kt`, 24 setters), sample (7), synthesis (6), the rest of
+  tonal (12), vowel, body, addons. Same recipe, same two spec rows per accessor.
 - The same chain in `_liftStringField` and `_applyControlFromParams` for string and control fields.
 - Provider twins on demand.
-- A provider or mapper handed to a setter WITHOUT the mapper branch (`lpf(freq)` today) is still
+- A provider or mapper handed to a setter WITHOUT the mapper branch (`room(freq)` today) is still
   silently dropped and the field cleared or kept, with no diagnostic; the analyzer cannot flag it
   (`PatternLike` is `Any`). Either every setter gets the branch, or `toListOfPatterns` reports it.
-- Settle what a null write means. `freqUpdate` clears the field on `null`; a `voiceSetter` such as
-  `bpfMutation` ignores `null` and keeps the old value. The control path has had this asymmetry
-  all along; the mapper path inherits it (`stack(note("c e"), s("hh*4")).bpf(800).bpf(freq)`
-  keeps 800 on the hats). Decide once before more fields get the mapper branch.
+- Null write: SETTLED 2026-09-07. On the mapper path a `null` result leaves the field unchanged
+  for every setter (`_mapNumericField` skips the update). The control path keeps its historic
+  per-setter behaviour, not touched: most mutations are `field = it?.asDoubleOrNull()` and CLEAR
+  on `null` (gain, pan, velocity, postgain, the envelope fields, the three Q fields, `freqUpdate`);
+  the three cutoff mutations (`lpfMutation`, `hpfMutation`, `bpfMutation`) early-return and KEEP.
 - `note` as a string field: decide whether an accessor makes sense.
 
 ## Review checklist mapping (`/dsl-design`)
@@ -233,7 +240,8 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
 4. Parity: the accessor reads exactly the field its setter writes (`freq` and `freqHz`).
 5. One word per concept: `freq` is the setter, the accessor and the mapper target; the replaced
    top-level function annotation is removed, not deprecated.
-6. Coerce: a non-numeric value writes `null`; a mapper that yields nothing writes `null`; never throws.
+6. Coerce: a non-numeric value writes `null`; a mapper that yields nothing leaves the field
+   unchanged (decided 2026-09-07, `_mapNumericField` KDoc); never throws.
 7. No wire change.
 8. No frontend DSP, no cycles over the wire.
 9. KDoc on `freq` (constant) and `Freq.invoke` feeds the editor popup.

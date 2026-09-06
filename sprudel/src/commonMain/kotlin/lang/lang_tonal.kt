@@ -17,7 +17,6 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
-import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
@@ -1453,10 +1452,7 @@ private fun applyFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("freq")
-object Freq : PatternMapperProvider {
-
-    /** The read mapper: the event's frequency into the value register. */
-    override fun mapper(): PatternMapperFn = { p -> p.reinterpretVoice { it.copy(value = it.freqHz?.asVoiceValue()) } }
+object Freq : FieldAccessor({ it.freqHz }) {
 
     /**
      * Sets the playback frequency in Hz directly, bypassing note name resolution.

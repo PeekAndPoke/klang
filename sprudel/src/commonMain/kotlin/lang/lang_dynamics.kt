@@ -16,6 +16,7 @@ import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftNumericField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.putOscParam
 
@@ -24,6 +25,10 @@ import io.peekandpoke.klang.sprudel.putOscParam
 private val gainMutation = voiceSetter { gain = it?.asDoubleOrNull() }
 
 private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.gain }, update = gainMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, gainMutation)
 }
 
@@ -64,17 +69,50 @@ fun String.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).gain(amount, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
+ * Returns a [PatternMapperFn] for `gain(...)`.
  *
- * ```KlangScript(Playable)
- * s("hh hh hh hh").apply(gain("1.0 0.75 0.5 0.25"))
- * ```
- *
- * @param amount The control value to use for gain.
+ * Kotlin door only: the script reaches this through `gain(...)`, which is [Gain.invoke].
  */
-@KlangScript.Function
 fun gain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.gain(amount, callInfo) }
+
+/**
+ * The gain of each event, as a value other setters can read.
+ *
+ * Bare `gain` reads what the chain has set so far, so it comes after whatever set the field
+ * (`gain(...)`, `adsr(...)`, an alias). Call it, `gain(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * s("hh*8").gain("0.4 1").gain(mul(perlin.seg(8).range(0.8, 1.2)))   // humanised levels
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c e g").gain("0.9 0.6 0.3").velocity(gain)                      // velocity follows gain
+ * ```
+ *
+ * @category dynamics
+ * @tags gain, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("gain")
+object Gain : FieldAccessor({ it.gain }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
+     *
+     * ```KlangScript(Playable)
+     * s("hh hh hh hh").apply(gain("1.0 0.75 0.5 0.25"))
+     * ```
+     *
+     * @param amount The control value to use for gain.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        gain(amount, callInfo)
+}
+
+/** The [Gain] accessor as a value, so the Kotlin door reads like the script: `pan(gain)`. */
+val gain: Gain = Gain
 
 /**
  * Creates a chained [PatternMapperFn] that sets the gain after the previous mapper.
@@ -94,6 +132,10 @@ fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null
 private val panMutation = voiceSetter { pan = it?.asDoubleOrNull() }
 
 private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.pan }, update = panMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, panMutation)
 }
 
@@ -138,15 +180,48 @@ fun String.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
     this.toVoiceValuePattern(callInfo?.receiverLocation).pan(amount, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the pan for each event in a pattern.
+ * Returns a [PatternMapperFn] for `pan(...)`.
  *
- * ```KlangScript(Playable)
- * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
- * ```
+ * Kotlin door only: the script reaches this through `pan(...)`, which is [Pan.invoke].
  */
-@KlangScript.Function
 fun pan(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.pan(amount, callInfo) }
+
+/**
+ * The stereo position of each event, as a value other setters can read.
+ *
+ * Bare `pan` reads what the chain has set so far, so it comes after whatever set the field
+ * (`pan(...)`, `adsr(...)`, an alias). Call it, `pan(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * s("hh*8").pan("0 0.25 0.5 0.75 1 0.75 0.5 0.25").pan(add(perlin.seg(8).range(-0.1, 0.1)))   // a little drift
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c e g").pan("0.2 0.5 0.8").gain(pan)                             // louder to the right
+ * ```
+ *
+ * @category dynamics
+ * @tags pan, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("pan")
+object Pan : FieldAccessor({ it.pan }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the pan for each event in a pattern.
+     *
+     * ```KlangScript(Playable)
+     * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        pan(amount, callInfo)
+}
+
+/** The [Pan] accessor as a value, so the Kotlin door reads like the script: `pan(pan)`. */
+val pan: Pan = Pan
 
 /**
  * Creates a chained [PatternMapperFn] that sets the pan after the previous mapper.
@@ -166,6 +241,10 @@ fun PatternMapperFn.pan(amount: PatternLike? = null, callInfo: CallInfo? = null)
 private val velocityMutation = voiceSetter { velocity = it?.asDoubleOrNull() }
 
 private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.velocity }, update = velocityMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, velocityMutation)
 }
 
@@ -208,17 +287,50 @@ fun String.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(amount, callInfo)
 
 /**
- * Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
+ * Returns a [PatternMapperFn] for `velocity(...)`.
  *
- * ```KlangScript(Playable)
- * note("c*4").apply(velocity("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
- * ```
- *
- * @param amount The velocity value or pattern to apply to the events.
+ * Kotlin door only: the script reaches this through `velocity(...)`, which is [Velocity.invoke].
  */
-@KlangScript.Function
 fun velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.velocity(amount, callInfo) }
+
+/**
+ * The velocity of each event, as a value other setters can read.
+ *
+ * Bare `velocity` reads what the chain has set so far, so it comes after whatever set the field
+ * (`velocity(...)`, `adsr(...)`, an alias). Call it, `velocity(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").velocity("1 0.5").velocity(mul(0.8))                        // scale the accents
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c e g").velocity("0.9 0.6 0.3").lpf(velocity.mul(4000))          // softer notes are darker
+ * ```
+ *
+ * @category dynamics
+ * @tags velocity, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("velocity")
+object Velocity : FieldAccessor({ it.velocity }) {
+
+    /**
+     * Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
+     *
+     * ```KlangScript(Playable)
+     * note("c*4").apply(velocity("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
+     * ```
+     *
+     * @param amount The velocity value or pattern to apply to the events.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        velocity(amount, callInfo)
+}
+
+/** The [Velocity] accessor as a value, so the Kotlin door reads like the script: `pan(velocity)`. */
+val velocity: Velocity = Velocity
 
 /**
  * Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
@@ -298,6 +410,10 @@ fun PatternMapperFn.vel(amount: PatternLike? = null, callInfo: CallInfo? = null)
 private val postgainMutation = voiceSetter { postGain = it?.asDoubleOrNull() }
 
 private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.postGain }, update = postgainMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, postgainMutation)
 }
 
@@ -340,17 +456,50 @@ fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).postgain(amount, callInfo)
 
 /**
- * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
+ * Returns a [PatternMapperFn] for `postgain(...)`.
  *
- * ```KlangScript(Playable)
- * "hh*8".apply(postgain(sine.range(0.1, 1.0).slow(2))).s()   // sine post-gain over two cycles
- * ```
- *
- * @param amount The post-gain value or pattern to apply to the events.
+ * Kotlin door only: the script reaches this through `postgain(...)`, which is [Postgain.invoke].
  */
-@KlangScript.Function
 fun postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.postgain(amount, callInfo) }
+
+/**
+ * The post-processing gain of each event, as a value other setters can read.
+ *
+ * Bare `postgain` reads what the chain has set so far, so it comes after whatever set the field
+ * (`postgain(...)`, `adsr(...)`, an alias). Call it, `postgain(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").distort(2).postgain(0.4).postgain(mul("1 0.5 1 0.5"))       // tame every second hit
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c e").postgain("0.5 0.25").gain(postgain)                        // match the two stages
+ * ```
+ *
+ * @category dynamics
+ * @tags postgain, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("postgain")
+object Postgain : FieldAccessor({ it.postGain }) {
+
+    /**
+     * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
+     *
+     * ```KlangScript(Playable)
+     * "hh*8".apply(postgain(sine.range(0.1, 1.0).slow(2))).s()   // sine post-gain over two cycles
+     * ```
+     *
+     * @param amount The post-gain value or pattern to apply to the events.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        postgain(amount, callInfo)
+}
+
+/** The [Postgain] accessor as a value, so the Kotlin door reads like the script: `pan(postgain)`. */
+val postgain: Postgain = Postgain
 
 /**
  * Creates a chained [PatternMapperFn] that sets the post-gain after the previous mapper.
@@ -1072,6 +1221,10 @@ fun PatternMapperFn.d(amount: PatternLike? = null, callInfo: CallInfo? = null): 
 private val attackMutation = voiceSetter { attack = it?.asDoubleOrNull() }
 
 private fun applyAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.attack }, update = attackMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, attackMutation)
 }
 
@@ -1112,17 +1265,50 @@ fun String.attack(time: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).attack(time, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the ADSR envelope attack time for each event.
+ * Returns a [PatternMapperFn] for `attack(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(attack("<0.01 0.1 0.5 1.0>"))  // varying attacks
- * ```
- *
- * @param time The attack time in seconds.
+ * Kotlin door only: the script reaches this through `attack(...)`, which is [Attack.invoke].
  */
-@KlangScript.Function
 fun attack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.attack(time, callInfo) }
+
+/**
+ * The envelope attack of each event, as a value other setters can read.
+ *
+ * Bare `attack` reads what the chain has set so far, so it comes after whatever set the field
+ * (`attack(...)`, `adsr(...)`, an alias). Call it, `attack(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").attack(0.05).attack(mul("1 4"))                 // every second note swells
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").attack("0.01 0.2").release(attack)               // symmetric envelope
+ * ```
+ *
+ * @category dynamics
+ * @tags attack, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("attack")
+object Attack : FieldAccessor({ it.attack }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the ADSR envelope attack time for each event.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").s("sine").apply(attack("<0.01 0.1 0.5 1.0>"))  // varying attacks
+     * ```
+     *
+     * @param time The attack time in seconds.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        attack(time, callInfo)
+}
+
+/** The [Attack] accessor as a value, so the Kotlin door reads like the script: `pan(attack)`. */
+val attack: Attack = Attack
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR attack time after the previous mapper.
@@ -1142,6 +1328,10 @@ fun PatternMapperFn.attack(time: PatternLike? = null, callInfo: CallInfo? = null
 private val decayMutation = voiceSetter { decay = it?.asDoubleOrNull() }
 
 private fun applyDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.decay }, update = decayMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, decayMutation)
 }
 
@@ -1181,17 +1371,50 @@ fun String.decay(time: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
     this.toVoiceValuePattern(callInfo?.receiverLocation).decay(time, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the ADSR envelope decay time for each event.
+ * Returns a [PatternMapperFn] for `decay(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3*4").s("sawtooth").apply(decay("<0.05 0.2 0.5 1.0>"))  // varying decays
- * ```
- *
- * @param time The decay time in seconds.
+ * Kotlin door only: the script reaches this through `decay(...)`, which is [Decay.invoke].
  */
-@KlangScript.Function
 fun decay(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.decay(time, callInfo) }
+
+/**
+ * The envelope decay of each event, as a value other setters can read.
+ *
+ * Bare `decay` reads what the chain has set so far, so it comes after whatever set the field
+ * (`decay(...)`, `adsr(...)`, an alias). Call it, `decay(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").decay(0.2).decay(mul(perlin.seg(4).range(0.5, 1.5)))        // uneven decays
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").decay("0.1 0.3").release(decay)                               // release follows decay
+ * ```
+ *
+ * @category dynamics
+ * @tags decay, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("decay")
+object Decay : FieldAccessor({ it.decay }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the ADSR envelope decay time for each event.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").s("sawtooth").apply(decay("<0.05 0.2 0.5 1.0>"))  // varying decays
+     * ```
+     *
+     * @param time The decay time in seconds.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        decay(time, callInfo)
+}
+
+/** The [Decay] accessor as a value, so the Kotlin door reads like the script: `pan(decay)`. */
+val decay: Decay = Decay
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR decay time after the previous mapper.
@@ -1211,6 +1434,10 @@ fun PatternMapperFn.decay(time: PatternLike? = null, callInfo: CallInfo? = null)
 private val sustainMutation = voiceSetter { sustain = it?.asDoubleOrNull() }
 
 private fun applySustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.sustain }, update = sustainMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, sustainMutation)
 }
 
@@ -1251,17 +1478,50 @@ fun String.sustain(level: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).sustain(level, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the ADSR envelope sustain level for each event.
+ * Returns a [PatternMapperFn] for `sustain(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(sustain("<0 0.3 0.7 1.0>"))  // varying sustain
- * ```
- *
- * @param level The sustain level between 0 and 1.
+ * Kotlin door only: the script reaches this through `sustain(...)`, which is [Sustain.invoke].
  */
-@KlangScript.Function
 fun sustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sustain(level, callInfo) }
+
+/**
+ * The envelope sustain level of each event, as a value other setters can read.
+ *
+ * Bare `sustain` reads what the chain has set so far, so it comes after whatever set the field
+ * (`sustain(...)`, `adsr(...)`, an alias). Call it, `sustain(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").sustain(0.8).sustain(mul("1 0.5"))              // every second note thinner
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").sustain("0.9 0.4").gain(sustain)                 // level follows sustain
+ * ```
+ *
+ * @category dynamics
+ * @tags sustain, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("sustain")
+object Sustain : FieldAccessor({ it.sustain }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the ADSR envelope sustain level for each event.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").s("sine").apply(sustain("<0 0.3 0.7 1.0>"))  // varying sustain
+     * ```
+     *
+     * @param level The sustain level between 0 and 1.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        sustain(level, callInfo)
+}
+
+/** The [Sustain] accessor as a value, so the Kotlin door reads like the script: `pan(sustain)`. */
+val sustain: Sustain = Sustain
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR sustain level after the previous mapper.
@@ -1281,6 +1541,10 @@ fun PatternMapperFn.sustain(level: PatternLike? = null, callInfo: CallInfo? = nu
 private val releaseMutation = voiceSetter { release = it?.asDoubleOrNull() }
 
 private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.release }, update = releaseMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, releaseMutation)
 }
 
@@ -1321,17 +1585,50 @@ fun String.release(time: PatternLike? = null, callInfo: CallInfo? = null): Sprud
     this.toVoiceValuePattern(callInfo?.receiverLocation).release(time, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the ADSR envelope release time for each event.
+ * Returns a [PatternMapperFn] for `release(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(release("<0.1 0.3 0.8 2.0>"))  // varying releases
- * ```
- *
- * @param time The release time in seconds.
+ * Kotlin door only: the script reaches this through `release(...)`, which is [Release.invoke].
  */
-@KlangScript.Function
 fun release(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.release(time, callInfo) }
+
+/**
+ * The envelope release of each event, as a value other setters can read.
+ *
+ * Bare `release` reads what the chain has set so far, so it comes after whatever set the field
+ * (`release(...)`, `adsr(...)`, an alias). Call it, `release(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").release(0.3).release(add("0 0.5"))              // every second note rings on
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").release("0.1 0.6").attack(release)               // symmetric envelope
+ * ```
+ *
+ * @category dynamics
+ * @tags release, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("release")
+object Release : FieldAccessor({ it.release }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the ADSR envelope release time for each event.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").s("sine").apply(release("<0.1 0.3 0.8 2.0>"))  // varying releases
+     * ```
+     *
+     * @param time The release time in seconds.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        release(time, callInfo)
+}
+
+/** The [Release] accessor as a value, so the Kotlin door reads like the script: `pan(release)`. */
+val release: Release = Release
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR release time after the previous mapper.

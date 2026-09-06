@@ -71,11 +71,15 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
   }
   ```
 
-- The accessor is an `@KlangScript.Object("<name>") object <Name> : PatternMapperProvider` with a
-  `@KlangScript.Method(name = "invoke")` member that delegates to the Kotlin factory, plus an
-  unannotated `val <name> = <Name>` for the Kotlin door. The top-level factory `fun <name>(...)`
-  stays for Kotlin and loses its `@KlangScript.Function` (it would collide with the object).
+- The accessor is `@KlangScript.Library("sprudel") @KlangScript.Object("<name>") object <Name> :
+  FieldAccessor({ it.<field> })` with a `@KlangScript.Method(name = "invoke")` member that
+  delegates to the Kotlin factory (same parameters), plus an unannotated `val <name> = <Name>` for
+  the Kotlin door. The top-level factory `fun <name>(...)` stays for Kotlin and loses its
+  `@KlangScript.Function` (it would collide with the object); its KDoc moves onto `invoke`, the
+  object's KDoc describes the accessor with two playable examples and keeps the field's category.
   Never make the accessor a `PatternMapperFn`: see `MEMORY.md` 2026-09-06 for the ambiguity.
+- Every new accessor gets two rows in `LangFieldAccessorsSpec`: a mapper on its own field and the
+  bare accessor read into another field, both doors.
 - Design record and rejected alternatives: `docs/tasks/sprudel-field-accessors.md`.
 
 ## KDoc Rules

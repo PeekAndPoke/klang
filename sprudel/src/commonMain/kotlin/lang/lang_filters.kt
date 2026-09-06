@@ -23,6 +23,10 @@ private val lpfMutation = voiceSetter {
 }
 
 private fun applyLpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.cutoff }, update = lpfMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, lpfMutation)
 }
 
@@ -96,30 +100,60 @@ fun String.lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: Patter
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpf(freq, q, passes, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that applies a Low Pass Filter.
+ * Returns a [PatternMapperFn] for `lpf(...)`.
  *
- * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
- * When [freq] is omitted, the pattern's own numeric values are reinterpreted as cutoff frequencies.
+ * Kotlin door only: the script reaches this through `lpf(...)`, which is [Lpf.invoke].
+ */
+fun lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lpf(freq, q, passes, callInfo) }
+
+/**
+ * The lowpass cutoff of each event, as a value other setters can read.
  *
- * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
- * @param q The filter Q factor (resonance). Omit to leave it unchanged.
- * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
- * @return A [PatternMapperFn] that applies LPF.
+ * Bare `lpf` reads what the chain has set so far, so it comes after whatever set the field
+ * (`lpf(...)`, `adsr(...)`, an alias). Call it, `lpf(...)`, to set the field; a mapper argument applies to the field.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(lpf(500))                     // apply LPF via mapper
+ * note("c3 e3").s("saw").lpf(800).lpf(mul(perlin.seg(4).range(0.5, 2)))   // the cutoff wanders
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4*4").firstOf(4, lpf(200).lpq(20))   // resonant LPF on first cycle
+ * note("c3 e3").s("saw").lpf("400 1600").hpf(lpf.div(2))                  // highpass an octave below the cutoff
  * ```
  *
  * @category effects
- * @tags lpf, cutoff, low pass filter, filter, frequency
+ * @tags lpf, accessor
  */
-@KlangScript.Function
-fun lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.lpf(freq, q, passes, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("lpf")
+object Lpf : FieldAccessor({ it.cutoff }) {
+
+    /**
+     * Returns a [PatternMapperFn] that applies a Low Pass Filter.
+     *
+     * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+     * When [freq] is omitted, the pattern's own numeric values are reinterpreted as cutoff frequencies.
+     *
+     * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+     * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+     * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
+     * @return A [PatternMapperFn] that applies LPF.
+     *
+     * ```KlangScript(Playable)
+     * note("c4 e4").apply(lpf(500))                     // apply LPF via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c4*4").firstOf(4, lpf(200).lpq(20))   // resonant LPF on first cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        lpf(freq, q, passes, callInfo)
+}
+
+/** The [Lpf] accessor as a value, so the Kotlin door reads like the script: `pan(lpf)`. */
+val lpf: Lpf = Lpf
 
 /**
  * Creates a chained [PatternMapperFn] that applies a Low Pass Filter after the previous mapper.
@@ -149,6 +183,10 @@ private val hpfMutation = voiceSetter {
 }
 
 private fun applyHpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.hcutoff }, update = hpfMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, hpfMutation)
 }
 
@@ -219,27 +257,57 @@ fun String.hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: Patter
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpf(freq, q, passes, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that applies a High Pass Filter.
+ * Returns a [PatternMapperFn] for `hpf(...)`.
  *
- * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
- * @param q The filter Q factor (resonance). Omit to leave it unchanged.
- * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
- * @return A [PatternMapperFn] that applies HPF.
+ * Kotlin door only: the script reaches this through `hpf(...)`, which is [Hpf.invoke].
+ */
+fun hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.hpf(freq, q, passes, callInfo) }
+
+/**
+ * The highpass cutoff of each event, as a value other setters can read.
+ *
+ * Bare `hpf` reads what the chain has set so far, so it comes after whatever set the field
+ * (`hpf(...)`, `adsr(...)`, an alias). Call it, `hpf(...)`, to set the field; a mapper argument applies to the field.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(hpf(300))                     // apply HPF via mapper
+ * s("hh*4").hpf(4000).hpf(mul("1 2 1 2"))                                // every second hat thinner
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4*4").firstOf(4, hpf(200).hpq(10))  // resonant HPF on first cycle
+ * s("hh*4").hpf("2000 4000").lpf(hpf.mul(3))                              // a band that follows
  * ```
  *
  * @category effects
- * @tags hpf, hcutoff, high pass filter, filter, frequency
+ * @tags hpf, accessor
  */
-@KlangScript.Function
-fun hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.hpf(freq, q, passes, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("hpf")
+object Hpf : FieldAccessor({ it.hcutoff }) {
+
+    /**
+     * Returns a [PatternMapperFn] that applies a High Pass Filter.
+     *
+     * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+     * @param q The filter Q factor (resonance). Omit to leave it unchanged.
+     * @param passes The cascade count (C5): `2` = 24 dB/oct, `3` = 36. Omit for a single 12 dB/oct stage.
+     * @return A [PatternMapperFn] that applies HPF.
+     *
+     * ```KlangScript(Playable)
+     * note("c4 e4").apply(hpf(300))                     // apply HPF via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c4*4").firstOf(4, hpf(200).hpq(10))  // resonant HPF on first cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        hpf(freq, q, passes, callInfo)
+}
+
+/** The [Hpf] accessor as a value, so the Kotlin door reads like the script: `pan(hpf)`. */
+val hpf: Hpf = Hpf
 
 /**
  * Creates a chained [PatternMapperFn] that applies a High Pass Filter after the previous mapper.
@@ -354,32 +422,66 @@ fun PatternMapperFn.bpf(freq: PatternLike? = null, q: PatternLike? = null, callI
     this.chain { p -> p.bpf(freq, q, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] that applies a Band Pass Filter.
+ * Returns a [PatternMapperFn] for `bpf(...)`.
  *
- * @param freq The centre frequency in Hz.
- * @param q The filter Q factor (bandwidth). Omit to leave it unchanged.
- * @return A [PatternMapperFn] that applies BPF.
+ * Kotlin door only: the script reaches this through `bpf(...)`, which is [Bpf.invoke].
+ */
+fun bpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bpf(freq, q, callInfo) }
+
+/**
+ * The bandpass centre of each event, as a value other setters can read.
+ *
+ * Bare `bpf` reads what the chain has set so far, so it comes after whatever set the field
+ * (`bpf(...)`, `adsr(...)`, an alias). Call it, `bpf(...)`, to set the field; a mapper argument applies to the field.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(bpf(1000))    // same as chained form
+ * s("white*4").bpf("400 1600").lpf(bpf.mul(4))                            // lowpass two octaves above the band
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, bpf(800)) // BPF on first cycle
+ * s("white*4").bpf("400 800 1600 3200").bpf(mul(perlin.seg(4).range(0.9, 1.1)))   // never quite on the note
  * ```
  *
  * @category effects
- * @tags bpf, bandf, band pass filter, filter, frequency
+ * @tags bpf, accessor
  */
-@KlangScript.Function
-fun bpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bpf(freq, q, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("bpf")
+object Bpf : FieldAccessor({ it.bandf }) {
+
+    /**
+     * Returns a [PatternMapperFn] that applies a Band Pass Filter.
+     *
+     * @param freq The centre frequency in Hz.
+     * @param q The filter Q factor (bandwidth). Omit to leave it unchanged.
+     * @return A [PatternMapperFn] that applies BPF.
+     *
+     * ```KlangScript(Playable)
+     * note("c4 e4").apply(bpf(1000))    // same as chained form
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").firstOf(4, bpf(800)) // BPF on first cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        bpf(freq, q, callInfo)
+}
+
+/** The [Bpf] accessor as a value, so the Kotlin door reads like the script: `pan(bpf)`. */
+val bpf: Bpf = Bpf
 
 // -- lpq() - Low Pass Filter resonance ---------------------------------------------------------------------------------
 
 private val resonanceMutation = voiceSetter { resonance = it?.asDoubleOrNull() }
 
 private fun applyResonance(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.resonance }, update = resonanceMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, resonanceMutation)
 }
 
@@ -450,31 +552,65 @@ fun PatternMapperFn.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
     this.chain { p -> p.lpq(q, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] that sets LPF resonance.
+ * Returns a [PatternMapperFn] for `lpq(...)`.
  *
- * @param q The Q factor.
- * @return A [PatternMapperFn] that applies LPF resonance.
+ * Kotlin door only: the script reaches this through `lpq(...)`, which is [Lpq.invoke].
+ */
+fun lpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lpq(q, callInfo) }
+
+/**
+ * The lowpass resonance of each event, as a value other setters can read.
+ *
+ * Bare `lpq` reads what the chain has set so far, so it comes after whatever set the field
+ * (`lpq(...)`, `adsr(...)`, an alias). Call it, `lpq(...)`, to set the field; a mapper argument applies to the field.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(lpf(500).lpq(10))  // same as chained form
+ * note("c3*4").s("saw").lpf(600).lpq("2 8").lpq(mul("1 0.5"))            // tame the peaks
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, lpq(20))       // high Q on first cycle
+ * note("c3*4").s("saw").lpf(600).lpq("2 8").hpf(200).hpq(lpq)             // same Q on both filters
  * ```
  *
  * @category effects
- * @tags lpq, resonance, res, low pass filter, Q
+ * @tags lpq, accessor
  */
-@KlangScript.Function
-fun lpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.lpq(q, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("lpq")
+object Lpq : FieldAccessor({ it.resonance }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets LPF resonance.
+     *
+     * @param q The Q factor.
+     * @return A [PatternMapperFn] that applies LPF resonance.
+     *
+     * ```KlangScript(Playable)
+     * note("c4 e4").apply(lpf(500).lpq(10))  // same as chained form
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").firstOf(4, lpq(20))       // high Q on first cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        lpq(q, callInfo)
+}
+
+/** The [Lpq] accessor as a value, so the Kotlin door reads like the script: `pan(lpq)`. */
+val lpq: Lpq = Lpq
 
 // -- hpq() - High Pass Filter resonance --------------------------------------------------------------------------------
 
 private val hresonanceMutation = voiceSetter { hresonance = it?.asDoubleOrNull() }
 
 private fun applyHresonance(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.hresonance }, update = hresonanceMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, hresonanceMutation)
 }
 
@@ -545,31 +681,65 @@ fun PatternMapperFn.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
     this.chain { p -> p.hpq(q, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] that sets HPF resonance.
+ * Returns a [PatternMapperFn] for `hpq(...)`.
  *
- * @param q The Q factor.
- * @return A [PatternMapperFn] that applies HPF resonance.
+ * Kotlin door only: the script reaches this through `hpq(...)`, which is [Hpq.invoke].
+ */
+fun hpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.hpq(q, callInfo) }
+
+/**
+ * The highpass resonance of each event, as a value other setters can read.
+ *
+ * Bare `hpq` reads what the chain has set so far, so it comes after whatever set the field
+ * (`hpq(...)`, `adsr(...)`, an alias). Call it, `hpq(...)`, to set the field; a mapper argument applies to the field.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(hpf(300).hpq(10))  // same as chained form
+ * s("hh*4").hpf(3000).hpq("1 4").hpq(add(1))                              // a little more bite
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, hpq(20))       // high Q on first cycle
+ * s("hh*4").hpf(3000).hpq("1 4").bpf(6000).bpq(hpq)                       // same Q on the bandpass
  * ```
  *
  * @category effects
- * @tags hpq, hresonance, hres, high pass filter, Q
+ * @tags hpq, accessor
  */
-@KlangScript.Function
-fun hpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.hpq(q, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("hpq")
+object Hpq : FieldAccessor({ it.hresonance }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets HPF resonance.
+     *
+     * @param q The Q factor.
+     * @return A [PatternMapperFn] that applies HPF resonance.
+     *
+     * ```KlangScript(Playable)
+     * note("c4 e4").apply(hpf(300).hpq(10))  // same as chained form
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").firstOf(4, hpq(20))       // high Q on first cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        hpq(q, callInfo)
+}
+
+/** The [Hpq] accessor as a value, so the Kotlin door reads like the script: `pan(hpq)`. */
+val hpq: Hpq = Hpq
 
 // -- bpq() - Band Pass Filter resonance --------------------------------------------------------------------------------
 
 private val bandqMutation = voiceSetter { bandq = it?.asDoubleOrNull() }
 
 private fun applyBandq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.bandq }, update = bandqMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, bandqMutation)
 }
 
@@ -640,25 +810,55 @@ fun PatternMapperFn.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
     this.chain { p -> p.bpq(q, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] that sets BPF Q.
+ * Returns a [PatternMapperFn] for `bpq(...)`.
  *
- * @param q The Q factor.
- * @return A [PatternMapperFn] that applies BPF Q.
+ * Kotlin door only: the script reaches this through `bpq(...)`, which is [Bpq.invoke].
+ */
+fun bpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bpq(q, callInfo) }
+
+/**
+ * The bandpass Q of each event, as a value other setters can read.
+ *
+ * Bare `bpq` reads what the chain has set so far, so it comes after whatever set the field
+ * (`bpq(...)`, `adsr(...)`, an alias). Call it, `bpq(...)`, to set the field; a mapper argument applies to the field.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").apply(bpf(800).bpq(5))  // same as chained form
+ * note("c e g a").bpf(freq).s("pink").bpq(12).bpq(mul(perlin.seg(4).range(0.5, 1.5)))   // a whistle that breathes
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, bpq(10))        // narrow BPF on first cycle
+ * s("white*4").bpf(1000).bpq("2 8").lpf(4000).lpq(bpq)                    // same Q on the lowpass
  * ```
  *
  * @category effects
- * @tags bpq, bandq, band pass filter, Q, bandwidth
+ * @tags bpq, accessor
  */
-@KlangScript.Function
-fun bpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bpq(q, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("bpq")
+object Bpq : FieldAccessor({ it.bandq }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets BPF Q.
+     *
+     * @param q The Q factor.
+     * @return A [PatternMapperFn] that applies BPF Q.
+     *
+     * ```KlangScript(Playable)
+     * note("c4 e4").apply(bpf(800).bpq(5))  // same as chained form
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").firstOf(4, bpq(10))        // narrow BPF on first cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        bpq(q, callInfo)
+}
+
+/** The [Bpq] accessor as a value, so the Kotlin door reads like the script: `pan(bpq)`. */
+val bpq: Bpq = Bpq
 
 
 // -- lpe() - Low Pass Filter Envelope Depth ----------------------------------------------------------------------------

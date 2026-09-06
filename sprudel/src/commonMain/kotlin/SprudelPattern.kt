@@ -1034,6 +1034,11 @@ fun SprudelPattern._liftNumericField(
  * runs on that, and [update] writes the value register back into the field. The value register is
  * drained afterwards, which is the state `note()` and `sound()` leave it in.
  *
+ * A mapper that yields nothing leaves the field unchanged: `bpf(freq)` on an event without a
+ * frequency keeps whatever `bandf` was, instead of clearing it. Copying an unset field must not
+ * destroy the target, and this holds for every setter regardless of how its own update treats
+ * `null` (decided 2026-09-07).
+ *
  * Because there is no join, nothing is paired by time: every chord note maps its own field. The
  * mapper may change structure (`freq(fast(2))` is legal and means what it says).
  *
@@ -1047,7 +1052,11 @@ fun SprudelPattern._mapNumericField(
     return this
         .reinterpretVoice { it.copy(value = read(it)?.asVoiceValue()) }
         .let(mapper)
-        .reinterpretVoice { it.update(it.value?.asDouble).copy(value = null) }
+        .reinterpretVoice { voice ->
+            val mapped = voice.value?.asDouble
+            val written = if (mapped == null) voice else voice.update(mapped)
+            written.copy(value = null)
+        }
 }
 
 /**

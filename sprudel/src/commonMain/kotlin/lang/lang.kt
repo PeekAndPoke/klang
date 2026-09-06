@@ -8,6 +8,8 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
 /**
@@ -38,6 +40,17 @@ typealias PatternMapperFn = (source: SprudelPattern) -> SprudelPattern
  */
 fun interface PatternMapperProvider {
     fun mapper(): PatternMapperFn
+}
+
+/**
+ * A field accessor: the object behind a script name such as `gain` or `lpf`.
+ *
+ * Bare, it is the mapper that reads one voice-data field into the value register, so another
+ * setter can consume it (`pan(gain)`, `hpf(lpf.mul(2))`). Each accessor object adds the setter as
+ * its `invoke` member, so `gain(0.5)` stays the setter. See `docs/tasks/sprudel-field-accessors.md`.
+ */
+abstract class FieldAccessor(private val read: (SprudelVoiceData) -> Double?) : PatternMapperProvider {
+    override fun mapper(): PatternMapperFn = { p -> p.reinterpretVoice { it.copy(value = read(it)?.asVoiceValue()) } }
 }
 
 /**
