@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 // -- lpf() -------------------------------------------------------------------------------------------------------------
 
@@ -268,6 +269,10 @@ private val bpfMutation = voiceSetter {
 }
 
 private fun applyBpf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.bandf }, update = bpfMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, bpfMutation)
 }
 

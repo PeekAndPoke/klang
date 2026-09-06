@@ -129,6 +129,19 @@ fun add(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
 fun PatternMapperFn.add(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.add(amount, callInfo) }
 
+/**
+ * First step of a mapper chain on a field accessor: `freq.add(...)` reads the field, then adds [amount].
+ *
+ * ```KlangScript(Playable)
+ * note("c e g a").bpf(freq.add(50))
+ * ```
+ *
+ * @param amount The operand. May be a number, string mini-notation, or a [SprudelPattern].
+ */
+@KlangScript.Function
+fun PatternMapperProvider.add(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    mapper().add(amount, callInfo)
+
 // -- sub() ------------------------------------------------------------------------------------------------------------
 
 /**
@@ -199,6 +212,19 @@ fun sub(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
 @KlangScript.Function
 fun PatternMapperFn.sub(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sub(amount, callInfo) }
+
+/**
+ * First step of a mapper chain on a field accessor: `freq.sub(...)` reads the field, then subtracts [amount].
+ *
+ * ```KlangScript(Playable)
+ * note("c e g a").bpf(freq.sub(50))
+ * ```
+ *
+ * @param amount The operand. May be a number, string mini-notation, or a [SprudelPattern].
+ */
+@KlangScript.Function
+fun PatternMapperProvider.sub(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    mapper().sub(amount, callInfo)
 
 // -- mul() ------------------------------------------------------------------------------------------------------------
 
@@ -271,6 +297,19 @@ fun mul(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
 fun PatternMapperFn.mul(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.mul(factor, callInfo) }
 
+/**
+ * First step of a mapper chain on a field accessor: `freq.mul(...)` reads the field, then multiplies by [factor].
+ *
+ * ```KlangScript(Playable)
+ * note("c e g a").bpf(freq.mul(2))
+ * ```
+ *
+ * @param factor The operand. May be a number, string mini-notation, or a [SprudelPattern].
+ */
+@KlangScript.Function
+fun PatternMapperProvider.mul(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    mapper().mul(factor, callInfo)
+
 // -- div() ------------------------------------------------------------------------------------------------------------
 
 /**
@@ -341,6 +380,19 @@ fun div(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
 @KlangScript.Function
 fun PatternMapperFn.div(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.div(divisor, callInfo) }
+
+/**
+ * First step of a mapper chain on a field accessor: `freq.div(...)` reads the field, then divides by [divisor].
+ *
+ * ```KlangScript(Playable)
+ * note("c e g a").bpf(freq.div(2))
+ * ```
+ *
+ * @param divisor The operand. May be a number, string mini-notation, or a [SprudelPattern].
+ */
+@KlangScript.Function
+fun PatternMapperProvider.div(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    mapper().div(divisor, callInfo)
 
 // -- mod() ------------------------------------------------------------------------------------------------------------
 

@@ -1,5 +1,28 @@
 # Sprudel — Memory
 
+## Recent Work (2026-09-06)
+
+- **Field accessors, pilot on `freq`** (`docs/tasks/sprudel-field-accessors.md`). Two rules:
+  1. A MAPPER argument to a setter applies to the setter's own field: `freq(mul(2))`,
+     `freq(add(50))`, `bpf(freq)`. Implemented by `_mapNumericField(mapper, read, update)`:
+     read the field into the value register, run the mapper, write the value register back,
+     drain it. One chain, no join, so chords map each note on its own. Before this a mapper
+     argument was silently dropped and the field CLEARED (`toListOfPatterns` returned null).
+  2. Bare `freq` is an object (`@KlangScript.Object("freq") object Freq : PatternMapperProvider`)
+     whose `mapper()` reads the frequency into the value register; its `@Method("invoke")` is the
+     setter, so `freq(440)` is unchanged. `PatternMapperProvider` is deliberately NOT a
+     `PatternMapperFn`: a `Function1` member `invoke(SprudelPattern)` next to the setter would give
+     `Freq(pattern)` and `freq(pattern)` opposite meanings in Kotlin. First-step twins
+     (`PatternMapperProvider.add/sub/mul/div`) unwrap once; after that the mapper library composes.
+  - Rejected on the way, with reasons in the plan: a `QueryContext` key binding the source event
+    (per-event context copy, and any join inside the control rebinds); a provider re-joined by
+    time (`sampleAt` gives every chord note the first note's field); `Freq : PatternMapperFn`.
+  - KSP: object symbols now carry their supertypes (`KlangScriptProcessor`, object docs), so
+    `freq.mul(2)` resolves in the editor. Guard: `FreqAccessorIntelSpec`.
+  - Found on the way: arithmetic evaluates a continuous control once per query arc
+    (`seq("1 1 1").mul(sine)` is flat), `docs/tasks/sprudel-arithmetic-continuous-controls.md`.
+    Use `perlin.seg(4)` until that is decided.
+
 ## Recent Work (2026-08-20)
 
 - `tag(name)` addon (`lang_structural_addons.kt`): semantic event tags for visualizations/analysis.

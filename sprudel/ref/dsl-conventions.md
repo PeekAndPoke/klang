@@ -56,6 +56,28 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
   strings as mini-notation. Use `reinterpretVoice { }` instead (precedents: `pipeline(dsl)` in
   `lang_pipeline.kt`, `tag(name)` in `lang_structural_addons.kt`).
 
+## Field accessors and mapper arguments (2026-09-06, pilot: `freq`)
+
+- A setter that receives a single `PatternMapperFn` or `PatternMapperProvider` argument applies
+  it to its OWN field through `_mapNumericField(mapper, read, update)` (read the field into
+  `value`, run the mapper, write `value` back, drain it). Add the branch in the `apply*` helper:
+
+  ```kotlin
+  private fun applyFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+      args.singleMapperOrNull()?.let { mapper ->
+          return source._mapNumericField(mapper, read = { it.freqHz }, update = freqUpdate)
+      }
+      return source._liftOrReinterpretNumericalField(args, freqUpdate)
+  }
+  ```
+
+- The accessor is an `@KlangScript.Object("<name>") object <Name> : PatternMapperProvider` with a
+  `@KlangScript.Method(name = "invoke")` member that delegates to the Kotlin factory, plus an
+  unannotated `val <name> = <Name>` for the Kotlin door. The top-level factory `fun <name>(...)`
+  stays for Kotlin and loses its `@KlangScript.Function` (it would collide with the object).
+  Never make the accessor a `PatternMapperFn`: see `MEMORY.md` 2026-09-06 for the ambiguity.
+- Design record and rejected alternatives: `docs/tasks/sprudel-field-accessors.md`.
+
 ## KDoc Rules
 
 - Examples: fenced ` ```KlangScript ``` ` blocks (or ` ```KlangScript(Playable) ``` `) — **NOT** `@sample` tags

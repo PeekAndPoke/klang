@@ -1167,6 +1167,10 @@ class KlangScriptProcessor(
                 appendLine()
                 val objFqcn = obj.cls.qualifiedName?.asString()
                 val objFqcnArg = if (objFqcn != null) ", fqcn = \"$objFqcn\"" else ""
+                // An object's type carries its supertypes like a property type does, so a method
+                // registered on a base type (sprudel's `PatternMapperProvider.mul`) resolves on the
+                // object (`freq.mul(2)`), mirroring the runtime's isInstance walk.
+                val objSupertypes = supertypeListExpr(obj.cls).let { if (it.isEmpty()) "" else ", supertypes = $it" }
                 appendLine("    \"${obj.name}\" to KlangSymbol(")
                 appendLine("        name = \"${obj.name}\",")
                 appendLine("        category = \"$category\",")
@@ -1176,8 +1180,20 @@ class KlangScriptProcessor(
                 appendLine("        variants = listOf(")
                 appendLine("            KlangProperty(")
                 appendLine("                name = \"${obj.name}\",")
-                appendLine("                type = KlangType(simpleName = \"${obj.name}\"$objFqcnArg),")
+                appendLine("                type = KlangType(simpleName = \"${obj.name}\"$objFqcnArg$objSupertypes),")
                 appendLine("                description = \"\"\"$description\"\"\",")
+                // The class KDoc's code fences are samples, like a property's: without this an
+                // object's examples were stripped from the description and emitted nowhere.
+                if (kdoc.samples.isNotEmpty()) {
+                    appendLine("                samples = listOf(")
+                    kdoc.samples.forEachIndexed { sIdx, sample ->
+                        val comma = if (sIdx < kdoc.samples.lastIndex) "," else ""
+                        appendLine("                    KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})$comma")
+                    }
+                    appendLine("                ),")
+                } else {
+                    appendLine("                samples = emptyList(),")
+                }
                 appendLine("                library = \"$libraryName\",")
                 appendLine("            )")
                 appendLine("        )")

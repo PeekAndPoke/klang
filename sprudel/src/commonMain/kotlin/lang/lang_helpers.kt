@@ -228,6 +228,28 @@ fun List<SprudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, SprudelPatt
 fun SprudelDslArg<Any?>?.toPatternMapper(): PatternMapperFn? = patternMapper(this?.value)
 
 /**
+ * The mapper a setter should apply to its own field, when its single argument is one.
+ *
+ * A [PatternMapperProvider] (a field accessor such as `freq`) or a [PatternMapperFn] (`mul(2)`,
+ * `freq.mul(2)`) qualifies. Patterns, strings and numbers are control values, not mappers, and
+ * yield `null` here so the caller takes the control-pattern path. Unlike [patternMapper] this
+ * never turns a pattern into a mapper.
+ */
+fun List<SprudelDslArg<Any?>>.singleMapperOrNull(): PatternMapperFn? {
+    return when (val value = singleOrNull()?.value) {
+        is PatternMapperProvider -> value.mapper()
+
+        // A script arrow function can arrive here too (`freq(x => 42)`): [patternMapper] wraps the
+        // call and falls back to the input when the result is not a pattern (a thrown failure is
+        // reported as a diagnostic), so the field is left as it was instead of the session dying
+        // on a ClassCastException.
+        is Function1<*, *> -> patternMapper(value)
+
+        else -> null
+    }
+}
+
+/**
  * Extracts choice arguments for choose* functions.
  * If args is a single List, unwraps it. Otherwise returns args as-is.
  */

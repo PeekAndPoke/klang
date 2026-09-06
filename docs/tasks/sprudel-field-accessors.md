@@ -15,9 +15,9 @@ declaratively, in pattern-land. A field name is one object with three roles:
 | Form                                   | Meaning                                                          |
 |----------------------------------------|------------------------------------------------------------------|
 | `freq(440)`, `freq("440 880")`         | today's setter, unchanged                                        |
-| `freq(mul(perlin.range(0.95, 1.05)))`  | a MAPPER argument: apply this mapper to the field                |
-| `bandf(freq)`                          | bare `freq` is the mapper "read freq into the value register"    |
-| `bandf(freq.mul(2))`                   | the accessor composes with the existing chained mapper forms     |
+| `freq(mul(perlin.seg(4).range(0.95, 1.05)))`  | a MAPPER argument: apply this mapper to the field                |
+| `bpf(freq)`                          | bare `freq` is the mapper "read freq into the value register"    |
+| `bpf(freq.mul(2))`                   | the accessor composes with the existing chained mapper forms     |
 
 Two doors, one text: every line above is valid KlangScript and valid Kotlin, character for
 character, and produces the same events.
@@ -26,16 +26,16 @@ character, and produces the same events.
 
 1. **The wind whistles a melody.** Pink noise through a bandpass whose cutoff follows the note:
    ```
-   note("c e g a").bandf(freq).sound("pink").bandq(2.0)
+   note("c e g a").bpf(freq).sound("pink").bpq(2.0)
    ```
    Built-in song candidate: "Blowing in the Wind".
 2. **A novice violin player struggling with intonation.** The pitch wobbles a few percent around
    the note:
    ```
-   note("a c e").freq(mul(perlin.range(0.95, 1.05)))
+   note("a c e").freq(mul(perlin.seg(4).range(0.95, 1.05)))
    ```
    This is the pilot's acceptance example.
-3. **Field arithmetic.** `freq(add(50))` (shift by 50 Hz), `bandf(freq.mul(2))` (bandpass one
+3. **Field arithmetic.** `freq(add(50))` (shift by 50 Hz), `bpf(freq.mul(2))` (bandpass one
    octave above the note), `freq(freq.add(50))` (same as `freq(add(50))`).
 
 ### Non-negotiable: stay in pattern-land
@@ -62,10 +62,13 @@ So the slot is free and its current meaning is a bug. New meaning, in `_liftNume
 the single argument is a mapper:
 
 ```kotlin
-return this.reinterpretVoice { it.value = it.freqHz?.asVoiceValue(); it }      // field -> value
-    .let(mapper)                                                                 // the user's mapper
-    .reinterpretVoice { it.freqHz = it.value?.asDouble; it.value = null; it }    // value -> field
+// SprudelPattern._mapNumericField(mapper, read, update), called from applyFreq / applyBpf
+return this.reinterpretVoice { it.copy(value = read(it)?.asVoiceValue()) }        // field -> value
+    .let(mapper)                                                                   // the user's mapper
+    .reinterpretVoice { it.update(it.value?.asDouble).copy(value = null) }         // value -> field
 ```
+
+`reinterpretVoice` hands the source event's data to the lambda uncloned, so both passes `copy`.
 
 Properties:
 
@@ -88,7 +91,7 @@ fun interface PatternMapperProvider {
 }
 
 object Freq : PatternMapperProvider {
-    override fun mapper(): PatternMapperFn = { p -> p.reinterpretVoice { it.value = it.freqHz?.asVoiceValue(); it } }
+    override fun mapper(): PatternMapperFn = { p -> p.reinterpretVoice { it.copy(value = it.freqHz?.asVoiceValue()) } }
 }
 ```
 
@@ -96,8 +99,9 @@ Why not `Freq : PatternMapperFn` (a `Function1`): Kotlin would then have the mem
 `invoke(SprudelPattern)` next to the setter extension `invoke(hz)`, and `Freq(pattern)` would
 silently pick the member and mean "read" while `freq(pattern)` means "set". The provider keeps
 one meaning per spelling in every door. Bonus: `PatternMapperProvider` is not a `kotlin.*` type,
-so the KSP supertype emission (which drops `kotlin.*` ancestors) already carries it into the
-editor's type of `freq`; no KSP change.
+so the KSP supertype emission (which drops `kotlin.*` ancestors) carries it into the editor's
+type of `freq`. Object symbols needed that emission added (D3); a `kotlin.Function1` supertype
+would have needed the drop rule changed as well.
 
 Why not a pattern leaf bound through the `QueryContext`: it needs a per-event context copy in
 `_applyControl` (a cost paid by every setter in every query), and any join inside the control
@@ -113,17 +117,24 @@ The provider needs only first-step twins (D4) and then lives in the existing map
 ### D3. The setter role goes through the KlangScript `invoke` operator
 
 ```kotlin
-@KlangScript.Constant
-val freq: Freq = Freq
-
-@KlangScript.Function
-operator fun Freq.invoke(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = freq(hz, callInfo)
+@KlangScript.Library("sprudel")
+@KlangScript.Object("freq")
+object Freq : PatternMapperProvider {
+    override fun mapper(): PatternMapperFn = ...
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = freq(hz, callInfo)
+}
+val freq: Freq = Freq   // Kotlin door, unannotated
 ```
 
+- `@KlangScript.Object("freq")` rather than a `@Constant`: the analyzer renders an `invoke`
+  signature with the receiver type's display name, and only the object route displays as `freq`
+  (a constant of type `Freq` rendered `Freq(hz: ...)`). Object symbols carried no supertypes in
+  the analyzer before; the KSP processor now emits them (one line, guarded by the intel spec).
 - The existing top-level `fun freq(hz, callInfo)` keeps its body and loses only its
-  `@KlangScript.Function` annotation (a `@Constant` and a `@Function` of the same top-level name
+  `@KlangScript.Function` annotation (an `@Object` and a `@Function` of the same top-level name
   collide in KSP). In Kotlin a call `freq(440)` still resolves to the function, `Freq(440)` to the
-  extension; both set.
+  member; both set.
 - `SprudelPattern.freq(...)` and `String.freq(...)` are untouched.
 - Runtime dispatch (verified in `Interpreter.evaluateCall`): a `NativeObjectValue` callee is only
   ever dispatched to the registered `invoke` extension, through the same spec-aware path as a
@@ -150,15 +161,15 @@ After one step the value is a `PatternMapperFn` and the whole library composes. 
 - `PatternMapperFn`-typed parameters (`apply`, `superimpose`, `firstOf`) do not accept a provider.
   "value := freq" as a bare transform has no use case; if one appears it is the same unwrap.
 - No generic `set`/`copy`/`clear`/`humanize`: `set(gain, x)` is `gain(x)`, `copy(freq, bandf)` is
-  `bandf(freq)`, `mul(gain, x)` is `gain(mul(x))`. One word per concept. `clear` and `humanize`
+  `bpf(freq)`, `mul(gain, x)` is `gain(mul(x))`. One word per concept. `clear` and `humanize`
   wait for a song that needs them.
 - No `KlangValue`/`Ref` register variant: routing `sound` or `pipeline` between fields has no
   use case.
 
 ### D6. Order matters, and that is documented, not engineered around
 
-An accessor reads what the chain has set so far. `note("c e").bandf(freq)` works;
-`bandf(freq).note("c e")` writes nothing into `bandf` because `freqHz` is unset when it reads.
+An accessor reads what the chain has set so far. `note("c e").bpf(freq)` works;
+`bpf(freq).note("c e")` writes nothing into `bpf` because `freqHz` is unset when it reads.
 Same rule as every outer join. One sentence in the KDoc of the accessor.
 
 ## Pilot: `freq`
@@ -168,7 +179,9 @@ Same rule as every outer join. One sentence in the KDoc of the accessor.
 | File                                            | Change                                                                                          |
 |-------------------------------------------------|-------------------------------------------------------------------------------------------------|
 | `sprudel/.../lang/lang.kt`                      | `PatternMapperProvider`                                                                         |
-| `sprudel/.../SprudelPattern.kt`                 | `_liftNumericField`: mapper / provider argument runs the read, map, write chain                 |
+| `sprudel/.../SprudelPattern.kt`                 | `_mapNumericField(mapper, read, update)`: the read, map, write chain                            |
+| `sprudel/.../lang/lang_helpers.kt`              | `singleMapperOrNull()`: provider or mapper argument detection, guarded by `patternMapper`      |
+| `sprudel/.../lang/lang_filters.kt`              | `applyBpf` takes the mapper branch too, so a field can be read into another (`bpf(freq)`)      |
 | `sprudel/.../lang/lang_tonal.kt`                | `object Freq`, `val freq`, `Freq.invoke`; annotation moved off the top-level `fun freq`         |
 | `sprudel/.../lang/lang_arithmetic.kt`           | `PatternMapperProvider.add/sub/mul/div` first-step twins                                         |
 | specs (below)                                   |                                                                                                 |
@@ -176,14 +189,14 @@ Same rule as every outer join. One sentence in the KDoc of the accessor.
 
 ### Specs (sprudel timing core: mandatory mutation tier)
 
-1. Violin: `note("a c e").freq(mul(perlin.range(0.95, 1.05)))` over 12 cycles, every event's
+1. Violin: `note("a c e").freq(mul(perlin.seg(4).range(0.95, 1.05)))` over 12 cycles, every event's
    `freqHz` within 5 percent of its note's frequency and not all equal.
 2. Chord: `note("[a,c,e]").freq(mul(2))` doubles each note on its own.
 3. Regression guard for the silent clear: `note("c e").freq(add(50))` adds 50 Hz.
-4. Read into another field: `note("c e g a").bandf(freq)` gives `bandf == freqHz` per event.
-5. Provider first step: `note("c e").bandf(freq.mul(2))`.
+4. Read into another field: `note("c e g a").bpf(freq)` gives `bandf == freqHz` per event.
+5. Provider first step: `note("c e").bpf(freq.mul(2))`.
 6. Self reference: `freq(freq.add(50))` equals `freq(add(50))`.
-7. Order: `bandf(freq).note("c e")` leaves `bandf` unset.
+7. Order: `bpf(freq).note("c e")` leaves `bpf` unset.
 8. Value register drained: after `freq(mul(2))`, `value == null`.
 9. Setter unchanged: `freq(440)`, `freq("440 880")`, `"440 880".freq()` as before (existing specs).
 10. Door parity: the script text and the Kotlin text of 1, 4 and 5 produce equal events.
@@ -191,8 +204,8 @@ Same rule as every outer join. One sentence in the KDoc of the accessor.
 
 ### Acceptance by ear
 
-The violin line in the editor, then "Blowing in the Wind" once `bandf` accepts the accessor
-(that is Phase 2, `bandf` is a compound field and its setter takes `(freq, q)`).
+The violin line in the editor, then "Blowing in the Wind" once `bpf` accepts the accessor
+(that is Phase 2, `bpf` is a compound field and its setter takes `(freq, q)`).
 
 ## Phase 2 (after the pilot)
 
@@ -202,6 +215,13 @@ The violin line in the editor, then "Blowing in the Wind" once `bandf` accepts t
   a mapper.
 - The same chain in `_liftStringField` and `_applyControlFromParams` for string and control fields.
 - Provider twins on demand.
+- A provider or mapper handed to a setter WITHOUT the mapper branch (`lpf(freq)` today) is still
+  silently dropped and the field cleared or kept, with no diagnostic; the analyzer cannot flag it
+  (`PatternLike` is `Any`). Either every setter gets the branch, or `toListOfPatterns` reports it.
+- Settle what a null write means. `freqUpdate` clears the field on `null`; a `voiceSetter` such as
+  `bpfMutation` ignores `null` and keeps the old value. The control path has had this asymmetry
+  all along; the mapper path inherits it (`stack(note("c e"), s("hh*4")).bpf(800).bpf(freq)`
+  keeps 800 on the hats). Decide once before more fields get the mapper branch.
 - `note` as a string field: decide whether an accessor makes sense.
 
 ## Review checklist mapping (`/dsl-design`)

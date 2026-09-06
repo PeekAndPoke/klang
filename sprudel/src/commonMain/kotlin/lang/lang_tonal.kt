@@ -17,9 +17,11 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.ControlPattern
@@ -1422,31 +1424,78 @@ fun PatternMapperFn.transpose(amount: PatternLike, callInfo: CallInfo? = null): 
 
 // -- freq() -----------------------------------------------------------------------------------------------------------
 
+private val freqUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { v -> copy(freqHz = v) }
+
 private fun applyFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args) { v -> copy(freqHz = v) }
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.freqHz }, update = freqUpdate)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, freqUpdate)
 }
 
 /**
- * Sets the playback frequency in Hz directly, bypassing note name resolution.
+ * The frequency of each event, as a value other setters can read.
  *
- * Overrides the computed frequency for each event. Useful for precise tuning or
- * microtonal work where standard note names are insufficient. When called with no argument,
- * reinterprets the current event value as a frequency in Hz.
+ * Bare `freq` reads the frequency `note()` (or `freq(hz)`) has set so far in the chain; it must
+ * therefore come AFTER the note in the chain. Call it, `freq(hz)`, to set the frequency.
  *
  * ```KlangScript(Playable)
- * "440 550 660".freq()         // A4, roughly C#5, roughly E5 by raw Hz
+ * note("c e g a").bpf(freq).sound("pink").bpq(2.0)   // the wind whistles the melody
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4 e4").freq(432)      // force all events to 432 Hz
+ * note("c e g a").bpf(freq.mul(2))                     // bandpass one octave above the note
  * ```
- *
- * @param hz Frequency in Hz. Directly sets the pitch, bypassing note name resolution. 440 = A4, 261.63 = C4. Default: determined by note(). Range: 20–20000.
  *
  * @category tonal
- * @tags freq, frequency, Hz, pitch, tuning
+ * @tags freq, frequency, Hz, pitch, accessor
  */
-@KlangScript.Function
+@KlangScript.Library("sprudel")
+@KlangScript.Object("freq")
+object Freq : PatternMapperProvider {
+
+    /** The read mapper: the event's frequency into the value register. */
+    override fun mapper(): PatternMapperFn = { p -> p.reinterpretVoice { it.copy(value = it.freqHz?.asVoiceValue()) } }
+
+    /**
+     * Sets the playback frequency in Hz directly, bypassing note name resolution.
+     *
+     * Overrides the computed frequency for each event. Useful for precise tuning or
+     * microtonal work where standard note names are insufficient. When called with no argument,
+     * reinterprets the current event value as a frequency in Hz. A mapper argument is applied to
+     * the frequency itself.
+     *
+     * ```KlangScript(Playable)
+     * "440 550 660".freq()         // A4, roughly C#5, roughly E5 by raw Hz
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c4 e4").freq(432)      // force all events to 432 Hz
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("a c e").freq(mul(perlin.seg(4).range(0.95, 1.05)))   // a novice violin player's intonation
+     * ```
+     *
+     * @param hz Frequency in Hz. Directly sets the pitch, bypassing note name resolution. 440 = A4, 261.63 = C4. Default: determined by note(). Range: 20 to 20000. A mapper (`mul(2)`, `add(50)`) is applied to the current frequency.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        freq(hz, callInfo)
+}
+
+/** The [Freq] accessor as a value, so the Kotlin door reads like the script: `bpf(freq)`. */
+val freq: Freq = Freq
+
+/**
+ * Returns a [PatternMapperFn] that sets the playback frequency in Hz.
+ *
+ * Kotlin door only: the script reaches this through `freq(hz)`, which is [Freq.invoke] on the
+ * `freq` object.
+ *
+ * @param hz Frequency in Hz, a control pattern, or a mapper applied to the current frequency.
+ */
 fun freq(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.freq(hz, callInfo) }
 

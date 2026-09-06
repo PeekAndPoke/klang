@@ -28,6 +28,19 @@ typealias PatternLike = Any
 typealias PatternMapperFn = (source: SprudelPattern) -> SprudelPattern
 
 /**
+ * Hands out a [PatternMapperFn]. Field accessors (`freq`, ...) implement it.
+ *
+ * An accessor is deliberately NOT a [PatternMapperFn] itself: a `Function1` carries a member
+ * `invoke(SprudelPattern)`, which would sit next to the accessor's setter `invoke(hz)` and give
+ * `Freq(pattern)` and `freq(pattern)` opposite meanings in Kotlin. The provider keeps one meaning
+ * per spelling. A setter that receives a provider unwraps it with [mapper] and applies the result
+ * to its own field (see `_mapNumericField`); `docs/tasks/sprudel-field-accessors.md`.
+ */
+fun interface PatternMapperProvider {
+    fun mapper(): PatternMapperFn
+}
+
+/**
  * Type alias for voice data transformation functions.
  * Takes a SprudelVoiceData as input and returns a modified SprudelVoiceData.
  */

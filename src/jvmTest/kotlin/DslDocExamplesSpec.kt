@@ -66,6 +66,8 @@ class DslDocExamplesSpec : StringSpec({
         // code -> the symbols that show it, so a failure names where to go and fix it
         val byCode = linkedMapOf<String, MutableSet<String>>()
 
+        // Sprudel only: stdlib samples evaluate to oscillator nodes, numbers or strings, and this
+        // spec's oracle is "compiles to a sprudel pattern". A stdlib guard needs its own oracle.
         for ((name, symbol) in generatedSprudelDocs) {
             for (decl in symbol.variants) {
                 for (sample in decl.samples) {
