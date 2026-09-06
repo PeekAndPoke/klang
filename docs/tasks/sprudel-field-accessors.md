@@ -28,7 +28,8 @@ character, and produces the same events.
    ```
    note("c e g a").bpf(freq).sound("pink").bpq(2.0)
    ```
-   Built-in song candidate: "Blowing in the Wind".
+   Built-in song: Greensleeves (traditional, public domain). "Blowing in the Wind" was the
+   first idea and is under copyright, so it stays a local experiment.
 2. **A novice violin player struggling with intonation.** The pitch wobbles a few percent around
    the note:
    ```
@@ -204,8 +205,8 @@ Same rule as every outer join. One sentence in the KDoc of the accessor.
 
 ### Acceptance by ear
 
-The violin line in the editor, then "Blowing in the Wind" once `bpf` accepts the accessor
-(that is Phase 2, `bpf` is a compound field and its setter takes `(freq, q)`).
+The violin line in the editor (heard 2026-09-06, works), then Greensleeves whistled by the wind
+(`src/commonMain/kotlin/builtinsongs/Greensleeves.kt`).
 
 ## Phase 2 (after the pilot)
 
