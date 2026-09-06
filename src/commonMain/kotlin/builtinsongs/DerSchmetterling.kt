@@ -136,10 +136,10 @@ export lead_pat =
   `<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-4 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
 
 export lead_shape = x => x.gain(1.00).sound("supertri")//.adsrOff()
-  .unison(9).spread(0.20).hpf(2000).distort(0.4, "softsat", 4)
-  .clip(0.90).velocity(guitarDyna)
-  .vowel("a e i o u".scramble(4)).vowelWet(0.2).vowelFloor(0.8)
-  .pan(0.45)
+  .unison(9).spread(0.20).hpf(2000).distort(0.4, "softsat", 4).adsr(0.02, 0.5, 0.5, 0.2)
+  .clip(0.95).velocity(guitarDyna)
+  .vowel("a e i o u".scramble(4)).vowelWet(0.5).vowelFloor(0.5)
+  .pan(0.2).superimpose(pan(0.8))
 
 export lead_arrange = x => x.orbit(0) // .mute()
   .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<1.00!48 0.30!16 1.00!48 1.50!16>")  
@@ -156,7 +156,7 @@ export guitar1_pat =
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-5 -2 0 3] 4]]>/4`
 
 export guitar1_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(15).spread(0.05) // . solo()
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 6 / 12)).oscp("hpq", 1.7) //. mute()
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 1.0) //. mute()
   .oscp("low", 5.0).oscp("lowHz", "1500").oscp("lowQ", 0.7)
   .oscp("mid", 4.0).oscp("midHz", "2200".sub(saw.pow(0.5).mul(200).slow(4))).oscp("midQ", 0.7)
   .oscp("high", 3.0).oscp("highHz", "2700".sub(saw.pow(0.5).mul(500).slow(4))).oscp("highQ", 0.7)
@@ -176,7 +176,7 @@ export guitar2_pat =
     [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 6] 9]>/4`
 
 export guitar2_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(13).spread(0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 3 / 12)).oscp("hpq", 1.7)
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -3 / 12)).oscp("hpq", 1.0)
   .oscp("mid", 3.0).oscp("midHz", 800).oscp("midQ", 0.7)
   .oscp("mid", 5.0).oscp("midHz", 1300).oscp("midQ", 0.7)
   .oscp("high", 4.0).oscp("highHz", 2500).oscp("highQ", 0.7)
@@ -194,7 +194,7 @@ export guitar3_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [5 -2 0 3] 6]!1>/4`
 
 export guitar3_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(11).spread(0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 1.7)
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -6 / 12)).oscp("hpq", 1.0)
   .oscp("low", 4.0).oscp("lowHz", 700).oscp("lowQ", 0.7)
   .oscp("mid", 5.0).oscp("midHz", 1100).oscp("midQ", 0.7)
   .oscp("high", 4.0).oscp("highHz", 2350).oscp("highQ", 0.7)
