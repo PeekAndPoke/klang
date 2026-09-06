@@ -47,11 +47,16 @@ makes the stacking explicit.
 
 Every partial is a multiple of **this sine's** frequency. The sine itself is partial 1.
 
-| knob                          | adds                                       | gain of an added partial at multiple `m` |
-|-------------------------------|--------------------------------------------|-------------------------------------------|
-| `harmonics(count, rolloff=1)` | `count` partials at `2f, 3f, 4f ...`       | `m ^ -rolloff`                            |
-| `octaves(count, rolloff=1)`   | `count` partials at `2f, 4f, 8f ...`       | `m ^ -rolloff`                            |
-| `fundamental(gain=1)`         | nothing; scales the sine's own partial     | `gain`                                    |
+| knob                            | adds                                       | gain of an added partial at multiple `m`  |
+|---------------------------------|--------------------------------------------|--------------------------------------------|
+| `harmonics(count, rolloff=1)`   | `count` partials at `2f, 3f, 4f ...`       | `m ^ -rolloff`                             |
+| `octaves(count, rolloff=1)`     | `count` partials at `2f, 4f, 8f ...`       | `m ^ -rolloff`                             |
+| `suboctaves(count, rolloff=1)`  | `count` partials at `f/2, f/4, f/8 ...`    | `(1/m) ^ -rolloff`                         |
+| `fundamental(gain=1)`           | nothing; scales the sine's own partial     | `gain`                                     |
+
+One gain law for all three banks: `distance ^ -rolloff`, where distance is the multiple measured
+away from the fundamental (`m` above it, `1/m` below it). `suboctaves(1)` is a sub at f/2 with
+gain 1/2; `suboctaves(1, 0)` is the classic equal-level sub oscillator.
 
 - `count = 0` is off and the default. `harmonics(1, 0.5)` adds one partial at 2f with gain 0.707.
 - `rolloff = 1` is the sawtooth law (a full series is a band-limited saw), `2` is triangle-soft,
@@ -62,10 +67,22 @@ Every partial is a multiple of **this sine's** frequency. The sine itself is par
   switch for free, levels are 0 to 1 doubles everywhere in the house, and no boolean sits on the wire.
   It is a knob of its own, stated once, rather than a third parameter on each bank, so two banks
   never have to pick a winner.
-- Both banks set at once are **summed, no deduplication**: `harmonics(7)` plus `octaves(3)`
+- Several banks set at once are **summed, no deduplication**: `harmonics(7)` plus `octaves(3)`
   doubles 2f, 4f and 8f, exactly as two hand-written sines would. No special rule.
-- With `fundamental = 1` and both counts `0` the node IS today's sine, bit-identical (section 5).
+- With `fundamental = 1` and all counts `0` the node IS today's sine, bit-identical (section 5).
 - `Osc.sine(x => x.fundamental(0))` with no bank is silence. Coerced, never an error.
+- **A sub-octave moves the perceived pitch.** The ear takes f/2 as the fundamental as soon as it is
+  there at a comparable level, because f is its second harmonic; that is the missing-fundamental
+  effect run backwards, and it is the point of a sub oscillator (weight) but it must be in the
+  KDoc. Downward partials never alias, but `suboctaves(2)` on the low E is 10 Hz: real infrasound
+  at full gain, headroom and woofer travel for nothing audible. The Motor stays raw (no low cut);
+  the user's highpass exists for that.
+- **Sub-harmonics (f/2, f/3, f/4 ...) are WON'T IMPLEMENT.** The undertone series is a downward
+  minor chord (f/3 is an octave and a fifth below), so it changes the harmony, not the timbre; no
+  synth, pedal or enhancer offers it beyond the sub-octave (dbx 120XP, Lowender, Logic SubBass and
+  the Octaver family all go down in octaves; the Hammond 5 1/3' drawbar is 3f/2, not f/3). A bank
+  that rewrites the chord is a family of models (`/dsl-design` §9). `Osc.sine(Osc.freq().div(3))`
+  is the honest spelling for the one song that wants a twelfth below.
 
 **The door's `freq` decides where the series starts and what it is.** Partials are multiples of
 the sine, not of the note:
@@ -75,6 +92,7 @@ Osc.sine(x => x.harmonics(7))                          // sub plus 2f .. 8f: the
 Osc.sine(x => x.harmonics(7).fundamental(0))           // overtones only, 2f .. 8f
 Osc.sine(Osc.freq().mul(2), x => x.octaves(5)).mul(1/2) // the original grind stack, 2f .. 64f, original levels
 Osc.sine(Osc.freq().mul(2), x => x.harmonics(3))       // 2f, 4f, 6f, 8f: the EVEN series (the tube spectrum)
+Osc.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
 Osc.sine(x => x.harmonics(12, Osc.param("rolloff", 1))) // brightness from the pattern
 Osc.sine(x => x.harmonics(8, Osc.sine(0.2).range(0.7, 2))) // breathing brightness, control rate
 ```
@@ -89,11 +107,12 @@ their keep on sine, pluck and sample-based voices, and as a standalone additive 
 
 ## 3. Surface (both doors, identical)
 
-Three methods on `OscSineBuilder` in `klangscript-libs/.../IgnitorBuilders.kt`, next to `analog`:
+Four methods on `OscSineBuilder` in `klangscript-libs/.../IgnitorBuilders.kt`, next to `analog`:
 
 ```kotlin
 fun OscSineBuilder.harmonics(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder
 fun OscSineBuilder.octaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder
+fun OscSineBuilder.suboctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder
 fun OscSineBuilder.fundamental(gain: IgnitorDslLike): OscSineBuilder
 ```
 
@@ -115,7 +134,7 @@ Nothing changes for sprudel: `sound("sine")` reaches the node; the knobs are not
 
 ## 4. Wire
 
-`IgnitorDsl.Sine` in `audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt` grows five fields, all
+`IgnitorDsl.Sine` in `audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt` grows seven fields, all
 with constant defaults that mean "plain sine":
 
 ```kotlin
@@ -128,7 +147,9 @@ data class Sine(
     val harmonicsRolloff: IgnitorDsl = Constant(1.0),
     val octaves: IgnitorDsl = Constant(0.0),
     val octavesRolloff: IgnitorDsl = Constant(1.0),
-) : IgnitorDsl { collectParams over all seven }
+    val suboctaves: IgnitorDsl = Constant(0.0),
+    val suboctavesRolloff: IgnitorDsl = Constant(1.0),
+) : IgnitorDsl { collectParams over all nine }
 ```
 
 No new node kind, no enum, no sealed addition: the distinction is numeric, so fields are the
@@ -151,11 +172,12 @@ Registration points a grown leaf must hit (all found by grepping `IgnitorDsl.Sin
 is IgnitorDsl.Sine ->
     if (isPlainSine()) pitchedSource(freq, Ignitors.sine(freq.noMod(), analog.noMod()))
     else pitchedSource(freq, Ignitors.sinePartials(freq.noMod(), analog.noMod(), fundamental.noMod(),
-        harmonics.noMod(), harmonicsRolloff.noMod(), octaves.noMod(), octavesRolloff.noMod(), rng = cache.random))
+        harmonics.noMod(), harmonicsRolloff.noMod(), octaves.noMod(), octavesRolloff.noMod(),
+        suboctaves.noMod(), suboctavesRolloff.noMod(), rng = cache.random))
 ```
 
-`isPlainSine()` is a structural check on the DSL node: `fundamental == Constant(1.0)`,
-`harmonics == Constant(0.0)`, `octaves == Constant(0.0)`. Only literal defaults qualify; a `Param`
+`isPlainSine()` is a structural check on the DSL node: `fundamental == Constant(1.0)` and all
+three counts `== Constant(0.0)`. Only literal defaults qualify; a `Param`
 or graph on any of the three goes through the bank, because its value can change per block. Every
 sine in every existing song therefore builds exactly the `SineIgnitor` it builds today; this is
 pinned by a bit-identity spec.
@@ -168,19 +190,25 @@ keeps working unchanged.
 
 One new ignitor in `audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt`. Per block:
 
-1. `resolveFreq` the base frequency; `readParam` the five knobs (block-start values, the `voices`
+1. `resolveFreq` the base frequency; `readParam` the seven knobs (block-start values, the `voices`
    pattern in `DetunedStackIgnitor`). Coerce: counts to `0..64` each (the super oscillators' engine
-   cap), `fundamental` and both rolloffs as read.
-2. `n = 1 + harmonics + octaves`. Grow the per-partial arrays (`phase`, `gain`, `dt`) only when `n`
-   exceeds the allocated size; never allocate per block (hot-path rule). New partials start at
-   phase 0.
+   cap), `fundamental` and the rolloffs as read.
+2. `n = 1 + harmonics + octaves + suboctaves`. Grow the per-partial arrays (`phase`, `gain`, `dt`)
+   only when `n` exceeds the allocated size; never allocate per block (hot-path rule). New partials
+   start at phase 0.
 3. Fill the multiples table: partial 0 at `1` with `gain = fundamental`; then `2 .. harmonics+1`
-   with `m ^ -harmonicsRolloff`; then `2^k, k = 1 .. octaves` with `m ^ -octavesRolloff`. Gains via
-   `exp(-rolloff * ln(m))`: `n` transcendental calls per block, not per sample.
+   with `m ^ -harmonicsRolloff`; then `2^k, k = 1 .. octaves` with `m ^ -octavesRolloff`; then
+   `1 / 2^k, k = 1 .. suboctaves` with `(1/m) ^ -suboctavesRolloff`. Gains via
+   `exp(-rolloff * ln(distance))`: `n` transcendental calls per block, not per sample.
    `dt[k] = m * freq / sampleRate`. Partials whose frequency reaches Nyquist get `gain = 0`
-   (decision 1).
+   (decision 1); there is no lower limit.
 4. Drift: a `PolyAnalogDrift(analog, n, sampleRate, rng)` created on first use and re-created on
-   growth, per-partial multiplier lanes like the super-oscillator voices. `analog = 0` skips it.
+   growth, per-partial multiplier lanes like the super-oscillator voices. The sine's one `analog`
+   value is the depth for every partial (a pitch multiplier, so the same cents on each partial);
+   the walks are independent per lane. This is what the hand-rolled stack does, since every
+   `Osc.sine` in it reads the same `analog` slot and owns its own drift. `analog = 0` skips it.
+   The alternative, one shared lane so the spectrum stays exactly harmonic like a single physical
+   oscillator, is decision 3 in section 7.
 
 Per sample, one loop over partials, one `sin()` each, summed into the buffer:
 
@@ -231,8 +259,10 @@ KSP), and committed on the working branch when clean.
   within `1e-12`. The proof that the song migration does not change the sound.
 - `fundamental = 0` renders the overtones only: equals the golden tree minus `Ignitors.sine()`.
 - `octaves = 5` at `freq = 2f` scaled by `1/2` equals the original six-sine grind stack.
-- `rolloff = 0` gives equal-amplitude partials; `rolloff = 2` gives `1/m²`. Both banks set: sum,
-  the doubled partial doubled.
+- `Sine(suboctaves = 1)` equals `Ignitors.sine()` at `f` plus `Ignitors.sine()` at `f/2` scaled
+  `1/2`, within `1e-12`; `suboctaves = 1, suboctavesRolloff = 0` gives the sub at gain 1.
+- `rolloff = 0` gives equal-amplitude partials; `rolloff = 2` gives `1/m²`. Several banks set:
+  sum, the doubled partial doubled.
 - A `Param`-driven `harmonics` changes the partial count at the next block; shrinking then growing
   does not reallocate (growth-only rule).
 - Band limit: a partial at or above Nyquist contributes exactly zero (decision 1).
@@ -260,8 +290,10 @@ Decide phase 2 (5.3) on that number.
 - Knobs on the sine builder, not separate doors. The sine is always partial 1.
 - Counts are partials *added above* the sine; 0 is off and the default.
 - `fundamental` is a gain with default 1, its own knob, not a boolean and not a bank parameter.
-- Both banks sum without deduplication.
+- Banks sum without deduplication.
 - Sine partials only; no `wave` knob.
+- Downward: `suboctaves` in, with the mirrored gain law; sub-harmonics (f/3 and beyond) are
+  won't-implement (section 2 has the reasoning).
 
 **Still open, need a yes:**
 
@@ -296,6 +328,9 @@ Decide phase 2 (5.3) on that number.
   missing-fundamental effect from the other side: raise `hptrack` from 1 toward 2 and let the
   saw's own harmonics carry the pitch. That clears the band under the guitars for the bass without
   thinning them. By-ear check, no operator needed.
+- **Sub-octaves:** not for this bass (the sub already sits at 41 Hz; f/2 would be 20 Hz). The
+  candidate is the lead, a sine an octave under the supersquare with `fundamental(0).suboctaves(1, 0)`
+  for weight without a second voice; by ear, against the `hpf(2000)` already on it.
 - **Plucks and samples:** a sine with `harmonics(6, 2)` under a thin pluck for body; sample voices
   with a known note are the case where the pitch-aware bank beats the signal-derived wrapper (no
   intermodulation).
@@ -303,5 +338,5 @@ Decide phase 2 (5.3) on that number.
 ## What we built
 
 Designed together on 2026-09-06 from a hand-rolled stack in the bass and the question "could we
-make an operator out of this". Went from two doors to three knobs on the sine, and from a boolean
-to a gain, in one afternoon of questions.
+make an operator out of this". Went from two doors to four knobs on the sine, from a boolean to a
+gain, and drew the line at sub-harmonics, in one afternoon of questions.
