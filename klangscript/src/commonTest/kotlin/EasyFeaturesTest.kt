@@ -30,7 +30,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
  */
 class EasyFeaturesTest : StringSpec({
 
-    fun engine() = klangScript()
+    fun engine() = klangScriptEngine()
 
     // =============================================================
     // Feature 1: Scientific notation number literals

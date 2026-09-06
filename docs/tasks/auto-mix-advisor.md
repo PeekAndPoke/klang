@@ -6,7 +6,7 @@
 >
 > **Depends on:** [`realtime-analytics-meters.md`](realtime-analytics-meters.md) §3 (capture ring +
 > worker, windowed balance distribution — the measurement substrate) · stem export (§4 here, new) ·
-> `MasterFx.eq()` ([`master-dsl-followups.md`](master-dsl-followups.md), new item) for the
+> the master `eq` stage ([`master-dsl-followups.md`](master-dsl-followups.md), new item) for the
 > closed-loop phase only.
 >
 > **The framing that makes this interesting:** every commercial auto-master tool (LANDR, Ozone…)
@@ -45,7 +45,7 @@ Starting rule set, each one a mechanized session diagnosis:
    is +3.4 dB over target; guitar 2 owns most of it → raise its tracking highpass (`hptrack` 1.0 → 1.4) or trim
    `postgain` 1.5 dB." The knob map per voice type lives in a registry (§6.2).
 2. **Low-band excess + deep GR events coinciding with low peaks** → the gain-staging transfer:
-   "trim the low contributors X dB, raise `MasterFx.gain` ~X dB." **Measured 2026-08-11:** bass −2.1 dB + kick −1.9 dB +
+   "trim the low contributors X dB, raise the master `gain` stage ~X dB." **Measured 2026-08-11:** bass −2.1 dB + kick −1.9 dB +
    master +1.8 dB ⇒ **+1.3 dB louder, beat-rate pumping −5…−12 %, zero clipping.** The mix was paying a
    loudness-and-pumping tax to carry the low end; the rule refunds it.
 3. **Pumping metric over threshold** → master gain down / limiter drive down (the v7→v8 finding:
@@ -66,8 +66,8 @@ median** with structural outlier windows excluded (machinery:
 
 ## 3. Closed-loop auto-master — deliberately weak, last
 
-Only after §1–§2 exist, and only on the master stage: solve for **`MasterFx.gain` + a gentle tilt/shelf pair**
-(`MasterFx.eq()`, 2–3 bands) against the target curve, offline: measure → set → re-render → verify convergence. Kept
+Only after §1–§2 exist, and only on the master stage: solve for **the master `gain` stage + a gentle tilt/shelf pair**
+(the master `eq` stage, 2–3 bands) against the target curve, offline: measure → set → re-render → verify convergence. Kept
 intentionally weak because §2 is where real correction belongs; the master EQ handles only what no single contributor
 owns. Adaptive/realtime versions are out of scope until the offline loop has proven itself.
 
@@ -91,7 +91,7 @@ voices, not numbers.
   with estimated dB effects. Still offline/CLI.
 - **P2 — UI integration:** advisor panel consuming the meters doc's Tier-B analyses (capture ring + worker); live
   attribution via the per-orbit band tap.
-- **P3 — closed-loop master** (needs `MasterFx.eq()`): offline convergence loop, verify-by-measure.
+- **P3 — closed-loop master** (needs the master `eq` stage): offline convergence loop, verify-by-measure.
 
 ## 6. Open decisions
 

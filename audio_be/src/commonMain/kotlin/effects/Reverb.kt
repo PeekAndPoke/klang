@@ -457,7 +457,7 @@ class Reverb(
     companion object {
         /**
          * The **authored** room-size scale — what `roomsize()` (sprudel) and
-         * `MasterFx.reverb().roomSize()` (master) speak: roughly 0..10.
+         * the master reverb's `roomSize` knob speak: roughly 0..10.
          *
          * [roomSize] itself is normalized 0..1. Keeping the conversion here means both buses go
          * through one definition instead of each inventing its own — the two silently disagreed

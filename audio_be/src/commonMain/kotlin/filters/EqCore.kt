@@ -14,7 +14,7 @@ import io.peekandpoke.klang.audio_be.safeOut
  * Freq-agnostic serial EQ core — N second-order TPT-SVF sections in one `process()` call.
  *
  * The shared engine of the unified-equalizer work: the per-voice `EqIgnitor` adapter drives
- * it (D3b); the planned `MasterFx.eq()` and Katalyst chains adopt the SAME core later.
+ * it (D3b); the planned master eq stage and Katalyst chains adopt the SAME core later.
  *
  * CONTRACT — the core owns: section state (`ic1`/`ic2`), coefficient storage and computation
  * (via [computeSvfCoeffs], or [computeSvfBellCoeffs] for [BELL] — NaN/Inf-safe through
@@ -25,7 +25,7 @@ import io.peekandpoke.klang.audio_be.safeOut
  * The SURFACE owns: param resolution (scalars per control tick), WHEN to call
  * [configureSection] (control rate; coefficients take effect immediately — the core is
  * SNAP-only, so any smoothing/ramping policy must be built by the surface BEFORE
- * MasterFx.eq/Katalyst can adopt it: a per-block-swept cutoff snaps here exactly like the
+ * a master eq stage or Katalyst can adopt it: a per-block-swept cutoff snaps here exactly like the
  * per-voice `SvfIgnitor` does, which is parity for the ignitor surface and a click hazard for
  * a bus surface), stereo (the core is MONO — one instance per channel), and the note frequency
  * (the core never sees a voice).

@@ -18,14 +18,14 @@ import io.peekandpoke.klang.script.runtime.StringValue
 class ObjectLiteralTest : StringSpec({
 
     "should create empty object" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{}")
         result.shouldBeInstanceOf<ObjectValue>()
     }
 
     "should create object with single property" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ x: 10 }")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -36,7 +36,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create object with multiple properties" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ x: 10, y: 20, z: 30 }")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -47,7 +47,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create object with string keys" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("""{ "first-name": "Alice", "last-name": "Smith" }""")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -57,7 +57,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create object with mixed value types" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("""{ name: "Bob", age: 25, score: 98.5 }""")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -68,7 +68,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create object with expression values" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ sum: 1 + 2, product: 3 * 4 }")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -78,7 +78,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create nested objects" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ outer: { inner: 42 } }")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -91,7 +91,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create object with variable values" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -108,7 +108,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create object with function call values" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             registerFunctionRaw("getValue") { _, _ -> NumberValue(99.0) }
         }
 
@@ -119,7 +119,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should access object properties" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("let obj = { x: 10, y: 20 }")
 
@@ -131,7 +131,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create object with arrow function property" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ double: x => x * 2 }")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -141,7 +141,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should use object in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("(x => ({ value: x, doubled: x * 2 }))(5)")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -151,7 +151,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should create object with multiple nested objects" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ a: { x: 1 }, b: { y: 2 } }")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -164,7 +164,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should support trailing comma in object literal" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ x: 10, y: 20, }")
         result.shouldBeInstanceOf<ObjectValue>()
@@ -174,7 +174,7 @@ class ObjectLiteralTest : StringSpec({
     }
 
     "should support trailing comma after single property" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("{ x: 42, }")
         result.shouldBeInstanceOf<ObjectValue>()

@@ -19,7 +19,7 @@ import kotlin.random.Random
 /**
  * End-to-end seam guard for the phase-pool knobs: DSL node → `IgnitorDslRuntime.buildRaw`
  * forwarding → `Ignitors.*` factory → shared engine. This is the ONE path real users take
- * (`Osc.supersine().phasePool(1)`), and dropping a `phasePool = phasePool` forwarding in a
+ * (`Osc.supersine(x => x.phasePool(1))`), and dropping a `phasePool = phasePool` forwarding in a
  * `buildRaw` branch compiles cleanly (the factory default fills in) while turning the knob into a
  * permanent silent no-op — no other spec would notice (`PhasePoolSpec` calls the factories
  * directly; the KlangScript specs stop at DSL object equality; the codec spec stops at the wire).

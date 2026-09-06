@@ -66,7 +66,7 @@ registerObject("Math", MathObject) {
 ## Built-in Type Methods
 
 Handled in `Interpreter.evaluateMemberAccess()` — checks for extension methods on `ArrayValue`, `StringValue`,
-`ObjectValue` before throwing reference error. Registered in `stdlib/KlangStdLib.kt` via `registerType<ArrayValue>` etc.
+`ObjectValue` before throwing reference error. Registered in `klangscript-libs/src/commonMain/kotlin/stdlib/KlangStdLib.kt` via `registerType<ArrayValue>` etc.
 
 ## Import/Export
 

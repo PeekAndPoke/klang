@@ -129,7 +129,9 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
     private val filteredSymbols: List<KlangSymbol>
         get() {
             val terms = LibraryDocSearch.parseTerms(searchQuery)
-            val all = registry.symbols.values.sortedBy { it.name }
+            // `invoke` is the operator behind a callable object (`Master(...)`); it is documented on
+            // the object itself and is never typed, so it gets no card of its own.
+            val all = registry.symbols.values.filter { it.name != "invoke" }.sortedBy { it.name }
 
             return when {
                 terms.isNotEmpty() -> all

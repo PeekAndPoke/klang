@@ -13,7 +13,7 @@ import io.peekandpoke.klang.script.runtime.ObjectValue
 class MinimalChainTest : StringSpec({
 
     "Simplest possible chain: obj().prop" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("obj") { _, _ ->
                 ObjectValue(
                     mutableMapOf(
@@ -35,7 +35,7 @@ class MinimalChainTest : StringSpec({
     }
 
     "Pattern from bug: obj.method().prop" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val obj = ObjectValue(
             mutableMapOf(
@@ -61,7 +61,7 @@ class MinimalChainTest : StringSpec({
     }
 
     "Variable then chain: pattern.method().prop" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val pattern = ObjectValue(
             mutableMapOf(

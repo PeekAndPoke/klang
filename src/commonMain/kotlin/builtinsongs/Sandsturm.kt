@@ -38,7 +38,7 @@ let lead = Osc.saw().mul(0.5)
 
 // The fizzy supersaw PAD = the actual JP-8080 "Sandstorm" boot preset the track
 // is named after — bright + wide, sits under the lead as syncopated stabs.
-let pad = Osc.supersaw(Osc.freq(), 9, 0.3).analog(0.25)
+let pad = Osc.supersaw(x => x.voices(9).spread(0.3).analog(0.25))
     .lowpass(Osc.sine(0.1).plus(1).times(1500).plus(2200))
     .adsr(0.008, 0.25, 0.3, 0.2)
 

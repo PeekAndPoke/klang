@@ -40,7 +40,8 @@ interpreter's `runtime/Environment.kt`.
 
 A child scope is pushed when entering:
 
-- `ArrowFunction` body (parameters bind into the child scope, untyped)
+- `ArrowFunction` body (parameters bind into the child scope; typed when the arrow is an
+  argument to a callable whose parameter is function-typed, untyped otherwise)
 - `IfExpression.thenBranch` and `ElseBranch.Block.statements`
 - `WhileStatement.body`, `DoWhileStatement.body`
 - `ForStatement` (init/cond/update/body all share one scope started at the for)
@@ -49,7 +50,16 @@ Bindings are added on visiting:
 
 - `LetDeclaration` / `ConstDeclaration` / `ExportDeclaration` — binding type = inferred
   type of the initializer (may be null if uninferable; the binding still shadows).
-- `ArrowFunction.parameters` — bound with type = null.
+- `ArrowFunction.parameters` — bound with the declared lambda parameter types when the arrow
+  is passed to a registered callable whose `KlangParam.type.functionParams` is set (KSP emits
+  these for every `FunctionN` / function-typealias parameter, e.g. `superimpose(vararg
+  transforms: PatternMapperFn)` types `x` in `.superimpose(x => x.` as `SprudelPattern`).
+  Positional arguments are aligned to parameters through `runtime/ArgAlignment` (the SAME
+  function the interpreter uses, including the trailing-lambda rule: a sole trailing lambda
+  floats to the single trailing function-typed parameter, so `Osc.supersaw(x => ...)` types
+  `x` as the builder although `freq` comes first). Arguments past the declared list take the
+  trailing vararg parameter's type. Named arguments bind by name. Unknown callee, mixed
+  named/positional, or a bare arrow (not a call argument): type = null.
 
 `TypeScope.contains(name)` returns true even when the bound type is null — "bound with
 unknown type" is meaningfully different from "not bound", and only the former should
@@ -66,6 +76,10 @@ fun inferType(expr: Expression, scope: TypeScope? = null): KlangType?
 The scope parameter is optional — callers without one (e.g. standalone tests that aren't
 walking statements) still get registry-only inference. `AnalyzedAst.TypeMapBuilder` passes
 its current scope on every call so the typeMap reflects shadowing as the walk progresses.
+
+`resolveCallable` (used by `inferCallExpression` and by the typed-lambda binding) falls back to
+the `invoke` callable registered on the callee's type when no plain callable matches, so a
+callable object (`Master(...)`) gets its return type and typed lambda params like a method call.
 
 For `inferCallExpression` on `Identifier(name)`: if `name` is locally bound, returns null
 (we don't infer return types of locally-bound arrow functions yet). Crucially, it does NOT

@@ -19,11 +19,15 @@ package io.peekandpoke.klang.script.types
  * @param isTypeAlias Whether this type is an alias for another type
  * @param isNullable Whether this type is nullable
  * @param unionMembers Members of a union type (e.g., String | Number), or null if not a union
+ * @param functionParams For a function type `(P1, P2) -> R`: the parameter types, in order
+ *   (empty for `() -> R`). Null for every non-function type. Emitted by KSP from the
+ *   `FunctionN<P1..Pn, R>` type arguments, following typealiases such as `PatternMapperFn`.
+ * @param functionReturn For a function type: the return type. Null otherwise.
  * @param supertypes Transitive script-registered supertypes of this type (`kotlin.*`
  *   ancestors excluded), emitted by KSP for return/property types. Lets the static
- *   type-inferrer resolve a base-type method on a narrowed subtype receiver — e.g.
- *   `Osc.supersaw()` returns `IgnitorDsl.SuperSaw`, yet `.lowpass()`/`.adsr()` are
- *   registered on `IgnitorDsl`. Mirrors the runtime's reflective supertype walk
+ *   type-inferrer resolve a base-type method on a narrowed subtype receiver, e.g. sprudel's
+ *   `note()` returns `SprudelPattern`, which carries `KlangPattern`, so a method registered on
+ *   `KlangPattern` resolves on it. Mirrors the runtime's reflective supertype walk
  *   (`Environment.getAllRegisteredSupertypes`). Empty for primitives and types built
  *   by hand (e.g. in tests), so receiver matching is unchanged for those.
  */
@@ -34,18 +38,37 @@ data class KlangType(
     val isNullable: Boolean = false,
     val unionMembers: List<KlangType>? = null,
     val supertypes: List<KlangType> = emptyList(),
+    val functionParams: List<KlangType>? = null,
+    val functionReturn: KlangType? = null,
 ) {
     /** Whether this type is a union type. */
     val isUnion: Boolean get() = !unionMembers.isNullOrEmpty()
 
     /**
+     * Whether this is a function type (`(A) -> B`). True when [functionParams] is set,
+     * even if empty (`() -> R`). Function-typed callable parameters are what the analyzer
+     * uses to type the parameters of a lambda passed at a call site.
+     */
+    val isFunction: Boolean get() = functionParams != null
+
+    /**
      * Render this type as a display string.
+     *
+     * Function types render structurally, `(OscSineBuilder) -> OscSineBuilder`, and a
+     * nullable function type is parenthesised, `((A) -> B)?`, so the `?` cannot be read as
+     * belonging to the return type.
      *
      * @return The rendered type name with nullable suffix if applicable
      */
     fun render(): String = buildString {
-        append(simpleName)
-        if (isNullable) append("?")
+        val params = functionParams
+        if (params != null) {
+            val fn = "(${params.joinToString(", ") { it.render() }}) -> ${functionReturn?.render() ?: "Any"}"
+            append(if (isNullable) "($fn)?" else fn)
+        } else {
+            append(simpleName)
+            if (isNullable) append("?")
+        }
     }
 
     override fun toString(): String = render()

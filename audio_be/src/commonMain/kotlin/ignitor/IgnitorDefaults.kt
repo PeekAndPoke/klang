@@ -203,7 +203,7 @@ fun IgnitorRegistry.registerDefaults() {
     )
 
     // ─── Unified-EQ demo: the smallest sound that exercises the fused EqCore end to end
-    //     (the authoring surface for songs is `.eq().band(...)`; this preset stays as the
+    //     (the authoring surface for songs is `.eq(e => e.band(...))`; this preset stays as the
     //     knob-per-param test sound) ─────────────────────────────────────────────────────
 
     // Sawtooth through one fused Eq: a bell (0 dB by default = bit-transparent, so the
@@ -266,7 +266,7 @@ fun IgnitorRegistry.registerDefaults() {
 //
 // ── Effects Chains ───────────────────────────────────────────────────────────
 //   SuperSaw.distort(0.4).lowpass(3000)             — heavy lead
-//   Pluck.phaser(0.3).wet(0.5)                      — spacey pluck
+//   Pluck.phaser(0.3, x => x.wet(0.5))               — spacey pluck
 //   Square.crush(6.0)                               — retro / chiptune
 //   Saw.coarse(8.0)                                 — sample-rate reduced lo-fi
 //

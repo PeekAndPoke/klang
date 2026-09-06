@@ -22,6 +22,7 @@ kotlin {
             dependencies {
                 api(project(":klangjs"))
                 api(project(":klangscript"))
+                api(project(":klangscript-libs"))
                 api(project(":klangui"))
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)

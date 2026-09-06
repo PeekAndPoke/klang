@@ -13,7 +13,7 @@ import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.builder.registerFunction
 import io.peekandpoke.klang.script.builder.registerVarargFunction
-import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.klangScriptEngine
 
 /**
  * Tests for nullable parameter handling in native function registration.
@@ -25,7 +25,7 @@ class NullableParamTest : StringSpec({
     "vararg function receives null in args list" {
         val received = mutableListOf<List<Any?>>()
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerVarargFunction("capture") { args: List<Any?> ->
                 received.add(args)
             }
@@ -43,7 +43,7 @@ class NullableParamTest : StringSpec({
     "vararg function receives all nulls" {
         val received = mutableListOf<List<Any?>>()
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerVarargFunction("allNulls") { args: List<Any?> ->
                 received.add(args)
             }
@@ -57,7 +57,7 @@ class NullableParamTest : StringSpec({
     "vararg function receives no nulls" {
         val received = mutableListOf<List<Any?>>()
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerVarargFunction("noNulls") { args: List<Any?> ->
                 received.add(args)
             }
@@ -91,7 +91,7 @@ class NullableParamTest : StringSpec({
     // ── Non-nullable typed params reject null with clear error ────────────────
 
     "non-nullable Double param gives error on null" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunction<Double, Double>("strictDouble") { d ->
                 d * 2
             }
@@ -106,7 +106,7 @@ class NullableParamTest : StringSpec({
     }
 
     "non-nullable String param gives error on null" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunction<String, String>("strictString") { s ->
                 s.uppercase()
             }
@@ -121,7 +121,7 @@ class NullableParamTest : StringSpec({
     }
 
     "non-nullable two params, second is null, gives error" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunction<Double, Double, Double>("add") { a, b ->
                 a + b
             }
@@ -137,7 +137,7 @@ class NullableParamTest : StringSpec({
     // ── guardNativeCall produces useful InternalError ─────────────────────────
 
     "InternalError includes function name and param values" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunction<Double, Double>("badFn") { _ ->
                 throw RuntimeException("something broke")
             }
@@ -155,7 +155,7 @@ class NullableParamTest : StringSpec({
     }
 
     "InternalError from extension method includes type and method name" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunction<Double, Double>("identity") { it }
         }
 

@@ -47,8 +47,13 @@ data class KlangCallable(
 ) : KlangDecl {
     override val signature: String
         get() = buildString {
-            receiver?.let { append("${it.render()}.") }
-            append(name)
+            // A callable object's `invoke` renders as the call the user writes: `Master(...)`.
+            if (name == "invoke" && receiver != null) {
+                append(receiver.render())
+            } else {
+                receiver?.let { append("${it.render()}.") }
+                append(name)
+            }
             append("(")
             append(params.joinToString(", ") { it.render() })
             append(")")

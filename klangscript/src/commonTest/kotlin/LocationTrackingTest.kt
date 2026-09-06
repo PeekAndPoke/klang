@@ -28,7 +28,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
 class LocationTrackingTest : StringSpec({
 
     "ReferenceError includes source location from parser" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let x = 5
             undefinedVariable
@@ -46,7 +46,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "TypeError includes source location for binary operations" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let x = 5
             let y = "hello"
@@ -64,7 +64,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "TypeError includes source location for member access" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let num = 42
             num.property
@@ -81,7 +81,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "TypeError includes source location for function calls" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val script = """
             let x = 5
             x()
@@ -98,7 +98,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "ArgumentError includes source location for script functions" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val script = """
             let add = (a, b) => a + b
@@ -118,7 +118,7 @@ class LocationTrackingTest : StringSpec({
     "ArgumentError for native functions (no location yet)" {
         // Note: Native function argument validation happens in the helper functions
         // which don't have access to source location. This is a known limitation.
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunction<Double, Double, Double>("test") { x, y -> x + y }
         }
 
@@ -134,7 +134,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "ImportError includes source location" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val script = """
             import * from "nonexistent"
@@ -151,7 +151,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "Location tracking works across multiple lines" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val script = """
             let a = 1
@@ -170,7 +170,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "Location tracking works without source name" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("missingVar")
@@ -185,7 +185,7 @@ class LocationTrackingTest : StringSpec({
     // ===== RuntimeValue Location Tracking Tests =====
 
     "StringValue preserves location from parser" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("checkLocation") { args, _ ->
                 val stringValue = args[0] as? StringValue
                 stringValue shouldNotBe null
@@ -203,7 +203,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "NumberValue preserves location from parser" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("checkLocation") { args, _ ->
                 val numberValue = args[0] as? NumberValue
                 numberValue shouldNotBe null
@@ -221,7 +221,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "StringValue location points to string literal" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("checkLocation") { args, _ ->
                 val stringValue = args[0] as? StringValue
                 stringValue shouldNotBe null
@@ -238,7 +238,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "NumberValue location points to number literal" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("checkLocation") { args, _ ->
                 val numberValue = args[0] as? NumberValue
                 numberValue shouldNotBe null
@@ -255,7 +255,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "Multiple string literals have different locations" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             var firstLocation: io.peekandpoke.klang.common.SourceLocation? = null
             var secondLocation: io.peekandpoke.klang.common.SourceLocation? = null
 
@@ -291,7 +291,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "StringValue equality ignores location" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("checkEquality") { args, _ ->
                 val str1 = args[0] as? StringValue
                 val str2 = args[1] as? StringValue
@@ -316,7 +316,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "NumberValue equality ignores location" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("checkEquality") { args, _ ->
                 val num1 = args[0] as? NumberValue
                 val num2 = args[1] as? NumberValue

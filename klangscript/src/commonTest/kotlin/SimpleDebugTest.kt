@@ -10,7 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 class SimpleDebugTest : StringSpec({
 
     "Debug: Simple chain" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         try {
             // Simplest possible case
@@ -23,7 +23,7 @@ class SimpleDebugTest : StringSpec({
     }
 
     "Debug: Parse just parentheses after member" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         try {
             val result = engine.execute("obj.method()")

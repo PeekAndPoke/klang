@@ -25,19 +25,19 @@ class TemplateLiteralTest : StringSpec({
     // ============================================================
 
     "template: plain backtick string without interpolation still works" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("`hello world`")
         (result as StringValue).value shouldBe "hello world"
     }
 
     "template: empty backtick string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("``")
         (result as StringValue).value shouldBe ""
     }
 
     "template: backtick string with newlines" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("`line1\\nline2`")
         (result as StringValue).value shouldBe "line1\nline2"
     }
@@ -47,7 +47,7 @@ class TemplateLiteralTest : StringSpec({
     // ============================================================
 
     "template: single interpolation of variable" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -59,7 +59,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: interpolation at start of string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -71,7 +71,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: interpolation at end of string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -83,7 +83,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: multiple interpolations" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -96,7 +96,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: arithmetic expression in interpolation" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -109,7 +109,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: number interpolation" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -121,7 +121,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: boolean interpolation" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -133,7 +133,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: null interpolation" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -145,7 +145,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: function call in interpolation" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("greet") { args, _ ->
                 val name = (args[0] as StringValue).value
                 StringValue("Hello, $name")
@@ -161,7 +161,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: only interpolation, no surrounding text" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -173,7 +173,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: complex expression with comparison" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -185,7 +185,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: works in let declaration" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -199,7 +199,7 @@ class TemplateLiteralTest : StringSpec({
 
     "template: works in function argument" {
         val received = mutableListOf<String>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("log") { args, _ ->
                 received.add((args[0] as StringValue).value)
                 NullValue
@@ -216,7 +216,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: works inside if expression" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -230,7 +230,7 @@ class TemplateLiteralTest : StringSpec({
 
     "template: works inside while loop" {
         val results = mutableListOf<String>()
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("log") { args, _ ->
                 results.add((args[0] as StringValue).value)
                 NullValue
@@ -250,7 +250,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: three interpolations" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -268,7 +268,7 @@ class TemplateLiteralTest : StringSpec({
     // ============================================================
 
     "template: double-quoted string with braces inside interpolation" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -280,7 +280,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: single-quoted string with braces inside interpolation" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """
@@ -292,7 +292,7 @@ class TemplateLiteralTest : StringSpec({
     }
 
     "template: escaped quote inside interpolation string literal" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val dollar = "\$"
         val result = engine.execute(
             """

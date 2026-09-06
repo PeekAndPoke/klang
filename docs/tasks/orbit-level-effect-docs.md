@@ -25,7 +25,7 @@ Ground truth (from the skill ref — verify against the engine before publishing
   ⚠️ Note `distort` is per-voice — the user's shorthand ("room, reverb, body, distort etc.")
   groups it with the bus effects; double-check each function against the engine, don't copy
   any list blindly.
-- **PER-PLAYBACK (master)**: `master(Master.of(...))` fx.
+- **PER-PLAYBACK (master)**: `master(Master(m => ...))` fx.
 
 ⚠️ **The scope table above is itself an oversimplification** — proven during tutorial B6's
 review (2026-08-17, verified in audio_be):

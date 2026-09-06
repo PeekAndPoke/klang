@@ -74,9 +74,9 @@ stack(
     .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(perlin.range(440, 440 * 4).segment(16).slow(6)).bpq(sine.range(0.25, 5.0).slow(48).early(12))
   , // Master ------------------------------------------------------------------------------------------------------
-  master(Master.of(
-    MasterFx.reverb().wet(0.05).damp(0.5).roomSize(9),
-    MasterFx.gain(2.5),
+  master(Master(m => m
+    .reverb(r => r.wet(0.05).damp(0.5).roomSize(9))
+    .gain(2.5)
   ))
 )
 

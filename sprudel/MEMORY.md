@@ -31,6 +31,25 @@
 
 ## Lessons Learned
 
+**Immutable at construction, mutable at runtime, both deliberate.** Every combinator returns a new
+pattern (the project-wide DSL principle, see `audio/MEMORY.md` Architecture Decisions and
+`docs/tasks/dsl-configure-lambdas.md`). The query/render path uses mutable single-owner
+`SprudelVoiceData` on purpose (leaf clone ~17x faster). Do not "fix" either side toward the other.
+
+**`.scale()` applies exactly once per chain** (decided 2026-08-20 on Der Schmetterling):
+`resolveNote()` (`lang/lang_tonal.kt`) consumes the note index on first resolution (writes
+`note`/`freqHz`, clears `value` and the step source), so a later `.scale()` finds no index and is
+inert for pitch. Consequences: exported Klangbuch parts carry NO scale, not even a default (a
+part-level default would flatten a song-level scale journey such as `<e4:minor!48 e5:minor!16>`);
+unscaled parts still play chromatically; an importer's own `.scale()` works because it is first.
+KDoc backlog: `scale()` should say "later .scale() calls do not re-pitch".
+
+**Klangbuch parts are arrangement-free.** When a song is rewritten into `export` form, patterns,
+shapes and parts (shape x pattern, fully voiced) are exported as-is; arrangement timing
+(`filterWhen`, `early`, `late`, anything time-gating) lives only at the `stack(...)` song level.
+An importer wants a part ready to play and can add gating, but cannot remove one chained in.
+`slow`/`fast` are intrinsic to the voice and stay in the part.
+
 **`_innerJoin` is mandatory** for any DSL function accepting pattern arguments — static values work
 without it, but control patterns (e.g. `pressBy("<0 0.5>")`) silently break without it.
 

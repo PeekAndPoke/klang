@@ -831,7 +831,7 @@ class KlangScriptProcessor(
                 scriptParams = scriptParams.mapIndexed { i, p ->
                     ArityDispatchItem.ResolvedParam(
                         name = p.name?.asString() ?: "p$i",
-                        kotlinType = resolveKotlinType(p.type.resolve()),
+                        kotlinType = classLiteralTypeName(resolveKotlinType(p.type.resolve())),
                         castType = resolveCastType(p.type.resolve()),
                         hasDefault = p.hasDefault,
                         isNullable = p.type.resolve().isMarkedNullable,
@@ -994,7 +994,7 @@ class KlangScriptProcessor(
             scriptParams = scriptParams.mapIndexed { i, p ->
                 ArityDispatchItem.ResolvedParam(
                     name = p.name?.asString() ?: "p$i",
-                    kotlinType = resolveKotlinType(p.type.resolve()),
+                    kotlinType = classLiteralTypeName(resolveKotlinType(p.type.resolve())),
                     castType = resolveCastType(p.type.resolve()),
                     hasDefault = p.hasDefault,
                     isNullable = p.type.resolve().isMarkedNullable,
@@ -1048,7 +1048,7 @@ class KlangScriptProcessor(
                 scriptParams = params.mapIndexed { i, p ->
                     ArityDispatchItem.ResolvedParam(
                         name = p.name?.asString() ?: "p$i",
-                        kotlinType = resolveKotlinType(p.type.resolve()),
+                        kotlinType = classLiteralTypeName(resolveKotlinType(p.type.resolve())),
                         castType = resolveCastType(p.type.resolve()),
                         hasDefault = p.hasDefault,
                         isNullable = p.type.resolve().isMarkedNullable,
@@ -1560,9 +1560,10 @@ class KlangScriptProcessor(
             val returnType = typeArgs.last().type?.resolve()?.let { resolveKotlinType(it) } ?: "Any"
             val funcType = "(${paramTypes.joinToString(", ")}) -> $returnType"
             // Always parenthesize so the type is unambiguous in lambda parameter
-            // declarations like `{ transform: ((P) -> R) -> body }`.
+            // declarations like `{ transform: ((P) -> R) -> body }`. The nullable form ends in
+            // `?` (`((P) -> R)?`), which `castSuffix` recognises so it does not append a second one.
             val isNullable = type.nullability == Nullability.NULLABLE
-            return if (isNullable) "(($funcType)?)" else "($funcType)"
+            return if (isNullable) "($funcType)?" else "($funcType)"
         }
 
         return resolveKotlinType(type)
@@ -1582,14 +1583,61 @@ class KlangScriptProcessor(
         val isTypeAlias = declaration is KSTypeAlias
         val isNullable = type.nullability == Nullability.NULLABLE
         val supertypesExpr = if (includeSupertypes) supertypeListExpr(declaration) else ""
+        val functionExpr = functionComponentsExpr(type)
+        // Primitive Kotlin types are represented at runtime by NumberValue/StringValue/BooleanValue,
+        // and the registry matches fqcn-to-fqcn when both sides have one. Emitting `kotlin.Double`
+        // here would make a Number-typed value (a return type, or a lambda parameter typed from a
+        // `(Double) -> Double` callback) miss every method registered on NumberValue.
+        val emittedFqcn = fqcn?.let { RECEIVER_TYPE_MAP[it] ?: it }
 
         return buildString {
             append("KlangType(simpleName = \"$displayName\"")
-            if (fqcn != null) append(", fqcn = \"$fqcn\"")
+            if (emittedFqcn != null) append(", fqcn = \"$emittedFqcn\"")
             if (isTypeAlias) append(", isTypeAlias = true")
             if (isNullable) append(", isNullable = true")
             if (supertypesExpr.isNotEmpty()) append(", supertypes = $supertypesExpr")
+            if (functionExpr.isNotEmpty()) append(functionExpr)
             append(")")
+        }
+    }
+
+    /** True for `kotlin.FunctionN` (aliases such as `PatternMapperFn` followed). */
+    private fun isFunctionKsType(type: KSType): Boolean {
+        val effective = type.resolveAlias()
+        val name = effective.declaration.simpleName.asString()
+        return name.startsWith("Function") &&
+                name.removePrefix("Function").toIntOrNull() != null &&
+                effective.declaration.qualifiedName?.asString()?.startsWith("kotlin.") == true
+    }
+
+    /**
+     * For a function type (`FunctionN<P1..Pn, R>`, aliases such as `PatternMapperFn`
+     * followed) emit `, functionParams = listOf(...), functionReturn = ...` so the
+     * analyzer can type the parameters of a lambda passed at a call site. Empty string
+     * for every other type. The outer type keeps its own simpleName / fqcn (an alias keeps
+     * its alias identity for registry matching), but note that `KlangType.render()` shows
+     * the STRUCTURAL form `(A) -> B` whenever `functionParams` is set, so popups display
+     * `(SprudelPattern) -> SprudelPattern` rather than `PatternMapperFn`. Component types
+     * carry their supertypes like return types do, so a base-type method is offered on a
+     * lambda parameter exactly as it is on a returned value.
+     */
+    private fun functionComponentsExpr(type: KSType): String {
+        val effective = type.resolveAlias()
+        if (!isFunctionKsType(type) || effective.arguments.isEmpty()) {
+            return ""
+        }
+
+        val typeArgs = effective.arguments
+        val params = typeArgs.dropLast(1).map { arg ->
+            arg.type?.resolve()?.let { generateKlangType(it, includeSupertypes = true) }
+                ?: "KlangType(simpleName = \"Any\")"
+        }
+        val returnExpr = typeArgs.last().type?.resolve()?.let { generateKlangType(it, includeSupertypes = true) }
+        return buildString {
+            append(", functionParams = listOf(${params.joinToString(", ")})")
+            if (returnExpr != null) {
+                append(", functionReturn = $returnExpr")
+            }
         }
     }
 
@@ -1650,6 +1698,46 @@ class KlangScriptProcessor(
     // ===== ParamSpec emission =====
 
     /**
+     * The runtime's trailing-lambda rule (`runtime/ArgAlignment`) only runs on the spec-aware
+     * call path, which requires EVERY optional parameter to carry a default thunk (KSP emits
+     * one only for a safe literal). A door whose shape lets a trailing lambda float, but whose
+     * optionals include a non-literal default (e.g. `freq: IgnitorDslLike = IgnitorDsl.Freq`),
+     * would look floatable to the editor yet bind the lambda to the first slot at runtime.
+     * Refuse that shape at generation time instead of letting the two disagree silently.
+     * The fix on the declaring side is a literal default (`freq: IgnitorDslLike? = null`).
+     *
+     * Floatable, per `ArgAlignment`: the LAST function-typed parameter `j` has a non-function
+     * parameter directly before it (`j >= 1`, `j - 1` not function-typed). Then a call whose
+     * last positional argument lands on `j - 1` sees exactly one function-typed candidate after
+     * it. If `j - 1` is itself function-typed, every earlier position sees two or more
+     * candidates and the rule refuses (ambiguous), so the shape is not floatable. A vararg
+     * parameter also rules floating out: `resolveByParamSpec`'s vararg branch maps positionally.
+     */
+    private fun checkTrailingLambdaShape(scriptParams: List<KSValueParameter>) {
+        val isFunction = scriptParams.map { isFunctionKsType(it.type.resolve()) }
+        val lastFunctionIdx = isFunction.lastIndexOf(true)
+        val floatable = lastFunctionIdx >= 1 && !isFunction[lastFunctionIdx - 1] && scriptParams.none { it.isVararg }
+        if (!floatable) {
+            return
+        }
+        val functionParam = scriptParams[lastFunctionIdx]
+        for (p in scriptParams) {
+            if (p.hasDefault && safeDefaultThunk(p) == null) {
+                val fnName = (p.parent as? KSFunctionDeclaration)?.simpleName?.asString() ?: "<function>"
+                logger.error(
+                    "'$fnName': parameter '${functionParam.name?.asString()}' is function-typed and invites a " +
+                            "trailing lambda, but optional parameter '${p.name?.asString()}' has a non-literal " +
+                            "default (no default thunk), which disables the spec-aware call path, so " +
+                            "`$fnName(x => ...)` would bind the lambda to the first slot at runtime. Give " +
+                            "'${p.name?.asString()}' a literal default (number, string, boolean or null) and " +
+                            "resolve the real default in the body.",
+                    p,
+                )
+            }
+        }
+    }
+
+    /**
      * Build the Kotlin source for a `List<ParamSpec>` covering [scriptParams].
      *
      * For optional params, attempts to extract the Kotlin default expression via
@@ -1668,6 +1756,7 @@ class KlangScriptProcessor(
      */
     private fun paramSpecsListExpression(scriptParams: List<KSValueParameter>, indent: String = "    "): String {
         if (scriptParams.isEmpty()) return "emptyList()"
+        checkTrailingLambdaShape(scriptParams)
         val specs = scriptParams.map { p ->
             val name = p.name?.asString() ?: "p"
             val resolvedType = p.type.resolve()

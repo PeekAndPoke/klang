@@ -33,6 +33,10 @@ gets the cheapest model/effort tier that can do its task well.
 | Trivial mechanical work                              | `haiku`                | extract/list/count, grep sweeps, format conversion, high-volume simple scans                                         |
 | Frontier reasoning                                   | inherit (omit `model`) | architecture judgment, by-ear/sound design tradeoffs, cross-cutting analysis the coordinator can't decompose further |
 
+**Klang note — review rounds 3 and later run on the strongest tier.** Maintainer instruction
+2026-09-05: when a `/review-loop` needs a third round, run the reviewers on `fable` (or inherit
+when the session already is), not on `opus`. Rounds 1 and 2 follow the table.
+
 **Klang note — DSP review is correctness-critical.** The audio-engineer reviewer in `/review-loop`
 judges numerical stability, per-sample cost and click risk; run it at `opus` or inherit, never
 `sonnet`. Same for anything touching `audio_be` hot paths.

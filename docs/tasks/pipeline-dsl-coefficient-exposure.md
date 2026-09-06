@@ -49,7 +49,7 @@ See memory `feedback_parameter_parity.md` and `docs/tasks/master-dsl-followups.m
 
 `IgnitorFilters.kt:119` reads the bare `FILTER_DRIVE_PER_ANALOG` while the voice strip threads
 `stage.drivePerAnalog`. The 08-11 move unified the *default*; the moment anyone calls
-`Stage.filter().drive(x)` the two paths diverge again — `Pipeline.of(Stage.filter().drive(1.0))` on a patch that also
+`Pipeline(p => p.filter(f => f.drive(x)))` the two paths diverge again: `Pipeline(p => p.filter(f => f.drive(1.0)))` on a patch that also
 uses an ignitor-level `lowpass(analog = 3)` gives the strip filter `driveScale = 3.0`
 and the ignitor filter `0.75`.
 

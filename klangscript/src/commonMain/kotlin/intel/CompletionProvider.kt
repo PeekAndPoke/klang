@@ -81,6 +81,10 @@ class CompletionProvider(private val registry: KlangDocsRegistry) {
             if (prefix.isNotEmpty() && !symbol.name.startsWith(prefix, ignoreCase = true)) {
                 continue
             }
+            // `invoke` is what makes `Master(...)` callable; nobody types `Master.invoke(...)`.
+            if (symbol.name == "invoke") {
+                continue
+            }
             suggestions.add(symbol.toMemberSuggestion(receiverType))
         }
 

@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
 class VariableTest : StringSpec({
 
     "should declare let variable with initializer" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -32,7 +32,7 @@ class VariableTest : StringSpec({
     }
 
     "should declare let variable without initializer (defaults to null)" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("let x")
 
@@ -41,7 +41,7 @@ class VariableTest : StringSpec({
     }
 
     "should declare const variable with initializer" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("const MAX = 100")
 
@@ -51,7 +51,7 @@ class VariableTest : StringSpec({
     }
 
     "should use let variable in expressions" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -66,7 +66,7 @@ class VariableTest : StringSpec({
     }
 
     "should use const variable in expressions" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -81,7 +81,7 @@ class VariableTest : StringSpec({
     }
 
     "should declare variable with expression as initializer" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("let result = 2 + 3 * 4")
 
@@ -91,7 +91,7 @@ class VariableTest : StringSpec({
     }
 
     "should declare variable with function call as initializer" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             registerFunctionRaw("getValue") { _, _ -> NumberValue(99.0) }
         }
 
@@ -103,7 +103,7 @@ class VariableTest : StringSpec({
     }
 
     "should declare string variable" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("let greeting = \"Hello, World!\"")
 
@@ -113,7 +113,7 @@ class VariableTest : StringSpec({
     }
 
     "should support multiple variable declarations" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -136,7 +136,7 @@ class VariableTest : StringSpec({
     }
 
     "should use variable in arrow function" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute("let multiplier = 10")
 
@@ -146,7 +146,7 @@ class VariableTest : StringSpec({
     }
 
     "should capture variable in closure" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -161,7 +161,7 @@ class VariableTest : StringSpec({
     }
 
     "should pass variable to native function" {
-        val script = klangScript {
+        val script = klangScriptEngine {
             registerFunctionRaw("double") { args, _ ->
                 val num = (args[0] as NumberValue).value
                 NumberValue(num * 2)

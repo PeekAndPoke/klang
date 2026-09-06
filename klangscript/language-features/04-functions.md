@@ -145,3 +145,51 @@ let r2 = applyOperation(5, 3, multiply);  // 15
 ```
 
 **Expected:** Results as commented
+
+### 4.10 Lambdas as arguments to native functions ✅ — typed in the editor, trailing-lambda rule
+
+A script arrow function passed to a native (Kotlin) function whose parameter is function-typed
+(`(A) -> B`, or a typealias of one) is converted to a Kotlin lambda and may be called back by the
+native (`NativeInterop.convertFunctionToKotlin`). Two rules make this pleasant at the call site:
+
+- **Trailing-lambda rule** (`runtime/ArgAlignment`): when the LAST positional argument is a
+  function, the parameter at its index is not function-typed, and exactly one function-typed
+  parameter follows, the argument binds to that parameter and the skipped slots take their
+  defaults. `Osc.supersaw(x => x.voices(9))` lands the lambda in the trailing `configure`
+  parameter although `freq` comes first. Only the last argument floats; two candidates are
+  ambiguous (name the parameter instead).
+- **Typed parameters in the editor**: the analyzer binds the lambda's parameters with the
+  callee's declared function-parameter types, so `x.` completes inside the lambda.
+
+```javascript
+note("c3").superimpose(x => x.transpose(12))              // x: SprudelPattern
+Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder (klangscript-libs)
+```
+
+A door that wants the trailing-lambda rule must give every EARLIER optional parameter a literal
+default (number, string, boolean, null): the rule runs on the spec-aware call path, which needs
+a default thunk for each skipped slot, and KSP only emits thunks for literals. The KSP processor
+refuses a function-typed parameter preceded by a non-literal optional default.
+
+Tests: `ArgAlignmentTest.kt`, `ConfigureLambdaBindingTest.kt` (runtime), `AnalyzedAstTest.kt`
+("configure lambda" cases, analyzer). Plan: `docs/tasks/dsl-configure-lambdas.md`.
+
+### 4.11 Callable native objects (`invoke`) ✅
+
+A native object registered from Kotlin becomes callable when its type registers a method named
+`invoke` (`@KlangScript.Method(name = "invoke")` on an `@KlangScript.Object` member, or a hand
+registration under `NativeOperatorNames.INVOKE`). `Master(m => m.gain(2.5))` then dispatches to
+that method through the SAME spec-aware path as `Master.build(m => ...)`: named arguments,
+default thunks and the trailing-lambda rule all apply. An object without `invoke` stays a plain
+value; calling it is a type error that names the missing method. The analyzer resolves the call
+to the `invoke` callable (return type, typed lambda parameter, hover signature rendered as
+`Master(...)`), and `invoke` never appears as a member completion.
+
+```javascript
+master(Master(m => m.reverb(r => r.wet(0.05)).gain(2.5)))   // == Master.build(m => ...)
+master(Master())                                            // == Master.default()
+```
+
+Tests: `NativeObjectInvokeTest.kt` (runtime), `InvokeAnalysisTest.kt` (analyzer). Design:
+`docs/tasks/klangscript-native-object-operators.md` (revision 2026-09-05). The arithmetic and
+comparison operators of that plan are designed, not built.

@@ -34,7 +34,7 @@ Known asymmetries already spotted, as a starting list:
 sprudel's `compressor()`, not per-orbit, not per-voice. A lookahead limiter delays the signal it protects; on the summed
 master that delay is uniform and harmless, but on an orbit it would shift that orbit late against every other one — a
 silent timing bug that reads as "my drums feel loose". Same reasoning one level up keeps the *authored*
-`MasterFx.limiter()` at
+the authored `limiter` stage at
 `lookaheadSeconds = 0` while the house limiter runs at 5 ms: the house one is global and post-sum, the authored one is
 per-playback. `MasterDefaultsSyncSpec` asserts both the shared values and the divergence. See
 `master-limiter-lookahead.md` §3 and §4.
@@ -75,7 +75,7 @@ Recorded here only because the underlying tension stays: the FE cannot distingui
 `master(...)`" from "this query chunk happens to contain none", and a sectioned song legitimately has cycles without a
 master event. Revisit only if it bites in practice.
 
-## 5. `MasterFx.eq()` — a gentle master-bus EQ (new, 2026-08-11)
+## 5. A master `eq` stage (`Master(m => m.eq(...))`), a gentle master-bus EQ (new, 2026-08-11)
 
 Wanted by [`auto-mix-advisor.md`](auto-mix-advisor.md) §3 (closed-loop master correction), and independently useful as
 an authored mastering tool. Scope: **2–3 bands — low shelf, high shelf, optionally one mid bell** — deliberately not a
@@ -90,9 +90,9 @@ full parametric EQ.
   `eqLowDb/eqLowHz`, `eqHighDb/eqHighHz`, `eqMidDb/eqMidHz/eqMidQ` (dB gain + Hz corner, the industry-standard meaning)
   and record them in the parity table before shipping.
   **UPDATE 2026-08-20 — the per-voice counterpart NOW EXISTS**, so this is no longer hypothetical:
-  the ignitor DSL ships `.eq()` plus `.band(freq, q, db)` (serial bell, dB gain, `q` = the ordinary
+  the ignitor DSL ships `.eq(e => e.band(freq, q, db))` (serial bell, dB gain, `q` = the ordinary
   width scale, 0 dB transparent) and `.tap(freq, q, gain)` (parallel boost, LINEAR gain). Whoever
-  implements `MasterFx.eq()` must reconcile with those names and units rather than inventing a
+  implements the master `eq` stage must reconcile with those names and units rather than inventing a
   parallel vocabulary — in particular `db` means the same thing on both, and a master `q` should
   mean the same width it means on `.band()`. See also the (now settled, 2026-08-25) `freq`
   unification in `docs/tasks-archive/2026-08/20260825-filter-frequency-param-naming.md`, which will touch these names.
@@ -118,4 +118,4 @@ full parametric EQ.
 - Next in the same family: [`katalyst-dsl.md`](katalyst-dsl.md) — follows this application-path and effect-reuse
   precedent
 - [`../plans/resource-warehouse.md`](../plans/resource-warehouse.md) — owns item 3
-- [`auto-mix-advisor.md`](auto-mix-advisor.md) — wants item 5 (`MasterFx.eq`) for its closed-loop phase
+- [`auto-mix-advisor.md`](auto-mix-advisor.md) — wants item 5 (the master `eq` stage) for its closed-loop phase

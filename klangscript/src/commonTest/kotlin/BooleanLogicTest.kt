@@ -27,28 +27,28 @@ class BooleanLogicTest : StringSpec({
     // ============================================================
 
     "true && true should return true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("true && true")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe true
     }
 
     "true && false should return false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("true && false")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe false
     }
 
     "false && true should return false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("false && true")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe false
     }
 
     "false && false should return false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("false && false")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe false
@@ -59,28 +59,28 @@ class BooleanLogicTest : StringSpec({
     // ============================================================
 
     "true || true should return true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("true || true")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe true
     }
 
     "true || false should return true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("true || false")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe true
     }
 
     "false || true should return true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("false || true")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe true
     }
 
     "false || false should return false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("false || false")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe false
@@ -91,28 +91,28 @@ class BooleanLogicTest : StringSpec({
     // ============================================================
 
     "chained AND operations: true && true && true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("true && true && true")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe true
     }
 
     "chained AND operations: true && false && true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("true && false && true")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe false
     }
 
     "chained OR operations: false || false || true" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("false || false || true")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe true
     }
 
     "chained OR operations: false || false || false" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("false || false || false")
         result.shouldBeInstanceOf<BooleanValue>()
         result.value shouldBe false
@@ -123,7 +123,7 @@ class BooleanLogicTest : StringSpec({
     // ============================================================
 
     "boolean logic with variables: a && b" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let a = true
@@ -136,7 +136,7 @@ class BooleanLogicTest : StringSpec({
     }
 
     "boolean logic with variables: a || b" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let a = false

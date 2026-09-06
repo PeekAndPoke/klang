@@ -299,8 +299,10 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
  * Builder for registering extension methods on a native object or type
  */
 class NativeObjectExtensionsBuilder<T : Any>(
-    @PublishedApi internal val builder: KlangScriptExtensionBuilder,
-    @PublishedApi internal val cls: KClass<T>,
+    /** The enclosing registry. Public because KSP-generated registrations in OTHER modules (`:klangscript-libs`, `:sprudel`) call it directly. */
+    val builder: KlangScriptExtensionBuilder,
+    /** The receiver class every method registered through this builder is attached to. Public for the same reason as [builder]. */
+    val cls: KClass<T>,
 ) {
     /**
      * Register a no-parens property accessor on the receiver type.

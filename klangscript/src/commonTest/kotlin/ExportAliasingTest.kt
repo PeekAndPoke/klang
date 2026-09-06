@@ -142,7 +142,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should support mixed export with aliases" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -164,7 +164,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should export alias work with wildcard import" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -184,7 +184,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should export alias work with namespace import" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -205,7 +205,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should not expose original name in wildcard import when aliased" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -228,7 +228,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should allow import aliasing on top of export aliasing" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -248,7 +248,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should export aliasing preserve function behavior" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "funcs", """
                     let square = (x) => x * x
@@ -269,7 +269,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should export aliasing work with objects" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "config", """
                     let settings = { value: 42 }
@@ -289,7 +289,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should handle complex real-world pattern with export aliases" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("nativeLog") { values, _ ->
                 val value = values[0]
                 NumberValue((value as NumberValue).value * 10)
@@ -318,7 +318,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should error when trying to import non-exported symbol even if it exists" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let public = (x) => x + 1

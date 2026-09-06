@@ -51,7 +51,7 @@ class LibrarySystemTest : StringSpec({
     }
 
     "Library with script code only (backward compatibility)" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             // Old API still works
             registerLibrary(
                 "math", """
@@ -84,7 +84,7 @@ class LibrarySystemTest : StringSpec({
             )
             .build()
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(mathLib)
         }
 
@@ -109,7 +109,7 @@ class LibrarySystemTest : StringSpec({
             registerFunction("create") { value: Double -> MathHelper(value) }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(mathLib)
         }
 
@@ -140,7 +140,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(mathLib)
         }
 
@@ -169,7 +169,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -208,7 +208,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(mathLib)
             registerLibrary(stringLib)
         }
@@ -247,7 +247,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -293,7 +293,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -319,7 +319,7 @@ class LibrarySystemTest : StringSpec({
         }
 
         // Use with first engine
-        val engine1 = klangScript {
+        val engine1 = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -333,7 +333,7 @@ class LibrarySystemTest : StringSpec({
         result1 shouldBe NumberValue(16.0)
 
         // Use with second engine
-        val engine2 = klangScript {
+        val engine2 = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -359,7 +359,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -374,7 +374,7 @@ class LibrarySystemTest : StringSpec({
     }
 
     "Library not found error still works" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val exception = shouldThrow<KlangScriptImportError> {
             engine.execute("""import * from "nonexistent" """)
@@ -402,7 +402,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -426,7 +426,7 @@ class LibrarySystemTest : StringSpec({
             )
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -451,7 +451,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(lib)
         }
 
@@ -492,7 +492,7 @@ class LibrarySystemTest : StringSpec({
             }
         }
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(lib)
         }
 

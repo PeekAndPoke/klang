@@ -162,7 +162,7 @@ sealed interface IgnitorDsl {
      * Builtin sounds (`IgnitorDefaults.kt`) wire these in automatically; custom sounds
      * opt in explicitly:
      * ```
-     * let mypad = Osc.sine().analog(OscSlot.analog())
+     * let mypad = Osc.sine(x => x.analog(OscSlot.analog))
      * note("c").sound(mypad)
      * ```
      */

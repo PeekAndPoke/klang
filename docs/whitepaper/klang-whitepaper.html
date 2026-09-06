@@ -1503,12 +1503,12 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
             <figure>
                 <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// Double-VCA sandwich: the first VCA shapes how hard the distortion is driven</span>
 <span class="cm">// (so the envelope sculpts harmonics), the second rides the output level.</span>
-<span class="kw">let</span> chain = Pipeline.of(
-    Stage.filterMod(),
-    Stage.vca(),        <span class="cm">// early — sculpts the drive</span>
-    Stage.distort(),
-    Stage.filter(),
-    Stage.vca()         <span class="cm">// late — trims the level</span>
+<span class="kw">let</span> chain = Pipeline(p =&gt; p
+    .filterMod()
+    .vca()              <span class="cm">// early — sculpts the drive</span>
+    .distort()
+    .filter()
+    .vca()              <span class="cm">// late — trims the level</span>
 )</pre>
                 </div>
                 <figcaption>Stage order is audible. This is the difference between a synth and a pedalboard.
@@ -1526,12 +1526,12 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
             <figure>
                 <div class="code engine" data-lang="KlangScript"><pre>stack(
   lead, bass, drums,
-  master(Master.of(
-    MasterFx.reverb().wet(0.03).roomSize(6),  <span class="cm">// a breath of shared space, before the dynamics</span>
-    MasterFx.gain(1.45),
-    MasterFx.limiter().thresholdDb(-8.0).ratio(2.0).attack(0.015).release(0.25),
-    MasterFx.gain(1.40),
-    MasterFx.limiter().thresholdDb(-4.0).ratio(4.0).attack(0.008).release(0.15)
+  master(Master(m =&gt; m
+    .reverb(r =&gt; r.wet(0.03).roomSize(6))  <span class="cm">// a breath of shared space, before the dynamics</span>
+    .gain(1.45)
+    .limiter(l =&gt; l.thresholdDb(-8.0).ratio(2.0).attack(0.015).release(0.25))
+    .gain(1.40)
+    .limiter(l =&gt; l.thresholdDb(-4.0).ratio(4.0).attack(0.008).release(0.15))
   ))
 )</pre>
                 </div>
@@ -1549,7 +1549,7 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
                 all run at that level today; patterns set their
                 amounts, but the chain itself — which effects, in what order — is hardcoded in the engine.
                 The Katalyst DSL closes that quadrant: declare a per-orbit chain the way
-                <code>Pipeline.of(…)</code> declares the per-voice one, following the Master DSL's
+                <code>Pipeline(p =&gt; …)</code> declares the per-voice one, following the Master DSL's
                 registration pattern and reusing the same DSP underneath. One word per concept: the Ignitor
                 lights the voice, the Katalyst refines the bus.
             </p>
@@ -1593,17 +1593,17 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
                analog = Osc.slot.analog)
 
 <span class="cm">// Shakuhachi — sine body, triangle edge, two breath-noise layers, vibrato</span>
-<span class="kw">let</span> shaku = Osc.sine().mul(0.6)
-      .plus(Osc.triangle().mul(0.25))
+<span class="kw">let</span> shaku = Osc.sine(x =&gt; x.analog(0.2)).mul(0.6)
+      .plus(Osc.triangle(x =&gt; x.analog(0.2)).mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
       .highpass(freq = 300, analog = Osc.slot.analog)
       .lowpass(freq = 3800, q = 1.0, analog = Osc.slot.analog)
-      .analog(0.2).vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
+      .vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
 
-<span class="kw">let</span> pad = Osc.supertri(freq = Osc.freq(), voices = 5).analog(5.0)
+<span class="kw">let</span> pad = Osc.supertri(x =&gt; x.voices(5).analog(5.0))
       .lowpass(freq = Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()),
                q = 2, analog = Osc.slot.analog)
       .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve(<span class="st">"scurve"</span>)

@@ -16,7 +16,7 @@ class KlangScriptIntegrationTest : StringSpec({
         val output = mutableListOf<String>()
 
         // Register a print function
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("print") { values, _ ->
                 val value = values.first()
                 output.add(value.toDisplayString())
@@ -34,7 +34,7 @@ class KlangScriptIntegrationTest : StringSpec({
     "should execute multiple statements" {
         val output = mutableListOf<String>()
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("print") { values, _ ->
                 val value = values.first()
                 output.add(value.toDisplayString())
@@ -56,7 +56,7 @@ class KlangScriptIntegrationTest : StringSpec({
     "should handle numeric values" {
         var receivedValue: Double? = null
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("check") { values, _ ->
                 val value = values.first()
                 receivedValue = (value as NumberValue).value
@@ -72,7 +72,7 @@ class KlangScriptIntegrationTest : StringSpec({
     "should call functions with multiple arguments" {
         var sum = 0.0
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("add") { args, _ ->
                 sum = args.sumOf { (it as NumberValue).value }
                 NumberValue(sum)
@@ -87,7 +87,7 @@ class KlangScriptIntegrationTest : StringSpec({
     "should handle nested function calls" {
         val output = mutableListOf<String>()
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("print") { values, _ ->
                 val value = values.first()
                 output.add(value.toDisplayString())

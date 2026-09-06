@@ -20,7 +20,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Bitwise AND ──
 
     "bitwise AND: 5 & 3 should be 1" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("5 & 3")
         (result as NumberValue).value shouldBe 1.0
     }
@@ -28,7 +28,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Bitwise OR ──
 
     "bitwise OR: 5 | 3 should be 7" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("5 | 3")
         (result as NumberValue).value shouldBe 7.0
     }
@@ -36,7 +36,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Bitwise XOR ──
 
     "bitwise XOR: 5 ^ 3 should be 6" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("5 ^ 3")
         (result as NumberValue).value shouldBe 6.0
     }
@@ -44,7 +44,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Bitwise NOT ──
 
     "bitwise NOT: ~5 should be -6" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("~5")
         (result as NumberValue).value shouldBe -6.0
     }
@@ -52,7 +52,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Shift left ──
 
     "shift left: 1 << 3 should be 8" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("1 << 3")
         (result as NumberValue).value shouldBe 8.0
     }
@@ -60,7 +60,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Shift right ──
 
     "shift right: 16 >> 2 should be 4" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("16 >> 2")
         (result as NumberValue).value shouldBe 4.0
     }
@@ -68,7 +68,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Unsigned shift right ──
 
     "unsigned shift right: -1 >>> 28 should be 15" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("-1 >>> 28")
         (result as NumberValue).value shouldBe 15.0
     }
@@ -76,13 +76,13 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Hex literal ──
 
     "hex literal: 0xFF should be 255" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("0xFF")
         (result as NumberValue).value shouldBe 255.0
     }
 
     "hex literal: 0XAB should be 171" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("0XAB")
         (result as NumberValue).value shouldBe 171.0
     }
@@ -90,13 +90,13 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Octal literal ──
 
     "octal literal: 0o77 should be 63" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("0o77")
         (result as NumberValue).value shouldBe 63.0
     }
 
     "octal literal: 0O10 should be 8" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("0O10")
         (result as NumberValue).value shouldBe 8.0
     }
@@ -104,13 +104,13 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Binary literal ──
 
     "binary literal: 0b1010 should be 10" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("0b1010")
         (result as NumberValue).value shouldBe 10.0
     }
 
     "binary literal: 0B11111111 should be 255" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("0B11111111")
         (result as NumberValue).value shouldBe 255.0
     }
@@ -118,19 +118,19 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Nullish coalescing ──
 
     "nullish coalescing: null ?? 'default' should be 'default'" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("""null ?? "default" """)
         (result as StringValue).value shouldBe "default"
     }
 
     "nullish coalescing: 'value' ?? 'default' should be 'value'" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(""" "value" ?? "default" """)
         (result as StringValue).value shouldBe "value"
     }
 
     "nullish coalescing: 0 ?? 'default' should be 0 (0 is NOT null)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("""0 ?? "default" """)
         (result as NumberValue).value shouldBe 0.0
     }
@@ -138,7 +138,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Optional chaining ──
 
     "optional chaining: obj.a?.b should return property value" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let obj = { a: { b: 1 } }
@@ -149,7 +149,7 @@ class BitwiseOperatorsTest : StringSpec({
     }
 
     "optional chaining: obj.c?.d should return null (no error)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let obj = { a: { b: 1 } }
@@ -162,7 +162,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Compound assignment: bitwise ──
 
     "compound assignment: x &= 0x0F" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 0xFF
@@ -174,7 +174,7 @@ class BitwiseOperatorsTest : StringSpec({
     }
 
     "compound assignment: x |= 0xF0" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 0x0F
@@ -186,7 +186,7 @@ class BitwiseOperatorsTest : StringSpec({
     }
 
     "compound assignment: x ^= 0xFF" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 0xFF
@@ -200,7 +200,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Compound assignment: shift ──
 
     "compound assignment: x <<= 4" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 1
@@ -212,7 +212,7 @@ class BitwiseOperatorsTest : StringSpec({
     }
 
     "compound assignment: x >>= 2" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 16
@@ -226,7 +226,7 @@ class BitwiseOperatorsTest : StringSpec({
     // ── Compound assignment: exponent ──
 
     "compound assignment: x **= 10" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 2

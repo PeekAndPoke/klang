@@ -5,6 +5,8 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
+    // KSP plugin stays applied for kotest's spec discovery; the module runs NO symbol processor of
+    // its own any more (the stdlib and its generated registration live in :klangscript-libs).
     id("com.google.devtools.ksp")
     id("io.kotest")
 }
@@ -43,7 +45,6 @@ kotlin {
             dependencies {
                 api(project(":common"))
                 api(project(":klangscript-annotations"))
-                api(project(":audio_bridge"))
                 implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
             }
@@ -87,21 +88,4 @@ kotlin {
 
 tasks {
     configureJvmTests()
-}
-
-kotlin.sourceSets.commonMain {
-    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
-    if (name != "kspCommonMainKotlinMetadata") {
-        dependsOn("kspCommonMainKotlinMetadata")
-    }
-}
-
-dependencies {
-    kspCommonMainMetadata(project(":klangscript-ksp"))
-
-    add("kspJvmTest", project(":klangscript-ksp"))
-    add("kspJsTest", project(":klangscript-ksp"))
 }

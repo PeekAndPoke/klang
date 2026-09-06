@@ -305,7 +305,7 @@ class RuntimeValueHelpersTest : StringSpec({
             parameters = listOf(element = "x"),
             body = io.peekandpoke.klang.script.ast.ArrowFunctionBody.ExpressionBody(NumberLiteral(1.0)),
             closureEnv = Environment(),
-            engine = klangScript(),
+            engine = klangScriptEngine(),
         )
         value.toBooleanOrNull() shouldBe null
     }
@@ -417,7 +417,7 @@ class RuntimeValueHelpersTest : StringSpec({
             parameters = listOf("x"),
             body = io.peekandpoke.klang.script.ast.ArrowFunctionBody.ExpressionBody(NumberLiteral(1.0)),
             closureEnv = Environment(),
-            engine = klangScript(),
+            engine = klangScriptEngine(),
         )
         value.isFunction() shouldBe true
     }

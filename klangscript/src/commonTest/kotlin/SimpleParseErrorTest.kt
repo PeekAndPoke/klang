@@ -10,7 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 class SimpleParseErrorTest : StringSpec({
 
     "Reproduce parse error with no-arg method in chain" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         try {
             // This should trigger a parse error

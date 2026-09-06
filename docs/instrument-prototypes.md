@@ -8,8 +8,8 @@ These are starting points — tweak parameters to taste.
 ### Flute
 
 ```javascript
-let flute = Osc.sine()
-        .plus(Osc.triangle().mul(0.3))
+let flute = Osc.sine(x => x.analog(0.15))
+        .plus(Osc.triangle(x => x.analog(0.15)).mul(0.3))
         .plus(
             Osc.perlin(12).mul(0.2)
                 .lowpass(4000)
@@ -19,7 +19,6 @@ let flute = Osc.sine()
         .plus(Osc.perlin(8).mul(0.05))
         .lowpass(3000)
         .highpass(400)
-        .analog(0.15)
         .vibrato(4.5, 0.012)
         .pitchEnvelope(1.5, 0.01, 0.06)
         .adsr(0.06, 0.15, 0.75, 0.2)
@@ -156,7 +155,7 @@ let twelve = Osc.superpluck()
 let electric = Osc.pluck()
         .lowpass(6000)
         .highpass(200)
-        .phaser(0.3).wet(0.3)
+        .phaser(0.3, x => x.wet(0.3))
 ```
 
 ### Electric Distorted
@@ -174,8 +173,7 @@ let crunch = Osc.pluck()
 ### Fat Analog Pad
 
 ```javascript
-let fatpad = Osc.supersaw()
-        .analog(0.3)
+let fatpad = Osc.supersaw(x => x.analog(0.3))
         .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
         .adsr(0.2, 0.5, 0.7, 1.0)
 ```

@@ -24,7 +24,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     // ============================================================
 
     "should execute arrow function with simple block body and return" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute("((x) => { return x + 1 })(5)")
         result.shouldBeInstanceOf<NumberValue>()
@@ -32,7 +32,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should execute arrow function with multiple statements" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -47,7 +47,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should return null if no return statement in block body" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -60,7 +60,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should support early return" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -80,7 +80,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     // ============================================================
 
     "should return value from return statement" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -95,7 +95,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should return null for return without value" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         val result = script.execute(
             """
@@ -108,7 +108,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should return complex expressions" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -123,7 +123,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should return specific value from block body and ignore unreachable code" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Test that return actually exits the function with the correct value
         script.execute(
@@ -142,7 +142,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should return different values based on computation in block" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Verify the actual computed value is returned
         script.execute(
@@ -164,7 +164,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     // ============================================================
 
     "should support let declarations in block body" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -181,7 +181,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should support const declarations in block body" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -201,7 +201,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     // ============================================================
 
     "should capture closure variables in block body" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -223,7 +223,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     // ============================================================
 
     "should use comparison operators in block body" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -239,7 +239,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     }
 
     "should use equality in block body with member access" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """
@@ -259,7 +259,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     // ============================================================
 
     "should parse the original user example: note filter with block body" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         // Just test that it parses successfully - we'll test execution separately
         val code = """
@@ -281,7 +281,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
     // ============================================================
 
     "should support both expression and block bodies in same code" {
-        val script = klangScript()
+        val script = klangScriptEngine()
 
         script.execute(
             """

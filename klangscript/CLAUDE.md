@@ -3,6 +3,12 @@
 JavaScript-like scripting language for live coding. Kotlin Multiplatform (JVM + JS).
 Hand-rolled lexer + recursive descent parser. Tree-walking interpreter.
 
+**This module is the language and runtime only.** The standard library (`Osc`, `Master`,
+`Pipeline`, `Math`, `Object`, `console`, value-type extensions) lives in `:klangscript-libs`
+(see `klangscript-libs/CLAUDE.md`), which depends on this module, never the other way round.
+`klangScriptEngine()` here builds a bare engine; `klangScript()` in the libs module builds one
+with the stdlib registered.
+
 ## Architecture
 
 ```
@@ -25,7 +31,8 @@ Interpreter (tree-walking)  →  RuntimeValue / Environment
 | `runtime/Errors.kt`                      | Typed exceptions + `ReturnException`                   |
 | `KlangScriptEngine.kt`                   | Public facade                                          |
 | `builder/KlangScriptExtensionBuilder.kt` | Native registration DSL                                |
-| `stdlib/KlangStdLib.kt`                  | Standard library (Math, console, string/array methods) |
+| `index_common.kt`                        | `klangScriptEngine()` (bare engine), `klangScriptLibrary()` |
+| `../klangscript-libs/`                   | Standard library, in its own module (see its CLAUDE.md) |
 
 ## Reference Files — Read Only What You Need
 
@@ -42,7 +49,8 @@ Interpreter (tree-walking)  →  RuntimeValue / Environment
 ## Build & Test
 
 ```bash
-./gradlew :klangscript:jvmTest          # run all tests (fast)
+./gradlew :klangscript:jvmTest          # language tests (fast)
 ./gradlew :klangscript:jsTest           # JS platform tests
+./gradlew :klangscript-libs:jvmTest     # stdlib tests (separate module)
 ./gradlew :klangscript:compileKotlinJvm # compile only
 ```

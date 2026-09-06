@@ -93,22 +93,25 @@ Multiple detuned copies for thick, lush sounds.
 
 | Method                                     | Description             |
 |--------------------------------------------|-------------------------|
-| `Osc.supersaw(freq?, voices?, spread?)`    | Detuned sawtooth chorus |
-| `Osc.supersine(freq?, voices?, spread?)`   | Detuned sine chorus     |
-| `Osc.supersquare(freq?, voices?, spread?)` | Detuned square chorus   |
-| `Osc.supertri(freq?, voices?, spread?)`    | Detuned triangle chorus |
-| `Osc.superramp(freq?, voices?, spread?)`   | Detuned ramp chorus     |
+| `Osc.supersaw(freq?, configure?)`    | Detuned sawtooth chorus |
+| `Osc.supersine(freq?, configure?)`   | Detuned sine chorus     |
+| `Osc.supersquare(freq?, configure?)` | Detuned square chorus   |
+| `Osc.supertri(freq?, configure?)`    | Detuned triangle chorus |
+| `Osc.superramp(freq?, configure?)`   | Detuned ramp chorus     |
 
-**Constructor params** (all optional):
+**Every oscillator door is `Osc.name(freq?, configure?)`.** `freq` first (omit for the note's pitch, Hz for a
+fixed frequency, `Osc.sine(5)` is an LFO), then a `configure` lambda that receives the oscillator's BUILDER
+and returns it. The builder carries exactly that oscillator's knobs; processing (`.lowpass()`, `.adsr()`,
+`.mul()`, ...) goes on the returned sound, OUTSIDE the lambda:
 
-| Param    | Default | Description                     |
-|----------|---------|---------------------------------|
-| `voices` | 8       | Number of detuned voices        |
-| `spread` | 0.2     | Frequency spread between voices |
+```javascript
+Osc.supersaw(x => x.voices(9).spread(0.1).analog(0.2)).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
+```
 
-**Chained character knobs** (return the same super-osc subtype): `.analog(x)` (per-voice pitch drift),
-`.spreadPower(x)`, `.sideAtten(x)`, `.gainJitter(x)`, `.centerJitter(x)`, and the combined phase-pool
-call `.phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` — banded start-phase
+**Builder knobs of the super oscillators** (each returns the builder): `voices(x)` (default 8), `spread(x)`
+(default 0.2), `analog(x)` (per-voice pitch drift), `spreadPower(x)`, `sideAtten(x)`, `gainJitter(x)`,
+`centerJitter(x)`, and the combined phase-pool call
+`phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)`, banded start-phase
 selection for consistent low-note fundamentals, off by default. Every param is an optional literal,
 so named-arg subsets work: `.phasePool()` = on with family defaults,
 `.phasePool(kMin = 0.05, kMax = 0.25)` = the hollow-pad band (the band is a timbre control),
@@ -120,16 +123,18 @@ notes the old random draw was cancelling) — on a finished song, retrim the low
 switching it on.
 
 ```javascript
-// Chained knobs — override only what you want:
+// Configure only what you want, inside the lambda:
 
 // Thin 3-voice supersaw
-Osc.supersaw().voices(3).spread(0.1)
+Osc.supersaw(x => x.voices(3).spread(0.1))
 
-// Wide 12-voice pad with analog drift
-Osc.supersaw().voices(12).spread(0.3).analog(0.2)
+// Wide 12-voice pad with analog drift, then processing outside the lambda
+Osc.supersaw(x => x.voices(12).spread(0.3).analog(0.2)).lowpass(2000)
 
-// ⚠ Osc.supersaw(voices = 3) FAILS at runtime: the leading `freq` param has a complex default
-// the named-arg binder can't skip. Chain the knobs (above) or pass freq positionally first.
+// Fixed frequency goes first: a 55 Hz drone
+Osc.supersaw(55, x => x.voices(7))
+
+// There is NO .voices()/.analog() on the sound itself any more; they are builder knobs.
 ```
 
 ### Noise Sources
@@ -163,8 +168,8 @@ Osc.supersaw().voices(12).spread(0.3).analog(0.2)
 
 | Method                                    | Description                     |
 |-------------------------------------------|---------------------------------|
-| `Osc.pluck(freq?)`                        | Karplus-Strong plucked string   |
-| `Osc.superpluck(freq?, voices?, spread?)` | Unison plucked strings (chorus) |
+| `Osc.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `decay` (0.996), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
+| `Osc.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8) and `spread` (0.2): `Osc.superpluck(x => x.voices(6).decay(0.995))` |
 
 ### Utility
 
@@ -245,9 +250,9 @@ first. (The per-sample filter loop itself stays: the core runs one loop per sect
 section count and is much larger in the browser and on weak hardware than on desktop JVM, where
 it is small. Measure your own patch rather than assuming a rate.
 
-You write `.band()` and `.tap()` sections yourself, and plain `.lowpass()/.highpass()/
-.bandpass()/.notch()` are folded into the same pass automatically, so there is no need to
-rewrite them as bands.
+You write `band()` and `tap()` sections yourself inside the `.eq(e => e...)` lambda, and plain
+`.lowpass()/.highpass()/.bandpass()/.notch()` written after it are folded into the same pass
+automatically, so there is no need to rewrite them as bands.
 
 **Only NEIGHBOURING filters merge, and nothing is ever reordered.** Anything else between two
 filters is a wall: `.distort()`, `.drive()`, `.shape()`, `.crush()`, `.mul()`, `.shimmer()`,
@@ -269,10 +274,10 @@ exactly as written, and compare.
 
 | Method                  | Description                                                                                        |
 |-------------------------|----------------------------------------------------------------------------------------------------|
-| `.eq()`                 | Opens the EQ; `.band()`/`.tap()` exist only on an EQ, so this comes first                          |
+| `.eq(e => e...)`        | Opens the EQ and configures its sections in the lambda; `band`/`tap` exist only on that builder    |
 | `.optimizer(0)`         | Renders a sound exactly as written, with no filter fusion; for A/B-ing the fusion by ear           |
-| `.band(freq, q?, db?)`  | **Serial** peaking band: `db` dB gain at `freq`, `q` = width (defaults q=0.707, db=0)             |
-| `.tap(freq, q?, gain?)` | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=0.707, gain=1.0)        |
+| `band(freq, q?, db?)`   | **Serial** peaking band: `db` dB gain at `freq`, `q` = width (defaults q=0.707, db=0)             |
+| `tap(freq, q?, gain?)`  | **Parallel** boost: bandpasses the EQ INPUT and mixes it back in (defaults q=0.707, gain=1.0)        |
 
 **The difference matters and it is audible.** `.band()` sections apply one after another, so
 they compound: two overlapping +6 dB bands give about +12 dB where they overlap, like any DAW EQ.
@@ -282,20 +287,20 @@ than compound. Converting a parallel tap bank into serial bands measured **+4.5 
 
 ```javascript
 // EQ bands: shaping a sound, gains in dB
-Osc.saw().eq().band(3500, 0.7, 6).band(300, 1.0, -4)      // presence lift, mud cut
+Osc.saw().eq(e => e.band(3500, 0.7, 6).band(300, 1.0, -4))      // presence lift, mud cut
 
 // Parallel boosts: the classic guitar mids + presence lift, gains are plain multipliers
-Osc.saw().eq().tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0)
+Osc.saw().eq(e => e.tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0))
 ```
 
-Use `.tap()` when you are stacking resonant boosts onto a sound, `.band()` when you are shaping
-with EQ bands. They mix freely in one `.eq()`, in written order.
+Use `tap()` when you are stacking resonant boosts onto a sound, `band()` when you are shaping
+with EQ bands. They mix freely in one `.eq(e => e...)` lambda, in written order.
 
-⚠ `.band(1200, 6)` sets **q**, not gain: the second positional arg is `q` and db stays 0, which
-is silent. Write `.band(freq = 1200, db = 6)` when you mean gain. KlangScript forbids MIXING
+⚠ `band(1200, 6)` sets **q**, not gain: the second positional arg is `q` and db stays 0, which
+is silent. Write `band(freq = 1200, db = 6)` when you mean gain. KlangScript forbids MIXING
 positional and named arguments, so name them all or pass all three positionally.
 
-⚠ `.eq()` is only idempotent back-to-back. An `.eq()` written *after* other filters opens a
+⚠ `.eq(...)` directly on an eq continues it. An `.eq(...)` written *after* other filters opens a
 SECOND eq, so the one-pass saving applies per eq, not across the whole line.
 
 ⚠ Both `q` values are the ordinary width scale: `.band(f, 0.707)` and `.bandpass(f, 0.707)` span
@@ -303,8 +308,8 @@ the same 1.90 octaves. What differs is CONVERSION. A tap keeps its numbers verba
 (`signal.add(signal.bandpass(f, Q).mul(g))` becomes `.tap(f, Q, g)`), but rewriting that tap as a
 `.band()` needs a WIDER setting, because a tap's audible bump is wider than the bandpass inside
 it: use `db = 20*log10(1 + g)` and `q = Q / sqrt(1 + g)` (since C2 the tap is unity-peak, so
-`q` is out of the level equation). Example: `.tap(850, 0.707, 1.7)` becomes
-`.band(850, 0.430, 8.63)`.
+`q` is out of the level equation). Example: `tap(850, 0.707, 1.7)` becomes
+`band(850, 0.430, 8.63)`.
 
 ⚠ Everything is control-rate (read once per block). For `.band()` that includes `db`, which
 moves filter coefficients, so an LFO on `db` zippers exactly like an LFO on a cutoff; use a VCA
@@ -319,8 +324,8 @@ is a pure WIDTH control: the boost at `freq` is `1 + gain` for ANY `q`. Tighten 
 its defaults is still a **+6 dB lift** (`1 + 1 = 2`) while `.band(freq)` at its defaults is
 transparent.
 
-⚠ You cannot go back to a band after a chained filter: `.eq().band(...).lowpass(5000).band(...)`
-is an error, because `.lowpass()` returns a plain filter node. Open a new `.eq()` for more bands.
+⚠ `band`/`tap` exist only inside the `.eq(e => e...)` lambda; `.eq()` returns the plain sound, so
+`.eq().band(...)` is an error. To add bands after a chained filter, open a new `.eq(e => e...)`.
 
 ⚠ Order matters when mixing them: a `.band()` earlier in the list cannot shape a later `.tap()`,
 because a tap always reads the sound entering the eq.
@@ -342,7 +347,7 @@ Put taps first unless you want that.
 | `.distort(amount, shape?, oversample?)` | `.drive()` + `.shape()` in one node        |
 | `.crush(amount)`                        | Bit-depth reduction                        |
 | `.coarse(amount)`                       | Sample-rate reduction                      |
-| `.phaser(rate, center?, sweep?).wet(w?).dryFloor(f?)` | Allpass phaser (center/sweep default 1000; wet 0.5, dryFloor 0 — the shared C4 wet knob) |
+| `.phaser(rate, center?, sweep?, x => x.wet(w).dryFloor(f))` | Allpass phaser (center/sweep default 1000; wet 0.5, dryFloor 0 are knobs on the configure builder) |
 | `.tremolo(rate, depth)`                 | Amplitude LFO modulation                   |
 
 `.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,
@@ -768,7 +773,7 @@ let koto = Osc.pluck()
     .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
     .highpass(200)
 
-let pad = Osc.supersine().analog(0.3)
+let pad = Osc.supersine(x => x.analog(0.3))
     .lowpass(Osc.sine(0.08).plus(1).times(300).plus(800))
     .adsr(0.8, 0.5, 0.9, 2.0)
 

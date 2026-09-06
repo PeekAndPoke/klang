@@ -41,7 +41,7 @@ let blockfloete =
 
 // Guitar — more sustain and release
 let fingerpick =
-    Osc.pluck(Osc.freq(), 0.99, 0.45, 0.5)
+    Osc.pluck(x => x.decay(0.99).brightness(0.45).pickPosition(0.5))
         .plus(Osc.sine().mul(0.12))
         .plus(Osc.sine().detune(-12).mul(0.1))
         .lowpass(2800)
@@ -53,9 +53,9 @@ let fingerpick =
 
 // Pizzicato contrabass
 let contrabass =
-  Osc.pluck(Osc.freq(), 0.995, 0.25, 0.55, 0.05)
+  Osc.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05))
     .pitchEnvelope(0.5, 0.003, 0.02)
-    .plus(Osc.pluck(Osc.freq(), 0.995, 0.25, 0.55, 0.05).detune(0.05).mul(0.15))
+    .plus(Osc.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05)).detune(0.05).mul(0.15))
     .plus(Osc.sine().detune(0.01).lowpass(200).mul(0.3).adsr(0.005, 0.6, 0.0, 0.15))
     .plus(Osc.triangle().lowpass(1200).mul(0.15).adsr(0.005, 0.3, 0.0, 0.05))
     .plus(Osc.brownnoise().lowpass(600).mul(0.06).adsr(0.001, 0.04, 0.0, 0.01))

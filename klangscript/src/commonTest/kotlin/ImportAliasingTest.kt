@@ -62,7 +62,7 @@ class ImportAliasingTest : StringSpec({
     }
 
     "should support aliasing to avoid name conflicts" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -90,7 +90,7 @@ class ImportAliasingTest : StringSpec({
     }
 
     "should use aliased name in scope" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -111,7 +111,7 @@ class ImportAliasingTest : StringSpec({
     }
 
     "should not expose original name when aliased" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -135,7 +135,7 @@ class ImportAliasingTest : StringSpec({
     }
 
     "should work with single alias" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let square = (x) => x * x
@@ -155,7 +155,7 @@ class ImportAliasingTest : StringSpec({
     }
 
     "should allow multiple imports with different aliases" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let a = 1
@@ -178,7 +178,7 @@ class ImportAliasingTest : StringSpec({
     }
 
     "should support aliasing for complex library patterns" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("nativeLog") { values, _ ->
                 val value = values[0]
                 NumberValue((value as NumberValue).value * 10)
@@ -204,7 +204,7 @@ class ImportAliasingTest : StringSpec({
     }
 
     "should error when trying to import non-exported symbol even with alias" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let public = (x) => x + 1
@@ -227,7 +227,7 @@ class ImportAliasingTest : StringSpec({
     }
 
     "should support aliasing with object properties" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "objects", """
                     let config = { value: 42 }

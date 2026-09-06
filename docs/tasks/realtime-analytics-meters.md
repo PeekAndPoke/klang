@@ -69,13 +69,13 @@ UI-only except for the possible FFT-size change. No hot-path cost.
 ### 2.2 Limiter gain-reduction meter — SHOULD
 
 The "pumping" question consumed three review rounds and an offline envelope-modulation metric, because gain reduction is
-invisible. The house limiter (`MasterStage`, 5 ms lookahead) and any authored `MasterFx.limiter()` compute their gain
+invisible. The house limiter (`MasterStage`, 5 ms lookahead) and any authored master `limiter` stage compute their gain
 every sample; publish, per block: **current GR (dB), block-min GR, and a ~10 s history strip** in the UI. Same tap
 generalizes to per-orbit Katalyst compressors later.
 
 What it answers at a glance: is the limiter working at all · how many dB on kick hits · does GR return to 0 between
 beats (breathing) or stay depressed (the measured 1.25 dB @ 100 ms pump — see
-[`master-limiter-lookahead.md`](master-limiter-lookahead.md) §Phase 4, still-open decision) · did a `MasterFx.gain`
+[`master-limiter-lookahead.md`](master-limiter-lookahead.md) §Phase 4, still-open decision) · did a master `gain` stage
 change move GR from "occasional −2 dB" to "pinned −6 dB".
 
 It is also the trust indicator for meter 2.1: a program-dependent limiter ducks the low-heavy moments hardest, so under

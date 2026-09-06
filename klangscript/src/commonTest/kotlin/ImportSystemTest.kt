@@ -46,7 +46,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should import and use library function" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             // Register a library with a simple function
             registerLibrary(
                 "math", """
@@ -67,7 +67,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should import multiple functions from library" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -88,7 +88,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should import and use library object with methods" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "signals", """
                     let sine = {
@@ -110,7 +110,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should allow multiple imports in same script" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -136,7 +136,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should isolate library internal variables" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let internal = "should not be visible"
@@ -174,7 +174,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should allow library functions to call each other" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let double = (x) => x * 2
@@ -194,7 +194,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should support arrow functions in library that capture library variables" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "counter", """
                     let initialValue = 10
@@ -214,7 +214,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should allow importing library that uses native functions" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             // Register a native function
             registerFunctionRaw("nativeDouble") { values, _ ->
                 val value = values[0]
@@ -240,7 +240,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should support complex library with nested function calls" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "strudel", """
                     let note = (pattern) => {
@@ -279,7 +279,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should handle import at different positions in script" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let func = (x) => x + 1
@@ -300,7 +300,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should allow library to define constants" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "constants", """
                     const PI = 3.14159

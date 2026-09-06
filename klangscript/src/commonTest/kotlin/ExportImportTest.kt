@@ -57,7 +57,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should prevent scope pollution with explicit exports" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let internalHelper = (x) => x * 2
@@ -83,7 +83,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should import only exported symbols with wildcard" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let internalHelper = (x) => x * 2
@@ -118,7 +118,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should support selective imports" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
@@ -141,7 +141,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should allow importing single symbol" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "math", """
                     let square = (x) => x * x
@@ -161,7 +161,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should support libraries with mixed exports" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "signals", """
                     let frequency = 440
@@ -188,7 +188,7 @@ class ExportImportTest : StringSpec({
 
     "should backward compatible - libraries without exports export all" {
         // Library without export statement
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "old", """
                     let func1 = (x) => x + 1
@@ -208,7 +208,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should prevent importing from library without matching export" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let add = (a, b) => a + b
@@ -230,7 +230,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should allow multiple selective imports from same library" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let a = 1
@@ -253,7 +253,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should export functions that use native functions" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("nativeDouble") { values, _ ->
                 val value = values[0]
                 NumberValue((value as NumberValue).value * 2)
@@ -279,7 +279,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should support complex real-world library pattern" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "strudel", """
                     // Internal helpers
@@ -310,7 +310,7 @@ class ExportImportTest : StringSpec({
     }
 
     "should error on importing multiple non-exported symbols" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "lib", """
                     let a = 1
@@ -339,7 +339,7 @@ class ExportImportTest : StringSpec({
     // would otherwise render at positions belonging to the imported file.
 
     "imported library locations carry the library URI in their source field" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerLibrary(
                 "peekandpoke/test-tag", """
                     let foo = nonExistentSymbol

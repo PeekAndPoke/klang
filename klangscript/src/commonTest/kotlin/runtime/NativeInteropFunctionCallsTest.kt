@@ -8,7 +8,7 @@ package io.peekandpoke.klang.script.runtime
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.script.ast.NumberLiteral
-import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.klangScriptEngine
 
 /**
  * Tests calling function from script-land into kotlin-land
@@ -41,7 +41,7 @@ class NativeInteropFunctionCallsTest : StringSpec({
                 NumberLiteral(paramCount.toDouble()) // Return the param count as a check
             ),
             closureEnv = Environment(),
-            engine = klangScript()
+            engine = klangScriptEngine()
         )
     }
 

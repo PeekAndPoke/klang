@@ -363,11 +363,23 @@ data class FileLevelExtItem(
 //  Shared utility
 // ============================================================================
 
-/** Produces the `as Type` suffix for a convertArgToKotlin call. Returns empty string when the cast is redundant (e.g. `as Any?`). */
+/**
+ * Produces the `as Type` suffix for a convertArgToKotlin call. Returns empty string when the cast
+ * is redundant (e.g. `as Any?`). A [kotlinType] that already ends in `?` is not suffixed again:
+ * `resolveCastType` renders a nullable function type as `((A) -> B)?` and a nullable plain type
+ * arrives as `Double?`, and `((A) -> B)??` is not a type Kotlin accepts.
+ */
 internal fun castSuffix(kotlinType: String, isNullable: Boolean): String {
-    val fullType = "$kotlinType${if (isNullable) "?" else ""}"
+    val fullType = if (isNullable && !kotlinType.endsWith("?")) "$kotlinType?" else kotlinType
     return if (fullType == "Any?") "" else " as $fullType"
 }
+
+/**
+ * The type name usable in a class literal (`X::class`) for a resolved Kotlin type name. A class
+ * literal has no nullability, so `Function1?` (a nullable `configure: ((B) -> B)? = null`
+ * parameter) must become `Function1`; nullability travels separately in `isNullable`.
+ */
+internal fun classLiteralTypeName(resolvedKotlinType: String): String = resolvedKotlinType.removeSuffix("?")
 
 internal fun joinCallArgs(selfArg: String, args: String): String = when {
     selfArg.isEmpty() -> args

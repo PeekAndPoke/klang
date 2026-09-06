@@ -33,7 +33,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "ReferenceError - undefined variable should throw ReferenceError" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("undefinedVariable")
@@ -69,7 +69,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - calling non-function should throw TypeError" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("let x = 5\nx()")
@@ -80,7 +80,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - binary operation on incompatible types" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("\"hello\" + null")
@@ -91,7 +91,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - member access on non-object" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("let x = 5\nx.foo")
@@ -151,7 +151,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "ArgumentError - wrong number of arguments to script function" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptArgumentError> {
             engine.execute(
@@ -197,7 +197,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "ImportError - library not found" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptImportError> {
             engine.execute("import * from \"nonexistent\"")
@@ -373,7 +373,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError in nested arithmetic" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(
@@ -393,7 +393,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "Error messages should be descriptive - undefined variable" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("myVariable")
@@ -405,7 +405,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "Error messages should be descriptive - type error" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("5()")
@@ -433,7 +433,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - unary NOT on string should work (JavaScript truthiness)" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         // JavaScript-like truthiness: !"string" should work and return false
         val result = engine.execute("!\"hello\"")
@@ -441,7 +441,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - unary PLUS on string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("+\"hello\"")
@@ -452,7 +452,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - unary NEGATE on string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("-\"hello\"")
@@ -463,7 +463,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - unary NEGATE on null" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("-null")
@@ -478,7 +478,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - multiplication with string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("5 * \"hello\"")
@@ -489,7 +489,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - division with string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("10 / \"hello\"")
@@ -500,7 +500,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - subtraction with null" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("5 - null")
@@ -511,7 +511,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - boolean in arithmetic" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("true + 5")
@@ -522,7 +522,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - modulo by zero" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("10 % 0")
@@ -534,7 +534,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - modulo with string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("10 % \"hello\"")
@@ -545,7 +545,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - modulo with null" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("5 % null")
@@ -560,7 +560,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - member access on null" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("null.property")
@@ -571,7 +571,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - chained member access on non-object" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(
@@ -587,7 +587,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - member access on string" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("\"hello\".length")
@@ -602,7 +602,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - calling null" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("null()")
@@ -613,7 +613,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - calling boolean" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("true()")
@@ -624,7 +624,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - calling object" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("let obj = { a: 1 }\nobj()")
@@ -639,7 +639,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "ReferenceError - undefined variable in object literal" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("{ a: undefinedVar }")
@@ -649,7 +649,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - nested operations with mixed types" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
 
         val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("(5 + 3) * \"hello\"")

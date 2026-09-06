@@ -249,7 +249,7 @@ stack(
     [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
     [96, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
   ),
-  master(Master.of(MasterFx.reverb().wet(0.05).roomSize(7), MasterFx.gain(1.1)))
+  master(Master(m => m.reverb(r => r.wet(0.05).roomSize(7)).gain(1.1)))
 ).analog(3.0)
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing

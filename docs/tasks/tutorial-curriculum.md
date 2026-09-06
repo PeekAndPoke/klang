@@ -1,5 +1,19 @@
 # Tutorial Curriculum — Rework Plan
 
+> **Hand-off from the DSL work, 2026-09-06.** The authoring surface changed under this plan before
+> any Ignitor/Master/Pipeline tutorial was written; teach the NEW forms only
+> (`docs/tasks/dsl-configure-lambdas.md`, `/dsl-design`):
+> - Oscillator knobs live in a configure lambda: `Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)`.
+>   There is no `Osc.supersaw().voices(9)` and no `.analog()` on a sound any more.
+> - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer wet knobs:
+>   `.phaser(0.3, x => x.wet(0.3))`.
+> - Master: `master(Master(m => m.reverb(r => r.wet(0.05)).gain(2.5).limiter()))`, `master(Master())`
+>   for unity. `Master.of` and `MasterFx` are gone.
+> - Pipeline: `Pipeline(p => p.filterMod().vca().distort().filter().vca())`,
+>   `Pipeline.modern(p => p.tuneVca(v => v.expK(2.5)))`. `Pipeline.of` and `Stage` are gone.
+> The song-usage counts below (line "Master: 5/14 songs ...") predate this; the five songs now use
+> the `Master(m => ...)` form.
+
 Status: **ACTIVE**, last updated 2026-08-31. **17 lessons shipped**: the Stage-1 onramp (B1-B3), all of
 Stage 2 (A1-A4, B4-B7), and Stage 3 so far (A5, A6, A7, B8, B9, B10). The ladder below is no longer a
 proposal, it is the contract; the obligations register is the debt ledger against it. Next slots: **A8
@@ -143,7 +157,7 @@ stages must not carry it.
 | C3 | Layered ignitors | additive `.plus()` stacks | — | IrishLament's flute/fingerpick/contrabass: many layers, flat wiring. *Listen for: the noise crackle that makes the pluck "wood".* |
 | C4 | Knobs & variants | `Osc.param`, `.oscp()`, `Osc.variants` | — | DialogueWithTheStars' three guitars, round-robin. *Listen for: open vs. muted variant.* |
 | C5 | Living instruments | signal-arithmetic cutoffs, pitch-tracking filters, `Osc.slot.analog`, perlin vibrato | — | Sakura's shakuhachi & pad, dissected. *Listen for: the filter following the note's pitch.* |
-| C6 | The Master bus | `master(Master.of(...))`, `MasterFx` gain + limiter | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
+| C6 | The Master bus | `master(Master(m => m.gain(2.5).limiter()))` | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
 | C7 | Pipeline — modern vs. pedal | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
 | C8 | Arranging a song | `arrange([bars, section])` AND `filterWhen(t => ...)` | — | The same 3 sections arranged both ways; when to use which. |
 | C9 | Live technique & remixing | mute/solo, live edits, `.oscp()` tweaks, `export`/`import` | — | Remix lesson: import Tetris' `leadPattern` like TetrisRemix does. |
@@ -445,3 +459,30 @@ polish pass sits after the loop; polished examples re-run the machine gates befo
 - **Graded ear training** (Syntorial-style "reproduce this hidden sound in code"): killer feature, separate
   build — not a prerequisite for the rework.
 - Lesson naming/tone pass: titles above are placeholders, not final voice.
+
+## Appendix: craft rules carried over from the earlier tutorial sessions (added 2026-09-06)
+
+Restored from the maintainer's session memory during the memory housekeeping; the tutorial
+workstream owns them from here. Hardness: guideline, except where the engine dictates the fact.
+
+- **Per-orbit effects.** Layers with different delay/reverb need their own `orbit()`; reverb and
+  delay are per-orbit, two patterns on one orbit share the bus. (engine fact)
+- **`chord("...").voicing()`.** `chord()` alone plays nothing; `n().scale().chord("minor")` is wrong.
+  (engine fact)
+- **`pan()` is 0.0 (left) to 1.0 (right), centre 0.5.** Not -1 to 1. (engine fact)
+- **Always `.lpf()` saw / supersaw / square** unless the text explicitly demonstrates the raw
+  sound; harsh first impressions get blamed on the platform.
+- **Musicality over cleverness.** A simple pattern that sounds good beats a complex one that sounds
+  bad; proven progressions and pentatonic lines.
+- **No inflated titles** ("masterclass", "ultimate", "definitive", "comprehensive"). Describe what
+  the learner does or learns.
+- **Break long chains** after logical groups, 2-space continuation indent, about 80 chars per line.
+- **Mark the teaching moment** with a comment on the line before the new function so the eye lands
+  on it. Tone: playful sculptor (chisel, carve, shape, polish, grain), never cooking metaphors.
+- **Tags stay tight.** `TutorialTag` has 12 entries; do not add one without a strong reason.
+- **Series over dense tutorials.** Complex topics (mini-notation, chords, effect chains,
+  arrangement) span several tutorials across difficulty levels; fill missing levels of an
+  existing series before starting a new one.
+- **Workflow.** Claude drafts the frame and intermediate examples; the maintainer composes the
+  final "Putting It All Together" jingle; Claude then rewrites the intermediate steps backwards
+  from that jingle.

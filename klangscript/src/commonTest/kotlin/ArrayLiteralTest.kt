@@ -28,7 +28,7 @@ import io.peekandpoke.klang.script.runtime.NumberValue
 class ArrayLiteralTest : StringSpec({
 
     "Empty array" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[]")
 
         (result as ArrayValue).elements.size shouldBe 0
@@ -36,7 +36,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Single element array" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[42]") as ArrayValue
 
         result.elements.size shouldBe 1
@@ -44,7 +44,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Multiple element array - numbers" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[1, 2, 3]") as ArrayValue
 
         result.elements.size shouldBe 3
@@ -54,7 +54,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array with strings" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("""["a", "b", "c"]""") as ArrayValue
 
         result.elements.size shouldBe 3
@@ -62,7 +62,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Mixed type array" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("""[1, "hello", true, null]""") as ArrayValue
 
         result.elements.size shouldBe 4
@@ -73,7 +73,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array with expressions" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[1 + 1, 2 * 2, 3 - 1]") as ArrayValue
 
         result.elements.size shouldBe 3
@@ -82,7 +82,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array in variable" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let arr = [1, 2, 3]
@@ -97,7 +97,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Multiple arrays in variables" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         engine.execute(
             """
             let numbers = [1, 2, 3]
@@ -124,7 +124,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array with variables as elements" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 5
@@ -142,7 +142,7 @@ class ArrayLiteralTest : StringSpec({
     "Array as function argument" {
         val captured = mutableListOf<String>()
 
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("capture") { args, _ ->
                 captured.add(args[0].toDisplayString())
                 args[0]
@@ -158,7 +158,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array with function calls as elements" {
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("getValue") { _, _ -> NumberValue(42.0) }
             registerFunctionRaw("getDouble") { args, _ ->
                 val n = args[0] as NumberValue
@@ -173,7 +173,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Nested arrays" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[[1, 2], [3, 4], [5, 6]]") as ArrayValue
 
         result.elements.size shouldBe 3
@@ -186,7 +186,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Deeply nested arrays" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[[[1, 2]], [[3, 4]]]") as ArrayValue
 
         result.elements.size shouldBe 2
@@ -197,7 +197,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array with objects" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("""[{ a: 1 }, { b: 2 }]""")
 
         result.toDisplayString() shouldContain "[object]"
@@ -205,7 +205,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Object with array property" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let obj = { items: [1, 2, 3], names: ["a", "b"] }
@@ -217,7 +217,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Trailing comma in array" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[1, 2, 3,]") as ArrayValue
 
         result.elements.size shouldBe 3
@@ -227,7 +227,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array with trailing comma after single element" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[42,]") as ArrayValue
 
         result.elements.size shouldBe 1
@@ -235,7 +235,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Multi-line array" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             [
@@ -253,7 +253,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array with mixed expressions and literals" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute(
             """
             let x = 10
@@ -270,7 +270,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Empty nested arrays" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[[], [], []]")
 
         (result as ArrayValue).elements.size shouldBe 3
@@ -278,7 +278,7 @@ class ArrayLiteralTest : StringSpec({
     }
 
     "Array with arrow functions" {
-        val engine = klangScript()
+        val engine = klangScriptEngine()
         val result = engine.execute("[x => x + 1, y => y * 2]")
 
         (result as ArrayValue).elements.size shouldBe 2

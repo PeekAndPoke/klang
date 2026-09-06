@@ -147,6 +147,17 @@ kraftApp {
 - CSS styling uses `kotlinx-css` via the `css {}` block.
 - `@KraftDsl` marks DSL builder functions — check for this annotation when exploring the API surface.
 
+## Klang UI conventions (maintainer feedback, carried over 2026-09-06)
+
+- **Custom classes via `.with()`**, not the `+` operator:
+  `ui.compact.segment.with(laf.styles.popup()) { }`, never `(ui.compact.segment + laf.styles.popup()) { }`.
+- **Stored `SemanticIconFn` values need `.render()`**: `icon.(domainIconFn(domain))().render()`.
+  Direct calls such as `icon.search()` auto-render inside the builder; a stored function returns
+  an unrendered `SemanticTag` and emits nothing without `.render()`.
+- **RoundGauge proportions** (settled by iteration): icon about 0.15 x gauge size, positioned
+  between centre and top (top 30 %, centred via transform); label uses `borderBox` with a 2.5 px
+  border; the canvas paints the circular background, not the Semantic UI label.
+
 ## HARD RULE
 
 **Never edit, create, or delete any file under `/opt/dev/peekandpoke/ultra/kraft/`.** These are external library

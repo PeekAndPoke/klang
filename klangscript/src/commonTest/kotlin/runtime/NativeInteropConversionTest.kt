@@ -11,7 +11,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
 import io.peekandpoke.klang.script.ast.NumberLiteral
-import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.klangScriptEngine
 
 /**
  * Tests for NativeInterop conversion utilities:
@@ -160,7 +160,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "FunctionValue from script: numeric arguments used in expression body" {
         var capturedFn: FunctionValue? = null
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("withCallback") { args, _ ->
                 capturedFn = args[0] as? FunctionValue
                 NullValue
@@ -175,7 +175,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "FunctionValue from script: string argument passes through identity function" {
         var capturedFn: FunctionValue? = null
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("withCallback") { args, _ ->
                 capturedFn = args[0] as? FunctionValue
                 NullValue
@@ -191,7 +191,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "FunctionValue from script: string + string concatenation in body" {
         var capturedFn: FunctionValue? = null
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("withCallback") { args, _ ->
                 capturedFn = args[0] as? FunctionValue
                 NullValue
@@ -206,7 +206,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "FunctionValue from script: block body with return — arguments reach the body" {
         var capturedFn: FunctionValue? = null
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("withCallback") { args, _ ->
                 capturedFn = args[0] as? FunctionValue
                 NullValue
@@ -227,7 +227,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "FunctionValue from script: block body with no return yields null" {
         var capturedFn: FunctionValue? = null
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("withCallback") { args, _ ->
                 capturedFn = args[0] as? FunctionValue
                 NullValue
@@ -248,7 +248,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "FunctionValue from script: closure captures outer variable" {
         var capturedFn: FunctionValue? = null
-        val engine = klangScript {
+        val engine = klangScriptEngine {
             registerFunctionRaw("withCallback") { args, _ ->
                 capturedFn = args[0] as? FunctionValue
                 NullValue
@@ -272,7 +272,7 @@ class NativeInteropConversionTest : StringSpec({
             parameters = List(11) { "a$it" },
             body = ArrowFunctionBody.ExpressionBody(NumberLiteral(0.0)),
             closureEnv = Environment(),
-            engine = klangScript()
+            engine = klangScriptEngine()
         )
         shouldThrow<KlangScriptTypeError> {
             fv.convertFunctionToKotlin()

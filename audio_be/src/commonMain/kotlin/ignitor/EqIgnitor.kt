@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
  * Thin per-voice adapter driving the freq-agnostic [EqCore]: resolves each section's params
  * per block via [Ignitors.readParam] — the ONLY layer where `Freq`-backed params can exist
  * (the guitar chain's tracking highpass `highpass(Osc.freq().mul(k))`); the planned
- * MasterFx/Katalyst surfaces hand the core scalars directly. The upstream renders into the
+ * the master eq stage / Katalyst surfaces hand the core scalars directly. The upstream renders into the
  * caller's buffer and the core processes IN PLACE — no scratch pass, which is the fused
  * chain's whole win over per-node rendering.
  *

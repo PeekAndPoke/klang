@@ -6,6 +6,51 @@
 - **Production**: Kotlin/JS builds working ✅
 - **Parser**: Hand-rolled recursive descent (replaced better-parse due to Kotlin/JS issue #66)
 
+## Recent Work (2026-09)
+
+- **Pipeline builders, S6 (2026-09-06)**: `Pipeline(p => p.filterMod().vca(v => v.expK(2)).distort())`,
+  presets `Pipeline.modern(p => p.tuneVca(...))`; stage knobs append, `tuneVca`/`tuneFilter` configure
+  existing stages (error when none). `Pipeline.of`, `Stage` and the stage knob objects deleted.
+
+- **Effect and master builders, S3 + S5 (2026-09-06, `klangscript-libs`)**: `.eq(e => e.band().tap())`,
+  `.phaser(rate, center, sweep, x => x.wet())`, `.shimmer(..., x => x.wet())` on `EqBuilder`/
+  `PhaserBuilder`/`ShimmerBuilder` (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
+  Kotlin `Eq.band/tap`, which stay as the engine-level API). `Master(m => m.reverb(r => ...).gain(2.5)
+  .limiter(l => ...))` via the `invoke` operator, aliases `Master.build`/`Master.default`;
+  `Master.of` and `MasterFx` deleted. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to
+  float; any door parameter with a non-literal default blocks the trailing lambda (KSP guard).
+
+- **`invoke` operator (S4, 2026-09-06)**: a `NativeObjectValue` callee dispatches to the `invoke`
+  extension method of its type through the spec-aware member-call path (`Interpreter.evaluateCall`);
+  `ExpressionTypeInferrer.resolveCallable` falls back to `getCallable("invoke", type)`;
+  `KlangCallable.signature` renders it as `Master(...)`; member completion hides `invoke`.
+  `NativeOperatorNames` holds the name. Arithmetic operators of the same plan: not built.
+
+- **Configure-lambda doors, S2 (2026-09-06, `klangscript-libs`)**: the 16 oscillator doors are
+  `Osc.name(freq?, configure?)`, knobs live on immutable `Osc*Builder` value wrappers
+  (`IgnitorBuilders.kt`), the 17 sub-type extension objects are gone. Lesson: the old `pluck`/
+  `superpluck` doors baked SEALED `Constant` defaults while the nodes carry open `Slots.*` params;
+  a builder door that falls back to node defaults changes the tree. A migration-only fingerprint
+  spec over every builtin song's sound trees caught it; the spec was removed with the migration
+  done (2026-09-06, maintainer: migration guards go once the migration is over).
+
+- **Module split (2026-09-06)**: `stdlib/` (35 files + `PlatformConsole`) moved to the new
+  `:klangscript-libs` module together with `stdlibLib` and `klangScript()`; the core gained
+  `klangScriptEngine()` (bare engine) and dropped its `audio_bridge` dependency and its own KSP
+  processor run (the KSP *plugin* stays applied for kotest). Tests that need the real stdlib
+  (`stdlib/`, docs, `GeneratedRegistrationTest`, analyzer tests using `generatedStdlibDocs`)
+  moved with it. `sprudel` and `klangscript-ui` depend on the libs module. Plan and facts:
+  `docs/tasks/klangscript-libs-split.md`. Lesson: KSP-generated code in another module needs the
+  members it touches to be public (`NativeObjectExtensionsBuilder.builder/cls`), and Kotlin cannot
+  smart-cast a property declared in another module (two moved tests needed explicit casts).
+
+- **Configure-lambda foundation (S1 of `docs/tasks/dsl-configure-lambdas.md`)**:
+  `runtime/ArgAlignment` (trailing-lambda rule, shared by interpreter and analyzer),
+  `ParamSpec.isFunctionType`, `KlangType.functionParams/functionReturn` (KSP now emits the
+  `FunctionN` components, aliases like `PatternMapperFn` included), and the analyzer binds a
+  lambda argument's parameters with the callee's declared types (`.superimpose(x => x.` now
+  completes). Language docs: `language-features/04-functions.md` 4.10.
+
 ## Recent Work (2026-05)
 
 - Added `ExportDeclaration` — new top-level form `export name = expr` (immutable binding +
@@ -35,6 +80,17 @@
 - **No `this` keyword**: object methods use stored arrow functions (`obj.fn = (a, b) => ...`)
 - **No `var`**: only `let` and `const`
 - **No `undefined`**: only `null`
+- **Stays a JS-syntax dialect for V1 (decided 2026-09-05)**: the maintainer considered a Kotlin
+  subset (trailing lambdas `f { }`, receiver lambdas) to fix the broken sub-type chains
+  (`Osc.supersaw().voices(9).lowpass(800).analog(3)` cannot reach `.analog`). Decided instead:
+  **configure lambdas on the existing arrow syntax with dedicated immutable builder types**,
+  `Osc.sine(freq, configure: (OscSineBuilder) -> OscSineBuilder)`; knobs leave `IgnitorDsl`;
+  NO back-compat; `Master(...)`/`Pipeline(...)` via the `invoke` operator
+  (`docs/tasks/klangscript-native-object-operators.md` must be revised first). Full plan and
+  every closed decision: `docs/tasks/dsl-configure-lambdas.md`. Receiver lambdas PARKED (need
+  multiple `this` + mutable builders). Kotlin round trip is an editor feature for later
+  (paste-detect + "copy as Kotlin" from the AST), not a grammar change. Analyzer gap that this
+  work closes: arrow params bind with `type = null`, so `.superimpose(x => x.` has no completion.
 
 ## Completed Phases
 
