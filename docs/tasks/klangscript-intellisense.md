@@ -347,3 +347,12 @@ All analyzer tests run on JVM (fast, no browser needed):
 | `klangscript-ui/src/jsMain/kotlin/codemirror/CodeMirrorComp.kt`      | Feed diagnostics to linter          |
 | `klangscript-worker/`                                                | Web worker module (new, Phase 3)    |
 | `klangjs/src/jsMain/kotlin/.../Lint.kt`                              | CodeMirror linter bindings (exists) |
+
+## Backlog item: warn when an import shadows an earlier import (added 2026-09-06)
+
+When one `import` overwrites symbols already in scope from a previous import, the analyzer should
+raise a WARNING diagnostic. Users may not notice that the second import shadows functions of the
+first, and a call then routes to a different library than expected. Implementation sketch: when
+`EditorDocContext.rebuildRegistry()` merges symbols from several libraries, detect name collisions
+and emit `DiagnosticSeverity.WARNING` in `AnalyzedAst.diagnostics`. (Wanted by the maintainer,
+2026-07; restored from session memory during the 2026-09-06 housekeeping.)

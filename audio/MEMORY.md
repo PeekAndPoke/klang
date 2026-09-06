@@ -118,6 +118,15 @@ The `audio_be` oscillator code was consolidated (branch `dedicated-cycle-time`) 
 
 ## Architecture Decisions
 
+**State lives at the granularity it is bound to** (FE/BE state placement, 4 steps done 2026-08).
+playbackId-bound state sits in `PlaybackEngine` (BE) and the per-playback controller (FE);
+global state in `AudioBackendContext` (BE) and `KlangPlayer` (FE). Share only what is expensive
+to recreate AND safe to outlive a playback: samples (content-keyed) and built-in oscillators.
+Custom oscillators and engines are per-playback so they are collected with the engine. Do not
+remove the past-cutoff in `VoiceScheduler.promoteScheduled`: it stops `ReplaceVoices` from
+re-promoting already-played voices (duplicate burst). Open follow-up:
+`docs/tasks/future/worklet-clock-divergence.md`.
+
 - **Block-based processing**: fixed-size blocks (128–256 frames). No per-sample allocation in hot paths.
 - **Ring-buffer IPC**: `KlangCommLink` uses two `KlangRingBuffer`s — no locking between threads.
 - **Voice pipeline**: `Voice` interface + `VoiceImpl` runs a **Pitch → Excite → Filter** pipeline.

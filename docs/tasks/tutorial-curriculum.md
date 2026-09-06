@@ -459,3 +459,30 @@ polish pass sits after the loop; polished examples re-run the machine gates befo
 - **Graded ear training** (Syntorial-style "reproduce this hidden sound in code"): killer feature, separate
   build — not a prerequisite for the rework.
 - Lesson naming/tone pass: titles above are placeholders, not final voice.
+
+## Appendix: craft rules carried over from the earlier tutorial sessions (added 2026-09-06)
+
+Restored from the maintainer's session memory during the memory housekeeping; the tutorial
+workstream owns them from here. Hardness: guideline, except where the engine dictates the fact.
+
+- **Per-orbit effects.** Layers with different delay/reverb need their own `orbit()`; reverb and
+  delay are per-orbit, two patterns on one orbit share the bus. (engine fact)
+- **`chord("...").voicing()`.** `chord()` alone plays nothing; `n().scale().chord("minor")` is wrong.
+  (engine fact)
+- **`pan()` is 0.0 (left) to 1.0 (right), centre 0.5.** Not -1 to 1. (engine fact)
+- **Always `.lpf()` saw / supersaw / square** unless the text explicitly demonstrates the raw
+  sound; harsh first impressions get blamed on the platform.
+- **Musicality over cleverness.** A simple pattern that sounds good beats a complex one that sounds
+  bad; proven progressions and pentatonic lines.
+- **No inflated titles** ("masterclass", "ultimate", "definitive", "comprehensive"). Describe what
+  the learner does or learns.
+- **Break long chains** after logical groups, 2-space continuation indent, about 80 chars per line.
+- **Mark the teaching moment** with a comment on the line before the new function so the eye lands
+  on it. Tone: playful sculptor (chisel, carve, shape, polish, grain), never cooking metaphors.
+- **Tags stay tight.** `TutorialTag` has 12 entries; do not add one without a strong reason.
+- **Series over dense tutorials.** Complex topics (mini-notation, chords, effect chains,
+  arrangement) span several tutorials across difficulty levels; fill missing levels of an
+  existing series before starting a new one.
+- **Workflow.** Claude drafts the frame and intermediate examples; the maintainer composes the
+  final "Putting It All Together" jingle; Claude then rewrites the intermediate steps backwards
+  from that jingle.

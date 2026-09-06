@@ -161,7 +161,14 @@ Mutation checking is the antidote: it tests the test.
 - **Gradle: never run two builds concurrently** — corrupts the sprudel KSP cache; recover with
   `:sprudel:clean`.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards
-  (quoted/wildcard filters match nothing).
+  (quoted/wildcard filters match nothing). **One `--tests` per run**: chaining several was seen
+  to match nothing at all (2026-07-03, 2026-09-06). In a mutate-then-expect-red script that
+  `No tests found` exit is indistinguishable from a real kill and produced three spurious RED
+  verdicts (2026-08-20): every expect-red runner must grep the log for `No tests found` and
+  treat it as a script error, and print the failing test names (an empty list on a "red" is the tell).
+- Before a JS/frontend build, check for a running frontend auto-compile watcher (`pgrep -f
+  jsBrowserDevelopmentRun` or similar). The maintainer often has one open; the build lock cannot
+  serialize against it. Report instead of building when one is running.
 - Don't fuss over whitespace/blank-line findings — codefactor.io auto-fixes formatting.
 
 ## Changelog

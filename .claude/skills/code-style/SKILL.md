@@ -122,6 +122,11 @@ a.generate(buffer, freqHz, ctx)
 
 ### 3. File Naming Conventions
 
+**Flat directories.** Source files sit at the module's package root (`module/src/commonMain/kotlin/`),
+never nested under `io/peekandpoke/...` directories. Sub-packages get one flat directory
+(`runtime/`, `intel/`), not a mirrored package path.
+
+
 - **Files containing a class/object/interface:** PascalCase matching the primary declaration.
 - **Files containing only utility/helper/extension functions:** `lower_case.kt`.
   In folders that also contain class files, use a `_` prefix (e.g., `_staff_pos_helpers.kt`) to
@@ -372,3 +377,39 @@ Every `.kt` source file must begin with the project license header as its very f
   ```
 
   IntelliJ applies this automatically via the "Klang tones MIT" copyright profile scoped to `tones/`.
+
+## Language Rules
+
+### 18. Imports, Not Fully Qualified Names
+
+Use an import for every referenced type or function. `io.peekandpoke.klang.audio_bridge.VoiceData`
+inline in code is a finding; the only exception is a genuine name clash inside one file.
+
+### 19. Exhaustive `when` in Expression Form
+
+Over a sealed class or enum, write `when` as an expression so the compiler checks every arm. Arms
+that do nothing are written out (`is Foo -> Unit` or `{}`); never a bare non-exhaustive
+statement `when` that silently skips a new variant.
+
+### 20. Annotate NaN Guards
+
+A self-comparison NaN check is not obvious to the next reader. Always mark it:
+
+```kotlin
+if (x != x) { // NaN-guard
+    return 0.0
+}
+```
+
+### 21. Coerce User Input, `require()` Only Internal Invariants
+
+Anything a user can reach (sprudel args, KlangScript DSL args, UI inputs, imports) is coerced
+into range (`coerceIn`, defaults, clamping of INDICES and COUNTS), never asserted. `require()`
+and `check()` are for internal invariants only. This is the "coerce" half of `/dsl-design` §6;
+the "raw" half (no unasked safety clamps on AUDIO parameters) lives there too.
+
+### 22. No Em-Dashes in User-Facing Text
+
+Never `—` or `–` in docs, KDoc, UI strings, tutorials, commit messages or reports. Use commas,
+colons, parentheses or a new sentence. The A/B comment suffix convention is `, swap`.
+(Maintainer, 2026-08: the dash reads as an AI tell.)

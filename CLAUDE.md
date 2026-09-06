@@ -4,19 +4,90 @@ Enjoy the ride. Errors happen, no worries, we find them, we fix them.
 We write exceptional software. We are an awesome team and we give our very best.
 Der Weg ist das Ziel. Sound first!
 
-## Complexity is the enemy
+## Rules register
 
-Keep complexity as low as we can; that is what keeps future development smooth and our
-understanding of the whole project high. Before introducing build-time magic or anything of
-similar weight (cross-module generated sources, processor options, unusual Gradle wiring, clever
-indirection), STOP and consult the maintainer. Prefer the plain module boundary, the plain
-function, the plain data class. (Maintainer, 2026-09-06.)
+Every standing rule of this project, with its hardness. Detail lives in the skill or file named in
+the last column; this table is the index. Curated 2026-09-06
+(`docs/housekeeping/2026-09-06-memory-and-rules-inventory.md`).
 
-## Memory lives in the repo
+**Hardness levels**
 
-Record decisions, status and lessons in the module memory files the skills load
-(`klangscript/MEMORY.md`, `audio/MEMORY.md`, `sprudel/MEMORY.md`) and in `docs/tasks/`.
-Never in the home-directory auto-memory. If something has no module home, ask where it belongs.
+| Level         | Meaning                                                                                                        |
+|---------------|----------------------------------------------------------------------------------------------------------------|
+| **stone**     | Never deviate. Changing it is a maintainer decision, recorded here with a date.                                |
+| **rule**      | The default. Deviate only with a stated reason in the report or the diff.                                      |
+| **guideline** | Taste and preference. Apply judgement; deviating needs no justification, but say so when it matters.           |
+| **guardrail** | A check against a known failure. Skip it only when you have verified that the failure cannot occur here.       |
+
+**Session instructions are not rules.** What the maintainer says in a session applies to that
+session or that phase of work. It becomes a rule only when it lands in this table or in a skill
+with a date. Examples that were never meant to last: "stop before commit" (a per-phase request,
+superseded 2026-09-06 by "commit completed steps"), "this file is owned by another session",
+"do not compile the frontend right now".
+
+### Stone
+
+| Rule                                                                                                                                                   | Since      | Detail                                    |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------|------------|-------------------------------------------|
+| Complexity is the enemy: before build-time magic or similar weight (cross-module generated sources, processor options, unusual Gradle wiring, clever indirection), STOP and consult. Prefer the plain module boundary, function, data class. | 2026-09-06 | this file                                 |
+| Memory lives in the repo: module `MEMORY.md` files, `docs/tasks/`, skills. Never the home-directory auto-memory. No home for a fact? Ask where it belongs. | 2026-09-05 | this file                                 |
+| The engine is the horse: a frontend (sprudel, MIDI, a sequencer) never gets DSP of its own; it maps onto existing engine components via the wire.       | 2026-07    | `/dsl-design` §8                          |
+| The backend never learns about cycles; only seconds cross the wire.                                                                                     | 2026-07    | `/dsl-design` §8                          |
+| Every DSL value is immutable at construction time; runtime mutability is engine-internal (sprudel voice data is the deliberate exception).             | 2026-09-05 | `/dsl-design` §1                          |
+| No boxed types anywhere: no `Long`/`ULong`/`Byte`/`Short`/`Char`; `Int` or `Double`.                                                                    | 2026-04    | `/code-style` §5                          |
+| The Motor stays raw: no safety clamp on an audio parameter without asking. Coerce user-reachable inputs, never `require()` them.                       | 2026-05    | `/dsl-design` §6, `/code-style` §21       |
+| Licensing: AGPL v3 with `AUTHORS.MD`; `tones/` stays MIT and never gets the AGPL header. Commercial use waits for copyright-audit task 07 (lawyer).    | 2026-06-24 | `LICENSE`, `docs/tasks/copyright-audit-00-overview.md` |
+| Naming: "Klangmotor" / "Motor" with a plain o (the umlaut was retired 2026-08-25, "too much ego"); historic diary and strategist records keep whatever they say; Motörhead keeps its umlaut. | 2026-08-25 | `/code-style` §17 (header)                |
+
+### Rule
+
+| Rule                                                                                                                        | Since      | Detail                                          |
+|-----------------------------------------------------------------------------------------------------------------------------|------------|-------------------------------------------------|
+| Reviews loop until a clean round; every new test is mutation-checked (mandatory tier for engine/wire/KSP, light elsewhere). | 2026-08-02 | `/review-loop`                                  |
+| Gradle is a single-writer resource: one build at a time, the coordinator owns it, workers never fan out.                    | 2026-08-04 | `/agent-fleet`                                  |
+| Two doors, one DSL: every surface addition lands in KlangScript stdlib AND Kotlin in the same deliverable, with a door-parity spec. | 2026-08 | `/dsl-design` §3                                |
+| Parameter parity: same name, meaning and scale on every surface; conversions in one place; asymmetries recorded with a reason. | 2026-08-02 | `/dsl-design` §4                              |
+| One word per concept end to end; a replaced surface is removed, not deprecated.                                              | 2026-08    | `/dsl-design` §5                                |
+| Door shape: knobs on a builder behind a `configure` lambda, construction inputs on the door, `configure` last and optional. | 2026-09-05 | `/dsl-design` §2, `docs/tasks/dsl-configure-lambdas.md` |
+| Wire types over enums: sealed `@WireName` hierarchies for wire-visible distinctions; enum only for a closed param-less set.  | 2026-08    | `/dsl-design` §7                                |
+| KlangScript stdlib follows Kotlin conventions, not JavaScript (naming, argument style, `name = value` named args).           | 2026-05    | `klangscript/MEMORY.md` Design Decisions        |
+| Code style: braces always, blank lines around `if`, flat directories, no FQCN, exhaustive `when`, NaN-guard comment, no allocation or exceptions in hot paths, flush IIR state, copyright header. | 2026-04 | `/code-style` |
+| No em-dashes in user-facing text (docs, KDoc, UI, tutorials, commits, reports).                                              | 2026-08    | `/code-style` §22                               |
+| AST walkers and analysis utilities live in `klangscript`, never in UI modules.                                               | 2026-05    | `/code-style` §18 neighbourhood, `klangscript/CLAUDE.md` |
+| Klangbuch exported parts carry no arrangement timing and no scale; both live at song level.                                  | 2026-08-20 | `sprudel/MEMORY.md` Lessons                     |
+| Plans live in `docs/plans/`, tasks in `docs/tasks/`, finished tasks in `docs/tasks-archive/<month>/`.                        | 2026-06    | `docs/tasks/_priorities.md`                     |
+| Commit completed, reviewed steps on the working branch; leave work uncommitted only when the maintainer asks to inspect first. | 2026-09-06 | this file                                     |
+
+### Guideline
+
+| Guideline                                                                                                                  | Since      | Detail                                     |
+|----------------------------------------------------------------------------------------------------------------------------|------------|--------------------------------------------|
+| Sound first: engine work-streams, then the tutorial quarter, then launch, then hard performance work. Do not push launch planning or native/Wasm backends before then. | 2026-07-03 | `docs/tasks/_priorities.md`, `docs/tasks/future/high-performance-audio-backend.md` |
+| Taste is also what you do not do: won't-implement is a first-class outcome, even for a designed feature; check upstream (mixing, levels) before animating a component. | 2026-08-20 | `/dsl-design` §9 |
+| Caricature sound model: 2 to 4 real acoustic tells, sparse fill, tuned by ear, a fixed learnable target (no randomised or adaptive parameters). | 2026-07 | `/klang-music-writing` |
+| Design for adults that kids also enjoy, never the reverse (Pixar, not PBS Kids).                                          | 2026-07    | this line                                  |
+| "What we built": credit the collaboration in reports and docs.                                                            | 2026-07    | this line                                  |
+| Tutorial craft (per-orbit effects, `chord().voicing()`, pan 0 to 1, lpf harsh waves, sculptor comments, series across levels, maintainer writes the jingle). | 2026-07 | `docs/tasks/tutorial-curriculum.md` appendix |
+| Klang UI conventions: `.with()` for custom classes, `.render()` on stored icon functions, RoundGauge proportions.          | 2026-05    | `/kraft-knowhow`                           |
+| Review rounds 3 and later run on the strongest model tier.                                                                 | 2026-09-05 | `/agent-fleet`                             |
+| Whitespace and blank-line findings are not worth a round; codefactor.io fixes formatting.                                  | 2026-07    | `/review-loop` Gotchas                     |
+
+### Guardrail
+
+| Guardrail                                                                                                                  | Since      | Detail                                     |
+|----------------------------------------------------------------------------------------------------------------------------|------------|--------------------------------------------|
+| Kotest: one unquoted `--tests` FQCN per Gradle run; treat `No tests found` as a script error in any expect-red runner.      | 2026-07-03 | `/review-loop` Gotchas                     |
+| Before a frontend/JS build, check for the maintainer's running auto-compile watcher.                                        | 2026-08    | `/review-loop` Gotchas                     |
+| Block size is pinned to 128 frames everywhere (it is a tone parameter); never raise it to speed up a render.                | 2026-08    | `audio/MEMORY.md`, `DelayLine` KDoc        |
+| Deliberate engine exceptions a reviewer must not "fix": reverb uses `+ ANTI_DENORMAL` (not `flushState`); OnePole HPF cutoff bias is documented, not corrected; BPF stays linear; the master limiter lookahead is master-only. | 2026-05 | `/review-loop` templates, `docs/tasks/audio-backend-audit.md` §7 |
+| Script-door defaults must be safe literals; a `Slots.*` default makes KSP emit no thunk and named calls that skip it fail at runtime (the KSP guard catches floatable shapes only). | 2026-09-05 | `/dsl-design` §3 |
+| Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | 2026-07 | `sprudel/MEMORY.md` |
+| Builtin songs are KlangScript inside Kotlin strings: `/` divides, `$` interpolates.                                          | 2026-09    | this line                                  |
+
+### Retired, do not restore or cite
+
+`klangblocks` (removed 2026-08-23, never user-visible); the `Motör` spelling; the sub-type method
+chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors.
 
 ## Available Agent
 
