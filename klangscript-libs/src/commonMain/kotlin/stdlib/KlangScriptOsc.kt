@@ -367,7 +367,6 @@ object KlangScriptOsc {
         OscPluckBuilder(
             // Sealed constants, not the node's open `Slots.*` params: a custom pluck ignores sprudel's
             // per-note modulation unless the author opts in with `OscSlot.*` (see [KlangScriptOscSlot]).
-            // Same trees as before the builder door, verified by BuiltInSongsSoundTreeBaselineSpec.
             IgnitorDsl.Pluck(
                 freq = freq.orNoteFreq(),
                 decay = IgnitorDsl.Constant(0.996),

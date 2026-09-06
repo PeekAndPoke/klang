@@ -71,6 +71,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Klang UI conventions: `.with()` for custom classes, `.render()` on stored icon functions, RoundGauge proportions.          | 2026-05    | `/kraft-knowhow`                           |
 | Review rounds 3 and later run on the strongest model tier.                                                                 | 2026-09-05 | `/agent-fleet`                             |
 | Whitespace and blank-line findings are not worth a round; codefactor.io fixes formatting.                                  | 2026-07    | `/review-loop` Gotchas                     |
+| Scaffolding goes when its job is done: a migration guard, a one-off script or a comparison fixture is removed in the change that finishes the migration, so no future reader wonders why it exists. | 2026-09-06 | this line |
 
 ### Guardrail
 
