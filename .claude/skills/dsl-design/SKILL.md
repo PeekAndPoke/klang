@@ -51,7 +51,7 @@ the authoring surface. Do not "fix" either side toward the other.
 
 ## 2. The door shape: configure lambdas on dedicated builder types
 
-Decided 2026-09-05; plan and status in `docs/tasks/dsl-configure-lambdas.md`.
+Decided 2026-09-05; plan and status in `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
 
 ```
 door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)

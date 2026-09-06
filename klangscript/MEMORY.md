@@ -40,11 +40,11 @@
   processor run (the KSP *plugin* stays applied for kotest). Tests that need the real stdlib
   (`stdlib/`, docs, `GeneratedRegistrationTest`, analyzer tests using `generatedStdlibDocs`)
   moved with it. `sprudel` and `klangscript-ui` depend on the libs module. Plan and facts:
-  `docs/tasks/klangscript-libs-split.md`. Lesson: KSP-generated code in another module needs the
+  `docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`. Lesson: KSP-generated code in another module needs the
   members it touches to be public (`NativeObjectExtensionsBuilder.builder/cls`), and Kotlin cannot
   smart-cast a property declared in another module (two moved tests needed explicit casts).
 
-- **Configure-lambda foundation (S1 of `docs/tasks/dsl-configure-lambdas.md`)**:
+- **Configure-lambda foundation (S1 of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`)**:
   `runtime/ArgAlignment` (trailing-lambda rule, shared by interpreter and analyzer),
   `ParamSpec.isFunctionType`, `KlangType.functionParams/functionReturn` (KSP now emits the
   `FunctionN` components, aliases like `PatternMapperFn` included), and the analyzer binds a
@@ -87,7 +87,7 @@
   `Osc.sine(freq, configure: (OscSineBuilder) -> OscSineBuilder)`; knobs leave `IgnitorDsl`;
   NO back-compat; `Master(...)`/`Pipeline(...)` via the `invoke` operator
   (`docs/tasks/klangscript-native-object-operators.md` must be revised first). Full plan and
-  every closed decision: `docs/tasks/dsl-configure-lambdas.md`. Receiver lambdas PARKED (need
+  every closed decision: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`. Receiver lambdas PARKED (need
   multiple `this` + mutable builders). Kotlin round trip is an editor feature for later
   (paste-detect + "copy as Kotlin" from the AST), not a grammar change. Analyzer gap that this
   work closes: arrow params bind with `type = null`, so `.superimpose(x => x.` has no completion.

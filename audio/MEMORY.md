@@ -150,7 +150,7 @@ re-promoting already-played voices (duplicate burst). Open follow-up:
   `Osc*Builder`/`EqBuilder`/`Master*Builder`/`Pipeline*Builder` classes in `klangscript-libs`,
   annotated for KlangScript directly in `klangscript-libs` (module split 2026-09-06). `MasterFx`, `Stage`,
   `Master.of`, `Pipeline.of` and all 17 sub-type extension objects are DELETED, no back-compat.
-  Plan: `docs/tasks/dsl-configure-lambdas.md`.
+  Plan: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
 
 ## Filter Saturation Dead-End — Linear SVF is the Right Choice (2026-05-28)
 

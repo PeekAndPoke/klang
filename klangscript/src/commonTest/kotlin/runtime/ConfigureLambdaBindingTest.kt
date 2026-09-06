@@ -15,7 +15,7 @@ import io.peekandpoke.klang.script.klangScriptEngine
  * End-to-end binding of a script lambda into a native's trailing function-typed parameter,
  * through the real interpreter path (`positionalArgsForNative` → `resolveByParamSpec`).
  *
- * The natives here stand in for the DSL doors of `docs/tasks/dsl-configure-lambdas.md`:
+ * The natives here stand in for the DSL doors of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`:
  * `door(freq = 440, configure = null)` mirrors `Osc.sine(freq, configure)`.
  */
 class ConfigureLambdaBindingTest : StringSpec({

@@ -172,7 +172,7 @@ a default thunk for each skipped slot, and KSP only emits thunks for literals. T
 refuses a function-typed parameter preceded by a non-literal optional default.
 
 Tests: `ArgAlignmentTest.kt`, `ConfigureLambdaBindingTest.kt` (runtime), `AnalyzedAstTest.kt`
-("configure lambda" cases, analyzer). Plan: `docs/tasks/dsl-configure-lambdas.md`.
+("configure lambda" cases, analyzer). Plan: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
 
 ### 4.11 Callable native objects (`invoke`) ✅
 

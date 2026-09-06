@@ -15,7 +15,7 @@ in the same deliverable.
     the base type plus TWO section methods, `band(freq, q, db)` (serial bell) and
     `tap(freq, q, gain)` (parallel boost, the form Der Schmetterling's guitar uses). Both shipped
     on BOTH doors with identical names and defaults. Since 2026-09-06 (S3 of
-    `dsl-configure-lambdas.md`) the script door is `.eq(e => e.band(...).tap(...))` on an
+    `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`) the script door is `.eq(e => e.band(...).tap(...))` on an
     `EqBuilder` in `klangscript-libs`, which delegates to the audio_bridge Kotlin extensions
     `IgnitorDsl.Eq.band/tap`; future Eq section methods land on both.
   - **Known gap (D5 round 3):** the Kotlin door ships HOMOGENEOUS overloads (all-IgnitorDsl or

@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
  * The master doors: `Master(configure)` (the `invoke` operator), its alias `Master.build`, and
- * `Master.default()`. Decision D8 of `docs/tasks/dsl-configure-lambdas.md`: the callable form and
+ * `Master.default()`. Decision D8 of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`: the callable form and
  * the method form are aliases, pinned here node for node, so the operator is tested against a
  * form that works without it. The Kotlin side is `MasterDsl.of(...)` with the stage data classes.
  */

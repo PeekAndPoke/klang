@@ -925,7 +925,7 @@ let a = placeholder("aa", Osc.sine())"""
 
     /**
      * A hand-built registry standing in for the builder-typed DSL doors of
-     * `docs/tasks/dsl-configure-lambdas.md`: `Osc.supersaw(freq?, configure?)` whose
+     * `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`: `Osc.supersaw(freq?, configure?)` whose
      * `configure` is `((OscSuperSawBuilder) -> OscSuperSawBuilder)?`, the builder's
      * `.voices()`, and a sprudel-like `superimpose(vararg transforms: PatternMapperFn)`.
      */
