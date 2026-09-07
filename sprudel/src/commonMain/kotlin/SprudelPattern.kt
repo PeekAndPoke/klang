@@ -26,6 +26,7 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.sprudel.lang.toPattern
 import io.peekandpoke.klang.sprudel.pattern.BindPattern
 import io.peekandpoke.klang.sprudel.pattern.ContextRangeMapPattern
+import io.peekandpoke.klang.sprudel.pattern.createEventList
 import io.peekandpoke.klang.sprudel.pattern.FastGapPattern
 import io.peekandpoke.klang.sprudel.pattern.MapPattern
 import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
@@ -1148,6 +1149,65 @@ fun SprudelPattern._outerJoin(
             ctx = ctx,
             combiner = combiner
         )
+    }
+}
+
+/**
+ * Combines this pattern with a control pattern, structure from the source, values from BOTH (Strudel's `appLeft`).
+ *
+ * For every source event the control is queried over the part of that event that lies inside the query arc,
+ * and one result event is emitted per overlapping control event: `part` is the overlap, `whole` stays the
+ * source's, the value is whatever [combiner] makes of the pair. So a source event may come back as several
+ * fragments that share one whole, of which only the first is an onset.
+ *
+ * This differs from [_outerJoin], which samples the control ONCE at the source onset and emits the source
+ * event unchanged in shape. The two agree for everything that is played (only onsets are scheduled), and
+ * they differ for patterns that are read back by point queries, which is how a setter reads a control
+ * (`sampleAt`, see [_applyControl]): a point query into an `_appLeft` result finds the fragment that covers
+ * that point, with the control value that was live there; a point query into an `_outerJoin` result finds
+ * the source event with the value of its onset. Arithmetic (`add`, `mul`, ...) is built on this join for
+ * exactly that reason: `"<0.9>".mul("[1.3 0.99!7]")` is the accent map of a song, read once per note, and it
+ * must answer with `1.3` for the first eighth and `0.99` afterwards, not with `1.3` for the whole cycle.
+ *
+ * Why the control is queried over the source part clipped to the query arc rather than over the source
+ * whole: leaves answer with their full part even for a point query (an atom asked at 0.5 still reports
+ * `[0, 1)`), so clipping is the only thing that keeps a point query from returning every fragment of the
+ * cycle, of which `firstOrNull` would pick the wrong one. The result is the same as Strudel's whole-based
+ * query followed by a part intersection, minus the discarded work.
+ *
+ * A control event without a value, and a span of the control without any event (a rest), drop the source
+ * fragment there.
+ */
+fun SprudelPattern._appLeft(
+    control: SprudelPattern,
+    combiner: (source: SprudelPatternEvent, control: SprudelPatternEvent) -> SprudelPatternEvent?,
+): SprudelPattern = object : SprudelPattern {
+    override val weight: Double get() = this@_appLeft.weight
+    override val numSteps: Double? get() = this@_appLeft.numSteps
+    override fun estimateCycleDuration(): Double = this@_appLeft.estimateCycleDuration()
+
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
+        val sourceEvents = this@_appLeft.queryArcContextual(from, to, ctx)
+        if (sourceEvents.isEmpty()) return sourceEvents
+
+        val result = createEventList()
+
+        for (event in sourceEvents) {
+            val begin = maxOf(event.part.begin, from)
+            val end = minOf(event.part.end, to)
+            if (end <= begin) continue
+
+            for (controlEvent in control.queryArcContextual(begin, end, ctx)) {
+                val part = event.part.clipTo(controlEvent.part) ?: continue
+                val combined = combiner(event, controlEvent) ?: continue
+
+                result.add(
+                    combined.copy(part = part).prependLocations(controlEvent.sourceLocations)
+                )
+            }
+        }
+
+        return result
     }
 }
 

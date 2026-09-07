@@ -76,7 +76,15 @@ internal class SegmentPattern(
                 val sliceBegin = base + duration.scaleBy(i.toDouble() / n)
                 val sliceEnd = base + duration.scaleBy((i + 1).toDouble() / n)
 
-                // Query source for this slice
+                // Leaves answer a query with their full part (an atom queried at a point still
+                // reports its whole cycle), so the slices must be checked against the query arc
+                // here: a point query at 0.5 into segment(2) must yield the SECOND slice, not the
+                // first one of the cycle. Without this, `sampleAt` (every source-structured join)
+                // read the first slice for every onset.
+                if (sliceEnd <= from || sliceBegin >= to) continue
+
+                // Query source for the full slice, so a continuous source is read at the slice
+                // start regardless of where the query arc begins.
                 val sourceEvents = source.queryArcContextual(sliceBegin, sliceEnd, ctx)
 
                 for (sourceEvent in sourceEvents) {

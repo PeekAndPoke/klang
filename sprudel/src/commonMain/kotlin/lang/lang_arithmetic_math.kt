@@ -12,26 +12,42 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
-import io.peekandpoke.klang.sprudel._innerJoin
+import io.peekandpoke.klang.sprudel._appLeft
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.mapEvents
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
-// Helper for arithmetic operations that modify the 'value' field
+/**
+ * Helper for the binary arithmetic, comparison and bitwise operators: `source op control`, written
+ * into the value register of every source event.
+ *
+ * **Structure from the SOURCE, values from both** ([_appLeft], Strudel's default `add`). It used to
+ * be an inner join, i.e. structure from the CONTROL: a continuous control (`sine`, `perlin`)
+ * queried over a cycle emits one event valued at the cycle start, so `seq("1 1 1").mul(sine)` gave
+ * every note the same number while `.pan(sine.range(0, 1))` swept, and a source event longer than
+ * the control's step came back as fragments with the CONTROL's wholes, every one of them an onset
+ * (`docs/tasks/sprudel-arithmetic-continuous-controls.md`, 2026-09-07).
+ *
+ * Now a source event keeps its whole, so only its first fragment is an onset and `weight`/`numSteps`
+ * come from the source; a continuous control is read at every onset without a `seg()`. The
+ * fragments themselves stay, on purpose: arithmetic results are mostly READ, not played
+ * (`"<0.9>".mul("[1.3 0.99!7]")` is a clip map that `.clip(...)` samples once per note), and a
+ * point query has to find the control value that was live at that point. See [_appLeft] for why
+ * onset sampling ([_outerJoin]) would flatten such a map to its first value.
+ *
+ * A source span that meets no control event (a rest in the control) is dropped, as before and as
+ * in Strudel. A source event without a value passes through untouched.
+ */
 internal fun applyArithmetic(
     source: SprudelPattern,
     args: List<SprudelDslArg<Any?>>,
     op: (SprudelVoiceValue, SprudelVoiceValue) -> SprudelVoiceValue?,
 ): SprudelPattern {
-    return source._innerJoin(args) { src, controlValue ->
-        val controlVal = controlValue ?: return@_innerJoin silence
+    val control = args.getOrNull(0)?.toPattern() ?: return source
 
-        // Apply the operation to each event in the source pattern
-        src.mapEvents { event ->
-            val sourceVal = event.data.value ?: return@mapEvents event
-            val newVal = op(sourceVal, controlVal)
-            event.copy(data = event.data.copy(value = newVal))
-        }
+    return source._appLeft(control) { event, controlEvent ->
+        val controlVal = controlEvent.data.value ?: return@_appLeft null
+        val sourceVal = event.data.value ?: return@_appLeft event
+        event.copy(data = event.data.copy(value = op(sourceVal, controlVal)))
     }
 }
 

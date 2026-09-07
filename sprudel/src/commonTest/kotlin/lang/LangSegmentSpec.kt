@@ -10,6 +10,11 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.peekandpoke.klang.sprudel.sampleAt
 
 class LangSegmentSpec : StringSpec({
 
@@ -135,6 +140,40 @@ class LangSegmentSpec : StringSpec({
         events1.zip(events2).forEach { (e1, e2) ->
             e1.part.begin shouldBe e2.part.begin
             e1.part.end shouldBe e2.part.end
+        }
+    }
+
+    // -- Point queries ------------------------------------------------------------------------------------------------
+
+    "a point query answers with the slice containing that point | saw.segment(4).sampleAt(t)" {
+        // An atom answers a point query with its whole cycle, so the segmenter must pick the slice
+        // that contains the point itself. Before this row, every point query returned the first slice.
+        val p = saw.segment(4)
+        val ctx = SprudelPattern.QueryContext()
+
+        for (cycle in 0 until 12) {
+            for (i in 0 until 4) {
+                val t = cycle + i / 4.0
+                withClue("t=$t") {
+                    val e = p.sampleAt(t, ctx).shouldNotBeNull()
+                    e.whole.begin.toCycles() shouldBe t
+                    e.whole.end.toCycles() shouldBe t + 0.25
+                    e.data.value?.asDouble shouldBe (i / 4.0 plusOrMinus 1e-9)
+                }
+            }
+        }
+    }
+
+    "a segmented control reaches every note | note(\"c e g a\").gain(saw.segment(4))" {
+        // The setter samples the control at each onset: the second note must see the second slice.
+        val p = note("c e g a").gain(saw.segment(4))
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 4
+                events.map { it.data.gain } shouldBe listOf(0.0, 0.25, 0.5, 0.75)
+            }
         }
     }
 })
