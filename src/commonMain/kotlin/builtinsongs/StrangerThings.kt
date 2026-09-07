@@ -22,7 +22,7 @@ import * from "sprudel"
 
 let wait = 16
 let keep = 32 * 6
-let notch = sine.range(320, 520).slow(20)
+let notchFreq = sine.range(320, 520).slow(20)
 
 stack(
   // Claps --------------------------------------------------------------------------------------------------------------------
@@ -31,18 +31,18 @@ stack(
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(1)
-    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(2000).bpq(7.0).hpf(1000).analog(2)
+    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(freq = 2000, q = 7.0).hpf(1000).analog(2)
     .sound("pulse").onepole(3743).crush(5).gain(0.2).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.2) // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body("membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(2).s("supersaw").unison(11).spread(saw.range(0.05, 0.35).slow(16))
-    .gain(0.6).distort(0.7).postgain(0.11).adsr(0.008, 3.0, 0.5, 0.1).lpadsr(0.008, 5.0, 0.2, 0.1).clip(1.05)
-    .hpf(800).lpf(1400).lpe(perlin.range(21.7, 27.9).slow(8)).lpq(1.5).analog(15).body("violin").bodyWet(0.5)
+    .gain(0.6).distort(0.7).postgain(0.11).adsr(0.008, 3.0, 0.5, 0.1).lpf(attack = 0.008, decay = 5.0, sustain = 0.2, release = 0.1).clip(1.05)
+    .hpf(800).lpf(freq = 1400, env = perlin.range(21.7, 27.9).slow(8), q = 1.5).analog(15).body("violin").bodyWet(0.5)
     .pan(0.5).superimpose(
-      x => x.hpf(800).lpf(1500).lpq(5).bpf(notch).bpq(1.0).transpose(12).postgain(0.08).pan(0.3).superimpose(pan(0.7)),
-      x => x.hpf(800).lpf(1500).lpq(5).bpf(notch).bpq(1.0).transpose(24).postgain(0.04).pan(0.1).superimpose(pan(0.9))
+      x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).postgain(0.08).pan(0.3).superimpose(pan(0.7)),
+      x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(24).postgain(0.04).pan(0.1).superimpose(pan(0.9))
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4").clip(0.7).struct("x!4").slow(16)
@@ -52,7 +52,7 @@ stack(
     .superimpose(
       x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
-    ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.5).body("glass").vowel("e o e i a u".slow(24)).vowelWet(0.40)
+    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body("glass").vowel("e o e i a u".slow(24)).vowelWet(0.40)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2)).vibrato("0.51".add(perlin.div(20))).vibratoMod(0.06)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
@@ -74,7 +74,7 @@ stack(
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").legato(2)
     .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
-    .bpf(perlin.range(440, 440 * 4).segment(16).slow(6)).bpq(sine.range(0.25, 5.0).slow(48).early(12))
+    .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(6), q = sine.range(0.25, 5.0).slow(48).early(12))
   , // Master ------------------------------------------------------------------------------------------------------
   master(Master(m => m
     .reverb(r => r.wet(0.05).damp(0.5).roomSize(9))

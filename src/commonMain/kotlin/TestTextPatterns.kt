@@ -316,7 +316,7 @@ object TestTextPatterns {
 
     val bandF = """
         n("0 1 2 3 4 5 6 7").scale("C4:minor")
-         .bpf("500 1000 200").lpq(5)
+         .bpf("500 1000 200").lpf(q = 5)
          .slow(4)         
     """.trimIndent()
 
@@ -324,8 +324,8 @@ object TestTextPatterns {
     val notchF = """
         // or "noise"
         s("white") 
-            .notchf("100 500 2000 5000")
-            .lpq(20)
+            .notch("100 500 2000 5000")
+            .lpf(q = 20)
             .gain(0.5)
     """.trimIndent()
 

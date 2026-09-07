@@ -204,7 +204,7 @@ Two classes of envelope, with different roles in deciding when a voice ends:
     - Voice end frame = `gateEndFrame + max(amp.release, ignitorAmpRelease)`.
 
 - **Modulator envelopes** do **not** extend voice lifetime:
-    - Filter modulator envelope (`lpadsr` / `hpadsr` / `bpadsr` / `notchadsr`)
+    - Filter modulator envelope (the `attack, decay, sustain, release` slots of `lpf` / `hpf` / `bpf` / `notch`)
       — modulates filter cutoff at control rate.
     - FM envelope — modulates FM depth.
     - Pitch envelope — modulates pitch.

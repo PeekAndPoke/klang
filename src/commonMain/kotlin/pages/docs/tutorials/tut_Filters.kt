@@ -21,7 +21,7 @@ val filtersTutorial = Tutorial(
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Synthesis),
-    teaches = listOf("lpf", "hpf", "lpq"),
+    teaches = listOf("lpf", "hpf"),
     sections = listOf(
         TutorialSection(
             heading = "Colour, not loudness",
@@ -87,21 +87,21 @@ val filtersTutorial = Tutorial(
             ),
         ),
         TutorialSection(
-            heading = "Resonance: lpq",
+            heading = "Resonance: q",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    A filter has a boundary (its cutoff), and `lpq()` makes that boundary itself audible: **resonance** boosts the frequencies right at it, so the filter stops being a blanket and becomes a presence. From here on, this is the resonant edge. (Resonance adds level, so this pair sits a notch lower in gain.)
+                    A filter has a boundary (its cutoff), and `lpf(q = ...)` makes that boundary itself audible: **resonance** boosts the frequencies right at it, so the filter stops being a blanket and becomes a presence. From here on, this is the resonant edge. (Resonance adds level, so this pair sits a notch lower in gain.)
 
-                    **Try it:** swap the `//` to compare the resonant edge against the plain filter. Then push `lpq` to 20.
+                    **Try it:** swap the `//` to compare the resonant edge against the plain filter. Then push `q` to 20.
 
                     **Listen for:** a whistling sheen right at the cutoff: the filter beginning to sing along. At 20 the whistle becomes the loudest thing in the line. Small amounts sharpen a sound; big amounts take it over.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").lpf(700).lpq(6).gain(0.4) // the resonant edge, try lpq 20
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").lpf(700).gain(0.4)     // the plain filter, swap to compare
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").lpf(freq = 700, q = 6).gain(0.4)  // the resonant edge, try q 20
+                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").lpf(700).gain(0.4)             // the plain filter, swap to compare
                     """.trimIndent(),
                 ),
             ),
@@ -122,8 +122,8 @@ val filtersTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").lpf("<3200 400>").lpq(4).gain(0.4) // bright and dark, alternating
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").hpf("<200 1600>").gain(0.5)     // the other half of the spectrum
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").lpf(freq = "<3200 400>", q = 4).gain(0.4)  // bright and dark, alternating
+                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").hpf("<200 1600>").gain(0.5)             // the other half of the spectrum
                     """.trimIndent(),
                 ),
             ),

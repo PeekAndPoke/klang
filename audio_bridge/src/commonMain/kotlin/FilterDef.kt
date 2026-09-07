@@ -139,7 +139,7 @@ sealed class FilterDef {
 /**
  * Upper bound for the `passes` cascade count (C5). 16 stages is 192 dB/oct — far past any
  * musical use; the bound exists because `passes` is a RESOURCE count, not a tone knob:
- * a live-typed `lpx(1e9)` would otherwise allocate a billion filter stages inside a note-on
+ * a live-typed `lpf(passes = 1e9)` would otherwise allocate a billion filter stages inside a note-on
  * on the render thread. Nothing about the sound of a reachable value is clamped.
  */
 const val FILTER_MAX_PASSES = 16

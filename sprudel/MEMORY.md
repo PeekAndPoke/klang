@@ -2,6 +2,16 @@
 
 ## Recent Work (2026-09-07)
 
+- **Filters are objects with named slots (batch F).** `lpf(freq, q, passes, env, attack, decay,
+  sustain, release)`, `hpf` the same, `bpf(freq, q, env, attack, decay, sustain, release)`,
+  `notch` the same; `lpf(q = mul(2))` maps, `hpf(lpf.freq.div(2))` reads. Per-knob doors and
+  aliases (`lpq`, `lpe`, `lpadsr`, `notchf`, `nfenv`, ...) are GONE (`LangRetiredDoorsSpec`).
+  The long names `lowpass`/`highpass`/`bandpass` stay as constants. Compound objects have NO bare
+  read: children only, one rule for every compound. `adsrCurves` is an object with the setter
+  only (name slots, no readers); the singular `adsrCurve` went from sprudel and the ignitor door.
+  `lang_effects_addons.kt` no longer exists. Filter curve objects wait for engine fields
+  (`docs/tasks/filter-envelope-configuration.md`).
+
 - **Compound effects are objects with named slots (batch E).** `room(wet, size, fade, lowpass,
   dim)`, `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,
   `tremolo(depth, sync, shape, skew, phase)`, `distort(amount, shape, oversample)`,
@@ -249,22 +259,15 @@ return applyCat(patterns)
 
 ### Audio Effects — Filters
 
-- `lpf()` / `cutoff` / `ctf` / `lp`, `lpq()` / `resonance` / `res`
-- `hpf()` / `hp` / `hcutoff`, `hpq()` / `hresonance` / `hres`
-- `bpf()` / `bandf` / `bp`, `bpq()` / `bandq`
-- `notchf()`, `nresonance()` / `nres`
+- `lpf(freq, q, passes, env, attack, decay, sustain, release)` / `lowpass`; readers `lpf.freq/.q/.passes/.env/.attack/.decay/.sustain/.release`
+- `hpf(...)` / `highpass` the same; `bpf(freq, q, env, attack, decay, sustain, release)` / `bandpass`
+- `notch(freq, q, env, attack, decay, sustain, release)` (addon); readers `notch.*`
 - `vowel()`
 
 ### Audio Effects — Filter Envelopes
 
-- LP: `lpadsr(a, d, s, r)` and `lpe` (the stage doors `lpattack/lpa`, `lpdecay/lpd`, `lpsustain/lps`,
-  `lprelease/lpr` and `lpenv` were retired by the C6a alias cleanup, see `LangDeletedFilterAliasesSpec`;
-  the stages have no accessors yet, `docs/tasks/sprudel-accessors-compound-slots.md`)
-- HP: `hpattack()` / `hpa`, `hpdecay()` / `hpd`, `hpsustain()` / `hps`, `hprelease()` / `hpr`, `hpenv()` / `hpe`
-- BP: `bpattack()` / `bpa`, `bpdecay()` / `bpd`, `bpsustain()` / `bps`, `bprelease()` / `bpr`, `bpenv()` / `bpe`
-- Notch (Klang extension): `nfattack()` / `nfa`, `nfdecay()` / `nfd`, `nfsustain()` / `nfs`, `nfrelease()` / `nfr`,
-  `nfenv()` / `nfe`
-- Filter envelope audio engine integration complete
+- The envelope of each filter is its own slots (`lpf(env = 24, attack = 0.01, decay = 0.3, sustain = 0.2)`);
+  the old stage doors and `lpadsr`/`hpadsr`/`bpadsr`/`nfadsr` are retired (2026-09-07, `LangRetiredDoorsSpec`)
 
 ### Audio Effects — Pitch Envelope
 

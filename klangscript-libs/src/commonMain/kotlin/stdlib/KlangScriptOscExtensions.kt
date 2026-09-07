@@ -232,11 +232,6 @@ object KlangScriptOscExtensions {
         }
     }
 
-    /** Applies the same ADSR shape curve to all three stages — same names as [adsrCurves] (`"exp"` default). */
-    @KlangScript.Method
-    fun adsrCurve(self: IgnitorDsl, curve: String = "exp"): IgnitorDsl =
-        adsrCurves(self, curve, curve, curve)
-
     /**
      * De-click the ADSR gain by [seconds] — a one-pole low-pass that rounds the corners at segment
      * joins (attack→decay peak, gate-off, cutoff), removing the low-note "plop". `0` = off; a gentle

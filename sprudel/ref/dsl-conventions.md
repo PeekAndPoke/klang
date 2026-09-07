@@ -92,7 +92,9 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
   the children read. String slots (`shape`) get no child. `SprudelPattern.X`, `String.X`,
   `PatternMapperFn.X` and `X.invoke` carry the same parameter list in the same order; the
   tail-only guard on the first slot keeps `seq("3 4").room(size = 4)` from reinterpreting the
-  head. `@param-tool` lines sit on the compound's setter, one per slot that has an editor.
+  head. `@param-tool` lines sit on the compound's setter, one per slot that has an editor. A
+  compound whose slots are all names (`adsrCurves`) carries the setter only, no children
+  (maintainer, 2026-09-07).
 - A setter whose lift call carries an inline update lambda (`_liftOrReinterpretNumericalField(args)
   { v -> copy(x = v) }`) gets a named `private val <name>Update: SprudelVoiceData.(Double?) ->
   SprudelVoiceData` so the mapper branch and the lift share one update (tonal, 2026-09-07).

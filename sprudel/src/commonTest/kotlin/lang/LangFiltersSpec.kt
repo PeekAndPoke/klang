@@ -9,9 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.lang.addons.notchf
-import io.peekandpoke.klang.sprudel.lang.addons.notchq
-import io.peekandpoke.klang.sprudel.lang.addons.nresonance
+import io.peekandpoke.klang.sprudel.lang.addons.notch
 
 class LangFiltersSpec : StringSpec({
 
@@ -43,10 +41,10 @@ class LangFiltersSpec : StringSpec({
         events.map { (it.data.toVoiceData().filters[0] as FilterDef.HighPass).freq } shouldBe expected
     }
 
-    // notchf()
+    // notch()
 
-    "top-level notchf() adds/sets Notch filter with cutoff" {
-        val p = note("a b").apply(notchf("400 500"))
+    "top-level notch() adds/sets Notch filter with cutoff" {
+        val p = note("a b").apply(notch("400 500"))
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -55,9 +53,9 @@ class LangFiltersSpec : StringSpec({
         events.map { (it.data.toVoiceData().filters[0] as FilterDef.Notch).freq } shouldBe listOf(400.0, 500.0)
     }
 
-    "control pattern notchf() applies Notch per event" {
+    "control pattern notch() applies Notch per event" {
         val base = note("c3 e3")
-        val p = base.notchf("600 700")
+        val p = base.notch("600 700")
 
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
@@ -66,7 +64,6 @@ class LangFiltersSpec : StringSpec({
         events.map { it.data.notchf } shouldBe expected
         events.map { (it.data.toVoiceData().filters[0] as FilterDef.Notch).freq } shouldBe expected
     }
-
 
     "lpf() works within compiled code as top-level function" {
         val p = SprudelPattern.compile("""seq("200 400").lpf()""")
@@ -104,18 +101,8 @@ class LangFiltersSpec : StringSpec({
         events.map { it.data.hcutoff } shouldBe listOf(100.0, 250.0)
     }
 
-
-    "notchf() works within compiled code as top-level function" {
-        val p = SprudelPattern.compile("""seq("400 500").notchf()""")
-
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.notchf } shouldBe listOf(400.0, 500.0)
-    }
-
-    "notchf() works within compiled code as chained-level function" {
-        val p = SprudelPattern.compile("""note("a b").notchf("400 500")""")
+    "notch() works within compiled code as top-level function" {
+        val p = SprudelPattern.compile("""seq("400 500").notch()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -123,12 +110,19 @@ class LangFiltersSpec : StringSpec({
         events.map { it.data.notchf } shouldBe listOf(400.0, 500.0)
     }
 
+    "notch() works within compiled code as chained-level function" {
+        val p = SprudelPattern.compile("""note("a b").notch("400 500")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.notchf } shouldBe listOf(400.0, 500.0)
+    }
 
     // Notch resonance + per-filter independence
 
-
-    "nresonance() sets Notch resonance specifically" {
-        val p = note("c3 e3").notchf("500").nresonance("0.8")
+    "notch(q = ...) sets Notch resonance specifically" {
+        val p = note("c3 e3").notch(freq = "500", q = "0.8")
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -142,7 +136,7 @@ class LangFiltersSpec : StringSpec({
 
     "each filter can have independent resonance values" {
         // Multiple filters with different resonances
-        val p = note("c3").lpf("200").lpq("0.7").hpf("300").hpq("1.3")
+        val p = note("c3").lpf(freq = "200", q = "0.7").hpf(freq = "300", q = "1.3")
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
@@ -160,17 +154,9 @@ class LangFiltersSpec : StringSpec({
         voiceData.filters.getByType<FilterDef.HighPass>()?.q shouldBe 1.3
     }
 
-    "notchq() writes the nresonance field like nresonance()" {
-        // NOTE: despite the @alias KDoc tags, nres is NOT a dispatchable name (doc metadata only)
-        val p = note("c3 e3").notchf("500").notchq("0.8")
-        val events = p.queryArc(0.0, 1.0)
-        events.size shouldBe 2
-        events[0].data.nresonance shouldBe 0.8
-    }
-
     // Compiled code tests for resonance functions
-    "hpq() works within compiled code" {
-        val p = SprudelPattern.compile("""note("a b").hpf("100 250").hpq("1.5 2.5")""")
+    "hpf(q = ...) works within compiled code" {
+        val p = SprudelPattern.compile("""note("a b").hpf(freq = "100 250", q = "1.5 2.5")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -178,9 +164,8 @@ class LangFiltersSpec : StringSpec({
         events.map { it.data.hresonance } shouldBe listOf(1.5, 2.5)
     }
 
-
-    "nresonance() works within compiled code" {
-        val p = SprudelPattern.compile("""note("a b").notchf("400 500").nresonance("0.5 0.9")""")
+    "notch(q = ...) works within compiled code" {
+        val p = SprudelPattern.compile("""note("a b").notch(freq = "400 500", q = "0.5 0.9")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -203,7 +188,6 @@ class LangFiltersSpec : StringSpec({
         events[0].data.hcutoff shouldBe 300.0
     }
 
-
     "bpf() works as string extension" {
         val p = "c3 e3".bpf("800")
         val events = p.queryArc(0.0, 1.0)
@@ -211,33 +195,31 @@ class LangFiltersSpec : StringSpec({
         events[0].data.bandf shouldBe 800.0
     }
 
-    "notchf() works as string extension" {
-        val p = "c3 e3".notchf("400")
+    "notch() works as string extension" {
+        val p = "c3 e3".notch("400")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.notchf shouldBe 400.0
     }
 
-
-    "hpq() works as string extension" {
-        val p = "c3 e3".hpf("300").hpq("2.0")
+    "hpf(q = ...) works as string extension" {
+        val p = "c3 e3".hpf(freq = "300", q = "2.0")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.hresonance shouldBe 2.0
     }
 
-
-    "nresonance() works as string extension" {
-        val p = "c3 e3".notchf("500").nresonance("0.8")
+    "notch(q = ...) works as string extension" {
+        val p = "c3 e3".notch(freq = "500", q = "0.8")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.nresonance shouldBe 0.8
     }
 
-    // ---- C0 guard: notchf(freq, q) ----
+    // ---- C0 guard: notch(freq, q) ----
 
-    "notchf(freq, q) sets both fields" {
-        val p = note("c e").notchf("200 800", 1.5)
+    "notch(freq, q) sets both fields" {
+        val p = note("c e").notch("200 800", 1.5)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -247,8 +229,8 @@ class LangFiltersSpec : StringSpec({
         events[1].data.nresonance shouldBe 1.5
     }
 
-    "notchf(q = ...) does not clear a previously set freq" {
-        val p = SprudelPattern.compile("""note("c3").notchf(800).notchf(q = 12)""")
+    "notch(q = ...) does not clear a previously set freq" {
+        val p = SprudelPattern.compile("""note("c3").notch(800).notch(q = 12)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

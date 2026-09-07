@@ -18,6 +18,10 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * - 2026-09-07, envelope: `adsr(attack = ...)` sets a slot and `adsr.attack` reads it.
  * - 2026-09-07, effects: `room`, `delay`, `phaser`, `tremolo`, `distort`, `crush` and `coarse`
  *   are objects with named slots; the per-knob doors and their aliases went with them.
+ * - 2026-09-07, filters: `lpf`, `hpf`, `bpf`, `notch` are objects with the resonance, cascade,
+ *   envelope depth and envelope stages as slots; `adsrCurves` carries the setter only and the
+ *   singular `adsrCurve` is gone from every surface (the ignitor door is guarded in
+ *   `LangAdsrCurveDefaultSpec`).
  */
 class LangRetiredDoorsSpec : StringSpec({
     val envelope = listOf("attack", "decay", "sustain", "release")
@@ -31,7 +35,14 @@ class LangRetiredDoorsSpec : StringSpec({
         "crushos", "crushOversampling", "coarseos", "coarseOversampling",
     )
 
-    (envelope + effects).forEach { name ->
+    val filters = listOf(
+        "lpq", "lpx", "lpe", "lpadsr", "hpq", "hpx", "hpe", "hpadsr", "bpq", "bpe", "bpadsr",
+        "notchf", "nresonance", "nres", "notchq", "ntq", "ntf", "nfadsr",
+        "nfattack", "nfa", "nfdecay", "nfd", "nfsustain", "nfs", "nfrelease", "nfr", "nfenv", "nfe",
+        "adsrCurve",
+    )
+
+    (envelope + effects + filters).forEach { name ->
         "retired door '$name' fails as a member call" {
             val error = shouldThrowAny { SprudelPattern.compile("""note("c4").$name(0.5)""") }
             withClue("error should name the missing method") { (error.message ?: "") shouldContain name }

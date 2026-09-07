@@ -185,7 +185,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > | Scope | Effects |
 > |-------|---------|
 > | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room` (slots `wet`/`size`/`fade`/`lowpass`/`dim`, plus `ir`), `delay` (slots `wet`/`time`/`feedback`/`cap`), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
-> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 
 **Master limiter knobs.** `m.limiter(l => l...)` takes: `thresholdDb(db)` `ratio(x)` `kneeDb(db)`
@@ -345,7 +345,7 @@ selection — extended to ignitor variants and per-note gain.
 
 ### Filters
 
-All filters accept pattern values and have envelope variants (`lpe` for depth, `lpadsr` for shape; same for `hp*`/`bp*`)
+All filters accept pattern values on every slot, and each carries its own envelope as slots: `env` for the depth in semitones, `attack`, `decay`, `sustain`, `release` for the shape (`lpf(freq = 400, env = 24, attack = 0.01, decay = 0.3, sustain = 0.2)`; same on `hpf`, `bpf`, `notch`)
 
 Lowpass and highpass also take a **cascade count** as their third argument: `lpf(freq, q, passes)`.
 At the default q the cascade keeps its -3 dB point AT the cutoff (`lpf(800, 0.707, 2)` still means
@@ -354,22 +354,11 @@ at the cutoff). Same third slot on the ignitor door.
 
 | Function         | Aliases               | Description                | Example                                                      |
 |------------------|-----------------------|----------------------------|--------------------------------------------------------------|
-| `lpf(freq)`      |  | Lowpass filter cutoff (Hz) | `note("c3").s("saw").lpf(800)`                               |
-| `lpq(q)`         |  | Lowpass resonance/Q        | `note("c3").lpf(400).lpq(5)`                                 |
-| `lpe(depth)`     |  | LP env depth in SEMITONES (+12 doubles the cutoff at full env; negative sweeps down) | `note("c3").lpf(200).lpe(24)`           |
-| `lpadsr(params)` |  | LP envelope ADSR           | `note("c3").lpf(200).lpe(24).lpadsr(0.01, 0.3, 0.5, 0.5)`      |
-| `lpx(passes)`    |  | LP cascade count: `2` = 24 dB/oct, `3` = 36 (also the third slot of `lpf`) | `note("c3").lpf(800).lpx("<1 2>")`      |
-| `hpf(freq)`      |  | Highpass filter cutoff     | `s("bd").hpf(200)`                                           |
-| `hpq(q)`         |  | Highpass resonance         | `s("bd").hpf(200).hpq(2)`                                    |
-| `hpe(depth)`     |  | HP env depth in SEMITONES | `note("c3").hpf(100).hpe(24)`                               |
-| `hpadsr(params)` |  | HP envelope ADSR           | `note("c3").hpf(100).hpe(24).hpadsr(0.01, 0.2, 0.3, 0.5)`      |
-| `hpx(passes)`    |  | HP cascade count (also the third slot of `hpf`) | `s("bd").hpf(200).hpx(2)`      |
-| `bpf(freq)`      |  | Bandpass center freq       | `s("sd").bpf(1000)`                                          |
-| `bpq(q)`         |  | Bandpass Q                 | `s("sd").bpf(1000).bpq(5)`                                   |
-| `bpe(depth)`     |  | BP env depth in SEMITONES | `note("c3").bpf(200).bpe(27.9)`                               |
-| `bpadsr(params)` |  | BP envelope ADSR           | `note("c3").bpf(200).bpe(27.9).bpadsr(0.01, 0.3, 0.5, 0.5)`      |
-| `notchf(freq)`   |                       | Notch (band-reject) freq   | `s("sd").notchf(1000)`                                       |
-| `notchq(q)`      | `nresonance`          | Notch Q                    | `s("sd").notchf(1000).notchq(2)`                             |
+| `lpf(freq, q, passes, env, attack, decay, sustain, release)`           | `lowpass`  | Lowpass: cutoff Hz, resonance, cascade count (2 = 24 dB/oct), envelope depth in SEMITONES (+12 doubles the cutoff, negative sweeps down) and the envelope stages | `note("c3").s("saw").lpf(freq = 400, q = 5, env = 24, attack = 0.01, decay = 0.3, sustain = 0.2)`    |
+| `lpf.freq` / `lpf.q` / `lpf.passes` / `lpf.env` / `lpf.attack` ...     |            | Read a lowpass slot; `lpf(q = mul(2))` maps one slot on its own value                                                                                  | `p.lpf(800).hpf(lpf.freq.div(2))`                                                                    |
+| `hpf(freq, q, passes, env, attack, decay, sustain, release)`           | `highpass` | Highpass, same slots and readers as `lpf` (`hpf.freq`, `hpf.env`, ...)                                                                                 | `s("bd").hpf(freq = 200, q = 2)`                                                                     |
+| `bpf(freq, q, env, attack, decay, sustain, release)`                   | `bandpass` | Bandpass: centre Hz, Q, envelope depth in semitones and the stages; readers `bpf.freq`, `bpf.q`, ...                                                   | `note("c3").bpf(freq.mul(4), 3)`                                                                     |
+| `notch(freq, q, env, attack, decay, sustain, release)`                 |            | Notch (band reject), same slots as `bpf`; readers `notch.freq`, `notch.q`, ...                                                                         | `s("sd").notch(freq = 1000, q = 2)`                                                                  |
 
 ### Effects
 
@@ -700,7 +689,7 @@ stack(
     .scale("c3:dorian")          // dorian mode for folk feel
     .gain(0.8)
     .lpf("2000")                 // gentle lowpass
-    .lpadsr(0.01, 0.1, 0.2, 0.1) // filter envelope
+    .lpf(attack = 0.01, decay = 0.1, sustain = 0.2, release = 0.1) // filter envelope
     .tremolo(depth = 0.33, sync = 8, shape = "sine") // 8 Hz tremolo
     .analog(1)                   // warm analog drift
 

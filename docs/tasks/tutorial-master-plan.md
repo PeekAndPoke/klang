@@ -102,7 +102,7 @@ grouping, `<>` alternation
 
 | #   | Title                 | Level        | Concepts                              | Genre            | Why this genre                                                                  |
 |-----|-----------------------|--------------|---------------------------------------|------------------|---------------------------------------------------------------------------------|
-| M5  | Dynamic Filters       | Intermediate | `lpenv()`, `lpadsr()`, filter ADSR    | **Acid House**   | TB-303 squelch IS a filter envelope. The genre was born from this one parameter |
+| M5  | Dynamic Filters       | Intermediate | `lpf(env = ...)`, `lpf(attack = ...)`, filter ADSR    | **Acid House**   | TB-303 squelch IS a filter envelope. The genre was born from this one parameter |
 | M6  | Scale Modes           | Intermediate | `mode()`, `scale()` modes             | **Flamenco**     | Phrygian mode = instant Spain. Most viscerally clear mode demonstration         |
 | M7  | Pitch Bends and Drops | Intermediate | `accelerate()`, `penv()`, `panchor()` | **Grime**        | Wiley's "Eskimo" sound = pitch envelopes on bass. Every hit dives               |
 | M8  | Sidechain Pumping     | Intermediate | `duckorbit()`, `duckattack()`         | **French House** | Daft Punk's Alesis 3630 pumping defined the genre                               |

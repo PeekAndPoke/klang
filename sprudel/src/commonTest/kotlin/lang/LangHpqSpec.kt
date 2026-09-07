@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.peekandpoke.klang.sprudel.EPSILON
@@ -18,54 +17,18 @@ class LangHpqSpec : StringSpec({
 
     // ---- hpq ----
 
-
-    "reinterpret voice data as hresonance | seq(\"0.5 1.0\").hpq()" {
-        val p = seq("0.5 1.0").hpq()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.hresonance shouldBe 0.5
-            events[1].data.hresonance shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as hresonance | \"0.5 1.0\".hpq()" {
-        val p = "0.5 1.0".hpq()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.hresonance shouldBe 0.5
-            events[1].data.hresonance shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as hresonance | seq(\"0.5 1.0\").apply(hpq())" {
-        val p = seq("0.5 1.0").apply(hpq())
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.hresonance shouldBe 0.5
-            events[1].data.hresonance shouldBe 1.0
-        }
-    }
-
-
-
-
-
-
     
 
     "hpq dsl interface" {
         val pat = "a b"
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
-            "pattern.hpq(ctrl)" to seq(pat).hpq(ctrl),
-            "script pattern.hpq(ctrl)" to SprudelPattern.compile("""seq("$pat").hpq("$ctrl")"""),
-            "string.hpq(ctrl)" to pat.hpq(ctrl),
-            "script string.hpq(ctrl)" to SprudelPattern.compile(""""$pat".hpq("$ctrl")"""),
-            "hpq(ctrl)" to seq(pat).apply(hpq(ctrl)),
-            "script hpq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpq("$ctrl"))"""),
+            "pattern.hpf(q = ctrl)" to seq(pat).hpf(q = ctrl),
+            "script pattern.hpf(q = ctrl)" to SprudelPattern.compile("""seq("$pat").hpf(q = "$ctrl")"""),
+            "string.hpf(q = ctrl)" to pat.hpf(q = ctrl),
+            "script string.hpf(q = ctrl)" to SprudelPattern.compile(""""$pat".hpf(q = "$ctrl")"""),
+            "hpf(q = ctrl)" to seq(pat).apply(hpf(q = ctrl)),
+            "script hpf(q = ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpf(q = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hresonance shouldBe 0.5
@@ -73,10 +36,9 @@ class LangHpqSpec : StringSpec({
         }
     }
 
-
-    "hpq() with continuous pattern sets hresonance correctly" {
+    "hpf(q = ...) with continuous pattern sets hresonance correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").hpq(sine)
+        val p = note("a b c d").hpf(q = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

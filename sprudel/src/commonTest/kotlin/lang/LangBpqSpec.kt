@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
@@ -19,41 +18,9 @@ class LangBpqSpec : StringSpec({
 
     // ---- bandq ----
 
-
-    "reinterpret voice data as bandq | seq(\"1.2 1.8\").bpq()" {
-        val p = seq("1.2 1.8").bpq()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.bandq shouldBe 1.2
-            events[1].data.bandq shouldBe 1.8
-        }
-    }
-
-    "reinterpret voice data as bandq | \"1.2 1.8\".bpq()" {
-        val p = "1.2 1.8".bpq()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.bandq shouldBe 1.2
-            events[1].data.bandq shouldBe 1.8
-        }
-    }
-
-    "reinterpret voice data as bandq | seq(\"1.2 1.8\").apply(bpq())" {
-        val p = seq("1.2 1.8").apply(bpq())
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.bandq shouldBe 1.2
-            events[1].data.bandq shouldBe 1.8
-        }
-    }
-
-
-    "bpq() sets BPF Q specifically" {
+    "bpf(q = ...) sets BPF Q specifically" {
         // Apply BPF first, then update bandq to 1.5
-        val p = note("c").bpf("1000").bpq("1.5")
+        val p = note("c").bpf(freq = "1000", q = "1.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -65,41 +32,39 @@ class LangBpqSpec : StringSpec({
         (voiceData.filters[0] as FilterDef.BandPass).q shouldBe 1.5
     }
 
-    "bpq() works as pattern extension" {
-        val p = note("c").bpq("1.5")
+    "bpf(q = ...) works as pattern extension" {
+        val p = note("c").bpf(q = "1.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.bandq shouldBe 1.5
     }
 
-    "bpq() works as string extension" {
-        val p = "c".bpq("1.5")
+    "bpf(q = ...) works as string extension" {
+        val p = "c".bpf(q = "1.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.bandq shouldBe 1.5
     }
 
-    "bpq() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").bpq("1.5")""")
+    "bpf(q = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").bpf(q = "1.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bandq shouldBe 1.5
     }
 
-
-
     "bpq dsl interface" {
         val pat = "a b"
         val ctrl = "1.2 1.8"
         dslInterfaceTests(
-            "pattern.bpq(ctrl)" to seq(pat).bpq(ctrl),
-            "script pattern.bpq(ctrl)" to SprudelPattern.compile("""seq("$pat").bpq("$ctrl")"""),
-            "string.bpq(ctrl)" to pat.bpq(ctrl),
-            "script string.bpq(ctrl)" to SprudelPattern.compile(""""$pat".bpq("$ctrl")"""),
-            "bpq(ctrl)" to seq(pat).apply(bpq(ctrl)),
-            "script bpq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bpq("$ctrl"))"""),
+            "pattern.bpf(q = ctrl)" to seq(pat).bpf(q = ctrl),
+            "script pattern.bpf(q = ctrl)" to SprudelPattern.compile("""seq("$pat").bpf(q = "$ctrl")"""),
+            "string.bpf(q = ctrl)" to pat.bpf(q = ctrl),
+            "script string.bpf(q = ctrl)" to SprudelPattern.compile(""""$pat".bpf(q = "$ctrl")"""),
+            "bpf(q = ctrl)" to seq(pat).apply(bpf(q = ctrl)),
+            "script bpf(q = ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bpf(q = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bandq shouldBe 1.2
@@ -107,9 +72,9 @@ class LangBpqSpec : StringSpec({
         }
     }
 
-    "bpq() with continuous pattern sets bandq correctly" {
+    "bpf(q = ...) with continuous pattern sets bandq correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").bpq(sine)
+        val p = note("a b c d").bpf(q = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

@@ -67,7 +67,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-one accessor is an object with a call form and the first-step operators" {
-        listOf("gain", "velocity", "pan", "postgain", "lpf", "hpf", "bpf", "lpq", "hpq", "bpq").forEach { name ->
+        listOf("gain", "velocity", "pan", "postgain").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -86,7 +86,10 @@ class FreqAccessorIntelSpec : StringSpec({
             "delay" to listOf("wet", "time", "feedback", "cap"),
             "phaser" to listOf("rate", "wet", "center", "sweep", "floor"),
             "tremolo" to listOf("depth", "sync", "skew", "phase"),
-        ).forEach { (name, slots) ->
+            "lpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
+            "hpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
+            "bpf" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
+            "notch" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release")).forEach { (name, slots) ->
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe name
@@ -106,7 +109,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-three accessor is an object with a call form and the first-step operators" {
-        listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "fmh", "fmattack", "fmdecay", "fmsustain", "vowelWet", "vowelFloor", "bodyWet", "bodyFloor", "legato", "vibrato", "vibratoMod", "pattack", "pdecay", "prelease", "penv", "pcurve", "panchor", "accelerate", "notchf", "nresonance", "nfattack", "nfdecay", "nfsustain", "nfrelease", "nfenv", "lpe", "lpx", "hpe", "hpx", "bpe").forEach { name ->
+        listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "fmh", "fmattack", "fmdecay", "fmsustain", "vowelWet", "vowelFloor", "bodyWet", "bodyFloor", "legato", "vibrato", "vibratoMod", "pattack", "pdecay", "prelease", "penv", "pcurve", "panchor", "accelerate").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -127,8 +130,8 @@ class FreqAccessorIntelSpec : StringSpec({
 
     "every alias constant carries its canonical object's type, so it calls and reads like the original" {
         mapOf("fmmod" to "fmenv", "uni" to "unison", "voices" to "unison", "d" to "density", "o" to "orbit", "duck" to "duckorbit", "duckatt" to "duckattack", "comp" to "compressor",
-            "clip" to "legato", "vib" to "vibrato", "patt" to "pattack", "pdec" to "pdecay", "prel" to "prelease", "pamt" to "penv", "pcrv" to "pcurve", "panc" to "panchor", "loopb" to "loopBegin", "loope" to "loopEnd", "fmatt" to "fmattack", "fmdec" to "fmdecay", "fmsus" to "fmsustain", "notch" to "notchf", "ntf" to "notchf", "notchq" to "nresonance", "ntq" to "nresonance", "nfa" to "nfattack", "nfd" to "nfdecay", "nfs" to "nfsustain", "nfr" to "nfrelease", "nfe" to "nfenv",
-            "vel" to "velocity", "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf").forEach { (alias, canonical) ->
+            "clip" to "legato", "vib" to "vibrato", "patt" to "pattack", "pdec" to "pdecay", "prel" to "prelease", "pamt" to "penv", "pcrv" to "pcurve", "panc" to "panchor", "loopb" to "loopBegin", "loope" to "loopEnd", "fmatt" to "fmattack", "fmdec" to "fmdecay", "fmsus" to "fmsustain",
+            "vel" to "velocity").forEach { (alias, canonical) ->
             val symbol = registry.get(alias).shouldNotBeNull()
             // An alias constant's KDoc carries the category: the property entry merges first and
             // would otherwise turn the whole symbol "uncategorized" on the docs page.
@@ -139,6 +142,30 @@ class FreqAccessorIntelSpec : StringSpec({
             analyze("$alias(0.5)").diagnostics.size shouldBe 0
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("mul")
         }
+    }
+
+    "the long filter names are constants of the compound objects" {
+        mapOf("lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf").forEach { (alias, canonical) ->
+            withClue(alias) {
+                val symbol = registry.get(alias).shouldNotBeNull()
+                (symbol.category != "uncategorized") shouldBe true
+                val type = symbol.variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+                type.simpleName shouldBe canonical
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical(freq"
+                CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("freq", "q", "env")
+                analyze("$alias(500)").diagnostics.size shouldBe 0
+            }
+        }
+    }
+
+    "adsrCurves is an object with the setter only: no children, the slots are names" {
+        val type = registry.get("adsrCurves").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+        type.simpleName shouldBe "adsrCurves"
+        registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "adsrCurves(attack"
+        val members = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
+        members shouldNotContain "attack"
+        members shouldNotContain "invoke"
+        analyze("""adsrCurves(attack = "scurve", release = "linear")""").diagnostics.size shouldBe 0
     }
 
     "adsr is an object whose children are the slot accessors and whose call form is the setter" {

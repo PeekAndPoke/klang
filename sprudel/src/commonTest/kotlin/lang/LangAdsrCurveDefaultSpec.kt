@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
@@ -17,7 +18,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 /**
  * ADSR curve default pin (maintainer decision, 2026-08-24): NOTHING SET means
  * [AdsrCurve.Default] (= Exponential) on every stage and every door. On the IGNITOR door,
- * bare `adsrCurve()`/`adsrCurves()` also mean exp and an unrecognized name coerces to exp.
+ * a bare `adsrCurves()` also means exp and an unrecognized name coerces to exp.
  * (The SPRUDEL door deliberately differs on those two: a bare control call is a no-op and
  * a bad name keeps the prior curve — per-event control-pattern semantics, pinned by
  * `LangAdsrCurvesSpec`; only the UNSET default is shared across doors.) The ignitor door
@@ -48,7 +49,13 @@ class LangAdsrCurveDefaultSpec : StringSpec({
         data.releaseCurve shouldBe null
     }
 
-    "ignitor node: unset curves are null — and the script door's bare adsrCurve() means exp" {
+    "ignitor door: the singular adsrCurve() is gone (parity with sprudel, 2026-09-07)" {
+        val engine = klangScript()
+        engine.execute("""import * from "stdlib"""")
+        shouldThrowAny { engine.execute("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurve("linear")""") }
+    }
+
+    "ignitor node: unset curves are null — and the script door's bare adsrCurves() means exp" {
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
         fun eval(code: String): Any? = engine.execute(code).toObjectOrNull<Any>()
@@ -59,20 +66,15 @@ class LangAdsrCurveDefaultSpec : StringSpec({
         plain.decayCurve shouldBe null
         plain.releaseCurve shouldBe null
 
-        // bare adsrCurve() -> Exponential on every stage
-        val bare = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurve()""") as IgnitorDsl.Adsr
+        // bare adsrCurves() -> Exponential on every stage
+        val bare = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurves()""") as IgnitorDsl.Adsr
         bare.attackCurve shouldBe AdsrCurve.Exponential
         bare.decayCurve shouldBe AdsrCurve.Exponential
         bare.releaseCurve shouldBe AdsrCurve.Exponential
 
-        // bare adsrCurves() -> same
-        val bares = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurves()""") as IgnitorDsl.Adsr
-        bares.attackCurve shouldBe AdsrCurve.Exponential
-        bares.decayCurve shouldBe AdsrCurve.Exponential
-        bares.releaseCurve shouldBe AdsrCurve.Exponential
 
         // an unrecognized name coerces to the default, not to Square — on ALL three stages
-        val typo = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurve("sqare")""") as IgnitorDsl.Adsr
+        val typo = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurves("sqare", "sqare", "sqare")""") as IgnitorDsl.Adsr
         typo.attackCurve shouldBe AdsrCurve.Exponential
         typo.decayCurve shouldBe AdsrCurve.Exponential
         typo.releaseCurve shouldBe AdsrCurve.Exponential

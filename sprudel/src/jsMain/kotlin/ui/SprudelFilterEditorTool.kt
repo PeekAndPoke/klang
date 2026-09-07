@@ -58,7 +58,7 @@ enum class FilterCurveShape {
  *   call and commits the full argument list.
  * - Scalar fallback (embedded / sequence atom): edits a single freq value.
  *
- * The envelope depth is NOT part of the filter call any more (it lives on lpe/hpe/bpe/nfe).
+ * The envelope depth is the `env` slot of the filter call (2026-09-07); this tool edits freq and q only.
  */
 class SprudelFilterEditorTool(
     override val title: String,

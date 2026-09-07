@@ -56,7 +56,7 @@ One effect bus. Holds its own stereo accumulation buffer and effect instances.
 **PER-ORBIT (bus) vs PER-VOICE — which effects run where.** The Katalyst pipeline runs **once per orbit**
 on the summed mix: `[body, vowel, delay, reverb, phaser, compressor]` (+ ducking, separate pass). Config is
 copied from voices in `updateFromVoice` **last-writer-wins**, so all voices on an orbit SHARE these; put
-voices on different orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notchf` +
+voices on different orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notch` +
 envelopes, `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pitch env, `gain`/`pan`/
 `postgain`, `unison`/`spread`, `analog`) is **per-voice** in the voice strip.
 

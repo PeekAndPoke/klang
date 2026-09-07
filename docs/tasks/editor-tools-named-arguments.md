@@ -17,7 +17,11 @@ parameter by POSITION and ignores the argument's name:
 Before batch E every knob had a door of its own with the tool on parameter 0, so position and
 name agreed. Since batch E the compound effects are objects with named slots, and a tail slot is
 reachable ONLY by name: `room(size = 4)`, `delay(time = 0.25)`, `delay(feedback = 0.4)`,
-`tremolo(sync = 4)`. The shipped tutorials use exactly these (`tut_SpaceAndDirt.kt`).
+`tremolo(sync = 4)`. The shipped tutorials use exactly these (`tut_SpaceAndDirt.kt`). Batch F
+(2026-09-07, the filters) added the worse shape: a SKIPPED middle slot shifts every later argument, so
+in `lpf(freq = 400, env = 36).lpf(attack = 0.001, decay = 0.15, sustain = 0, release = 0.1)`
+(`tut_TheFilterEnvelope.kt`) `env = 36` resolves to `q` and opens the resonance editor on a depth in
+semitones, and `decay = 0.15` on the second call resolves to `q` as well.
 
 Failure: cursor on the `4` in `.room(size = 4)` resolves argument 0, the `wet` parameter, whose
 tool is `SprudelReverbEditor` (a 0..1 send editor) opened on a 0..10 size. `.delay(time = ...)`
@@ -36,6 +40,14 @@ name, so a tool that rewrites `argFrom..argTo` with a bare value would drop the 
 path uses the cursor node range (the value only), so only the fallback has this second problem.
 
 ## Also open on the tools, found in the same review
+
+- The whole-envelope editors `SprudelLpAdsrEditor`, `SprudelHpAdsrEditor`, `SprudelBpAdsrEditor`,
+  `SprudelNfAdsrEditor` (and their sequence twins) read and write argument slots 0 to 3 of the call
+  they sit on (`SprudelFilterAdsrEditorTool.kt`), the shape of the retired `lpadsr(a, d, s, r)`.
+  Bound to the `attack` slot of `lpf(freq, q, passes, env, attack, ...)` they would show the cutoff
+  as the attack and write a dragged attack into `freq`, so since batch F they are bound to nothing
+  and registered for nothing; `SprudelNotchQEditor` and `SprudelNotchFreq*` are unwired the same
+  way. The rework binds them by `paramNames.indexOf("attack")` or retires them.
 
 - The delay editor has no control for the `cap` slot; the phaser editor has no control for
   `floor` (`docs/tasks/sprudel-ui-tools.md` table).

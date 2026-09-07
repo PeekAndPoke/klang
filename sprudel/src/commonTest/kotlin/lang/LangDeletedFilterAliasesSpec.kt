@@ -18,8 +18,8 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * mapper-factory call. If one of these starts resolving again, an alias crept
  * back in (docs/plans/filter-unification.md, chunk C6a).
  *
- * The notch family (notchf/notchq/nresonance/nf*) is deliberately absent: it is
- * carved out until C6.
+ * The notch family became the `notch` compound 2026-09-07; `LangRetiredDoorsSpec` guards
+ * its old names.
  */
 class LangDeletedFilterAliasesSpec : StringSpec({
 
@@ -30,7 +30,7 @@ class LangDeletedFilterAliasesSpec : StringSpec({
         "res", "resonance", "hres", "hresonance", "bandq",
         // envelope depth
         "lpenv", "hpenv", "bpenv",
-        // envelope shape (lpadsr/hpadsr/bpadsr survive instead)
+        // envelope shape (the stages are slots of lpf/hpf/bpf since 2026-09-07)
         "lpattack", "lpa", "lpdecay", "lpd", "lpsustain", "lps", "lprelease", "lpr",
         "hpattack", "hpa", "hpdecay", "hpd", "hpsustain", "hps", "hprelease", "hpr",
         "bpattack", "bpa", "bpdecay", "bpd", "bpsustain", "bps", "bprelease", "bpr",

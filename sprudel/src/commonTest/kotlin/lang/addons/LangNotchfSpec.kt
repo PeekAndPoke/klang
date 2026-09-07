@@ -27,12 +27,12 @@ class LangNotchfSpec : StringSpec({
         val ctrl = "1000 500"
 
         dslInterfaceTests(
-            "pattern.notchf(ctrl)" to seq(pat).notchf(ctrl),
-            "script pattern.notchf(ctrl)" to SprudelPattern.compile("""seq("$pat").notchf("$ctrl")"""),
-            "string.notchf(ctrl)" to pat.notchf(ctrl),
-            "script string.notchf(ctrl)" to SprudelPattern.compile(""""$pat".notchf("$ctrl")"""),
-            "notchf(ctrl)" to seq(pat).apply(notchf(ctrl)),
-            "script notchf(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notchf("$ctrl"))"""),
+            "pattern.notch(ctrl)" to seq(pat).notch(ctrl),
+            "script pattern.notch(ctrl)" to SprudelPattern.compile("""seq("$pat").notch("$ctrl")"""),
+            "string.notch(ctrl)" to pat.notch(ctrl),
+            "script string.notch(ctrl)" to SprudelPattern.compile(""""$pat".notch("$ctrl")"""),
+            "notch(ctrl)" to seq(pat).apply(notch(ctrl)),
+            "script notch(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notch("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.notchf shouldBe 1000.0
@@ -40,8 +40,8 @@ class LangNotchfSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as notchf | seq(\"1000 500\").notchf()" {
-        val p = seq("1000 500").notchf()
+    "reinterpret voice data as notchf | seq(\"1000 500\").notch()" {
+        val p = seq("1000 500").notch()
         val events = p.queryArc(0.0, 1.0)
         assertSoftly {
             events.size shouldBe 2
@@ -50,8 +50,8 @@ class LangNotchfSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as notchf | \"1000 500\".notchf()" {
-        val p = "1000 500".notchf()
+    "reinterpret voice data as notchf | \"1000 500\".notch()" {
+        val p = "1000 500".notch()
         val events = p.queryArc(0.0, 1.0)
         assertSoftly {
             events.size shouldBe 2
@@ -60,8 +60,8 @@ class LangNotchfSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as notchf | seq(\"1000 500\").apply(notchf())" {
-        val p = seq("1000 500").apply(notchf())
+    "reinterpret voice data as notchf | seq(\"1000 500\").apply(notch())" {
+        val p = seq("1000 500").apply(notch())
         val events = p.queryArc(0.0, 1.0)
         assertSoftly {
             events.size shouldBe 2
@@ -70,8 +70,8 @@ class LangNotchfSpec : StringSpec({
         }
     }
 
-    "notchf() sets VoiceData.notchf" {
-        val p = note("a b").apply(notchf("1000 500"))
+    "notch() sets VoiceData.notchf" {
+        val p = note("a b").apply(notch("1000 500"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -79,32 +79,32 @@ class LangNotchfSpec : StringSpec({
         events[1].data.notchf shouldBe 500.0
     }
 
-    "notchf() works as pattern extension" {
-        val p = note("c").notchf("1000")
+    "notch() works as pattern extension" {
+        val p = note("c").notch("1000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.notchf shouldBe 1000.0
     }
 
-    "notchf() works as string extension" {
-        val p = "c".notchf("1000")
+    "notch() works as string extension" {
+        val p = "c".notch("1000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.notchf shouldBe 1000.0
     }
 
-    "notchf() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").notchf("1000")""")
+    "notch() works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").notch("1000")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
         events[0].data.notchf shouldBe 1000.0
     }
 
-    "notchf() with continuous pattern sets notchf correctly" {
-        val p = note("a b c d").notchf(sine)
+    "notch() with continuous pattern sets notchf correctly" {
+        val p = note("a b c d").notch(sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

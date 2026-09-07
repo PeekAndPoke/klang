@@ -12,7 +12,7 @@ sprudel/src/commonMain/kotlin/lang/addons/
     lang_structural_addons.kt   — morse, merge, timeLoop, repeat, solo
     lang_continuous_addons.kt   — cps, bpm, timeOfDay/Night, sinOfDay/Night variants
     lang_tempo_addons.kt
-    lang_filters_addons.kt
+    lang_filters_addons.kt      — the notch compound (notch(freq, q, env, attack, decay, sustain, release))
     lang_osc_addons.kt
 ```
 

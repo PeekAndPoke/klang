@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
@@ -19,73 +18,25 @@ class LangNresonanceSpec : StringSpec({
 
     // ---- nresonance ----
 
-    "nresonance dsl interface" {
-        val pat = "a b"
-        val ctrl = "0.5 1.0"
-
-        dslInterfaceTests(
-            "pattern.nresonance(ctrl)" to seq(pat).nresonance(ctrl),
-            "script pattern.nresonance(ctrl)" to SprudelPattern.compile("""seq("$pat").nresonance("$ctrl")"""),
-            "string.nresonance(ctrl)" to pat.nresonance(ctrl),
-            "script string.nresonance(ctrl)" to SprudelPattern.compile(""""$pat".nresonance("$ctrl")"""),
-            "nresonance(ctrl)" to seq(pat).apply(nresonance(ctrl)),
-            "script nresonance(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nresonance("$ctrl"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.nresonance shouldBe 0.5
-            events[1].data.nresonance shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as nresonance | seq(\"0.5 1.0\").nresonance()" {
-        val p = seq("0.5 1.0").nresonance()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.nresonance shouldBe 0.5
-            events[1].data.nresonance shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as nresonance | \"0.5 1.0\".nresonance()" {
-        val p = "0.5 1.0".nresonance()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.nresonance shouldBe 0.5
-            events[1].data.nresonance shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as nresonance | seq(\"0.5 1.0\").apply(nresonance())" {
-        val p = seq("0.5 1.0").apply(nresonance())
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.nresonance shouldBe 0.5
-            events[1].data.nresonance shouldBe 1.0
-        }
-    }
-
-    "nresonance() sets VoiceData.nresonance" {
-        val p = note("a b").apply(nresonance("0.5 1.0"))
+    "notch(q = ...) sets VoiceData.nresonance" {
+        val p = note("a b").apply(notch(q = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.nresonance } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern nresonance() sets VoiceData.nresonance on existing pattern" {
+    "control pattern notch(q = ...) sets VoiceData.nresonance on existing pattern" {
         val base = note("c3 e3")
-        val p = base.nresonance("0.1 0.2")
+        val p = base.notch(q = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)
 
         events.size shouldBe 4
         events.map { it.data.nresonance } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
     }
 
-    "nresonance() works as string extension" {
-        val p = "c3".nresonance("0.5")
+    "notch(q = ...) works as string extension" {
+        val p = "c3".notch(q = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -93,29 +44,27 @@ class LangNresonanceSpec : StringSpec({
         events[0].data.nresonance shouldBe 0.5
     }
 
-    "nresonance() works within compiled code" {
-        val p = SprudelPattern.compile("""note("a b").nresonance("0.5 1.0")""")
+    "notch(q = ...) works within compiled code" {
+        val p = SprudelPattern.compile("""note("a b").notch(q = "0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
         events.map { it.data.nresonance } shouldBe listOf(0.5, 1.0)
     }
 
-    // ---- nres (alias) ----
-
-    "notchq dsl interface" {
+    "notch(q = ...) dsl interface" {
         val pat = "a b"
         val ctrl = "0.5 1.0"
 
         dslInterfaceTests(
-            "pattern.notchq(ctrl)" to seq(pat).notchq(ctrl),
-            "script pattern.notchq(ctrl)" to SprudelPattern.compile("""seq("$pat").notchq("$ctrl")"""),
-            "string.notchq(ctrl)" to pat.notchq(ctrl),
-            "script string.notchq(ctrl)" to SprudelPattern.compile(""""$pat".notchq("$ctrl")"""),
-            "notchq(ctrl)" to seq(pat).apply(notchq(ctrl)),
-            "script notchq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notchq("$ctrl"))"""),
-            "chained notchq(ctrl)" to seq(pat).apply(notchq(ctrl).notchq(ctrl)),
-            "script chained notchq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notchq("$ctrl").notchq("$ctrl"))"""),
+            "pattern.notch(q = ctrl)" to seq(pat).notch(q = ctrl),
+            "script pattern.notch(q = ctrl)" to SprudelPattern.compile("""seq("$pat").notch(q = "$ctrl")"""),
+            "string.notch(q = ctrl)" to pat.notch(q = ctrl),
+            "script string.notch(q = ctrl)" to SprudelPattern.compile(""""$pat".notch(q = "$ctrl")"""),
+            "notch(q = ctrl)" to seq(pat).apply(notch(q = ctrl)),
+            "script notch(q = ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notch(q = "$ctrl"))"""),
+            "chained notch(q = ctrl)" to seq(pat).apply(notch(q = ctrl).notch(q = ctrl)),
+            "script chained notch(q = ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notch(q = "$ctrl").notch(q = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nresonance shouldBe 0.5
@@ -123,38 +72,4 @@ class LangNresonanceSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as nresonance | seq(\"0.5 1.0\").notchq()" {
-        val p = seq("0.5 1.0").notchq()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.nresonance shouldBe 0.5
-            events[1].data.nresonance shouldBe 1.0
-        }
-    }
-
-    "notchq() alias works as pattern extension" {
-        val p = note("c d").notchq("0.4 0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.nresonance } shouldBe listOf(0.4, 0.6)
-    }
-
-    "notchq() alias works as string extension" {
-        val p = "e3".notchq("0.8")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.value?.asString shouldBe "e3"
-        events[0].data.nresonance shouldBe 0.8
-    }
-
-    "notchq() alias works within compiled code" {
-        val p = SprudelPattern.compile("""note("c d").notchq("0.2 0.9")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.nresonance } shouldBe listOf(0.2, 0.9)
-    }
 })

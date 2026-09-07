@@ -114,40 +114,40 @@ are the only spellings); the phaser editor has no `floor` control and the delay 
 | DSL Function                            | Editor                     | Sequence Editor                    | Format               |
 |-----------------------------------------|----------------------------|------------------------------------|----------------------|
 | `lpf()` | `SprudelLpFilterEditor`    | `SprudelLpFilterSequenceEditor`    | `freq:resonance:env` |
-| `lpq()` | `SprudelLpResonanceEditor` | `SprudelLpResonanceSequenceEditor` | single value         |
-| `lpe()` | `SprudelLpEnvEditor`       | `SprudelLpEnvSequenceEditor`       | single value         |
-| `lpadsr()`                              | `SprudelLpAdsrEditor`      | `SprudelLpAdsrSequenceEditor`      | `a:d:s:r`            |
+| `lpf(q = ...)` | `SprudelLpResonanceEditor` | `SprudelLpResonanceSequenceEditor` | single value         |
+| `lpf(env = ...)` | `SprudelLpEnvEditor`       | `SprudelLpEnvSequenceEditor`       | single value         |
+| whole envelope of `lpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelLpAdsrEditor` | `SprudelLpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## High Pass Filter
 
 | DSL Function                        | Editor                     | Sequence Editor                    | Format               |
 |-------------------------------------|----------------------------|------------------------------------|----------------------|
 | `hpf()` | `SprudelHpFilterEditor`    | `SprudelHpFilterSequenceEditor`    | `freq:resonance:env` |
-| `hpq()` | `SprudelHpResonanceEditor` | `SprudelHpResonanceSequenceEditor` | single value         |
-| `hpe()` | `SprudelHpEnvEditor`       | `SprudelHpEnvSequenceEditor`       | single value         |
-| `hpadsr()`                          | `SprudelHpAdsrEditor`      | `SprudelHpAdsrSequenceEditor`      | `a:d:s:r`            |
+| `hpf(q = ...)` | `SprudelHpResonanceEditor` | `SprudelHpResonanceSequenceEditor` | single value         |
+| `hpf(env = ...)` | `SprudelHpEnvEditor`       | `SprudelHpEnvSequenceEditor`       | single value         |
+| whole envelope of `hpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelHpAdsrEditor` | `SprudelHpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Band Pass Filter
 
 | DSL Function                 | Editor                   | Sequence Editor                  | Format       |
 |------------------------------|--------------------------|----------------------------------|--------------|
 | `bpf()` | `SprudelBpFilterEditor`  | `SprudelBpFilterSequenceEditor`  | `freq:q:env` |
-| `bpq()` | `SprudelBpQEditor`       | `SprudelBpQSequenceEditor`       | single value |
-| `bpe()` | `SprudelBpEnvEditor`     | `SprudelBpEnvSequenceEditor`     | single value |
-| `bpadsr()`                   | `SprudelBpAdsrEditor`    | `SprudelBpAdsrSequenceEditor`    | `a:d:s:r`    |
+| `bpf(q = ...)` | `SprudelBpQEditor`       | `SprudelBpQSequenceEditor`       | single value |
+| `bpf(env = ...)` | `SprudelBpEnvEditor`     | `SprudelBpEnvSequenceEditor`     | single value |
+| whole envelope of `bpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelBpAdsrEditor` | `SprudelBpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Notch Filter
 
 | DSL Function                | Editor                                            | Sequence Editor                    | Format       |
 |-----------------------------|---------------------------------------------------|------------------------------------|--------------|
-| `notchf()`                  | `SprudelNotchFilterEditor`                        | `SprudelNotchFilterSequenceEditor` | `freq:q:env` |
-| `nresonance()` / `notchq()` | `SprudelNResonanceEditor` / `SprudelNotchQEditor` | Sequence variants                  | single value |
-| `nfenv()` / `nfe()`         | `SprudelNfEnvEditor`                              | `SprudelNfEnvSequenceEditor`       | single value |
-| `nfattack()` / `nfa()`      | `SprudelNfAttackEditor`                           | `SprudelNfAttackSequenceEditor`    | single value |
-| `nfdecay()` / `nfd()`       | `SprudelNfDecayEditor`                            | `SprudelNfDecaySequenceEditor`     | single value |
-| `nfsustain()` / `nfs()`     | `SprudelNfSustainEditor`                          | `SprudelNfSustainSequenceEditor`   | single value |
-| `nfrelease()` / `nfr()`     | `SprudelNfReleaseEditor`                          | `SprudelNfReleaseSequenceEditor`   | single value |
-| `nfadsr()`                  | `SprudelNfAdsrEditor`                             | `SprudelNfAdsrSequenceEditor`      | `a:d:s:r`    |
+| `notch()`                  | `SprudelNotchFilterEditor`                        | `SprudelNotchFilterSequenceEditor` | `freq:q:env` |
+| `notch(q = ...)`                  | `SprudelNResonanceEditor` (`SprudelNotchQEditor` is unwired since 2026-09-07) | Sequence variants | single value |
+| `notch(env = ...)`                | `SprudelNfEnvEditor`                              | `SprudelNfEnvSequenceEditor`       | single value |
+| `notch(attack = ...)`             | `SprudelNfAttackEditor`                           | `SprudelNfAttackSequenceEditor`    | single value |
+| `notch(decay = ...)`              | `SprudelNfDecayEditor`                            | `SprudelNfDecaySequenceEditor`     | single value |
+| `notch(sustain = ...)`            | `SprudelNfSustainEditor`                          | `SprudelNfSustainSequenceEditor`   | single value |
+| `notch(release = ...)`            | `SprudelNfReleaseEditor`                          | `SprudelNfReleaseSequenceEditor`   | single value |
+| whole envelope (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelNfAdsrEditor` | `SprudelNfAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Other
 

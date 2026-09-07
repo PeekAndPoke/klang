@@ -103,7 +103,7 @@ class PassesCascadeSpec : StringSpec({
         // 0 and negative coerce to a single stage
         butterworthQLadder(0, 0.9).toList() shouldBe listOf(0.9)
         butterworthQLadder(-3, 0.9).toList() shouldBe listOf(0.9)
-        // ...and the resource ceiling holds: a live-typed `lpx(1e9)` must not allocate a
+        // ...and the resource ceiling holds: a live-typed `lpf(passes = 1e9)` must not allocate a
         // billion stages inside a note-on. FILTER_MAX_PASSES is the ONE bound (coercePasses).
         butterworthQLadder(1_000_000, 0.707).size shouldBe FILTER_MAX_PASSES
         LowPassHighPassFilters.createLPF(cutoffHz = 800.0, q = 0.707, sampleRate = sr, passes = 1_000_000)

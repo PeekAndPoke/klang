@@ -294,7 +294,7 @@ class EffectBenchmark(
 
             // Full envelope-modulated hot path: setCutoff per block (triggers tan + the
             // 32-sample coefficient ramp) AND the saturated process loop. Mimics what an
-            // `lpf(...).lpe(2.0)` patch actually does each block.
+            // `lpf(..., env = 2.0)` patch actually does each block.
             Case("SvfLPF (mod, 1k, q=1, analog=3)") { sr, bf ->
                 val filter = LowPassHighPassFilters.SvfLPF(1000.0, 1.0, sr.toDouble(), analog = 3.0)
                 val src = sineSource(440.0, sr, bf)

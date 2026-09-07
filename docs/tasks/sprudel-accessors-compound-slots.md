@@ -5,7 +5,8 @@ Follow-up to `docs/tasks/sprudel-field-accessors.md`, opened 2026-09-07 after th
 Status 2026-09-07: option 1 below is the decided shape. `adsr` piloted it; the seven compound
 effects (`room`, `delay`, `phaser`, `tremolo`, `distort`, `crush`, `coarse`) followed in batch E,
 each an object with slot children and the setter as `invoke`, their per-knob doors removed. The
-filter envelopes in the table are batch F.
+filter envelopes in the table followed in batch F the same day (`lpf(attack = ...)`, `lpf.attack`);
+only the compressor's slots remain, batch G.
 
 ## The gap
 
@@ -15,10 +16,10 @@ mapper handed to their compound door is still silently dropped:
 
 | Compound door                | Fields (SprudelVoiceData)                               |
 |------------------------------|---------------------------------------------------------|
-| `lpadsr(a, d, s, r)`         | `lpattack, lpdecay, lpsustain, lprelease`               |
-| `hpadsr(a, d, s, r)`         | `hpattack, hpdecay, hpsustain, hprelease`               |
-| `bpadsr(a, d, s, r)`         | `bpattack, bpdecay, bpsustain, bprelease`               |
-| `nfadsr(a, d, s, r)`         | `nfattack, nfdecay, nfsustain, nfrelease`, DONE: these four have doors and accessors |
+| `lpf(attack = a, decay = d, sustain = s, release = r)`         | `lpattack, lpdecay, lpsustain, lprelease`               |
+| `hpf(attack = a, decay = d, sustain = s, release = r)`         | `hpattack, hpdecay, hpsustain, hprelease`               |
+| `bpf(attack = a, decay = d, sustain = s, release = r)`         | `bpattack, bpdecay, bpsustain, bprelease`               |
+| `notch(attack = a, decay = d, sustain = s, release = r)`         | `nfattack, nfdecay, nfsustain, nfrelease`, DONE: these four have doors and accessors |
 
 `adsr(a, d, s, r)` was the PILOT for this shape (2026-09-07): its four stages have no doors of
 their own any more (the maintainer removed `attack()`, `decay()`, `sustain()`, `release()`), and
@@ -38,10 +39,10 @@ feature list still named them as implemented; corrected 2026-09-07.
 
 1. **Slot accessors on the compound object.** `lpadsr` becomes an object with member accessors:
    `lpadsr.attack`, `lpadsr.decay`, `lpadsr.sustain`, `lpadsr.release`, each a `FieldAccessor`
-   for the matching field, and `lpadsr(...)` stays the setter (KSP supports member properties on
-   objects, the `Osc.slot.analog` chain is the precedent). Reads: `lpf(500).lpadsr(0.01, 0.3)
-   .lpq(lpadsr.attack.mul(20))`. Mapper: `lpadsr(mul(2))` on the first slot, like `lpf(mul(2), 8)`,
-   or `lpadsr(attack = mul(2))` by name. No new top-level names, nothing retired comes back, and
+   for the matching field, and `lpf(attack = ...)` stays the setter (KSP supports member properties on
+   objects, the `Osc.slot.analog` chain is the precedent). Reads: `lpf(500).lpf(attack = 0.01, decay = 0.3)
+   .lpf(q = lpadsr.attack.mul(20))`. Mapper: `lpf(attack = mul(2))` on the first slot, like `lpf(mul(2), 8)`,
+   or `lpf(attack = mul(2))` by name. No new top-level names, nothing retired comes back, and
    the same shape would serve `hpadsr`, `bpadsr`, `compressor.ratio` and any future compound.
 2. **Reinstate the long stage names** (`lpattack` ...) as accessor objects. Contradicts C6a;
    would need the maintainer to reverse that decision and the deleted-alias spec to change.

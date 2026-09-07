@@ -47,6 +47,21 @@ Rewritten 2026-09-06 after a design session; the previous draft (context-key bin
   reads call names, so `teaches`/`previews` name the object now; duplicate Kotest titles appear
   when two alias tests collapse onto the canonical call; a slot name that is also a top-level
   symbol (`lowpass`) gives the docs symbol two property variants.
+- 2026-09-07: batch F, the filters: `lpf(freq, q, passes, env, attack, decay, sustain, release)`,
+  `hpf(...)` the same, `bpf(freq, q, env, attack, decay, sustain, release)` and `notch(...)` the same;
+  every slot reads back as a child (`lpf.q`, `notch.env`); `lowpass`/`highpass`/`bandpass` stay as
+  constants of the objects. Retired: `lpq lpx lpe lpadsr hpq hpx hpe hpadsr bpq bpe bpadsr notchf
+  nresonance nres notchq ntq ntf nfadsr nfattack nfa nfdecay nfd nfsustain nfs nfrelease nfr nfenv
+  nfe`. The envelope stages got the mapper branch for the first time (`lpf(attack = mul(2))`).
+  `adsrCurves` is an object with the setter only (its slots are curve names, no readers) and the
+  singular `adsrCurve` went from sprudel AND the ignitor script door (parity). Decisions on the
+  way: the compound objects have children only, no bare read (`hpf(lpf.freq.div(2))`, not
+  `hpf(lpf.div(2))`), one rule for every compound; the envelope stage mutations keep their value on
+  a null control (the old compound's behaviour), `q`, `passes` and `env` clear (the old single
+  doors' behaviour). `lang_effects_addons.kt` is gone (it held only `lpadsr`/`hpadsr`/`bpadsr`/
+  `nfadsr`); the notch compound is the whole of `lang_filters_addons.kt`. The tutorial lint learned
+  the named envelope form. Filter curve objects (`lpCurves`, `hpCurves`, `bpCurves`) are NOT built:
+  the engine has no filter curve fields yet (`docs/tasks/filter-envelope-configuration.md`).
 - 2026-09-07: batch four, the last numeric group: `unison, spread, panSpread, density` (unison
   oscillator params, read from `oscParams`), `orbit, duckorbit` (Int routing fields), `duckattack,
   duckdepth`, `compressor` (its first slot, the threshold; the other knobs have no single-field
@@ -76,7 +91,7 @@ character, and produces the same events.
 
 1. **The wind whistles a melody.** Pink noise through a bandpass whose cutoff follows the note:
    ```
-   note("c e g a").bpf(freq).sound("pink").bpq(2.0)
+   note("c e g a").bpf(freq).sound("pink").bpf(q = 2.0)
    ```
    Built-in song: Greensleeves (traditional, public domain). "Blowing in the Wind" was the
    first idea and is under copyright, so it stays a local experiment.
@@ -288,21 +303,19 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   `object adsr`) and the 85 `val` twins went too: one declaration per concept, the Kotlin naming
   convention suppressed at file level.
 - DONE (batch E, 2026-09-07): the seven compound effects as objects with slot children; per-knob
-  doors and aliases removed. Next: batch F, the filters (`lpf/hpf(freq, q, passes, env, attack,
-  decay, sustain, release)`, `bpf`/`notch` without passes; retiring `lpq/lpx/lpe/lpadsr`, the
-  `hp*`, `bp*`, `nf*` families, `nresonance`, `notchq`), then batch G (`compressor`, `vibrato`,
+  doors and aliases removed.
+- DONE (batch F, 2026-09-07): `lpf`, `hpf`, `bpf`, `notch` as objects with slot children;
+  `adsrCurves` setter-only; `adsrCurve` gone everywhere. Next: batch G (`compressor`, `vibrato`,
   `penv`, `fm`, `duck`, `vowel`, `body`, `unison`). The `snd*` sound doors are a separate
   discussion (idea: `object Snd { object supersaw { fields } }`).
-- OPEN (maintainer, 2026-09-07): `adsrCurve` (the singular, one curve name for all stages) is to
-  be REMOVED; `adsrCurves(attack, decay, release)` becomes an object with fields like the other
-  compounds. Same for the filter envelope curve siblings, which should be called `lpCurves`,
+- DONE in batch F (maintainer, 2026-09-07): `adsrCurve` (the singular, one curve name for all stages) is
+  REMOVED; `adsrCurves(attack, decay, release)` is an object with the setter only (decided: no
+  children, the slots are names). Same for the filter envelope curve siblings, which should be called `lpCurves`,
   `hpCurves`, `bpCurves` rather than `lpadsrCurves`. Note: no `lp/hp/bpadsrCurves` door exists in
   sprudel today (only `adsrCurves` and `adsrCurve` in `lang_dynamics.kt`); the ignitor side is to
-  be checked. Open question for the shape: the slots are curve NAMES (strings), and string
-  accessors are won't-implement, so either the object gets children that read the name anyway
-  (a first string reader) or it carries the setter only. Batch F item. Sakura uses
-  `adsrCurve("scurve")` once and moves to `adsrCurves("scurve", "scurve", "scurve")` or a
-  shorter form to be decided.
+  be checked. The slots are curve NAMES (strings), string accessors are won't-implement, so the object
+  carries the setter only. Batch F item. Sakura used
+  `adsrCurve("scurve")` once and now reads `adsrCurves("scurve", "scurve", "scurve")`.
 - OPEN: the remaining compound doors (above); a diagnostic when a mapper reaches a setter without
   the branch (today the value is dropped), and for a compound object used as a value (`pan(adsr)`
   is accepted by `PatternLike` and writes nothing useful, since `Adsr` is not a `FieldAccessor`);
@@ -311,7 +324,7 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   the object KDocs: `pcurve` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not
   read by `VoiceFactory` (it loops between `begin` and `end`); negative `speed` is silence, not
   reverse (the sample docs claimed reverse). `nfenv` is in semitones; the addon file's examples
-  said `nfenv(3000)`.
+  said `notch(env = 3000)`.
 - The same chain in `_liftStringField` and `_applyControlFromParams` for string and control fields.
 - Provider twins on demand.
 - A provider or mapper handed to a setter WITHOUT the mapper branch (`room(freq)` today) is still

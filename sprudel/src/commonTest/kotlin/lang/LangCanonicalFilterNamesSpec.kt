@@ -12,14 +12,10 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
- * C6: sprudel gained the CANONICAL filter names — `lowpass`/`highpass`/`bandpass`/`notch`,
- * plus `ntf`/`ntq` completing the `xxf`/`xxq` family. The short forms (`lpf`/`hpf`/`bpf`/
- * `notchf`) stay first-class: they are in every song and all the teaching material, so this
- * is one function under two names, NOT a deprecation.
- *
- * The rows compare the two spellings on the WIRE, which is the only place "same function"
- * can be proven — a canonical name that dispatched to a different field, or silently dropped
- * `q`/`passes`, would still compile and still look right in a song.
+ * The long filter names (`lowpass`, `highpass`, `bandpass`) and the short ones (`lpf`, `hpf`,
+ * `bpf`) are one object under two names, NOT a deprecation: both spellings must build exactly
+ * the same wire definition. Since 2026-09-07 the notch has one name only (`notch`); its old
+ * spellings are guarded by `LangRetiredDoorsSpec`.
  */
 class LangCanonicalFilterNamesSpec : StringSpec({
 
@@ -31,8 +27,6 @@ class LangCanonicalFilterNamesSpec : StringSpec({
         """note("c").lowpass(800, 1.2, 2)""" to """note("c").lpf(800, 1.2, 2)""",
         """note("c").highpass(200, 0.9, 3)""" to """note("c").hpf(200, 0.9, 3)""",
         """note("c").bandpass(1000, 4.0)""" to """note("c").bpf(1000, 4.0)""",
-        """note("c").notch(1500, 6.0)""" to """note("c").notchf(1500, 6.0)""",
-        """note("c").ntf(1500).ntq(6.0)""" to """note("c").notchf(1500).notchq(6.0)""",
     )
 
     equivalent.forEach { (canonical, short) ->
@@ -52,10 +46,10 @@ class LangCanonicalFilterNamesSpec : StringSpec({
         filters("""note("c").apply(gain(0.8).lowpass(800))""").size shouldBe 1
     }
 
-    "the short forms did NOT become aliases — they still work unchanged" {
+    "the short forms are the same objects as the long ones" {
         (filters("""note("c").lpf(800)""")[0] as FilterDef.LowPass).freq shouldBe 800.0
         (filters("""note("c").hpf(200)""")[0] as FilterDef.HighPass).freq shouldBe 200.0
         (filters("""note("c").bpf(1000)""")[0] as FilterDef.BandPass).freq shouldBe 1000.0
-        (filters("""note("c").notchf(1500)""")[0] as FilterDef.Notch).freq shouldBe 1500.0
+        (filters("""note("c").notch(1500)""")[0] as FilterDef.Notch).freq shouldBe 1500.0
     }
 })

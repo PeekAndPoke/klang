@@ -1732,7 +1732,7 @@ private fun applyFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * therefore come AFTER the note in the chain. Call it, `freq(hz)`, to set the frequency.
  *
  * ```KlangScript(Playable)
- * note("c e g a").bpf(freq).sound("pink").bpq(2.0)   // the wind whistles the melody
+ * note("c e g a").bpf(freq).sound("pink").bpf(q = 2.0)   // the wind whistles the melody
  * ```
  *
  * ```KlangScript(Playable)

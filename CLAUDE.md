@@ -95,7 +95,11 @@ sets a slot and `adsr.attack` reads it); the per-knob effect doors and their ali
 `delaycap`/`dcap`, `ph`, `phaserWet`, `phasercenter`/`phc`, `phasersweep`/`phs`, `phaserFloor`, the `tremolo*`/`trem*`
 knobs, `dist`, `distos`, `distortshape`/`dshape`, `crushos`, `coarseos`, the `*Oversampling` spellings; gone
 2026-09-07: `room`, `delay`, `phaser`, `tremolo`, `distort`, `crush`, `coarse` are objects with named slots,
-`room(fade = 0.3)` sets, `room.fade` reads). Guard for both: `LangRetiredDoorsSpec`. The spelling
+`room(fade = 0.3)` sets, `room.fade` reads); the filter per-knob doors `lpq`, `lpx`, `lpe`, `lpadsr`, `hpq`, `hpx`, `hpe`,
+`hpadsr`, `bpq`, `bpe`, `bpadsr`, `notchf`, `nresonance`/`nres`/`notchq`/`ntq`, `ntf`, `nfadsr`, `nfattack`/`nfa`, `nfdecay`/`nfd`,
+`nfsustain`/`nfs`, `nfrelease`/`nfr`, `nfenv`/`nfe` (gone 2026-09-07: `lpf` and `hpf` carry `q`, `passes`, `env` and the envelope
+stages as slots, `bpf` and `notch` the same without `passes`); the singular `adsrCurve` on every surface (`adsrCurves(a, d, r)` only). Guard for all:
+`LangRetiredDoorsSpec`. The spelling
 `@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
 refuses the old one).
 

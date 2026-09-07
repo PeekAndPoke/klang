@@ -13,25 +13,10 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
-import io.peekandpoke.klang.sprudel.lang.addons.nfa
 import io.peekandpoke.klang.sprudel.lang.addons.analog
 import io.peekandpoke.klang.sprudel.lang.addons.duty
 import io.peekandpoke.klang.sprudel.lang.addons.onepole
-import io.peekandpoke.klang.sprudel.lang.addons.nfattack
-import io.peekandpoke.klang.sprudel.lang.addons.nfd
-import io.peekandpoke.klang.sprudel.lang.addons.nfdecay
-import io.peekandpoke.klang.sprudel.lang.addons.nfe
-import io.peekandpoke.klang.sprudel.lang.addons.nfenv
-import io.peekandpoke.klang.sprudel.lang.addons.nfr
-import io.peekandpoke.klang.sprudel.lang.addons.nfrelease
-import io.peekandpoke.klang.sprudel.lang.addons.nfs
-import io.peekandpoke.klang.sprudel.lang.addons.nfsustain
 import io.peekandpoke.klang.sprudel.lang.addons.notch
-import io.peekandpoke.klang.sprudel.lang.addons.notchf
-import io.peekandpoke.klang.sprudel.lang.addons.notchq
-import io.peekandpoke.klang.sprudel.lang.addons.nresonance
-import io.peekandpoke.klang.sprudel.lang.addons.ntf
-import io.peekandpoke.klang.sprudel.lang.addons.ntq
 
 /**
  * One row per field accessor, each run through BOTH doors: the Kotlin pattern and the same text
@@ -59,12 +44,12 @@ class LangFieldAccessorsSpec : StringSpec({
         row("velocity", """note("c e").velocity(0.8).velocity(mul(0.5))""", { it.velocity }, 0.4, note("c e").velocity(0.8).velocity(mul(0.5))),
         row("pan", """note("c e").pan(0.3).pan(add(0.2))""", { it.pan }, 0.5, note("c e").pan(0.3).pan(add(0.2))),
         row("postgain", """note("c e").postgain(0.5).postgain(mul(2))""", { it.postGain }, 1.0, note("c e").postgain(0.5).postgain(mul(2))),
-        row("lpf", """note("c e").lpf(800).lpf(mul(2))""", { it.cutoff }, 1600.0, note("c e").lpf(800).lpf(mul(2))),
-        row("hpf", """note("c e").hpf(200).hpf(add(50))""", { it.hcutoff }, 250.0, note("c e").hpf(200).hpf(add(50))),
-        row("bpf", """note("c e").bpf(500).bpf(mul(2))""", { it.bandf }, 1000.0, note("c e").bpf(500).bpf(mul(2))),
-        row("lpq", """note("c e").lpq(4).lpq(mul(2))""", { it.resonance }, 8.0, note("c e").lpq(4).lpq(mul(2))),
-        row("hpq", """note("c e").hpq(3).hpq(add(1))""", { it.hresonance }, 4.0, note("c e").hpq(3).hpq(add(1))),
-        row("bpq", """note("c e").bpq(5).bpq(mul(2))""", { it.bandq }, 10.0, note("c e").bpq(5).bpq(mul(2))),
+        row("lpf.freq", """note("c e").lpf(800).lpf(mul(2))""", { it.cutoff }, 1600.0, note("c e").lpf(800).lpf(mul(2))),
+        row("hpf.freq", """note("c e").hpf(200).hpf(add(50))""", { it.hcutoff }, 250.0, note("c e").hpf(200).hpf(add(50))),
+        row("bpf.freq", """note("c e").bpf(500).bpf(mul(2))""", { it.bandf }, 1000.0, note("c e").bpf(500).bpf(mul(2))),
+        row("lpf.q", """note("c e").lpf(q = 4).lpf(q = mul(2))""", { it.resonance }, 8.0, note("c e").lpf(q = 4).lpf(q = mul(2))),
+        row("hpf.q", """note("c e").hpf(q = 3).hpf(q = add(1))""", { it.hresonance }, 4.0, note("c e").hpf(q = 3).hpf(q = add(1))),
+        row("bpf.q", """note("c e").bpf(q = 5).bpf(q = mul(2))""", { it.bandq }, 10.0, note("c e").bpf(q = 5).bpf(q = mul(2))),
     )
 
     val read = listOf(
@@ -72,12 +57,12 @@ class LangFieldAccessorsSpec : StringSpec({
         row("velocity", """note("c e").velocity(0.7).pan(velocity)""", { it.pan }, 0.7, note("c e").velocity(0.7).pan(velocity)),
         row("pan", """note("c e").pan(0.3).gain(pan)""", { it.gain }, 0.3, note("c e").pan(0.3).gain(pan)),
         row("postgain", """note("c e").postgain(0.6).pan(postgain)""", { it.pan }, 0.6, note("c e").postgain(0.6).pan(postgain)),
-        row("lpf", """note("c e").lpf(800).hpf(lpf)""", { it.hcutoff }, 800.0, note("c e").lpf(800).hpf(lpf)),
-        row("hpf", """note("c e").hpf(200).lpf(hpf)""", { it.cutoff }, 200.0, note("c e").hpf(200).lpf(hpf)),
-        row("bpf", """note("c e").bpf(500).lpf(bpf)""", { it.cutoff }, 500.0, note("c e").bpf(500).lpf(bpf)),
-        row("lpq", """note("c e").lpq(4).hpq(lpq)""", { it.hresonance }, 4.0, note("c e").lpq(4).hpq(lpq)),
-        row("hpq", """note("c e").hpq(3).bpq(hpq)""", { it.bandq }, 3.0, note("c e").hpq(3).bpq(hpq)),
-        row("bpq", """note("c e").bpq(5).lpq(bpq)""", { it.resonance }, 5.0, note("c e").bpq(5).lpq(bpq)),
+        row("lpf.freq", """note("c e").lpf(800).hpf(lpf.freq)""", { it.hcutoff }, 800.0, note("c e").lpf(800).hpf(lpf.freq)),
+        row("hpf.freq", """note("c e").hpf(200).lpf(hpf.freq)""", { it.cutoff }, 200.0, note("c e").hpf(200).lpf(hpf.freq)),
+        row("bpf.freq", """note("c e").bpf(500).lpf(bpf.freq)""", { it.cutoff }, 500.0, note("c e").bpf(500).lpf(bpf.freq)),
+        row("lpf.q", """note("c e").lpf(q = 4).hpf(q = lpf.q)""", { it.hresonance }, 4.0, note("c e").lpf(q = 4).hpf(q = lpf.q)),
+        row("hpf.q", """note("c e").hpf(q = 3).bpf(q = hpf.q)""", { it.bandq }, 3.0, note("c e").hpf(q = 3).bpf(q = hpf.q)),
+        row("bpf.q", """note("c e").bpf(q = 5).lpf(q = bpf.q)""", { it.resonance }, 5.0, note("c e").bpf(q = 5).lpf(q = bpf.q)),
     )
 
     // Effects: one row per slot of the seven compound objects (distort, crush, coarse, room, delay, phaser, tremolo).
@@ -147,9 +132,9 @@ class LangFieldAccessorsSpec : StringSpec({
 
     val aliasReads = listOf(
         row("vel", """s("bd sd").vel(2).pan(vel)""", { it.pan }, 2.0, s("bd sd").vel(2).pan(vel)),
-        row("lowpass", """s("bd sd").lowpass(2).pan(lowpass)""", { it.pan }, 2.0, s("bd sd").lowpass(2).pan(lowpass)),
-        row("highpass", """s("bd sd").highpass(2).pan(highpass)""", { it.pan }, 2.0, s("bd sd").highpass(2).pan(highpass)),
-        row("bandpass", """s("bd sd").bandpass(2).pan(bandpass)""", { it.pan }, 2.0, s("bd sd").bandpass(2).pan(bandpass)),
+        row("lowpass", """s("bd sd").lowpass(2).pan(lowpass.freq)""", { it.pan }, 2.0, s("bd sd").lowpass(2).pan(lowpass.freq)),
+        row("highpass", """s("bd sd").highpass(2).pan(highpass.freq)""", { it.pan }, 2.0, s("bd sd").highpass(2).pan(highpass.freq)),
+        row("bandpass", """s("bd sd").bandpass(2).pan(bandpass.freq)""", { it.pan }, 2.0, s("bd sd").bandpass(2).pan(bandpass.freq)),
     )
 
     // Batch three: sample, synthesis, vowel, body, tonal, notch and filter envelope fields.
@@ -178,18 +163,30 @@ class LangFieldAccessorsSpec : StringSpec({
         row("pcurve", """s("bd sd").pcurve(1).pcurve(add(1))""", { it.pCurve }, 2.0, s("bd sd").pcurve(1).pcurve(add(1))),
         row("panchor", """s("bd sd").panchor(0.5).panchor(mul(2))""", { it.pAnchor }, 1.0, s("bd sd").panchor(0.5).panchor(mul(2))),
         row("accelerate", """s("bd sd").accelerate(2).accelerate(mul(2))""", { it.accelerate }, 4.0, s("bd sd").accelerate(2).accelerate(mul(2))),
-        row("notchf", """s("bd sd").notchf(1000).notchf(mul(2))""", { it.notchf }, 2000.0, s("bd sd").notchf(1000).notchf(mul(2))),
-        row("nresonance", """s("bd sd").nresonance(4).nresonance(mul(2))""", { it.nresonance }, 8.0, s("bd sd").nresonance(4).nresonance(mul(2))),
-        row("nfattack", """s("bd sd").nfattack(0.1).nfattack(mul(2))""", { it.nfattack }, 0.2, s("bd sd").nfattack(0.1).nfattack(mul(2))),
-        row("nfdecay", """s("bd sd").nfdecay(0.2).nfdecay(mul(2))""", { it.nfdecay }, 0.4, s("bd sd").nfdecay(0.2).nfdecay(mul(2))),
-        row("nfsustain", """s("bd sd").nfsustain(0.5).nfsustain(mul(0.5))""", { it.nfsustain }, 0.25, s("bd sd").nfsustain(0.5).nfsustain(mul(0.5))),
-        row("nfrelease", """s("bd sd").nfrelease(0.3).nfrelease(mul(2))""", { it.nfrelease }, 0.6, s("bd sd").nfrelease(0.3).nfrelease(mul(2))),
-        row("nfenv", """s("bd sd").nfenv(12).nfenv(mul(2))""", { it.nfenv }, 24.0, s("bd sd").nfenv(12).nfenv(mul(2))),
-        row("lpe", """s("bd sd").lpe(12).lpe(mul(2))""", { it.lpenv }, 24.0, s("bd sd").lpe(12).lpe(mul(2))),
-        row("lpx", """s("bd sd").lpx(1).lpx(add(1))""", { it.lpPasses }, 2.0, s("bd sd").lpx(1).lpx(add(1))),
-        row("hpe", """s("bd sd").hpe(12).hpe(mul(2))""", { it.hpenv }, 24.0, s("bd sd").hpe(12).hpe(mul(2))),
-        row("hpx", """s("bd sd").hpx(1).hpx(add(1))""", { it.hpPasses }, 2.0, s("bd sd").hpx(1).hpx(add(1))),
-        row("bpe", """s("bd sd").bpe(12).bpe(mul(2))""", { it.bpenv }, 24.0, s("bd sd").bpe(12).bpe(mul(2))),
+        row("notch.freq", """s("bd sd").notch(1000).notch(mul(2))""", { it.notchf }, 2000.0, s("bd sd").notch(1000).notch(mul(2))),
+        row("notch.q", """s("bd sd").notch(q = 4).notch(q = mul(2))""", { it.nresonance }, 8.0, s("bd sd").notch(q = 4).notch(q = mul(2))),
+        row("notch.attack", """s("bd sd").notch(attack = 0.1).notch(attack = mul(2))""", { it.nfattack }, 0.2, s("bd sd").notch(attack = 0.1).notch(attack = mul(2))),
+        row("notch.decay", """s("bd sd").notch(decay = 0.2).notch(decay = mul(2))""", { it.nfdecay }, 0.4, s("bd sd").notch(decay = 0.2).notch(decay = mul(2))),
+        row("notch.sustain", """s("bd sd").notch(sustain = 0.5).notch(sustain = mul(0.5))""", { it.nfsustain }, 0.25, s("bd sd").notch(sustain = 0.5).notch(sustain = mul(0.5))),
+        row("notch.release", """s("bd sd").notch(release = 0.3).notch(release = mul(2))""", { it.nfrelease }, 0.6, s("bd sd").notch(release = 0.3).notch(release = mul(2))),
+        row("notch.env", """s("bd sd").notch(env = 12).notch(env = mul(2))""", { it.nfenv }, 24.0, s("bd sd").notch(env = 12).notch(env = mul(2))),
+        row("lpf.attack", """s("bd sd").lpf(attack = 0.1).lpf(attack = mul(2))""", { it.lpattack }, 0.2, s("bd sd").lpf(attack = 0.1).lpf(attack = mul(2))),
+        row("lpf.decay", """s("bd sd").lpf(decay = 0.2).lpf(decay = mul(2))""", { it.lpdecay }, 0.4, s("bd sd").lpf(decay = 0.2).lpf(decay = mul(2))),
+        row("lpf.sustain", """s("bd sd").lpf(sustain = 0.5).lpf(sustain = mul(0.5))""", { it.lpsustain }, 0.25, s("bd sd").lpf(sustain = 0.5).lpf(sustain = mul(0.5))),
+        row("lpf.release", """s("bd sd").lpf(release = 0.3).lpf(release = mul(2))""", { it.lprelease }, 0.6, s("bd sd").lpf(release = 0.3).lpf(release = mul(2))),
+        row("hpf.attack", """s("bd sd").hpf(attack = 0.1).hpf(attack = mul(2))""", { it.hpattack }, 0.2, s("bd sd").hpf(attack = 0.1).hpf(attack = mul(2))),
+        row("hpf.decay", """s("bd sd").hpf(decay = 0.2).hpf(decay = mul(2))""", { it.hpdecay }, 0.4, s("bd sd").hpf(decay = 0.2).hpf(decay = mul(2))),
+        row("hpf.sustain", """s("bd sd").hpf(sustain = 0.5).hpf(sustain = mul(0.5))""", { it.hpsustain }, 0.25, s("bd sd").hpf(sustain = 0.5).hpf(sustain = mul(0.5))),
+        row("hpf.release", """s("bd sd").hpf(release = 0.3).hpf(release = mul(2))""", { it.hprelease }, 0.6, s("bd sd").hpf(release = 0.3).hpf(release = mul(2))),
+        row("bpf.attack", """s("bd sd").bpf(attack = 0.1).bpf(attack = mul(2))""", { it.bpattack }, 0.2, s("bd sd").bpf(attack = 0.1).bpf(attack = mul(2))),
+        row("bpf.decay", """s("bd sd").bpf(decay = 0.2).bpf(decay = mul(2))""", { it.bpdecay }, 0.4, s("bd sd").bpf(decay = 0.2).bpf(decay = mul(2))),
+        row("bpf.sustain", """s("bd sd").bpf(sustain = 0.5).bpf(sustain = mul(0.5))""", { it.bpsustain }, 0.25, s("bd sd").bpf(sustain = 0.5).bpf(sustain = mul(0.5))),
+        row("bpf.release", """s("bd sd").bpf(release = 0.3).bpf(release = mul(2))""", { it.bprelease }, 0.6, s("bd sd").bpf(release = 0.3).bpf(release = mul(2))),
+        row("lpf.env", """s("bd sd").lpf(env = 12).lpf(env = mul(2))""", { it.lpenv }, 24.0, s("bd sd").lpf(env = 12).lpf(env = mul(2))),
+        row("lpf.passes", """s("bd sd").lpf(passes = 1).lpf(passes = add(1))""", { it.lpPasses }, 2.0, s("bd sd").lpf(passes = 1).lpf(passes = add(1))),
+        row("hpf.env", """s("bd sd").hpf(env = 12).hpf(env = mul(2))""", { it.hpenv }, 24.0, s("bd sd").hpf(env = 12).hpf(env = mul(2))),
+        row("hpf.passes", """s("bd sd").hpf(passes = 1).hpf(passes = add(1))""", { it.hpPasses }, 2.0, s("bd sd").hpf(passes = 1).hpf(passes = add(1))),
+        row("bpf.env", """s("bd sd").bpf(env = 12).bpf(env = mul(2))""", { it.bpenv }, 24.0, s("bd sd").bpf(env = 12).bpf(env = mul(2))),
     )
 
     val readBatchThree = listOf(
@@ -217,18 +214,30 @@ class LangFieldAccessorsSpec : StringSpec({
         row("pcurve", """s("bd sd").pcurve(1).pan(pcurve)""", { it.pan }, 1.0, s("bd sd").pcurve(1).pan(pcurve)),
         row("panchor", """s("bd sd").panchor(0.5).pan(panchor)""", { it.pan }, 0.5, s("bd sd").panchor(0.5).pan(panchor)),
         row("accelerate", """s("bd sd").accelerate(2).pan(accelerate)""", { it.pan }, 2.0, s("bd sd").accelerate(2).pan(accelerate)),
-        row("notchf", """s("bd sd").notchf(1000).pan(notchf)""", { it.pan }, 1000.0, s("bd sd").notchf(1000).pan(notchf)),
-        row("nresonance", """s("bd sd").nresonance(4).pan(nresonance)""", { it.pan }, 4.0, s("bd sd").nresonance(4).pan(nresonance)),
-        row("nfattack", """s("bd sd").nfattack(0.1).pan(nfattack)""", { it.pan }, 0.1, s("bd sd").nfattack(0.1).pan(nfattack)),
-        row("nfdecay", """s("bd sd").nfdecay(0.2).pan(nfdecay)""", { it.pan }, 0.2, s("bd sd").nfdecay(0.2).pan(nfdecay)),
-        row("nfsustain", """s("bd sd").nfsustain(0.5).pan(nfsustain)""", { it.pan }, 0.5, s("bd sd").nfsustain(0.5).pan(nfsustain)),
-        row("nfrelease", """s("bd sd").nfrelease(0.3).pan(nfrelease)""", { it.pan }, 0.3, s("bd sd").nfrelease(0.3).pan(nfrelease)),
-        row("nfenv", """s("bd sd").nfenv(12).pan(nfenv)""", { it.pan }, 12.0, s("bd sd").nfenv(12).pan(nfenv)),
-        row("lpe", """s("bd sd").lpe(12).pan(lpe)""", { it.pan }, 12.0, s("bd sd").lpe(12).pan(lpe)),
-        row("lpx", """s("bd sd").lpx(1).pan(lpx)""", { it.pan }, 1.0, s("bd sd").lpx(1).pan(lpx)),
-        row("hpe", """s("bd sd").hpe(12).pan(hpe)""", { it.pan }, 12.0, s("bd sd").hpe(12).pan(hpe)),
-        row("hpx", """s("bd sd").hpx(1).pan(hpx)""", { it.pan }, 1.0, s("bd sd").hpx(1).pan(hpx)),
-        row("bpe", """s("bd sd").bpe(12).pan(bpe)""", { it.pan }, 12.0, s("bd sd").bpe(12).pan(bpe)),
+        row("notch.freq", """s("bd sd").notch(1000).pan(notch.freq)""", { it.pan }, 1000.0, s("bd sd").notch(1000).pan(notch.freq)),
+        row("notch.q", """s("bd sd").notch(q = 4).pan(notch.q)""", { it.pan }, 4.0, s("bd sd").notch(q = 4).pan(notch.q)),
+        row("notch.attack", """s("bd sd").notch(attack = 0.1).pan(notch.attack)""", { it.pan }, 0.1, s("bd sd").notch(attack = 0.1).pan(notch.attack)),
+        row("notch.decay", """s("bd sd").notch(decay = 0.2).pan(notch.decay)""", { it.pan }, 0.2, s("bd sd").notch(decay = 0.2).pan(notch.decay)),
+        row("notch.sustain", """s("bd sd").notch(sustain = 0.5).pan(notch.sustain)""", { it.pan }, 0.5, s("bd sd").notch(sustain = 0.5).pan(notch.sustain)),
+        row("notch.release", """s("bd sd").notch(release = 0.3).pan(notch.release)""", { it.pan }, 0.3, s("bd sd").notch(release = 0.3).pan(notch.release)),
+        row("notch.env", """s("bd sd").notch(env = 12).pan(notch.env)""", { it.pan }, 12.0, s("bd sd").notch(env = 12).pan(notch.env)),
+        row("lpf.attack", """s("bd sd").lpf(attack = 0.1).pan(lpf.attack)""", { it.pan }, 0.1, s("bd sd").lpf(attack = 0.1).pan(lpf.attack)),
+        row("lpf.decay", """s("bd sd").lpf(decay = 0.2).pan(lpf.decay)""", { it.pan }, 0.2, s("bd sd").lpf(decay = 0.2).pan(lpf.decay)),
+        row("lpf.sustain", """s("bd sd").lpf(sustain = 0.5).pan(lpf.sustain)""", { it.pan }, 0.5, s("bd sd").lpf(sustain = 0.5).pan(lpf.sustain)),
+        row("lpf.release", """s("bd sd").lpf(release = 0.3).pan(lpf.release)""", { it.pan }, 0.3, s("bd sd").lpf(release = 0.3).pan(lpf.release)),
+        row("hpf.attack", """s("bd sd").hpf(attack = 0.1).pan(hpf.attack)""", { it.pan }, 0.1, s("bd sd").hpf(attack = 0.1).pan(hpf.attack)),
+        row("hpf.decay", """s("bd sd").hpf(decay = 0.2).pan(hpf.decay)""", { it.pan }, 0.2, s("bd sd").hpf(decay = 0.2).pan(hpf.decay)),
+        row("hpf.sustain", """s("bd sd").hpf(sustain = 0.5).pan(hpf.sustain)""", { it.pan }, 0.5, s("bd sd").hpf(sustain = 0.5).pan(hpf.sustain)),
+        row("hpf.release", """s("bd sd").hpf(release = 0.3).pan(hpf.release)""", { it.pan }, 0.3, s("bd sd").hpf(release = 0.3).pan(hpf.release)),
+        row("bpf.attack", """s("bd sd").bpf(attack = 0.1).pan(bpf.attack)""", { it.pan }, 0.1, s("bd sd").bpf(attack = 0.1).pan(bpf.attack)),
+        row("bpf.decay", """s("bd sd").bpf(decay = 0.2).pan(bpf.decay)""", { it.pan }, 0.2, s("bd sd").bpf(decay = 0.2).pan(bpf.decay)),
+        row("bpf.sustain", """s("bd sd").bpf(sustain = 0.5).pan(bpf.sustain)""", { it.pan }, 0.5, s("bd sd").bpf(sustain = 0.5).pan(bpf.sustain)),
+        row("bpf.release", """s("bd sd").bpf(release = 0.3).pan(bpf.release)""", { it.pan }, 0.3, s("bd sd").bpf(release = 0.3).pan(bpf.release)),
+        row("lpf.env", """s("bd sd").lpf(env = 12).pan(lpf.env)""", { it.pan }, 12.0, s("bd sd").lpf(env = 12).pan(lpf.env)),
+        row("lpf.passes", """s("bd sd").lpf(passes = 1).pan(lpf.passes)""", { it.pan }, 1.0, s("bd sd").lpf(passes = 1).pan(lpf.passes)),
+        row("hpf.env", """s("bd sd").hpf(env = 12).pan(hpf.env)""", { it.pan }, 12.0, s("bd sd").hpf(env = 12).pan(hpf.env)),
+        row("hpf.passes", """s("bd sd").hpf(passes = 1).pan(hpf.passes)""", { it.pan }, 1.0, s("bd sd").hpf(passes = 1).pan(hpf.passes)),
+        row("bpf.env", """s("bd sd").bpf(env = 12).pan(bpf.env)""", { it.pan }, 12.0, s("bd sd").bpf(env = 12).pan(bpf.env)),
     )
 
     val aliasSetsBatchThree = listOf(
@@ -245,15 +254,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("fmatt", """s("bd sd").apply(fmatt(2))""", { it.fmAttack }, 2.0, s("bd sd").apply(fmatt(2))),
         row("fmdec", """s("bd sd").apply(fmdec(2))""", { it.fmDecay }, 2.0, s("bd sd").apply(fmdec(2))),
         row("fmsus", """s("bd sd").apply(fmsus(2))""", { it.fmSustain }, 2.0, s("bd sd").apply(fmsus(2))),
-        row("notch", """s("bd sd").apply(notch(2))""", { it.notchf }, 2.0, s("bd sd").apply(notch(2))),
-        row("ntf", """s("bd sd").apply(ntf(2))""", { it.notchf }, 2.0, s("bd sd").apply(ntf(2))),
-        row("notchq", """s("bd sd").apply(notchq(2))""", { it.nresonance }, 2.0, s("bd sd").apply(notchq(2))),
-        row("ntq", """s("bd sd").apply(ntq(2))""", { it.nresonance }, 2.0, s("bd sd").apply(ntq(2))),
-        row("nfa", """s("bd sd").apply(nfa(2))""", { it.nfattack }, 2.0, s("bd sd").apply(nfa(2))),
-        row("nfd", """s("bd sd").apply(nfd(2))""", { it.nfdecay }, 2.0, s("bd sd").apply(nfd(2))),
-        row("nfs", """s("bd sd").apply(nfs(2))""", { it.nfsustain }, 2.0, s("bd sd").apply(nfs(2))),
-        row("nfr", """s("bd sd").apply(nfr(2))""", { it.nfrelease }, 2.0, s("bd sd").apply(nfr(2))),
-        row("nfe", """s("bd sd").apply(nfe(2))""", { it.nfenv }, 2.0, s("bd sd").apply(nfe(2))),
     )
 
     val aliasReadsBatchThree = listOf(
@@ -270,15 +270,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("fmatt", """s("bd sd").fmattack(2).pan(fmatt)""", { it.pan }, 2.0, s("bd sd").fmattack(2).pan(fmatt)),
         row("fmdec", """s("bd sd").fmdecay(2).pan(fmdec)""", { it.pan }, 2.0, s("bd sd").fmdecay(2).pan(fmdec)),
         row("fmsus", """s("bd sd").fmsustain(2).pan(fmsus)""", { it.pan }, 2.0, s("bd sd").fmsustain(2).pan(fmsus)),
-        row("notch", """s("bd sd").notchf(2).pan(notch)""", { it.pan }, 2.0, s("bd sd").notchf(2).pan(notch)),
-        row("ntf", """s("bd sd").notchf(2).pan(ntf)""", { it.pan }, 2.0, s("bd sd").notchf(2).pan(ntf)),
-        row("notchq", """s("bd sd").nresonance(2).pan(notchq)""", { it.pan }, 2.0, s("bd sd").nresonance(2).pan(notchq)),
-        row("ntq", """s("bd sd").nresonance(2).pan(ntq)""", { it.pan }, 2.0, s("bd sd").nresonance(2).pan(ntq)),
-        row("nfa", """s("bd sd").nfattack(2).pan(nfa)""", { it.pan }, 2.0, s("bd sd").nfattack(2).pan(nfa)),
-        row("nfd", """s("bd sd").nfdecay(2).pan(nfd)""", { it.pan }, 2.0, s("bd sd").nfdecay(2).pan(nfd)),
-        row("nfs", """s("bd sd").nfsustain(2).pan(nfs)""", { it.pan }, 2.0, s("bd sd").nfsustain(2).pan(nfs)),
-        row("nfr", """s("bd sd").nfrelease(2).pan(nfr)""", { it.pan }, 2.0, s("bd sd").nfrelease(2).pan(nfr)),
-        row("nfe", """s("bd sd").nfenv(2).pan(nfe)""", { it.pan }, 2.0, s("bd sd").nfenv(2).pan(nfe)),
     )
 
     // Batch four: the dynamics leftovers, the routing fields, the compressor threshold and fmenv.
@@ -433,7 +424,7 @@ class LangFieldAccessorsSpec : StringSpec({
             it.cutoff shouldBe 800.0
             it.resonance shouldBe 8.0
         }
-        both(note("c e").lpf(400).hpf(lpf.div(2), 4), """note("c e").lpf(400).hpf(lpf.div(2), 4)""") {
+        both(note("c e").lpf(400).hpf(lpf.freq.div(2), 4), """note("c e").lpf(400).hpf(lpf.freq.div(2), 4)""") {
             it.hcutoff shouldBe 200.0
             it.hresonance shouldBe 4.0
         }
@@ -464,17 +455,13 @@ class LangFieldAccessorsSpec : StringSpec({
             it.distort shouldBe 0.5
             it.distortOversample shouldBe 2
         }
-        // batch three: the notch door and its alias
-        both(s("bd sd").apply(notchf(1000, 5)), """s("bd sd").apply(notchf(1000, 5))""") {
-            it.notchf shouldBe 1000.0
-            it.nresonance shouldBe 5.0
-        }
-        both(s("bd sd").notchf(1000).apply(notchf(mul(2), 5)), """s("bd sd").notchf(1000).apply(notchf(mul(2), 5))""") {
-            it.notchf shouldBe 2000.0
-            it.nresonance shouldBe 5.0
-        }
+        // batch three: the notch door
         both(s("bd sd").apply(notch(1000, 5)), """s("bd sd").apply(notch(1000, 5))""") {
             it.notchf shouldBe 1000.0
+            it.nresonance shouldBe 5.0
+        }
+        both(s("bd sd").notch(1000).apply(notch(mul(2), 5)), """s("bd sd").notch(1000).apply(notch(mul(2), 5))""") {
+            it.notchf shouldBe 2000.0
             it.nresonance shouldBe 5.0
         }
         both(s("bd sd").apply(compressor(-12, 4, 6)), """s("bd sd").apply(compressor(-12, 4, 6))""") {
@@ -660,6 +647,139 @@ class LangFieldAccessorsSpec : StringSpec({
                     withClue(door) {
                         p.queryArc(0.0, 1.0).map { case.field(it.data) } shouldBe listOf(0.5, 0.5)
                         p.queryArc(1.0, 2.0).map { case.field(it.data) } shouldBe listOf(0.8, 0.8)
+                    }
+                }
+            }
+        }
+    }
+
+    "filters: a mapper on one slot leaves the other slots alone, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val check: (SprudelVoiceData) -> Unit)
+        listOf(
+            Case("lpf(env = mul(2))", note("c e").lpf(500, 8, 2, 12, 0.1, 0.2, 0.5, 0.3).lpf(env = mul(2)), """note("c e").lpf(500, 8, 2, 12, 0.1, 0.2, 0.5, 0.3).lpf(env = mul(2))""") {
+                it.cutoff shouldBe 500.0
+                it.resonance shouldBe 8.0
+                it.lpPasses shouldBe 2.0
+                it.lpenv shouldBe 24.0
+                it.lpattack shouldBe 0.1
+                it.lpdecay shouldBe 0.2
+                it.lpsustain shouldBe 0.5
+                it.lprelease shouldBe 0.3
+            },
+            Case("hpf(attack = mul(2))", note("c e").hpf(300, 4, 1, 12, 0.1, 0.2, 0.5, 0.3).hpf(attack = mul(2)), """note("c e").hpf(300, 4, 1, 12, 0.1, 0.2, 0.5, 0.3).hpf(attack = mul(2))""") {
+                it.hcutoff shouldBe 300.0
+                it.hresonance shouldBe 4.0
+                it.hpPasses shouldBe 1.0
+                it.hpenv shouldBe 12.0
+                it.hpattack shouldBe 0.2
+                it.hpdecay shouldBe 0.2
+                it.hpsustain shouldBe 0.5
+                it.hprelease shouldBe 0.3
+            },
+            Case("bpf(q = mul(2))", note("c e").bpf(1000, 3, 12, 0.1, 0.2, 0.5, 0.3).bpf(q = mul(2)), """note("c e").bpf(1000, 3, 12, 0.1, 0.2, 0.5, 0.3).bpf(q = mul(2))""") {
+                it.bandf shouldBe 1000.0
+                it.bandq shouldBe 6.0
+                it.bpenv shouldBe 12.0
+                it.bpattack shouldBe 0.1
+                it.bpdecay shouldBe 0.2
+                it.bpsustain shouldBe 0.5
+                it.bprelease shouldBe 0.3
+            },
+            Case("notch(release = mul(2))", note("c e").notch(1000, 5, 12, 0.1, 0.2, 0.5, 0.3).notch(release = mul(2)), """note("c e").notch(1000, 5, 12, 0.1, 0.2, 0.5, 0.3).notch(release = mul(2))""") {
+                it.notchf shouldBe 1000.0
+                it.nresonance shouldBe 5.0
+                it.nfenv shouldBe 12.0
+                it.nfattack shouldBe 0.1
+                it.nfdecay shouldBe 0.2
+                it.nfsustain shouldBe 0.5
+                it.nfrelease shouldBe 0.6
+            },
+        ).forEach { case ->
+            withClue(case.name) {
+                listOf("kotlin" to case.kotlin, "script" to SprudelPattern.compile(case.script).shouldNotBeNull()).forEach { (door, p) ->
+                    withClue(door) { p.cycles().forEach { events -> events shouldHaveSize 2; events.forEach { case.check(it.data) } } }
+                }
+            }
+        }
+    }
+
+    "filters: every slot takes a control pattern per event, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
+        val cases = mutableListOf<Case>()
+        fun add(name: String, kotlin: SprudelPattern, script: String, field: (SprudelVoiceData) -> Double?) { cases.add(Case(name, kotlin, script, field)) }
+        add("lpf.freq", s("bd sd").lpf(freq = "0.1 0.5"), """s("bd sd").lpf(freq = "0.1 0.5")""") { it.cutoff }
+        add("lpf.q", s("bd sd").lpf(q = "0.1 0.5"), """s("bd sd").lpf(q = "0.1 0.5")""") { it.resonance }
+        add("lpf.passes", s("bd sd").lpf(passes = "0.1 0.5"), """s("bd sd").lpf(passes = "0.1 0.5")""") { it.lpPasses }
+        add("lpf.env", s("bd sd").lpf(env = "0.1 0.5"), """s("bd sd").lpf(env = "0.1 0.5")""") { it.lpenv }
+        add("lpf.attack", s("bd sd").lpf(attack = "0.1 0.5"), """s("bd sd").lpf(attack = "0.1 0.5")""") { it.lpattack }
+        add("lpf.decay", s("bd sd").lpf(decay = "0.1 0.5"), """s("bd sd").lpf(decay = "0.1 0.5")""") { it.lpdecay }
+        add("lpf.sustain", s("bd sd").lpf(sustain = "0.1 0.5"), """s("bd sd").lpf(sustain = "0.1 0.5")""") { it.lpsustain }
+        add("lpf.release", s("bd sd").lpf(release = "0.1 0.5"), """s("bd sd").lpf(release = "0.1 0.5")""") { it.lprelease }
+        add("hpf.freq", s("bd sd").hpf(freq = "0.1 0.5"), """s("bd sd").hpf(freq = "0.1 0.5")""") { it.hcutoff }
+        add("hpf.q", s("bd sd").hpf(q = "0.1 0.5"), """s("bd sd").hpf(q = "0.1 0.5")""") { it.hresonance }
+        add("hpf.passes", s("bd sd").hpf(passes = "0.1 0.5"), """s("bd sd").hpf(passes = "0.1 0.5")""") { it.hpPasses }
+        add("hpf.env", s("bd sd").hpf(env = "0.1 0.5"), """s("bd sd").hpf(env = "0.1 0.5")""") { it.hpenv }
+        add("hpf.attack", s("bd sd").hpf(attack = "0.1 0.5"), """s("bd sd").hpf(attack = "0.1 0.5")""") { it.hpattack }
+        add("hpf.decay", s("bd sd").hpf(decay = "0.1 0.5"), """s("bd sd").hpf(decay = "0.1 0.5")""") { it.hpdecay }
+        add("hpf.sustain", s("bd sd").hpf(sustain = "0.1 0.5"), """s("bd sd").hpf(sustain = "0.1 0.5")""") { it.hpsustain }
+        add("hpf.release", s("bd sd").hpf(release = "0.1 0.5"), """s("bd sd").hpf(release = "0.1 0.5")""") { it.hprelease }
+        add("bpf.freq", s("bd sd").bpf(freq = "0.1 0.5"), """s("bd sd").bpf(freq = "0.1 0.5")""") { it.bandf }
+        add("bpf.q", s("bd sd").bpf(q = "0.1 0.5"), """s("bd sd").bpf(q = "0.1 0.5")""") { it.bandq }
+        add("bpf.env", s("bd sd").bpf(env = "0.1 0.5"), """s("bd sd").bpf(env = "0.1 0.5")""") { it.bpenv }
+        add("bpf.attack", s("bd sd").bpf(attack = "0.1 0.5"), """s("bd sd").bpf(attack = "0.1 0.5")""") { it.bpattack }
+        add("bpf.decay", s("bd sd").bpf(decay = "0.1 0.5"), """s("bd sd").bpf(decay = "0.1 0.5")""") { it.bpdecay }
+        add("bpf.sustain", s("bd sd").bpf(sustain = "0.1 0.5"), """s("bd sd").bpf(sustain = "0.1 0.5")""") { it.bpsustain }
+        add("bpf.release", s("bd sd").bpf(release = "0.1 0.5"), """s("bd sd").bpf(release = "0.1 0.5")""") { it.bprelease }
+        add("notch.freq", s("bd sd").notch(freq = "0.1 0.5"), """s("bd sd").notch(freq = "0.1 0.5")""") { it.notchf }
+        add("notch.q", s("bd sd").notch(q = "0.1 0.5"), """s("bd sd").notch(q = "0.1 0.5")""") { it.nresonance }
+        add("notch.env", s("bd sd").notch(env = "0.1 0.5"), """s("bd sd").notch(env = "0.1 0.5")""") { it.nfenv }
+        add("notch.attack", s("bd sd").notch(attack = "0.1 0.5"), """s("bd sd").notch(attack = "0.1 0.5")""") { it.nfattack }
+        add("notch.decay", s("bd sd").notch(decay = "0.1 0.5"), """s("bd sd").notch(decay = "0.1 0.5")""") { it.nfdecay }
+        add("notch.sustain", s("bd sd").notch(sustain = "0.1 0.5"), """s("bd sd").notch(sustain = "0.1 0.5")""") { it.nfsustain }
+        add("notch.release", s("bd sd").notch(release = "0.1 0.5"), """s("bd sd").notch(release = "0.1 0.5")""") { it.nfrelease }
+        cases.forEach { case ->
+            withClue(case.name) {
+                listOf("kotlin" to case.kotlin, "script" to SprudelPattern.compile(case.script).shouldNotBeNull()).forEach { (door, p) ->
+                    withClue(door) { p.queryArc(0.0, 1.0).map { case.field(it.data) } shouldBe listOf(0.1, 0.5) }
+                }
+            }
+        }
+    }
+
+    "filters: a tail-only call does not reinterpret a numeric receiver into the head slot, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val head: (SprudelVoiceData) -> Double?, val tail: (SprudelVoiceData) -> Double?)
+        listOf(
+            Case("lpf(q = 4)", seq("3 4").lpf(q = 4), """seq("3 4").lpf(q = 4)""", { it.cutoff }, { it.resonance }),
+            Case("hpf(env = 4)", seq("3 4").hpf(env = 4), """seq("3 4").hpf(env = 4)""", { it.hcutoff }, { it.hpenv }),
+            Case("bpf(q = 4)", seq("3 4").bpf(q = 4), """seq("3 4").bpf(q = 4)""", { it.bandf }, { it.bandq }),
+            Case("notch(attack = 4)", seq("3 4").notch(attack = 4), """seq("3 4").notch(attack = 4)""", { it.notchf }, { it.nfattack }),
+        ).forEach { case ->
+            withClue(case.name) {
+                listOf("kotlin" to case.kotlin, "script" to SprudelPattern.compile(case.script).shouldNotBeNull()).forEach { (door, p) ->
+                    withClue(door) {
+                        val events = p.queryArc(0.0, 1.0)
+                        events shouldHaveSize 2
+                        events.map { case.head(it.data) } shouldBe listOf(null, null)
+                        events.map { case.tail(it.data) } shouldBe listOf(4.0, 4.0)
+                    }
+                }
+            }
+        }
+    }
+
+    "filters: every filter head keeps its value where the control pattern has a gap, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
+        listOf(
+            Case("lpf", s("bd sd").lpf(800).lpf("<500 ~>"), """s("bd sd").lpf(800).lpf("<500 ~>")""") { it.cutoff },
+            Case("hpf", s("bd sd").hpf(800).hpf("<500 ~>"), """s("bd sd").hpf(800).hpf("<500 ~>")""") { it.hcutoff },
+            Case("bpf", s("bd sd").bpf(800).bpf("<500 ~>"), """s("bd sd").bpf(800).bpf("<500 ~>")""") { it.bandf },
+            Case("notch", s("bd sd").notch(800).notch("<500 ~>"), """s("bd sd").notch(800).notch("<500 ~>")""") { it.notchf },
+        ).forEach { case ->
+            withClue(case.name) {
+                listOf("kotlin" to case.kotlin, "script" to SprudelPattern.compile(case.script).shouldNotBeNull()).forEach { (door, p) ->
+                    withClue(door) {
+                        p.queryArc(0.0, 1.0).map { case.field(it.data) } shouldBe listOf(500.0, 500.0)
+                        p.queryArc(1.0, 2.0).map { case.field(it.data) } shouldBe listOf(800.0, 800.0)
                     }
                 }
             }

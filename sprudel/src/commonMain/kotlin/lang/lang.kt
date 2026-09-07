@@ -46,7 +46,7 @@ fun interface PatternMapperProvider {
  * A field accessor: the object behind a script name such as `gain` or `lpf`.
  *
  * Bare, it is the mapper that reads one voice-data field into the value register, so another
- * setter can consume it (`pan(gain)`, `hpf(lpf.mul(2))`). Each accessor object adds the setter as
+ * setter can consume it (`pan(gain)`, `hpf(lpf.freq.mul(2))`). Each accessor object adds the setter as
  * its `invoke` member, so `gain(0.5)` stays the setter. See `docs/tasks/sprudel-field-accessors.md`.
  */
 open class FieldAccessor(private val read: (SprudelVoiceData) -> Double?) : PatternMapperProvider {

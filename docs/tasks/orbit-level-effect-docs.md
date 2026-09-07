@@ -19,7 +19,7 @@ Ground truth (from the skill ref — verify against the engine before publishing
   `phaser` family IS per-orbit (one sweep over the summed mix, first-writer-wins on the
   knobs). Only a CUSTOM pipeline that adds `StageDsl.Phaser` gets an extra per-voice pass
   (then a floor below 1 floors the dry twice). Document it as per-orbit with that caveat.
-- **PER-VOICE**: filters (`lpf`/`hpf`/`bandf`/`notchf` + envs/qs), `distort`, `crush`,
+- **PER-VOICE**: filters (`lpf`/`hpf`/`bpf`/`notch` with their env and q slots), `distort`, `crush`,
   `coarse`, `gain`/`velocity`/`pan`/`postgain`, envelopes, `vibrato`/`tremolo`, `fm*`,
   pitch env, `unison`/`spread`, `analog`, `sound`/`n`/`note`.
   ⚠️ Note `distort` is per-voice — the user's shorthand ("room, reverb, body, distort etc.")

@@ -104,7 +104,6 @@ object gain : FieldAccessor({ it.gain }) {
         { p -> p.gain(amount, callInfo) }
 }
 
-
 /**
  * Creates a chained [PatternMapperFn] that sets the gain after the previous mapper.
  *
@@ -203,7 +202,6 @@ object pan : FieldAccessor({ it.pan }) {
         { p -> p.pan(amount, callInfo) }
 }
 
-
 /**
  * Creates a chained [PatternMapperFn] that sets the pan after the previous mapper.
  *
@@ -301,7 +299,6 @@ object velocity : FieldAccessor({ it.velocity }) {
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.velocity(amount, callInfo) }
 }
-
 
 /**
  * Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
@@ -456,7 +453,6 @@ object postgain : FieldAccessor({ it.postGain }) {
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.postgain(amount, callInfo) }
 }
-
 
 /**
  * Creates a chained [PatternMapperFn] that sets the post-gain after the previous mapper.
@@ -655,7 +651,6 @@ object compressor : FieldAccessor({ it.compressorThreshold }) {
         { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 }
 
-
 /**
  * Creates a chained [PatternMapperFn] that sets compressor parameters after the previous mapper.
  *
@@ -830,7 +825,6 @@ object unison : FieldAccessor({ it.oscParams?.get("voices") }) {
     operator fun invoke(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.unison(voices, callInfo) }
 }
-
 
 /**
  * Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous mapper.
@@ -1042,7 +1036,6 @@ object spread : FieldAccessor({ it.oscParams?.get("spread") }) {
         { p -> p.spread(amount, callInfo) }
 }
 
-
 /**
  * Creates a chained [PatternMapperFn] that sets the unison frequency spread after the previous mapper.
  *
@@ -1131,7 +1124,6 @@ object panSpread : FieldAccessor({ it.oscParams?.get("panSpread") }) {
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.panSpread(amount, callInfo) }
 }
-
 
 /**
  * Creates a chained [PatternMapperFn] that sets the stereo pan spread after the previous mapper.
@@ -1229,7 +1221,6 @@ object density : FieldAccessor({ it.oscParams?.get("density") }) {
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.density(amount, callInfo) }
 }
-
 
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the previous mapper.
@@ -1470,7 +1461,6 @@ object adsr {
         { p -> p.adsr(attack, decay, sustain, release, callInfo) }
 }
 
-
 // -- ADSR curves ------------------------------------------------------------------------------------------------------
 
 private fun parseAdsrCurveName(name: String?): AdsrCurve? = when (name?.trim()?.lowercase()) {
@@ -1511,24 +1501,6 @@ private fun applyDecayCurve(source: SprudelPattern, args: List<SprudelDslArg<Any
 
 private fun applyReleaseCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, releaseCurveMutation) { src, ctrl ->
-        src.releaseCurve = ctrl.releaseCurve ?: src.releaseCurve
-        src
-    }
-}
-
-private val adsrCurveMutation = voiceSetter {
-    val curve = parseAdsrCurveName(it?.toString())
-    if (curve != null) {
-        attackCurve = curve
-        decayCurve = curve
-        releaseCurve = curve
-    }
-}
-
-private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._applyControlFromParams(args, adsrCurveMutation) { src, ctrl ->
-        src.attackCurve = ctrl.attackCurve ?: src.attackCurve
-        src.decayCurve = ctrl.decayCurve ?: src.decayCurve
         src.releaseCurve = ctrl.releaseCurve ?: src.releaseCurve
         src
     }
@@ -1595,21 +1567,30 @@ fun String.adsrCurves(
     this.toVoiceValuePattern(callInfo?.receiverLocation).adsrCurves(attack, decay, release, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets per-stage ADSR shape curves for each event.
+ * The `adsrCurves` object: `adsrCurves(attack, decay, release)` sets the stage curves by name.
+ * The slots are names, not numbers, so the object carries the setter only and no readers
+ * (maintainer decision, 2026-09-07).
  *
- * @param attack Curve name for the attack stage — `linear` / `square` / `cube` / `scurve` /
- *   `invsquare` / `exponential`. Omit to keep the current curve.
- * @param decay Curve name for the decay stage. Omit to keep the current curve.
- * @param release Curve name for the release stage. Omit to keep the current curve.
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).apply(adsrCurves("square", "exponential", "scurve"))
+ * ```
+ *
+ * @category dynamics
+ * @tags adsr, curve, envelope, shape
  */
-@KlangScript.Function
-fun adsrCurves(
-    attack: PatternLike? = null,
-    decay: PatternLike? = null,
-    release: PatternLike? = null,
-    callInfo: CallInfo? = null,
-): PatternMapperFn =
-    { p -> p.adsrCurves(attack, decay, release, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("adsrCurves")
+object adsrCurves {
+
+    /** The setter, see [SprudelPattern.adsrCurves]. */
+    @KlangScript.Invoke
+    operator fun invoke(
+        attack: PatternLike? = null,
+        decay: PatternLike? = null,
+        release: PatternLike? = null,
+        callInfo: CallInfo? = null,
+    ): PatternMapperFn = { p -> p.adsrCurves(attack, decay, release, callInfo) }
+}
 
 /**
  * Creates a chained [PatternMapperFn] that sets per-stage ADSR shape curves after the previous mapper.
@@ -1626,44 +1607,6 @@ fun PatternMapperFn.adsrCurves(
     callInfo: CallInfo? = null,
 ): PatternMapperFn =
     this.chain { p -> p.adsrCurves(attack, decay, release, callInfo) }
-
-/**
- * Sets the same ADSR shape curve on all three stages (attack, decay, release).
- *
- * Accepts `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential` (see the
- * `adsrCurves` docs for the aliases and the shape of each).
- *
- * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).adsrCurve("scurve")
- * ```
- *
- * @param params Curve name — `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential`.
- *
- * @category dynamics
- * @tags adsr, curve, envelope, shape
- */
-@KlangScript.Function
-fun SprudelPattern.adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyAdsrCurve(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern and sets the same curve on all three ADSR stages.
- *
- * @param params Curve name — `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential`.
- */
-@KlangScript.Function
-fun String.adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).adsrCurve(params, callInfo)
-
-/**
- * Creates a [PatternMapperFn] that applies the same ADSR shape curve to all three stages
- * for each event.
- *
- * @param params Curve name — `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential`.
- */
-@KlangScript.Function
-fun adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.adsrCurve(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all ADSR parameters after the previous mapper.
@@ -1779,7 +1722,6 @@ object orbit : FieldAccessor({ it.cylinder?.toDouble() }) {
     operator fun invoke(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.orbit(index, callInfo) }
 }
-
 
 /**
  * Creates a chained [PatternMapperFn] that routes events to the given orbit after the previous mapper.
@@ -1929,7 +1871,6 @@ object duckorbit : FieldAccessor({ it.duckCylinder?.toDouble() }) {
     operator fun invoke(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.duckorbit(orbitIndex, callInfo) }
 }
-
 
 /**
  * Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the previous mapper.
@@ -2088,7 +2029,6 @@ object duckattack : FieldAccessor({ it.duckAttack }) {
         { p -> p.duckattack(time, callInfo) }
 }
 
-
 /**
  * Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous mapper.
  *
@@ -2242,7 +2182,6 @@ object duckdepth : FieldAccessor({ it.duckDepth }) {
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.duckdepth(amount, callInfo) }
 }
-
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ducking depth after the previous mapper.
