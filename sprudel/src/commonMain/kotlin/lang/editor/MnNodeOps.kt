@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang.editor
 
-import io.peekandpoke.klang.sprudel.lang.editor.MnNodeOps.groupInsertAt
 import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
 

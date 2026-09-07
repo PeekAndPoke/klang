@@ -27,10 +27,10 @@ import * from "sprudel"
 // One cycle is one bar of 6/8, counted in twelve sixteenths. The tune is sixteen bars:
 // eight of verse, eight of chorus, with the pickup note at the end of the last bar.
 let melody = note(`<
-  [c5@4 d5@2 e5@3 f5 e5@2] [d5@4 b4@2 g4@3 a4 b4@2] [c5@4 a4@2 a4@3 gs4 a4@2] [b4@4 gs4@2 e4@4 a4@2]
-  [c5@4 d5@2 e5@3 f5 e5@2] [d5@4 b4@2 g4@3 a4 b4@2] [c5@3 b4 a4@2 gs4@3 fs4 gs4@2]  [a4@6 ~@6]
-  [g5@6 g5@3 fs5 e5@2]     [d5@4 b4@2 g4@3 a4 b4@2] [c5@4 a4@2 a4@3 gs4 a4@2] [b4@4 gs4@2 e4@6]
-  [g5@6 g5@3 fs5 e5@2]     [d5@4 b4@2 g4@3 a4 b4@2] [c5@3 b4 a4@2 gs4@3 fs4 gs4@2]  [a4@6 ~@4 a4@2]
+  [c5@4 d5@2 e5@3 f5 e5@2] [d5@4 b4@2 g4@3 a4 b4@2] [c5@4 a4@2 a4@3 gs4   a4@2     ] [b4@4 gs4@2 e4@4 a4@2]
+  [c5@4 d5@2 e5@3 f5 e5@2] [d5@4 b4@2 g4@3 a4 b4@2] [c5@3 b4   a4@2 gs4@3 fs4 gs4@2] [a4@6 ~@6]
+  [g5@6 g5@3 fs5 e5@2]     [d5@4 b4@2 g4@3 a4 b4@2] [c5@4 a4@2 a4@3 gs4   a4@2     ] [b4@4 gs4@2 e4@6]
+  [g5@6 g5@3 fs5 e5@2]     [d5@4 b4@2 g4@3 a4 b4@2] [c5@3 b4   a4@2 gs4@3 fs4 gs4@2] [a4@6 ~@4 a4@2]
 >`).late(4)
 
 let harmony = chord(`<Am G Am E  Am G [Am E] Am  C G Am E  C G [Am E] Am>`).late(4)
@@ -39,16 +39,16 @@ let harmony = chord(`<Am G Am E  Am G [Am E] Am  C G Am E  C G [Am E] Am>`).late
 // `freq` is read from the event, so the whistle follows whatever pitch the chain has set,
 // and the wind is never quite in tune.
 let whistleOf = (tune) => tune.s("pink")
-  .bpf(freq.mul(perlin.seg(6).range(0.985, 1.015))).bpq(64) 
+  .bpf(freq = freq.mul(perlin.seg(6).range(0.985, 1.015)), q = 64) 
   .adsr(0.08, 0.1, 0.9, 0.3).legato(0.95)
 
 let breathOf = (tune) => tune.s("pink")
-  .bpf(freq.mul(2)).bpq(1.5)
+  .bpf(freq = freq.mul(2), q = 1.5)
   .adsr(0.12, 0.1, 0.8, 0.3).legato(0.95)
 
 // The wind itself: brown noise wandering through a wide band.
 let wind = s("brown!4")
-  .bpf(perlin.seg(4).range(180, 1100)).bpq(1.5)
+  .bpf(freq = perlin.seg(4).range(180, 1100), q = 1.5)
   .clip(1.2).adsr("0.2:0.1:0.0:0.2")
   .pan(perlin.range(0.3, 0.7).slow(5))
 
@@ -72,6 +72,7 @@ stack(
 
   , master(Master(m => m.reverb(r => r.wet(0.14).roomSize(6)).gain(1.6).limiter()))
 )
+    
     
     
     

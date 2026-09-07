@@ -53,6 +53,7 @@ Every partial is a multiple of **this sine's** frequency. The sine itself is par
 | `octaves(count, rolloff=1)`     | `count` partials at `2f, 4f, 8f ...`       | `m ^ -rolloff`                             |
 | `suboctaves(count, rolloff=1)`  | `count` partials at `f/2, f/4, f/8 ...`    | `(1/m) ^ -rolloff`                         |
 | `fundamental(gain=1)`           | nothing; scales the sine's own partial     | `gain`                                     |
+| `analogSpread(amount=1)`        | nothing; how much the partials drift apart | see below                                  |
 
 One gain law for all three banks: `distance ^ -rolloff`, where distance is the multiple measured
 away from the fundamental (`m` above it, `1/m` below it). `suboctaves(1)` is a sub at f/2 with
@@ -67,6 +68,14 @@ gain 1/2; `suboctaves(1, 0)` is the classic equal-level sub oscillator.
   switch for free, levels are 0 to 1 doubles everywhere in the house, and no boolean sits on the wire.
   It is a knob of its own, stated once, rather than a third parameter on each bank, so two banks
   never have to pick a winner.
+- `analogSpread` is a blend, not a switch, the same move as `fundamental`. `0`: one shared drift
+  lane, every partial follows the same wobble, the spectrum stays exactly harmonic, the bank is one
+  slightly unstable physical oscillator. `1`: one independent lane per partial, the beating and
+  inharmonicity of the hand-rolled stack. Between: each partial's multiplier mixes the shared lane
+  and its own, so the knob is "how much the partials drift against each other", audible as more or
+  less beating. The depth stays the sine's `analog`, in cents on every partial; `analog = 0` makes
+  the knob moot. Named with the `analog` prefix because the supersaw's `spread` is static unison
+  detune, a different thing.
 - Several banks set at once are **summed, no deduplication**: `harmonics(7)` plus `octaves(3)`
   doubles 2f, 4f and 8f, exactly as two hand-written sines would. No special rule.
 - With `fundamental = 1` and all counts `0` the node IS today's sine, bit-identical (section 5).
@@ -93,6 +102,7 @@ Osc.sine(x => x.harmonics(7).fundamental(0))           // overtones only, 2f .. 
 Osc.sine(Osc.freq().mul(2), x => x.octaves(5)).mul(1/2) // the original grind stack, 2f .. 64f, original levels
 Osc.sine(Osc.freq().mul(2), x => x.harmonics(3))       // 2f, 4f, 6f, 8f: the EVEN series (the tube spectrum)
 Osc.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
+Osc.sine(x => x.harmonics(7).analog(3).analogSpread(0)) // drifts as ONE oscillator, spectrum stays harmonic
 Osc.sine(x => x.harmonics(12, Osc.param("rolloff", 1))) // brightness from the pattern
 Osc.sine(x => x.harmonics(8, Osc.sine(0.2).range(0.7, 2))) // breathing brightness, control rate
 ```
@@ -107,13 +117,14 @@ their keep on sine, pluck and sample-based voices, and as a standalone additive 
 
 ## 3. Surface (both doors, identical)
 
-Four methods on `OscSineBuilder` in `klangscript-libs/.../IgnitorBuilders.kt`, next to `analog`:
+Five methods on `OscSineBuilder` in `klangscript-libs/.../IgnitorBuilders.kt`, next to `analog`:
 
 ```kotlin
 fun OscSineBuilder.harmonics(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder
 fun OscSineBuilder.octaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder
 fun OscSineBuilder.suboctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder
 fun OscSineBuilder.fundamental(gain: IgnitorDslLike): OscSineBuilder
+fun OscSineBuilder.analogSpread(amount: IgnitorDslLike): OscSineBuilder
 ```
 
 `copy`-based, immutable (`/dsl-design` §1). The script door is the same function through KSP;
@@ -134,7 +145,7 @@ Nothing changes for sprudel: `sound("sine")` reaches the node; the knobs are not
 
 ## 4. Wire
 
-`IgnitorDsl.Sine` in `audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt` grows seven fields, all
+`IgnitorDsl.Sine` in `audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt` grows eight fields, all
 with constant defaults that mean "plain sine":
 
 ```kotlin
@@ -149,7 +160,8 @@ data class Sine(
     val octavesRolloff: IgnitorDsl = Constant(1.0),
     val suboctaves: IgnitorDsl = Constant(0.0),
     val suboctavesRolloff: IgnitorDsl = Constant(1.0),
-) : IgnitorDsl { collectParams over all nine }
+    val analogSpread: IgnitorDsl = Constant(1.0),
+) : IgnitorDsl { collectParams over all ten }
 ```
 
 No new node kind, no enum, no sealed addition: the distinction is numeric, so fields are the
@@ -173,11 +185,12 @@ is IgnitorDsl.Sine ->
     if (isPlainSine()) pitchedSource(freq, Ignitors.sine(freq.noMod(), analog.noMod()))
     else pitchedSource(freq, Ignitors.sinePartials(freq.noMod(), analog.noMod(), fundamental.noMod(),
         harmonics.noMod(), harmonicsRolloff.noMod(), octaves.noMod(), octavesRolloff.noMod(),
-        suboctaves.noMod(), suboctavesRolloff.noMod(), rng = cache.random))
+        suboctaves.noMod(), suboctavesRolloff.noMod(), analogSpread.noMod(), rng = cache.random))
 ```
 
 `isPlainSine()` is a structural check on the DSL node: `fundamental == Constant(1.0)` and all
-three counts `== Constant(0.0)`. Only literal defaults qualify; a `Param`
+three counts `== Constant(0.0)`. `analogSpread` does not take part: with one partial it has nothing
+to spread. Only literal defaults qualify; a `Param`
 or graph on any of the three goes through the bank, because its value can change per block. Every
 sine in every existing song therefore builds exactly the `SineIgnitor` it builds today; this is
 pinned by a bit-identity spec.
@@ -190,9 +203,9 @@ keeps working unchanged.
 
 One new ignitor in `audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt`. Per block:
 
-1. `resolveFreq` the base frequency; `readParam` the seven knobs (block-start values, the `voices`
+1. `resolveFreq` the base frequency; `readParam` the eight knobs (block-start values, the `voices`
    pattern in `DetunedStackIgnitor`). Coerce: counts to `0..64` each (the super oscillators' engine
-   cap), `fundamental` and the rolloffs as read.
+   cap), `analogSpread` to `0..1`, `fundamental` and the rolloffs as read.
 2. `n = 1 + harmonics + octaves + suboctaves`. Grow the per-partial arrays (`phase`, `gain`, `dt`)
    only when `n` exceeds the allocated size; never allocate per block (hot-path rule). New partials
    start at phase 0.
@@ -202,13 +215,14 @@ One new ignitor in `audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt`. Per blo
    `exp(-rolloff * ln(distance))`: `n` transcendental calls per block, not per sample.
    `dt[k] = m * freq / sampleRate`. Partials whose frequency reaches Nyquist get `gain = 0`
    (decision 1); there is no lower limit.
-4. Drift: a `PolyAnalogDrift(analog, n, sampleRate, rng)` created on first use and re-created on
-   growth, per-partial multiplier lanes like the super-oscillator voices. The sine's one `analog`
-   value is the depth for every partial (a pitch multiplier, so the same cents on each partial);
-   the walks are independent per lane. This is what the hand-rolled stack does, since every
-   `Osc.sine` in it reads the same `analog` slot and owns its own drift. `analog = 0` skips it.
-   The alternative, one shared lane so the spectrum stays exactly harmonic like a single physical
-   oscillator, is decision 3 in section 7.
+4. Drift: a `PolyAnalogDrift(analog, n + 1, sampleRate, rng)` created on first use and re-created
+   on growth: lane 0 is the shared walk, lanes `1..n` belong to the partials, like the
+   super-oscillator voices. The sine's one `analog` value is the depth for every lane (a pitch
+   multiplier, so the same cents on each partial). Per partial the multiplier is
+   `1 + (1 - s) * (shared - 1) + s * (own - 1)` with `s = analogSpread`. At `s = 1` exactly the
+   shared lane is not advanced (the hand-rolled sound, every `Osc.sine` in the stack owning its
+   drift); at `s = 0` exactly only the shared lane is advanced, one walk for the whole bank, cheaper
+   than either. `analog = 0` skips all of it.
 
 Per sample, one loop over partials, one `sin()` each, summed into the buffer:
 
@@ -266,6 +280,11 @@ KSP), and committed on the working branch when clean.
 - A `Param`-driven `harmonics` changes the partial count at the next block; shrinking then growing
   does not reallocate (growth-only rule).
 - Band limit: a partial at or above Nyquist contributes exactly zero (decision 1).
+- Drift lanes: with `analog > 0` and `analogSpread = 0`, the ratio between any two partials'
+  instantaneous frequencies stays exactly their multiple ratio (zero-crossing counts over a long
+  render); with `analogSpread = 1` and a seeded RNG, partial k equals a standalone `sine()` at
+  `k * f` driven by the same seed sequence; a mid value lands between the two (a mutation that
+  drops the shared term must fail this).
 - Frequency of each partial by zero-crossing count, the `IgnitorsTest` sine pattern.
 - `pitchEnvelope` over the bank moves every partial (a `phaseMod` case).
 
@@ -294,6 +313,8 @@ Decide phase 2 (5.3) on that number.
 - Sine partials only; no `wave` knob.
 - Downward: `suboctaves` in, with the mirrored gain law; sub-harmonics (f/3 and beyond) are
   won't-implement (section 2 has the reasoning).
+- Drift lanes are configurable through `analogSpread`, a 0 to 1 blend from one shared lane to
+  one lane per partial (2026-09-07). The `analog` depth stays one value for the whole sine.
 
 **Still open, need a yes:**
 
@@ -302,9 +323,10 @@ Decide phase 2 (5.3) on that number.
    raw sound, it is an alias at an unrelated pitch, and every additive engine band-limits.
 2. **No normalisation.** The bank is the raw sum; `harmonics(16)` is louder than `harmonics(8)`,
    and the user scales with `.mul()` as everywhere. Recommended: raw, matching the hand-rolled sound.
-3. **Per-partial analog drift** (each partial its own `PolyAnalogDrift` lane), matching the
-   hand-rolled stack where each `Osc.sine` drifted on its own. Recommended: yes; it keeps a harmonic
-   bank on a saw from sounding like a static EQ boost.
+3. **Default of `analogSpread`.** Recommended: 1, independent lanes, the sound already tuned in the
+   song and the reason a harmonic bank on a saw does not sound like a static EQ boost. 0 would make
+   "a sine with harmonics" behave like one physical oscillator by default. Either is defensible;
+   pick by ear on the bass with `analog` turned up.
 
 **Settled by the design, recorded so nobody reopens them:**
 
@@ -338,5 +360,5 @@ Decide phase 2 (5.3) on that number.
 ## What we built
 
 Designed together on 2026-09-06 from a hand-rolled stack in the bass and the question "could we
-make an operator out of this". Went from two doors to four knobs on the sine, from a boolean to a
-gain, and drew the line at sub-harmonics, in one afternoon of questions.
+make an operator out of this". Went from two doors to five knobs on the sine, from a boolean to a
+gain, drew the line at sub-harmonics, and made the drift lanes a blend, over two days of questions.
