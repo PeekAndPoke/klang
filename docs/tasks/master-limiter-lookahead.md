@@ -303,7 +303,7 @@ A lookahead limiter delays the signal it protects. On the master that is harmles
 — `lookahead` will exist on the master limiter and nowhere else. That is a justified exception, **and it must be
 documented as one** in the parity audit, or the next person will "fix" it.
 
-Therefore **untouched**: `sprudel/lang/lang_dynamics.kt` (all 8 `compressor`/`comp` forms),
+Therefore **untouched**: `sprudel/lang/lang_dynamics_compressor.kt` (all 8 `compressor`/`comp` forms),
 `Compressor.parseSettings`'s 5-slot and 2-slot arms, `SprudelCompressorEditorTool`, and the
 `@param-sub` docs. Nothing in sprudel changes.
 

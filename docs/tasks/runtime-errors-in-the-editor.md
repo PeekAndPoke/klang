@@ -67,7 +67,7 @@ carries the location.
 
 | Site | Message seen in console |
 |---|---|
-| `sprudel/.../lang/lang_structural.kt:2015` | "Error applying layer transform: ..." (the one hit in this case) |
+| `sprudel/.../lang/lang_structural_layer.kt` | "Error applying layer transform: ..." (the one hit in this case) |
 | `sprudel/.../lang/lang_helpers.kt:148` | "Error while chaining pattern mappers: ..." |
 | `sprudel/.../lang/lang_helpers.kt:172` | "Error while invoking pattern mapper: ..." |
 

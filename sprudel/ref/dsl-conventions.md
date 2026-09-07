@@ -1,19 +1,18 @@
-# Sprudel — DSL Conventions (`lang_*.kt`)
+# Sprudel — DSL Conventions (`lang_<group>_<subgroup>.kt`)
 
-## Before Adding Any DSL Function — Ask First
+## Where a New Function Goes
 
-**Always ask the user:** "Is this an original Strudel function or a Klang addon?"
-
-- **Original Strudel** → goes in the appropriate `lang_*.kt` file (e.g. `lang_structural.kt`)
-- **Addon** → goes in `lang/addons/lang_*_addons.kt` and requires `addon` in `@tags`
-
-See `ref/dsl-addons.md` for addon rules and conventions.
+Every DSL file is `lang_<group>_<subgroup>.kt`: the group is the concept area (`structural`,
+`tempo`, `filters`, `effects`, `tonal`, `picking`, ...), the subgroup is what its functions do to
+that concept (`lang_structural_mask.kt`, `lang_effects_reverb.kt`, `lang_picking_pick.kt`).
+A new function goes in the file its group names. If no subgroup fits, add one rather than growing
+a file past ~700 lines.
 
 ## Pattern for Every DSL Function
 
 > ⚠️ Historical note: an older delegate API (`@SprudelDsl`, `dslFunction`, `dslPatternExtension`,
-> init sentinel vars) no longer exists. Current reality below — `lang_body.kt` and
-> `lang/addons/lang_structural_addons.kt` are good reference implementations.
+> init sentinel vars) no longer exists. Current reality below — `lang_effects_body.kt` and
+> `lang_structural_tag.kt` are good reference implementations.
 
 **1.** File header registers the library; every public form is a plain `fun` annotated
 `@KlangScript.Function` (registration into KlangScript is fully automatic via `klangscript-ksp` —
@@ -44,6 +43,9 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
     this.chain { p -> p.foo(amount, callInfo) }
 ```
 
+See `tag()` in `lang_structural_tag.kt` for a full four-form example, including the mapper forms
+(c) and (d) and a literal (non-mini-notation) string parameter.
+
 **3.** Writing into voice data — pick the right idiom:
 
 - `voiceSetter { ... }` (`lang_helpers.kt`) mutates in place — the fast path, safe because every
@@ -54,7 +56,7 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
   accepting control patterns** — static values work without it, control patterns silently break.
 - **Literal (non-patternable) arguments must NOT go through the lift helpers** — those parse
   strings as mini-notation. Use `reinterpretVoice { }` instead (precedents: `pipeline(dsl)` in
-  `lang_pipeline.kt`, `tag(name)` in `lang_structural_addons.kt`).
+  `lang_pipeline.kt`, `tag(name)` in `lang_structural_tag.kt`).
 
 ## Field accessors and mapper arguments (2026-09-06, pilot: `freq`)
 

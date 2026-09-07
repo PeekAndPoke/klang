@@ -39,8 +39,8 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 
 ### L4. Sprudel DSL boilerplate duplication
 
-- `lang_pattern_picking.kt` (2387 lines) — 5 near-identical `dispatch*` functions, ~16 functions per variant
-- `lang_euclid.kt` — arg-parsing `when` block duplicated 10+ times
+- `lang_picking_*.kt` (seven files, ~2 480 lines) — 5 near-identical `dispatch*` functions, ~16 functions per variant
+- `lang_euclid_basic.kt` / `lang_euclid_legato.kt` — arg-parsing `when` block duplicated 10+ times
 - `SprudelVoiceValue.kt:292-349` — fraction parsing duplicated between decoder branches
 - **Constraint:** only unify internals; user-facing DSL functions and registration must not change
 - Large refactor with risk; flag for future sprint

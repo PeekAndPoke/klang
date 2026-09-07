@@ -13,7 +13,7 @@ Setters behave differently and as expected: `s("hh*8").pan(sine.range(0, 1))` sw
 
 ## Cause
 
-`applyArithmetic` (`lang_arithmetic.kt`) joins through `_innerJoin(args)`, which is
+`applyArithmetic` (`lang_arithmetic_math.kt`) joins through `_innerJoin(args)`, which is
 `control._bind { ... }`: the STRUCTURE comes from the control. A `ContinuousPattern` queried
 over the arc `[0, 1)` emits one event with the value computed at `from`, so every source event in
 that cycle receives the value at the cycle start.

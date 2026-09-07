@@ -2,9 +2,9 @@
 
 Opened 2026-09-07 as the follow-up of the field-accessor rollout
 (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`). Every other compound door is an
-object with named slots and reader children; the `snd*` family in
-`sprudel/src/commonMain/kotlin/lang/addons/lang_snd_addons.kt` is the one surface still built from
-per-sound functions. Maintainer's idea (2026-09-07): "the snd* prefix looks like it would happily
+object with named slots and reader children; the `snd*` family
+(`sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt` and
+`lang_synthesis_snd_super.kt`) is the one surface still built from per-sound functions. Maintainer's idea (2026-09-07): "the snd* prefix looks like it would happily
 live on an object as well: `object Snd { object supersaw { fields } }`. Not fully sure."
 
 ## The surface today (19 doors, all `@KlangScript.Function`, no objects, no readers)

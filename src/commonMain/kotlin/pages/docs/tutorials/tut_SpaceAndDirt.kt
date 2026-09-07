@@ -21,7 +21,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *   time defaults to 0.0. So a bare `room(0.4)` and a bare `delay(0.4)` are both
  *   SILENT. §1 introduces the pair and §2 proves it by ear.
  *   Two `KlangScript(Playable)` KDoc examples were silent for this reason and were fixed
- *   at source in the same change (lang_effects.kt).
+ *   at source in the same change (lang_effects_reverb.kt, lang_effects_delay.kt).
  * - `room(wet, size, fade, ...)`: the `fade` slot OVERRIDES `size` in the engine. The
  *   lesson never sets `fade`, so it cannot walk into that.
  * - `room(size)` scale is ~0..10 (3 ≈ 1 s tail, 5 ≈ 1.4 s, 10 ≈ 12.5 s). Prose stays at

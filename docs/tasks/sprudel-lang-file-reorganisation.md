@@ -4,7 +4,12 @@ Opened 2026-09-07. Maintainer request: "our sprudel impl has diverged significan
 so the whole addons concept does not even make sense anymore" plus "some files are enormous, which
 is not ideal for coding agents".
 
-Status: IN EXECUTION since 2026-09-07. Written to be executed by an Opus agent with no prior context.
+Status: DONE 2026-09-07, all three phases. `lang/addons/` is dissolved, its package
+`io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag are gone, and the 28 `lang_*.kt`
+files (20 in `lang/`, 8 in `lang/addons/`) are now 70 files named `lang_<group>_<subgroup>.kt`.
+The largest lang file is 622 lines (`lang_structural_cat.kt`); `lang_structural.kt` was 4 651.
+Phase 3 rewrote the documents that described the old layout and deleted `sprudel/ref/dsl-addons.md`.
+This document stays as the record of why the layout looks like this.
 
 **Revised 2026-09-07 after the accessor rework landed** (commits `d9b6c8e3` batch E, `0c535555`
 batch F, `95705370` batch G). Compound doors became single objects with slot children, which

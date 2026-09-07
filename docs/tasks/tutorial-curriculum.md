@@ -218,7 +218,8 @@ stages must not carry it.
   send: reverb is inactive unless `roomSize >= 0.01` (defaults to 0.0) and delay is Off
   unless `time >= 0.01` (defaults to 0.0), so a bare `room(0.4)` and a bare
   `delay(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
-  three silent `KlangScript(Playable)` KDoc examples were fixed at source in `lang_effects.kt`.
+  three silent `KlangScript(Playable)` KDoc examples were fixed at source in the reverb and delay
+  files (`lang_effects_reverb.kt`, `lang_effects_delay.kt`).
   (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
   distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
   (c) `gain` and `postgain` are BOTH applied at the voice output in SendRenderer, so `gain`
@@ -263,8 +264,8 @@ stages must not carry it.
   the stack is SUM-NORMALIZED, so layer-count A/Bs are level-matched by construction; defaults
   are `voices` 8, `spread` 0.2, `analog` 0.0, so a bare `sound("supersaw")` is already eight
   layers; `spread` is in SEMITONES and `analog` is peak drift in CENTS (the sprudel KDoc claimed
-  0.0-1.0 and was WRONG, corrected at source in `lang_osc_addons.kt` the way A4's `lpe` was, and
-  eight stale `.detune(0.3)` examples on `unison`/`uni`/`voices` were repaired at the same time,
+  0.0-1.0 and was WRONG, corrected at source in `lang_synthesis_oscparam.kt` the way A4's `lpe`
+  was, and eight stale `.detune(0.3)` examples on `unison`/`uni`/`voices` were repaired at the same time,
   since sprudel's `detune()` no longer exists); the slow drift layer is seeded at CENTRE, so
   drift only develops on HELD notes, which is why the lesson's drift section wears A2's pad
   shape plus B9's `.slow(2)`. Licensed term: "unison layers". Open: the compile gate has not

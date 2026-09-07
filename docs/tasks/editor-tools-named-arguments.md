@@ -51,7 +51,7 @@ path uses the cursor node range (the value only), so only the fallback has this 
 
 - The delay editor has no control for the `cap` slot; the phaser editor has no control for
   `floor` (`docs/tasks/sprudel-ui-tools.md` table).
-- The tremolo `sync` slot is an LFO rate in Hz (`TremoloRenderer.kt`, `lang_effects.kt`
+- The tremolo `sync` slot is an LFO rate in Hz (`TremoloRenderer.kt`, `lang_effects_modulation.kt`
   `@param sync`); any tool or doc that presents it as cycles per cycle is wrong.
 - Compound slots carry no aliases any more; the alias columns in `sprudel-ui-tools.md` were
   collapsed accordingly.

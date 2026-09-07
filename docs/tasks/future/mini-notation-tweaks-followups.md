@@ -16,7 +16,7 @@ note("c3 e3{swell} g3{swell bend}").tweaks({
 ```
 
 Shipped in commits `a8b0b4f6`, `5ceda001`, `dbe2dc75`: `SprudelVoiceData.tweaks: List<String>?`,
-`pattern/TweaksPattern.kt`, `tweak()`/`tweaks()` in `lang_structural_addons.kt`, and the removal of
+`pattern/TweaksPattern.kt`, `tweak()`/`tweaks()` in `lang_structural_tag.kt`, and the removal of
 the old `{key=value}` attribute block. Works on `note()`, `n()`, `s()`, chords, and through
 `scale()`.
 
@@ -59,7 +59,8 @@ step like every existing chip, so it does not fit the `mnModChip` shape as-is.
 
 ## 4. Phase 6 docs, half done
 
-Done: `sprudel/ref/dsl-addons.md` rows, and the KDoc on all forms including the verb-noun caveat
+Done: the reference rows (in `sprudel/ref/dsl-addons.md`, deleted 2026-09-07 with the addons split),
+and the KDoc on all forms including the verb-noun caveat
 (`.tweak("bend")` reads as a verb but only marks).
 
 Not done: tutorials, and the editor popup category.

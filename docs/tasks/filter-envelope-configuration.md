@@ -29,8 +29,8 @@ Sprudel DSL** — plus a note on ignitor-internal filters.
   (`Voice.kt:157-159`). The renderer already supports per-curve filter envelopes
   (`EnvelopeCalc.calculateControlRateEnvelope` reads `env.decayCurve` / `env.releaseCurve`) — it's just never
   fed anything but the default.
-- **Sprudel:** `.lpadsr` / `.lpe` / `.lpq` / `.lpf` set times/depth/Q/cutoff (`lang_filters.kt`,
-  `lang_filters.kt`, the `lpf` compound since 2026-09-07); `FilterEnvDef` is assembled in `SprudelVoiceData.kt:~772-782` from the `Svd*`
+- **Sprudel:** the `lpf` compound sets cutoff, Q, depth and the envelope times through its slots
+  (`lang_filters_lpf.kt`, since 2026-09-07); `FilterEnvDef` is assembled in `SprudelVoiceData.kt:~772-782` from the `Svd*`
   filter fields. **No curve fields, no curve DSL.**
 
 The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → `AdsrDef.Std` curves → resolve →
@@ -62,7 +62,7 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 - `SprudelVoiceData.kt`: add `lpAttackCurve / lpDecayCurve / lpReleaseCurve` (nullable) to the `Svd*` filter
   group; thread into the `FilterEnvDef` construction (`:~772-782`).
 - New DSL object **`lpCurves(attack, decay, release)`** (mirror of `adsrCurves`, setter only, parse `AdsrCurve` per stage) in
-  `lang_filters.kt` next to the `lpf` compound (2026-09-07 naming; `lang_effects_addons.kt` no longer exists); plus mapper/string-receiver overloads per the DSL
+  `lang_filters_lpf.kt` next to the `lpf` compound; plus mapper/string-receiver overloads per the DSL
   conventions. Follow [[feedback_klangscript_no_named_params]] / `/sprudel-dev-knowhow` for the function shape.
 - KlangScript surface only if the amp `adsrCurves` is exposed there (match it).
 
@@ -92,5 +92,5 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 |-----------|---------------------------------------------------------------------------------------------------------------------------|
 | Wire      | `audio_bridge/.../FilterEnvDef.kt`, `FilterDef.kt`; codec ([[project_worklet_serialization]])                             |
 | Backend   | `audio_be/.../voices/VoiceFactory.kt` (~428), `voices/Voice.kt`, `voices/strip/EnvelopeCalc.kt`                           |
-| DSL       | `sprudel/.../SprudelVoiceData.kt` (~772-782 + `Svd*` group), `lang/lang_filters.kt` |
+| DSL       | `sprudel/.../SprudelVoiceData.kt` (~772-782 + `Svd*` group), `lang/lang_filters_lpf.kt` |
 | Templates | amp curves: `.adsrCurves` → `AdsrDef` → `Voice.Envelope.of` (`VoiceFactory.kt:479`)                                       |

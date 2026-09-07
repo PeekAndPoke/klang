@@ -9,7 +9,7 @@ Loads context for working on the `sprudel` Kotlin/Multiplatform module — Klang
 for live coding music. Sprudel is a sibling of the JavaScript [Strudel](https://strudel.cc) pattern
 language, sharing the same roots and many of the same ideas but now taking its own direction.
 Also covers `sprudel-ksp`, the KSP processor that extracts DSL documentation from KDoc blocks on
-`@SprudelDsl`-annotated items.
+`@KlangScript.Function`-annotated items.
 
 ## Context to Read
 
@@ -25,7 +25,6 @@ Also covers `sprudel-ksp`, the KSP processor that extracts DSL documentation fro
 | Understanding events, part/whole, isOnset, operation categories   | `sprudel/ref/event-model.md`      |
 | Working with control patterns, `_innerJoin`, `fmap`/`squeezeJoin` | `sprudel/ref/control-patterns.md` |
 | Adding or documenting DSL functions in `lang_*.kt`                | `sprudel/ref/dsl-conventions.md`  |
-| Adding addon functions in `lang/addons/`                          | `sprudel/ref/dsl-addons.md`       |
 | Running or writing tests                                          | `sprudel/ref/testing.md`          |
 | Building or modifying UI editor tools                             | `sprudel/ref/uitools.md`          |
 

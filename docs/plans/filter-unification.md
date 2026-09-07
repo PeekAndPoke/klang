@@ -281,7 +281,7 @@ of sprudel's unordered model, not a naming preference; document it so nobody lat
 up" into the ordered form that cannot work. `blend`, `bodyMix`, `vowelMix` go. Note `bodyFloor()`
 and `vowelFloor()` ALREADY exist on sprudel with exactly these names; they are kept, not added.
 **COLLISION on the ignitor door:** `floor()` = round-down already exists as an arithmetic
-function on `SprudelPattern` (`lang_arithmetic.kt`). A `.floor()` meaning "minimum dry
+function on `SprudelPattern` (`lang_arithmetic_numeric.kt`). A `.floor()` meaning "minimum dry
 coefficient" on the ignitor effect nodes is one word for two concepts across doors. The
 prefixed sprudel names (`bodyFloor`) do not collide; the bare ignitor `.floor()` does. Decide
 in the C4 review: a different word on the ignitor (`dryFloor`?) or accept the cross-door
@@ -440,7 +440,7 @@ for the doomed. C6a removes the doomed; C0 then reshapes what remains.
     exactly the "colon is already taken" reason the compound-parameter form must go, and they
     are untouched.
 - **THE TRAP in the filter migration:** today's third colon slot of `lpf/hpf/bpf/notchf` is the
-  ENVELOPE DEPTH (`lang_filters.kt:26`: `lpenv = parts[2]`), while the plan's per-param shape is
+  ENVELOPE DEPTH (`lang_filters_lpf.kt`: `lpenv = parts[2]`), while the plan's per-param shape is
   `(freq, q, passes)`. A mechanical `"a:b:c"` -> `(a, b, c)` sweep COMPILES, looks right, and
   reinterprets depth as pass count: `IrishLamentTechno.kt:102` `lpf("80:1.2:60")` would become
   a bass with SIXTY filter passes. The correct target is `.lpf(freq = f, q = q, env = env)`, and it must land

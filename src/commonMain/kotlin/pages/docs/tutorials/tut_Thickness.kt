@@ -27,7 +27,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * - `spread` is in SEMITONES (±spread/2 per edge layer); `analog` is peak drift in
  *   CENTS (±analog cents, AnalogDrift/PolyAnalogDrift), NOT the 0..1 the sprudel KDoc
  *   used to claim. That KDoc was wrong and was corrected at source in the same change
- *   as this lesson (lang_osc_addons.kt), the way A4's `lpe` unit was.
+ *   as this lesson (lang_synthesis_oscparam.kt), the way A4's `lpe` unit was.
  * - The slow drift layer is seeded at CENTRE so every note attacks in tune, and only
  *   develops over a held note (~10 s time constant). That is why §4 wears A2's pad
  *   shape and B9's `.slow(2)`: on a pluck there is nothing to hear, by design.

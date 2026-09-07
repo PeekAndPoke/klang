@@ -7,7 +7,7 @@
 
 ## The gap (root cause of the "Function `X` is never used" warnings)
 
-Each sprudel DSL operation is defined in (up to) four overload shapes in `lang/` + `lang/addons/`:
+Each sprudel DSL operation is defined in (up to) four overload shapes in `lang/`:
 
 - (a) `SprudelPattern.X(...)` — the pattern-receiver form
 - (b) `String.X(...)` — the string-receiver form
@@ -36,11 +36,11 @@ untested, not dead.
 5 addon files cleared (per the working memory): the `snd*` addon block (`sndZamp` + a consolidated
 `PatternMapperFn.sndX` form-(d) case via `gain(1.0).sndX()`), `LangDutySpec` (new), and form-(d) cases added to
 `LangHpadsr/Bpadsr/Nfadsr/Nresonance/Nfattack/Nfdecay/Nfsustain/Nfrelease/Nfenv/Oscparam` specs; `@Suppress`
-on the `lang_arithmetic_addons.kt` vestigial params (`flipSign`/`oneMinusValue`/`not`/`abs`).
+on the `lang_arithmetic_numeric.kt` vestigial params (`flipSign`/`oneMinusValue`/`not`/`abs`).
 
 ## Remaining
 
-Walk the rest of `lang/` + `lang/addons/` file-by-file. For each file: run the IDE inspection, and for every
+Walk the rest of `lang/` file-by-file. For each file: run the IDE inspection, and for every
 "Function `X` is never used" on a `PatternMapperFn.X` overload, apply the fix above. The new `voices()` alias (retired 2026-09-07 into `unison(voices)`)
 (2026-06-30) already ships with its form-(d) covered in `LangUnisonSpec` — use it as the template.
 
@@ -58,6 +58,6 @@ Since we're touching every file anyway, also note/fix:
 
 ## Critical files
 
-- `sprudel/src/commonMain/kotlin/lang/**` and `lang/addons/**` (definitions).
+- `sprudel/src/commonMain/kotlin/lang/**` (definitions).
 - `sprudel/src/commonTest/kotlin/lang/**` (specs + the `dslInterfaceTests` harness).
 - Working memory: `sprudel_dsl_test_coverage.md`.
