@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("ObjectPropertyName")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -14,6 +14,32 @@ import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import io.peekandpoke.ultra.datetime.Kronos
 import kotlin.math.PI
 import kotlin.math.sin
+
+// -- time -------------------------------------------------------------------------------------------------------------
+
+private val timeBase: SprudelPattern by lazy { applySignal { t -> t } }
+
+/**
+ * Continuous ramp — current cycle time, increases linearly by `1.0` per cycle.
+ *
+ * At cycle `n`, the value equals `n + fraction_of_cycle`. Useful as a time-dependent modulation
+ * source or for creating patterns that evolve over many cycles. Use [range] or [rangex] to map
+ * it to a target parameter range.
+ *
+ *
+ * ```KlangScript(Playable)
+ * time.range(100.0, 255.0).freq().segment(128)  // linearly rising frequency per cycle
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * time.rangex(100.0, 2000.0).freq().segment(128)  // exponentially rising frequency over time
+ * ```
+ * @category continuous
+ * @tags time, continuous, linear, ramp
+ */
+@KlangScript.Constant
+val time: SprudelPattern = timeBase
+
 // -- cps() ------------------------------------------------------------------------------------------------------------
 
 /**
