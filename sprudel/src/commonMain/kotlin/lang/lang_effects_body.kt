@@ -73,7 +73,12 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @tags body, material, wet, floor
  */
 @KlangScript.Function
-fun SprudelPattern.body(material: PatternLike? = null, wet: PatternLike? = null, floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.body(
+    material: PatternLike? = null,
+    wet: PatternLike? = null,
+    floor: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern {
     // A tail-only call must not touch material: reinterpret runs only on a fully bare call.
     var p = if (material != null || !(wet != null || floor != null)) {
         applyBody(this, listOfNotNull(material).asSprudelDslArgs(callInfo))
@@ -87,12 +92,22 @@ fun SprudelPattern.body(material: PatternLike? = null, wet: PatternLike? = null,
 
 /** Parses this string as a pattern, then applies [body]. */
 @KlangScript.Function
-fun String.body(material: PatternLike? = null, wet: PatternLike? = null, floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+fun String.body(
+    material: PatternLike? = null,
+    wet: PatternLike? = null,
+    floor: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).body(material, wet, floor, callInfo)
 
 /** Chains a [body] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.body(material: PatternLike? = null, wet: PatternLike? = null, floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+fun PatternMapperFn.body(
+    material: PatternLike? = null,
+    wet: PatternLike? = null,
+    floor: PatternLike? = null,
+    callInfo: CallInfo? = null
+): PatternMapperFn =
     this.chain { p -> p.body(material, wet, floor, callInfo) }
 
 /**
@@ -116,6 +131,11 @@ object body {
 
     /** The setter, see [SprudelPattern.body]. */
     @KlangScript.Invoke
-    operator fun invoke(material: PatternLike? = null, wet: PatternLike? = null, floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    operator fun invoke(
+        material: PatternLike? = null,
+        wet: PatternLike? = null,
+        floor: PatternLike? = null,
+        callInfo: CallInfo? = null
+    ): PatternMapperFn =
         { p -> p.body(material, wet, floor, callInfo) }
 }

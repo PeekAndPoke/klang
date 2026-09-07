@@ -15,6 +15,7 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+
 // -- vowel -----------------------------------------------------------------------------------------------------------
 
 private fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -71,7 +72,12 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * @tags vowel, wet, floor
  */
 @KlangScript.Function
-fun SprudelPattern.vowel(vowel: PatternLike? = null, wet: PatternLike? = null, floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.vowel(
+    vowel: PatternLike? = null,
+    wet: PatternLike? = null,
+    floor: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern {
     // A tail-only call must not touch vowel: reinterpret runs only on a fully bare call.
     var p = if (vowel != null || !(wet != null || floor != null)) {
         applyVowel(this, listOfNotNull(vowel).asSprudelDslArgs(callInfo))
@@ -85,12 +91,22 @@ fun SprudelPattern.vowel(vowel: PatternLike? = null, wet: PatternLike? = null, f
 
 /** Parses this string as a pattern, then applies [vowel]. */
 @KlangScript.Function
-fun String.vowel(vowel: PatternLike? = null, wet: PatternLike? = null, floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+fun String.vowel(
+    vowel: PatternLike? = null,
+    wet: PatternLike? = null,
+    floor: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).vowel(vowel, wet, floor, callInfo)
 
 /** Chains a [vowel] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.vowel(vowel: PatternLike? = null, wet: PatternLike? = null, floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+fun PatternMapperFn.vowel(
+    vowel: PatternLike? = null,
+    wet: PatternLike? = null,
+    floor: PatternLike? = null,
+    callInfo: CallInfo? = null
+): PatternMapperFn =
     this.chain { p -> p.vowel(vowel, wet, floor, callInfo) }
 
 /**
@@ -114,6 +130,11 @@ object vowel {
 
     /** The setter, see [SprudelPattern.vowel]. */
     @KlangScript.Invoke
-    operator fun invoke(vowel: PatternLike? = null, wet: PatternLike? = null, floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    operator fun invoke(
+        vowel: PatternLike? = null,
+        wet: PatternLike? = null,
+        floor: PatternLike? = null,
+        callInfo: CallInfo? = null
+    ): PatternMapperFn =
         { p -> p.vowel(vowel, wet, floor, callInfo) }
 }
