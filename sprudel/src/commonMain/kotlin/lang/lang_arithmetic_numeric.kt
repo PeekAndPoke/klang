@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("ObjectPropertyName")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -18,6 +18,85 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 import io.peekandpoke.klang.sprudel.mapEvents
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
+
+// -- round() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Rounds every numeric value in the pattern to the nearest integer.
+ *
+ * @return A new pattern with each value rounded to the nearest integer.
+ * @category arithmetic
+ * @tags round, rounding, arithmetic, math
+ */
+@KlangScript.Function
+fun SprudelPattern.round(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+// Half-up rounding (floor(x+0.5)) to match the previous behavior; kotlin.math.round is
+    // half-to-even (banker's), which would round 2.5 -> 2.
+    applyUnaryOp(this) { v -> v.asDouble?.let { floor(it + 0.5) }?.asVoiceValue() ?: v }
+
+@KlangScript.Function
+fun String.round(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).round(callInfo)
+
+@KlangScript.Function
+fun round(callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.round(callInfo) }
+
+@KlangScript.Function
+fun PatternMapperFn.round(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.round(callInfo) }
+
+// -- floor() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Floors every numeric value in the pattern to the largest integer less than or equal to the value.
+ *
+ * @return A new pattern with each value floored to an integer.
+ * @category arithmetic
+ * @tags floor, rounding, arithmetic, math
+ */
+@KlangScript.Function
+fun SprudelPattern.floor(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    applyUnaryOp(this) { v -> v.asDouble?.let { floor(it) }?.asVoiceValue() ?: v }
+
+@KlangScript.Function
+fun String.floor(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).floor(callInfo)
+
+@KlangScript.Function
+fun floor(callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.floor(callInfo) }
+
+@KlangScript.Function
+fun PatternMapperFn.floor(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.floor(callInfo) }
+
+// -- ceil() -----------------------------------------------------------------------------------------------------------
+
+/**
+ * Ceils every numeric value in the pattern to the smallest integer greater than or equal to the value.
+ *
+ * @return A new pattern with each value ceiled to an integer.
+ * @category arithmetic
+ * @tags ceil, ceiling, rounding, arithmetic, math
+ */
+@KlangScript.Function
+fun SprudelPattern.ceil(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    applyUnaryOp(this) { v -> v.asDouble?.let { ceil(it) }?.asVoiceValue() ?: v }
+
+@KlangScript.Function
+fun String.ceil(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).ceil(callInfo)
+
+@KlangScript.Function
+fun ceil(callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.ceil(callInfo) }
+
+@KlangScript.Function
+fun PatternMapperFn.ceil(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.ceil(callInfo) }
 
 // -- negateValue  -----------------------------------------------------------------------------------------------------
 
@@ -129,66 +208,6 @@ val oneMinusValue: PatternMapperFn = { p -> p.oneMinusValue() }
 @KlangScript.Function
 fun PatternMapperFn.oneMinusValue(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.oneMinusValue(callInfo) }
-
-// -- not --------------------------------------------------------------------------------------------------------------
-
-private fun applyNot(pattern: SprudelPattern): SprudelPattern {
-    return pattern.reinterpret { evt ->
-        val current = evt.data.isTruthy()
-        val withNot = !current
-
-        evt.copy(data = evt.data.copy(value = withNot.asVoiceValue()))
-    }
-}
-
-/**
- * Applies logical NOT to each event's boolean value.
- *
- * Truthy values become `false`; falsy values become `true`. Useful for inverting
- * gate or trigger patterns.
- *
- * ```KlangScript(Playable)
- * "1 0 0 1".not().scale("c4:minor").n()   // becomes: false true true false
- * ```
- *
- * @category arithmetic
- * @tags not, logical, boolean, gate, invert
- */
-@KlangScript.Function
-@Suppress("UNUSED_PARAMETER") // callInfo is part of the uniform DSL signature; this unary op has no arg to locate
-fun SprudelPattern.not(callInfo: CallInfo? = null): SprudelPattern = applyNot(this)
-
-/**
- * Applies logical NOT to a string pattern's boolean values.
- *
- * ```KlangScript(Playable)
- * "1 0 0 1".not().scale("c4:minor").n()   // becomes: false true true false
- * ```
- */
-@KlangScript.Function
-fun String.not(callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).not(callInfo)
-
-/**
- * Applies logical NOT as a [PatternMapperFn], inverting each event's boolean value.
- *
- * ```KlangScript(Playable)
- * note("c d e f").degradeBy("1 0 1 0".apply(not))   // invert a degrade pattern into a gate
- * ```
- */
-@KlangScript.Constant
-val not: PatternMapperFn = { p -> p.not() }
-
-/**
- * Chains a logical NOT onto this [PatternMapperFn], inverting every boolean value in the result.
- *
- * ```KlangScript(Playable)
- * seq("1 0").apply(mul(1).not())  // not(1*1)=false, not(0*1)=true
- * ```
- */
-@KlangScript.Function
-fun PatternMapperFn.not(callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.not(callInfo) }
 
 // -- abs --------------------------------------------------------------------------------------------------------------
 
