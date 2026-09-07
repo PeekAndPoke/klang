@@ -186,14 +186,6 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).analog(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `analog(...)`.
- *
- * Kotlin door only: the script reaches this through `analog(...)`, which is [Analog.invoke].
- */
-fun analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.analog(amount, callInfo) }
-
-/**
  * The analog drift amount of each event, as a value other setters can read.
  *
  * Bare `analog` reads what the chain has set so far, so it comes after whatever set the field
@@ -226,7 +218,7 @@ object Analog : FieldAccessor({ it.oscParams?.get("analog") }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        analog(amount, callInfo)
+        { p -> p.analog(amount, callInfo) }
 }
 
 /** The [Analog] accessor as a value, so the Kotlin door reads like the script. */
@@ -289,14 +281,6 @@ fun String.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).duty(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `duty(...)`.
- *
- * Kotlin door only: the script reaches this through `duty(...)`, which is [Duty.invoke].
- */
-fun duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.duty(amount, callInfo) }
-
-/**
  * The pulse duty cycle of each event, as a value other setters can read.
  *
  * Bare `duty` reads what the chain has set so far, so it comes after whatever set the field
@@ -324,7 +308,7 @@ object Duty : FieldAccessor({ it.oscParams?.get("duty") }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        duty(amount, callInfo)
+        { p -> p.duty(amount, callInfo) }
 }
 
 /** The [Duty] accessor as a value, so the Kotlin door reads like the script. */
@@ -398,14 +382,6 @@ fun String.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
     this.toVoiceValuePattern(callInfo?.receiverLocation).onepole(freq, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `onepole(...)`.
- *
- * Kotlin door only: the script reaches this through `onepole(...)`, which is [Onepole.invoke].
- */
-fun onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.onepole(freq, callInfo) }
-
-/**
  * The one-pole lowpass cutoff of each event, as a value other setters can read.
  *
  * Bare `onepole` reads what the chain has set so far, so it comes after whatever set the field
@@ -437,7 +413,7 @@ object Onepole : FieldAccessor({ it.oscParams?.get("onepole") }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        onepole(freq, callInfo)
+        { p -> p.onepole(freq, callInfo) }
 }
 
 /** The [Onepole] accessor as a value, so the Kotlin door reads like the script. */

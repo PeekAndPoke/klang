@@ -123,14 +123,6 @@ fun String.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmh(ratio, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `fmh(...)`.
- *
- * Kotlin door only: the script reaches this through `fmh(...)`, which is [Fmh.invoke].
- */
-fun fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.fmh(ratio, callInfo) }
-
-/**
  * The FM harmonicity ratio of each event, as a value other setters can read.
  *
  * Bare `fmh` reads what the chain has set so far, so it comes after whatever set the field
@@ -163,7 +155,7 @@ object Fmh : FieldAccessor({ it.fmh }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(ratio: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        fmh(ratio, callInfo)
+        { p -> p.fmh(ratio, callInfo) }
 }
 
 /** The [Fmh] accessor as a value, so the Kotlin door reads like the script. */
@@ -217,14 +209,6 @@ fun String.fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmattack(seconds, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `fmattack(...)`.
- *
- * Kotlin door only: the script reaches this through `fmattack(...)`, which is [Fmattack.invoke].
- */
-fun fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.fmattack(seconds, callInfo) }
-
-/**
  * The FM envelope attack of each event, as a value other setters can read.
  *
  * Bare `fmattack` reads what the chain has set so far, so it comes after whatever set the field
@@ -259,7 +243,7 @@ object Fmattack : FieldAccessor({ it.fmAttack }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        fmattack(seconds, callInfo)
+        { p -> p.fmattack(seconds, callInfo) }
 }
 
 /** The [Fmattack] accessor as a value, so the Kotlin door reads like the script. */
@@ -285,10 +269,6 @@ fun SprudelPattern.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = nul
 @KlangScript.Function
 fun String.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmatt(seconds, callInfo)
-
-/** Kotlin door only: alias of [fmattack]; the script reaches it through `fmatt(...)`. */
-fun fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.fmatt(seconds, callInfo) }
 
 /**
  * Alias of [fmattack]: the same accessor under another name.
@@ -347,14 +327,6 @@ fun String.fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmdecay(seconds, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `fmdecay(...)`.
- *
- * Kotlin door only: the script reaches this through `fmdecay(...)`, which is [Fmdecay.invoke].
- */
-fun fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.fmdecay(seconds, callInfo) }
-
-/**
  * The FM envelope decay of each event, as a value other setters can read.
  *
  * Bare `fmdecay` reads what the chain has set so far, so it comes after whatever set the field
@@ -389,7 +361,7 @@ object Fmdecay : FieldAccessor({ it.fmDecay }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        fmdecay(seconds, callInfo)
+        { p -> p.fmdecay(seconds, callInfo) }
 }
 
 /** The [Fmdecay] accessor as a value, so the Kotlin door reads like the script. */
@@ -415,10 +387,6 @@ fun SprudelPattern.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = nul
 @KlangScript.Function
 fun String.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmdec(seconds, callInfo)
-
-/** Kotlin door only: alias of [fmdecay]; the script reaches it through `fmdec(...)`. */
-fun fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.fmdec(seconds, callInfo) }
 
 /**
  * Alias of [fmdecay]: the same accessor under another name.
@@ -478,14 +446,6 @@ fun String.fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmsustain(level, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `fmsustain(...)`.
- *
- * Kotlin door only: the script reaches this through `fmsustain(...)`, which is [Fmsustain.invoke].
- */
-fun fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.fmsustain(level, callInfo) }
-
-/**
  * The FM envelope sustain level of each event, as a value other setters can read.
  *
  * Bare `fmsustain` reads what the chain has set so far, so it comes after whatever set the field
@@ -520,7 +480,7 @@ object Fmsustain : FieldAccessor({ it.fmSustain }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        fmsustain(level, callInfo)
+        { p -> p.fmsustain(level, callInfo) }
 }
 
 /** The [Fmsustain] accessor as a value, so the Kotlin door reads like the script. */
@@ -547,10 +507,6 @@ fun SprudelPattern.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null)
 fun String.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmsus(level, callInfo)
 
-/** Kotlin door only: alias of [fmsustain]; the script reaches it through `fmsus(...)`. */
-fun fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.fmsus(level, callInfo) }
-
 /**
  * Alias of [fmsustain]: the same accessor under another name.
  *
@@ -576,14 +532,6 @@ private fun applyFmenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
     return source._liftNumericField(args, fmenvMutation)
 }
-
-/**
- * Builds a control pattern of FM envelope depths.
- *
- * Kotlin door only: the script reaches this through `fmenv(...)`, which is [Fmenv.invoke].
- */
-fun fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    listOf(depth).asSprudelDslArgs(callInfo).toPattern(fmenvMutation)
 
 /**
  * The FM envelope depth of each event, as a value other setters can read.
@@ -631,7 +579,7 @@ object Fmenv : FieldAccessor({ it.fmEnv }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-        fmenv(depth, callInfo)
+        listOf(depth).asSprudelDslArgs(callInfo).toPattern(fmenvMutation)
 }
 
 /** The [Fmenv] accessor as a value, so the Kotlin door reads like the script. */
@@ -646,10 +594,6 @@ fun SprudelPattern.fmenv(depth: PatternLike, callInfo: CallInfo? = null): Sprude
 @KlangScript.Function
 fun String.fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmenv(depth, callInfo)
-
-/** Kotlin door only: alias of [fmenv]; the script reaches it through `fmmod(...)`. */
-fun fmmod(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    fmenv(depth, callInfo)
 
 /**
  * Alias of [fmenv]: the same accessor under another name.

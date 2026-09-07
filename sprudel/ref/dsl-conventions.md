@@ -72,11 +72,13 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
   ```
 
 - The accessor is `@KlangScript.Library("sprudel") @KlangScript.Object("<name>") object <Name> :
-  FieldAccessor({ it.<field> })` with a `@KlangScript.Method(name = "invoke")` member that
-  delegates to the Kotlin factory (same parameters), plus an unannotated `val <name> = <Name>` for
-  the Kotlin door. The top-level factory `fun <name>(...)` stays for Kotlin and loses its
-  `@KlangScript.Function` (it would collide with the object); its KDoc moves onto `invoke`, the
-  object's KDoc describes the accessor with two playable examples and keeps the field's category.
+  FieldAccessor({ it.<field> })` with a `@KlangScript.Method(name = "invoke") operator fun invoke(...)
+  = { p -> p.<name>(...) }` member, plus an unannotated `val <name> = <Name>`. That val IS the
+  Kotlin door: `gain(0.5)` resolves through the invoke convention and `pan(gain)` reads the value,
+  so there is NO top-level `fun <name>(...)` factory (removed 2026-09-07, they were a second Kotlin
+  door). The old factory's KDoc lives on `invoke`; the object's KDoc describes the accessor with two
+  playable examples and keeps the field's category. The `val` is not annotated: the object
+  annotation already registers the script name, a second registration would collide.
   Never make the accessor a `PatternMapperFn`: see `MEMORY.md` 2026-09-06 for the ambiguity.
 - Every new accessor gets two rows in `LangFieldAccessorsSpec`: a mapper on its own field and the
   bare accessor read into another field, both doors.
@@ -91,7 +93,7 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
 - An alias (`rsize` for `roomsize`) is `@KlangScript.Constant val rsize: RoomSize = RoomSize` with
   a KDoc that carries `@category` and `@tags` (the property entry merges into the symbol first, so
   without them the docs page shows the alias as "uncategorized"; guarded by
-  `FreqAccessorIntelSpec`); its factory `fun rsize(...)` stays for Kotlin, unannotated. The editor types it
+  `FreqAccessorIntelSpec`). No alias factory either: `rsize(4)` in Kotlin is the constant's invoke. The editor types it
   as the canonical object, so `rsize(` shows the `roomsize(...)` signature. One alias row per alias.
 - Design record and rejected alternatives: `docs/tasks/sprudel-field-accessors.md`.
 

@@ -60,14 +60,6 @@ fun String.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
     this.toVoiceValuePattern(callInfo?.receiverLocation).begin(pos, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `begin(...)`.
- *
- * Kotlin door only: the script reaches this through `begin(...)`, which is [Begin.invoke].
- */
-fun begin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.begin(pos, callInfo) }
-
-/**
  * The sample start position of each event (0..1), as a value other setters can read.
  *
  * Bare `begin` reads what the chain has set so far, so it comes after whatever set the field
@@ -101,7 +93,7 @@ object Begin : FieldAccessor({ it.begin }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        begin(pos, callInfo)
+        { p -> p.begin(pos, callInfo) }
 }
 
 /** The [Begin] accessor as a value, so the Kotlin door reads like the script. */
@@ -154,14 +146,6 @@ fun String.end(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
     this.toVoiceValuePattern(callInfo?.receiverLocation).end(pos, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `end(...)`.
- *
- * Kotlin door only: the script reaches this through `end(...)`, which is [End.invoke].
- */
-fun end(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.end(pos, callInfo) }
-
-/**
  * The sample end position of each event (0..1), as a value other setters can read.
  *
  * Bare `end` reads what the chain has set so far, so it comes after whatever set the field
@@ -195,7 +179,7 @@ object End : FieldAccessor({ it.end }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        end(pos, callInfo)
+        { p -> p.end(pos, callInfo) }
 }
 
 /** The [End] accessor as a value, so the Kotlin door reads like the script. */
@@ -249,14 +233,6 @@ fun String.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
     this.toVoiceValuePattern(callInfo?.receiverLocation).speed(rate, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `speed(...)`.
- *
- * Kotlin door only: the script reaches this through `speed(...)`, which is [Speed.invoke].
- */
-fun speed(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.speed(rate, callInfo) }
-
-/**
  * The playback speed of each event, as a value other setters can read.
  *
  * Bare `speed` reads what the chain has set so far, so it comes after whatever set the field
@@ -290,7 +266,7 @@ object Speed : FieldAccessor({ it.speed }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        speed(rate, callInfo)
+        { p -> p.speed(rate, callInfo) }
 }
 
 /** The [Speed] accessor as a value, so the Kotlin door reads like the script. */
@@ -467,14 +443,6 @@ fun String.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopBegin(pos, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `loopBegin(...)`.
- *
- * Kotlin door only: the script reaches this through `loopBegin(...)`, which is [LoopBegin.invoke].
- */
-fun loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.loopBegin(pos, callInfo) }
-
-/**
  * The loop start position of each event (0..1), as a value other setters can read. Reserved:
  * the engine loops between `begin` and `end` for now; `loopBegin` travels but is not read yet.
  *
@@ -511,7 +479,7 @@ object LoopBegin : FieldAccessor({ it.loopBegin }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        loopBegin(pos, callInfo)
+        { p -> p.loopBegin(pos, callInfo) }
 }
 
 /** The [LoopBegin] accessor as a value, so the Kotlin door reads like the script. */
@@ -538,10 +506,6 @@ fun SprudelPattern.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelP
 @KlangScript.Function
 fun String.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopb(pos, callInfo)
-
-/** Kotlin door only: alias of [loopBegin]; the script reaches it through `loopb(...)`. */
-fun loopb(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    loopBegin(pos, callInfo)
 
 /**
  * Alias of [loopBegin]: the same accessor under another name.
@@ -600,14 +564,6 @@ fun String.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopEnd(pos, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `loopEnd(...)`.
- *
- * Kotlin door only: the script reaches this through `loopEnd(...)`, which is [LoopEnd.invoke].
- */
-fun loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.loopEnd(pos, callInfo) }
-
-/**
  * The loop end position of each event (0..1), as a value other setters can read. Reserved:
  * the engine loops between `begin` and `end` for now; `loopEnd` travels but is not read yet.
  *
@@ -644,7 +600,7 @@ object LoopEnd : FieldAccessor({ it.loopEnd }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        loopEnd(pos, callInfo)
+        { p -> p.loopEnd(pos, callInfo) }
 }
 
 /** The [LoopEnd] accessor as a value, so the Kotlin door reads like the script. */
@@ -671,10 +627,6 @@ fun SprudelPattern.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelP
 @KlangScript.Function
 fun String.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loope(pos, callInfo)
-
-/** Kotlin door only: alias of [loopEnd]; the script reaches it through `loope(...)`. */
-fun loope(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    loopEnd(pos, callInfo)
 
 /**
  * Alias of [loopEnd]: the same accessor under another name.
@@ -921,14 +873,6 @@ fun String.cut(group: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
     this.toVoiceValuePattern(callInfo?.receiverLocation).cut(group, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `cut(...)`.
- *
- * Kotlin door only: the script reaches this through `cut(...)`, which is [Cut.invoke].
- */
-fun cut(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.cut(group, callInfo) }
-
-/**
  * The cut group of each event, as a value other setters can read.
  *
  * Bare `cut` reads what the chain has set so far, so it comes after whatever set the field
@@ -962,7 +906,7 @@ object Cut : FieldAccessor({ it.cut?.toDouble() }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        cut(group, callInfo)
+        { p -> p.cut(group, callInfo) }
 }
 
 /** The [Cut] accessor as a value, so the Kotlin door reads like the script. */

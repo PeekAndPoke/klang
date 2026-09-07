@@ -113,14 +113,6 @@ fun String.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).bodyWet(wet, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `bodyWet(...)`.
- *
- * Kotlin door only: the script reaches this through `bodyWet(...)`, which is [BodyWet.invoke].
- */
-fun bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bodyWet(wet, callInfo) }
-
-/**
  * The body resonator mix of each event, as a value other setters can read.
  *
  * Bare `bodyWet` reads what the chain has set so far, so it comes after whatever set the field
@@ -145,7 +137,7 @@ object BodyWet : FieldAccessor({ it.bodyMix }) {
     /** Returns a [PatternMapperFn] that sets the body resonator wet balance. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        bodyWet(wet, callInfo)
+        { p -> p.bodyWet(wet, callInfo) }
 }
 
 /** The [BodyWet] accessor as a value, so the Kotlin door reads like the script. */
@@ -191,14 +183,6 @@ fun String.bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).bodyFloor(floor, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `bodyFloor(...)`.
- *
- * Kotlin door only: the script reaches this through `bodyFloor(...)`, which is [BodyFloor.invoke].
- */
-fun bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bodyFloor(floor, callInfo) }
-
-/**
  * The body resonator floor of each event, as a value other setters can read.
  *
  * Bare `bodyFloor` reads what the chain has set so far, so it comes after whatever set the field
@@ -223,7 +207,7 @@ object BodyFloor : FieldAccessor({ it.bodyFloor }) {
     /** Returns a [PatternMapperFn] that sets the body resonator floor. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        bodyFloor(floor, callInfo)
+        { p -> p.bodyFloor(floor, callInfo) }
 }
 
 /** The [BodyFloor] accessor as a value, so the Kotlin door reads like the script. */

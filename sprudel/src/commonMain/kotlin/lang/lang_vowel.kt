@@ -109,14 +109,6 @@ fun String.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Sprud
     this.toVoiceValuePattern(callInfo?.receiverLocation).vowelWet(wet, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `vowelWet(...)`.
- *
- * Kotlin door only: the script reaches this through `vowelWet(...)`, which is [VowelWet.invoke].
- */
-fun vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.vowelWet(wet, callInfo) }
-
-/**
  * The vowel filter mix of each event, as a value other setters can read.
  *
  * Bare `vowelWet` reads what the chain has set so far, so it comes after whatever set the field
@@ -141,7 +133,7 @@ object VowelWet : FieldAccessor({ it.vowelMix }) {
     /** Returns a [PatternMapperFn] that sets the vowel formant wet balance. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        vowelWet(wet, callInfo)
+        { p -> p.vowelWet(wet, callInfo) }
 }
 
 /** The [VowelWet] accessor as a value, so the Kotlin door reads like the script. */
@@ -186,14 +178,6 @@ fun String.vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).vowelFloor(floor, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `vowelFloor(...)`.
- *
- * Kotlin door only: the script reaches this through `vowelFloor(...)`, which is [VowelFloor.invoke].
- */
-fun vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.vowelFloor(floor, callInfo) }
-
-/**
  * The vowel filter floor of each event, as a value other setters can read.
  *
  * Bare `vowelFloor` reads what the chain has set so far, so it comes after whatever set the field
@@ -218,7 +202,7 @@ object VowelFloor : FieldAccessor({ it.vowelFloor }) {
     /** Returns a [PatternMapperFn] that sets the vowel formant floor. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        vowelFloor(floor, callInfo)
+        { p -> p.vowelFloor(floor, callInfo) }
 }
 
 /** The [VowelFloor] accessor as a value, so the Kotlin door reads like the script. */

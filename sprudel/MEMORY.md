@@ -2,6 +2,11 @@
 
 ## Recent Work (2026-09-07)
 
+- **One Kotlin door per accessor.** The 139 unannotated factories (`fun gain(...)`, the alias
+  `fun rsize(...)`) are gone; `val gain: Gain` plus `operator fun invoke` is the Kotlin call form
+  (`apply(gain(0.5))` still compiles, through the invoke convention). The `val` stays unannotated,
+  the `@KlangScript.Object` registers the script name.
+
 - **Compound pilot: `adsr` is an object with children.** `adsr.attack/.decay/.sustain/.release`
   read the slots, `adsr(attack = mul(2))` maps one slot, and the single doors `attack()`,
   `decay()`, `sustain()`, `release()` are GONE from both doors (`LangRetiredEnvelopeDoorsSpec`).

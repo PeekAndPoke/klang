@@ -95,14 +95,6 @@ fun String.notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: C
     this.toVoiceValuePattern(callInfo?.receiverLocation).notchf(freq, q, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `notchf(...)`.
- *
- * Kotlin door only: the script reaches this through `notchf(...)`, which is [Notchf.invoke].
- */
-fun notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.notchf(freq, q, callInfo) }
-
-/**
  * The notch filter frequency of each event, as a value other setters can read.
  *
  * Bare `notchf` reads what the chain has set so far, so it comes after whatever set the field
@@ -142,7 +134,7 @@ object Notchf : FieldAccessor({ it.notchf }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        notchf(freq, q, callInfo)
+        { p -> p.notchf(freq, q, callInfo) }
 }
 
 /** The [Notchf] accessor as a value, so the Kotlin door reads like the script. */
@@ -229,14 +221,6 @@ fun String.nresonance(q: PatternLike? = null, callInfo: CallInfo? = null): Sprud
     this.toVoiceValuePattern(callInfo?.receiverLocation).nresonance(q, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `nresonance(...)`.
- *
- * Kotlin door only: the script reaches this through `nresonance(...)`, which is [Nresonance.invoke].
- */
-fun nresonance(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.nresonance(q, callInfo) }
-
-/**
  * The notch filter resonance of each event, as a value other setters can read.
  *
  * Bare `nresonance` reads what the chain has set so far, so it comes after whatever set the field
@@ -276,7 +260,7 @@ object Nresonance : FieldAccessor({ it.nresonance }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        nresonance(q, callInfo)
+        { p -> p.nresonance(q, callInfo) }
 }
 
 /** The [Nresonance] accessor as a value, so the Kotlin door reads like the script. */
@@ -336,10 +320,6 @@ fun SprudelPattern.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): S
 @KlangScript.Function
 fun String.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).notchq(q, callInfo)
-
-/** Kotlin door only: alias of [nresonance]; the script reaches it through `notchq(...)`. */
-fun notchq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    nresonance(q, callInfo)
 
 /**
  * Alias of [nresonance]: the same accessor under another name.
@@ -411,14 +391,6 @@ fun String.nfattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfattack(seconds, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `nfattack(...)`.
- *
- * Kotlin door only: the script reaches this through `nfattack(...)`, which is [Nfattack.invoke].
- */
-fun nfattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.nfattack(seconds, callInfo) }
-
-/**
  * The notch envelope attack of each event, as a value other setters can read.
  *
  * Bare `nfattack` reads what the chain has set so far, so it comes after whatever set the field
@@ -445,7 +417,7 @@ object Nfattack : FieldAccessor({ it.nfattack }) {
     /** Creates a [PatternMapperFn] that sets the notch filter envelope attack time. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        nfattack(seconds, callInfo)
+        { p -> p.nfattack(seconds, callInfo) }
 }
 
 /** The [Nfattack] accessor as a value, so the Kotlin door reads like the script. */
@@ -482,10 +454,6 @@ fun SprudelPattern.nfa(seconds: PatternLike? = null, callInfo: CallInfo? = null)
 @KlangScript.Function
 fun String.nfa(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfa(seconds, callInfo)
-
-/** Kotlin door only: alias of [nfattack]; the script reaches it through `nfa(...)`. */
-fun nfa(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    nfattack(seconds, callInfo)
 
 /**
  * Alias of [nfattack]: the same accessor under another name.
@@ -544,14 +512,6 @@ fun String.nfdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfdecay(seconds, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `nfdecay(...)`.
- *
- * Kotlin door only: the script reaches this through `nfdecay(...)`, which is [Nfdecay.invoke].
- */
-fun nfdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.nfdecay(seconds, callInfo) }
-
-/**
  * The notch envelope decay of each event, as a value other setters can read.
  *
  * Bare `nfdecay` reads what the chain has set so far, so it comes after whatever set the field
@@ -578,7 +538,7 @@ object Nfdecay : FieldAccessor({ it.nfdecay }) {
     /** Creates a [PatternMapperFn] that sets the notch filter envelope decay time. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        nfdecay(seconds, callInfo)
+        { p -> p.nfdecay(seconds, callInfo) }
 }
 
 /** The [Nfdecay] accessor as a value, so the Kotlin door reads like the script. */
@@ -615,10 +575,6 @@ fun SprudelPattern.nfd(seconds: PatternLike? = null, callInfo: CallInfo? = null)
 @KlangScript.Function
 fun String.nfd(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfd(seconds, callInfo)
-
-/** Kotlin door only: alias of [nfdecay]; the script reaches it through `nfd(...)`. */
-fun nfd(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    nfdecay(seconds, callInfo)
 
 /**
  * Alias of [nfdecay]: the same accessor under another name.
@@ -678,14 +634,6 @@ fun String.nfsustain(level: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfsustain(level, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `nfsustain(...)`.
- *
- * Kotlin door only: the script reaches this through `nfsustain(...)`, which is [Nfsustain.invoke].
- */
-fun nfsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.nfsustain(level, callInfo) }
-
-/**
  * The notch envelope sustain level of each event, as a value other setters can read.
  *
  * Bare `nfsustain` reads what the chain has set so far, so it comes after whatever set the field
@@ -712,7 +660,7 @@ object Nfsustain : FieldAccessor({ it.nfsustain }) {
     /** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        nfsustain(level, callInfo)
+        { p -> p.nfsustain(level, callInfo) }
 }
 
 /** The [Nfsustain] accessor as a value, so the Kotlin door reads like the script. */
@@ -749,10 +697,6 @@ fun SprudelPattern.nfs(level: PatternLike? = null, callInfo: CallInfo? = null): 
 @KlangScript.Function
 fun String.nfs(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfs(level, callInfo)
-
-/** Kotlin door only: alias of [nfsustain]; the script reaches it through `nfs(...)`. */
-fun nfs(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    nfsustain(level, callInfo)
 
 /**
  * Alias of [nfsustain]: the same accessor under another name.
@@ -811,14 +755,6 @@ fun String.nfrelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): 
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfrelease(seconds, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `nfrelease(...)`.
- *
- * Kotlin door only: the script reaches this through `nfrelease(...)`, which is [Nfrelease.invoke].
- */
-fun nfrelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.nfrelease(seconds, callInfo) }
-
-/**
  * The notch envelope release of each event, as a value other setters can read.
  *
  * Bare `nfrelease` reads what the chain has set so far, so it comes after whatever set the field
@@ -845,7 +781,7 @@ object Nfrelease : FieldAccessor({ it.nfrelease }) {
     /** Creates a [PatternMapperFn] that sets the notch filter envelope release time. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        nfrelease(seconds, callInfo)
+        { p -> p.nfrelease(seconds, callInfo) }
 }
 
 /** The [Nfrelease] accessor as a value, so the Kotlin door reads like the script. */
@@ -882,10 +818,6 @@ fun SprudelPattern.nfr(seconds: PatternLike? = null, callInfo: CallInfo? = null)
 @KlangScript.Function
 fun String.nfr(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfr(seconds, callInfo)
-
-/** Kotlin door only: alias of [nfrelease]; the script reaches it through `nfr(...)`. */
-fun nfr(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    nfrelease(seconds, callInfo)
 
 /**
  * Alias of [nfrelease]: the same accessor under another name.
@@ -967,14 +899,6 @@ fun String.nfenv(depth: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfenv(depth, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `nfenv(...)`.
- *
- * Kotlin door only: the script reaches this through `nfenv(...)`, which is [Nfenv.invoke].
- */
-fun nfenv(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.nfenv(depth, callInfo) }
-
-/**
  * The notch envelope depth of each event in semitones, as a value other setters can read.
  *
  * Bare `nfenv` reads what the chain has set so far, so it comes after whatever set the field
@@ -1001,7 +925,7 @@ object Nfenv : FieldAccessor({ it.nfenv }) {
     /** Creates a [PatternMapperFn] that sets the notch filter envelope depth. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        nfenv(depth, callInfo)
+        { p -> p.nfenv(depth, callInfo) }
 }
 
 /** The [Nfenv] accessor as a value, so the Kotlin door reads like the script. */
@@ -1038,10 +962,6 @@ fun SprudelPattern.nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): 
 @KlangScript.Function
 fun String.nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfe(depth, callInfo)
-
-/** Kotlin door only: alias of [nfenv]; the script reaches it through `nfe(...)`. */
-fun nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    nfenv(depth, callInfo)
 
 /**
  * Alias of [nfenv]: the same accessor under another name.
@@ -1083,10 +1003,6 @@ fun SprudelPattern.notch(freq: PatternLike? = null, q: PatternLike? = null, call
 fun String.notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.notchf(freq, q, callInfo)
 
-/** Kotlin door only: alias of [notchf]; the script reaches it through `notch(...)`. */
-fun notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    notchf(freq, q, callInfo)
-
 /**
  * Alias of [notchf]: the same accessor under another name.
  *
@@ -1124,10 +1040,6 @@ fun SprudelPattern.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): S
 fun String.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.notchf(freq, null, callInfo)
 
-/** Kotlin door only: alias of [notchf]; the script reaches it through `ntf(...)`. */
-fun ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    notchf(freq, null, callInfo)
-
 /**
  * Alias of [notchf]: the same accessor under another name.
  *
@@ -1163,10 +1075,6 @@ fun SprudelPattern.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): Spru
 @KlangScript.Function
 fun String.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.notchq(q, callInfo)
-
-/** Kotlin door only: alias of [nresonance]; the script reaches it through `ntq(...)`. */
-fun ntq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    notchq(q, callInfo)
 
 /**
  * Alias of [nresonance]: the same accessor under another name.

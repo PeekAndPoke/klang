@@ -100,14 +100,6 @@ fun String.lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: Patter
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpf(freq, q, passes, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `lpf(...)`.
- *
- * Kotlin door only: the script reaches this through `lpf(...)`, which is [Lpf.invoke].
- */
-fun lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.lpf(freq, q, passes, callInfo) }
-
-/**
  * The lowpass cutoff of each event, as a value other setters can read.
  *
  * Bare `lpf` reads what the chain has set so far, so it comes after whatever set the field
@@ -149,7 +141,7 @@ object Lpf : FieldAccessor({ it.cutoff }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        lpf(freq, q, passes, callInfo)
+        { p -> p.lpf(freq, q, passes, callInfo) }
 }
 
 /** The [Lpf] accessor as a value, so the Kotlin door reads like the script: `pan(lpf)`. */
@@ -257,14 +249,6 @@ fun String.hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: Patter
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpf(freq, q, passes, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `hpf(...)`.
- *
- * Kotlin door only: the script reaches this through `hpf(...)`, which is [Hpf.invoke].
- */
-fun hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.hpf(freq, q, passes, callInfo) }
-
-/**
  * The highpass cutoff of each event, as a value other setters can read.
  *
  * Bare `hpf` reads what the chain has set so far, so it comes after whatever set the field
@@ -303,7 +287,7 @@ object Hpf : FieldAccessor({ it.hcutoff }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        hpf(freq, q, passes, callInfo)
+        { p -> p.hpf(freq, q, passes, callInfo) }
 }
 
 /** The [Hpf] accessor as a value, so the Kotlin door reads like the script: `pan(hpf)`. */
@@ -422,14 +406,6 @@ fun PatternMapperFn.bpf(freq: PatternLike? = null, q: PatternLike? = null, callI
     this.chain { p -> p.bpf(freq, q, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] for `bpf(...)`.
- *
- * Kotlin door only: the script reaches this through `bpf(...)`, which is [Bpf.invoke].
- */
-fun bpf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bpf(freq, q, callInfo) }
-
-/**
  * The bandpass centre of each event, as a value other setters can read.
  *
  * Bare `bpf` reads what the chain has set so far, so it comes after whatever set the field
@@ -467,7 +443,7 @@ object Bpf : FieldAccessor({ it.bandf }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        bpf(freq, q, callInfo)
+        { p -> p.bpf(freq, q, callInfo) }
 }
 
 /** The [Bpf] accessor as a value, so the Kotlin door reads like the script: `pan(bpf)`. */
@@ -552,14 +528,6 @@ fun PatternMapperFn.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
     this.chain { p -> p.lpq(q, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] for `lpq(...)`.
- *
- * Kotlin door only: the script reaches this through `lpq(...)`, which is [Lpq.invoke].
- */
-fun lpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.lpq(q, callInfo) }
-
-/**
  * The lowpass resonance of each event, as a value other setters can read.
  *
  * Bare `lpq` reads what the chain has set so far, so it comes after whatever set the field
@@ -596,7 +564,7 @@ object Lpq : FieldAccessor({ it.resonance }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        lpq(q, callInfo)
+        { p -> p.lpq(q, callInfo) }
 }
 
 /** The [Lpq] accessor as a value, so the Kotlin door reads like the script: `pan(lpq)`. */
@@ -681,14 +649,6 @@ fun PatternMapperFn.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
     this.chain { p -> p.hpq(q, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] for `hpq(...)`.
- *
- * Kotlin door only: the script reaches this through `hpq(...)`, which is [Hpq.invoke].
- */
-fun hpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.hpq(q, callInfo) }
-
-/**
  * The highpass resonance of each event, as a value other setters can read.
  *
  * Bare `hpq` reads what the chain has set so far, so it comes after whatever set the field
@@ -725,7 +685,7 @@ object Hpq : FieldAccessor({ it.hresonance }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        hpq(q, callInfo)
+        { p -> p.hpq(q, callInfo) }
 }
 
 /** The [Hpq] accessor as a value, so the Kotlin door reads like the script: `pan(hpq)`. */
@@ -810,14 +770,6 @@ fun PatternMapperFn.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
     this.chain { p -> p.bpq(q, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] for `bpq(...)`.
- *
- * Kotlin door only: the script reaches this through `bpq(...)`, which is [Bpq.invoke].
- */
-fun bpq(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bpq(q, callInfo) }
-
-/**
  * The bandpass Q of each event, as a value other setters can read.
  *
  * Bare `bpq` reads what the chain has set so far, so it comes after whatever set the field
@@ -854,7 +806,7 @@ object Bpq : FieldAccessor({ it.bandq }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        bpq(q, callInfo)
+        { p -> p.bpq(q, callInfo) }
 }
 
 /** The [Bpq] accessor as a value, so the Kotlin door reads like the script: `pan(bpq)`. */
@@ -931,14 +883,6 @@ fun PatternMapperFn.lpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
     this.chain { p -> p.lpe(semitones, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] for `lpe(...)`.
- *
- * Kotlin door only: the script reaches this through `lpe(...)`, which is [Lpe.invoke].
- */
-fun lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.lpe(semitones, callInfo) }
-
-/**
  * The lowpass envelope depth of each event in semitones, as a value other setters can read.
  *
  * Bare `lpe` reads what the chain has set so far, so it comes after whatever set the field
@@ -963,7 +907,7 @@ object Lpe : FieldAccessor({ it.lpenv }) {
     /** Creates a [PatternMapperFn] that sets the LPF envelope depth. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        lpe(semitones, callInfo)
+        { p -> p.lpe(semitones, callInfo) }
 }
 
 /** The [Lpe] accessor as a value, so the Kotlin door reads like the script. */
@@ -1017,14 +961,6 @@ fun String.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpx(passes, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `lpx(...)`.
- *
- * Kotlin door only: the script reaches this through `lpx(...)`, which is [Lpx.invoke].
- */
-fun lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.lpx(passes, callInfo) }
-
-/**
  * The lowpass cascade count of each event, as a value other setters can read.
  *
  * Bare `lpx` reads what the chain has set so far, so it comes after whatever set the field
@@ -1049,7 +985,7 @@ object Lpx : FieldAccessor({ it.lpPasses }) {
     /** Returns a [PatternMapperFn] that sets the lowpass cascade count (see [SprudelPattern.lpx]). */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        lpx(passes, callInfo)
+        { p -> p.lpx(passes, callInfo) }
 }
 
 /** The [Lpx] accessor as a value, so the Kotlin door reads like the script. */
@@ -1130,14 +1066,6 @@ fun PatternMapperFn.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
     this.chain { p -> p.hpe(semitones, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] for `hpe(...)`.
- *
- * Kotlin door only: the script reaches this through `hpe(...)`, which is [Hpe.invoke].
- */
-fun hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.hpe(semitones, callInfo) }
-
-/**
  * The highpass envelope depth of each event in semitones, as a value other setters can read.
  *
  * Bare `hpe` reads what the chain has set so far, so it comes after whatever set the field
@@ -1162,7 +1090,7 @@ object Hpe : FieldAccessor({ it.hpenv }) {
     /** Creates a [PatternMapperFn] that sets the HPF envelope depth. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        hpe(semitones, callInfo)
+        { p -> p.hpe(semitones, callInfo) }
 }
 
 /** The [Hpe] accessor as a value, so the Kotlin door reads like the script. */
@@ -1210,14 +1138,6 @@ fun String.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpx(passes, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `hpx(...)`.
- *
- * Kotlin door only: the script reaches this through `hpx(...)`, which is [Hpx.invoke].
- */
-fun hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.hpx(passes, callInfo) }
-
-/**
  * The highpass cascade count of each event, as a value other setters can read.
  *
  * Bare `hpx` reads what the chain has set so far, so it comes after whatever set the field
@@ -1242,7 +1162,7 @@ object Hpx : FieldAccessor({ it.hpPasses }) {
     /** Returns a [PatternMapperFn] that sets the highpass cascade count (see [SprudelPattern.hpx]). */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        hpx(passes, callInfo)
+        { p -> p.hpx(passes, callInfo) }
 }
 
 /** The [Hpx] accessor as a value, so the Kotlin door reads like the script. */
@@ -1323,14 +1243,6 @@ fun PatternMapperFn.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
     this.chain { p -> p.bpe(semitones, callInfo) }
 
 /**
- * Returns a [PatternMapperFn] for `bpe(...)`.
- *
- * Kotlin door only: the script reaches this through `bpe(...)`, which is [Bpe.invoke].
- */
-fun bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.bpe(semitones, callInfo) }
-
-/**
  * The bandpass envelope depth of each event in semitones, as a value other setters can read.
  *
  * Bare `bpe` reads what the chain has set so far, so it comes after whatever set the field
@@ -1355,7 +1267,7 @@ object Bpe : FieldAccessor({ it.bpenv }) {
     /** Creates a [PatternMapperFn] that sets the BPF envelope depth. */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        bpe(semitones, callInfo)
+        { p -> p.bpe(semitones, callInfo) }
 }
 
 /** The [Bpe] accessor as a value, so the Kotlin door reads like the script. */
@@ -1387,10 +1299,6 @@ fun SprudelPattern.lowpass(freq: PatternLike? = null, q: PatternLike? = null, pa
 @KlangScript.Function
 fun String.lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpf(freq, q, passes, callInfo)
-
-/** Kotlin door only: alias of [lpf]; the script reaches it through `lowpass(...)`. */
-fun lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    lpf(freq, q, passes, callInfo)
 
 /**
  * Alias of [lpf]: the same accessor under another name.
@@ -1434,10 +1342,6 @@ fun SprudelPattern.highpass(freq: PatternLike? = null, q: PatternLike? = null, p
 fun String.highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hpf(freq, q, passes, callInfo)
 
-/** Kotlin door only: alias of [hpf]; the script reaches it through `highpass(...)`. */
-fun highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    hpf(freq, q, passes, callInfo)
-
 /**
  * Alias of [hpf]: the same accessor under another name.
  *
@@ -1478,10 +1382,6 @@ fun SprudelPattern.bandpass(freq: PatternLike? = null, q: PatternLike? = null, c
 @KlangScript.Function
 fun String.bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bpf(freq, q, callInfo)
-
-/** Kotlin door only: alias of [bpf]; the script reaches it through `bandpass(...)`. */
-fun bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    bpf(freq, q, callInfo)
 
 /**
  * Alias of [bpf]: the same accessor under another name.

@@ -70,14 +70,6 @@ fun String.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).gain(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `gain(...)`.
- *
- * Kotlin door only: the script reaches this through `gain(...)`, which is [Gain.invoke].
- */
-fun gain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.gain(amount, callInfo) }
-
-/**
  * The gain of each event, as a value other setters can read.
  *
  * Bare `gain` reads what the chain has set so far, so it comes after whatever set the field
@@ -109,7 +101,7 @@ object Gain : FieldAccessor({ it.gain }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        gain(amount, callInfo)
+        { p -> p.gain(amount, callInfo) }
 }
 
 /** The [Gain] accessor as a value, so the Kotlin door reads like the script: `pan(gain)`. */
@@ -181,14 +173,6 @@ fun String.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
     this.toVoiceValuePattern(callInfo?.receiverLocation).pan(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `pan(...)`.
- *
- * Kotlin door only: the script reaches this through `pan(...)`, which is [Pan.invoke].
- */
-fun pan(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.pan(amount, callInfo) }
-
-/**
  * The stereo position of each event, as a value other setters can read.
  *
  * Bare `pan` reads what the chain has set so far, so it comes after whatever set the field
@@ -218,7 +202,7 @@ object Pan : FieldAccessor({ it.pan }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        pan(amount, callInfo)
+        { p -> p.pan(amount, callInfo) }
 }
 
 /** The [Pan] accessor as a value, so the Kotlin door reads like the script: `pan(pan)`. */
@@ -288,14 +272,6 @@ fun String.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `velocity(...)`.
- *
- * Kotlin door only: the script reaches this through `velocity(...)`, which is [Velocity.invoke].
- */
-fun velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.velocity(amount, callInfo) }
-
-/**
  * The velocity of each event, as a value other setters can read.
  *
  * Bare `velocity` reads what the chain has set so far, so it comes after whatever set the field
@@ -327,7 +303,7 @@ object Velocity : FieldAccessor({ it.velocity }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        velocity(amount, callInfo)
+        { p -> p.velocity(amount, callInfo) }
 }
 
 /** The [Velocity] accessor as a value, so the Kotlin door reads like the script: `pan(velocity)`. */
@@ -379,10 +355,6 @@ fun SprudelPattern.vel(amount: PatternLike? = null, callInfo: CallInfo? = null):
 @KlangScript.Function
 fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(amount, callInfo)
-
-/** Kotlin door only: alias of [velocity]; the script reaches it through `vel(...)`. */
-fun vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.velocity(amount, callInfo) }
 
 /**
  * Alias of [velocity]: the same accessor under another name.
@@ -457,14 +429,6 @@ fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).postgain(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `postgain(...)`.
- *
- * Kotlin door only: the script reaches this through `postgain(...)`, which is [Postgain.invoke].
- */
-fun postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.postgain(amount, callInfo) }
-
-/**
  * The post-processing gain of each event, as a value other setters can read.
  *
  * Bare `postgain` reads what the chain has set so far, so it comes after whatever set the field
@@ -496,7 +460,7 @@ object Postgain : FieldAccessor({ it.postGain }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        postgain(amount, callInfo)
+        { p -> p.postgain(amount, callInfo) }
 }
 
 /** The [Postgain] accessor as a value, so the Kotlin door reads like the script: `pan(postgain)`. */
@@ -663,14 +627,6 @@ fun String.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null
     this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(threshold, ratio, knee, attack, release, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `compressor(...)`.
- *
- * Kotlin door only: the script reaches this through `compressor(...)`, which is [Compressor.invoke].
- */
-fun compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
-
-/**
  * The compressor threshold of each event in dB, as a value other setters can read.
  *
  * Bare `compressor` reads what the chain has set so far, so it comes after whatever set the field
@@ -704,7 +660,7 @@ object Compressor : FieldAccessor({ it.compressorThreshold }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        compressor(threshold, ratio, knee, attack, release, callInfo)
+        { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 }
 
 /** The [Compressor] accessor as a value, so the Kotlin door reads like the script. */
@@ -770,10 +726,6 @@ fun SprudelPattern.comp(threshold: PatternLike? = null, ratio: PatternLike? = nu
 @KlangScript.Function
 fun String.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(threshold, ratio, knee, attack, release, callInfo)
-
-/** Kotlin door only: alias of [compressor]; the script reaches it through `comp(...)`. */
-fun comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 
 /**
  * Alias of [compressor]: the same accessor under another name.
@@ -852,14 +804,6 @@ fun String.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `unison(...)`.
- *
- * Kotlin door only: the script reaches this through `unison(...)`, which is [Unison.invoke].
- */
-fun unison(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.unison(voices, callInfo) }
-
-/**
  * The unison voice count of each event, as a value other setters can read.
  *
  * Bare `unison` reads what the chain has set so far, so it comes after whatever set the field
@@ -894,7 +838,7 @@ object Unison : FieldAccessor({ it.oscParams?.get("voices") }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        unison(voices, callInfo)
+        { p -> p.unison(voices, callInfo) }
 }
 
 /** The [Unison] accessor as a value, so the Kotlin door reads like the script. */
@@ -944,10 +888,6 @@ fun SprudelPattern.uni(voices: PatternLike? = null, callInfo: CallInfo? = null):
 @KlangScript.Function
 fun String.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
-
-/** Kotlin door only: alias of [unison]; the script reaches it through `uni(...)`. */
-fun uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.unison(voices, callInfo) }
 
 /**
  * Alias of [unison]: the same accessor under another name.
@@ -1005,10 +945,6 @@ fun SprudelPattern.voices(voices: PatternLike? = null, callInfo: CallInfo? = nul
 @KlangScript.Function
 fun String.voices(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
-
-/** Kotlin door only: alias of [unison]; the script reaches it through `voices(...)`. */
-fun voices(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.unison(voices, callInfo) }
 
 /**
  * Alias of [unison]: the same accessor under another name.
@@ -1084,14 +1020,6 @@ fun String.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).spread(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `spread(...)`.
- *
- * Kotlin door only: the script reaches this through `spread(...)`, which is [Spread.invoke].
- */
-fun spread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.spread(amount, callInfo) }
-
-/**
  * The unison detune spread of each event, as a value other setters can read.
  *
  * Bare `spread` reads what the chain has set so far, so it comes after whatever set the field
@@ -1123,7 +1051,7 @@ object Spread : FieldAccessor({ it.oscParams?.get("spread") }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        spread(amount, callInfo)
+        { p -> p.spread(amount, callInfo) }
 }
 
 /** The [Spread] accessor as a value, so the Kotlin door reads like the script. */
@@ -1186,14 +1114,6 @@ fun String.panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).panSpread(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `panSpread(...)`.
- *
- * Kotlin door only: the script reaches this through `panSpread(...)`, which is [PanSpread.invoke].
- */
-fun panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.panSpread(amount, callInfo) }
-
-/**
  * The unison stereo spread of each event, as a value other setters can read. Reserved: no engine
  * stage reads `panSpread` yet, the value travels but changes nothing.
  *
@@ -1223,7 +1143,7 @@ object PanSpread : FieldAccessor({ it.oscParams?.get("panSpread") }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        panSpread(amount, callInfo)
+        { p -> p.panSpread(amount, callInfo) }
 }
 
 /** The [PanSpread] accessor as a value, so the Kotlin door reads like the script. */
@@ -1289,14 +1209,6 @@ fun String.density(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
     this.toVoiceValuePattern(callInfo?.receiverLocation).density(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `density(...)`.
- *
- * Kotlin door only: the script reaches this through `density(...)`, which is [Density.invoke].
- */
-fun density(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.density(amount, callInfo) }
-
-/**
  * The noise density of each event (`dust`; 0..1, mapped to grains per second), as a value
  * other setters can read.
  *
@@ -1331,7 +1243,7 @@ object Density : FieldAccessor({ it.oscParams?.get("density") }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        density(amount, callInfo)
+        { p -> p.density(amount, callInfo) }
 }
 
 /** The [Density] accessor as a value, so the Kotlin door reads like the script. */
@@ -1383,10 +1295,6 @@ fun SprudelPattern.d(amount: PatternLike? = null, callInfo: CallInfo? = null): S
 @KlangScript.Function
 fun String.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).density(amount, callInfo)
-
-/** Kotlin door only: alias of [density]; the script reaches it through `d(...)`. */
-fun d(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.density(amount, callInfo) }
 
 /**
  * Alias of [density]: the same accessor under another name.
@@ -1520,20 +1428,6 @@ fun String.adsr(
     this.toVoiceValuePattern(callInfo?.receiverLocation).adsr(attack, decay, sustain, release, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the ADSR envelope.
- *
- * Kotlin door only: the script reaches this through `adsr(...)`, which is [Adsr.invoke].
- */
-fun adsr(
-    attack: PatternLike? = null,
-    decay: PatternLike? = null,
-    sustain: PatternLike? = null,
-    release: PatternLike? = null,
-    callInfo: CallInfo? = null,
-): PatternMapperFn =
-    { p -> p.adsr(attack, decay, sustain, release, callInfo) }
-
-/**
  * The amplitude envelope of each event: `adsr(attack, decay, sustain, release)` sets it, and its
  * four slots can be read back as `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release`.
  *
@@ -1591,7 +1485,7 @@ object Adsr {
         release: PatternLike? = null,
         callInfo: CallInfo? = null,
     ): PatternMapperFn =
-        adsr(attack, decay, sustain, release, callInfo)
+        { p -> p.adsr(attack, decay, sustain, release, callInfo) }
 }
 
 /** The [Adsr] object as a value, so the Kotlin door reads like the script: `adsr.attack`. */
@@ -1869,14 +1763,6 @@ fun String.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).orbit(index, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `orbit(...)`.
- *
- * Kotlin door only: the script reaches this through `orbit(...)`, which is [Orbit.invoke].
- */
-fun orbit(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.orbit(index, callInfo) }
-
-/**
  * The orbit (effect bus) of each event, as a value other setters can read.
  *
  * Bare `orbit` reads what the chain has set so far, so it comes after whatever set the field
@@ -1911,7 +1797,7 @@ object Orbit : FieldAccessor({ it.cylinder?.toDouble() }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        orbit(index, callInfo)
+        { p -> p.orbit(index, callInfo) }
 }
 
 /** The [Orbit] accessor as a value, so the Kotlin door reads like the script. */
@@ -1963,10 +1849,6 @@ fun SprudelPattern.o(index: PatternLike? = null, callInfo: CallInfo? = null): Sp
 @KlangScript.Function
 fun String.o(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).orbit(index, callInfo)
-
-/** Kotlin door only: alias of [orbit]; the script reaches it through `o(...)`. */
-fun o(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.orbit(index, callInfo) }
 
 /**
  * Alias of [orbit]: the same accessor under another name.
@@ -2033,14 +1915,6 @@ fun String.duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckorbit(orbitIndex, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `duckorbit(...)`.
- *
- * Kotlin door only: the script reaches this through `duckorbit(...)`, which is [DuckOrbit.invoke].
- */
-fun duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.duckorbit(orbitIndex, callInfo) }
-
-/**
  * The orbit each event ducks, as a value other setters can read.
  *
  * Bare `duckorbit` reads what the chain has set so far, so it comes after whatever set the field
@@ -2075,7 +1949,7 @@ object DuckOrbit : FieldAccessor({ it.duckCylinder?.toDouble() }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        duckorbit(orbitIndex, callInfo)
+        { p -> p.duckorbit(orbitIndex, callInfo) }
 }
 
 /** The [DuckOrbit] accessor as a value, so the Kotlin door reads like the script. */
@@ -2126,10 +2000,6 @@ fun SprudelPattern.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = n
 @KlangScript.Function
 fun String.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckorbit(orbitIndex, callInfo)
-
-/** Kotlin door only: alias of [duckorbit]; the script reaches it through `duck(...)`. */
-fun duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.duckorbit(orbitIndex, callInfo) }
 
 /**
  * Alias of [duckorbit]: the same accessor under another name.
@@ -2204,14 +2074,6 @@ fun String.duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckattack(time, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `duckattack(...)`.
- *
- * Kotlin door only: the script reaches this through `duckattack(...)`, which is [DuckAttack.invoke].
- */
-fun duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.duckattack(time, callInfo) }
-
-/**
  * The ducking recovery time of each event, as a value other setters can read. The duck-down is
  * instant; this smooths the return (named attack for strudel compatibility).
  *
@@ -2247,7 +2109,7 @@ object DuckAttack : FieldAccessor({ it.duckAttack }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        duckattack(time, callInfo)
+        { p -> p.duckattack(time, callInfo) }
 }
 
 /** The [DuckAttack] accessor as a value, so the Kotlin door reads like the script. */
@@ -2299,10 +2161,6 @@ fun SprudelPattern.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null
 @KlangScript.Function
 fun String.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckattack(time, callInfo)
-
-/** Kotlin door only: alias of [duckattack]; the script reaches it through `duckatt(...)`. */
-fun duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.duckattack(time, callInfo) }
 
 /**
  * Alias of [duckattack]: the same accessor under another name.
@@ -2376,14 +2234,6 @@ fun String.duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckdepth(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] for `duckdepth(...)`.
- *
- * Kotlin door only: the script reaches this through `duckdepth(...)`, which is [DuckDepth.invoke].
- */
-fun duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.duckdepth(amount, callInfo) }
-
-/**
  * The ducking depth of each event, as a value other setters can read.
  *
  * Bare `duckdepth` reads what the chain has set so far, so it comes after whatever set the field
@@ -2416,7 +2266,7 @@ object DuckDepth : FieldAccessor({ it.duckDepth }) {
      */
     @KlangScript.Method(name = "invoke")
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        duckdepth(amount, callInfo)
+        { p -> p.duckdepth(amount, callInfo) }
 }
 
 /** The [DuckDepth] accessor as a value, so the Kotlin door reads like the script. */
