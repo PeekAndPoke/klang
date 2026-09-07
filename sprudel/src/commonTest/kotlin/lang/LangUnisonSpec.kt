@@ -33,7 +33,6 @@ class LangUnisonSpec : StringSpec({
                     seq(pat).apply(unison(ctrl)),
             "script unison(ctrl)" to
                     SprudelPattern.compile("""seq("$pat").apply(unison("$ctrl"))"""),
-            // comp alias
             "pattern.uni(ctrl)" to
                     seq(pat).uni(ctrl),
             "script pattern.uni(ctrl)" to
@@ -46,19 +45,6 @@ class LangUnisonSpec : StringSpec({
                     seq(pat).apply(uni(ctrl)),
             "script uni(ctrl)" to
                     SprudelPattern.compile("""seq("$pat").apply(uni("$ctrl"))"""),
-            // voices alias
-            "pattern.voices(ctrl)" to
-                    seq(pat).voices(ctrl),
-            "script pattern.voices(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").voices("$ctrl")"""),
-            "string.voices(ctrl)" to
-                    pat.voices(ctrl),
-            "script string.voices(ctrl)" to
-                    SprudelPattern.compile(""""$pat".voices("$ctrl")"""),
-            "voices(ctrl)" to
-                    seq(pat).apply(voices(ctrl)),
-            "script voices(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(voices("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("voices") shouldBe 2
@@ -110,26 +96,10 @@ class LangUnisonSpec : StringSpec({
         events.map { it.data.oscParams?.get("voices") } shouldBe listOf(4.0, 8.0)
     }
 
-    "uni() alias sets VoiceData.voices" {
-        val p = "1 0".apply(uni("4 8"))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.oscParams?.get("voices") } shouldBe listOf(4.0, 8.0)
-    }
-
-    "voices() alias sets VoiceData.voices" {
-        val p = "1 0".apply(voices("4 8"))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.oscParams?.get("voices") } shouldBe listOf(4.0, 8.0)
-    }
-
-    "voices() works as pattern + string extension and in compiled code" {
-        note("c").voices("4").queryArc(0.0, 1.0)[0].data.oscParams?.get("voices") shouldBe 4.0
-        "c".voices("4").queryArc(0.0, 1.0)[0].data.oscParams?.get("voices") shouldBe 4.0
-        val compiled = SprudelPattern.compile("""note("c").voices("4")""")
+    "unison() works as pattern + string extension and in compiled code" {
+        note("c").unison("4").queryArc(0.0, 1.0)[0].data.oscParams?.get("voices") shouldBe 4.0
+        "c".unison("4").queryArc(0.0, 1.0)[0].data.oscParams?.get("voices") shouldBe 4.0
+        val compiled = SprudelPattern.compile("""note("c").unison("4")""")
         (compiled?.queryArc(0.0, 1.0) ?: emptyList())[0].data.oscParams?.get("voices") shouldBe 4.0
     }
 

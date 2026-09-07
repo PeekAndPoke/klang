@@ -106,7 +106,7 @@ stack(
     // High fifth
     ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.7).hpf(1000)
   // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
-  ).orbit(4).coarse(amount = 2, oversample = 1).filterWhen(x => x >= wait * 3).body("tube").bodyWet(0.3)
+  ).orbit(4).coarse(amount = 2, oversample = 1).filterWhen(x => x >= wait * 3).body(material = "tube", wet = 0.3)
 
   // Noise
   , sound("dust!2").gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)

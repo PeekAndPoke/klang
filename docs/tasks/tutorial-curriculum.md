@@ -157,9 +157,9 @@ stages must not carry it.
 | B8 | Scales & melodies | `n()`, `scale()`, `transpose` | — | Numbers instead of note names; same line, swap the scale. *Listen for: major vs. minor mood flip.* |
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
-| A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
+| A6 | Thickness — unison, spread, analog | `unison` (with the `spread` slot), `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
 | A7 | Space & dirt | `room`, `delay`, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
-| A8 | Body | `body()`, `bodyWet` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
+| A8 | Body | `body(material, wet)` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
 | A9 | The note moves the knobs | field accessors: a knob changed relative to itself (`gain(mul(0.5))`), and a knob that reads another field (`bpf(freq)`, `bpf(freq.mul(2))`) | `bpf` and the `mul`/`add` mappers, none of which anything teaches yet | Pink noise through a bandpass sitting on the note: the wind whistles the melody. *Listen for: noise turning into a pitch as the filter locks onto each note.* Built-in song **Greensleeves** is the reference; the surface landed 2026-09-07, the lesson did not. |
 
@@ -233,7 +233,7 @@ stages must not carry it.
   a chords lesson still to come takes that up properly") and licenses only the power chord; B11
   must pick that up. B7 also glossed "riff" ("a short figure that repeats") — reuse, don't re-gloss.
 - **A8 (body resonator):** A3 spends **"body"** as the standing term for the low half of the
-  spectrum ("body below, sparkle above"). A8 teaches `body()`/`bodyWet` — the cabinet resonator —
+  spectrum ("body below, sparkle above"). A8 teaches `body(material, wet)` — the cabinet resonator —
   and must disambiguate the collision explicitly at first use, the way A6 must for "voice".
 - **B5 re-licences "bar" (decided in review):** B1 retired the word; B5 brings it back with a
   split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth
@@ -316,9 +316,9 @@ stages must not carry it.
     diagnostic** (OPEN in the accessor plan). If that is still true when A9 is written, the lesson
     must not encourage exploratory guessing at which knobs read.
   - ⚠️ **Engine gaps found during the sweep, documented as "reserved" in the object KDocs, that must
-    never appear in a lesson example:** `panSpread` has no engine stage at all; `density` is the
-    dust grain rate, not a unison knob; `duckattack` is the recovery time (the duck-down is
-    instant); `pcurve` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not read by
+    never appear in a lesson example:** `unison(pan)` (was `panSpread`) has no engine stage at all; `density` is the
+    dust grain rate, not a unison knob; `duck(attack)` is the recovery time (the duck-down is
+    instant); `penv(curve)` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not read by
     `VoiceFactory`; negative `speed` is silence, not reverse.
   - **Title is provisional.** "The note moves the knobs" pairs with A5 and matches the headline
     example, but §2 generalizes past the note (`pan(gain)` is just as legal). Settle it when the

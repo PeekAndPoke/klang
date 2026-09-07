@@ -18,19 +18,6 @@ class LangDuckingSpec : StringSpec({
         val ctrl = "1 2"
 
         dslInterfaceTests(
-            "pattern.duckorbit(ctrl)" to
-                    seq(pat).duckorbit(ctrl),
-            "script pattern.duckorbit(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").duckorbit("$ctrl")"""),
-            "string.duckorbit(ctrl)" to
-                    pat.duckorbit(ctrl),
-            "script string.duckorbit(ctrl)" to
-                    SprudelPattern.compile(""""$pat".duckorbit("$ctrl")"""),
-            "duckorbit(ctrl)" to
-                    seq(pat).apply(duckorbit(ctrl)),
-            "script duckorbit(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(duckorbit("$ctrl"))"""),
-            // duck alias
             "pattern.duck(ctrl)" to
                     seq(pat).duck(ctrl),
             "script pattern.duck(ctrl)" to
@@ -55,31 +42,18 @@ class LangDuckingSpec : StringSpec({
         val ctrl = "0.1 0.5"
 
         dslInterfaceTests(
-            "pattern.duckattack(ctrl)" to
-                    seq(pat).duckattack(ctrl),
-            "script pattern.duckattack(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").duckattack("$ctrl")"""),
-            "string.duckattack(ctrl)" to
-                    pat.duckattack(ctrl),
-            "script string.duckattack(ctrl)" to
-                    SprudelPattern.compile(""""$pat".duckattack("$ctrl")"""),
-            "duckattack(ctrl)" to
-                    seq(pat).apply(duckattack(ctrl)),
-            "script duckattack(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(duckattack("$ctrl"))"""),
-            // duckatt alias
-            "pattern.duckatt(ctrl)" to
-                    seq(pat).duckatt(ctrl),
-            "script pattern.duckatt(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").duckatt("$ctrl")"""),
-            "string.duckatt(ctrl)" to
-                    pat.duckatt(ctrl),
-            "script string.duckatt(ctrl)" to
-                    SprudelPattern.compile(""""$pat".duckatt("$ctrl")"""),
-            "duckatt(ctrl)" to
-                    seq(pat).apply(duckatt(ctrl)),
-            "script duckatt(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(duckatt("$ctrl"))"""),
+            "pattern.duck(attack = ctrl)" to
+                    seq(pat).duck(attack = ctrl),
+            "script pattern.duck(attack = ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").duck(attack = "$ctrl")"""),
+            "string.duck(attack = ctrl)" to
+                    pat.duck(attack = ctrl),
+            "script string.duck(attack = ctrl)" to
+                    SprudelPattern.compile(""""$pat".duck(attack = "$ctrl")"""),
+            "duck(attack = ctrl)" to
+                    seq(pat).apply(duck(attack = ctrl)),
+            "script duck(attack = ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").apply(duck(attack = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.duckAttack shouldBe 0.1
@@ -92,18 +66,18 @@ class LangDuckingSpec : StringSpec({
         val ctrl = "0.1 0.5"
 
         dslInterfaceTests(
-            "pattern.duckdepth(ctrl)" to
-                    seq(pat).duckdepth(ctrl),
-            "script pattern.duckdepth(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").duckdepth("$ctrl")"""),
-            "string.duckdepth(ctrl)" to
-                    pat.duckdepth(ctrl),
-            "script string.duckdepth(ctrl)" to
-                    SprudelPattern.compile(""""$pat".duckdepth("$ctrl")"""),
-            "duckdepth(ctrl)" to
-                    seq(pat).apply(duckdepth(ctrl)),
-            "script duckdepth(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(duckdepth("$ctrl"))"""),
+            "pattern.duck(depth = ctrl)" to
+                    seq(pat).duck(depth = ctrl),
+            "script pattern.duck(depth = ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").duck(depth = "$ctrl")"""),
+            "string.duck(depth = ctrl)" to
+                    pat.duck(depth = ctrl),
+            "script string.duck(depth = ctrl)" to
+                    SprudelPattern.compile(""""$pat".duck(depth = "$ctrl")"""),
+            "duck(depth = ctrl)" to
+                    seq(pat).apply(duck(depth = ctrl)),
+            "script duck(depth = ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").apply(duck(depth = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.duckDepth shouldBe 0.1
@@ -111,20 +85,12 @@ class LangDuckingSpec : StringSpec({
         }
     }
 
-    "duckorbit() sets duckOrbit" {
-        val p = note("c3").duckorbit(1)
+    "duck() sets duckOrbit" {
+        val p = note("c3").duck(1)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.duckCylinder shouldBe 1
-    }
-
-    "duck() alias sets duckOrbit" {
-        val p = note("c3").duck(0)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.duckCylinder shouldBe 0
     }
 
     "duck() can be used as PatternMapper" {
@@ -135,40 +101,32 @@ class LangDuckingSpec : StringSpec({
         events[0].data.duckCylinder shouldBe 1
     }
 
-    "duckattack() sets duckAttack" {
-        val p = note("c3").duckattack(0.15)
+    "duck(attack = ...) sets duckAttack" {
+        val p = note("c3").duck(attack = 0.15)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.duckAttack shouldBe 0.15
     }
 
-    "duckatt() alias sets duckAttack" {
-        val p = note("c3").duckatt(0.2)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.duckAttack shouldBe 0.2
-    }
-
-    "duckattack() can be used as PatternMapper" {
-        val p = note("c3").apply(duckattack(0.25))
+    "duck(attack = ...) can be used as PatternMapper" {
+        val p = note("c3").apply(duck(attack = 0.25))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.duckAttack shouldBe 0.25
     }
 
-    "duckdepth() sets duckDepth" {
-        val p = note("c3").duckdepth(0.7)
+    "duck(depth = ...) sets duckDepth" {
+        val p = note("c3").duck(depth = 0.7)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.duckDepth shouldBe 0.7
     }
 
-    "duckdepth() can be used as PatternMapper" {
-        val p = note("c3").apply(duckdepth(0.9))
+    "duck(depth = ...) can be used as PatternMapper" {
+        val p = note("c3").apply(duck(depth = 0.9))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -178,8 +136,8 @@ class LangDuckingSpec : StringSpec({
     "ducking parameters merge correctly" {
         val p = note("c3")
             .duck(0)
-            .duckatt(0.1)
-            .duckdepth(0.8)
+            .duck(attack = 0.1)
+            .duck(depth = 0.8)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -191,8 +149,8 @@ class LangDuckingSpec : StringSpec({
     "ducking parameters transfer to VoiceData" {
         val p = note("c3")
             .duck(0)
-            .duckatt(0.15)
-            .duckdepth(0.6)
+            .duck(attack = 0.15)
+            .duck(depth = 0.6)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -206,8 +164,8 @@ class LangDuckingSpec : StringSpec({
     "ducking parameters work with pattern control" {
         val p = note("c3 d3")
             .duck(2)
-            .duckatt(0.1)
-            .duckdepth(0.5)
+            .duck(attack = 0.1)
+            .duck(depth = 0.5)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

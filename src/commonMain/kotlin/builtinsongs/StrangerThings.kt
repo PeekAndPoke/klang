@@ -37,24 +37,24 @@ stack(
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(2).s("supersaw").unison(11).spread(saw.range(0.05, 0.35).slow(16))
+    .orbit(2).s("supersaw").unison(voices = 11, spread = saw.range(0.05, 0.35).slow(16))
     .gain(0.6).distort(0.7).postgain(0.11).adsr(0.008, 3.0, 0.5, 0.1).lpf(attack = 0.008, decay = 5.0, sustain = 0.2, release = 0.1).clip(1.05)
-    .hpf(800).lpf(freq = 1400, env = perlin.range(21.7, 27.9).slow(8), q = 1.5).analog(15).body("violin").bodyWet(0.5)
+    .hpf(800).lpf(freq = 1400, env = perlin.range(21.7, 27.9).slow(8), q = 1.5).analog(15).body(material = "violin", wet = 0.5)
     .pan(0.5).superimpose(
       x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).postgain(0.08).pan(0.3).superimpose(pan(0.7)),
       x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(24).postgain(0.04).pan(0.1).superimpose(pan(0.9))
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4").clip(0.7).struct("x!4").slow(16)
-    .orbit(3).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
+    .orbit(3).s("supersaw").unison(voices = 9, spread = saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
     // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
     .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(amount = 2, oversample = 1) // solo()
     .superimpose(
       x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
-    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body("glass").vowel("e o e i a u".slow(24)).vowelWet(0.40)
+    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body("glass").vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
     .superimpose(
-      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2)).vibrato("0.51".add(perlin.div(20))).vibratoMod(0.06)
+      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2)).vibrato(rate = "0.51".add(perlin.div(20)), depth = 0.06)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
         .crush(amount = "2.0".add(berlin2.mul(0.75).slow(4)), oversample = 1).lpf(7.75 * 440).hpf(300).postgain(0.45)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                

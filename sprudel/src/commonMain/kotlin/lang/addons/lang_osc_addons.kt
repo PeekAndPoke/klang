@@ -196,7 +196,7 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("supersaw").analog("1 4").spread(analog.div(20))       // more drift, wider
+ * note("c3 e3").s("supersaw").analog("1 4").unison(spread = analog.div(20))       // more drift, wider
  * ```
  *
  * @category tonal

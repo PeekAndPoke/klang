@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
@@ -19,12 +18,12 @@ class LangFmdecaySpec : StringSpec({
         val ctrl = "0.1 0.5"
 
         dslInterfaceTests(
-            "pattern.fmdecay(ctrl)" to s(pat).fmdecay(ctrl),
-            "script pattern.fmdecay(ctrl)" to SprudelPattern.compile("""s("$pat").fmdecay("$ctrl")"""),
-            "string.fmdecay(ctrl)" to pat.fmdecay(ctrl),
-            "script string.fmdecay(ctrl)" to SprudelPattern.compile(""""$pat".fmdecay("$ctrl")"""),
-            "fmdecay(ctrl)" to s(pat).apply(fmdecay(ctrl)),
-            "script fmdecay(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmdecay("$ctrl"))"""),
+            "pattern.fm(decay = ctrl)" to s(pat).fm(decay = ctrl),
+            "script pattern.fm(decay = ctrl)" to SprudelPattern.compile("""s("$pat").fm(decay = "$ctrl")"""),
+            "string.fm(decay = ctrl)" to pat.fm(decay = ctrl),
+            "script string.fm(decay = ctrl)" to SprudelPattern.compile(""""$pat".fm(decay = "$ctrl")"""),
+            "fm(decay = ctrl)" to s(pat).apply(fm(decay = ctrl)),
+            "script fm(decay = ctrl)" to SprudelPattern.compile("""s("$pat").apply(fm(decay = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmDecay shouldBe 0.1
@@ -37,12 +36,12 @@ class LangFmdecaySpec : StringSpec({
         val ctrl = "0.1 0.5"
 
         dslInterfaceTests(
-            "pattern.fmdec(ctrl)" to s(pat).fmdec(ctrl),
-            "script pattern.fmdec(ctrl)" to SprudelPattern.compile("""s("$pat").fmdec("$ctrl")"""),
-            "string.fmdec(ctrl)" to pat.fmdec(ctrl),
-            "script string.fmdec(ctrl)" to SprudelPattern.compile(""""$pat".fmdec("$ctrl")"""),
-            "fmdec(ctrl)" to s(pat).apply(fmdec(ctrl)),
-            "script fmdec(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmdec("$ctrl"))"""),
+            "pattern.fm(decay = ctrl)" to s(pat).fm(decay = ctrl),
+            "script pattern.fm(decay = ctrl)" to SprudelPattern.compile("""s("$pat").fm(decay = "$ctrl")"""),
+            "string.fm(decay = ctrl)" to pat.fm(decay = ctrl),
+            "script string.fm(decay = ctrl)" to SprudelPattern.compile(""""$pat".fm(decay = "$ctrl")"""),
+            "fm(decay = ctrl)" to s(pat).apply(fm(decay = ctrl)),
+            "script fm(decay = ctrl)" to SprudelPattern.compile("""s("$pat").apply(fm(decay = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmDecay shouldBe 0.1
@@ -50,61 +49,25 @@ class LangFmdecaySpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as fmDecay | seq(\"0.1 0.5\").fmdecay()" {
-        val p = seq("0.1 0.5").fmdecay()
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.fmDecay shouldBe 0.1
-            events[1].data.fmDecay shouldBe 0.5
-        }
-    }
-
-    "reinterpret voice data as fmDecay | \"0.1 0.5\".fmdecay()" {
-        val p = "0.1 0.5".fmdecay()
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.fmDecay shouldBe 0.1
-            events[1].data.fmDecay shouldBe 0.5
-        }
-    }
-
-    "reinterpret voice data as fmDecay | seq(\"0.1 0.5\").apply(fmdecay())" {
-        val p = seq("0.1 0.5").apply(fmdecay())
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.fmDecay shouldBe 0.1
-            events[1].data.fmDecay shouldBe 0.5
-        }
-    }
-
-    "top-level fmdecay() sets VoiceData.fmDecay correctly" {
-        val p = s("hh hh").apply(fmdecay("0.5 1.0"))
+    "top-level fm(decay = ...) sets VoiceData.fmDecay correctly" {
+        val p = s("hh hh").apply(fm(decay = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.fmDecay } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern fmdecay() sets VoiceData.fmDecay on existing pattern" {
+    "control pattern fm(decay = ...) sets VoiceData.fmDecay on existing pattern" {
         val base = note("c3 e3")
-        val p = base.fmdecay("0.1 0.2")
+        val p = base.fm(decay = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)
 
         events.size shouldBe 4
         events.map { it.data.fmDecay } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
     }
 
-    "fmdecay() works as string extension" {
-        val p = "c3".fmdecay("0.5")
+    "fm(decay = ...) works as string extension" {
+        val p = "c3".fm(decay = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -112,36 +75,12 @@ class LangFmdecaySpec : StringSpec({
         events[0].data.fmDecay shouldBe 0.5
     }
 
-    "fmdecay() works within compiled code" {
-        val p = SprudelPattern.compile("""note("a b").fmdecay("0.5 1.0")""")
+    "fm(decay = ...) works within compiled code" {
+        val p = SprudelPattern.compile("""note("a b").fm(decay = "0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
         events.map { it.data.fmDecay } shouldBe listOf(0.5, 1.0)
     }
 
-    "fmdec() alias works as pattern extension" {
-        val p = note("c d").fmdec("0.4 0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.fmDecay } shouldBe listOf(0.4, 0.6)
-    }
-
-    "fmdec() alias works as string extension" {
-        val p = "e3".fmdec("0.8")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.value?.asString shouldBe "e3"
-        events[0].data.fmDecay shouldBe 0.8
-    }
-
-    "fmdec() alias works within compiled code" {
-        val p = SprudelPattern.compile("""note("c d").fmdec("0.2 0.9")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.fmDecay } shouldBe listOf(0.2, 0.9)
-    }
 })

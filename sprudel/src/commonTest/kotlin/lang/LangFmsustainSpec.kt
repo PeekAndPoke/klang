@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
@@ -19,12 +18,12 @@ class LangFmsustainSpec : StringSpec({
         val ctrl = "0.0 0.7"
 
         dslInterfaceTests(
-            "pattern.fmsustain(ctrl)" to s(pat).fmsustain(ctrl),
-            "script pattern.fmsustain(ctrl)" to SprudelPattern.compile("""s("$pat").fmsustain("$ctrl")"""),
-            "string.fmsustain(ctrl)" to pat.fmsustain(ctrl),
-            "script string.fmsustain(ctrl)" to SprudelPattern.compile(""""$pat".fmsustain("$ctrl")"""),
-            "fmsustain(ctrl)" to s(pat).apply(fmsustain(ctrl)),
-            "script fmsustain(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmsustain("$ctrl"))"""),
+            "pattern.fm(sustain = ctrl)" to s(pat).fm(sustain = ctrl),
+            "script pattern.fm(sustain = ctrl)" to SprudelPattern.compile("""s("$pat").fm(sustain = "$ctrl")"""),
+            "string.fm(sustain = ctrl)" to pat.fm(sustain = ctrl),
+            "script string.fm(sustain = ctrl)" to SprudelPattern.compile(""""$pat".fm(sustain = "$ctrl")"""),
+            "fm(sustain = ctrl)" to s(pat).apply(fm(sustain = ctrl)),
+            "script fm(sustain = ctrl)" to SprudelPattern.compile("""s("$pat").apply(fm(sustain = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmSustain shouldBe 0.0
@@ -37,12 +36,12 @@ class LangFmsustainSpec : StringSpec({
         val ctrl = "0.0 0.7"
 
         dslInterfaceTests(
-            "pattern.fmsus(ctrl)" to s(pat).fmsus(ctrl),
-            "script pattern.fmsus(ctrl)" to SprudelPattern.compile("""s("$pat").fmsus("$ctrl")"""),
-            "string.fmsus(ctrl)" to pat.fmsus(ctrl),
-            "script string.fmsus(ctrl)" to SprudelPattern.compile(""""$pat".fmsus("$ctrl")"""),
-            "fmsus(ctrl)" to s(pat).apply(fmsus(ctrl)),
-            "script fmsus(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmsus("$ctrl"))"""),
+            "pattern.fm(sustain = ctrl)" to s(pat).fm(sustain = ctrl),
+            "script pattern.fm(sustain = ctrl)" to SprudelPattern.compile("""s("$pat").fm(sustain = "$ctrl")"""),
+            "string.fm(sustain = ctrl)" to pat.fm(sustain = ctrl),
+            "script string.fm(sustain = ctrl)" to SprudelPattern.compile(""""$pat".fm(sustain = "$ctrl")"""),
+            "fm(sustain = ctrl)" to s(pat).apply(fm(sustain = ctrl)),
+            "script fm(sustain = ctrl)" to SprudelPattern.compile("""s("$pat").apply(fm(sustain = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmSustain shouldBe 0.0
@@ -50,61 +49,25 @@ class LangFmsustainSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as fmSustain | seq(\"0.0 0.7\").fmsustain()" {
-        val p = seq("0.0 0.7").fmsustain()
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.fmSustain shouldBe 0.0
-            events[1].data.fmSustain shouldBe 0.7
-        }
-    }
-
-    "reinterpret voice data as fmSustain | \"0.0 0.7\".fmsustain()" {
-        val p = "0.0 0.7".fmsustain()
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.fmSustain shouldBe 0.0
-            events[1].data.fmSustain shouldBe 0.7
-        }
-    }
-
-    "reinterpret voice data as fmSustain | seq(\"0.0 0.7\").apply(fmsustain())" {
-        val p = seq("0.0 0.7").apply(fmsustain())
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.fmSustain shouldBe 0.0
-            events[1].data.fmSustain shouldBe 0.7
-        }
-    }
-
-    "top-level fmsustain() sets VoiceData.fmSustain correctly" {
-        val p = s("hh hh").apply(fmsustain("0.5 1.0"))
+    "top-level fm(sustain = ...) sets VoiceData.fmSustain correctly" {
+        val p = s("hh hh").apply(fm(sustain = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.fmSustain } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern fmsustain() sets VoiceData.fmSustain on existing pattern" {
+    "control pattern fm(sustain = ...) sets VoiceData.fmSustain on existing pattern" {
         val base = note("c3 e3")
-        val p = base.fmsustain("0.1 0.2")
+        val p = base.fm(sustain = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)
 
         events.size shouldBe 4
         events.map { it.data.fmSustain } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
     }
 
-    "fmsustain() works as string extension" {
-        val p = "c3".fmsustain("0.5")
+    "fm(sustain = ...) works as string extension" {
+        val p = "c3".fm(sustain = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -112,36 +75,12 @@ class LangFmsustainSpec : StringSpec({
         events[0].data.fmSustain shouldBe 0.5
     }
 
-    "fmsustain() works within compiled code" {
-        val p = SprudelPattern.compile("""note("a b").fmsustain("0.5 1.0")""")
+    "fm(sustain = ...) works within compiled code" {
+        val p = SprudelPattern.compile("""note("a b").fm(sustain = "0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
         events.map { it.data.fmSustain } shouldBe listOf(0.5, 1.0)
     }
 
-    "fmsus() alias works as pattern extension" {
-        val p = note("c d").fmsus("0.4 0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.fmSustain } shouldBe listOf(0.4, 0.6)
-    }
-
-    "fmsus() alias works as string extension" {
-        val p = "e3".fmsus("0.8")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.value?.asString shouldBe "e3"
-        events[0].data.fmSustain shouldBe 0.8
-    }
-
-    "fmsus() alias works within compiled code" {
-        val p = SprudelPattern.compile("""note("c d").fmsus("0.2 0.9")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.fmSustain } shouldBe listOf(0.2, 0.9)
-    }
 })

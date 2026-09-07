@@ -89,7 +89,13 @@ class FreqAccessorIntelSpec : StringSpec({
             "lpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
             "hpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
             "bpf" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
-            "notch" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release")).forEach { (name, slots) ->
+            "notch" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
+            "compressor" to listOf("threshold", "ratio", "knee", "attack", "release"),
+            "unison" to listOf("voices", "spread", "pan"),
+            "duck" to listOf("orbit", "depth", "attack"),
+            "vibrato" to listOf("rate", "depth"),
+            "penv" to listOf("amount", "attack", "decay", "release", "curve", "anchor"),
+            "fm" to listOf("env", "h", "attack", "decay", "sustain")).forEach { (name, slots) ->
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe name
@@ -109,7 +115,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-three accessor is an object with a call form and the first-step operators" {
-        listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "fmh", "fmattack", "fmdecay", "fmsustain", "vowelWet", "vowelFloor", "bodyWet", "bodyFloor", "legato", "vibrato", "vibratoMod", "pattack", "pdecay", "prelease", "penv", "pcurve", "panchor", "accelerate").forEach { name ->
+        listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "legato", "accelerate").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -119,7 +125,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-four accessor is an object with a call form and the first-step operators" {
-        listOf("unison", "spread", "panSpread", "density", "orbit", "duckorbit", "duckattack", "duckdepth", "compressor", "fmenv", "analog", "duty", "onepole").forEach { name ->
+        listOf("density", "orbit", "analog", "duty", "onepole").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -129,9 +135,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every alias constant carries its canonical object's type, so it calls and reads like the original" {
-        mapOf("fmmod" to "fmenv", "uni" to "unison", "voices" to "unison", "d" to "density", "o" to "orbit", "duck" to "duckorbit", "duckatt" to "duckattack", "comp" to "compressor",
-            "clip" to "legato", "vib" to "vibrato", "patt" to "pattack", "pdec" to "pdecay", "prel" to "prelease", "pamt" to "penv", "pcrv" to "pcurve", "panc" to "panchor", "loopb" to "loopBegin", "loope" to "loopEnd", "fmatt" to "fmattack", "fmdec" to "fmdecay", "fmsus" to "fmsustain",
-            "vel" to "velocity").forEach { (alias, canonical) ->
+        mapOf("d" to "density", "o" to "orbit", "clip" to "legato", "loopb" to "loopBegin", "loope" to "loopEnd", "vel" to "velocity").forEach { (alias, canonical) ->
             val symbol = registry.get(alias).shouldNotBeNull()
             // An alias constant's KDoc carries the category: the property entry merges first and
             // would otherwise turn the whole symbol "uncategorized" on the docs page.
@@ -144,16 +148,32 @@ class FreqAccessorIntelSpec : StringSpec({
         }
     }
 
-    "the long filter names are constants of the compound objects" {
-        mapOf("lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf").forEach { (alias, canonical) ->
+    "the alias constants of the compound objects carry the object type" {
+        mapOf("lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "comp" to "compressor", "uni" to "unison", "vib" to "vibrato", "pamt" to "penv").forEach { (alias, canonical) ->
             withClue(alias) {
                 val symbol = registry.get(alias).shouldNotBeNull()
                 (symbol.category != "uncategorized") shouldBe true
                 val type = symbol.variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe canonical
-                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical(freq"
-                CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("freq", "q", "env")
-                analyze("$alias(500)").diagnostics.size shouldBe 0
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical("
+                CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldNotContain "invoke"
+                analyze("$alias(5)").diagnostics.size shouldBe 0
+            }
+        }
+    }
+
+    "vowel and body: the name slot has no child, the numeric slots do" {
+        mapOf("vowel" to listOf("wet", "floor"), "body" to listOf("wet", "floor")).forEach { (name, slots) ->
+            withClue(name) {
+                val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+                type.simpleName shouldBe name
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+                val children = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
+                children shouldContainAll slots
+                children shouldNotContain name
+                children shouldNotContain "material"
+                analyze("""$name("a", wet = 0.5)""").diagnostics.size shouldBe 1
+                analyze("""$name(wet = mul(2))""").diagnostics.size shouldBe 0
             }
         }
     }

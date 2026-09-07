@@ -59,7 +59,7 @@ export leadShape = (p) => p
     .superimpose(x => x.transpose("<0 12 0 -12>/8").hpf("<800 1200 800 500>/8"),
                 x => x.sound("pink").gain(0.12).adsr(0.009, 0.1, 0.1, 0.1)) // TODO: separate noise with steady rhythm
     .pan(sine.range(0.2,0.3).slow(8)).superimpose(pan(sine.range(0.8, 0.7).slow(8)))
-    .body("wood").bodyWet(0.2).velocity(perlin.range(0.95,1.0))
+    .body(material = "wood", wet = 0.2).velocity(perlin.range(0.95,1.0))
     .delay(wet = 0.05, time = pure(5/32).div(cps), feedback = 0.2).analog(3.5)
 
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
@@ -70,7 +70,7 @@ export bassShape = (p) => p
       x => x.pan(0.8),
       x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
     ).phaser(rate = 1/13, wet = 0.15, center = 2000, sweep = 1200)
-    .spread(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(200).lpf(freq = 2900, env = 14.4)
+    .unison(spread = sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(200).lpf(freq = 2900, env = 14.4)
     .lpf(q = berlin.range(1.5, 2.2).seg(32).slow(32))
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.

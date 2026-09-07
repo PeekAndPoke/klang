@@ -131,7 +131,7 @@ bullet is withdrawn to [`docs/tasks/future/ducking-unfinished.md`](../tasks/futu
 The observation stands — the DSL, bus effect and DSP each have a spec while the join between them has
 none, the same shape that hid [F18](FINDINGS.md#f18) — but no shipped song uses ducking, so it is
 unfinished work, not a hole in something live. The doc carries the four design questions, of which
-the sharpest is that `duckattack` sets the **release** while `Compressor.attackSeconds` in the same
+the sharpest is that `duck(attack)` (then `duckattack`) sets the **release** while `Compressor.attackSeconds` in the same
 directory means something else again.
 
 **2026-08-31 (eighth pass) — [F3](FINDINGS.md#f3) closed from the block-framing side, and a flaky

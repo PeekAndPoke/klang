@@ -586,7 +586,7 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
   [F18](#f18). But no shipped song uses ducking, so this is unfinished work rather than a coverage
   hole in something live. Moved with its design questions to
   [`docs/tasks/future/ducking-unfinished.md`](../tasks/future/ducking-unfinished.md) — including the
-  one worth fixing before anyone writes a song against it: `duckattack` sets the **release**, and
+  one worth fixing before anyone writes a song against it: `duck(attack)` (then `duckattack`) sets the **release**, and
   `Compressor` in the same directory has an `attackSeconds` that means something else again.
 - ~~**`Voice.Compressor`'s DSP is untested.**~~ ❌ **WITHDRAWN 2026-08-31.** The DSP has two dedicated
   specs: `effects/CompressorSpec` asserts gain reduction above threshold, transparency below it,

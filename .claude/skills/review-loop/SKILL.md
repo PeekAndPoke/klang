@@ -150,7 +150,7 @@ assertion IS the specification, readable one-to-one, the check is near-tautologi
 
 ### Why this exists
 
-The project has shipped toothless guards before: `vowelFloor()` was a silent no-op (the live path never received the
+The project has shipped toothless guards before: `vowel(floor = ...)` was a silent no-op (the live path never received the
 value — caught only by a later review), and Triangle `flankSamples` was proven a no-op only by a render-effect guard.
 Mutation checking is the antidote: it tests the test.
 
@@ -158,6 +158,11 @@ Mutation checking is the antidote: it tests the test.
 
 ## Gotchas
 
+- **A scripted rename must know what a word is.** A door name that is also an English word (`voices`,
+  `spread`, `vibrato`, `compressor`, `body`) rewritten by a bare regex lands in KDoc prose, Lexikon
+  strings, tutorial text and even a Kotlin function name (batch G, 2026-09-07: 215 prose sites).
+  Rewrite reads only in a call context (an argument, a `.mul(` chain) and let a reviewer grep the
+  dotted paths afterwards; the compiler cannot tell prose from code inside a string.
 - **Gradle: never run two builds concurrently** — corrupts the sprudel KSP cache; recover with
   `:sprudel:clean`.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards

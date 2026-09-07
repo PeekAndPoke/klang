@@ -2,6 +2,18 @@
 
 ## Recent Work (2026-09-07)
 
+- **Batch G, the last compounds.** `compressor(threshold, ratio, knee, attack, release)`,
+  `unison(voices, spread, pan)`, `duck(orbit, depth, attack)`, `vibrato(rate, depth)`,
+  `penv(amount, attack, decay, release, curve, anchor)`, `fm(env, h, attack, decay, sustain)`,
+  `vowel(vowel, wet, floor)`, `body(material, wet, floor)`: objects with a child per numeric slot;
+  the name slots `vowel` and `material` have no readers (`docs/tasks/future/string-slot-readers.md`).
+  Retired: `vibratoMod`, the `p*` pitch stage doors, `fmenv/fmmod/fmh/fmattack/fmdecay/fmsustain`,
+  `duckorbit/duckattack/duckdepth`, `voices/spread/panSpread`, `vowelWet/vowelFloor`,
+  `bodyWet/bodyFloor`; `comp`, `uni`, `vib`, `pamt` stay as aliases. Every compound head keeps its
+  value on a control gap and reinterprets on a bare call (the old `compressor()` no-op is gone). KSP
+  now qualifies the owner in generated calls, because a slot named like its object (`vowel(vowel)`)
+  shadowed it. The ignitor builders keep their own `voices`/`spread`; the migration skipped those.
+
 - **Filters are objects with named slots (batch F).** `lpf(freq, q, passes, env, attack, decay,
   sustain, release)`, `hpf` the same, `bpf(freq, q, env, attack, decay, sustain, release)`,
   `notch` the same; `lpf(q = mul(2))` maps, `hpf(lpf.freq.div(2))` reads. Per-knob doors and
@@ -271,8 +283,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Pitch Envelope
 
-- `pattack()` / `patt`, `pdecay()` / `pdec`, `prelease()` / `prel`
-- `penv()` / `pamt`, `pcurve()` / `pcrv`, `panchor()` / `panc`
+- `penv(amount, attack, decay, release, curve, anchor)` / `pamt`; readers `penv.*`
 
 ### Audio Effects — Waveshaping / Distortion
 
@@ -302,7 +313,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Duck / Sidechain
 
-- `duckorbit()` / `duck`, `duckattack()` / `duckatt`, `duckdepth()`
+- `duck(orbit, depth, attack)`; readers `duck.*`
 
 ### Audio Effects — Other
 
@@ -348,13 +359,13 @@ return applyCat(patterns)
 ### Synthesis Parameters
 
 - `gain()`, `pan()`, `legato()` / `clip()`
-- `vibrato()` / `vib`, `vibratoMod()` / `vibmod`
-- `accelerate()`, `unison()` / `uni`, `detune()`, `spread()`, `density()` / `d`
+- `vibrato(rate, depth)` / `vib`; readers `vibrato.rate`, `vibrato.depth`
+- `accelerate()`, `unison(voices, spread, pan)` / `uni`, `density()` / `d` (`detune()` and `spread()` are gone)
 - `adsr()` (its stages are slots and `adsr.*` children; the single doors were removed 2026-09-07)
 - `onepole()` (Klang extension; formerly `warmth`, now Hz)
 - `velocity()`, `postgain()`
-- FM synthesis: `fmh()`, `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`
-- Pitch envelope: `pattack`, `pdecay`, `prelease`, `penv`
+- FM synthesis: `fm(env, h, attack, decay, sustain)`; readers `fm.*`
+- Pitch envelope: `penv(amount, attack, decay, release, curve, anchor)`
 
 ### Arithmetic Addons (Non-Strudel)
 

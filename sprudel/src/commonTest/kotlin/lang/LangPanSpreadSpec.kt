@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
@@ -21,18 +20,18 @@ class LangPanSpreadSpec : StringSpec({
         val ctrl = "0 0.25"
 
         dslInterfaceTests(
-            "pattern.panSpread(ctrl)" to
-                    seq(pat).panSpread(ctrl),
-            "script pattern.panSpread(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").panSpread("$ctrl")"""),
-            "string.panSpread(ctrl)" to
-                    pat.panSpread(ctrl),
-            "script string.panSpread(ctrl)" to
-                    SprudelPattern.compile(""""$pat".panSpread("$ctrl")"""),
-            "panSpread(ctrl)" to
-                    seq(pat).apply(panSpread(ctrl)),
-            "script spread(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(panSpread("$ctrl"))"""),
+            "pattern.unison(pan = ctrl)" to
+                    seq(pat).unison(pan = ctrl),
+            "script pattern.unison(pan = ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").unison(pan = "$ctrl")"""),
+            "string.unison(pan = ctrl)" to
+                    pat.unison(pan = ctrl),
+            "script string.unison(pan = ctrl)" to
+                    SprudelPattern.compile(""""$pat".unison(pan = "$ctrl")"""),
+            "unison(pan = ctrl)" to
+                    seq(pat).apply(unison(pan = ctrl)),
+            "script unison(spread = ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").apply(unison(pan = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("panSpread") shouldBe 0.0
@@ -40,76 +39,40 @@ class LangPanSpreadSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as panSpread | seq(\"0 1\").panSpread()" {
-        val p = seq("0 1").panSpread()
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.oscParams?.get("panSpread") shouldBe 0.0
-            events[1].data.oscParams?.get("panSpread") shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as panSpread | \"0 1\".panSpread()" {
-        val p = "0 1".panSpread()
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.oscParams?.get("panSpread") shouldBe 0.0
-            events[1].data.oscParams?.get("panSpread") shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as panSpread | seq(\"0 1\").apply(panSpread())" {
-        val p = seq("0 1").apply(panSpread())
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.oscParams?.get("panSpread") shouldBe 0.0
-            events[1].data.oscParams?.get("panSpread") shouldBe 1.0
-        }
-    }
-
-    "panSpread() sets VoiceData.panSpread" {
-        val p = "0 1".apply(panSpread("0.5 1.0"))
+    "unison(pan = ...) sets VoiceData.panSpread" {
+        val p = "0 1".apply(unison(pan = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.oscParams?.get("panSpread") } shouldBe listOf(0.5, 1.0)
     }
 
-    "panSpread() works as pattern extension" {
-        val p = note("c").panSpread("0.5")
+    "unison(pan = ...) works as pattern extension" {
+        val p = note("c").unison(pan = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("panSpread") shouldBe 0.5
     }
 
-    "panSpread() works as string extension" {
-        val p = "c".panSpread("0.5")
+    "unison(pan = ...) works as string extension" {
+        val p = "c".unison(pan = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("panSpread") shouldBe 0.5
     }
 
-    "panSpread() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").panSpread("0.5")""")
+    "unison(pan = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").unison(pan = "0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.oscParams?.get("panSpread") shouldBe 0.5
     }
 
-    "panSpread() with continuous pattern sets panSpread correctly" {
+    "unison(pan = ...) with continuous pattern sets panSpread correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").panSpread(sine)
+        val p = note("a b c d").unison(pan = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

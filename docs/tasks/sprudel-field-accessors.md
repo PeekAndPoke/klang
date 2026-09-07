@@ -62,6 +62,22 @@ Rewritten 2026-09-06 after a design session; the previous draft (context-key bin
   `nfadsr`); the notch compound is the whole of `lang_filters_addons.kt`. The tutorial lint learned
   the named envelope form. Filter curve objects (`lpCurves`, `hpCurves`, `bpCurves`) are NOT built:
   the engine has no filter curve fields yet (`docs/tasks/filter-envelope-configuration.md`).
+- 2026-09-07: batch G, the last compounds: `compressor(threshold, ratio, knee, attack, release)`,
+  `unison(voices, spread, pan)`, `duck(orbit, depth, attack)`, `vibrato(rate, depth)`, `penv(amount,
+  attack, decay, release, curve, anchor)`, `fm(env, h, attack, decay, sustain)`, `vowel(vowel, wet,
+  floor)`, `body(material, wet, floor)`. The name slots have no readers
+  (`docs/tasks/future/string-slot-readers.md`). Retired 31 doors and aliases; `comp`, `uni`, `vib`,
+  `pamt` stay. The free-standing `fmenv("...")` control-pattern factory is gone with the door.
+  KSP fix on the way: a slot named like its object (`vowel(vowel = ...)`) shadowed the object in
+  the generated call; the owner is now fully qualified. The ignitor builders' own `voices` and
+  `spread` were left alone by the migration (lambda-chain heuristic, 30 sites skipped on purpose).
+  With this the compound sweep is complete except the `snd*` family (separate discussion).
+  `vowel` moved from category `tonal` to `effects`, next to `body` and `room` (deliberate). Archived
+  plans (`docs/plans/filter-unification.md`, `block-framing-invariance.md`, `future/phoneme-singing.md`)
+  keep the spellings of their day; the migration was reverted there.
+  Lesson: the batch G names are English words; the script's bare-word read rewrite hit prose in 215
+  places (Lexikon, tutorials, KDoc tags, a Kotlin function name) and was repaired by restoring the
+  HEAD text wherever the word was not a call argument. Recorded in `/review-loop` Gotchas.
 - 2026-09-07: batch four, the last numeric group: `unison, spread, panSpread, density` (unison
   oscillator params, read from `oscParams`), `orbit, duckorbit` (Int routing fields), `duckattack,
   duckdepth`, `compressor` (its first slot, the threshold; the other knobs have no single-field
@@ -287,7 +303,8 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
 - DONE (batch four, 2026-09-07): dynamics leftovers, routing fields, compressor threshold, fmenv.
   Phase 2 numeric sweep complete: 88 accessors, 54 alias constants.
 - WON'T IMPLEMENT (maintainer, 2026-09-07): string and boolean setters (`note, n, sound, bank,
-  scale, vowel, body, unit, loop, *shape, *curve`). "Apply a mapper to a name" has no use case,
+  scale, vowel, body, unit, loop, *shape, *curve`); the name slots of the compounds have no reader
+  children either, listed in `docs/tasks/future/string-slot-readers.md`. "Apply a mapper to a name" has no use case,
   and the maintainer expects it never will.
 - 2026-09-07, compound pilot on `adsr` (maintainer decision): `adsr` is an object whose children
   `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release` are the slot accessors and whose
@@ -305,9 +322,9 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
 - DONE (batch E, 2026-09-07): the seven compound effects as objects with slot children; per-knob
   doors and aliases removed.
 - DONE (batch F, 2026-09-07): `lpf`, `hpf`, `bpf`, `notch` as objects with slot children;
-  `adsrCurves` setter-only; `adsrCurve` gone everywhere. Next: batch G (`compressor`, `vibrato`,
-  `penv`, `fm`, `duck`, `vowel`, `body`, `unison`). The `snd*` sound doors are a separate
-  discussion (idea: `object Snd { object supersaw { fields } }`).
+  `adsrCurves` setter-only; `adsrCurve` gone everywhere.
+- DONE (batch G, 2026-09-07): `compressor`, `unison`, `duck`, `vibrato`, `penv`, `fm`, `vowel`,
+  `body`. The compound sweep is complete; the `snd*` sound doors are a separate discussion (idea: `object Snd { object supersaw { fields } }`).
 - DONE in batch F (maintainer, 2026-09-07): `adsrCurve` (the singular, one curve name for all stages) is
   REMOVED; `adsrCurves(attack, decay, release)` is an object with the setter only (decided: no
   children, the slots are names). Same for the filter envelope curve siblings, which should be called `lpCurves`,

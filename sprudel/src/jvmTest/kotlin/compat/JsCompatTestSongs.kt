@@ -45,7 +45,7 @@ object JsCompatTestSongs {
                         // bass
                         note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                         .orbit(3)
-                        .sound("supersaw").unison(4).spread(0.1)
+                        .sound("supersaw").unison(voices = 4, spread = 0.1)
                         .adsr(0.0, 0.3, 0.0, 0.8)
                         .lpf(800)
                         .gain(0.8).pan(-0.5),
@@ -112,7 +112,7 @@ object JsCompatTestSongs {
                     .scale("<c3:major>/2")
                     .s("supersaw")
                     .distort(0.7)
-                    .superimpose((x) => x.spread("<0.5>"))
+                    .superimpose((x) => x.unison(spread = "<0.5>"))
                     //.lpf(env = perlin.slow(3).range(12, 27.9))
                     .lpf(sine.slow(2).range(100, 2000))
                     .gain(0.3)
@@ -125,7 +125,7 @@ object JsCompatTestSongs {
                         .scale("<c3:major>/2")
                         .s("supersaw")
                         .distort(0.7)
-                        .superimpose((x) => x.spread("<0.5>"))
+                        .superimpose((x) => x.unison(spread = "<0.5>"))
                         //.lpf(env = perlin.slow(3).range(12, 27.9))
                         .lpf(sine.slow(2).range(100, 2000))
                         .gain(0.3),

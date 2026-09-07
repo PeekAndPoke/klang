@@ -52,7 +52,7 @@ Of ~180 implemented concepts, only ~14% are well-covered by existing tutorials. 
 
 ### Missing Effects & Synthesis
 
-Filter envelopes, pitch envelope, FM synthesis, `compressor()`, `duckorbit()`, `vowel()`, `distort(shape = ...)`,
+Filter envelopes, pitch envelope, FM synthesis, `compressor()`, `duck()`, `vowel()`, `distort(shape = ...)`,
 `iresponse()`, `mode()`, `bank()`, `freq()`, `accelerate()`, `unison()`, `detune()`
 
 ### Missing Pattern Functions
@@ -104,8 +104,8 @@ grouping, `<>` alternation
 |-----|-----------------------|--------------|---------------------------------------|------------------|---------------------------------------------------------------------------------|
 | M5  | Dynamic Filters       | Intermediate | `lpf(env = ...)`, `lpf(attack = ...)`, filter ADSR    | **Acid House**   | TB-303 squelch IS a filter envelope. The genre was born from this one parameter |
 | M6  | Scale Modes           | Intermediate | `mode()`, `scale()` modes             | **Flamenco**     | Phrygian mode = instant Spain. Most viscerally clear mode demonstration         |
-| M7  | Pitch Bends and Drops | Intermediate | `accelerate()`, `penv()`, `panchor()` | **Grime**        | Wiley's "Eskimo" sound = pitch envelopes on bass. Every hit dives               |
-| M8  | Sidechain Pumping     | Intermediate | `duckorbit()`, `duckattack()`         | **French House** | Daft Punk's Alesis 3630 pumping defined the genre                               |
+| M7  | Pitch Bends and Drops | Intermediate | `accelerate()`, `penv()`, `penv(anchor = ...)` | **Grime**        | Wiley's "Eskimo" sound = pitch envelopes on bass. Every hit dives               |
+| M8  | Sidechain Pumping     | Intermediate | `duck()`, `duck(attack = ...)`         | **French House** | Daft Punk's Alesis 3630 pumping defined the genre                               |
 | L13 | Sound Banks           | Beginner     | `bank()`, browsing sounds             | **Reggae**       | Reggae has iconic, specific sounds — teaches why banks matter                   |
 
 ### Phase 4: Specialized Topics
@@ -131,7 +131,7 @@ grouping, `<>` alternation
 | L9  | Advanced Picking             | Advanced | `inhabit()`, `pickSqueeze()`      | **Salsa**       | Section switching (montuno→mambo→coro) = `inhabit()`. Conducting a Latin band |
 | L11 | Squeeze and Bite             | Advanced | `squeeze()`, `bite()`, `press()`  | **Glitch**      | Autechre-style time fracturing. These functions ARE glitch tools              |
 | A1  | Ignitor DSL                  | Pro      | Ignitor tree, Param/Const/Freq    | **Synthwave**   | Building a Juno-106 in code. Synth worship as design goal                     |
-| A2  | FM Synthesis                 | Pro      | `fmh()`, `fmenv()`, FM theory     | **80s Pop**     | DX7 = 80s pop. "THAT'S how you make that electric piano!"                     |
+| A2  | FM Synthesis                 | Pro      | `fm(env = ...)`, `fm(h = ...)`, FM theory     | **80s Pop**     | DX7 = 80s pop. "THAT'S how you make that electric piano!"                     |
 | A3  | Super-Oscillator Masterclass | Advanced | SuperSaw, voices, freqSpread      | **Trance**      | JP-8000 supersaw IS trance. Every euphoric breakdown for a decade             |
 | A4  | Physical Modeling            | Advanced | Pluck, SuperPluck, Karplus-Strong | **Bluegrass**   | KS simulates plucked strings. Banjo, guitar, mandolin — can it sound real?    |
 

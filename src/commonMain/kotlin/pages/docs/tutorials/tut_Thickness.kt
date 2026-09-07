@@ -49,7 +49,7 @@ val thicknessTutorial = Tutorial(
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Quick,
     tags = listOf(TutorialTag.Synthesis),
-    teaches = listOf("unison", "spread", "analog"),
+    teaches = listOf("unison", "analog"),
     sections = listOf(
         TutorialSection(
             heading = "A voice made of copies",
@@ -101,7 +101,7 @@ val thicknessTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    The other half of the stack is how far off the note the layers sit. `spread()` sets that distance, in the **semitones** you met in ${Tut.scalesAndMelodies}, and it is a small number on purpose: a spread of `0.2` fans the layers across two tenths of one semitone, a gap far too small to read as a wrong note.
+                    The other half of the stack is how far off the note the layers sit. `unison(spread = ...)` sets that distance, in the **semitones** you met in ${Tut.scalesAndMelodies}, and it is a small number on purpose: a spread of `0.2` fans the layers across two tenths of one semitone, a gap far too small to read as a wrong note.
 
                     **Try it:** let the four cycles come around twice, then change `unison(8)` to `unison(2)` and press **Update**. The same four distances, on a stack with almost nothing in it.
 
@@ -110,10 +110,10 @@ val thicknessTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("supersaw")  // the stacking voice
-                      .unison(8)                         // eight layers, the usual count
-                      .spread("<0.02 0.1 0.3 0.8>")      // semitones apart: tight, breathing, wide, too wide
-                      .gain(0.5)                         // unchanged: only the distance moves
+                    note("a3 ~ c4 ~").sound("supersaw")           // the stacking voice
+                      .unison(8)                                  // eight layers, the usual count
+                      .unison(spread = "<0.02 0.1 0.3 0.8>")      // semitones apart: tight, breathing, wide, too wide
+                      .gain(0.5)                                  // unchanged: only the distance moves
                     """.trimIndent(),
                 ),
             ),
@@ -136,8 +136,8 @@ val thicknessTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("supersaw").unison(8).spread(0.2).analog(6).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)    // drifting: each layer wanders on its own
-                    // note("a3 ~ c4 ~").sound("supersaw").unison(8).spread(0.2).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)           // perfectly still, swap to compare
+                    note("a3 ~ c4 ~").sound("supersaw").unison(voices = 8, spread = 0.2).analog(6).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)    // drifting: each layer wanders on its own
+                    // note("a3 ~ c4 ~").sound("supersaw").unison(voices = 8, spread = 0.2).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)           // perfectly still, swap to compare
                     """.trimIndent(),
                 ),
             ),
@@ -156,9 +156,9 @@ val thicknessTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("supersaw").unison(3).spread(0.04).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)              // tight: three layers, barely apart
-                    // note("a3 ~ c4 ~").sound("supersaw").unison(12).spread(0.3).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)           // wide: the big detuned lead
-                    // note("a3 ~ c4 ~").sound("supersaw").unison(12).spread(0.3).analog(6).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5) // alive: the same, drifting
+                    note("a3 ~ c4 ~").sound("supersaw").unison(voices = 3, spread = 0.04).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)              // tight: three layers, barely apart
+                    // note("a3 ~ c4 ~").sound("supersaw").unison(voices = 12, spread = 0.3).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)           // wide: the big detuned lead
+                    // note("a3 ~ c4 ~").sound("supersaw").unison(voices = 12, spread = 0.3).analog(6).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5) // alive: the same, drifting
                     """.trimIndent(),
                 ),
             ),

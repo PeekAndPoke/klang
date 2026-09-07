@@ -98,8 +98,12 @@ knobs, `dist`, `distos`, `distortshape`/`dshape`, `crushos`, `coarseos`, the `*O
 `room(fade = 0.3)` sets, `room.fade` reads); the filter per-knob doors `lpq`, `lpx`, `lpe`, `lpadsr`, `hpq`, `hpx`, `hpe`,
 `hpadsr`, `bpq`, `bpe`, `bpadsr`, `notchf`, `nresonance`/`nres`/`notchq`/`ntq`, `ntf`, `nfadsr`, `nfattack`/`nfa`, `nfdecay`/`nfd`,
 `nfsustain`/`nfs`, `nfrelease`/`nfr`, `nfenv`/`nfe` (gone 2026-09-07: `lpf` and `hpf` carry `q`, `passes`, `env` and the envelope
-stages as slots, `bpf` and `notch` the same without `passes`); the singular `adsrCurve` on every surface (`adsrCurves(a, d, r)` only). Guard for all:
-`LangRetiredDoorsSpec`. The spelling
+stages as slots, `bpf` and `notch` the same without `passes`); the singular `adsrCurve` on every surface (`adsrCurves(a, d, r)` only); the batch G per-knob doors `vibratoMod`,
+`pattack`/`patt`, `pdecay`/`pdec`, `prelease`/`prel`, `pcurve`/`pcrv`, `panchor`/`panc`, `fmenv`/`fmmod`, `fmh`, `fmattack`/`fmatt`,
+`fmdecay`/`fmdec`, `fmsustain`/`fmsus`, `duckorbit`, `duckattack`/`duckatt`, `duckdepth`, the pattern-level `voices`, `spread`, `panSpread`
+(the ignitor builders keep their own `voices()`/`spread()`),
+`vowelWet`, `vowelFloor`, `bodyWet`, `bodyFloor` (gone 2026-09-07: `compressor`, `unison`, `duck`, `vibrato`, `penv`, `fm`,
+`vowel`, `body` carry them as slots; `comp`, `uni`, `vib`, `pamt` stay). Guard for all: `LangRetiredDoorsSpec`. The spelling
 `@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
 refuses the old one).
 

@@ -281,7 +281,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 | `rootNotes()`           |         | Extract chord root notes      | `chord("Am C").rootNotes()`                     |
 | `freq(hz)`              |         | Set frequency in Hz           | `freq("440 880")`                               |
 | `accelerate(semitones)` |         | Pitch ramp during playback (SEMITONES over the event; 12 = one octave) | `s("cr").accelerate(24)`                        |
-| `vibrato(hz)` + `vibratoMod(semitones)` | `vib` | Pitch vibrato (sprudel-level) | `note("c3").vibrato(5).vibratoMod(0.3)`         |
+| `vibrato(rate, depth)`                                                 | `vib`      | Vibrato LFO rate in Hz and depth in semitones; readers `vibrato.rate`, `.depth`                                                                        | `note("c4").s("saw").vibrato(5, 0.5)`                                                                |
 
 #### `:soundIndex:gain` suffix (universal variant picker)
 
@@ -327,7 +327,6 @@ selection — extended to ignitor variants and per-note gain.
 | `adsrOn(flag?)`  |            | Voice envelope ON (the default) | `note("c3").adsrOn()`                |
 | `legato(amt)`    | `clip`     | Note duration scaling          | `note("c3").legato(1.5)`              |
 | `postgain(amt)`  |            | Post-processing gain           | `s("bd").distort(3).postgain(0.1)`    |
-| `spread(value)`  |            | Distribute value across events | `s("bd sd").spread(1.0)`              |
 
 ### Sound Selection
 
@@ -335,8 +334,7 @@ selection — extended to ignitor variants and per-note gain.
 |--------------------|-----------------|---------------------------------|----------------------------------------|
 | `sound(name)`      | `s`             | Set sound/instrument            | `sound("bd sd hh cp")`                 |
 | `analog(amt)`      |                 | Analog oscillator drift         | `note("c3").s("supersaw").analog(0.2)` |
-| `unison(n)`        | `uni`, `voices` | Voice doubling                  | `note("c3").s("saw").unison(6)`        |
-| `spread(amt)`      |                 | Frequency spread between voices | `note("c3").s("supersaw").spread(0.1)` |
+| `unison(voices, spread, pan)`                                          | `uni`      | Unison voices, detune spread in semitones, stereo spread (reserved); readers `unison.voices`, `.spread`, `.pan`                                        | `note("c3").s("supersaw").unison(5, 0.3)`                                                            |
 | `density(amt)`     | `d`             | Oscillator density (noise)      | `note("a").s("dust").density(40)`      |
 | `onepole(freq)`    |                 | One-pole lowpass in Hz (warmth) | `s("bd").distort(3).onepole(17814)`    |
 | `sndPluck(params)` |                 | Karplus-Strong shorthand        | `note("c3").sndPluck(0.999, 0.8)`     |
@@ -377,7 +375,10 @@ at the cutoff). Same third slot on the ignitor door.
 | `phaser.rate` / `phaser.wet` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
 | `tremolo(depth, sync, shape, skew, phase)`                                  |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`sync`), LFO shape name, skew, phase                                                                               | `note("c3").tremolo(depth = 0.5, sync = 4, shape = "sine")`  |
 | `tremolo.depth` / `tremolo.sync` / `tremolo.skew` / `tremolo.phase`         |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(tremolo.sync)`                     |
-| `compressor(threshold, ratio, knee, attack, release)`    | `comp`                                                                                   | Compressor (per-param)        | `s("bd sd").comp(-20, 4, 3, 0.01, 0.3)`     |
+| `compressor(threshold, ratio, knee, attack, release)`                  | `comp`     | Orbit compressor; readers `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`                                                             | `s("bd sd hh sd").compressor(-20, 4, 6, 0.003, 0.1)`                                                 |
+| `duck(orbit, depth, attack)`                                           |            | Sidechain: the orbit that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.orbit`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
+| `vowel(vowel, wet, floor)`                                             |            | Vowel formant: the vowel name (no reader), send 0..1, dry floor; readers `vowel.wet`, `.floor`                                                         | `note("c3").s("saw").vowel("a", 0.8)`                                                                |
+| `body(material, wet, floor)`                                           |            | Resonant body: material name (no reader), send 0..1, dry floor; readers `body.wet`, `.floor`                                                           | `note("c3").s("saw").body("wood", 0.7)`                                                              |
 | `iresponse(path)`       | `ir`                                                                                     | Impulse response convolution                  | `note("c3").ir("hall.wav")`               |
 
 Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`
@@ -386,22 +387,15 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 
 | Function           | Aliases | Description          | Example                                |
 |--------------------|---------|----------------------|----------------------------------------|
-| `fmh(ratio)`       |         | FM harmonicity ratio | `note("c3").s("sine").fmh(2)`          |
-| `fmenv(depth)`     | `fmmod` | FM modulation depth  | `note("c3").s("sine").fmenv(500)`      |
-| `fmattack(sec)`    | `fmatt` | FM envelope attack   | `note("c3").fmenv(500).fmattack(0.01)` |
-| `fmdecay(sec)`     | `fmdec` | FM envelope decay    | `note("c3").fmenv(500).fmdecay(0.1)`   |
-| `fmsustain(level)` | `fmsus` | FM envelope sustain  | `note("c3").fmenv(500).fmsustain(0.0)` |
+| `fm(env, h, attack, decay, sustain)`                                   |            | FM: modulation depth in Hz, harmonicity (modulator to carrier ratio), and the modulation envelope; active once `env` and `h` are set                   | `note("c3").s("sine").fm(300, 1.4, 0.01, 0.3, 0)`                                                    |
+| `fm.env` / `fm.h` / `fm.attack` / `fm.decay` / `fm.sustain`            |            | Read an FM slot; `fm(h = mul(2))` maps one slot                                                                                                        | `p.fm(200, 2).fm(env = mul("1 3"))`                                                                  |
 
 ### Pitch Envelope (via pattern params)
 
 | Function          | Aliases | Description          | Example                             |
 |-------------------|---------|----------------------|-------------------------------------|
-| `penv(semitones)` | `pamt`  | Pitch envelope depth | `note("c4").penv(12)`               |
-| `pattack(sec)`    | `patt`  | Pitch env attack     | `note("c4").penv(12).pattack(0.1)`  |
-| `pdecay(sec)`     | `pdec`  | Pitch env decay      | `note("c4").penv(12).pdecay(0.2)`   |
-| `prelease(sec)`   | `prel`  | Pitch env release    | `note("c4").penv(12).prelease(0.3)` |
-| `pcurve(shape)`   | `pcrv`  | Pitch env curve      | `note("c4").penv(12).pcurve(2)`     |
-| `panchor(point)`  | `panc`  | Pitch env anchor     | `note("c4").penv(12).panchor(0)`    |
+| `penv(amount, attack, decay, release, curve, anchor)`                  | `pamt`     | Pitch envelope: depth in semitones, its stages, curve (1 linear, below concave) and sustain anchor                                                     | `s("bd*4").penv(24, 0.001, 0.08)`                                                                    |
+| `penv.amount` / `penv.attack` / ... / `penv.anchor`                    |            | Read a pitch envelope slot                                                                                                                             | `p.penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))`                                    |
 
 ### Sampling
 
@@ -497,7 +491,7 @@ s("hh*8").pan(rand)
 s("sd").delay(wet = 0.5, time = pure(1/8).div(cps))
 
 // Organic modulation
-note("c3").s("supersaw").spread(perlin.range(0.0, 0.3).slow(16))
+note("c3").s("supersaw").unison(spread = perlin.range(0.0, 0.3).slow(16))
 ```
 
 ---

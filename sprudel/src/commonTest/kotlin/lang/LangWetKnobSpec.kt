@@ -35,8 +35,8 @@ class LangWetKnobSpec : StringSpec({
         firstData(note("c").delay(0.3)).delay shouldBe 0.3
         firstData(note("c").phaser(wet = 0.8)).phaserDepth shouldBe 0.8
         firstData(note("c").phaser(floor = 0.3)).phaserFloor shouldBe 0.3
-        firstData(note("c").bodyWet(0.5)).bodyMix shouldBe 0.5
-        firstData(note("c").vowelWet(0.6)).vowelMix shouldBe 0.6
+        firstData(note("c").body(wet = 0.5)).bodyMix shouldBe 0.5
+        firstData(note("c").vowel(wet = 0.6)).vowelMix shouldBe 0.6
     }
 
     "sprudel script door: wet knobs dispatch and write the same fields" {
@@ -44,8 +44,8 @@ class LangWetKnobSpec : StringSpec({
         firstData(SprudelPattern.compile("""note("c").delay(0.3)""")).delay shouldBe 0.3
         firstData(SprudelPattern.compile("""note("c").phaser(wet = 0.8)""")).phaserDepth shouldBe 0.8
         firstData(SprudelPattern.compile("""note("c").phaser(floor = 0.3)""")).phaserFloor shouldBe 0.3
-        firstData(SprudelPattern.compile("""note("c").bodyWet(0.5)""")).bodyMix shouldBe 0.5
-        firstData(SprudelPattern.compile("""note("c").vowelWet(0.6)""")).vowelMix shouldBe 0.6
+        firstData(SprudelPattern.compile("""note("c").body(wet = 0.5)""")).bodyMix shouldBe 0.5
+        firstData(SprudelPattern.compile("""note("c").vowel(wet = 0.6)""")).vowelMix shouldBe 0.6
     }
 
     "compound heads: the wet slot stays the head's first/second slot" {

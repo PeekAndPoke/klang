@@ -605,7 +605,6 @@ object legato : FieldAccessor({ it.legato }) {
         { p -> p.legato(amount, callInfo) }
 }
 
-
 /** Chains a legato operation onto this [PatternMapperFn]. */
 @KlangScript.Function
 fun PatternMapperFn.legato(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -635,108 +634,125 @@ val clip: legato = legato
 fun PatternMapperFn.clip(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.legato(amount, callInfo) }
 
-// -- vibrato() --------------------------------------------------------------------------------------------------------
+// -- vibrato ---------------------------------------------------------------------------------------------------------
 
-private val vibratoUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { hz ->
-    clone().also { it.vibrato = hz }
-}
+private val vibratoRateMutation = voiceSetter { vibrato = it?.asDoubleOrNull() ?: vibrato }
 
-private fun applyVibrato(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyVibratoRate(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.vibrato }, update = vibratoUpdate)
+        return source._mapNumericField(mapper, read = { it.vibrato }, update = vibratoRateMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, vibratoUpdate)
+    return source._liftOrReinterpretNumericalField(args, vibratoRateMutation)
+}
+
+private val vibratoDepthMutation = voiceSetter { vibratoMod = it?.asDoubleOrNull() }
+
+private fun applyVibratoDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.vibratoMod }, update = vibratoDepthMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, vibratoDepthMutation)
 }
 
 /**
- * Sets the vibrato rate (oscillation speed) in Hz.
+ * Vibrato: LFO rate in Hz and depth in semitones.
  *
- * Vibrato is a periodic pitch modulation applied to a note. Higher values create faster
- * vibrato; lower values create a slower wobble. Use [vibratoMod] to set the depth in semitones.
- * Default rate is 5 Hz when [vibratoMod] is set but [vibrato] is not.
+ * A pitch wobble; the rate is how fast, the depth how far.
  *
- * Both the sprudel DSL and the Ignitor DSL use the same units:
- * rate in Hz, depth in semitones.
+ * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
+ * a mapper (`vibrato(depth = mul(2))`), and the numeric slots read back as `vibrato.rate`, `vibrato.depth`.
+ * With no argument at all, the pattern's own values are reinterpreted as `rate`.
  *
  * ```KlangScript(Playable)
- * note("c4 e4 g4").vibrato(5).vibratoMod(0.5)  // 5 Hz, ±0.5 semitone
+ * note("c4 e4").s("saw").vibrato(5, 0.5)                                  // a singing vibrato
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").vibrato("<2 8>")       // alternating slow/fast vibrato per cycle
+ * note("c4 e4").s("saw").vibrato(5, 0.5).vibrato(rate = mul("1 1.5"))     // the second note wobbles faster
  * ```
  *
- * @param hz Vibrato LFO rate in Hz. 0.0 = no vibrato, 3.0 = gentle, 5.0 = standard,
- *   8.0+ = fast. Default: 5.0 Hz (when vibratoMod is set). Typical range: 1.0–10.0.
- * @alias vib
+ * ```KlangScript(Playable)
+ * note("c4 e4").s("saw").vibrato("3 7", 0.5).penv(vibrato.rate)           // a pitch rise as wide as the rate
+ * ```
+ *
+ * @param rate LFO rate in Hz; 3 is gentle, 5 standard, 7 nervous.
+ * @param depth Depth in semitones; 0.2 is subtle, 0.5 expressive, 1 a wide wobble.
+
+ *
  * @category tonal
- * @tags vibrato, vib, pitch modulation, oscillation, LFO
+ * @tags vibrato, rate, depth
  */
 @KlangScript.Function
-fun SprudelPattern.vibrato(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyVibrato(this, listOfNotNull(hz).asSprudelDslArgs(callInfo))
+fun SprudelPattern.vibrato(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch rate: reinterpret runs only on a fully bare call.
+    var p = if (rate != null || !(depth != null)) {
+        applyVibratoRate(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
+    } else {
+        this
+    }
+    if (depth != null) p = applyVibratoDepth(p, listOf<Any?>(depth).asSprudelDslArgs(callInfo?.forParam(1)))
+    return p
+}
 
-/** Sets the vibrato frequency (speed) in Hz on a string pattern. */
+/** Parses this string as a pattern, then applies [vibrato]. */
 @KlangScript.Function
-fun String.vibrato(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(hz, callInfo)
+fun String.vibrato(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(rate, depth, callInfo)
+
+/** Chains a [vibrato] step onto this [PatternMapperFn]. */
+@KlangScript.Function
+fun PatternMapperFn.vibrato(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.vibrato(rate, depth, callInfo) }
 
 /**
- * The vibrato rate of each event in Hz, as a value other setters can read.
- *
- * Bare `vibrato` reads what the chain has set so far, so it comes after whatever set the field
- * (`vibrato(...)` or an alias). Call it, `vibrato(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `vib`.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").vibrato(5).vibratoMod(0.3).vibrato(mul("1 1.5"))           // the second note wobbles faster
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4 e4").vibrato("4 7").vibratoMod(vibrato.div(20))               // faster vibrato, deeper too
- * ```
+ * The `vibrato` object: `vibrato(...)` sets the slots, and each numeric slot reads back as a child,
+ * `vibrato.rate`, `vibrato.depth`.
  *
  * @category tonal
  * @tags vibrato, accessor
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("vibrato")
-object vibrato : FieldAccessor({ it.vibrato }) {
+object vibrato {
 
-    /**
-     * Returns a [PatternMapperFn] that sets the vibrato frequency in Hz.
-     * When called with no argument, reinterprets the current event value as a vibrato rate.
-     *
-     * ```KlangScript(Playable)
-     * note("c4").apply(vibrato(5))   // mapper form
-     * ```
-     */
+    /** The rate slot of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val rate: FieldAccessor = FieldAccessor { it.vibrato }
+
+    /** The depth slot of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val depth: FieldAccessor = FieldAccessor { it.vibratoMod }
+
+    /** The setter, see [SprudelPattern.vibrato]. */
     @KlangScript.Invoke
-    operator fun invoke(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.vibrato(hz, callInfo) }
+    operator fun invoke(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.vibrato(rate, depth, callInfo) }
 }
 
+/**
+ * `vib`, the short name of [vibrato]: the same door, use whichever reads better.
+ *
+ * ```KlangScript(Playable)
+ * note("c4 e4").s("saw").vib(5, 0.5)
+ * ```
+ *
+ * @category tonal
+ * @tags vib, vibrato
 
-/** Chains a vibrato operation onto this [PatternMapperFn]. */
+ */
 @KlangScript.Function
-fun PatternMapperFn.vibrato(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vibrato(hz, callInfo) }
+fun SprudelPattern.vib(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    vibrato(rate, depth, callInfo)
 
-/** Alias for [vibrato] on this pattern. Sets the vibrato frequency in Hz. */
+/** Parses this string as a pattern, then applies [vib]. */
 @KlangScript.Function
-fun SprudelPattern.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.vibrato(hz, callInfo)
-
-/** Alias for [vibrato] on a string pattern. */
-@KlangScript.Function
-fun String.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(hz, callInfo)
+fun String.vib(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.vibrato(rate, depth, callInfo)
 
 /**
- * Alias of [vibrato]: the same accessor under another name.
+ * Alias of [vibrato]: the same object under its short name.
  *
  * @category tonal
  * @tags vib, vibrato, accessor
@@ -744,520 +760,194 @@ fun String.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatt
 @KlangScript.Constant
 val vib: vibrato = vibrato
 
-/** Chains a vib operation onto this [PatternMapperFn]. */
+/** Chains a [vib] step onto this [PatternMapperFn] (see [SprudelPattern.vib]). */
 @KlangScript.Function
-fun PatternMapperFn.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vibrato(hz, callInfo) }
+fun PatternMapperFn.vib(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.vibrato(rate, depth, callInfo)
 
-// -- vibratoMod() -----------------------------------------------------------------------------------------------------
+// -- penv ------------------------------------------------------------------------------------------------------------
 
-private val vibratoModUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { semitones ->
-    clone().also { it.vibratoMod = semitones }
-}
+private val penvAmountMutation = voiceSetter { pEnv = it?.asDoubleOrNull() ?: pEnv }
 
-private fun applyVibratoMod(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPenvAmount(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.vibratoMod }, update = vibratoModUpdate)
+        return source._mapNumericField(mapper, read = { it.pEnv }, update = penvAmountMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, vibratoModUpdate)
+    return source._liftOrReinterpretNumericalField(args, penvAmountMutation)
 }
 
-/**
- * Sets the vibrato depth (amplitude of pitch oscillation) in semitones.
- *
- * Controls how many semitones the vibrato deviates from the base pitch. Higher values
- * create wider, more pronounced pitch wobble. Use [vibrato] to set the rate in Hz.
- *
- * Both the sprudel DSL and the Ignitor DSL use semitones for depth.
- * Internally converted to a frequency ratio via `depth / 12.0`.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").vibratoMod(0.5)       // ±0.5 semitone pitch deviation
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4").vibratoMod("<0.2 1>")    // alternating subtle/wide vibrato depth
- * ```
- *
- * @param semitones Vibrato depth in SEMITONES. 0.0 = no vibrato, 0.2 = subtle,
- *   0.5 = standard, 1.0+ = wide wobble. Default: 0.0. Typical range: 0.1–2.0.
- * @category tonal
- * @tags vibratoMod, vibrato depth, pitch modulation
- */
-@KlangScript.Function
-fun SprudelPattern.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyVibratoMod(this, listOfNotNull(semitones).asSprudelDslArgs(callInfo))
+private val penvAttackMutation = voiceSetter { pAttack = it?.asDoubleOrNull() }
 
-/** Sets the vibrato depth on a string pattern. */
-@KlangScript.Function
-fun String.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).vibratoMod(semitones, callInfo)
-
-/**
- * The vibrato depth of each event in semitones, as a value other setters can read.
- *
- * Bare `vibratoMod` reads what the chain has set so far, so it comes after whatever set the field
- * (`vibratoMod(...)` or an alias). Call it, `vibratoMod(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").vibrato(5).vibratoMod(0.3).vibratoMod(mul("1 2"))          // the second note wobbles wider
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4 e4").vibrato(5).vibratoMod("0.2 0.6").pan(vibratoMod)         // deeper vibrato further right
- * ```
- *
- * @category tonal
- * @tags vibratoMod, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("vibratoMod")
-object vibratoMod : FieldAccessor({ it.vibratoMod }) {
-
-    /**
-     * Returns a [PatternMapperFn] that sets the vibrato depth in semitones.
-     * When called with no argument, reinterprets the current event value as a vibrato depth.
-     *
-     * ```KlangScript(Playable)
-     * note("c4").apply(vibratoMod(0.5))   // mapper form
-     * ```
-     */
-    @KlangScript.Invoke
-    operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.vibratoMod(semitones, callInfo) }
-}
-
-
-/** Chains a vibratoMod operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.vibratoMod(semitones, callInfo) }
-
-// -- pattack() / patt() -----------------------------------------------------------------------------------------------
-
-private val pattackUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { seconds -> clone().also { it.pAttack = seconds } }
-
-private fun applyPAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPenvAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.pAttack }, update = pattackUpdate)
+        return source._mapNumericField(mapper, read = { it.pAttack }, update = penvAttackMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, pattackUpdate)
+    return source._liftOrReinterpretNumericalField(args, penvAttackMutation)
 }
 
-/**
- * Sets the pitch envelope attack time in seconds.
- *
- * The pitch envelope shapes how the pitch changes over a note's duration. The attack
- * phase determines how quickly the pitch rises from its anchor to the target pitch.
- * Use with [penv], [pdecay], [prelease], [pcurve], and [panchor].
- * When called with no argument, reinterprets the current event value as an attack time.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").pattack(0.1).penv(12)   // pitch rises over 100 ms by 12 semitones
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4").pattack("<0.01 0.5>")       // fast vs slow pitch attack per cycle
- * ```
- *
- * @param seconds Pitch envelope attack time in seconds. 0.01 = instant, 0.1 = snappy,
- *   0.5+ = slow sweep. Default: 0.0. Typical range: 0.001–2.0.
- * @alias patt
- * @category tonal
- * @tags pattack, patt, pitch envelope, attack, envelope
- */
-@KlangScript.Function
-fun SprudelPattern.pattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPAttack(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
+private val penvDecayMutation = voiceSetter { pDecay = it?.asDoubleOrNull() }
 
-/** Sets the pitch envelope attack time on a string pattern. */
-@KlangScript.Function
-fun String.pattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).pattack(seconds, callInfo)
-
-/**
- * The pitch envelope attack of each event, as a value other setters can read.
- *
- * Bare `pattack` reads what the chain has set so far, so it comes after whatever set the field
- * (`pattack(...)` or an alias). Call it, `pattack(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `patt`.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).pattack(0.1).pattack(mul("1 3"))                  // the second note rises slower
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).pattack("0.05 0.2").pdecay(pattack)             // decay follows attack
- * ```
- *
- * @category tonal
- * @tags pattack, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("pattack")
-object pattack : FieldAccessor({ it.pAttack }) {
-
-    /**
-     * Returns a [PatternMapperFn] that sets the pitch envelope attack time.
-     *
-     * ```KlangScript(Playable)
-     * note("c4").apply(pattack(0.1))   // mapper form
-     * ```
-     */
-    @KlangScript.Invoke
-    operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.pattack(seconds, callInfo) }
-}
-
-
-/** Chains a pattack operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.pattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.pattack(seconds, callInfo) }
-
-/** Alias for [pattack] on this pattern. */
-@KlangScript.Function
-fun SprudelPattern.patt(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.pattack(seconds, callInfo)
-
-/** Alias for [pattack] on a string pattern. */
-@KlangScript.Function
-fun String.patt(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).pattack(seconds, callInfo)
-
-/**
- * Alias of [pattack]: the same accessor under another name.
- *
- * @category tonal
- * @tags patt, pattack, accessor
- */
-@KlangScript.Constant
-val patt: pattack = pattack
-
-/** Chains a patt operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.patt(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.pattack(seconds, callInfo) }
-
-// -- pdecay() / pdec() ------------------------------------------------------------------------------------------------
-
-private val pdecayUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { seconds -> clone().also { it.pDecay = seconds } }
-
-private fun applyPDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPenvDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.pDecay }, update = pdecayUpdate)
+        return source._mapNumericField(mapper, read = { it.pDecay }, update = penvDecayMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, pdecayUpdate)
+    return source._liftOrReinterpretNumericalField(args, penvDecayMutation)
 }
 
-/**
- * Sets the pitch envelope decay time in seconds.
- *
- * After the attack phase, the pitch envelope decays towards the sustain level. The decay
- * time determines how quickly this transition happens.
- * Use with [pattack], [penv], [prelease], [pcurve], and [panchor].
- * When called with no argument, reinterprets the current event value as a decay time.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").pdecay(0.2).penv(12)   // pitch decays over 200 ms
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4").pdecay("<0.05 0.5>")       // short vs long decay per cycle
- * ```
- *
- * @param seconds Pitch envelope decay time in seconds. 0.05 = snappy, 0.2 = moderate,
- *   1.0+ = long sweep. Default: 0.0. Typical range: 0.01–5.0.
- * @alias pdec
- * @category tonal
- * @tags pdecay, pdec, pitch envelope, decay, envelope
- */
-@KlangScript.Function
-fun SprudelPattern.pdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPDecay(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
+private val penvReleaseMutation = voiceSetter { pRelease = it?.asDoubleOrNull() }
 
-/** Sets the pitch envelope decay time on a string pattern. */
-@KlangScript.Function
-fun String.pdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).pdecay(seconds, callInfo)
-
-/**
- * The pitch envelope decay of each event, as a value other setters can read.
- *
- * Bare `pdecay` reads what the chain has set so far, so it comes after whatever set the field
- * (`pdecay(...)` or an alias). Call it, `pdecay(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `pdec`.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).pdecay(0.2).pdecay(mul("1 2"))                    // the second note falls slower
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).pdecay("0.1 0.4").prelease(pdecay)              // release follows decay
- * ```
- *
- * @category tonal
- * @tags pdecay, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("pdecay")
-object pdecay : FieldAccessor({ it.pDecay }) {
-
-    /**
-     * Returns a [PatternMapperFn] that sets the pitch envelope decay time.
-     *
-     * ```KlangScript(Playable)
-     * note("c4").apply(pdecay(0.2))   // mapper form
-     * ```
-     */
-    @KlangScript.Invoke
-    operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.pdecay(seconds, callInfo) }
-}
-
-
-/** Chains a pdecay operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.pdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.pdecay(seconds, callInfo) }
-
-/** Alias for [pdecay] on this pattern. */
-@KlangScript.Function
-fun SprudelPattern.pdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.pdecay(seconds, callInfo)
-
-/** Alias for [pdecay] on a string pattern. */
-@KlangScript.Function
-fun String.pdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).pdecay(seconds, callInfo)
-
-/**
- * Alias of [pdecay]: the same accessor under another name.
- *
- * @category tonal
- * @tags pdec, pdecay, accessor
- */
-@KlangScript.Constant
-val pdec: pdecay = pdecay
-
-/** Chains a pdec operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.pdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.pdecay(seconds, callInfo) }
-
-// -- prelease() / prel() ----------------------------------------------------------------------------------------------
-
-private val preleaseUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { seconds -> clone().also { it.pRelease = seconds } }
-
-private fun applyPRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPenvRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.pRelease }, update = preleaseUpdate)
+        return source._mapNumericField(mapper, read = { it.pRelease }, update = penvReleaseMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, preleaseUpdate)
+    return source._liftOrReinterpretNumericalField(args, penvReleaseMutation)
 }
 
-/**
- * Sets the pitch envelope release time in seconds.
- *
- * The release phase determines how quickly the pitch envelope returns to its resting state
- * after the note ends. Use with [pattack], [pdecay], [penv], [pcurve], and [panchor].
- * When called with no argument, reinterprets the current event value as a release time.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").prelease(0.3).penv(12)  // pitch releases over 300 ms
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4").prelease("<0.1 1.0>")       // short vs long release per cycle
- * ```
- *
- * @param seconds Pitch envelope release time in seconds. How quickly pitch returns after note-off. 0.01 = instant, 0.3 = gradual. Default: 0.0. Typical range: 0.001–5.0.
- *
- * @alias prel
- * @category tonal
- * @tags prelease, prel, pitch envelope, release, envelope
- */
-@KlangScript.Function
-fun SprudelPattern.prelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPRelease(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
+private val penvCurveMutation = voiceSetter { pCurve = it?.asDoubleOrNull() }
 
-/** Sets the pitch envelope release time on a string pattern. */
-@KlangScript.Function
-fun String.prelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).prelease(seconds, callInfo)
-
-/**
- * The pitch envelope release of each event, as a value other setters can read.
- *
- * Bare `prelease` reads what the chain has set so far, so it comes after whatever set the field
- * (`prelease(...)` or an alias). Call it, `prelease(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `prel`.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).prelease(0.3).prelease(mul("1 2"))                // the second note lets go slower
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).prelease("0.1 0.4").pattack(prelease)           // attack follows release
- * ```
- *
- * @category tonal
- * @tags prelease, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("prelease")
-object prelease : FieldAccessor({ it.pRelease }) {
-
-    /**
-     * Returns a [PatternMapperFn] that sets the pitch envelope release time.
-     *
-     * ```KlangScript(Playable)
-     * note("c4").apply(prelease(0.3))   // mapper form
-     * ```
-     */
-    @KlangScript.Invoke
-    operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.prelease(seconds, callInfo) }
-}
-
-
-/** Chains a prelease operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.prelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.prelease(seconds, callInfo) }
-
-/** Alias for [prelease] on this pattern. */
-@KlangScript.Function
-fun SprudelPattern.prel(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.prelease(seconds, callInfo)
-
-/** Alias for [prelease] on a string pattern. */
-@KlangScript.Function
-fun String.prel(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).prelease(seconds, callInfo)
-
-/**
- * Alias of [prelease]: the same accessor under another name.
- *
- * @category tonal
- * @tags prel, prelease, accessor
- */
-@KlangScript.Constant
-val prel: prelease = prelease
-
-/** Chains a prel operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.prel(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.prelease(seconds, callInfo) }
-
-// -- penv() / pamt() --------------------------------------------------------------------------------------------------
-
-private val penvUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { semitones -> clone().also { it.pEnv = semitones } }
-
-private fun applyPEnv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPenvCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.pEnv }, update = penvUpdate)
+        return source._mapNumericField(mapper, read = { it.pCurve }, update = penvCurveMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, penvUpdate)
+    return source._liftOrReinterpretNumericalField(args, penvCurveMutation)
+}
+
+private val penvAnchorMutation = voiceSetter { pAnchor = it?.asDoubleOrNull() }
+
+private fun applyPenvAnchor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.pAnchor }, update = penvAnchorMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, penvAnchorMutation)
 }
 
 /**
- * Sets the pitch envelope depth (amount) in semitones.
+ * The pitch envelope: depth in semitones, its attack, decay and release, curve and sustain anchor.
  *
- * Determines how far the pitch deviates from the base note during the envelope cycle.
- * Positive values raise the pitch; negative values lower it.
- * Use with [pattack], [pdecay], [prelease], [pcurve], and [panchor].
- * When called with no argument, reinterprets the current event value as an envelope depth.
+ * Pitch starts `amount` semitones away and glides home along the envelope.
+ *
+ * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
+ * a mapper (`penv(attack = mul(2))`), and the numeric slots read back as `penv.amount`, `penv.attack`, `penv.decay`, `penv.release`, `penv.curve`, `penv.anchor`.
+ * With no argument at all, the pattern's own values are reinterpreted as `amount`.
  *
  * ```KlangScript(Playable)
- * note("c4").penv(12).pattack(0.1)   // 1-octave pitch rise over 100 ms
+ * s("bd*4").penv(24, 0.001, 0.08)                                         // a kick with a pitch drop
  * ```
  *
  * ```KlangScript(Playable)
- * note("c4").penv(-7).pdecay(0.2)    // pitch falls a perfect fifth then decays
+ * s("bd*4").penv(24, 0.001, 0.08).penv(amount = mul("1 0.5"))            // half the drop on every second hit
  * ```
  *
- * @param semitones Pitch envelope depth in semitones. How far pitch deviates. 12 = one octave up, -12 = one octave down, 0 = no pitch envelope. Default: 0.0. Range: -24 to 24.
+ * ```KlangScript(Playable)
+ * note("c4*4").s("saw").penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))   // brighter with the rise
+ * ```
  *
- * @alias pamt
+ * @param amount Depth in semitones; 12 is an octave up, -12 an octave down, 0 no pitch envelope.
+ * @param attack Attack in seconds; 0.01 is instant, 0.1 snappy.
+ * @param decay Decay in seconds; 0.05 is snappy, 0.2 moderate.
+ * @param release Release in seconds, how fast the pitch returns after the note ends.
+ * @param curve Curve shape: 1 is linear, below 1 concave (fast start), above 1 convex (slow start).
+ * @param anchor Sustain pitch offset, -1 to 1; 0 returns to the note.
+
+ *
  * @category tonal
- * @tags penv, pamt, pitch envelope, depth, semitones, envelope
+ * @tags penv, amount, attack, decay, release, curve, anchor
  */
 @KlangScript.Function
-fun SprudelPattern.penv(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPEnv(this, listOfNotNull(semitones).asSprudelDslArgs(callInfo))
+fun SprudelPattern.penv(amount: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, release: PatternLike? = null, curve: PatternLike? = null, anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+    // A tail-only call must not touch amount: reinterpret runs only on a fully bare call.
+    var p = if (amount != null || !(attack != null || decay != null || release != null || curve != null || anchor != null)) {
+        applyPenvAmount(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+    } else {
+        this
+    }
+    if (attack != null) p = applyPenvAttack(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (decay != null) p = applyPenvDecay(p, listOf<Any?>(decay).asSprudelDslArgs(callInfo?.forParam(2)))
+    if (release != null) p = applyPenvRelease(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(3)))
+    if (curve != null) p = applyPenvCurve(p, listOf<Any?>(curve).asSprudelDslArgs(callInfo?.forParam(4)))
+    if (anchor != null) p = applyPenvAnchor(p, listOf<Any?>(anchor).asSprudelDslArgs(callInfo?.forParam(5)))
+    return p
+}
 
-/** Sets the pitch envelope depth (in semitones) on a string pattern. */
+/** Parses this string as a pattern, then applies [penv]. */
 @KlangScript.Function
-fun String.penv(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).penv(semitones, callInfo)
+fun String.penv(amount: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, release: PatternLike? = null, curve: PatternLike? = null, anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).penv(amount, attack, decay, release, curve, anchor, callInfo)
+
+/** Chains a [penv] step onto this [PatternMapperFn]. */
+@KlangScript.Function
+fun PatternMapperFn.penv(amount: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, release: PatternLike? = null, curve: PatternLike? = null, anchor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.penv(amount, attack, decay, release, curve, anchor, callInfo) }
 
 /**
- * The pitch envelope depth of each event in semitones, as a value other setters can read.
- *
- * Bare `penv` reads what the chain has set so far, so it comes after whatever set the field
- * (`penv(...)` or an alias). Call it, `penv(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `pamt`.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").pattack(0.1).penv(12).penv(mul("1 -1"))                    // up on the first, down on the second
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4 e4").pattack(0.1).penv("7 12").vibratoMod(penv.div(24))       // deeper sweep, wider vibrato
- * ```
+ * The `penv` object: `penv(...)` sets the slots, and each numeric slot reads back as a child,
+ * `penv.amount`, `penv.attack`, `penv.decay`, `penv.release`, `penv.curve`, `penv.anchor`.
  *
  * @category tonal
  * @tags penv, accessor
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("penv")
-object penv : FieldAccessor({ it.pEnv }) {
+object penv {
 
-    /**
-     * Returns a [PatternMapperFn] that sets the pitch envelope depth in semitones.
-     *
-     * ```KlangScript(Playable)
-     * note("c4").apply(penv(12))   // mapper form
-     * ```
-     */
+    /** The amount slot of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val amount: FieldAccessor = FieldAccessor { it.pEnv }
+
+    /** The attack slot of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val attack: FieldAccessor = FieldAccessor { it.pAttack }
+
+    /** The decay slot of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val decay: FieldAccessor = FieldAccessor { it.pDecay }
+
+    /** The release slot of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val release: FieldAccessor = FieldAccessor { it.pRelease }
+
+    /** The curve slot of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val curve: FieldAccessor = FieldAccessor { it.pCurve }
+
+    /** The anchor slot of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val anchor: FieldAccessor = FieldAccessor { it.pAnchor }
+
+    /** The setter, see [SprudelPattern.penv]. */
     @KlangScript.Invoke
-    operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.penv(semitones, callInfo) }
+    operator fun invoke(amount: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, release: PatternLike? = null, curve: PatternLike? = null, anchor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.penv(amount, attack, decay, release, curve, anchor, callInfo) }
 }
 
+/**
+ * `pamt`, the short name of [penv]: the same door, use whichever reads better.
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").pamt(24, 0.001, 0.08)
+ * ```
+ *
+ * @category tonal
+ * @tags pamt, penv
 
-/** Chains a penv operation onto this [PatternMapperFn]. */
+ */
 @KlangScript.Function
-fun PatternMapperFn.penv(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.penv(semitones, callInfo) }
+fun SprudelPattern.pamt(amount: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, release: PatternLike? = null, curve: PatternLike? = null, anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    penv(amount, attack, decay, release, curve, anchor, callInfo)
 
-/** Alias for [penv] on this pattern. */
+/** Parses this string as a pattern, then applies [pamt]. */
 @KlangScript.Function
-fun SprudelPattern.pamt(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.penv(semitones, callInfo)
-
-/** Alias for [penv] on a string pattern. */
-@KlangScript.Function
-fun String.pamt(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).penv(semitones, callInfo)
+fun String.pamt(amount: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, release: PatternLike? = null, curve: PatternLike? = null, anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.penv(amount, attack, decay, release, curve, anchor, callInfo)
 
 /**
- * Alias of [penv]: the same accessor under another name.
+ * Alias of [penv]: the same object under its short name.
  *
  * @category tonal
  * @tags pamt, penv, accessor
@@ -1265,228 +955,10 @@ fun String.pamt(semitones: PatternLike? = null, callInfo: CallInfo? = null): Spr
 @KlangScript.Constant
 val pamt: penv = penv
 
-/** Chains a pamt operation onto this [PatternMapperFn]. */
+/** Chains a [pamt] step onto this [PatternMapperFn] (see [SprudelPattern.pamt]). */
 @KlangScript.Function
-fun PatternMapperFn.pamt(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.penv(semitones, callInfo) }
-
-// -- pcurve() / pcrv() ------------------------------------------------------------------------------------------------
-
-private val pcurveUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { curve -> clone().also { it.pCurve = curve } }
-
-private fun applyPCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.pCurve }, update = pcurveUpdate)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, pcurveUpdate)
-}
-
-/**
- * Sets the pitch envelope curve shape.
- *
- * Controls the curvature of the pitch envelope segments. A value of `0` gives a linear
- * curve; positive values create logarithmic curves; negative values create exponential ones.
- * When called with no argument, reinterprets the current event value as a curve shape.
- *
- * ```KlangScript(Playable)
- * note("c4").pcurve(2).penv(12).pattack(0.2)   // logarithmic pitch rise
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4").pcurve(-2).penv(12).pattack(0.2)  // exponential pitch rise
- * ```
- *
- * @param curve Envelope curve shape. 1.0 = linear, <1.0 = concave (fast start, slow end), >1.0 = convex (slow start, fast end). Default: 1.0. Typical range: 0.5–2.0.
- *
- * @alias pcrv
- * @category tonal
- * @tags pcurve, pcrv, pitch envelope, curve, shape, envelope
- */
-@KlangScript.Function
-fun SprudelPattern.pcurve(curve: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPCurve(this, listOfNotNull(curve).asSprudelDslArgs(callInfo))
-
-/** Sets the pitch envelope curve shape on a string pattern. */
-@KlangScript.Function
-fun String.pcurve(curve: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).pcurve(curve, callInfo)
-
-/**
- * The pitch envelope curve of each event, as a value other setters can read. Reserved: the
- * engine renders the pitch envelope linearly for now, the value travels but changes nothing.
- *
- * Bare `pcurve` reads what the chain has set so far, so it comes after whatever set the field
- * (`pcurve(...)` or an alias). Call it, `pcurve(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `pcrv`.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).pattack(0.2).pcurve(1).pcurve(mul("1 2"))         // reserved, inaudible for now
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).pattack(0.2).pcurve("1 2").panchor(pcurve.sub(1))   // the anchor follows a reserved value
- * ```
- *
- * @category tonal
- * @tags pcurve, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("pcurve")
-object pcurve : FieldAccessor({ it.pCurve }) {
-
-    /**
-     * Returns a [PatternMapperFn] that sets the pitch envelope curve shape.
-     *
-     * ```KlangScript(Playable)
-     * note("c4").apply(pcurve(2))   // mapper form
-     * ```
-     */
-    @KlangScript.Invoke
-    operator fun invoke(curve: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.pcurve(curve, callInfo) }
-}
-
-
-/** Chains a pcurve operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.pcurve(curve: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.pcurve(curve, callInfo) }
-
-/** Alias for [pcurve] on this pattern. */
-@KlangScript.Function
-fun SprudelPattern.pcrv(curve: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.pcurve(curve, callInfo)
-
-/** Alias for [pcurve] on a string pattern. */
-@KlangScript.Function
-fun String.pcrv(curve: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).pcurve(curve, callInfo)
-
-/**
- * Alias of [pcurve]: the same accessor under another name.
- *
- * @category tonal
- * @tags pcrv, pcurve, accessor
- */
-@KlangScript.Constant
-val pcrv: pcurve = pcurve
-
-/** Chains a pcrv operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.pcrv(curve: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.pcurve(curve, callInfo) }
-
-// -- panchor() / panc() -----------------------------------------------------------------------------------------------
-
-private val panchorUpdate: SprudelVoiceData.(Double?) -> SprudelVoiceData = { anchor -> clone().also { it.pAnchor = anchor } }
-
-private fun applyPAnchor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.pAnchor }, update = panchorUpdate)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, panchorUpdate)
-}
-
-/**
- * Sets the pitch envelope anchor point.
- *
- * The anchor determines the relative position within the note duration where the pitch
- * envelope reaches its peak (or trough). `0` anchors at the start; `1` at the end.
- * When called with no argument, reinterprets the current event value as an anchor point.
- *
- * ```KlangScript(Playable)
- * note("c4").panchor(0).penv(12)   // pitch peaks at note start
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4").panchor(1).penv(12)   // pitch peaks at note end
- * ```
- *
- * @param anchor Sustain pitch offset. -1.0 to 1.0. 0.0 = pitch returns to original note, other values offset the sustain pitch. Default: 0.0.
- *
- * @alias panc
- * @category tonal
- * @tags panchor, panc, pitch envelope, anchor, envelope
- */
-@KlangScript.Function
-fun SprudelPattern.panchor(anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPAnchor(this, listOfNotNull(anchor).asSprudelDslArgs(callInfo))
-
-/** Sets the pitch envelope anchor point on a string pattern. */
-@KlangScript.Function
-fun String.panchor(anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).panchor(anchor, callInfo)
-
-/**
- * The pitch envelope anchor of each event (the sustain pitch offset: 0 returns to the note, 1
- * holds the full sweep), as a value other setters can read.
- *
- * Bare `panchor` reads what the chain has set so far, so it comes after whatever set the field
- * (`panchor(...)` or an alias). Call it, `panchor(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `panc`.
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).pattack(0.2).panchor(0).panchor(add("0 1"))      // back to the note, then holds the full sweep
- * ```
- *
- * ```KlangScript(Playable)
- * note("c4 e4").penv(12).pattack(0.2).panchor("0 1").pan(panchor)        // anchor across the stereo field
- * ```
- *
- * @category tonal
- * @tags panchor, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("panchor")
-object panchor : FieldAccessor({ it.pAnchor }) {
-
-    /**
-     * Returns a [PatternMapperFn] that sets the pitch envelope anchor point.
-     *
-     * ```KlangScript(Playable)
-     * note("c4").apply(panchor(0))   // mapper form
-     * ```
-     */
-    @KlangScript.Invoke
-    operator fun invoke(anchor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.panchor(anchor, callInfo) }
-}
-
-
-/** Chains a panchor operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.panchor(anchor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.panchor(anchor, callInfo) }
-
-/** Alias for [panchor] on this pattern. */
-@KlangScript.Function
-fun SprudelPattern.panc(anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.panchor(anchor, callInfo)
-
-/** Alias for [panchor] on a string pattern. */
-@KlangScript.Function
-fun String.panc(anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).panchor(anchor, callInfo)
-
-/**
- * Alias of [panchor]: the same accessor under another name.
- *
- * @category tonal
- * @tags panc, panchor, accessor
- */
-@KlangScript.Constant
-val panc: panchor = panchor
-
-/** Chains a panc operation onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.panc(anchor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.panchor(anchor, callInfo) }
+fun PatternMapperFn.pamt(amount: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, release: PatternLike? = null, curve: PatternLike? = null, anchor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.penv(amount, attack, decay, release, curve, anchor, callInfo)
 
 // -- accelerate() -----------------------------------------------------------------------------------------------------
 
@@ -1567,7 +1039,6 @@ object accelerate : FieldAccessor({ it.accelerate }) {
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.accelerate(semitones, callInfo) }
 }
-
 
 /** Chains an accelerate operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1772,7 +1243,6 @@ object freq : FieldAccessor({ it.freqHz }) {
     operator fun invoke(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.freq(hz, callInfo) }
 }
-
 
 /** Sets the playback frequency in Hz on this pattern. */
 @KlangScript.Function

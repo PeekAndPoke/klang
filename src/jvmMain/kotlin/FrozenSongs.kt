@@ -25,7 +25,9 @@ package io.peekandpoke.klang
  * `delayWet(w).delaytime(t)` -> `delay(wet = w, time = t)`, `coarse(2).coarseos(1)` -> `coarse(amount = 2, oversample = 1)`;
  * `oversample = 1` is the pinned value of the once-inert `coarseos`, not a change), and the filter compounds of the
  * same day (`lpf(f).lpq(q).lpe(e).lpadsr(a, d, s, r)` -> `lpf(freq = f, q = q, env = e, attack = a, ...)`, same values;
- * the local `notch` in Seltsamere Dinge renamed `notchFreq`, it shadowed the new `notch` object).
+ * the local `notch` in Seltsamere Dinge renamed `notchFreq`, it shadowed the new `notch` object), and the batch G
+ * compounds (`fmh(2).fmenv(e)` -> `fm(env = e, h = 2)`, `vibrato(r).vibratoMod(d)` -> `vibrato(rate = r, depth = d)`,
+ * `duckorbit`/`duckdepth`/`duckattack` -> `duck(...)`, `vowelWet`/`bodyWet` -> `vowel(wet = ...)`/`body(wet = ...)`, same values).
  *
  * Source at snapshot time:
  *  - Der Schmetterling  → builtinsongs/DerSchmetterling.kt  (rpm 34.5)
@@ -44,13 +46,13 @@ let feel = 8.0    // 0.0 .. ice | 100.0 .. fire                                 
 stack(                                                                                                                       //////////////          //////////////.
   // Lead                                                                                                                      //                              //.
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                                //          DISCO!          //.
-    .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound("superramp").unison(5).spread(0.08)                 //       FOREVER!       //.
+    .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound("superramp").unison(voices = 5, spread = 0.08)                 //       FOREVER!       //.
     .hpf(1500).lpf(freq = 1575, env = berlin.range(19.0, 19.6).fast(4), q = 2.3, attack = 0.007, decay = 1.3, sustain = 0.0, release = 0.01)                                    //                  //.
     .gain(0.50).distort(0.620, "tube", 4).postgain("<0.220!48 0.110!16 0.220!48 0.330!16>") // . solo()                                 //       //      //.
     .adsr(0.007, 4.0, 0.0, 0.01).clip(0.89)  // . mute()                                                                              //     //.   //    //.
-    .adsr(release = "<0.04!16 0.11!16>").vibrato(8).vibratoMod(0.01)                                                                           //   //.         //  //.
+    .adsr(release = "<0.04!16 0.11!16>").vibrato(rate = 8, depth = 0.01)                                                                           //   //.         //  //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                        // //.              // //.
-    .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.10).pan(0.15).superimpose(pan(0.85)))           //.                      //.
+    .superimpose(x => x.transpose(12).unison(spread = 0.12).mute("<1!16 0!16>").velocity(0.10).pan(0.15).superimpose(pan(0.85)))           //.                      //.
     .mute("<1!32 0!192>").analog(feel).pipeline("pedal").room(0.3, 5, 0.1)
   , // Guitar 1
   n(`<[7 [4@4 2 -1] 2 1 [0 -1 -3 -1] [0 -3] -2 <[-1 5@3] [5 6@3] [[4 5] 8@3] [[3 4] 3@3]>]!4
@@ -58,17 +60,17 @@ stack(                                                                          
       [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 2]!4]> [-5 -6] [-7,-14] [-5 <-1 -4 -4 1>]]>/4`)
     .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") //  .mute()
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)  // . solo()
-    .sound("supersaw").unison(9).spread(0.08).gain(0.75).postgain(0.12).distort(1, "tube", 4).distort(0.80)    
+    .sound("supersaw").unison(voices = 9, spread = 0.08).gain(0.75).postgain(0.12).distort(1, "tube", 4).distort(0.80)    
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.029).lpf(attack = 0.005, decay = 1.1, sustain = 0.0, release = 0.015)    
     .hpf("<550!16 360!16 550!16 800!16>").lpf(freq = "3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4), env = 8.1, q = 2.0)
     // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
     .coarse(amount = 2, oversample = 1).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))
-    .pipeline("pedal").body("wood").bodyWet(0.3)
+    .pipeline("pedal").body(material = "wood", wet = 0.3)
   , // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
     .orbit(1).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
     .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
-    .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort(1, "tube", 4).distort(0.85)
+    .sound("supersaw").unison(voices = 7, spread = 0.09).gain(0.75).postgain(0.11).distort(1, "tube", 4).distort(0.85)
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpf(attack = 0.005, decay = 1.0, sustain = 0.0, release = 0.01)    
     .hpf(120).lpf(freq = 3200, env = 8.1, q = 1.8)
     // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
@@ -76,7 +78,7 @@ stack(                                                                          
       x => x.pan(0.7),
       x => x.postgain(0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
-    ).superimpose(hpf(3500).lpf(6200).postgain(0.03)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("wood").bodyWet(0.30)
+    ).superimpose(hpf(3500).lpf(6200).postgain(0.03)).mute("<0!128 1!16 0!16>").pipeline("pedal").body(material = "wood", wet = 0.30)
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.98 0.99 0.98".fast(2))  // . mute()
     .orbit(4).scale("e1:minor").sound("saw").gain(0.5).distort(0.05, "soft", 2).postgain(0.20).clip(0.65)
@@ -139,7 +141,7 @@ stack(
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [0 -1 0 4 6 9 7 6] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(1).s("supersaw").unison(15).spread(saw.range(0.05, 0.35).slow(16))
+    .orbit(1).s("supersaw").unison(voices = 15, spread = saw.range(0.05, 0.35).slow(16))
     .gain(0.6).distort(1.0).postgain(0.10).adsr(0.005, 2.0, 0.5, 0.1).lpf(attack = 0.005, decay = 5.0, sustain = 0.5, release = 0.1).clip(1.0)
     .pan(0.5) // . solo()
     .hpf(400).lpf(freq = 1200, env = perlin.range(21.7, 27.9).lpf(q = 3.0).slow(8)).analog(5).body("wood")
@@ -148,15 +150,15 @@ stack(
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a2]]>/4").clip(0.67).struct("x!4").slow(16)
-    .orbit(2).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
+    .orbit(2).s("supersaw").unison(voices = 9, spread = saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
     // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
     .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(amount = 2, oversample = 1) // solo()
     .superimpose(
       x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.15, 0.8).slow(32)).clip(0.79)
-    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.75).body("glass").vowel("i a e".slow(12)).vowelWet(0.2)
+    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.75).body("glass").vowel(vowel = "i a e".slow(12), wet = 0.2)
     .superimpose(
-      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0)).vibrato("0.51".add(perlin.div(10))).vibratoMod(0.05)
+      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0)).vibrato(rate = "0.51".add(perlin.div(10)), depth = 0.05)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
         .crush(amount = "1.85".add(berlin2.mul(0.5).slow(4)), oversample = 1).lpf(5.5 * 440).hpf(300).postgain(0.45)
         .pan(0.2).superimpose(pan(0.8))                

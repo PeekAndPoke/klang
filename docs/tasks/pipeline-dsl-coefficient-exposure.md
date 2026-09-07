@@ -27,7 +27,7 @@ field:
    S3: the phaser's wet knob — `phaser(wet)`/`phaser(floor)` in sprudel, `.wet()`/`.dryFloor()`
 on `IgnitorDsl` — was exactly this case until C4 unified it onto one law, `WetDryMix`).
 2. **Match the name where the surface conventions allow.** They differ deliberately:
-   sprudel is lowercase-jammed strudel-style (`onepole`, `notchf`, `duckorbit`; the effect compounds moved to named slots 2026-09-07), the pipeline DSL /
+   sprudel is lowercase-jammed strudel-style (`onepole`, `postgain`, `accelerate`; the effect compounds moved to named slots 2026-09-07), the pipeline DSL /
    KlangScript is camelCase methods (`cutoffOffset`, `drivePerAnalog`, `expK`). Parity means the *stem* matches
    (`center` ↔ `phaser(center)`), not that the casing does. When a stem has to differ, say why in the KDoc on both sides.
 3. **Match the scale exactly.** Same unit, same range, same reference point — no surface may apply a conversion the
@@ -220,8 +220,8 @@ blocker (`docs/tasks/sprudel-sound-function-surface.md`).
 
 | coefficient   | default | reachable today                                                                            |
 |---------------|---------|--------------------------------------------------------------------------------------------|
-| `BODY_FLOOR`  | `0.4`   | per-note `bodyFloor()` (sprudel) → `FilterDef.Body.floor`; **no engine-level default**     |
-| `VOWEL_FLOOR` | `0.2`   | per-note `vowelFloor()` (sprudel) → `FilterDef.Formant.floor`; **no engine-level default** |
+| `BODY_FLOOR`  | `0.4`   | per-note `body(floor = ...)` (sprudel) → `FilterDef.Body.floor`; **no engine-level default**     |
+| `VOWEL_FLOOR` | `0.2`   | per-note `vowel(floor = ...)` (sprudel) → `FilterDef.Formant.floor`; **no engine-level default** |
 | `VOWEL_TAME`  | `0.05`  | ❌ nowhere                                                                                 |
 
 Body/vowel run as orbit-level Katalyst effects (`KatalystBodyEffect` / `KatalystFormantEffect`), not as voice-strip

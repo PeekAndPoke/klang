@@ -139,7 +139,7 @@ object TestTextPatterns {
 //                  .detune("<.3 .3 .3 1.0>")
                   .gain(0.25)
 //                  .hpf(100)
-//                  .spread(".8")
+//                  .unison(spread = ".8")
 //                  .unison("2 7")
             """.trimIndent()
 

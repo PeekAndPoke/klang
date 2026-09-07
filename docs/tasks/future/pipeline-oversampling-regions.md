@@ -129,7 +129,7 @@ mismatch. So the control-resampler is needed for exactly that subset, not everyt
    The example scopes tightly (`oversample(0)` before `lowpass`). This is the #1 user-education point: **keep
    regions minimal — wrap only the nonlinear stages that need it.**
 5. **Oversample is STRUCTURAL, not a signal — and for a load-bearing reason, not "it's a count."** The
-   ignitor-DSL norm is "everything is a signal": even a *count* like `voices()`/`unison()` can take an LFO
+   ignitor-DSL norm is "everything is a signal": even a *count* like `unison(voices)` (once `voices()`/`unison()`) can take an LFO
    (allocate the full stack, modulate how many voices are active / their gains — the super-ignitor is built
    for this). So "it's an integer" does NOT make something structural. Oversample is different: a signal is
    *sampled onto the buffer's timeline*, whereas **oversample DEFINES that timeline** — the buffer's

@@ -53,7 +53,7 @@ data class ScheduledVoice(
 | Field        | Type      | Meaning                                     |
 |--------------|-----------|---------------------------------------------|
 | `density`    | `Int?`    | Number of unison voices (supersaw / detune) |
-| `panSpread`  | `Double?` | Stereo spread of unison voices              |
+| `panSpread`  | `Double?` | Stereo spread of unison voices (sprudel `unison(pan)`) |
 | `freqSpread` | `Double?` | Frequency detune amount for unison          |
 | `voices`     | `Int?`    | Alias for `density`                         |
 | `onepole`    | `Double?` | One-pole lowpass cutoff in Hz on the oscillator (ex `warmth` 0..1 coefficient) |
@@ -79,7 +79,7 @@ data class ScheduledVoice(
 | Field        | Type      | Meaning                          |
 |--------------|-----------|----------------------------------|
 | `vibrato`    | `Double?` | Vibrato LFO rate in Hz           |
-| `vibratoMod` | `Double?` | Vibrato depth in SEMITONES       |
+| `vibratoMod` | `Double?` | Vibrato depth in SEMITONES (sprudel `vibrato(depth)`) |
 | `pAttack`    | `Double?` | Pitch envelope attack (s)        |
 | `pDecay`     | `Double?` | Pitch envelope decay (s)         |
 | `pRelease`   | `Double?` | Pitch envelope release (s)       |
@@ -91,7 +91,7 @@ data class ScheduledVoice(
 
 | Field       | Type      | Meaning                                      |
 |-------------|-----------|----------------------------------------------|
-| `fmh`       | `Double?` | FM modulator ratio (multiplier of base freq) |
+| `fmh`       | `Double?` | FM modulator ratio, a multiplier of the base frequency (sprudel `fm(h)`) |
 | `fmAttack`  | `Double?` | FM envelope attack (s)                       |
 | `fmDecay`   | `Double?` | FM envelope decay (s)                        |
 | `fmSustain` | `Double?` | FM envelope sustain level                    |

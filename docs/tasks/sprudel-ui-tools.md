@@ -54,11 +54,11 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 
 | #  | DSL Function                               | Proposed Editor                  | Format / UI Idea                                                                                   |
 |----|--------------------------------------------|----------------------------------|----------------------------------------------------------------------------------------------------|
-| 25 | `fmh()`                                    | `SprudelFmHarmonicityEditorTool` | numeric slider with harmonic ratio presets                                                         |
-| 26 | `fmenv()`                                  | `SprudelFmEnvEditorTool`         | numeric slider (0–5000 Hz depth)                                                                   |
-| 27 | `fmattack()` / `fmdecay()` / `fmsustain()` | reuse `SprudelNumericEditorTool` | individual ADSR component sliders                                                                  |
+| 25 | `fm(h = ...)`                                    | `SprudelFmHarmonicityEditorTool` | numeric slider with harmonic ratio presets                                                         |
+| 26 | `fm(env = ...)`                         | `SprudelFmEnvEditorTool`         | numeric slider (0–5000 Hz depth)                                                                   |
+| 27 | `fm(attack = ...)` / `fm(decay = ...)` / `fm(sustain = ...)` | reuse `SprudelNumericEditorTool` | individual ADSR component sliders                                                                  |
 | 28 | `unison()` / `uni()`                       | `SprudelUnisonEditorTool`        | integer picker (1–8 voices)                                                                        |
-| 29 | ~~`detune()`~~ **OBSOLETE**                | —                                | `detune()` renamed to `spread()` (unison freq-spread); the freq-spread editor is now #39's sibling |
+| 29 | ~~`detune()`~~ **OBSOLETE**                | —                                | `detune()` renamed to `unison(spread = ...)` (unison freq-spread); the freq-spread editor is now #39's sibling |
 | 30 | `transpose()`                              | `SprudelTransposeEditorTool`     | semitone slider (-24 to +24)                                                                       |
 | 31 | `swing()`                                  | `SprudelSwingEditorTool`         | numeric slider (0–1) with timing diagram                                                           |
 | 32 | `distort()`                                | `SprudelDistortEditorTool`       | numeric slider (0–1)                                                                               |
@@ -73,7 +73,7 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 | 36 | `loop()` / `loopBegin()` / `loopEnd()` | `SprudelLoopEditorTool`      | toggle + range bar                  |
 | 37 | `phaser*()` family                     | `SprudelPhaserEditorTool`    | combined center/depth/sweep editor  |
 | 38 | `tremolo*()` family                    | `SprudelTremoloEditorTool`   | combined depth/rate/shape editor    |
-| 39 | `panSpread()` (was `spread()`)         | `SprudelPanSpreadEditorTool` | numeric slider (0–1) stereo width   |
+| 39 | `unison(pan = ...)` (was `panSpread()`, before that `spread()`)         | `SprudelPanSpreadEditorTool` | numeric slider (0–1) stereo width   |
 | 40 | `freq()`                               | `SprudelFreqEditorTool`      | frequency slider (20–20000 Hz, log) |
 
 ## Tool Registry

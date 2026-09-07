@@ -813,7 +813,10 @@ class KlangScriptProcessor(
         val hasCallInfo = hasCallInfoParam(fn)
         val ownerName = ownerCls.simpleName.asString()
         val isFileLevelFn = fn.parentDeclaration !is KSClassDeclaration
-        val fnQualifier = if (isFileLevelFn) "" else "$ownerName."
+        // The owner is spelled out in full: a slot named like its object (`vowel(vowel = ...)`)
+        // becomes a local `val vowel` in the generated call and would shadow the simple name.
+        val ownerQualified = ownerCls.qualifiedName?.asString() ?: ownerName
+        val fnQualifier = if (isFileLevelFn) "" else "$ownerQualified."
 
         val scriptParams = if (isTypeExtension && allParams.isNotEmpty()) allParams.drop(1) else allParams
         val selfArg = if (isTypeExtension) {

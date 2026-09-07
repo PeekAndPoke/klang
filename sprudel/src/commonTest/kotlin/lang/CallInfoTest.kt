@@ -47,11 +47,11 @@ class CallInfoTest : StringSpec({
     }
 
     "detune passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").spread("0.3")""")
+        assertCallInfoPresent("""seq("0 1").unison(spread = "0.3")""")
     }
 
     "spread passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").panSpread("0.8")""")
+        assertCallInfoPresent("""seq("0 1").unison(pan = "0.8")""")
     }
 
     "density passes CallInfo from KlangScript" {
@@ -83,15 +83,15 @@ class CallInfoTest : StringSpec({
     }
 
     "duckorbit passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").duckorbit("1")""")
+        assertCallInfoPresent("""seq("0 1").duck("1")""")
     }
 
     "duckattack passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").duckattack("0.2")""")
+        assertCallInfoPresent("""seq("0 1").duck(attack = "0.2")""")
     }
 
     "duckdepth passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").duckdepth("0.8")""")
+        assertCallInfoPresent("""seq("0 1").duck(depth = "0.8")""")
     }
 
     "vowel passes CallInfo from KlangScript" {

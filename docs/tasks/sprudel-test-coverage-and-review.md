@@ -41,7 +41,7 @@ on the `lang_arithmetic_addons.kt` vestigial params (`flipSign`/`oneMinusValue`/
 ## Remaining
 
 Walk the rest of `lang/` + `lang/addons/` file-by-file. For each file: run the IDE inspection, and for every
-"Function `X` is never used" on a `PatternMapperFn.X` overload, apply the fix above. The new `voices()` alias
+"Function `X` is never used" on a `PatternMapperFn.X` overload, apply the fix above. The new `voices()` alias (retired 2026-09-07 into `unison(voices)`)
 (2026-06-30) already ships with its form-(d) covered in `LangUnisonSpec` — use it as the template.
 
 ## Overall module review (fold in while sweeping)
