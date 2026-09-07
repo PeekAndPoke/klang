@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftNumericField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FM Synthesis
@@ -84,6 +85,10 @@ note("c3*4")
 private val fmhMutation = voiceSetter { fmh = it?.asDoubleOrNull() }
 
 private fun applyFmh(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.fmh }, update = fmhMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, fmhMutation)
 }
 
@@ -118,19 +123,51 @@ fun String.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmh(ratio, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the FM harmonicity ratio on the source pattern.
+ * Returns a [PatternMapperFn] for `fmh(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3").s("sine").apply(fmh(2))  // via mapper
- * ```
- *
- * @param ratio Carrier-to-modulator frequency ratio. See [SprudelPattern.fmh].
- * @category synthesis
- * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
+ * Kotlin door only: the script reaches this through `fmh(...)`, which is [Fmh.invoke].
  */
-@KlangScript.Function
 fun fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmh(ratio, callInfo) }
+
+/**
+ * The FM harmonicity ratio of each event, as a value other setters can read.
+ *
+ * Bare `fmh` reads what the chain has set so far, so it comes after whatever set the field
+ * (`fmh(...)` or an alias). Call it, `fmh(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("sine").fmenv(200).fmh(2).fmh(mul("1 1.5 1 2"))          // the ratio changes per note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmenv(200).fmh("1 3").fmattack(fmh.div(10))    // higher ratio, slower attack
+ * ```
+ *
+ * @category synthesis
+ * @tags fmh, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("fmh")
+object Fmh : FieldAccessor({ it.fmh }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the FM harmonicity ratio on the source pattern.
+     *
+     * ```KlangScript(Playable)
+     * note("c3").s("sine").apply(fmh(2))  // via mapper
+     * ```
+     *
+     * @param ratio Carrier-to-modulator frequency ratio. See [SprudelPattern.fmh].
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(ratio: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        fmh(ratio, callInfo)
+}
+
+/** The [Fmh] accessor as a value, so the Kotlin door reads like the script. */
+val fmh: Fmh = Fmh
 
 /** Chains a fmh onto this [PatternMapperFn]; sets the FM harmonicity ratio on the result. */
 @KlangScript.Function
@@ -142,6 +179,10 @@ fun PatternMapperFn.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null):
 private val fmattackMutation = voiceSetter { fmAttack = it?.asDoubleOrNull() }
 
 private fun applyFmattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.fmAttack }, update = fmattackMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, fmattackMutation)
 }
 
@@ -176,20 +217,53 @@ fun String.fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmattack(seconds, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the FM modulation envelope attack time on the source pattern.
+ * Returns a [PatternMapperFn] for `fmattack(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3").s("sine").apply(fmattack(0.01))  // via mapper
- * ```
- *
- * @param seconds FM envelope attack time in seconds. See [SprudelPattern.fmattack].
- * @alias fmatt
- * @category synthesis
- * @tags fmattack, fmatt, FM, attack, envelope, synthesis
+ * Kotlin door only: the script reaches this through `fmattack(...)`, which is [Fmattack.invoke].
  */
-@KlangScript.Function
 fun fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmattack(seconds, callInfo) }
+
+/**
+ * The FM envelope attack of each event, as a value other setters can read.
+ *
+ * Bare `fmattack` reads what the chain has set so far, so it comes after whatever set the field
+ * (`fmattack(...)` or an alias). Call it, `fmattack(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `fmatt`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmenv(400).fmattack(0.05).fmattack(mul("1 4"))   // the second note swells
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmenv(400).fmattack("0.01 0.2").fmdecay(fmattack)   // decay follows attack
+ * ```
+ *
+ * @category synthesis
+ * @tags fmattack, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("fmattack")
+object Fmattack : FieldAccessor({ it.fmAttack }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the FM modulation envelope attack time on the source pattern.
+     *
+     * ```KlangScript(Playable)
+     * note("c3").s("sine").apply(fmattack(0.01))  // via mapper
+     * ```
+     *
+     * @param seconds FM envelope attack time in seconds. See [SprudelPattern.fmattack].
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        fmattack(seconds, callInfo)
+}
+
+/** The [Fmattack] accessor as a value, so the Kotlin door reads like the script. */
+val fmattack: Fmattack = Fmattack
 
 /** Chains a fmattack onto this [PatternMapperFn]; sets the FM envelope attack time on the result. */
 @KlangScript.Function
@@ -212,20 +286,18 @@ fun SprudelPattern.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = nul
 fun String.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmatt(seconds, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that is an alias for [fmattack].
- *
- * ```KlangScript(Playable)
- * note("c3").s("sine").apply(fmatt(0.01))  // via mapper
- * ```
- *
- * @alias fmattack
- * @category synthesis
- * @tags fmatt, fmattack, FM, attack, envelope, synthesis
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [fmattack]; the script reaches it through `fmatt(...)`. */
 fun fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmatt(seconds, callInfo) }
+
+/**
+ * Alias of [fmattack]: the same accessor under another name.
+ *
+ * @category synthesis
+ * @tags fmatt, fmattack, accessor
+ */
+@KlangScript.Constant
+val fmatt: Fmattack = Fmattack
 
 /** Chains a fmatt onto this [PatternMapperFn]; alias for [PatternMapperFn.fmattack]. */
 @KlangScript.Function
@@ -237,6 +309,10 @@ fun PatternMapperFn.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = nu
 private val fmdecayMutation = voiceSetter { fmDecay = it?.asDoubleOrNull() }
 
 private fun applyFmdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.fmDecay }, update = fmdecayMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, fmdecayMutation)
 }
 
@@ -271,20 +347,53 @@ fun String.fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmdecay(seconds, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the FM modulation envelope decay time on the source pattern.
+ * Returns a [PatternMapperFn] for `fmdecay(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3").s("sine").apply(fmdecay(0.1))  // via mapper
- * ```
- *
- * @param seconds FM envelope decay time in seconds. See [SprudelPattern.fmdecay].
- * @alias fmdec
- * @category synthesis
- * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
+ * Kotlin door only: the script reaches this through `fmdecay(...)`, which is [Fmdecay.invoke].
  */
-@KlangScript.Function
 fun fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmdecay(seconds, callInfo) }
+
+/**
+ * The FM envelope decay of each event, as a value other setters can read.
+ *
+ * Bare `fmdecay` reads what the chain has set so far, so it comes after whatever set the field
+ * (`fmdecay(...)` or an alias). Call it, `fmdecay(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `fmdec`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmenv(400).fmattack(0.01).fmsustain(0.2).fmdecay(0.1).fmdecay(mul("1 3"))   // the second note rings
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmenv(400).fmdecay("0.1 0.4").fmsustain(fmdecay)   // sustain follows decay
+ * ```
+ *
+ * @category synthesis
+ * @tags fmdecay, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("fmdecay")
+object Fmdecay : FieldAccessor({ it.fmDecay }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the FM modulation envelope decay time on the source pattern.
+     *
+     * ```KlangScript(Playable)
+     * note("c3").s("sine").apply(fmdecay(0.1))  // via mapper
+     * ```
+     *
+     * @param seconds FM envelope decay time in seconds. See [SprudelPattern.fmdecay].
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        fmdecay(seconds, callInfo)
+}
+
+/** The [Fmdecay] accessor as a value, so the Kotlin door reads like the script. */
+val fmdecay: Fmdecay = Fmdecay
 
 /** Chains a fmdecay onto this [PatternMapperFn]; sets the FM envelope decay time on the result. */
 @KlangScript.Function
@@ -307,20 +416,18 @@ fun SprudelPattern.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = nul
 fun String.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmdec(seconds, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that is an alias for [fmdecay].
- *
- * ```KlangScript(Playable)
- * note("c3").s("sine").apply(fmdec(0.1))  // via mapper
- * ```
- *
- * @alias fmdecay
- * @category synthesis
- * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [fmdecay]; the script reaches it through `fmdec(...)`. */
 fun fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmdec(seconds, callInfo) }
+
+/**
+ * Alias of [fmdecay]: the same accessor under another name.
+ *
+ * @category synthesis
+ * @tags fmdec, fmdecay, accessor
+ */
+@KlangScript.Constant
+val fmdec: Fmdecay = Fmdecay
 
 /** Chains a fmdec onto this [PatternMapperFn]; alias for [PatternMapperFn.fmdecay]. */
 @KlangScript.Function
@@ -332,6 +439,10 @@ fun PatternMapperFn.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = nu
 private val fmsustainMutation = voiceSetter { fmSustain = it?.asDoubleOrNull() }
 
 private fun applyFmsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.fmSustain }, update = fmsustainMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, fmsustainMutation)
 }
 
@@ -367,20 +478,53 @@ fun String.fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmsustain(level, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the FM modulation envelope sustain level on the source pattern.
+ * Returns a [PatternMapperFn] for `fmsustain(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3").s("sine").apply(fmsustain(0.0))  // via mapper
- * ```
- *
- * @param level FM envelope sustain level. See [SprudelPattern.fmsustain].
- * @alias fmsus
- * @category synthesis
- * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
+ * Kotlin door only: the script reaches this through `fmsustain(...)`, which is [Fmsustain.invoke].
  */
-@KlangScript.Function
 fun fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmsustain(level, callInfo) }
+
+/**
+ * The FM envelope sustain level of each event, as a value other setters can read.
+ *
+ * Bare `fmsustain` reads what the chain has set so far, so it comes after whatever set the field
+ * (`fmsustain(...)` or an alias). Call it, `fmsustain(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `fmsus`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmenv(400).fmdecay(0.2).fmsustain(0.5).fmsustain(mul("1 0"))   // the second note percussive
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmenv(400).fmsustain("0.2 0.8").fmdecay(fmsustain)   // decay follows sustain
+ * ```
+ *
+ * @category synthesis
+ * @tags fmsustain, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("fmsustain")
+object Fmsustain : FieldAccessor({ it.fmSustain }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the FM modulation envelope sustain level on the source pattern.
+     *
+     * ```KlangScript(Playable)
+     * note("c3").s("sine").apply(fmsustain(0.0))  // via mapper
+     * ```
+     *
+     * @param level FM envelope sustain level. See [SprudelPattern.fmsustain].
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        fmsustain(level, callInfo)
+}
+
+/** The [Fmsustain] accessor as a value, so the Kotlin door reads like the script. */
+val fmsustain: Fmsustain = Fmsustain
 
 /** Chains a fmsustain onto this [PatternMapperFn]; sets the FM envelope sustain level on the result. */
 @KlangScript.Function
@@ -403,20 +547,18 @@ fun SprudelPattern.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null)
 fun String.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmsus(level, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that is an alias for [fmsustain].
- *
- * ```KlangScript(Playable)
- * note("c3").s("sine").apply(fmsus(0.0))  // via mapper
- * ```
- *
- * @alias fmsustain
- * @category synthesis
- * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [fmsustain]; the script reaches it through `fmsus(...)`. */
 fun fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmsus(level, callInfo) }
+
+/**
+ * Alias of [fmsustain]: the same accessor under another name.
+ *
+ * @category synthesis
+ * @tags fmsus, fmsustain, accessor
+ */
+@KlangScript.Constant
+val fmsus: Fmsustain = Fmsustain
 
 /** Chains a fmsus onto this [PatternMapperFn]; alias for [PatternMapperFn.fmsustain]. */
 @KlangScript.Function

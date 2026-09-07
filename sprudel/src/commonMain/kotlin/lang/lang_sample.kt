@@ -15,13 +15,19 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel._liftData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 // -- begin() ----------------------------------------------------------------------------------------------------------
 
 private val beginMutation = voiceSetter { begin = it?.asDoubleOrNull() }
 
-private fun applyBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    source._liftOrReinterpretNumericalField(args, beginMutation)
+private fun applyBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.begin }, update = beginMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, beginMutation)
+}
 
 /**
  * Sets the sample start position as a fraction of the total sample length (0–1).
@@ -54,21 +60,52 @@ fun String.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
     this.toVoiceValuePattern(callInfo?.receiverLocation).begin(pos, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the sample start position (0–1).
+ * Returns a [PatternMapperFn] for `begin(...)`.
  *
- * @param pos Start position in [0, 1].
- * @return A [PatternMapperFn] that sets the begin field on the source pattern.
+ * Kotlin door only: the script reaches this through `begin(...)`, which is [Begin.invoke].
+ */
+fun begin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.begin(pos, callInfo) }
+
+/**
+ * The sample start position of each event (0..1), as a value other setters can read.
+ *
+ * Bare `begin` reads what the chain has set so far, so it comes after whatever set the field
+ * (`begin(...)` or an alias). Call it, `begin(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * s("breaks").apply(begin(0.5))     // via mapper
+ * s("breaks*4").begin(0.25).begin(mul("1 2 1 3"))                         // start points that jump
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("breaks*2").begin("0 0.5").end(begin.add(0.25))                      // a quarter of the sample from each start
  * ```
  *
  * @category sampling
- * @tags begin, start, sample, position, offset
+ * @tags begin, accessor
  */
-@KlangScript.Function
-fun begin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.begin(pos, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("begin")
+object Begin : FieldAccessor({ it.begin }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the sample start position (0–1).
+     *
+     * @param pos Start position in [0, 1].
+     * @return A [PatternMapperFn] that sets the begin field on the source pattern.
+     *
+     * ```KlangScript(Playable)
+     * s("breaks").apply(begin(0.5))     // via mapper
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        begin(pos, callInfo)
+}
+
+/** The [Begin] accessor as a value, so the Kotlin door reads like the script. */
+val begin: Begin = Begin
 
 /** Chains a begin onto this [PatternMapperFn]; sets the sample start position (0–1). */
 @KlangScript.Function
@@ -79,8 +116,13 @@ fun PatternMapperFn.begin(pos: PatternLike? = null, callInfo: CallInfo? = null):
 
 private val endMutation = voiceSetter { end = it?.asDoubleOrNull() }
 
-private fun applyEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    source._liftOrReinterpretNumericalField(args, endMutation)
+private fun applyEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.end }, update = endMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, endMutation)
+}
 
 /**
  * Sets the sample end position as a fraction of the total sample length (0–1).
@@ -112,21 +154,52 @@ fun String.end(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
     this.toVoiceValuePattern(callInfo?.receiverLocation).end(pos, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the sample end position (0–1).
+ * Returns a [PatternMapperFn] for `end(...)`.
  *
- * @param pos End position in [0, 1].
- * @return A [PatternMapperFn] that sets the end field on the source pattern.
+ * Kotlin door only: the script reaches this through `end(...)`, which is [End.invoke].
+ */
+fun end(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.end(pos, callInfo) }
+
+/**
+ * The sample end position of each event (0..1), as a value other setters can read.
+ *
+ * Bare `end` reads what the chain has set so far, so it comes after whatever set the field
+ * (`end(...)` or an alias). Call it, `end(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * s("breaks").apply(end(0.5))     // via mapper
+ * s("breaks*4").end(0.5).end(mul(perlin.seg(4).range(0.5, 1)))           // the cut point wanders
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("breaks*2").end("0.5 1").begin(end.sub(0.25))                        // start a quarter before each end
  * ```
  *
  * @category sampling
- * @tags end, stop, sample, position, offset
+ * @tags end, accessor
  */
-@KlangScript.Function
-fun end(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.end(pos, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("end")
+object End : FieldAccessor({ it.end }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the sample end position (0–1).
+     *
+     * @param pos End position in [0, 1].
+     * @return A [PatternMapperFn] that sets the end field on the source pattern.
+     *
+     * ```KlangScript(Playable)
+     * s("breaks").apply(end(0.5))     // via mapper
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        end(pos, callInfo)
+}
+
+/** The [End] accessor as a value, so the Kotlin door reads like the script. */
+val end: End = End
 
 /** Chains an end onto this [PatternMapperFn]; sets the sample end position (0–1). */
 @KlangScript.Function
@@ -137,16 +210,22 @@ fun PatternMapperFn.end(pos: PatternLike? = null, callInfo: CallInfo? = null): P
 
 private val speedMutation = voiceSetter { speed = it?.asDoubleOrNull() }
 
-private fun applySpeed(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    source._liftOrReinterpretNumericalField(args, speedMutation)
+private fun applySpeed(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.speed }, update = speedMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, speedMutation)
+}
 
 /**
  * Sets the sample playback speed as a multiplier.
  *
  * `1` is normal speed; `2` doubles the speed (one octave up); `0.5` halves the speed
- * (one octave down). Negative values play the sample in reverse.
+ * (one octave down). A negative speed sounds only when `begin` is set (it then plays backwards
+ * to the sample start); with `begin` unset the playhead starts at 0 and the voice is silent.
  *
- * @param rate Speed multiplier; 1 = normal, 2 = double, -1 = reverse.
+ * @param rate Speed multiplier; 1 = normal, 2 = double, 0.5 = half; negative only sounds with `begin` set (backwards to the start).
  * @return A pattern with the playback speed set.
  *
  * ```KlangScript(Playable)
@@ -154,11 +233,11 @@ private fun applySpeed(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd").speed("<1 -1>")           // alternate forward and reverse per cycle
+ * s("bd").speed("<1 0.5>")          // alternate normal and half speed per cycle
  * ```
  *
  * @category sampling
- * @tags speed, playback, pitch, rate, reverse
+ * @tags speed, playback, pitch, rate
  */
 @KlangScript.Function
 fun SprudelPattern.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -170,21 +249,52 @@ fun String.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
     this.toVoiceValuePattern(callInfo?.receiverLocation).speed(rate, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the sample playback speed.
+ * Returns a [PatternMapperFn] for `speed(...)`.
  *
- * @param rate Speed multiplier; 1 = normal, 2 = double, -1 = reverse.
- * @return A [PatternMapperFn] that sets the speed field on the source pattern.
+ * Kotlin door only: the script reaches this through `speed(...)`, which is [Speed.invoke].
+ */
+fun speed(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.speed(rate, callInfo) }
+
+/**
+ * The playback speed of each event, as a value other setters can read.
+ *
+ * Bare `speed` reads what the chain has set so far, so it comes after whatever set the field
+ * (`speed(...)` or an alias). Call it, `speed(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * s("breaks").apply(speed(2))       // double speed via mapper
+ * s("breaks*4").speed(1).speed(mul("1 0.5 1 2"))                           // normal, half, normal, double
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("breaks*2").speed("0.5 2").gain(speed.mul(0.4))                      // faster is louder
  * ```
  *
  * @category sampling
- * @tags speed, playback, pitch, rate, reverse
+ * @tags speed, accessor
  */
-@KlangScript.Function
-fun speed(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.speed(rate, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("speed")
+object Speed : FieldAccessor({ it.speed }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the sample playback speed.
+     *
+     * @param rate Speed multiplier; 1 = normal, 2 = double, 0.5 = half; negative only sounds with `begin` set (backwards to the start).
+     * @return A [PatternMapperFn] that sets the speed field on the source pattern.
+     *
+     * ```KlangScript(Playable)
+     * s("breaks").apply(speed(2))       // double speed via mapper
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        speed(rate, callInfo)
+}
+
+/** The [Speed] accessor as a value, so the Kotlin door reads like the script. */
+val speed: Speed = Speed
 
 /** Chains a speed onto this [PatternMapperFn]; sets the sample playback speed. */
 @KlangScript.Function
@@ -318,8 +428,13 @@ fun PatternMapperFn.loop(flag: PatternLike = true, callInfo: CallInfo? = null): 
 
 private val loopBeginMutation = voiceSetter { loopBegin = it?.asDoubleOrNull() }
 
-private fun applyLoopBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    source._liftOrReinterpretNumericalField(args, loopBeginMutation)
+private fun applyLoopBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.loopBegin }, update = loopBeginMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, loopBeginMutation)
+}
 
 /**
  * Sets the loop start position as a fraction of the total sample length (0–1).
@@ -352,22 +467,55 @@ fun String.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopBegin(pos, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the loop start position (0–1).
+ * Returns a [PatternMapperFn] for `loopBegin(...)`.
  *
- * @param pos Loop start position in [0, 1].
- * @return A [PatternMapperFn] that sets the loopBegin field.
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).apply(loopBegin(0.25))   // via mapper
- * ```
- *
- * @alias loopb
- * @category sampling
- * @tags loopBegin, loopb, loop, start, sample, position
+ * Kotlin door only: the script reaches this through `loopBegin(...)`, which is [LoopBegin.invoke].
  */
-@KlangScript.Function
 fun loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.loopBegin(pos, callInfo) }
+
+/**
+ * The loop start position of each event (0..1), as a value other setters can read. Reserved:
+ * the engine loops between `begin` and `end` for now; `loopBegin` travels but is not read yet.
+ *
+ * Bare `loopBegin` reads what the chain has set so far, so it comes after whatever set the field
+ * (`loopBegin(...)` or an alias). Call it, `loopBegin(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `loopb`.
+ *
+ * ```KlangScript(Playable)
+ * s("pad").loop(1).loopBegin(0.25).loopBegin(mul("<1 2>")).loopEnd(0.9)   // reserved, inaudible for now
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("pad").loop(1).loopBegin("0.2 0.4").loopEnd(loopBegin.add(0.3))      // reserved: a fixed loop length, once the engine reads it
+ * ```
+ *
+ * @category sampling
+ * @tags loopBegin, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("loopBegin")
+object LoopBegin : FieldAccessor({ it.loopBegin }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the loop start position (0–1).
+     *
+     * @param pos Loop start position in [0, 1].
+     * @return A [PatternMapperFn] that sets the loopBegin field.
+     *
+     * ```KlangScript(Playable)
+     * s("pad").loop(1).apply(loopBegin(0.25))   // via mapper
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        loopBegin(pos, callInfo)
+}
+
+/** The [LoopBegin] accessor as a value, so the Kotlin door reads like the script. */
+val loopBegin: LoopBegin = LoopBegin
 
 /** Chains a loopBegin onto this [PatternMapperFn]; sets the loop start position. */
 @KlangScript.Function
@@ -391,10 +539,18 @@ fun SprudelPattern.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelP
 fun String.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopb(pos, callInfo)
 
-/** Alias for [loopBegin] — returns a [PatternMapperFn]. */
-@KlangScript.Function
+/** Kotlin door only: alias of [loopBegin]; the script reaches it through `loopb(...)`. */
 fun loopb(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     loopBegin(pos, callInfo)
+
+/**
+ * Alias of [loopBegin]: the same accessor under another name.
+ *
+ * @category sampling
+ * @tags loopb, loopBegin, accessor
+ */
+@KlangScript.Constant
+val loopb: LoopBegin = LoopBegin
 
 /** Chains a loopb (alias for [loopBegin]) onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -405,8 +561,13 @@ fun PatternMapperFn.loopb(pos: PatternLike, callInfo: CallInfo? = null): Pattern
 
 private val loopEndMutation = voiceSetter { loopEnd = it?.asDoubleOrNull() }
 
-private fun applyLoopEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    source._liftOrReinterpretNumericalField(args, loopEndMutation)
+private fun applyLoopEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.loopEnd }, update = loopEndMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, loopEndMutation)
+}
 
 /**
  * Sets the loop end position as a fraction of the total sample length (0–1).
@@ -439,22 +600,55 @@ fun String.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).loopEnd(pos, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the loop end position (0–1).
+ * Returns a [PatternMapperFn] for `loopEnd(...)`.
  *
- * @param pos Loop end position in [0, 1].
- * @return A [PatternMapperFn] that sets the loopEnd field.
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).apply(loopEnd(0.75))   // via mapper
- * ```
- *
- * @alias loope
- * @category sampling
- * @tags loopEnd, loope, loop, end, sample, position
+ * Kotlin door only: the script reaches this through `loopEnd(...)`, which is [LoopEnd.invoke].
  */
-@KlangScript.Function
 fun loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.loopEnd(pos, callInfo) }
+
+/**
+ * The loop end position of each event (0..1), as a value other setters can read. Reserved:
+ * the engine loops between `begin` and `end` for now; `loopEnd` travels but is not read yet.
+ *
+ * Bare `loopEnd` reads what the chain has set so far, so it comes after whatever set the field
+ * (`loopEnd(...)` or an alias). Call it, `loopEnd(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `loope`.
+ *
+ * ```KlangScript(Playable)
+ * s("pad").loop(1).loopBegin(0.1).loopEnd(0.5).loopEnd(mul("<1 1.5>"))    // reserved, inaudible for now
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("pad").loop(1).loopEnd("0.5 0.9").loopBegin(loopEnd.sub(0.3))        // reserved: a fixed loop length, once the engine reads it
+ * ```
+ *
+ * @category sampling
+ * @tags loopEnd, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("loopEnd")
+object LoopEnd : FieldAccessor({ it.loopEnd }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the loop end position (0–1).
+     *
+     * @param pos Loop end position in [0, 1].
+     * @return A [PatternMapperFn] that sets the loopEnd field.
+     *
+     * ```KlangScript(Playable)
+     * s("pad").loop(1).apply(loopEnd(0.75))   // via mapper
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        loopEnd(pos, callInfo)
+}
+
+/** The [LoopEnd] accessor as a value, so the Kotlin door reads like the script. */
+val loopEnd: LoopEnd = LoopEnd
 
 /** Chains a loopEnd onto this [PatternMapperFn]; sets the loop end position. */
 @KlangScript.Function
@@ -478,10 +672,18 @@ fun SprudelPattern.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelP
 fun String.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).loope(pos, callInfo)
 
-/** Alias for [loopEnd] — returns a [PatternMapperFn]. */
-@KlangScript.Function
+/** Kotlin door only: alias of [loopEnd]; the script reaches it through `loope(...)`. */
 fun loope(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     loopEnd(pos, callInfo)
+
+/**
+ * Alias of [loopEnd]: the same accessor under another name.
+ *
+ * @category sampling
+ * @tags loope, loopEnd, accessor
+ */
+@KlangScript.Constant
+val loope: LoopEnd = LoopEnd
 
 /** Chains a loope (alias for [loopEnd]) onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -680,8 +882,13 @@ fun PatternMapperFn.loopatcps(factor: PatternLike, cps: PatternLike, callInfo: C
 
 private val cutMutation = voiceSetter { cut = it?.asIntOrNull() }
 
-private fun applyCut(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    source._liftOrReinterpretNumericalField(args, cutMutation)
+private fun applyCut(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.cut?.toDouble() }, update = cutMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, cutMutation)
+}
 
 /**
  * Assigns the sample to a cut group (choke group) by number.
@@ -714,21 +921,52 @@ fun String.cut(group: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
     this.toVoiceValuePattern(callInfo?.receiverLocation).cut(group, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that assigns the sample to a cut group.
+ * Returns a [PatternMapperFn] for `cut(...)`.
  *
- * @param group Cut group number; 0 = no choke.
- * @return A [PatternMapperFn] that sets the cut field on the source pattern.
+ * Kotlin door only: the script reaches this through `cut(...)`, which is [Cut.invoke].
+ */
+fun cut(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.cut(group, callInfo) }
+
+/**
+ * The cut group of each event, as a value other setters can read.
+ *
+ * Bare `cut` reads what the chain has set so far, so it comes after whatever set the field
+ * (`cut(...)` or an alias). Call it, `cut(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * s("hh*4").apply(cut(1))         // assign to cut group 1 via mapper
+ * s("hh*4").cut(1).cut(add("0 1 0 1"))                                    // two cut groups, alternating
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * stack(s("hh*4").cut(1), s("oh*2").cut(2)).gain(cut.mul(0.4))            // the cut group sets the level
  * ```
  *
  * @category sampling
- * @tags cut, choke, group, hi-hat, sample
+ * @tags cut, accessor
  */
-@KlangScript.Function
-fun cut(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.cut(group, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("cut")
+object Cut : FieldAccessor({ it.cut?.toDouble() }) {
+
+    /**
+     * Returns a [PatternMapperFn] that assigns the sample to a cut group.
+     *
+     * @param group Cut group number; 0 = no choke.
+     * @return A [PatternMapperFn] that sets the cut field on the source pattern.
+     *
+     * ```KlangScript(Playable)
+     * s("hh*4").apply(cut(1))         // assign to cut group 1 via mapper
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        cut(group, callInfo)
+}
+
+/** The [Cut] accessor as a value, so the Kotlin door reads like the script. */
+val cut: Cut = Cut
 
 /** Chains a cut onto this [PatternMapperFn]; assigns the sample to the given cut group. */
 @KlangScript.Function

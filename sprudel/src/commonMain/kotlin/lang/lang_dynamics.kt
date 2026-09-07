@@ -383,7 +383,12 @@ fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
 fun vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.velocity(amount, callInfo) }
 
-/** Alias of [velocity]: the same accessor under another name. */
+/**
+ * Alias of [velocity]: the same accessor under another name.
+ *
+ * @category dynamics
+ * @tags vel, velocity, accessor
+ */
 @KlangScript.Constant
 val vel: Velocity = Velocity
 

@@ -13,6 +13,22 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.lang.addons.nfa
+import io.peekandpoke.klang.sprudel.lang.addons.nfattack
+import io.peekandpoke.klang.sprudel.lang.addons.nfd
+import io.peekandpoke.klang.sprudel.lang.addons.nfdecay
+import io.peekandpoke.klang.sprudel.lang.addons.nfe
+import io.peekandpoke.klang.sprudel.lang.addons.nfenv
+import io.peekandpoke.klang.sprudel.lang.addons.nfr
+import io.peekandpoke.klang.sprudel.lang.addons.nfrelease
+import io.peekandpoke.klang.sprudel.lang.addons.nfs
+import io.peekandpoke.klang.sprudel.lang.addons.nfsustain
+import io.peekandpoke.klang.sprudel.lang.addons.notch
+import io.peekandpoke.klang.sprudel.lang.addons.notchf
+import io.peekandpoke.klang.sprudel.lang.addons.notchq
+import io.peekandpoke.klang.sprudel.lang.addons.nresonance
+import io.peekandpoke.klang.sprudel.lang.addons.ntf
+import io.peekandpoke.klang.sprudel.lang.addons.ntq
 
 /**
  * One row per field accessor, each run through BOTH doors: the Kotlin pattern and the same text
@@ -179,6 +195,135 @@ class LangFieldAccessorsSpec : StringSpec({
         row("dcap", """s("bd sd").dcap(2).pan(dcap)""", { it.pan }, 2.0, s("bd sd").dcap(2).pan(dcap)),
     )
 
+    // Batch three: sample, synthesis, vowel, body, tonal, notch and filter envelope fields.
+    val mappedBatchThree = listOf(
+        row("begin", """s("bd sd").begin(0.25).begin(mul(2))""", { it.begin }, 0.5, s("bd sd").begin(0.25).begin(mul(2))),
+        row("end", """s("bd sd").end(0.5).end(mul(2))""", { it.end }, 1.0, s("bd sd").end(0.5).end(mul(2))),
+        row("speed", """s("bd sd").speed(1).speed(mul(2))""", { it.speed }, 2.0, s("bd sd").speed(1).speed(mul(2))),
+        row("loopBegin", """s("bd sd").loopBegin(0.2).loopBegin(add(0.1))""", { it.loopBegin }, 0.3, s("bd sd").loopBegin(0.2).loopBegin(add(0.1))),
+        row("loopEnd", """s("bd sd").loopEnd(0.5).loopEnd(mul(2))""", { it.loopEnd }, 1.0, s("bd sd").loopEnd(0.5).loopEnd(mul(2))),
+        row("cut", """s("bd sd").cut(1).cut(add(1))""", { it.cut?.toDouble() }, 2.0, s("bd sd").cut(1).cut(add(1))),
+        row("fmh", """s("bd sd").fmh(2).fmh(mul(2))""", { it.fmh }, 4.0, s("bd sd").fmh(2).fmh(mul(2))),
+        row("fmattack", """s("bd sd").fmattack(0.1).fmattack(mul(2))""", { it.fmAttack }, 0.2, s("bd sd").fmattack(0.1).fmattack(mul(2))),
+        row("fmdecay", """s("bd sd").fmdecay(0.2).fmdecay(mul(2))""", { it.fmDecay }, 0.4, s("bd sd").fmdecay(0.2).fmdecay(mul(2))),
+        row("fmsustain", """s("bd sd").fmsustain(0.5).fmsustain(mul(0.5))""", { it.fmSustain }, 0.25, s("bd sd").fmsustain(0.5).fmsustain(mul(0.5))),
+        row("vowelWet", """s("bd sd").vowelWet(0.5).vowelWet(mul(0.5))""", { it.vowelMix }, 0.25, s("bd sd").vowelWet(0.5).vowelWet(mul(0.5))),
+        row("vowelFloor", """s("bd sd").vowelFloor(0.2).vowelFloor(add(0.3))""", { it.vowelFloor }, 0.5, s("bd sd").vowelFloor(0.2).vowelFloor(add(0.3))),
+        row("bodyWet", """s("bd sd").bodyWet(0.4).bodyWet(mul(2))""", { it.bodyMix }, 0.8, s("bd sd").bodyWet(0.4).bodyWet(mul(2))),
+        row("bodyFloor", """s("bd sd").bodyFloor(0.2).bodyFloor(add(0.3))""", { it.bodyFloor }, 0.5, s("bd sd").bodyFloor(0.2).bodyFloor(add(0.3))),
+        row("legato", """s("bd sd").legato(0.8).legato(mul(2))""", { it.legato }, 1.6, s("bd sd").legato(0.8).legato(mul(2))),
+        row("vibrato", """s("bd sd").vibrato(5).vibrato(mul(2))""", { it.vibrato }, 10.0, s("bd sd").vibrato(5).vibrato(mul(2))),
+        row("vibratoMod", """s("bd sd").vibratoMod(0.3).vibratoMod(mul(2))""", { it.vibratoMod }, 0.6, s("bd sd").vibratoMod(0.3).vibratoMod(mul(2))),
+        row("pattack", """s("bd sd").pattack(0.1).pattack(mul(2))""", { it.pAttack }, 0.2, s("bd sd").pattack(0.1).pattack(mul(2))),
+        row("pdecay", """s("bd sd").pdecay(0.2).pdecay(mul(2))""", { it.pDecay }, 0.4, s("bd sd").pdecay(0.2).pdecay(mul(2))),
+        row("prelease", """s("bd sd").prelease(0.3).prelease(mul(2))""", { it.pRelease }, 0.6, s("bd sd").prelease(0.3).prelease(mul(2))),
+        row("penv", """s("bd sd").penv(12).penv(mul(2))""", { it.pEnv }, 24.0, s("bd sd").penv(12).penv(mul(2))),
+        row("pcurve", """s("bd sd").pcurve(1).pcurve(add(1))""", { it.pCurve }, 2.0, s("bd sd").pcurve(1).pcurve(add(1))),
+        row("panchor", """s("bd sd").panchor(0.5).panchor(mul(2))""", { it.pAnchor }, 1.0, s("bd sd").panchor(0.5).panchor(mul(2))),
+        row("accelerate", """s("bd sd").accelerate(2).accelerate(mul(2))""", { it.accelerate }, 4.0, s("bd sd").accelerate(2).accelerate(mul(2))),
+        row("notchf", """s("bd sd").notchf(1000).notchf(mul(2))""", { it.notchf }, 2000.0, s("bd sd").notchf(1000).notchf(mul(2))),
+        row("nresonance", """s("bd sd").nresonance(4).nresonance(mul(2))""", { it.nresonance }, 8.0, s("bd sd").nresonance(4).nresonance(mul(2))),
+        row("nfattack", """s("bd sd").nfattack(0.1).nfattack(mul(2))""", { it.nfattack }, 0.2, s("bd sd").nfattack(0.1).nfattack(mul(2))),
+        row("nfdecay", """s("bd sd").nfdecay(0.2).nfdecay(mul(2))""", { it.nfdecay }, 0.4, s("bd sd").nfdecay(0.2).nfdecay(mul(2))),
+        row("nfsustain", """s("bd sd").nfsustain(0.5).nfsustain(mul(0.5))""", { it.nfsustain }, 0.25, s("bd sd").nfsustain(0.5).nfsustain(mul(0.5))),
+        row("nfrelease", """s("bd sd").nfrelease(0.3).nfrelease(mul(2))""", { it.nfrelease }, 0.6, s("bd sd").nfrelease(0.3).nfrelease(mul(2))),
+        row("nfenv", """s("bd sd").nfenv(12).nfenv(mul(2))""", { it.nfenv }, 24.0, s("bd sd").nfenv(12).nfenv(mul(2))),
+        row("lpe", """s("bd sd").lpe(12).lpe(mul(2))""", { it.lpenv }, 24.0, s("bd sd").lpe(12).lpe(mul(2))),
+        row("lpx", """s("bd sd").lpx(1).lpx(add(1))""", { it.lpPasses }, 2.0, s("bd sd").lpx(1).lpx(add(1))),
+        row("hpe", """s("bd sd").hpe(12).hpe(mul(2))""", { it.hpenv }, 24.0, s("bd sd").hpe(12).hpe(mul(2))),
+        row("hpx", """s("bd sd").hpx(1).hpx(add(1))""", { it.hpPasses }, 2.0, s("bd sd").hpx(1).hpx(add(1))),
+        row("bpe", """s("bd sd").bpe(12).bpe(mul(2))""", { it.bpenv }, 24.0, s("bd sd").bpe(12).bpe(mul(2))),
+    )
+
+    val readBatchThree = listOf(
+        row("begin", """s("bd sd").begin(0.25).pan(begin)""", { it.pan }, 0.25, s("bd sd").begin(0.25).pan(begin)),
+        row("end", """s("bd sd").end(0.5).pan(end)""", { it.pan }, 0.5, s("bd sd").end(0.5).pan(end)),
+        row("speed", """s("bd sd").speed(1).pan(speed)""", { it.pan }, 1.0, s("bd sd").speed(1).pan(speed)),
+        row("loopBegin", """s("bd sd").loopBegin(0.2).pan(loopBegin)""", { it.pan }, 0.2, s("bd sd").loopBegin(0.2).pan(loopBegin)),
+        row("loopEnd", """s("bd sd").loopEnd(0.5).pan(loopEnd)""", { it.pan }, 0.5, s("bd sd").loopEnd(0.5).pan(loopEnd)),
+        row("cut", """s("bd sd").cut(1).pan(cut)""", { it.pan }, 1.0, s("bd sd").cut(1).pan(cut)),
+        row("fmh", """s("bd sd").fmh(2).pan(fmh)""", { it.pan }, 2.0, s("bd sd").fmh(2).pan(fmh)),
+        row("fmattack", """s("bd sd").fmattack(0.1).pan(fmattack)""", { it.pan }, 0.1, s("bd sd").fmattack(0.1).pan(fmattack)),
+        row("fmdecay", """s("bd sd").fmdecay(0.2).pan(fmdecay)""", { it.pan }, 0.2, s("bd sd").fmdecay(0.2).pan(fmdecay)),
+        row("fmsustain", """s("bd sd").fmsustain(0.5).pan(fmsustain)""", { it.pan }, 0.5, s("bd sd").fmsustain(0.5).pan(fmsustain)),
+        row("vowelWet", """s("bd sd").vowelWet(0.5).pan(vowelWet)""", { it.pan }, 0.5, s("bd sd").vowelWet(0.5).pan(vowelWet)),
+        row("vowelFloor", """s("bd sd").vowelFloor(0.2).pan(vowelFloor)""", { it.pan }, 0.2, s("bd sd").vowelFloor(0.2).pan(vowelFloor)),
+        row("bodyWet", """s("bd sd").bodyWet(0.4).pan(bodyWet)""", { it.pan }, 0.4, s("bd sd").bodyWet(0.4).pan(bodyWet)),
+        row("bodyFloor", """s("bd sd").bodyFloor(0.2).pan(bodyFloor)""", { it.pan }, 0.2, s("bd sd").bodyFloor(0.2).pan(bodyFloor)),
+        row("legato", """s("bd sd").legato(0.8).pan(legato)""", { it.pan }, 0.8, s("bd sd").legato(0.8).pan(legato)),
+        row("vibrato", """s("bd sd").vibrato(5).pan(vibrato)""", { it.pan }, 5.0, s("bd sd").vibrato(5).pan(vibrato)),
+        row("vibratoMod", """s("bd sd").vibratoMod(0.3).pan(vibratoMod)""", { it.pan }, 0.3, s("bd sd").vibratoMod(0.3).pan(vibratoMod)),
+        row("pattack", """s("bd sd").pattack(0.1).pan(pattack)""", { it.pan }, 0.1, s("bd sd").pattack(0.1).pan(pattack)),
+        row("pdecay", """s("bd sd").pdecay(0.2).pan(pdecay)""", { it.pan }, 0.2, s("bd sd").pdecay(0.2).pan(pdecay)),
+        row("prelease", """s("bd sd").prelease(0.3).pan(prelease)""", { it.pan }, 0.3, s("bd sd").prelease(0.3).pan(prelease)),
+        row("penv", """s("bd sd").penv(12).pan(penv)""", { it.pan }, 12.0, s("bd sd").penv(12).pan(penv)),
+        row("pcurve", """s("bd sd").pcurve(1).pan(pcurve)""", { it.pan }, 1.0, s("bd sd").pcurve(1).pan(pcurve)),
+        row("panchor", """s("bd sd").panchor(0.5).pan(panchor)""", { it.pan }, 0.5, s("bd sd").panchor(0.5).pan(panchor)),
+        row("accelerate", """s("bd sd").accelerate(2).pan(accelerate)""", { it.pan }, 2.0, s("bd sd").accelerate(2).pan(accelerate)),
+        row("notchf", """s("bd sd").notchf(1000).pan(notchf)""", { it.pan }, 1000.0, s("bd sd").notchf(1000).pan(notchf)),
+        row("nresonance", """s("bd sd").nresonance(4).pan(nresonance)""", { it.pan }, 4.0, s("bd sd").nresonance(4).pan(nresonance)),
+        row("nfattack", """s("bd sd").nfattack(0.1).pan(nfattack)""", { it.pan }, 0.1, s("bd sd").nfattack(0.1).pan(nfattack)),
+        row("nfdecay", """s("bd sd").nfdecay(0.2).pan(nfdecay)""", { it.pan }, 0.2, s("bd sd").nfdecay(0.2).pan(nfdecay)),
+        row("nfsustain", """s("bd sd").nfsustain(0.5).pan(nfsustain)""", { it.pan }, 0.5, s("bd sd").nfsustain(0.5).pan(nfsustain)),
+        row("nfrelease", """s("bd sd").nfrelease(0.3).pan(nfrelease)""", { it.pan }, 0.3, s("bd sd").nfrelease(0.3).pan(nfrelease)),
+        row("nfenv", """s("bd sd").nfenv(12).pan(nfenv)""", { it.pan }, 12.0, s("bd sd").nfenv(12).pan(nfenv)),
+        row("lpe", """s("bd sd").lpe(12).pan(lpe)""", { it.pan }, 12.0, s("bd sd").lpe(12).pan(lpe)),
+        row("lpx", """s("bd sd").lpx(1).pan(lpx)""", { it.pan }, 1.0, s("bd sd").lpx(1).pan(lpx)),
+        row("hpe", """s("bd sd").hpe(12).pan(hpe)""", { it.pan }, 12.0, s("bd sd").hpe(12).pan(hpe)),
+        row("hpx", """s("bd sd").hpx(1).pan(hpx)""", { it.pan }, 1.0, s("bd sd").hpx(1).pan(hpx)),
+        row("bpe", """s("bd sd").bpe(12).pan(bpe)""", { it.pan }, 12.0, s("bd sd").bpe(12).pan(bpe)),
+    )
+
+    val aliasSetsBatchThree = listOf(
+        row("clip", """s("bd sd").apply(clip(2))""", { it.legato }, 2.0, s("bd sd").apply(clip(2))),
+        row("vib", """s("bd sd").apply(vib(2))""", { it.vibrato }, 2.0, s("bd sd").apply(vib(2))),
+        row("patt", """s("bd sd").apply(patt(2))""", { it.pAttack }, 2.0, s("bd sd").apply(patt(2))),
+        row("pdec", """s("bd sd").apply(pdec(2))""", { it.pDecay }, 2.0, s("bd sd").apply(pdec(2))),
+        row("prel", """s("bd sd").apply(prel(2))""", { it.pRelease }, 2.0, s("bd sd").apply(prel(2))),
+        row("pamt", """s("bd sd").apply(pamt(2))""", { it.pEnv }, 2.0, s("bd sd").apply(pamt(2))),
+        row("pcrv", """s("bd sd").apply(pcrv(2))""", { it.pCurve }, 2.0, s("bd sd").apply(pcrv(2))),
+        row("panc", """s("bd sd").apply(panc(2))""", { it.pAnchor }, 2.0, s("bd sd").apply(panc(2))),
+        row("loopb", """s("bd sd").apply(loopb(2))""", { it.loopBegin }, 2.0, s("bd sd").apply(loopb(2))),
+        row("loope", """s("bd sd").apply(loope(2))""", { it.loopEnd }, 2.0, s("bd sd").apply(loope(2))),
+        row("fmatt", """s("bd sd").apply(fmatt(2))""", { it.fmAttack }, 2.0, s("bd sd").apply(fmatt(2))),
+        row("fmdec", """s("bd sd").apply(fmdec(2))""", { it.fmDecay }, 2.0, s("bd sd").apply(fmdec(2))),
+        row("fmsus", """s("bd sd").apply(fmsus(2))""", { it.fmSustain }, 2.0, s("bd sd").apply(fmsus(2))),
+        row("notch", """s("bd sd").apply(notch(2))""", { it.notchf }, 2.0, s("bd sd").apply(notch(2))),
+        row("ntf", """s("bd sd").apply(ntf(2))""", { it.notchf }, 2.0, s("bd sd").apply(ntf(2))),
+        row("notchq", """s("bd sd").apply(notchq(2))""", { it.nresonance }, 2.0, s("bd sd").apply(notchq(2))),
+        row("ntq", """s("bd sd").apply(ntq(2))""", { it.nresonance }, 2.0, s("bd sd").apply(ntq(2))),
+        row("nfa", """s("bd sd").apply(nfa(2))""", { it.nfattack }, 2.0, s("bd sd").apply(nfa(2))),
+        row("nfd", """s("bd sd").apply(nfd(2))""", { it.nfdecay }, 2.0, s("bd sd").apply(nfd(2))),
+        row("nfs", """s("bd sd").apply(nfs(2))""", { it.nfsustain }, 2.0, s("bd sd").apply(nfs(2))),
+        row("nfr", """s("bd sd").apply(nfr(2))""", { it.nfrelease }, 2.0, s("bd sd").apply(nfr(2))),
+        row("nfe", """s("bd sd").apply(nfe(2))""", { it.nfenv }, 2.0, s("bd sd").apply(nfe(2))),
+    )
+
+    val aliasReadsBatchThree = listOf(
+        row("clip", """s("bd sd").legato(2).pan(clip)""", { it.pan }, 2.0, s("bd sd").legato(2).pan(clip)),
+        row("vib", """s("bd sd").vibrato(2).pan(vib)""", { it.pan }, 2.0, s("bd sd").vibrato(2).pan(vib)),
+        row("patt", """s("bd sd").pattack(2).pan(patt)""", { it.pan }, 2.0, s("bd sd").pattack(2).pan(patt)),
+        row("pdec", """s("bd sd").pdecay(2).pan(pdec)""", { it.pan }, 2.0, s("bd sd").pdecay(2).pan(pdec)),
+        row("prel", """s("bd sd").prelease(2).pan(prel)""", { it.pan }, 2.0, s("bd sd").prelease(2).pan(prel)),
+        row("pamt", """s("bd sd").penv(2).pan(pamt)""", { it.pan }, 2.0, s("bd sd").penv(2).pan(pamt)),
+        row("pcrv", """s("bd sd").pcurve(2).pan(pcrv)""", { it.pan }, 2.0, s("bd sd").pcurve(2).pan(pcrv)),
+        row("panc", """s("bd sd").panchor(2).pan(panc)""", { it.pan }, 2.0, s("bd sd").panchor(2).pan(panc)),
+        row("loopb", """s("bd sd").loopBegin(2).pan(loopb)""", { it.pan }, 2.0, s("bd sd").loopBegin(2).pan(loopb)),
+        row("loope", """s("bd sd").loopEnd(2).pan(loope)""", { it.pan }, 2.0, s("bd sd").loopEnd(2).pan(loope)),
+        row("fmatt", """s("bd sd").fmattack(2).pan(fmatt)""", { it.pan }, 2.0, s("bd sd").fmattack(2).pan(fmatt)),
+        row("fmdec", """s("bd sd").fmdecay(2).pan(fmdec)""", { it.pan }, 2.0, s("bd sd").fmdecay(2).pan(fmdec)),
+        row("fmsus", """s("bd sd").fmsustain(2).pan(fmsus)""", { it.pan }, 2.0, s("bd sd").fmsustain(2).pan(fmsus)),
+        row("notch", """s("bd sd").notchf(2).pan(notch)""", { it.pan }, 2.0, s("bd sd").notchf(2).pan(notch)),
+        row("ntf", """s("bd sd").notchf(2).pan(ntf)""", { it.pan }, 2.0, s("bd sd").notchf(2).pan(ntf)),
+        row("notchq", """s("bd sd").nresonance(2).pan(notchq)""", { it.pan }, 2.0, s("bd sd").nresonance(2).pan(notchq)),
+        row("ntq", """s("bd sd").nresonance(2).pan(ntq)""", { it.pan }, 2.0, s("bd sd").nresonance(2).pan(ntq)),
+        row("nfa", """s("bd sd").nfattack(2).pan(nfa)""", { it.pan }, 2.0, s("bd sd").nfattack(2).pan(nfa)),
+        row("nfd", """s("bd sd").nfdecay(2).pan(nfd)""", { it.pan }, 2.0, s("bd sd").nfdecay(2).pan(nfd)),
+        row("nfs", """s("bd sd").nfsustain(2).pan(nfs)""", { it.pan }, 2.0, s("bd sd").nfsustain(2).pan(nfs)),
+        row("nfr", """s("bd sd").nfrelease(2).pan(nfr)""", { it.pan }, 2.0, s("bd sd").nfrelease(2).pan(nfr)),
+        row("nfe", """s("bd sd").nfenv(2).pan(nfe)""", { it.pan }, 2.0, s("bd sd").nfenv(2).pan(nfe)),
+    )
+
     fun SprudelPattern.cycles() = (0 until 12).map { c -> queryArc(c.toDouble(), c + 1.0) }
 
     fun check(rows: List<Row>) {
@@ -222,6 +367,19 @@ class LangFieldAccessorsSpec : StringSpec({
     "every alias constant sets the canonical field through its call form and reads it bare, in both doors" {
         check(aliasSets)
         check(aliasReads)
+    }
+
+    "batch three: a mapper argument applies to the setter's own field, in both doors" {
+        check(mappedBatchThree)
+    }
+
+    "batch three: the bare accessor reads its field into another setter, in both doors" {
+        check(readBatchThree)
+    }
+
+    "batch three: every alias constant sets and reads like its canonical object, in both doors" {
+        check(aliasSetsBatchThree)
+        check(aliasReadsBatchThree)
     }
 
     "multi-parameter setters dispatch through the accessor's invoke in both doors" {
@@ -281,6 +439,19 @@ class LangFieldAccessorsSpec : StringSpec({
         both(s("bd sd").apply(distort(amount = 0.5, oversample = 2)), """s("bd sd").apply(distort(amount = 0.5, oversample = 2))""") {
             it.distort shouldBe 0.5
             it.distortOversample shouldBe 2
+        }
+        // batch three: the notch door and its alias
+        both(s("bd sd").apply(notchf(1000, 5)), """s("bd sd").apply(notchf(1000, 5))""") {
+            it.notchf shouldBe 1000.0
+            it.nresonance shouldBe 5.0
+        }
+        both(s("bd sd").notchf(1000).apply(notchf(mul(2), 5)), """s("bd sd").notchf(1000).apply(notchf(mul(2), 5))""") {
+            it.notchf shouldBe 2000.0
+            it.nresonance shouldBe 5.0
+        }
+        both(s("bd sd").apply(notch(1000, 5)), """s("bd sd").apply(notch(1000, 5))""") {
+            it.notchf shouldBe 1000.0
+            it.nresonance shouldBe 5.0
         }
         // a named argument that skips the first parameter
         both(note("c e").lpf(700).apply(lpf(q = 6)), """note("c e").lpf(700).apply(lpf(q = 6))""") {

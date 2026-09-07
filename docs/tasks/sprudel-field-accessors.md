@@ -23,7 +23,17 @@ Rewritten 2026-09-06 after a design session; the previous draft (context-key bin
   Benchmark note: the song benchmark rung `3 +coarse(2,os4)` (`SongBenchmarkCases.kt`) measured
   coarse WITHOUT oversampling before 2026-09-07 despite its name; tables from before that date
   (`docs/benchmarks/2026-08-19_*`) are not comparable on that rung.
-  Remaining: sample (7), synthesis (6), tonal (12), vowel, body, addons.
+- 2026-09-07: batch three, 36 accessors and 22 aliases across sample (`begin, end, speed,
+  loopBegin, loopEnd, cut`), synthesis (`fmh, fmattack, fmdecay, fmsustain`), vowel (`vowelWet,
+  vowelFloor`), body (`bodyWet, bodyFloor`), tonal (`legato, vibrato, vibratoMod, pattack, pdecay,
+  prelease, penv, pcurve, panchor, accelerate`), the notch addons (`notchf, nresonance, nfattack,
+  nfdecay, nfsustain, nfrelease, nfenv`) and the filter envelopes (`lpe, lpx, hpe, hpx, bpe`).
+  Tonal helpers had inline update lambdas; each became a named `<name>Update` value shared by the
+  mapper branch and the lift. Remaining numeric setters: dynamics leftovers (`unison, spread,
+  panSpread, density, duckAttack, duckDepth`, the compressor knobs), `fmenv` (its factory returns a
+  pattern, not a mapper), `orbit` and `duckOrbit` (Int routing fields). String and boolean setters
+  (`note, n, sound, bank, scale, vowel, body, unit, loop, *shape, *curve`) are out of scope: the
+  value register carries text, but "apply a mapper to a name" has no use case yet.
 
 ## Goal
 
@@ -235,8 +245,14 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   read row per accessor, both doors, 12 cycles), `FreqAccessorIntelSpec` (all objects).
 - DONE (batch two, 2026-09-07): the effects file, 24 accessors and 20 alias constants; alias
   rule: `@KlangScript.Constant val <alias>: <Obj> = <Obj>`, the alias factory stays for Kotlin.
-- NEXT batches: sample (7), synthesis (6), the rest of tonal (12), vowel, body, addons. Same
-  recipe, same two spec rows per accessor, one alias row per alias.
+- DONE (batch three, 2026-09-07): sample, synthesis, vowel, body, tonal, notch addons, filter
+  envelopes: 36 accessors, 22 aliases.
+- NEXT: the dynamics leftovers and the two Int routing fields, then decide about `fmenv`.
+- Engine gaps the examples exposed (2026-09-07, batch three review), documented as "reserved" in
+  the object KDocs: `pcurve` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not
+  read by `VoiceFactory` (it loops between `begin` and `end`); negative `speed` is silence, not
+  reverse (the sample docs claimed reverse). `nfenv` is in semitones; the addon file's examples
+  said `nfenv(3000)`.
 - The same chain in `_liftStringField` and `_applyControlFromParams` for string and control fields.
 - Provider twins on demand.
 - A provider or mapper handed to a setter WITHOUT the mapper branch (`room(freq)` today) is still

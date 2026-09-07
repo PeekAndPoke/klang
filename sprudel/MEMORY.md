@@ -2,6 +2,10 @@
 
 ## Recent Work (2026-09-07)
 
+- **Field accessors, batch three**: 36 objects and 22 aliases across sample, synthesis, vowel,
+  body, tonal, the notch addons and the filter envelopes. Tonal's inline update lambdas became
+  named `<name>Update` values. Addon accessors live in `lang.addons` and carry the `addon` tag.
+
 - **Field accessors, batch two** (effects): 24 objects, 20 alias constants (`val rsize: RoomSize =
   RoomSize`). Bug found by the new rows and fixed: `crushOversampleMutation` and
   `coarseOversampleMutation` used `toString()?.toIntOrNull()`, which is `null` for `"2.0"`, so

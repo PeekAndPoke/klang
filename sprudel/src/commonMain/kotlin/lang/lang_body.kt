@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 // -- body() -----------------------------------------------------------------------------------------------------------
@@ -78,6 +79,10 @@ fun PatternMapperFn.body(material: PatternLike? = null, callInfo: CallInfo? = nu
 private val bodyWetMutation = voiceSetter { bodyMix = it?.asDoubleOrNull() }
 
 private fun applyBodyWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.bodyMix }, update = bodyWetMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, bodyWetMutation)
 }
 
@@ -107,10 +112,44 @@ fun SprudelPattern.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null)
 fun String.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bodyWet(wet, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the body resonator wet balance. */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `bodyWet(...)`.
+ *
+ * Kotlin door only: the script reaches this through `bodyWet(...)`, which is [BodyWet.invoke].
+ */
 fun bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bodyWet(wet, callInfo) }
+
+/**
+ * The body resonator mix of each event, as a value other setters can read.
+ *
+ * Bare `bodyWet` reads what the chain has set so far, so it comes after whatever set the field
+ * (`bodyWet(...)` or an alias). Call it, `bodyWet(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").body("cedar").bodyWet(0.4).bodyWet(mul("1 0.5"))          // the second note less body
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").body("cedar").bodyWet("0.2 0.6").bodyFloor(bodyWet.mul(0.5))   // floor follows mix
+ * ```
+ *
+ * @category effects
+ * @tags bodyWet, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("bodyWet")
+object BodyWet : FieldAccessor({ it.bodyMix }) {
+
+    /** Returns a [PatternMapperFn] that sets the body resonator wet balance. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        bodyWet(wet, callInfo)
+}
+
+/** The [BodyWet] accessor as a value, so the Kotlin door reads like the script. */
+val bodyWet: BodyWet = BodyWet
 
 /** Chains a bodyWet step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -122,6 +161,10 @@ fun PatternMapperFn.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null
 private val bodyFloorMutation = voiceSetter { bodyFloor = it?.asDoubleOrNull() }
 
 private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.bodyFloor }, update = bodyFloorMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, bodyFloorMutation)
 }
 
@@ -147,10 +190,44 @@ fun SprudelPattern.bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = n
 fun String.bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bodyFloor(floor, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the body resonator floor. */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `bodyFloor(...)`.
+ *
+ * Kotlin door only: the script reaches this through `bodyFloor(...)`, which is [BodyFloor.invoke].
+ */
 fun bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bodyFloor(floor, callInfo) }
+
+/**
+ * The body resonator floor of each event, as a value other setters can read.
+ *
+ * Bare `bodyFloor` reads what the chain has set so far, so it comes after whatever set the field
+ * (`bodyFloor(...)` or an alias). Call it, `bodyFloor(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").body("brass").bodyFloor(0.2).bodyFloor(add("0 0.4"))       // more dry on the second note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").body("brass").bodyFloor("0.1 0.5").bodyWet(bodyFloor.add(0.3))   // mix follows floor
+ * ```
+ *
+ * @category effects
+ * @tags bodyFloor, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("bodyFloor")
+object BodyFloor : FieldAccessor({ it.bodyFloor }) {
+
+    /** Returns a [PatternMapperFn] that sets the body resonator floor. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        bodyFloor(floor, callInfo)
+}
+
+/** The [BodyFloor] accessor as a value, so the Kotlin door reads like the script. */
+val bodyFloor: BodyFloor = BodyFloor
 
 /** Chains a bodyFloor step onto this [PatternMapperFn]. */
 @KlangScript.Function

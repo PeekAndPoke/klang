@@ -12,8 +12,8 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
-import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 // -- distort() / dist() -----------------------------------------------------------------------------------------------
@@ -300,7 +300,12 @@ fun String.dist(amount: PatternLike? = null, shape: PatternLike? = null, oversam
 fun dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.distort(amount, shape, oversample, callInfo) }
 
-/** Alias of [distort]: the same accessor under another name. */
+/**
+ * Alias of [distort]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags dist, distort, accessor
+ */
 @KlangScript.Constant
 val dist: Distort = Distort
 
@@ -422,7 +427,12 @@ fun String.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? 
 fun distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.distortOversampling(factor, callInfo) }
 
-/** Alias of [distos]: the same accessor under another name. */
+/**
+ * Alias of [distos]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags distortOversampling, distos, accessor
+ */
 @KlangScript.Constant
 val distortOversampling: Distos = Distos
 
@@ -905,7 +915,12 @@ fun String.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = 
 fun crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.crushOversampling(factor, callInfo) }
 
-/** Alias of [crushos]: the same accessor under another name. */
+/**
+ * Alias of [crushos]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags crushOversampling, crushos, accessor
+ */
 @KlangScript.Constant
 val crushOversampling: Crushos = Crushos
 
@@ -1144,7 +1159,12 @@ fun String.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? =
 fun coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.coarseOversampling(factor, callInfo) }
 
-/** Alias of [coarseos]: the same accessor under another name. */
+/**
+ * Alias of [coarseos]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags coarseOversampling, coarseos, accessor
+ */
 @KlangScript.Constant
 val coarseOversampling: Coarseos = Coarseos
 
@@ -1499,7 +1519,12 @@ fun String.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprud
 fun rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.roomsize(amount, callInfo) }
 
-/** Alias of [roomsize]: the same accessor under another name. */
+/**
+ * Alias of [roomsize]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags rsize, roomsize, accessor
+ */
 @KlangScript.Constant
 val rsize: RoomSize = RoomSize
 
@@ -1557,7 +1582,12 @@ fun String.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
 fun sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.roomsize(amount, callInfo) }
 
-/** Alias of [roomsize]: the same accessor under another name. */
+/**
+ * Alias of [roomsize]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags sz, roomsize, accessor
+ */
 @KlangScript.Constant
 val sz: RoomSize = RoomSize
 
@@ -1614,7 +1644,12 @@ fun String.size(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
 fun size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.roomsize(amount, callInfo) }
 
-/** Alias of [roomsize]: the same accessor under another name. */
+/**
+ * Alias of [roomsize]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags size, roomsize, accessor
+ */
 @KlangScript.Constant
 val size: RoomSize = RoomSize
 
@@ -1829,7 +1864,12 @@ fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
 fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.roomfade(time, callInfo) }
 
-/** Alias of [roomfade]: the same accessor under another name. */
+/**
+ * Alias of [roomfade]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags rfade, roomfade, accessor
+ */
 @KlangScript.Constant
 val rfade: RoomFade = RoomFade
 
@@ -2034,7 +2074,12 @@ fun String.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
 fun rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.roomlp(freq, callInfo) }
 
-/** Alias of [roomlp]: the same accessor under another name. */
+/**
+ * Alias of [roomlp]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags rlp, roomlp, accessor
+ */
 @KlangScript.Constant
 val rlp: RoomLp = RoomLp
 
@@ -2237,7 +2282,12 @@ fun String.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
 fun rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.roomdim(freq, callInfo) }
 
-/** Alias of [roomdim]: the same accessor under another name. */
+/**
+ * Alias of [roomdim]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags rdim, roomdim, accessor
+ */
 @KlangScript.Constant
 val rdim: RoomDim = RoomDim
 
@@ -2887,7 +2937,12 @@ fun String.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
 fun delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.delayfeedback(amount, callInfo) }
 
-/** Alias of [delayfeedback]: the same accessor under another name. */
+/**
+ * Alias of [delayfeedback]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags delayfb, delayfeedback, accessor
+ */
 @KlangScript.Constant
 val delayfb: DelayFeedback = DelayFeedback
 
@@ -2957,7 +3012,12 @@ fun String.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
 fun dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.delayfeedback(amount, callInfo) }
 
-/** Alias of [delayfeedback]: the same accessor under another name. */
+/**
+ * Alias of [delayfeedback]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags dfb, delayfeedback, accessor
+ */
 @KlangScript.Constant
 val dfb: DelayFeedback = DelayFeedback
 
@@ -3210,7 +3270,12 @@ fun String.ph(rate: PatternLike? = null, wet: PatternLike? = null, center: Patte
 fun ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.phaser(rate, wet, center, sweep, callInfo) }
 
-/** Alias of [phaser]: the same accessor under another name. */
+/**
+ * Alias of [phaser]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags ph, phaser, accessor
+ */
 @KlangScript.Constant
 val ph: Phaser = Phaser
 
@@ -3636,7 +3701,12 @@ fun String.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
 fun phc(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.phasercenter(freq, callInfo) }
 
-/** Alias of [phasercenter]: the same accessor under another name. */
+/**
+ * Alias of [phasercenter]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags phc, phasercenter, accessor
+ */
 @KlangScript.Constant
 val phc: PhaserCenter = PhaserCenter
 
@@ -3838,7 +3908,12 @@ fun String.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
 fun phs(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.phasersweep(amount, callInfo) }
 
-/** Alias of [phasersweep]: the same accessor under another name. */
+/**
+ * Alias of [phasersweep]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags phs, phasersweep, accessor
+ */
 @KlangScript.Constant
 val phs: PhaserSweep = PhaserSweep
 
@@ -4040,7 +4115,12 @@ fun String.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): Spru
 fun tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.tremolosync(rate, callInfo) }
 
-/** Alias of [tremolosync]: the same accessor under another name. */
+/**
+ * Alias of [tremolosync]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags tremsync, tremolosync, accessor
+ */
 @KlangScript.Constant
 val tremsync: TremoloSync = TremoloSync
 
@@ -4242,7 +4322,12 @@ fun String.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): S
 fun tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.tremolodepth(amount, callInfo) }
 
-/** Alias of [tremolodepth]: the same accessor under another name. */
+/**
+ * Alias of [tremolodepth]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags tremdepth, tremolodepth, accessor
+ */
 @KlangScript.Constant
 val tremdepth: TremoloDepth = TremoloDepth
 
@@ -4443,7 +4528,12 @@ fun String.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
 fun tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.tremoloskew(amount, callInfo) }
 
-/** Alias of [tremoloskew]: the same accessor under another name. */
+/**
+ * Alias of [tremoloskew]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags tremskew, tremoloskew, accessor
+ */
 @KlangScript.Constant
 val tremskew: TremoloSkew = TremoloSkew
 
@@ -4648,7 +4738,12 @@ fun String.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): Sp
 fun tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.tremolophase(phase, callInfo) }
 
-/** Alias of [tremolophase]: the same accessor under another name. */
+/**
+ * Alias of [tremolophase]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags tremphase, tremolophase, accessor
+ */
 @KlangScript.Constant
 val tremphase: TremoloPhase = TremoloPhase
 
@@ -4987,7 +5082,12 @@ fun String.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
 fun dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.delaycap(amount, callInfo) }
 
-/** Alias of [delaycap]: the same accessor under another name. */
+/**
+ * Alias of [delaycap]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags dcap, delaycap, accessor
+ */
 @KlangScript.Constant
 val dcap: DelayCap = DelayCap
 

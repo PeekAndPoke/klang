@@ -866,6 +866,10 @@ val bpq: Bpq = Bpq
 private val lpenvMutation = voiceSetter { lpenv = it?.asDoubleOrNull() }
 
 private fun applyLpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.lpenv }, update = lpenvMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, lpenvMutation)
 }
 
@@ -926,10 +930,44 @@ fun String.lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): Spru
 fun PatternMapperFn.lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lpe(semitones, callInfo) }
 
-/** Creates a [PatternMapperFn] that sets the LPF envelope depth. */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `lpe(...)`.
+ *
+ * Kotlin door only: the script reaches this through `lpe(...)`, which is [Lpe.invoke].
+ */
 fun lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lpe(semitones, callInfo) }
+
+/**
+ * The lowpass envelope depth of each event in semitones, as a value other setters can read.
+ *
+ * Bare `lpe` reads what the chain has set so far, so it comes after whatever set the field
+ * (`lpe(...)` or an alias). Call it, `lpe(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").lpf(200).lpe(24).lpadsr(0.01, 0.3, 0.5, 0.5).lpe(mul("1 0.5"))   // a shallower sweep on the second note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").lpf(200).lpe("12 24").lpadsr(0.01, 0.3, 0.5, 0.5).hpf(100).hpe(lpe)   // both filters sweep as far
+ * ```
+ *
+ * @category effects
+ * @tags lpe, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("lpe")
+object Lpe : FieldAccessor({ it.lpenv }) {
+
+    /** Creates a [PatternMapperFn] that sets the LPF envelope depth. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        lpe(semitones, callInfo)
+}
+
+/** The [Lpe] accessor as a value, so the Kotlin door reads like the script. */
+val lpe: Lpe = Lpe
 
 
 // -- lpx() -----------------------------------------------------------------------------------------------------------
@@ -937,6 +975,10 @@ fun lpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
 private val lpxMutation = voiceSetter { lpPasses = it?.asDoubleOrNull() }
 
 private fun applyLpx(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.lpPasses }, update = lpxMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, lpxMutation)
 }
 
@@ -974,10 +1016,44 @@ fun SprudelPattern.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null):
 fun String.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpx(passes, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the lowpass cascade count (see [SprudelPattern.lpx]). */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `lpx(...)`.
+ *
+ * Kotlin door only: the script reaches this through `lpx(...)`, which is [Lpx.invoke].
+ */
 fun lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lpx(passes, callInfo) }
+
+/**
+ * The lowpass cascade count of each event, as a value other setters can read.
+ *
+ * Bare `lpx` reads what the chain has set so far, so it comes after whatever set the field
+ * (`lpx(...)` or an alias). Call it, `lpx(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c2*4").s("saw").lpf(900).lpx(1).lpx(add("0 1 0 2"))               // 12, 24, 12, 36 dB per octave
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2 e2").s("saw").lpf(900).lpx("1 2").hpf(100).hpx(lpx)            // same slope on both filters
+ * ```
+ *
+ * @category effects
+ * @tags lpx, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("lpx")
+object Lpx : FieldAccessor({ it.lpPasses }) {
+
+    /** Returns a [PatternMapperFn] that sets the lowpass cascade count (see [SprudelPattern.lpx]). */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        lpx(passes, callInfo)
+}
+
+/** The [Lpx] accessor as a value, so the Kotlin door reads like the script. */
+val lpx: Lpx = Lpx
 
 /** Chains a lpx step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -989,6 +1065,10 @@ fun PatternMapperFn.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null)
 private val hpenvMutation = voiceSetter { hpenv = it?.asDoubleOrNull() }
 
 private fun applyHpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.hpenv }, update = hpenvMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, hpenvMutation)
 }
 
@@ -1049,10 +1129,44 @@ fun String.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): Spru
 fun PatternMapperFn.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hpe(semitones, callInfo) }
 
-/** Creates a [PatternMapperFn] that sets the HPF envelope depth. */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `hpe(...)`.
+ *
+ * Kotlin door only: the script reaches this through `hpe(...)`, which is [Hpe.invoke].
+ */
 fun hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpe(semitones, callInfo) }
+
+/**
+ * The highpass envelope depth of each event in semitones, as a value other setters can read.
+ *
+ * Bare `hpe` reads what the chain has set so far, so it comes after whatever set the field
+ * (`hpe(...)` or an alias). Call it, `hpe(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").hpf(500).hpe(24).hpadsr(0.01, 0.5, 0.2, 0.3).hpe(mul("1 0.5"))   // a shallower sweep on the second note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").hpf(500).hpe("12 24").hpadsr(0.01, 0.5, 0.2, 0.3).lpf(4000).lpe(hpe)   // both filters sweep as far
+ * ```
+ *
+ * @category effects
+ * @tags hpe, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("hpe")
+object Hpe : FieldAccessor({ it.hpenv }) {
+
+    /** Creates a [PatternMapperFn] that sets the HPF envelope depth. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        hpe(semitones, callInfo)
+}
+
+/** The [Hpe] accessor as a value, so the Kotlin door reads like the script. */
+val hpe: Hpe = Hpe
 
 
 // -- hpx() -----------------------------------------------------------------------------------------------------------
@@ -1060,6 +1174,10 @@ fun hpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
 private val hpxMutation = voiceSetter { hpPasses = it?.asDoubleOrNull() }
 
 private fun applyHpx(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.hpPasses }, update = hpxMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, hpxMutation)
 }
 
@@ -1091,10 +1209,44 @@ fun SprudelPattern.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null):
 fun String.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpx(passes, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the highpass cascade count (see [SprudelPattern.hpx]). */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `hpx(...)`.
+ *
+ * Kotlin door only: the script reaches this through `hpx(...)`, which is [Hpx.invoke].
+ */
 fun hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpx(passes, callInfo) }
+
+/**
+ * The highpass cascade count of each event, as a value other setters can read.
+ *
+ * Bare `hpx` reads what the chain has set so far, so it comes after whatever set the field
+ * (`hpx(...)` or an alias). Call it, `hpx(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c4*4").s("saw").hpf(400).hpx(1).hpx(add("0 1 0 2"))               // 12, 24, 12, 36 dB per octave
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c4 e4").s("saw").hpf(400).hpx("1 2").lpf(4000).lpx(hpx)           // same slope on both filters
+ * ```
+ *
+ * @category effects
+ * @tags hpx, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("hpx")
+object Hpx : FieldAccessor({ it.hpPasses }) {
+
+    /** Returns a [PatternMapperFn] that sets the highpass cascade count (see [SprudelPattern.hpx]). */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        hpx(passes, callInfo)
+}
+
+/** The [Hpx] accessor as a value, so the Kotlin door reads like the script. */
+val hpx: Hpx = Hpx
 
 /** Chains a hpx step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1106,6 +1258,10 @@ fun PatternMapperFn.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null)
 private val bpenvMutation = voiceSetter { bpenv = it?.asDoubleOrNull() }
 
 private fun applyBpenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.bpenv }, update = bpenvMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, bpenvMutation)
 }
 
@@ -1166,10 +1322,44 @@ fun String.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): Spru
 fun PatternMapperFn.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bpe(semitones, callInfo) }
 
-/** Creates a [PatternMapperFn] that sets the BPF envelope depth. */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `bpe(...)`.
+ *
+ * Kotlin door only: the script reaches this through `bpe(...)`, which is [Bpe.invoke].
+ */
 fun bpe(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bpe(semitones, callInfo) }
+
+/**
+ * The bandpass envelope depth of each event in semitones, as a value other setters can read.
+ *
+ * Bare `bpe` reads what the chain has set so far, so it comes after whatever set the field
+ * (`bpe(...)` or an alias). Call it, `bpe(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").bpf(200).bpe(24).bpadsr(0.01, 0.3, 0.5, 0.5).bpe(mul("1 0.5"))   // a shallower sweep on the second note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").bpf(200).bpe("12 24").bpadsr(0.01, 0.3, 0.5, 0.5).lpf(4000).lpe(bpe)   // the lowpass sweeps as far
+ * ```
+ *
+ * @category effects
+ * @tags bpe, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("bpe")
+object Bpe : FieldAccessor({ it.bpenv }) {
+
+    /** Creates a [PatternMapperFn] that sets the BPF envelope depth. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        bpe(semitones, callInfo)
+}
+
+/** The [Bpe] accessor as a value, so the Kotlin door reads like the script. */
+val bpe: Bpe = Bpe
 
 // -- lowpass() --------------------------------------------------------------------------------------------------------
 
@@ -1202,7 +1392,12 @@ fun String.lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: Pa
 fun lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpf(freq, q, passes, callInfo)
 
-/** Alias of [lpf]: the same accessor under another name. */
+/**
+ * Alias of [lpf]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags lowpass, lpf, accessor
+ */
 @KlangScript.Constant
 val lowpass: Lpf = Lpf
 
@@ -1243,7 +1438,12 @@ fun String.highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: P
 fun highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hpf(freq, q, passes, callInfo)
 
-/** Alias of [hpf]: the same accessor under another name. */
+/**
+ * Alias of [hpf]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags highpass, hpf, accessor
+ */
 @KlangScript.Constant
 val highpass: Hpf = Hpf
 
@@ -1283,7 +1483,12 @@ fun String.bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo:
 fun bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bpf(freq, q, callInfo)
 
-/** Alias of [bpf]: the same accessor under another name. */
+/**
+ * Alias of [bpf]: the same accessor under another name.
+ *
+ * @category effects
+ * @tags bandpass, bpf, accessor
+ */
 @KlangScript.Constant
 val bandpass: Bpf = Bpf
 

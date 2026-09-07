@@ -190,20 +190,18 @@ class SprudelDocsSpec : StringSpec({
         extension.signature shouldBe "String.seq(vararg patterns: PatternLike): SprudelPattern"
     }
 
-    "accelerate property-based delegate should be classified as KlangCallable (top-level, no receiver)" {
+    "accelerate is a field accessor: a top-level property whose type carries the call form" {
+        // Since 2026-09-07 the bare name is an accessor object (docs/tasks/sprudel-field-accessors.md):
+        // the symbol's top-level variant is a property, and the setter is the `invoke` on its type.
         val doc = KlangDocsRegistry.global.get("accelerate")!!
-        val hasTopLevel = doc.variants.any { it is KlangCallable && it.receiver == null }
-        hasTopLevel shouldBe true
-    }
+        doc.variants.any { it is KlangCallable && it.receiver == null } shouldBe false
+        val prop = doc.variants.filterIsInstance<KlangProperty>().single()
+        prop.type.simpleName shouldBe "accelerate"
 
-    "accelerate top-level variant should have emptyList params (callable but no param info from property)" {
-        val topLevel = KlangDocsRegistry.global.get("accelerate")!!
-            .variants.filterIsInstance<KlangCallable>().first { it.receiver == null }
-
-        topLevel.name shouldBe "accelerate"
-        topLevel.receiver shouldBe null
-        topLevel.params shouldHaveSize 1        // but no param info available from property delegate
-        topLevel.returnType?.simpleName shouldBe "PatternMapperFn"
+        val invoke = KlangDocsRegistry.global.getCallable("invoke", prop.type)!!
+        invoke.params shouldHaveSize 1
+        invoke.returnType?.simpleName shouldBe "PatternMapperFn"
+        invoke.signature.startsWith("accelerate(") shouldBe true
     }
 
     "accelerate extension variants should have receiver" {

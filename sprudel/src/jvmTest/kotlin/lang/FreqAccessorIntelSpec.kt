@@ -89,14 +89,29 @@ class FreqAccessorIntelSpec : StringSpec({
         }
     }
 
+    "every batch-three accessor is an object with a call form and the first-step operators" {
+        listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "fmh", "fmattack", "fmdecay", "fmsustain", "vowelWet", "vowelFloor", "bodyWet", "bodyFloor", "legato", "vibrato", "vibratoMod", "pattack", "pdecay", "prelease", "penv", "pcurve", "panchor", "accelerate", "notchf", "nresonance", "nfattack", "nfdecay", "nfsustain", "nfrelease", "nfenv", "lpe", "lpx", "hpe", "hpx", "bpe").forEach { name ->
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+            type.simpleName shouldBe name
+            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
+            analyze("$name(0.5)").diagnostics.size shouldBe 0
+        }
+    }
+
     "every alias constant carries its canonical object's type, so it calls and reads like the original" {
-        mapOf("vel" to "velocity", "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "dist" to "distort", "distortOversampling" to "distos", "crushOversampling" to "crushos",
+        mapOf("clip" to "legato", "vib" to "vibrato", "patt" to "pattack", "pdec" to "pdecay", "prel" to "prelease", "pamt" to "penv", "pcrv" to "pcurve", "panc" to "panchor", "loopb" to "loopBegin", "loope" to "loopEnd", "fmatt" to "fmattack", "fmdec" to "fmdecay", "fmsus" to "fmsustain", "notch" to "notchf", "ntf" to "notchf", "notchq" to "nresonance", "ntq" to "nresonance", "nfa" to "nfattack", "nfd" to "nfdecay", "nfs" to "nfsustain", "nfr" to "nfrelease", "nfe" to "nfenv",
+            "vel" to "velocity", "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "dist" to "distort", "distortOversampling" to "distos", "crushOversampling" to "crushos",
             "coarseOversampling" to "coarseos", "rsize" to "roomsize", "sz" to "roomsize", "size" to "roomsize",
             "rfade" to "roomfade", "rlp" to "roomlp", "rdim" to "roomdim", "delayfb" to "delayfeedback",
             "dfb" to "delayfeedback", "ph" to "phaser", "phc" to "phasercenter", "phs" to "phasersweep",
             "tremsync" to "tremolosync", "tremdepth" to "tremolodepth", "tremskew" to "tremoloskew",
             "tremphase" to "tremolophase", "dcap" to "delaycap").forEach { (alias, canonical) ->
-            val type = registry.get(alias).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+            val symbol = registry.get(alias).shouldNotBeNull()
+            // An alias constant's KDoc carries the category: the property entry merges first and
+            // would otherwise turn the whole symbol "uncategorized" on the docs page.
+            (symbol.category != "uncategorized") shouldBe true
+            val type = symbol.variants.filterIsInstance<KlangProperty>().single().type
             type.simpleName shouldBe canonical
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical("
             analyze("$alias(0.5)").diagnostics.size shouldBe 0

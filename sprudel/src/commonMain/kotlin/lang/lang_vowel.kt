@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 // -- vowel() ----------------------------------------------------------------------------------------------------------
 
@@ -75,6 +76,10 @@ fun PatternMapperFn.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null
 private val vowelWetMutation = voiceSetter { vowelMix = it?.asDoubleOrNull() }
 
 private fun applyVowelWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.vowelMix }, update = vowelWetMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, vowelWetMutation)
 }
 
@@ -103,10 +108,44 @@ fun SprudelPattern.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null
 fun String.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).vowelWet(wet, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the vowel formant wet balance. */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `vowelWet(...)`.
+ *
+ * Kotlin door only: the script reaches this through `vowelWet(...)`, which is [VowelWet.invoke].
+ */
 fun vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.vowelWet(wet, callInfo) }
+
+/**
+ * The vowel filter mix of each event, as a value other setters can read.
+ *
+ * Bare `vowelWet` reads what the chain has set so far, so it comes after whatever set the field
+ * (`vowelWet(...)` or an alias). Call it, `vowelWet(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").vowel("a").vowelWet(0.5).vowelWet(mul("1 0.5"))   // the second note less vowel
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").vowel("a").vowelWet("0.3 0.9").vowelFloor(vowelWet.mul(0.5))   // floor follows mix
+ * ```
+ *
+ * @category effects
+ * @tags vowelWet, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("vowelWet")
+object VowelWet : FieldAccessor({ it.vowelMix }) {
+
+    /** Returns a [PatternMapperFn] that sets the vowel formant wet balance. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        vowelWet(wet, callInfo)
+}
+
+/** The [VowelWet] accessor as a value, so the Kotlin door reads like the script. */
+val vowelWet: VowelWet = VowelWet
 
 /** Chains a vowelWet step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -118,6 +157,10 @@ fun PatternMapperFn.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = nul
 private val vowelFloorMutation = voiceSetter { vowelFloor = it?.asDoubleOrNull() }
 
 private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.vowelFloor }, update = vowelFloorMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, vowelFloorMutation)
 }
 
@@ -142,10 +185,44 @@ fun SprudelPattern.vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = 
 fun String.vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).vowelFloor(floor, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the vowel formant floor. */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `vowelFloor(...)`.
+ *
+ * Kotlin door only: the script reaches this through `vowelFloor(...)`, which is [VowelFloor.invoke].
+ */
 fun vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.vowelFloor(floor, callInfo) }
+
+/**
+ * The vowel filter floor of each event, as a value other setters can read.
+ *
+ * Bare `vowelFloor` reads what the chain has set so far, so it comes after whatever set the field
+ * (`vowelFloor(...)` or an alias). Call it, `vowelFloor(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").vowel("a").vowelFloor(0.2).vowelFloor(add("0 0.4"))   // more dry on the second note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").vowel("a").vowelFloor("0.1 0.5").vowelWet(vowelFloor.add(0.4))   // mix follows floor
+ * ```
+ *
+ * @category effects
+ * @tags vowelFloor, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("vowelFloor")
+object VowelFloor : FieldAccessor({ it.vowelFloor }) {
+
+    /** Returns a [PatternMapperFn] that sets the vowel formant floor. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        vowelFloor(floor, callInfo)
+}
+
+/** The [VowelFloor] accessor as a value, so the Kotlin door reads like the script. */
+val vowelFloor: VowelFloor = VowelFloor
 
 /** Chains a vowelFloor step onto this [PatternMapperFn]. */
 @KlangScript.Function
