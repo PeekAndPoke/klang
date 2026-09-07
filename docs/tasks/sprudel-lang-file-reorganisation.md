@@ -89,8 +89,8 @@ grep -rho '@category .*' sprudel/src/commonMain/kotlin/lang/ | sort | uniq -c | 
 - **Line counts in this document were measured on 2026-09-07 and will drift.** They exist to size
   the work, not to address it. Address sections by their banner text, never by line number.
 - **Another agent is reworking the DSL surface on this same branch** (field accessors, compound
-  slot objects; see `docs/tasks/sprudel-field-accessors.md` and
-  `docs/tasks/sprudel-accessors-compound-slots.md`). Sections may be renamed, added or deleted
+  slot objects; see `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md` and
+  `docs/tasks-archive/2026-09/20260907-sprudel-accessors-compound-slots.md`). Sections may be renamed, added or deleted
   under you. Therefore: **re-derive the section list of a file at the moment you split it**
   (`grep -n '^// -- ' <file>`), and treat this document's tables as the grouping decision, not as
   a manifest. A section that no longer exists is skipped, silently. A section that is new goes into

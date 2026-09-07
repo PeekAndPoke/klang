@@ -1042,7 +1042,7 @@ fun SprudelPattern._liftNumericField(
  * Because there is no join, nothing is paired by time: every chord note maps its own field. The
  * mapper may change structure (`freq(fast(2))` is legal and means what it says).
  *
- * See `docs/tasks/sprudel-field-accessors.md`.
+ * See `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`.
  */
 fun SprudelPattern._mapNumericField(
     mapper: PatternMapperFn,

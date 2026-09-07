@@ -1,5 +1,8 @@
 # Sprudel accessors: fields that only have a compound door
 
+> Archived 2026-09-07. Status: **COMPLETE.** Option 1 (slot accessors on the compound object) was piloted on
+> `adsr` and applied to every compound in batches E, F and G; the compressor's slots followed in batch G.
+
 Follow-up to `docs/tasks/sprudel-field-accessors.md`, opened 2026-09-07 after the numeric sweep.
 
 Status 2026-09-07: option 1 below is the decided shape. `adsr` piloted it; the seven compound

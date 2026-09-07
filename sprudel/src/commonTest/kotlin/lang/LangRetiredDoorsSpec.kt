@@ -12,7 +12,7 @@ import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
- * Retired single-slot doors (`docs/tasks/sprudel-field-accessors.md`). Neither the member nor the
+ * Retired single-slot doors (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`). Neither the member nor the
  * top-level form may dispatch; if one resolves again, an old door crept back in.
  *
  * - 2026-09-07, envelope: `adsr(attack = ...)` sets a slot and `adsr.attack` reads it.

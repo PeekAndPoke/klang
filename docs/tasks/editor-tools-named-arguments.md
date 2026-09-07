@@ -1,6 +1,6 @@
 # Editor tools: named arguments resolve the wrong slot
 
-Opened 2026-09-07 during the field-accessor batch E review (`docs/tasks/sprudel-field-accessors.md`).
+Opened 2026-09-07 during the field-accessor batch E review (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`).
 Maintainer decision the same day: record here, do not mix into batch E; the editor tools get a
 rework of their own.
 

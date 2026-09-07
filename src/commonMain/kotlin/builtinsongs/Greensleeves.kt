@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 /**
  * Greensleeves, the traditional English tune (sixteenth century, public domain), whistled by
  * the wind: pink noise through a bandpass that follows the note (`bpf(freq)`), the first song
- * written for the sprudel field accessors (`docs/tasks/sprudel-field-accessors.md`).
+ * written for the sprudel field accessors (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`).
  */
 internal val greensleevesSong = Song(
     id = "${BuiltInSongs.PREFIX}-greensleeves",

@@ -28,7 +28,7 @@ checks for these names during operator and call dispatch. No new storage infrast
 > `runtime/ArgAlignment`), and the editor analyzer resolves callables from the KSP-emitted
 > docs registry. The `invoke` operator is now a prerequisite of two consumers:
 > `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md` (`Master(m => ...)`, `Pipeline(p => ...)`, later `Katalyst(...)`)
-> and `sprudel-field-accessors.md` (`gain(0.5)` on a callable accessor constant). This revision
+> and `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md` (`gain(0.5)` on a callable accessor constant). This revision
 > supersedes Steps 1 to 3a for `invoke`; Steps 3b/3c (arithmetic, comparison, unary) remain
 > valid designs but are NOT part of the configure-lambda work and stay unscheduled.
 
@@ -93,7 +93,7 @@ when `name == "invoke"` and a receiver exists, render `Master(configure: ...)`. 
 the object's receiver like any method, so completion after `Master.` does not show `invoke`
 (filter it out there, it is not meant to be typed).
 
-**Field accessors (second consumer).** `sprudel-field-accessors.md` wants `gain` to be a
+**Field accessors (second consumer).** `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md` wants `gain` to be a
 `@KlangScript.Constant` whose class carries `@KlangScript.Invoke`. Same mechanism, no
 special casing: the constant's value is a `NativeObjectValue`, the interpreter finds `invoke` on
 its class. The only difference is the analyzer fallback above resolving through a registry

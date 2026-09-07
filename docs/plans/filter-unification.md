@@ -651,7 +651,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   `floor()` is the arithmetic round-down, one word one concept); (b) `room`/`delay` HEAD
   functions renamed to `roomWet`/`delayWet` (their first slot IS the wet, and keeping
   `room(x)` alongside `roomWet(x)` would be two names for one knob - the C6a disease; the wet
-  folded back into the `room(wet = x)` slot 2026-09-07, `docs/tasks/sprudel-field-accessors.md`); the
+  folded back into the `room(wet = x)` slot 2026-09-07, `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`); the
   `room*`/`delay*` tails keep their names; (c) wet/dryFloor are NOT builder params on the
   ignitor - `phaser(rate, center, sweep)` / `shimmer(feedback, tone, pitches)` plus the
   typed knobs `.wet()`/`.dryFloor()` on the node (both doors), so the knob exists in exactly

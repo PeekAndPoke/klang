@@ -1,6 +1,6 @@
 # Sprudel arithmetic: a continuous control is evaluated once per query arc
 
-Found 2026-09-06 while piloting the field accessors (`docs/tasks/sprudel-field-accessors.md`).
+Found 2026-09-06 while piloting the field accessors (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`).
 
 ## Symptom
 

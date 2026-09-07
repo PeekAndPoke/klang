@@ -1,6 +1,6 @@
 # String slots have no readers
 
-Recorded 2026-09-07 (maintainer decision, `docs/tasks/sprudel-field-accessors.md`): a compound
+Recorded 2026-09-07 (maintainer decision, `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`): a compound
 object exposes a reader child for every NUMERIC slot (`room.size`, `lpf.env`, `penv.curve`), and
 none for a slot whose value is a name. "Apply a mapper to a name" has no use case, and reading a
 name into another setter has none either; the maintainer expects it never will.

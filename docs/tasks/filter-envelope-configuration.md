@@ -2,7 +2,7 @@
 
 ## Context
 
-Decided 2026-09-07 (maintainer, in `sprudel-field-accessors.md`): when the engine grows the fields, the doors
+Decided 2026-09-07 (maintainer, in `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`): when the engine grows the fields, the doors
 are `lpCurves`, `hpCurves`, `bpCurves` (not `lpadsrCurves`), each an object with the setter only, like
 `adsrCurves`; the singular curve door does not come back.
 

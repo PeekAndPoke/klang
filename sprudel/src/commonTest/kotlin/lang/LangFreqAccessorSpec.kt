@@ -16,7 +16,7 @@ import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.tones.Tones
 
 /**
- * The `freq` field accessor and the mapper-argument rule (`docs/tasks/sprudel-field-accessors.md`).
+ * The `freq` field accessor and the mapper-argument rule (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`).
  *
  * A mapper handed to a setter applies to the setter's own field; bare `freq` is the mapper that
  * reads the frequency into the value register. Timing core: every case runs over 12 cycles.

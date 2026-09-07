@@ -145,8 +145,9 @@ The release-defining set, regardless of when they're sequenced:
   `copyright-audit-00-overview.md`](copyright-audit-00-overview.md) + [
   `-07`](copyright-audit-07-control-vocabulary-legal-review.md)
   Code work done & archived; the one open item awaits external IP counsel. Gates a non-AGPL license, not Q3.
-- **NICE · ⚪ blocked** — **Sprudel field accessors** — [`sprudel-field-accessors.md`](sprudel-field-accessors.md) —
-  blocked on the klangscript `invoke` operator.
+- **DONE 2026-09-07** — **Sprudel field accessors** — [`20260907-sprudel-field-accessors.md`](../tasks-archive/2026-09/20260907-sprudel-field-accessors.md) —
+  every numeric field is an accessor, every compound door an object with slot children. Follow-up:
+  **`snd*` sound doors as compound objects** — [`sprudel-sound-doors-compound.md`](sprudel-sound-doors-compound.md), NICE.
 - **NICE** — **Native-object operators** — [
   `klangscript-native-object-operators.md`](klangscript-native-object-operators.md) — prerequisite for field accessors;
   readability win.

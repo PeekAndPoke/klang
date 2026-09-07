@@ -1,5 +1,12 @@
 # Sprudel field accessors: a field name that reads, sets, and takes a mapper
 
+> Archived 2026-09-07. Status: **COMPLETE.** Pilot on `freq`, four single-field batches, the `adsr` pilot and
+> the three compound batches E (effects), F (filters), G (the rest) are built, review-looped and committed on
+> branch `dsl-adjustments` (commits 1053f694 to 95705370). Every numeric field is an accessor, every compound is
+> an object with slot children, the retired doors are guarded by `LangRetiredDoorsSpec`. Follow-ups:
+> `docs/tasks/sprudel-sound-doors-compound.md` (the `snd*` family), `editor-tools-named-arguments.md`,
+> `filter-envelope-configuration.md` (filter curve objects), `future/string-slot-readers.md`.
+
 Rewritten 2026-09-06 after a design session; the previous draft (context-key binding, generic
 `set`/`copy`/`clear` ops, a `KlangValue`/`Ref` register variant) is superseded and not binding.
 

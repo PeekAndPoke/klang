@@ -15,7 +15,7 @@
 > the `Master(m => ...)` form.
 
 > **Second hand-off, from the sprudel field accessors, 2026-09-07**
-> (`docs/tasks/sprudel-field-accessors.md`, four batches, all specced and reviewed): every numeric
+> (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`, four batches, all specced and reviewed): every numeric
 > setter is now also a READER and accepts a mapper, so two spellings that did nothing before are
 > real surface:
 > - `gain(mul(0.5))`: change a knob relative to what the chain already set.
@@ -281,7 +281,7 @@ stages must not carry it.
 - **A9 (field accessors) NOT WRITTEN, recorded 2026-09-07 so it cannot be forgotten.** The surface
   shipped before its lesson. Every other row here is a promise one lesson made to another; this one
   is a promise the ENGINE made to the curriculum. 88 accessors and 54 alias constants landed with
-  specs in a pilot plus four batches (`docs/tasks/sprudel-field-accessors.md`), a built-in song was
+  specs in a pilot plus four batches (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`), a built-in song was
   written on them (**Greensleeves**, the wind whistling the tune), and the curriculum says nothing.
   What the lesson owes:
   - **Both roles, one idea.** A name like `gain` is the setter it always was, AND takes a mapper
@@ -310,7 +310,7 @@ stages must not carry it.
     `sound`, `bank`, `scale`, `vowel`, `body`, `unit`, `loop`, the `*shape`/`*curve` family) are
     won't-implement (maintainer, 2026-09-07), and the fields that only have a compound door and no accessor yet are down to the compressor's
     other slots (the filter envelope stages got theirs 2026-09-07 as `lpf.attack` and friends)
-    (`docs/tasks/sprudel-accessors-compound-slots.md`). "Every NUMBER knob, with a door of its own"
+    (`docs/tasks-archive/2026-09/20260907-sprudel-accessors-compound-slots.md`). "Every NUMBER knob, with a door of its own"
     is the true sentence.
   - **A mapper handed to a setter that lacks the branch is still silently dropped, with no
     diagnostic** (OPEN in the accessor plan). If that is still true when A9 is written, the lesson

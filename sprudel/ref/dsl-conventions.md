@@ -104,7 +104,7 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
   `FreqAccessorIntelSpec`). No alias factory either: `vel(0.5)` in Kotlin is the constant's invoke.
   The editor types it as the canonical object, so `vel(` shows the `velocity(...)` signature. One
   alias row per alias. Compound slots get no aliases at all (`rsize`, `delayfb` went 2026-09-07).
-- Design record and rejected alternatives: `docs/tasks/sprudel-field-accessors.md`.
+- Design record and rejected alternatives: `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`.
 
 ## KDoc Rules
 

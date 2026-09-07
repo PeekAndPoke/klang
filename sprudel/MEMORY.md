@@ -67,7 +67,7 @@
   `coarseOversampleMutation` used `toString()?.toIntOrNull()`, which is `null` for `"2.0"`, so
   `crushos(2)` never wrote its field from a number. Now `asDoubleOrNull()?.toInt()`.
 
-- **Field accessors, batch one** (`docs/tasks/sprudel-field-accessors.md`): fourteen objects on the
+- **Field accessors, batch one** (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`): fourteen objects on the
   new `FieldAccessor` base (`lang.kt`): `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq, hpq,
   bpq, attack, decay, sustain, release`. Recipe in `ref/dsl-conventions.md`. Null rule decided:
   on the mapper path a `null` result leaves the field unchanged (`_mapNumericField`).
@@ -75,7 +75,7 @@
 
 ## Recent Work (2026-09-06)
 
-- **Field accessors, pilot on `freq`** (`docs/tasks/sprudel-field-accessors.md`). Two rules:
+- **Field accessors, pilot on `freq`** (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`). Two rules:
   1. A MAPPER argument to a setter applies to the setter's own field: `freq(mul(2))`,
      `freq(add(50))`, `bpf(freq)`. Implemented by `_mapNumericField(mapper, read, update)`:
      read the field into the value register, run the mapper, write the value register back,
