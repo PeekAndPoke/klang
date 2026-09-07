@@ -577,10 +577,10 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     available to custom pipelines only. `phaserFloor` is exact by default now. Guard:
     `PipelinePresetSpec` ("built-in presets carry NO Phaser stage"). Original finding below.
     ⚠ EAR LIST addition: single-pass HALVES the effective phaser wet on shipped songs —
-    Tetris phaserWet(0.15), IrishLamentTechno phaserWet(0.25 / saw.range 0.3..0.6) were
+    Tetris phaser(wet = 0.15), IrishLamentTechno phaser(wet = 0.25 / saw.range 0.3..0.6) were
     dialled against the double pass; retune by ear (values likely go UP). Also note: the
     per-voice mono component is gone (bus is stereo) — listen for image changes.
-    Structural footgun (documented in phaserWet KDoc): orbit knobs are first-writer-wins,
+    Structural footgun (documented in the `phaser` KDoc): orbit knobs are first-writer-wins,
     so a non-lease voice's phaser knobs are now fully inert (no corpus instance today).
   - 44.1 kHz note for the warmth->onepole migration: four converted values (23846, 23688,
     23197, 22309 Hz) sit above 44.1k's Nyquist clamp (22049) and become exact bypass there;
@@ -595,7 +595,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     `Voice.Phaser` knobs. Pre-existing (at the additive floor-1 default the second pass only
     adds more wet; that is the shipped sound and why the goldens hold). But with the new
     `phaserFloor < 1` the dry is floored in BOTH passes (`dryC²`), so a full crossfade
-    (`phaserWet(1).phaserFloor(0)`) does NOT leave the phased signal alone. KDoc now states
+    (`phaser(wet = 1).phaser(floor = 0)`) does NOT leave the phased signal alone. KDoc now states
     the real path. Decide: which path OWNS the phaser (and should the two bypass gates —
     strip `> 0`, katalyst `>= 0.01` — agree)? Also note: the C4 orbit-phaser retune numbers
     in Decisions were computed single-application.
@@ -612,9 +612,9 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     ear retunes. Every song site in C4.2 is a pure RENAME (values kept), so the corpus ships
     at the C4.1 level shift (Tetris body wet about -6.4 dB, Tetris orbit phaser -8.8 dB,
     IrishLamentTechno -4.6 dB per the corrected p=2 numbers above) until the user's listening
-    pass moves the values UP by ear. Sites: Tetris bodyWet(0.2)/phaserWet(0.15),
-    IrishLamentTechno phaserWet(saw.range 0.3..0.6)/phaserWet(0.25), StrangerThings
-    vowelWet(0.40), GoldenCorpus phaserWet(0.15), plus every bare bodyWet/vowelWet user song.
+    pass moves the values UP by ear. Sites: Tetris bodyWet(0.2)/phaser(wet = 0.15),
+    IrishLamentTechno phaser(wet = saw.range 0.3..0.6)/phaser(wet = 0.25), StrangerThings
+    vowelWet(0.40), GoldenCorpus phaser(wet = 0.15), plus every bare bodyWet/vowelWet user song.
   - REJECTED in round 3 (reason recorded): mapping a `+Inf` floor to 1.0 instead of the
     law's uniform non-finite -> 0.0. The law treats EVERY non-finite input (w or floor) the
     same way; special-casing +Inf floor would make the coercion input-dependent for an input
@@ -650,11 +650,12 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
 - C4.2 decisions AS BUILT: (a) the ignitor floor knob is `dryFloor` (the plan's own rule:
   `floor()` is the arithmetic round-down, one word one concept); (b) `room`/`delay` HEAD
   functions renamed to `roomWet`/`delayWet` (their first slot IS the wet, and keeping
-  `room(x)` alongside `roomWet(x)` would be two names for one knob - the C6a disease); the
+  `room(x)` alongside `roomWet(x)` would be two names for one knob - the C6a disease; the wet
+  folded back into the `room(wet = x)` slot 2026-09-07, `docs/tasks/sprudel-field-accessors.md`); the
   `room*`/`delay*` tails keep their names; (c) wet/dryFloor are NOT builder params on the
   ignitor - `phaser(rate, center, sweep)` / `shimmer(feedback, tone, pitches)` plus the
   typed knobs `.wet()`/`.dryFloor()` on the node (both doors), so the knob exists in exactly
-  one place; (d) NEW wire field `phaserFloor` (sprudel `phaserFloor()`, engine default 1.0 =
+  one place; (d) NEW wire field `phaserFloor` (sprudel `phaser(floor = ...)`, engine default 1.0 =
   additive) reaches BOTH phaser paths; `IgnitorDsl.Phaser/Shimmer` gained `dryFloor` and
   renamed `blend`->`wet` on the node (goldens carry no ignitor param names - byte-identical);
   (e) sprudel `phd`/`phasdp` aliases stay, re-pointed at `phaserWet` (alias deletion is C6);

@@ -91,7 +91,7 @@ object begin : FieldAccessor({ it.begin }) {
      * s("breaks").apply(begin(0.5))     // via mapper
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.begin(pos, callInfo) }
 }
@@ -175,7 +175,7 @@ object end : FieldAccessor({ it.end }) {
      * s("breaks").apply(end(0.5))     // via mapper
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.end(pos, callInfo) }
 }
@@ -260,7 +260,7 @@ object speed : FieldAccessor({ it.speed }) {
      * s("breaks").apply(speed(2))       // double speed via mapper
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.speed(rate, callInfo) }
 }
@@ -471,7 +471,7 @@ object loopBegin : FieldAccessor({ it.loopBegin }) {
      * s("pad").loop(1).apply(loopBegin(0.25))   // via mapper
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.loopBegin(pos, callInfo) }
 }
@@ -590,7 +590,7 @@ object loopEnd : FieldAccessor({ it.loopEnd }) {
      * s("pad").loop(1).apply(loopEnd(0.75))   // via mapper
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.loopEnd(pos, callInfo) }
 }
@@ -894,7 +894,7 @@ object cut : FieldAccessor({ it.cut?.toDouble() }) {
      * s("hh*4").apply(cut(1))         // assign to cut group 1 via mapper
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.cut(group, callInfo) }
 }

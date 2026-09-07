@@ -74,27 +74,34 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
 - The accessor is ONE declaration, named exactly like the script name (maintainer decision
   2026-09-07, the Kotlin naming convention is suppressed at file level with `"ClassName"`):
   `@KlangScript.Library("sprudel") @KlangScript.Object("gain") object gain : FieldAccessor({ it.gain })`
-  with a `@KlangScript.Method(name = "invoke") operator fun invoke(...) = { p -> p.gain(...) }`
-  member. The object IS the Kotlin door: `gain(0.5)` resolves through the invoke convention and
+  with a `@KlangScript.Invoke operator fun invoke(...) = { p -> p.gain(...) }` member (the
+  annotation pins the name; KSP rejects a second one per object, a non-operator, or a function
+  not named `invoke`). The object IS the Kotlin door: `gain(0.5)` resolves through the invoke convention and
   `pan(gain)` reads the value. No top-level `fun gain(...)` factory and no `val gain` twin (both
   removed 2026-09-07). The old factory's KDoc lives on `invoke`; the object's KDoc describes the
   accessor with two playable examples and keeps the field's category.
   Never make the accessor a `PatternMapperFn`: see `MEMORY.md` 2026-09-06 for the ambiguity.
 - Every new accessor gets two rows in `LangFieldAccessorsSpec`: a mapper on its own field and the
   bare accessor read into another field, both doors.
-- A compound door whose slots have no doors of their own (`adsr`) is an object with the slot
-  accessors as children: `@KlangScript.Object("adsr") object adsr { @KlangScript.Property val
-  attack: FieldAccessor = FieldAccessor { it.attack } ... @Method("invoke") ... }`; the slot
-  helpers stay private and take the mapper branch, so `adsr(attack = mul(2))` works and
-  `adsr.attack` reads. Do not add single doors for such slots.
+- Every compound door is an object with the slot accessors as children (`adsr` was the pilot,
+  the seven effects followed 2026-09-07): `@KlangScript.Object("room") object room {
+  @KlangScript.Property val wet: FieldAccessor = FieldAccessor { it.room } ... @Invoke
+  operator fun invoke(wet, size, ...) }`; the slot helpers stay private and take the mapper
+  branch, so `room(size = mul(2))` works and `room.size` reads. Slots apply in declaration order
+  inside one call. No single doors for slots, and no bare-object read (`pan(room)` is nothing):
+  the children read. String slots (`shape`) get no child. `SprudelPattern.X`, `String.X`,
+  `PatternMapperFn.X` and `X.invoke` carry the same parameter list in the same order; the
+  tail-only guard on the first slot keeps `seq("3 4").room(size = 4)` from reinterpreting the
+  head. `@param-tool` lines sit on the compound's setter, one per slot that has an editor.
 - A setter whose lift call carries an inline update lambda (`_liftOrReinterpretNumericalField(args)
   { v -> copy(x = v) }`) gets a named `private val <name>Update: SprudelVoiceData.(Double?) ->
   SprudelVoiceData` so the mapper branch and the lift share one update (tonal, 2026-09-07).
-- An alias (`rsize` for `roomsize`) is `@KlangScript.Constant val rsize: roomsize = roomsize` with
+- An alias (`vel` for `velocity`) is `@KlangScript.Constant val vel: velocity = velocity` with
   a KDoc that carries `@category` and `@tags` (the property entry merges into the symbol first, so
   without them the docs page shows the alias as "uncategorized"; guarded by
-  `FreqAccessorIntelSpec`). No alias factory either: `rsize(4)` in Kotlin is the constant's invoke. The editor types it
-  as the canonical object, so `rsize(` shows the `roomsize(...)` signature. One alias row per alias.
+  `FreqAccessorIntelSpec`). No alias factory either: `vel(0.5)` in Kotlin is the constant's invoke.
+  The editor types it as the canonical object, so `vel(` shows the `velocity(...)` signature. One
+  alias row per alias. Compound slots get no aliases at all (`rsize`, `delayfb` went 2026-09-07).
 - Design record and rejected alternatives: `docs/tasks/sprudel-field-accessors.md`.
 
 ## KDoc Rules

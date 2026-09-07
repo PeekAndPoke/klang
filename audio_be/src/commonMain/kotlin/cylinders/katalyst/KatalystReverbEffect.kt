@@ -105,7 +105,7 @@ class KatalystReverbEffect(
      * last-active parameters are what the drain runs on.
      *
      * The active test must ask the same question the DSP decays from (`roomFade ?: roomSize`):
-     * testing roomSize alone made `room(0.6).roomfade(0.1)` — no `roomsize` — silent, because
+     * testing roomSize alone made `room(wet = 0.6, fade = 0.1)` — no `size` — silent, because
      * roomSize defaults to 0.0 and the override was never reached. An explicit roomFade is
      * intent to reverberate at ANY value: 0.0 is the engine's SHORTEST tail (~0.7 s), not "off".
      *

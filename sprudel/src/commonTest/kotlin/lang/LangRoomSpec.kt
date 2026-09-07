@@ -18,17 +18,17 @@ class LangRoomSpec : StringSpec({
 
     "room dsl interface" {
         dslInterfaceTests(
-            "pattern.roomWet(amount)" to note("c").roomWet(0.5),
-            "script pattern.roomWet(amount)" to SprudelPattern.compile("""note("c").roomWet(0.5)"""),
-            "string.roomWet(amount)" to "c".roomWet(0.5),
-            "script string.roomWet(amount)" to SprudelPattern.compile(""""c".roomWet(0.5)"""),
-            "roomWet(amount)" to note("c").apply(roomWet(0.5)),
-            "script roomWet(amount)" to SprudelPattern.compile("""note("c").apply(roomWet(0.5))"""),
+            "pattern.room(amount)" to note("c").room(0.5),
+            "script pattern.room(amount)" to SprudelPattern.compile("""note("c").room(0.5)"""),
+            "string.room(amount)" to "c".room(0.5),
+            "script string.room(amount)" to SprudelPattern.compile(""""c".room(0.5)"""),
+            "room(amount)" to note("c").apply(room(0.5)),
+            "script room(amount)" to SprudelPattern.compile("""note("c").apply(room(0.5))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
-    "reinterpret voice data as room | seq(\"0 0.5\").roomWet()" {
-        val p = seq("0 0.5").roomWet()
+    "reinterpret voice data as room | seq(\"0 0.5\").room()" {
+        val p = seq("0 0.5").room()
 
         val events = p.queryArc(0.0, 1.0)
 
@@ -39,8 +39,8 @@ class LangRoomSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as room | \"0 0.5\".roomWet()" {
-        val p = "0 0.5".roomWet()
+    "reinterpret voice data as room | \"0 0.5\".room()" {
+        val p = "0 0.5".room()
 
         val events = p.queryArc(0.0, 1.0)
 
@@ -51,8 +51,8 @@ class LangRoomSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as room | seq(\"0 0.5\").apply(roomWet())" {
-        val p = seq("0 0.5").apply(roomWet())
+    "reinterpret voice data as room | seq(\"0 0.5\").apply(room())" {
+        val p = seq("0 0.5").apply(room())
 
         val events = p.queryArc(0.0, 1.0)
 
@@ -63,41 +63,41 @@ class LangRoomSpec : StringSpec({
         }
     }
 
-    "roomWet() sets VoiceData.room" {
-        val p = note("a b").roomWet("0.5 0.8")
+    "room() sets VoiceData.room" {
+        val p = note("a b").room("0.5 0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.room } shouldBe listOf(0.5, 0.8)
     }
 
-    "roomWet() works as pattern extension" {
-        val p = note("c").roomWet("0.5")
+    "room() works as pattern extension" {
+        val p = note("c").room("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.room shouldBe 0.5
     }
 
-    "roomWet() works as string extension" {
-        val p = "c".roomWet("0.5")
+    "room() works as string extension" {
+        val p = "c".room("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.room shouldBe 0.5
     }
 
-    "roomWet() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").roomWet("0.5")""")
+    "room() works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").room("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.room shouldBe 0.5
     }
 
-    // ── Per-param reverb params via roomWet() ───────────────────────────
+    // ── Per-param reverb params via room() ───────────────────────────
 
-    "roomWet() per-param sets all reverb params" {
-        val p = note("c").roomWet(0.5, 2, 0.3, 4000, 2000)
+    "room() per-param sets all reverb params" {
+        val p = note("c").room(0.5, 2, 0.3, 4000, 2000)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -110,8 +110,8 @@ class LangRoomSpec : StringSpec({
         }
     }
 
-    "roomWet() with leading params sets only room and size" {
-        val p = note("c").roomWet(0.8, 4)
+    "room() with leading params sets only room and size" {
+        val p = note("c").room(0.8, 4)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -124,16 +124,16 @@ class LangRoomSpec : StringSpec({
         }
     }
 
-    "roomWet() still works with a plain number" {
-        val p = note("c").roomWet(0.6)
+    "room() still works with a plain number" {
+        val p = note("c").room(0.6)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.room shouldBe (0.6 plusOrMinus EPSILON)
     }
 
-    "roomWet() with per-param sequenced values" {
-        val p = note("c c").roomWet("0.3 0.8", "1 4")
+    "room() with per-param sequenced values" {
+        val p = note("c c").room("0.3 0.8", "1 4")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -145,9 +145,9 @@ class LangRoomSpec : StringSpec({
         }
     }
 
-    "roomWet() with continuous pattern sets room correctly" {
+    "room() with continuous pattern sets room correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").roomWet(sine)
+        val p = note("a b c d").room(sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -161,10 +161,10 @@ class LangRoomSpec : StringSpec({
         events[3].data.room shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "roomWet(tail-only) does not touch the head field" {
+    "room(tail-only) does not touch the head field" {
         // numeric receiver: without the tail-only guard the head apply would REINTERPRET
         // the values ("3"/"4") into the room field
-        val p = SprudelPattern.compile("""seq("3 4").roomWet(size = 8)""")
+        val p = SprudelPattern.compile("""seq("3 4").room(size = 8)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

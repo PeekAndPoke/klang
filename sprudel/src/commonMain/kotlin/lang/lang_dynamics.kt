@@ -99,7 +99,7 @@ object gain : FieldAccessor({ it.gain }) {
      *
      * @param amount The control value to use for gain.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.gain(amount, callInfo) }
 }
@@ -198,7 +198,7 @@ object pan : FieldAccessor({ it.pan }) {
      * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.pan(amount, callInfo) }
 }
@@ -297,7 +297,7 @@ object velocity : FieldAccessor({ it.velocity }) {
      *
      * @param amount The velocity value or pattern to apply to the events.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.velocity(amount, callInfo) }
 }
@@ -452,7 +452,7 @@ object postgain : FieldAccessor({ it.postGain }) {
      *
      * @param amount The post-gain value or pattern to apply to the events.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.postgain(amount, callInfo) }
 }
@@ -650,7 +650,7 @@ object compressor : FieldAccessor({ it.compressorThreshold }) {
      * ```
 
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 }
@@ -826,7 +826,7 @@ object unison : FieldAccessor({ it.oscParams?.get("voices") }) {
      *
      * @param voices The number of unison voices.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.unison(voices, callInfo) }
 }
@@ -1037,7 +1037,7 @@ object spread : FieldAccessor({ it.oscParams?.get("spread") }) {
      * ```
      * @param amount The unison spread in semitones.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.spread(amount, callInfo) }
 }
@@ -1127,7 +1127,7 @@ object panSpread : FieldAccessor({ it.oscParams?.get("panSpread") }) {
      *
      * @param amount The stereo pan spread, between 0 and 1.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.panSpread(amount, callInfo) }
 }
@@ -1225,7 +1225,7 @@ object density : FieldAccessor({ it.oscParams?.get("density") }) {
      * ```
      * @param amount The oscillator density.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.density(amount, callInfo) }
 }
@@ -1459,7 +1459,7 @@ object adsr {
      * @param sustain Sustain level (0–1).
      * @param release Release time in seconds.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(
         attack: PatternLike? = null,
         decay: PatternLike? = null,
@@ -1716,7 +1716,7 @@ private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").orbit(2).roomWet(0.8).roomsize(4)  // melodic line on orbit 2 with reverb
+ * note("c3 e3").orbit(2).room(wet = 0.8, size = 4)  // melodic line on orbit 2 with reverb
  * ```
  *
  * @param index The orbit index to route events to.
@@ -1756,7 +1756,7 @@ fun String.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd").orbit("0 1").roomWet(orbit.mul(0.3))                         // more reverb on the higher orbit
+ * s("bd sd").orbit("0 1").room(orbit.mul(0.3))                         // more reverb on the higher orbit
  * ```
  *
  * @category dynamics
@@ -1775,7 +1775,7 @@ object orbit : FieldAccessor({ it.cylinder?.toDouble() }) {
      *
      * @param index The orbit index to route events to.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.orbit(index, callInfo) }
 }
@@ -1802,7 +1802,7 @@ fun PatternMapperFn.orbit(index: PatternLike? = null, callInfo: CallInfo? = null
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").o(2).roomWet(0.8)          // melodic line on orbit 2 with reverb
+ * note("c3 e3").o(2).room(0.8)          // melodic line on orbit 2 with reverb
  * ```
  *
  * @param index The orbit index to route events to.
@@ -1925,7 +1925,7 @@ object duckorbit : FieldAccessor({ it.duckCylinder?.toDouble() }) {
      *
      * @param orbitIndex The orbit index to listen to for the sidechain trigger.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.duckorbit(orbitIndex, callInfo) }
 }
@@ -2083,7 +2083,7 @@ object duckattack : FieldAccessor({ it.duckAttack }) {
      *
      * @param time The recovery time in seconds.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.duckattack(time, callInfo) }
 }
@@ -2238,7 +2238,7 @@ object duckdepth : FieldAccessor({ it.duckDepth }) {
      *
      * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.duckdepth(amount, callInfo) }
 }

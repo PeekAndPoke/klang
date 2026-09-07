@@ -11,34 +11,26 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangTremoloSpec : StringSpec({
 
-    // -- tremolosync() ----------------------------------------------------------------------------------------------------
+    // -- tremolo(sync = ...) ----------------------------------------------------------------------------------------------------
 
-    "tremolosync() sets VoiceData.tremoloSync correctly" {
-        val p = note("c3").tremolosync("4.0")
+    "tremolo(sync = ...) sets VoiceData.tremoloSync correctly" {
+        val p = note("c3").tremolo(sync = "4.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.tremoloSync shouldBe 4.0
     }
 
-    "tremolosync() alias 'tremsync' works" {
-        val p = note("c3").tremsync("8.0")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.tremoloSync shouldBe 8.0
-    }
-
-    "tremolosync() works as top-level function" {
-        val p = note("a").apply(tremolosync("2.0"))
+    "tremolo(sync = ...) works as top-level function" {
+        val p = note("a").apply(tremolo(sync = "2.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.tremoloSync shouldBe 2.0
     }
 
-    "tremolosync() works with control pattern" {
-        val p = note("c3 e3").tremolosync("2.0 4.0")
+    "tremolo(sync = ...) works with control pattern" {
+        val p = note("c3 e3").tremolo(sync = "2.0 4.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -46,26 +38,18 @@ class LangTremoloSpec : StringSpec({
         events[1].data.tremoloSync shouldBe 4.0
     }
 
-    // -- tremolodepth() ---------------------------------------------------------------------------------------------------
+    // -- tremolo(depth = ...) ---------------------------------------------------------------------------------------------------
 
-    "tremolodepth() sets VoiceData.tremoloDepth correctly" {
-        val p = note("c3").tremolodepth("0.5")
+    "tremolo(depth = ...) sets VoiceData.tremoloDepth correctly" {
+        val p = note("c3").tremolo(depth = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.tremoloDepth shouldBe 0.5
     }
 
-    "tremolodepth() alias 'tremdepth' works" {
-        val p = note("c3").tremdepth("0.8")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.tremoloDepth shouldBe 0.8
-    }
-
-    "tremolodepth() works with control pattern" {
-        val p = note("c3 e3").tremolodepth("0.3 0.7")
+    "tremolo(depth = ...) works with control pattern" {
+        val p = note("c3 e3").tremolo(depth = "0.3 0.7")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -73,26 +57,18 @@ class LangTremoloSpec : StringSpec({
         events[1].data.tremoloDepth shouldBe 0.7
     }
 
-    // -- tremoloskew() ----------------------------------------------------------------------------------------------------
+    // -- tremolo(skew = ...) ----------------------------------------------------------------------------------------------------
 
-    "tremoloskew() sets VoiceData.tremoloSkew correctly" {
-        val p = note("c3").tremoloskew("0.6")
+    "tremolo(skew = ...) sets VoiceData.tremoloSkew correctly" {
+        val p = note("c3").tremolo(skew = "0.6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.tremoloSkew shouldBe 0.6
     }
 
-    "tremoloskew() alias 'tremskew' works" {
-        val p = note("c3").tremskew("0.4")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.tremoloSkew shouldBe 0.4
-    }
-
-    "tremoloskew() works with control pattern" {
-        val p = note("c3 e3").tremoloskew("0.2 0.8")
+    "tremolo(skew = ...) works with control pattern" {
+        val p = note("c3 e3").tremolo(skew = "0.2 0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -100,26 +76,18 @@ class LangTremoloSpec : StringSpec({
         events[1].data.tremoloSkew shouldBe 0.8
     }
 
-    // -- tremolophase() ---------------------------------------------------------------------------------------------------
+    // -- tremolo(phase = ...) ---------------------------------------------------------------------------------------------------
 
-    "tremolophase() sets VoiceData.tremoloPhase correctly" {
-        val p = note("c3").tremolophase("0.25")
+    "tremolo(phase = ...) sets VoiceData.tremoloPhase correctly" {
+        val p = note("c3").tremolo(phase = "0.25")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.tremoloPhase shouldBe 0.25
     }
 
-    "tremolophase() alias 'tremphase' works" {
-        val p = note("c3").tremphase("0.5")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.tremoloPhase shouldBe 0.5
-    }
-
-    "tremolophase() works with control pattern" {
-        val p = note("c3 e3").tremolophase("0.0 0.5")
+    "tremolo(phase = ...) works with control pattern" {
+        val p = note("c3 e3").tremolo(phase = "0.0 0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -127,34 +95,26 @@ class LangTremoloSpec : StringSpec({
         events[1].data.tremoloPhase shouldBe 0.5
     }
 
-    // -- tremoloshape() ---------------------------------------------------------------------------------------------------
+    // -- tremolo(shape = ...) ---------------------------------------------------------------------------------------------------
 
-    "tremoloshape() sets VoiceData.tremoloShape correctly" {
-        val p = note("c3").tremoloshape("sine")
+    "tremolo(shape = ...) sets VoiceData.tremoloShape correctly" {
+        val p = note("c3").tremolo(shape = "sine")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.tremoloShape shouldBe "sine"
     }
 
-    "tremoloshape() alias 'tremshape' works" {
-        val p = note("c3").tremshape("square")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.tremoloShape shouldBe "square"
-    }
-
-    "tremoloshape() works as top-level function" {
-        val p = note("a").apply(tremoloshape("tri"))
+    "tremolo(shape = ...) works as top-level function" {
+        val p = note("a").apply(tremolo(shape = "tri"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.tremoloShape shouldBe "tri"
     }
 
-    "tremoloshape() works with control pattern (string sequence)" {
-        val p = note("c3 e3").tremoloshape("sine square")
+    "tremolo(shape = ...) works with control pattern (string sequence)" {
+        val p = note("c3 e3").tremolo(shape = "sine square")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -162,8 +122,8 @@ class LangTremoloSpec : StringSpec({
         events[1].data.tremoloShape shouldBe "square"
     }
 
-    "tremoloshape() converts to lowercase" {
-        val p = note("c3").tremoloshape("SINE")
+    "tremolo(shape = ...) converts to lowercase" {
+        val p = note("c3").tremolo(shape = "SINE")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -174,11 +134,11 @@ class LangTremoloSpec : StringSpec({
 
     "tremolo functions can be chained together" {
         val p = note("c3")
-            .tremolosync("4.0")
-            .tremolodepth("0.5")
-            .tremoloskew("0.6")
-            .tremolophase("0.25")
-            .tremoloshape("sine")
+            .tremolo(sync = "4.0")
+            .tremolo(depth = "0.5")
+            .tremolo(skew = "0.6")
+            .tremolo(phase = "0.25")
+            .tremolo(shape = "sine")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -190,7 +150,7 @@ class LangTremoloSpec : StringSpec({
     }
 
     "tremolo functions work in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").tremolosync(4).tremolodepth(0.5).tremoloshape("sine")""")
+        val p = SprudelPattern.compile("""note("c3").tremolo(sync = 4, depth = 0.5, shape = "sine")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

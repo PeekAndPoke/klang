@@ -139,7 +139,7 @@ object lpf : FieldAccessor({ it.cutoff }) {
      * note("c4*4").firstOf(4, lpf(200).lpq(20))   // resonant LPF on first cycle
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.lpf(freq, q, passes, callInfo) }
 }
@@ -283,7 +283,7 @@ object hpf : FieldAccessor({ it.hcutoff }) {
      * note("c4*4").firstOf(4, hpf(200).hpq(10))  // resonant HPF on first cycle
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.hpf(freq, q, passes, callInfo) }
 }
@@ -437,7 +437,7 @@ object bpf : FieldAccessor({ it.bandf }) {
      * note("c3*4").firstOf(4, bpf(800)) // BPF on first cycle
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.bpf(freq, q, callInfo) }
 }
@@ -556,7 +556,7 @@ object lpq : FieldAccessor({ it.resonance }) {
      * note("c3*4").firstOf(4, lpq(20))       // high Q on first cycle
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.lpq(q, callInfo) }
 }
@@ -675,7 +675,7 @@ object hpq : FieldAccessor({ it.hresonance }) {
      * note("c3*4").firstOf(4, hpq(20))       // high Q on first cycle
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.hpq(q, callInfo) }
 }
@@ -794,7 +794,7 @@ object bpq : FieldAccessor({ it.bandq }) {
      * note("c3*4").firstOf(4, bpq(10))        // narrow BPF on first cycle
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.bpq(q, callInfo) }
 }
@@ -893,7 +893,7 @@ fun PatternMapperFn.lpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
 object lpe : FieldAccessor({ it.lpenv }) {
 
     /** Creates a [PatternMapperFn] that sets the LPF envelope depth. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.lpe(semitones, callInfo) }
 }
@@ -969,7 +969,7 @@ fun String.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
 object lpx : FieldAccessor({ it.lpPasses }) {
 
     /** Returns a [PatternMapperFn] that sets the lowpass cascade count (see [SprudelPattern.lpx]). */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.lpx(passes, callInfo) }
 }
@@ -1072,7 +1072,7 @@ fun PatternMapperFn.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
 object hpe : FieldAccessor({ it.hpenv }) {
 
     /** Creates a [PatternMapperFn] that sets the HPF envelope depth. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.hpe(semitones, callInfo) }
 }
@@ -1142,7 +1142,7 @@ fun String.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
 object hpx : FieldAccessor({ it.hpPasses }) {
 
     /** Returns a [PatternMapperFn] that sets the highpass cascade count (see [SprudelPattern.hpx]). */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.hpx(passes, callInfo) }
 }
@@ -1245,7 +1245,7 @@ fun PatternMapperFn.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
 object bpe : FieldAccessor({ it.bpenv }) {
 
     /** Creates a [PatternMapperFn] that sets the BPF envelope depth. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.bpe(semitones, callInfo) }
 }

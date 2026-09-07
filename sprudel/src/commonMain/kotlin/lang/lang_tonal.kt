@@ -600,7 +600,7 @@ object legato : FieldAccessor({ it.legato }) {
      * note("c3 e3").apply(legato(1.5))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.legato(amount, callInfo) }
 }
@@ -714,7 +714,7 @@ object vibrato : FieldAccessor({ it.vibrato }) {
      * note("c4").apply(vibrato(5))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.vibrato(hz, callInfo) }
 }
@@ -824,7 +824,7 @@ object vibratoMod : FieldAccessor({ it.vibratoMod }) {
      * note("c4").apply(vibratoMod(0.5))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.vibratoMod(semitones, callInfo) }
 }
@@ -909,7 +909,7 @@ object pattack : FieldAccessor({ it.pAttack }) {
      * note("c4").apply(pattack(0.1))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.pattack(seconds, callInfo) }
 }
@@ -1018,7 +1018,7 @@ object pdecay : FieldAccessor({ it.pDecay }) {
      * note("c4").apply(pdecay(0.2))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.pdecay(seconds, callInfo) }
 }
@@ -1126,7 +1126,7 @@ object prelease : FieldAccessor({ it.pRelease }) {
      * note("c4").apply(prelease(0.3))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.prelease(seconds, callInfo) }
 }
@@ -1235,7 +1235,7 @@ object penv : FieldAccessor({ it.pEnv }) {
      * note("c4").apply(penv(12))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.penv(semitones, callInfo) }
 }
@@ -1344,7 +1344,7 @@ object pcurve : FieldAccessor({ it.pCurve }) {
      * note("c4").apply(pcurve(2))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(curve: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.pcurve(curve, callInfo) }
 }
@@ -1453,7 +1453,7 @@ object panchor : FieldAccessor({ it.pAnchor }) {
      * note("c4").apply(panchor(0))   // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(anchor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.panchor(anchor, callInfo) }
 }
@@ -1563,7 +1563,7 @@ object accelerate : FieldAccessor({ it.accelerate }) {
      * s("hh").apply(accelerate(24))  // mapper form
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(semitones: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.accelerate(semitones, callInfo) }
 }
@@ -1768,7 +1768,7 @@ object freq : FieldAccessor({ it.freqHz }) {
      *
      * @param hz Frequency in Hz. Directly sets the pitch, bypassing note name resolution. 440 = A4, 261.63 = C4. Default: determined by note(). Range: 20 to 20000. A mapper (`mul(2)`, `add(50)`) is applied to the current frequency.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.freq(hz, callInfo) }
 }

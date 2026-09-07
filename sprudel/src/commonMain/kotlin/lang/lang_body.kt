@@ -135,7 +135,7 @@ fun String.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Sprude
 object bodyWet : FieldAccessor({ it.bodyMix }) {
 
     /** Returns a [PatternMapperFn] that sets the body resonator wet balance. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.bodyWet(wet, callInfo) }
 }
@@ -203,7 +203,7 @@ fun String.bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): Sp
 object bodyFloor : FieldAccessor({ it.bodyFloor }) {
 
     /** Returns a [PatternMapperFn] that sets the body resonator floor. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.bodyFloor(floor, callInfo) }
 }

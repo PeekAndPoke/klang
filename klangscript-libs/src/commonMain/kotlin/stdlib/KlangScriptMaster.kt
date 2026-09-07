@@ -73,6 +73,6 @@ object KlangScriptMaster {
      * master(Master(m => m.reverb(r => r.wet(0.05).roomSize(9)).gain(2.5).limiter(l => l.thresholdDb(-3))))
      * ```
      */
-    @KlangScript.Method(name = "invoke")
-    fun invoke(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = build(configure)
+    @KlangScript.Invoke
+    operator fun invoke(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = build(configure)
 }

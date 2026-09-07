@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldNotContain
@@ -31,14 +32,14 @@ class FreqAccessorIntelSpec : StringSpec({
     fun analyze(code: String) = AnalyzedAst.build(code, registry)
     fun AnalyzedAst.top() = (ast.statements.first() as ExpressionStatement).expression
 
-    val freqType = registry.get("freq").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+    val freqType = registry.get("freq").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
 
     "bare freq is an object whose type displays as freq" {
         freqType.simpleName shouldBe "freq"
     }
 
     "the object's KDoc examples reach the registry as samples" {
-        val prop = registry.get("freq").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single()
+        val prop = registry.get("freq").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }
         prop.samples.size shouldBe 2
         prop.samples.first().code shouldContain "bpf(freq)"
     }
@@ -67,7 +68,7 @@ class FreqAccessorIntelSpec : StringSpec({
 
     "every batch-one accessor is an object with a call form and the first-step operators" {
         listOf("gain", "velocity", "pan", "postgain", "lpf", "hpf", "bpf", "lpq", "hpq", "bpq").forEach { name ->
-            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
@@ -76,21 +77,37 @@ class FreqAccessorIntelSpec : StringSpec({
         }
     }
 
-    "every effects accessor is an object with a call form and the first-step operators" {
-        listOf("distort", "distos", "crush", "crushos", "coarse", "coarseos", "roomWet", "roomsize", "roomfade", "roomlp",
-            "roomdim", "delayWet", "delaytime", "delayfeedback", "phaser", "phaserWet", "phaserFloor", "phasercenter",
-            "phasersweep", "tremolosync", "tremolodepth", "tremoloskew", "tremolophase", "delaycap").forEach { name ->
-            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
-            type.simpleName shouldBe name
-            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
-            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
-            analyze("$name(0.5)").diagnostics.size shouldBe 0
+    "every effects compound is an object whose children are the slot accessors and whose call form is the setter" {
+        mapOf(
+            "distort" to listOf("amount", "oversample"),
+            "crush" to listOf("amount", "oversample"),
+            "coarse" to listOf("amount", "oversample"),
+            "room" to listOf("wet", "size", "fade", "lowpass", "dim"),
+            "delay" to listOf("wet", "time", "feedback", "cap"),
+            "phaser" to listOf("rate", "wet", "center", "sweep", "floor"),
+            "tremolo" to listOf("depth", "sync", "skew", "phase"),
+        ).forEach { (name, slots) ->
+            withClue(name) {
+                val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+                type.simpleName shouldBe name
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name(${slots.first()}"
+                val children = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
+                children shouldContainAll slots
+                children shouldNotContain "invoke"
+                analyze("$name(0.5)").diagnostics.size shouldBe 0
+                slots.forEach { slot ->
+                    withClue("$name.$slot") {
+                        analyze("$name.$slot.mul(2)").let { it.typeOf(it.top()).shouldNotBeNull() }
+                        analyze("$name($slot = mul(2))").diagnostics.size shouldBe 0
+                    }
+                }
+            }
         }
     }
 
     "every batch-three accessor is an object with a call form and the first-step operators" {
         listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "fmh", "fmattack", "fmdecay", "fmsustain", "vowelWet", "vowelFloor", "bodyWet", "bodyFloor", "legato", "vibrato", "vibratoMod", "pattack", "pdecay", "prelease", "penv", "pcurve", "panchor", "accelerate", "notchf", "nresonance", "nfattack", "nfdecay", "nfsustain", "nfrelease", "nfenv", "lpe", "lpx", "hpe", "hpx", "bpe").forEach { name ->
-            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
@@ -100,7 +117,7 @@ class FreqAccessorIntelSpec : StringSpec({
 
     "every batch-four accessor is an object with a call form and the first-step operators" {
         listOf("unison", "spread", "panSpread", "density", "orbit", "duckorbit", "duckattack", "duckdepth", "compressor", "fmenv", "analog", "duty", "onepole").forEach { name ->
-            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
@@ -111,17 +128,12 @@ class FreqAccessorIntelSpec : StringSpec({
     "every alias constant carries its canonical object's type, so it calls and reads like the original" {
         mapOf("fmmod" to "fmenv", "uni" to "unison", "voices" to "unison", "d" to "density", "o" to "orbit", "duck" to "duckorbit", "duckatt" to "duckattack", "comp" to "compressor",
             "clip" to "legato", "vib" to "vibrato", "patt" to "pattack", "pdec" to "pdecay", "prel" to "prelease", "pamt" to "penv", "pcrv" to "pcurve", "panc" to "panchor", "loopb" to "loopBegin", "loope" to "loopEnd", "fmatt" to "fmattack", "fmdec" to "fmdecay", "fmsus" to "fmsustain", "notch" to "notchf", "ntf" to "notchf", "notchq" to "nresonance", "ntq" to "nresonance", "nfa" to "nfattack", "nfd" to "nfdecay", "nfs" to "nfsustain", "nfr" to "nfrelease", "nfe" to "nfenv",
-            "vel" to "velocity", "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "dist" to "distort", "distortOversampling" to "distos", "crushOversampling" to "crushos",
-            "coarseOversampling" to "coarseos", "rsize" to "roomsize", "sz" to "roomsize", "size" to "roomsize",
-            "rfade" to "roomfade", "rlp" to "roomlp", "rdim" to "roomdim", "delayfb" to "delayfeedback",
-            "dfb" to "delayfeedback", "ph" to "phaser", "phc" to "phasercenter", "phs" to "phasersweep",
-            "tremsync" to "tremolosync", "tremdepth" to "tremolodepth", "tremskew" to "tremoloskew",
-            "tremphase" to "tremolophase", "dcap" to "delaycap").forEach { (alias, canonical) ->
+            "vel" to "velocity", "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf").forEach { (alias, canonical) ->
             val symbol = registry.get(alias).shouldNotBeNull()
             // An alias constant's KDoc carries the category: the property entry merges first and
             // would otherwise turn the whole symbol "uncategorized" on the docs page.
             (symbol.category != "uncategorized") shouldBe true
-            val type = symbol.variants.filterIsInstance<KlangProperty>().single().type
+            val type = symbol.variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe canonical
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical("
             analyze("$alias(0.5)").diagnostics.size shouldBe 0
@@ -130,7 +142,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "adsr is an object whose children are the slot accessors and whose call form is the setter" {
-        val type = registry.get("adsr").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+        val type = registry.get("adsr").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
         type.simpleName shouldBe "adsr"
         registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "adsr(attack"
         val members = CompletionProvider(registry).memberCompletions(type, "").map { it.name }

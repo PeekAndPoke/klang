@@ -131,7 +131,7 @@ fun String.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Sprud
 object vowelWet : FieldAccessor({ it.vowelMix }) {
 
     /** Returns a [PatternMapperFn] that sets the vowel formant wet balance. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.vowelWet(wet, callInfo) }
 }
@@ -198,7 +198,7 @@ fun String.vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): S
 object vowelFloor : FieldAccessor({ it.vowelFloor }) {
 
     /** Returns a [PatternMapperFn] that sets the vowel formant floor. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.vowelFloor(floor, callInfo) }
 }

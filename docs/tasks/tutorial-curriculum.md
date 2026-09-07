@@ -46,7 +46,7 @@ Ignitor / Master / Pipeline (they weren't on the generator's function allow-list
 Ground truth from the 14 built-in songs (full tally in session analysis, key facts):
 
 - Used by **all 14** songs: `stack`, `note`/`n`, `sound`/`s`, `gain`, `adsr`. Second tier (10+):
-  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `roomWet`, `postgain`, `distort`, `onepole`, `analog`.
+  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `room`, `postgain`, `distort`, `onepole`, `analog`.
 - Signals-as-modulators is the highest-value intermediate concept: 72 `.range(` calls across 7 songs.
 - Mini-notation actually used: sequences, `~`, `[]`, `<>`, `*`, `!`, `@`, comma-chords, `|`, `` >/n `` suffix,
   `struct` gates. Never used: polymeter. `.euclid()` in one song only.
@@ -146,7 +146,7 @@ stages must not carry it.
 | B5 | Alternation & repetition | `<>`, `!`, `@` | — | Bassline that changes per cycle (Sandsturm's `<bar1 bar2 bar3 bar4>` idiom). *Listen for: the 4-bar rotation.* |
 | A3 | Filters — LPF & HPF | `lpf`, `hpf`, `lpq` | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |
 | A4 | The filter envelope | `lpadsr`, `lpe` | `lpq` | The classic synth pluck: cutoff rides its own envelope. *Listen for: the "öw" the filter sweep adds to each note.* (Zero coverage today.) |
-| B6 | Layers — stack & orbit | `stack`, `orbit` | `roomWet`+`rsize` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
+| B6 | Layers — stack & orbit | `stack`, `orbit` | `room(wet, size)` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
 | B7 | Chords in one step | comma-chords `[0,7,12]`, random pick `\|` | — | Power-chord stabs; a step that gambles. *Listen for: which variant played this cycle.* |
 
 ### Stage 3 — Where the tracks meet
@@ -158,7 +158,7 @@ stages must not carry it.
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
 | A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
-| A7 | Space & dirt | `roomWet`/`rsize`, `delayWet` family, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
+| A7 | Space & dirt | `room`, `delay`, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
 | A8 | Body | `body()`, `bodyWet` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
 | A9 | The note moves the knobs | field accessors: a knob changed relative to itself (`gain(mul(0.5))`), and a knob that reads another field (`bpf(freq)`, `bpf(freq.mul(2))`) | `bpf`/`bpq` and the `mul`/`add` mappers, none of which anything teaches yet | Pink noise through a bandpass sitting on the note: the wind whistles the melody. *Listen for: noise turning into a pitch as the filter locks onto each note.* Built-in song **Greensleeves** is the reference; the surface landed 2026-09-07, the lesson did not. |
@@ -206,18 +206,18 @@ stages must not carry it.
 - **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
   literally; redeems B1's mixing promise by name in §2. ⚠️ Engine truth learned in its review
   (recorded in the lesson's KDoc + docs/tasks/orbit-level-effect-docs.md): reverb processor is
-  per-orbit but `roomWet` is a per-voice SEND; bare `roomWet()` is SILENT (gate needs roomsize); orbit
+  per-orbit but `room(wet)` is a per-voice SEND; a bare `room(wet)` is SILENT (gate needs `size`); orbit
   bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
 - **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
-  `roomWet` + `rsize` preview under its own intuitions, plus the delay family, `distort`,
-  `onepole` and `postgain`. Biggest `teaches` list in the corpus (8) and the only `Standard`
+  `room(wet, size)` preview under its own intuitions, plus the delay family, `distort`,
+  `onepole` and `postgain`. One of the two biggest `teaches` lists in the corpus (5) and the only `Standard`
   scope; if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
   (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
   (a) BOTH space effects are sends WITH A GATE and the gate is the SECOND number, not the
   send: reverb is inactive unless `roomSize >= 0.01` (defaults to 0.0) and delay is Off
-  unless `time >= 0.01` (defaults to 0.0), so a bare `roomWet(0.4)` and a bare
-  `delayWet(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
+  unless `time >= 0.01` (defaults to 0.0), so a bare `room(0.4)` and a bare
+  `delay(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
   three silent `KlangScript(Playable)` KDoc examples were fixed at source in `lang_effects.kt`.
   (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
   distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
@@ -227,7 +227,7 @@ stages must not carry it.
   and mute/solo scale `gain` only, which is now what §6 teaches (and the misleading
   "applied before synthesis" line in the `postgain` KDoc was corrected at source too).
   Open: review loop not run; the dry-vs-distorted pair is a render-QA level item by nature.
-- **A7 (space & dirt):** B6 previews `roomWet` + `rsize` ("how much goes in" / "how big the room is")
+- **A7 (space & dirt):** B6 previews `room(wet, size)` ("how much goes in" / "how big the room is")
   and points to "a Sound-track lesson still to come" — A7 must deliver both under those intuitions.
 - **B11 (chords & voicing):** B7 defers harmony ("Which notes agree like this, and which clash …
   a chords lesson still to come takes that up properly") and licenses only the power chord; B11

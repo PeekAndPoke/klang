@@ -31,8 +31,8 @@ Created 2026-08-31.
 in the BUILD-LOCK. The oldest debt in this folder and the one with the most new sound in it.
 
 Six shipped sprudel functions were **inert end to end** (full KDoc, examples and aliases, dropped at
-`FilterPipelineBuilder`): `tremoloskew`/`tremskew`, `tremolophase`/`tremphase`,
-`tremoloshape`/`tremshape`. All three are now implemented, plus a new `LfoShape.kt` with five
+`FilterPipelineBuilder`): `tremolo(skew)`, `tremolo(phase)`,
+`tremolo(shape)` (then `tremoloskew`, `tremolophase`, `tremoloshape` with aliases). All three are now implemented, plus a new `LfoShape.kt` with five
 waveforms drawn from the oscillator vocabulary.
 
 What to listen for:
@@ -86,8 +86,8 @@ Long-term path if hand-tuning stops paying:
 Live in the working tree as of 2026-08-31, not committed, not reviewed:
 
 - supersaw `voices` 17 to 21, `spread` 0.11 to 0.10, `spreadPower` 6.0 to 8.0
-- guitar bus `rsize` 3.0 to 1.0
-- drum bus `roomWet` 0.20 to 0.30
+- guitar bus `room(size)` 3.0 to 1.0
+- drum bus `room(wet)` 0.20 to 0.30
 
 This sits on top of the master-round fix that changed how the song opens: the first master
 application used to crossfade the opening 60 ms up from unmastered, so Der Schmetterling started

@@ -88,7 +88,7 @@ class TremoloRendererSpec : StringSpec({
     "the default sine is bit-identical to the shipped renderer — the DrunkenSailor guard" {
         // The reference is an INDEPENDENT transcription of the pre-W10 loop, not a call back
         // into the code under test. DrunkenSailor is the only shipped tremolo
-        // (tremolosync(8).tremolodepth(0.33).tremoloshape("sine")) and must not move.
+        // (tremolo(depth = 0.33, sync = 8, shape = "sine")) and must not move.
         val n = 8820
         val input = AudioBuffer(n) { 0.8 }
 

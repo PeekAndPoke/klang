@@ -110,6 +110,9 @@ The release-defining set, regardless of when they're sequenced:
    Real DSL debt (per-param patternable sound selection); unblocked now that named args exist.
 13. **NICE** · **Sprudel editor tools backlog** — [`sprudel-ui-tools.md`](sprudel-ui-tools.md) 🟡
     ~16 param editors still unwired; aids the tutorial quarter.
+    Since 2026-09-07 the tools also resolve a named argument by position, so `room(size = 4)`
+    opens the wet editor: [`editor-tools-named-arguments.md`](editor-tools-named-arguments.md),
+    to be folded into the rework.
 14. **NICE** · **Named-args docs polish** — [
     `klangscript-named-args-docs-polish.md`](klangscript-named-args-docs-polish.md) 🔴
     Usage-styles panel, KDoc conventions + `@sample` sweep. Small remainder of a done feature.

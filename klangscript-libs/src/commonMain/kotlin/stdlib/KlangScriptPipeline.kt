@@ -73,6 +73,6 @@ object KlangScriptPipeline {
      * note("c e g").pipeline(Pipeline(p => p.filterMod().vca().distort().filter().vca()))
      * ```
      */
-    @KlangScript.Method(name = "invoke")
-    fun invoke(configure: ((PipelineBuilder) -> PipelineBuilder)? = null): PipelineDsl = build(configure)
+    @KlangScript.Invoke
+    operator fun invoke(configure: ((PipelineBuilder) -> PipelineBuilder)? = null): PipelineDsl = build(configure)
 }

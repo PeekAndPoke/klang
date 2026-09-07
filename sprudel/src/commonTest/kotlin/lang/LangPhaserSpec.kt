@@ -30,34 +30,12 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "ph dsl interface" {
-        dslInterfaceTests(
-            "pattern.ph(rate)" to note("c3").ph("2.0"),
-            "script pattern.ph(rate)" to SprudelPattern.compile("""note("c3").ph("2.0")"""),
-            "string.ph(rate)" to "c3".ph("2.0"),
-            "script string.ph(rate)" to SprudelPattern.compile(""""c3".ph("2.0")"""),
-            "ph(rate)" to note("c3").apply(ph("2.0")),
-            "script ph(rate)" to SprudelPattern.compile("""note("c3").apply(ph("2.0"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.phaserRate shouldBe 2.0
-        }
-    }
-
     "phaser() sets VoiceData.phaser correctly" {
         val p = note("c3").phaser("2.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.phaserRate shouldBe 2.0
-    }
-
-    "phaser() alias 'ph' works" {
-        val p = note("c3").ph("3.0")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.phaserRate shouldBe 3.0
     }
 
     "phaser() works as top-level function" {
@@ -77,18 +55,18 @@ class LangPhaserSpec : StringSpec({
         events[1].data.phaserRate shouldBe 2.0
     }
 
-    // -- phaserWet() ----------------------------------------------------------------------------------------------------
+    // -- phaser(wet = ...) ----------------------------------------------------------------------------------------------------
 
-    "phaserWet() sets VoiceData.phaserDepth correctly" {
-        val p = note("c3").phaserWet("0.8")
+    "phaser(wet = ...) sets VoiceData.phaserDepth correctly" {
+        val p = note("c3").phaser(wet = "0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.phaserDepth shouldBe 0.8
     }
 
-    "phaserWet() works with control pattern" {
-        val p = note("c3 e3").phaserWet("0.3 0.9")
+    "phaser(wet = ...) works with control pattern" {
+        val p = note("c3 e3").phaser(wet = "0.3 0.9")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -96,26 +74,18 @@ class LangPhaserSpec : StringSpec({
         events[1].data.phaserDepth shouldBe 0.9
     }
 
-    // -- phasercenter() ---------------------------------------------------------------------------------------------------
+    // -- phaser(center = ...) ---------------------------------------------------------------------------------------------------
 
-    "phasercenter() sets VoiceData.phaserCenter correctly" {
-        val p = note("c3").phasercenter("500")
+    "phaser(center = ...) sets VoiceData.phaserCenter correctly" {
+        val p = note("c3").phaser(center = "500")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.phaserCenter shouldBe 500.0
     }
 
-    "phasercenter() alias 'phc' works" {
-        val p = note("c3").phc("1000")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.phaserCenter shouldBe 1000.0
-    }
-
-    "phasercenter() works with control pattern" {
-        val p = note("c3 e3").phasercenter("300 700")
+    "phaser(center = ...) works with control pattern" {
+        val p = note("c3 e3").phaser(center = "300 700")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -123,26 +93,18 @@ class LangPhaserSpec : StringSpec({
         events[1].data.phaserCenter shouldBe 700.0
     }
 
-    // -- phasersweep() ----------------------------------------------------------------------------------------------------
+    // -- phaser(sweep = ...) ----------------------------------------------------------------------------------------------------
 
-    "phasersweep() sets VoiceData.phaserSweep correctly" {
-        val p = note("c3").phasersweep("1000")
+    "phaser(sweep = ...) sets VoiceData.phaserSweep correctly" {
+        val p = note("c3").phaser(sweep = "1000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.phaserSweep shouldBe 1000.0
     }
 
-    "phasersweep() alias 'phs' works" {
-        val p = note("c3").phs("2000")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.phaserSweep shouldBe 2000.0
-    }
-
-    "phasersweep() works with control pattern" {
-        val p = note("c3 e3").phasersweep("500 1500")
+    "phaser(sweep = ...) works with control pattern" {
+        val p = note("c3 e3").phaser(sweep = "500 1500")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -153,7 +115,7 @@ class LangPhaserSpec : StringSpec({
     // -- chaining tests ---------------------------------------------------------------------------------------------------
 
     "phaser functions can be chained together" {
-        val p = note("c3").phaser("2.0").phaserWet("0.8").phasercenter("500").phasersweep("1000")
+        val p = note("c3").phaser(rate = "2.0", wet = "0.8", center = "500", sweep = "1000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -164,7 +126,7 @@ class LangPhaserSpec : StringSpec({
     }
 
     "phaser functions work in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").phaser(2).phaserWet(0.8)""")
+        val p = SprudelPattern.compile("""note("c3").phaser(rate = 2, wet = 0.8)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -258,8 +220,8 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "ph() per-param works" {
-        val p = note("c3").ph(1.0, 0.5, 300)
+    "phaser() per-param works" {
+        val p = note("c3").phaser(1.0, 0.5, 300)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

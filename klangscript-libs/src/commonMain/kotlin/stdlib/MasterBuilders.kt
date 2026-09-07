@@ -117,12 +117,12 @@ fun MasterLimiterBuilder.release(seconds: Double): MasterLimiterBuilder = copy(n
 /** Builder for a [MasterStageDsl.Reverb] stage. Knobs: `wet`, `roomSize`, `damp`, `roomFade`, `roomLp`. */
 data class MasterReverbBuilder(val node: MasterStageDsl.Reverb)
 
-/** How much of the bus is sent into the reverb (default 0.25; 0.0 = off). Orbit twin: `roomWet()`. */
+/** How much of the bus is sent into the reverb (default 0.25; 0.0 = off). Orbit twin: `room(wet = ...)`. */
 @KlangScript.Function
 fun MasterReverbBuilder.wet(wet: Double): MasterReverbBuilder = copy(node = node.copy(wet = wet))
 
 /**
- * Tail length, on the SAME scale as sprudel `roomsize()`: typical 1..10, default 5.
+ * Tail length, on the SAME scale as sprudel `room(size = ...)`: typical 1..10, default 5.
  *
  * 3 is about a 1 s tail, 5 about 1.4 s, 10 about 12.5 s; the shortest reachable is about 0.7 s.
  * Above 10 is bounded: past unity the comb network has no steady state and runs away, so there
@@ -138,12 +138,12 @@ fun MasterReverbBuilder.damp(damp: Double): MasterReverbBuilder = copy(node = no
 /**
  * OVERRIDES `roomSize` for the tail, and is NOT on the same scale: this is the normalized 0..1
  * value (0 is about 0.7 s, 1 about 12.5 s), and despite the name it is not a time.
- * Orbit twin: `roomfade()` / `rfade()`.
+ * Orbit twin: `room(fade = ...)`.
  */
 @KlangScript.Function
 fun MasterReverbBuilder.roomFade(amount: Double): MasterReverbBuilder = copy(node = node.copy(roomFade = amount))
 
-/** High-frequency damping as an absolute cutoff in Hz; overrides `damp`. Orbit twin: `roomlp()` / `rlp()`. */
+/** High-frequency damping as an absolute cutoff in Hz; overrides `damp`. Orbit twin: `room(lowpass = ...)`. */
 @KlangScript.Function
 fun MasterReverbBuilder.roomLp(hz: Double): MasterReverbBuilder = copy(node = node.copy(roomLp = hz))
 
@@ -162,11 +162,11 @@ fun MasterDelayBuilder.time(seconds: Double): MasterDelayBuilder = copy(node = n
 
 /**
  * Feedback amount (default 0.3). At or above 1.0 the delay recirculates without loss and
- * self-oscillates, allowed, with `cap` deciding how loud. Orbit twin: `delayfeedback()`.
+ * self-oscillates, allowed, with `cap` deciding how loud. Orbit twin: `delay(feedback = ...)`.
  */
 @KlangScript.Function
 fun MasterDelayBuilder.feedback(feedback: Double): MasterDelayBuilder = copy(node = node.copy(feedback = feedback))
 
-/** Ceiling the feedback saturates toward (default 1.0 = unchanged). Orbit twin: `delaycap()` / `dcap()`. */
+/** Ceiling the feedback saturates toward (default 1.0 = unchanged). Orbit twin: `delay(cap = ...)`. */
 @KlangScript.Function
 fun MasterDelayBuilder.cap(cap: Double): MasterDelayBuilder = copy(node = node.copy(cap = cap))

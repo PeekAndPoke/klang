@@ -177,8 +177,11 @@ Tests: `ArgAlignmentTest.kt`, `ConfigureLambdaBindingTest.kt` (runtime), `Analyz
 ### 4.11 Callable native objects (`invoke`) ✅
 
 A native object registered from Kotlin becomes callable when its type registers a method named
-`invoke` (`@KlangScript.Method(name = "invoke")` on an `@KlangScript.Object` member, or a hand
-registration under `NativeOperatorNames.INVOKE`). `Master(m => m.gain(2.5))` then dispatches to
+`invoke` (`@KlangScript.Invoke` on the `operator fun invoke` member of an `@KlangScript.Object`,
+or a hand registration under `NativeOperatorNames.INVOKE`; the name is defined once, as
+`KlangScript.Invoke.NAME`). KSP rejects an `@Invoke` that is not `operator fun invoke`, that sits
+outside an `@Object`/`@TypeExtensions` class, or that has a sibling `@Invoke`: KlangScript has no
+overloads, a callable object has exactly one call form (2026-09-07). `Master(m => m.gain(2.5))` then dispatches to
 that method through the SAME spec-aware path as `Master.build(m => ...)`: named arguments,
 default thunks and the trailing-lambda rule all apply. An object without `invoke` stays a plain
 value; calling it is a type error that names the missing method. The analyzer resolves the call

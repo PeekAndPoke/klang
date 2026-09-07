@@ -60,7 +60,7 @@ export leadShape = (p) => p
                 x => x.sound("pink").gain(0.12).adsr(0.009, 0.1, 0.1, 0.1)) // TODO: separate noise with steady rhythm
     .pan(sine.range(0.2,0.3).slow(8)).superimpose(pan(sine.range(0.8, 0.7).slow(8)))
     .body("wood").bodyWet(0.2).velocity(perlin.range(0.95,1.0))
-    .delayWet(0.05).delaytime(pure(5/32).div(cps)).delayfeedback(0.2).analog(3.5)
+    .delay(wet = 0.05, time = pure(5/32).div(cps), feedback = 0.2).analog(3.5)
 
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
@@ -69,7 +69,7 @@ export bassShape = (p) => p
     .superimpose(
       x => x.pan(0.8),
       x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
-    ).phaser(1/13).phaserWet(0.15).phasercenter(2000).phasersweep(1200)
+    ).phaser(rate = 1/13, wet = 0.15, center = 2000, sweep = 1200)
     .spread(sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(200).lpf(2900).lpe(14.4)
     .lpq(berlin.range(1.5, 2.2).seg(32).slow(32))
 
@@ -106,7 +106,7 @@ export song = stack(
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
     master(Master(m => m.gain(1.5))),
-).roomWet(0.3, 3, 0.05, 11500).compressor(-6, 2.5, 7, 0.02, 0.025).swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
+).room(0.3, 3, 0.05, 11500).compressor(-6, 2.5, 7, 0.02, 0.025).swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
 
 
 

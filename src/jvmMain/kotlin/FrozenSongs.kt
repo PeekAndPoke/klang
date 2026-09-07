@@ -20,7 +20,10 @@ package io.peekandpoke.klang
  * nothing. Values must never change; each such migration keeps the sound identical.
  * Applied so far: C6a filter-alias renames, C0 per-param argument split, C3 lpe semitone re-expression, C4 wet renames (room->roomWet, delay->delayWet, phaserdepth->phaserWet), P pitch-param unification (warmth(w) -> onepole(Hz) via fc = sr/pi*atan((1-w)/w), sound-identical at 48k),
  * 2026-09-07 envelope slots (`.release(x)` -> `.adsr(release = x)`) and the all-named form of a mixed call
- * (`delayWet(0.2, feedback = 0.5)` -> `delayWet(wet = 0.2, feedback = 0.5)`, which the language no longer parses mixed).
+ * (`delayWet(0.2, feedback = 0.5)` -> `delayWet(wet = 0.2, feedback = 0.5)`, which the language no longer parses mixed),
+ * and the 2026-09-07 compound objects (`roomWet(w, s, f).rlp(x)` -> `room(wet = w, size = s, fade = f, lowpass = x)`,
+ * `delayWet(w).delaytime(t)` -> `delay(wet = w, time = t)`, `coarse(2).coarseos(1)` -> `coarse(amount = 2, oversample = 1)`;
+ * `oversample = 1` is the pinned value of the once-inert `coarseos`, not a change).
  *
  * Source at snapshot time:
  *  - Der Schmetterling  → builtinsongs/DerSchmetterling.kt  (rpm 34.5)
@@ -46,7 +49,7 @@ stack(                                                                          
     .adsr(release = "<0.04!16 0.11!16>").vibrato(8).vibratoMod(0.01)                                                                           //   //.         //  //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                        // //.              // //.
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.10).pan(0.15).superimpose(pan(0.85)))           //.                      //.
-    .mute("<1!32 0!192>").analog(feel).pipeline("pedal").roomWet(0.3, 5, 0.1)
+    .mute("<1!32 0!192>").analog(feel).pipeline("pedal").room(0.3, 5, 0.1)
   , // Guitar 1
   n(`<[7 [4@4 2 -1] 2 1 [0 -1 -3 -1] [0 -3] -2 <[-1 5@3] [5 6@3] [[4 5] 8@3] [[3 4] 3@3]>]!4
       [[4@2 [2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
@@ -56,8 +59,8 @@ stack(                                                                          
     .sound("supersaw").unison(9).spread(0.08).gain(0.75).postgain(0.12).distort(1, "tube", 4).distort(0.80)    
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.029).lpadsr(0.005, 1.1, 0.0, 0.015)    
     .hpf("<550!16 360!16 550!16 800!16>").lpf("3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4)).lpe(8.1).lpq(2.0)
-    // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
-    .coarse(2).coarseos(1).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))
+    // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
+    .coarse(amount = 2, oversample = 1).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))
     .pipeline("pedal").body("wood").bodyWet(0.3)
   , // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
@@ -66,8 +69,8 @@ stack(                                                                          
     .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort(1, "tube", 4).distort(0.85)
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpadsr(0.005, 1.0, 0.0, 0.01)    
     .hpf(120).lpf(3200).lpe(8.1).lpq(1.8)
-    // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
-    .coarse(2).coarseos(1).pan(0.3).superimpose(
+    // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
+    .coarse(amount = 2, oversample = 1).pan(0.3).superimpose(
       x => x.pan(0.7),
       x => x.postgain(0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
@@ -87,7 +90,7 @@ stack(                                                                          
     .pan(0.515).late(0.0005).orbit(5).gain(0.33).hpf(800).lpf("11500".add(perlin.mul(300))).adsr(0.005, 0.15, 0.8, 0.2), // . mute()
   sound("pink!8").orbit(6).gain(0.08).hpf(8000).pan(sine.range(0.25, 0.75).slow(3)).adsr(0.007, 0.3, 0.0, 0.05) //  .solo(),
   // Master
-).roomWet(0.10, 8, 0.12).rlp(12500).seed(timeOfDay.mul(60*60*24))
+).room(wet = 0.10, size = 8, fade = 0.12, lowpass = 12500).seed(timeOfDay.mul(60*60*24))
  .compressor(-6, 2, 5, 0.02, 0.05)
 
 
@@ -144,16 +147,16 @@ stack(
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a2]]>/4").clip(0.67).struct("x!4").slow(16)
     .orbit(2).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
-    // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
-    .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(2).coarseos(1) // solo()
+    // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
+    .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(amount = 2, oversample = 1) // solo()
     .superimpose(
       x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.15, 0.8).slow(32)).clip(0.79)
     ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.75).body("glass").vowel("i a e".slow(12)).vowelWet(0.2)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0)).vibrato("0.51".add(perlin.div(10))).vibratoMod(0.05)
-        // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
-        .crush("1.85".add(berlin2.mul(0.5).slow(4))).crushos(1).lpf(5.5 * 440).hpf(300).postgain(0.45)
+        // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
+        .crush(amount = "1.85".add(berlin2.mul(0.5).slow(4)), oversample = 1).lpf(5.5 * 440).hpf(300).postgain(0.45)
         .pan(0.2).superimpose(pan(0.8))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))
@@ -170,7 +173,7 @@ stack(
     .orbit(0).gain(0.12).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(perlin.range(440, 440 * 4).segment(16).slow(48)).bpq(sine.range(0.25, 5.0).slow(48).early(12))
   ,
-).delayWet(wet = 0.2, feedback = 0.5).delaytime(pure(1/8).div(cps)).roomWet(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
+).delay(wet = 0.2, feedback = 0.5, time = pure(1/8).div(cps)).room(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
 
 
 

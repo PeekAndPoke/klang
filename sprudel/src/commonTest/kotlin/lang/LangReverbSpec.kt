@@ -14,34 +14,26 @@ import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangReverbSpec : StringSpec({
 
-    // -- roomfade() -------------------------------------------------------------------------------------------------------
+    // -- room(fade = ...) -------------------------------------------------------------------------------------------------------
 
-    "roomfade() sets VoiceData.roomFade correctly" {
-        val p = note("c3").roomfade("0.5")
+    "room(fade = ...) sets VoiceData.roomFade correctly" {
+        val p = note("c3").room(fade = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.roomFade shouldBe 0.5
     }
 
-    "roomfade() alias 'rfade' works" {
-        val p = note("c3").rfade("0.8")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.roomFade shouldBe 0.8
-    }
-
-    "roomfade() works as top-level function" {
-        val p = note("a").apply(roomfade("0.3"))
+    "room(fade = ...) works as top-level function" {
+        val p = note("a").apply(room(fade = "0.3"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.roomFade shouldBe 0.3
     }
 
-    "roomfade() works with control pattern" {
-        val p = note("c3 e3").roomfade("0.2 0.6")
+    "room(fade = ...) works with control pattern" {
+        val p = note("c3 e3").room(fade = "0.2 0.6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -49,42 +41,34 @@ class LangReverbSpec : StringSpec({
         events[1].data.roomFade shouldBe 0.6
     }
 
-    "roomfade() works as string extension" {
-        val p = "c3".roomfade("0.4")
+    "room(fade = ...) works as string extension" {
+        val p = "c3".room(fade = "0.4")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.roomFade shouldBe 0.4
     }
 
-    // -- roomlp() ---------------------------------------------------------------------------------------------------------
+    // -- room(lowpass = ...) ---------------------------------------------------------------------------------------------------------
 
-    "roomlp() sets VoiceData.roomLp correctly" {
-        val p = note("c3").roomlp("1000")
+    "room(lowpass = ...) sets VoiceData.roomLp correctly" {
+        val p = note("c3").room(lowpass = "1000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.roomLp shouldBe 1000.0
     }
 
-    "roomlp() alias 'rlp' works" {
-        val p = note("c3").rlp("2000")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.roomLp shouldBe 2000.0
-    }
-
-    "roomlp() works as top-level function" {
-        val p = note("a").apply(roomlp("500"))
+    "room(lowpass = ...) works as top-level function" {
+        val p = note("a").apply(room(lowpass = "500"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.roomLp shouldBe 500.0
     }
 
-    "roomlp() works with control pattern" {
-        val p = note("c3 e3").roomlp("800 1200")
+    "room(lowpass = ...) works with control pattern" {
+        val p = note("c3 e3").room(lowpass = "800 1200")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -92,42 +76,34 @@ class LangReverbSpec : StringSpec({
         events[1].data.roomLp shouldBe 1200.0
     }
 
-    "roomlp() works as string extension" {
-        val p = "c3".roomlp("1500")
+    "room(lowpass = ...) works as string extension" {
+        val p = "c3".room(lowpass = "1500")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.roomLp shouldBe 1500.0
     }
 
-    // -- roomdim() --------------------------------------------------------------------------------------------------------
+    // -- room(dim = ...) --------------------------------------------------------------------------------------------------------
 
-    "roomdim() sets VoiceData.roomDim correctly" {
-        val p = note("c3").roomdim("5000")
+    "room(dim = ...) sets VoiceData.roomDim correctly" {
+        val p = note("c3").room(dim = "5000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.roomDim shouldBe 5000.0
     }
 
-    "roomdim() alias 'rdim' works" {
-        val p = note("c3").rdim("6000")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.roomDim shouldBe 6000.0
-    }
-
-    "roomdim() works as top-level function" {
-        val p = note("a").apply(roomdim("3000"))
+    "room(dim = ...) works as top-level function" {
+        val p = note("a").apply(room(dim = "3000"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.roomDim shouldBe 3000.0
     }
 
-    "roomdim() works with control pattern" {
-        val p = note("c3 e3").roomdim("4000 7000")
+    "room(dim = ...) works with control pattern" {
+        val p = note("c3 e3").room(dim = "4000 7000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -135,8 +111,8 @@ class LangReverbSpec : StringSpec({
         events[1].data.roomDim shouldBe 7000.0
     }
 
-    "roomdim() works as string extension" {
-        val p = "c3".roomdim("8000")
+    "room(dim = ...) works as string extension" {
+        val p = "c3".room(dim = "8000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -190,11 +166,11 @@ class LangReverbSpec : StringSpec({
 
     "reverb functions can be chained together" {
         val p = note("c3")
-            .roomWet("0.8")
-            .roomsize("0.9")
-            .roomfade("0.5")
-            .roomlp("1000")
-            .roomdim("5000")
+            .room("0.8")
+            .room(size = "0.9")
+            .room(fade = "0.5")
+            .room(lowpass = "1000")
+            .room(dim = "5000")
             .iresponse("hall")
         val events = p.queryArc(0.0, 1.0)
 
@@ -207,27 +183,8 @@ class LangReverbSpec : StringSpec({
         events[0].data.iResponse shouldBe "hall"
     }
 
-    "reverb functions work with aliases chained" {
-        val p = note("c3")
-            .roomWet("0.7")
-            .sz("0.85")
-            .rfade("0.4")
-            .rlp("2000")
-            .rdim("6000")
-            .ir("plate")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.room shouldBe 0.7
-        events[0].data.roomSize shouldBe 0.85
-        events[0].data.roomFade shouldBe 0.4
-        events[0].data.roomLp shouldBe 2000.0
-        events[0].data.roomDim shouldBe 6000.0
-        events[0].data.iResponse shouldBe "plate"
-    }
-
     "reverb functions work in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").roomWet(0.8).roomfade(0.5).roomlp(1000).iresponse("hall")""")
+        val p = SprudelPattern.compile("""note("c3").room(wet = 0.8, fade = 0.5, lowpass = 1000).iresponse("hall")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -237,9 +194,8 @@ class LangReverbSpec : StringSpec({
         events[0].data.iResponse shouldBe "hall"
     }
 
-
-    "roomWet() addon sets all five VoiceData fields" {
-        val p = note("c").roomWet(0.5, 4, 0.3, 10000, 5000)
+    "room() addon sets all five VoiceData fields" {
+        val p = note("c").room(0.5, 4, 0.3, 10000, 5000)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -252,8 +208,8 @@ class LangReverbSpec : StringSpec({
         }
     }
 
-    "roomWet() addon with partial params sets only specified fields" {
-        val p = note("c").roomWet(0.8, 2)
+    "room() addon with partial params sets only specified fields" {
+        val p = note("c").room(0.8, 2)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -266,8 +222,8 @@ class LangReverbSpec : StringSpec({
         }
     }
 
-    "roomWet() addon with single param sets only room" {
-        val p = note("c").roomWet(0.6)
+    "room() addon with single param sets only room" {
+        val p = note("c").room(0.6)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -278,8 +234,8 @@ class LangReverbSpec : StringSpec({
         }
     }
 
-    "roomWet() addon works as string extension" {
-        val p = "c".roomWet(0.5, 3)
+    "room() addon works as string extension" {
+        val p = "c".room(0.5, 3)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -289,8 +245,8 @@ class LangReverbSpec : StringSpec({
         }
     }
 
-    "roomWet() addon works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").roomWet(0.8, 2, 0.5)""")
+    "room() addon works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").room(0.8, 2, 0.5)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {
@@ -300,8 +256,8 @@ class LangReverbSpec : StringSpec({
         }
     }
 
-    "roomWet() addon works with mini-notation patterns" {
-        val p = note("c3 e3").roomWet("<0.3 0.8>", "<1 4>")
+    "room() addon works with mini-notation patterns" {
+        val p = note("c3 e3").room("<0.3 0.8>", "<1 4>")
         val cycle0 = p.queryArc(0.0, 1.0)
         val cycle1 = p.queryArc(1.0, 2.0)
 
@@ -316,8 +272,8 @@ class LangReverbSpec : StringSpec({
         }
     }
 
-    "roomWet() addon works chained with other effects" {
-        val p = note("c").apply(gain(0.8).roomWet(0.5, 2))
+    "room() addon works chained with other effects" {
+        val p = note("c").apply(gain(0.8).room(0.5, 2))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -328,10 +284,10 @@ class LangReverbSpec : StringSpec({
         }
     }
 
-    "roomWet(tail-only) does not touch the head field" {
+    "room(tail-only) does not touch the head field" {
         // numeric receiver: without the tail-only guard the head apply would REINTERPRET
         // the values ("3"/"4") into the room field
-        val p = SprudelPattern.compile("""seq("3 4").roomWet(size = 8)""")
+        val p = SprudelPattern.compile("""seq("3 4").room(size = 8)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

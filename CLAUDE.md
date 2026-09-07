@@ -90,7 +90,14 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 `klangblocks` (removed 2026-08-23, never user-visible); the `Motör` spelling; the sub-type method
 chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors; the single
 envelope doors `attack()`, `decay()`, `sustain()`, `release()` (gone 2026-09-07, `adsr(attack = ...)`
-sets a slot and `adsr.attack` reads it; guard `LangRetiredEnvelopeDoorsSpec`).
+sets a slot and `adsr.attack` reads it); the per-knob effect doors and their aliases (`roomWet`,
+`roomsize`/`rsize`/`sz`/`size`, `roomfade`, `roomlp`, `roomdim`, `delayWet`, `delaytime`, `delayfeedback`/`delayfb`,
+`delaycap`/`dcap`, `ph`, `phaserWet`, `phasercenter`/`phc`, `phasersweep`/`phs`, `phaserFloor`, the `tremolo*`/`trem*`
+knobs, `dist`, `distos`, `distortshape`/`dshape`, `crushos`, `coarseos`, the `*Oversampling` spellings; gone
+2026-09-07: `room`, `delay`, `phaser`, `tremolo`, `distort`, `crush`, `coarse` are objects with named slots,
+`room(fade = 0.3)` sets, `room.fade` reads). Guard for both: `LangRetiredDoorsSpec`. The spelling
+`@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
+refuses the old one).
 
 ## Available Agent
 

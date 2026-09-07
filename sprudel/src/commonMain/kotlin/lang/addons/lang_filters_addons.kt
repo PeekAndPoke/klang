@@ -132,7 +132,7 @@ object notchf : FieldAccessor({ it.notchf }) {
      * note("c4*4").firstOf(4, notchf(500).nresonance(10)) // resonant notch on first cycle
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.notchf(freq, q, callInfo) }
 }
@@ -256,7 +256,7 @@ object nresonance : FieldAccessor({ it.nresonance }) {
      * note("c4*4").firstOf(4, nresonance(15))            // narrow notch on first cycle
      * ```
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.nresonance(q, callInfo) }
 }
@@ -411,7 +411,7 @@ fun String.nfattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
 object nfattack : FieldAccessor({ it.nfattack }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope attack time. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.nfattack(seconds, callInfo) }
 }
@@ -530,7 +530,7 @@ fun String.nfdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
 object nfdecay : FieldAccessor({ it.nfdecay }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope decay time. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.nfdecay(seconds, callInfo) }
 }
@@ -650,7 +650,7 @@ fun String.nfsustain(level: PatternLike? = null, callInfo: CallInfo? = null): Sp
 object nfsustain : FieldAccessor({ it.nfsustain }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.nfsustain(level, callInfo) }
 }
@@ -769,7 +769,7 @@ fun String.nfrelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): 
 object nfrelease : FieldAccessor({ it.nfrelease }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope release time. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.nfrelease(seconds, callInfo) }
 }
@@ -911,7 +911,7 @@ fun String.nfenv(depth: PatternLike? = null, callInfo: CallInfo? = null): Sprude
 object nfenv : FieldAccessor({ it.nfenv }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope depth. */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(depth: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.nfenv(depth, callInfo) }
 }

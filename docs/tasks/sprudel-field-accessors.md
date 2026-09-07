@@ -34,6 +34,19 @@ Rewritten 2026-09-06 after a design session; the previous draft (context-key bin
   pattern, not a mapper), `orbit` and `duckOrbit` (Int routing fields). String and boolean setters
   (`note, n, sound, bank, scale, vowel, body, unit, loop, *shape, *curve`) are out of scope: the
   value register carries text, but "apply a mapper to a name" has no use case yet.
+- 2026-09-07: batch E, the compound effects, after the `adsr` pilot: `room(wet, size, fade,
+  lowpass, dim)`, `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,
+  `tremolo(depth, sync, shape, skew, phase)`, `distort(amount, shape, oversample)`,
+  `crush(amount, oversample)`, `coarse(amount, oversample)`; each an object with one child per
+  numeric slot and the setter as `invoke`. The 24 batch-two accessors and their 20 aliases are
+  gone with the per-knob doors (guard `LangRetiredDoorsSpec`). The corpus (12 builtin songs, the
+  frozen benchmark snapshots, two tutorials, the golden corpus, docs and skills) was migrated by
+  script (`scratchpad/migrate_e.py`, not kept): adjacent calls on one object merged into one
+  named call. Collateral the script hit and that was reverted: the array method `.size()` in two
+  strategy docs and `Files.size` in `SampleMirrorMain.kt`. Found on the way: the tutorial lint
+  reads call names, so `teaches`/`previews` name the object now; duplicate Kotest titles appear
+  when two alias tests collapse onto the canonical call; a slot name that is also a top-level
+  symbol (`lowpass`) gives the docs symbol two property variants.
 - 2026-09-07: batch four, the last numeric group: `unison, spread, panSpread, density` (unison
   oscillator params, read from `oscParams`), `orbit, duckorbit` (Int routing fields), `duckattack,
   duckdepth`, `compressor` (its first slot, the threshold; the other knobs have no single-field
@@ -159,7 +172,7 @@ The provider needs only first-step twins (D4) and then lives in the existing map
 @KlangScript.Object("freq")
 object Freq : PatternMapperProvider {
     override fun mapper(): PatternMapperFn = ...
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(hz: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = freq(hz, callInfo)
 }
 val freq: Freq = Freq   // Kotlin door, unannotated
@@ -265,7 +278,7 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release` are the slot accessors and whose
   call form is the setter; a mapper on a named slot applies to that slot only. The single doors
   `attack()`, `decay()`, `sustain()`, `release()` were REMOVED from both doors (one word per
-  concept; guard `LangRetiredEnvelopeDoorsSpec`). Shape: `@KlangScript.Object("adsr") object Adsr`
+  concept; guard `LangRetiredEnvelopeDoorsSpec`, renamed `LangRetiredDoorsSpec` in batch E). Shape: `@KlangScript.Object("adsr") object Adsr`
   with `@KlangScript.Property val attack: FieldAccessor = FieldAccessor { it.attack }`, and the
   stage helpers private. The same shape is the plan for `lpadsr`, `hpadsr`, `bpadsr` and the
   compressor, see `docs/tasks/sprudel-accessors-compound-slots.md`.
@@ -274,6 +287,22 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   name has exactly one Kotlin form. Then the objects took the script name itself (`object gain`,
   `object adsr`) and the 85 `val` twins went too: one declaration per concept, the Kotlin naming
   convention suppressed at file level.
+- DONE (batch E, 2026-09-07): the seven compound effects as objects with slot children; per-knob
+  doors and aliases removed. Next: batch F, the filters (`lpf/hpf(freq, q, passes, env, attack,
+  decay, sustain, release)`, `bpf`/`notch` without passes; retiring `lpq/lpx/lpe/lpadsr`, the
+  `hp*`, `bp*`, `nf*` families, `nresonance`, `notchq`), then batch G (`compressor`, `vibrato`,
+  `penv`, `fm`, `duck`, `vowel`, `body`, `unison`). The `snd*` sound doors are a separate
+  discussion (idea: `object Snd { object supersaw { fields } }`).
+- OPEN (maintainer, 2026-09-07): `adsrCurve` (the singular, one curve name for all stages) is to
+  be REMOVED; `adsrCurves(attack, decay, release)` becomes an object with fields like the other
+  compounds. Same for the filter envelope curve siblings, which should be called `lpCurves`,
+  `hpCurves`, `bpCurves` rather than `lpadsrCurves`. Note: no `lp/hp/bpadsrCurves` door exists in
+  sprudel today (only `adsrCurves` and `adsrCurve` in `lang_dynamics.kt`); the ignitor side is to
+  be checked. Open question for the shape: the slots are curve NAMES (strings), and string
+  accessors are won't-implement, so either the object gets children that read the name anyway
+  (a first string reader) or it carries the setter only. Batch F item. Sakura uses
+  `adsrCurve("scurve")` once and moves to `adsrCurves("scurve", "scurve", "scurve")` or a
+  shorter form to be decided.
 - OPEN: the remaining compound doors (above); a diagnostic when a mapper reaches a setter without
   the branch (today the value is dropped), and for a compound object used as a value (`pan(adsr)`
   is accepted by `PatternLike` and writes nothing useful, since `Adsr` is not a `FieldAccessor`);

@@ -47,16 +47,16 @@ stack(
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4").clip(0.7).struct("x!4").slow(16)
     .orbit(3).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
-    // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
-    .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(2).coarseos(1) // solo()
+    // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
+    .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(amount = 2, oversample = 1) // solo()
     .superimpose(
       x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
     ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.5).body("glass").vowel("e o e i a u".slow(24)).vowelWet(0.40)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2)).vibrato("0.51".add(perlin.div(20))).vibratoMod(0.06)
-        // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
-        .crush("2.0".add(berlin2.mul(0.75).slow(4))).crushos(1).lpf(7.75 * 440).hpf(300).postgain(0.45)
+        // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
+        .crush(amount = "2.0".add(berlin2.mul(0.75).slow(4)), oversample = 1).lpf(7.75 * 440).hpf(300).postgain(0.45)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))
@@ -70,7 +70,7 @@ stack(
     sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
       .orbit(6).gain(0.6).pan(0.55).adsr(0.017, 0.3, 0.5, 1).degrade(0.01).hpf(80).lpf(7800)
       .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
-  ).roomWet(0.20).rsize(3.0).rlp(8000).compressor(-19, 2, 6, 0.01, 0.2)
+  ).room(wet = 0.20, size = 3.0, lowpass = 8000).compressor(-19, 2, 6, 0.01, 0.2)
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").legato(2)
     .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)

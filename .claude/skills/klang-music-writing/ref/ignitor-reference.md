@@ -45,7 +45,7 @@ let pad = Osc.supersaw()
     .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
     .adsr(0.3, 0.5, 0.8, 1.5)
 
-chord("<Am C F G>").voicing().sound(pad).adsrOff().gain(0.2).roomWet(0.3).rsize(6)
+chord("<Am C F G>").voicing().sound(pad).adsrOff().gain(0.2).room(wet = 0.3, size = 6)
 ```
 
 ### FM bell
@@ -55,7 +55,7 @@ let bell = Osc.sine()
     .fm(Osc.sine(), 2.3, 400)
     .adsr(0.001, 1.5, 0.0, 0.5)
 
-note("c5 e5 g5 c6").sound(bell).adsrOff().gain(0.3).roomWet(0.2)
+note("c5 e5 g5 c6").sound(bell).adsrOff().gain(0.3).room(wet = 0.2, size = 4)
 ```
 
 ---
@@ -801,5 +801,5 @@ stack(
   note("a1 ~ ~ ~ ~ ~ ~ ~").sound(kick).gain(0.8),
   sound("~ ~ ~ ~ cp ~ ~ ~").gain(0.4),
   sound("hh*8").gain(0.3)
-).roomWet(0.2).rsize(5).delayWet(0.15).delaytime(pure(1/8).div(cps))
+).room(wet = 0.2, size = 5).delay(wet = 0.15, time = pure(1/8).div(cps))
 ```

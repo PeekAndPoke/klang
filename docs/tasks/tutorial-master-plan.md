@@ -52,7 +52,7 @@ Of ~180 implemented concepts, only ~14% are well-covered by existing tutorials. 
 
 ### Missing Effects & Synthesis
 
-Filter envelopes, pitch envelope, FM synthesis, `compressor()`, `duckorbit()`, `vowel()`, `distortshape()`,
+Filter envelopes, pitch envelope, FM synthesis, `compressor()`, `duckorbit()`, `vowel()`, `distort(shape = ...)`,
 `iresponse()`, `mode()`, `bank()`, `freq()`, `accelerate()`, `unison()`, `detune()`
 
 ### Missing Pattern Functions
@@ -63,7 +63,7 @@ Filter envelopes, pitch envelope, FM synthesis, `compressor()`, `duckorbit()`, `
 ### Covered Well (no tutorial needed)
 
 `sound()`, `note()`, `stack()`, `fast()`/`slow()`, `every()`, `cat()`, `arrange()`, `scale()`, `chord()`, `voicing()`,
-`transpose()`, `lpf()`, `hpf()`, `gain()`, `pan()`, `delayWet()`, `roomWet()`, `adsr()`, `shuffle()`/`scramble()`, `[]`
+`transpose()`, `lpf()`, `hpf()`, `gain()`, `pan()`, `delay()`, `room()`, `adsr()`, `shuffle()`/`scramble()`, `[]`
 grouping, `<>` alternation
 
 ---
@@ -116,7 +116,7 @@ grouping, `<>` alternation
 | L2  | Compressor         | Intermediate | `compressor()`                   | **Punk Rock**     | Punk is LOUD — compression as weapon, not subtlety                     |
 | L3  | Convolution Reverb | Intermediate | `iresponse()`, `ir()`            | **Neo-Classical** | Nils Frahm's music lives and dies by the space (cathedral vs bedroom)  |
 | L4  | Vowel Sounds       | Intermediate | `vowel()`                        | **Funk**          | Wah-wah pedal IS a formant sweep. "Wacka-wacka" = vowel cycling        |
-| L5  | Distortion Shapes  | Intermediate | `distortshape()`, all 9 shapes   | **Industrial**    | NIN treats distortion as composition. 9 shapes = 9 different beasts    |
+| L5  | Distortion Shapes  | Intermediate | `distort(shape = ...)`, all 9 shapes   | **Industrial**    | NIN treats distortion as composition. 9 shapes = 9 different beasts    |
 | L6  | Seeds              | Intermediate | `seed()`, `withSeed()`           | **Krautrock**     | Motorik beat = seeded pattern. Generative but reproducible (NEU!, Can) |
 | L7  | within() Trick     | Intermediate | `within()`, `inside()`           | **Bossa Nova**    | Guitar pattern: bass in first half, chord in second = `within()`       |
 | L10 | Echo Patterns      | Intermediate | `echo()`, `stut()`, `stutWith()` | **Dancehall**     | "Ba-ba-ba-badman" stutters define the genre                            |
@@ -221,4 +221,4 @@ These didn't get dedicated tutorials — fold into related tutorials or leave fo
 
 `s_cat()`/`timeCat()`, `stackLeft/Right/Centre/By`, `pure()`, `gap()`, `run()`/`binary()`, `pickF()`, `pace()`/
 `steps()`, `take()`/`drop()`, `repeatCycles()`, `linger()`, `ribbon()`, `clip()`, `postgain()`, advanced reverb params (
-`roomfade`, `roomlp`, `roomdim`), bitwise operators, `compress()`/`focus()`/`zoom()`
+`room(fade)`, `room(lowpass)`, `room(dim)`), bitwise operators, `compress()`/`focus()`/`zoom()`

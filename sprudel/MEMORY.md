@@ -2,18 +2,31 @@
 
 ## Recent Work (2026-09-07)
 
+- **Compound effects are objects with named slots (batch E).** `room(wet, size, fade, lowpass,
+  dim)`, `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,
+  `tremolo(depth, sync, shape, skew, phase)`, `distort(amount, shape, oversample)`,
+  `crush(amount, oversample)`, `coarse(amount, oversample)`: `room(fade = 0.3)` sets one slot,
+  `room(size = mul(2))` maps it on its own value, `lpf(room.lowpass)` reads it. Every per-knob
+  door and alias (`roomWet`, `rsize`, `delayfb`, `ph`, `tremsync`, `dist`, `crushos`, ...) is
+  GONE from both doors (`LangRetiredDoorsSpec`); `tremolo` moved out of the addons file. Slots
+  apply in declaration order inside one call, so `room(dim = 3000, lowpass = room.dim)` reads the
+  old dim: chain two calls for that. A slot name that is also a top-level symbol (`lowpass`, the
+  `lpf` alias) shows two property variants under one docs symbol; intel tests filter on
+  `owner == null`. Tutorials name the object in `teaches`/`previews` (`room`, `delay`), not the
+  slots: the curriculum lint reads call names.
+
 - **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are
   gone: one declaration per concept in both doors. `"ClassName"` is suppressed at file level in
-  the lang files for this. Alias constants read `val rsize: roomsize = roomsize`.
+  the lang files for this. Alias constants read `val vel: velocity = velocity`.
 
 - **One Kotlin door per accessor.** The 139 unannotated factories (`fun gain(...)`, the alias
-  `fun rsize(...)`) are gone; `val gain: Gain` plus `operator fun invoke` is the Kotlin call form
+  `fun vel(...)`) are gone; `val gain: Gain` plus `operator fun invoke` is the Kotlin call form
   (`apply(gain(0.5))` still compiles, through the invoke convention). The `val` stays unannotated,
   the `@KlangScript.Object` registers the script name.
 
 - **Compound pilot: `adsr` is an object with children.** `adsr.attack/.decay/.sustain/.release`
   read the slots, `adsr(attack = mul(2))` maps one slot, and the single doors `attack()`,
-  `decay()`, `sustain()`, `release()` are GONE from both doors (`LangRetiredEnvelopeDoorsSpec`).
+  `decay()`, `sustain()`, `release()` are GONE from both doors (`LangRetiredDoorsSpec`).
   Sakura's `adsr("0.1:1:1:0.1")` never meant four values (no colon form exists; the string went to
   the attack slot and the mini-notation kept 0.1); rewritten as `adsr(0.1, 1, 1, 0.1)` per the
   maintainer, which changes those three noise beds.
@@ -47,7 +60,7 @@
      drain it. One chain, no join, so chords map each note on its own. Before this a mapper
      argument was silently dropped and the field CLEARED (`toListOfPatterns` returned null).
   2. Bare `freq` is an object (`@KlangScript.Object("freq") object Freq : PatternMapperProvider`)
-     whose `mapper()` reads the frequency into the value register; its `@Method("invoke")` is the
+     whose `mapper()` reads the frequency into the value register; its `@Invoke` member is the
      setter, so `freq(440)` is unchanged. `PatternMapperProvider` is deliberately NOT a
      `PatternMapperFn`: a `Function1` member `invoke(SprudelPattern)` next to the setter would give
      `Freq(pattern)` and `freq(pattern)` opposite meanings in Kotlin. First-step twins
@@ -260,13 +273,12 @@ return applyCat(patterns)
 
 ### Audio Effects — Waveshaping / Distortion
 
-- `crush()`, `coarse()`, `distort()` / `dist`
+- `distort(amount, shape, oversample)`, `crush(amount, oversample)`, `coarse(amount, oversample)`;
+  readers `distort.amount`, `distort.oversample`, `crush.*`, `coarse.*` (2026-09-07, batch E)
 
 ### Audio Effects — Tremolo / AM
 
-- `tremolosync()` / `tremsync`, `tremolodepth()` / `tremdepth`
-- `tremoloskew()` / `tremskew`, `tremolophase()` / `tremphase`
-- `tremoloshape()` / `tremshape`
+- `tremolo(depth, sync, shape, skew, phase)`; readers `tremolo.depth/.sync/.skew/.phase`
 
 ### Audio Effects — Dynamics & Panning
 
@@ -275,17 +287,15 @@ return applyCat(patterns)
 
 ### Audio Effects — Reverb
 
-- `roomWet()`, `roomsize()` / `rsize` / `sz` / `size`
-- `roomfade()` / `rfade`, `roomlp()` / `rlp`, `roomdim()` / `rdim`, `iresponse()` / `ir`
+- `room(wet, size, fade, lowpass, dim)`; readers `room.wet/.size/.fade/.lowpass/.dim`; `iresponse()` / `ir`
 
 ### Audio Effects — Delay
 
-- `delayWet()`, `delaytime()`, `delayfeedback()` / `delayfb` / `dfb`
+- `delay(wet, time, feedback, cap)`; readers `delay.wet/.time/.feedback/.cap`
 
 ### Audio Effects — Phaser
 
-- `phaser()` / `ph`, `phaserWet()` / `phd` / `phasdp`, `phaserFloor()`
-- `phasercenter()` / `phc`, `phasersweep()` / `phs`
+- `phaser(rate, wet, center, sweep, floor)`; readers `phaser.rate/.wet/.center/.sweep/.floor`
 
 ### Audio Effects — Duck / Sidechain
 

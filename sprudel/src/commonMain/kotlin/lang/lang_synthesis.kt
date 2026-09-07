@@ -153,7 +153,7 @@ object fmh : FieldAccessor({ it.fmh }) {
      *
      * @param ratio Carrier-to-modulator frequency ratio. See [SprudelPattern.fmh].
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(ratio: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.fmh(ratio, callInfo) }
 }
@@ -239,7 +239,7 @@ object fmattack : FieldAccessor({ it.fmAttack }) {
      *
      * @param seconds FM envelope attack time in seconds. See [SprudelPattern.fmattack].
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.fmattack(seconds, callInfo) }
 }
@@ -355,7 +355,7 @@ object fmdecay : FieldAccessor({ it.fmDecay }) {
      *
      * @param seconds FM envelope decay time in seconds. See [SprudelPattern.fmdecay].
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.fmdecay(seconds, callInfo) }
 }
@@ -472,7 +472,7 @@ object fmsustain : FieldAccessor({ it.fmSustain }) {
      *
      * @param level FM envelope sustain level. See [SprudelPattern.fmsustain].
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.fmsustain(level, callInfo) }
 }
@@ -569,7 +569,7 @@ object fmenv : FieldAccessor({ it.fmEnv }) {
      *   200–500 = bright/brassy, 500+ = complex/metallic/noisy. Default: 0.0 (FM inactive).
      *   Typical range: 50–1000. FM is active when both fmh and fmenv are set.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
         listOf(depth).asSprudelDslArgs(callInfo).toPattern(fmenvMutation)
 }

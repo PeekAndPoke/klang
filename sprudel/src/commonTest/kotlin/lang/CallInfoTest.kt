@@ -142,8 +142,8 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").onepole("12000")""")
     }
 
-    "roomWet passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").roomWet(0.5, 2)""")
+    "room passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").room(0.5, 2)""")
     }
 
     "lpadsr passes CallInfo from KlangScript" {

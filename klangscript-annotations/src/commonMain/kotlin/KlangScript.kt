@@ -104,6 +104,22 @@ object KlangScript {
     annotation class Method(val name: String = "")
 
     /**
+     * Marks the call form of a callable object: `room(0.3)` in KlangScript dispatches to the
+     * annotated member. The member must be `operator fun invoke` inside an `@Object` or
+     * `@TypeExtensions` class, and a class carries at most one, because KlangScript has no
+     * overloads. The script-side name is fixed to [NAME]; the runtime looks it up as an
+     * ordinary method under that name.
+     */
+    @Target(AnnotationTarget.FUNCTION)
+    @Retention(AnnotationRetention.SOURCE)
+    annotation class Invoke {
+        companion object {
+            /** The method name a callable object registers under. */
+            const val NAME = "invoke"
+        }
+    }
+
+    /**
      * Registers a top-level property as a named value in KlangScript.
      *
      * The annotated Kotlin property becomes accessible by name in KlangScript and

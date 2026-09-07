@@ -21,8 +21,10 @@ import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeAlias
 import com.google.devtools.ksp.symbol.KSValueParameter
+import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.symbol.Nullability
 import com.google.devtools.ksp.validate
+import io.peekandpoke.klang.script.annotations.KlangScript
 
 /**
  * KSP processor that generates registration and documentation code
@@ -54,6 +56,7 @@ class KlangScriptProcessor(
         private const val ANN_TYPE_EXTENSIONS = "$ANN_PKG.TypeExtensions"
         private const val ANN_FUNCTION = "$ANN_PKG.Function"
         private const val ANN_METHOD = "$ANN_PKG.Method"
+        private const val ANN_INVOKE = "$ANN_PKG.Invoke"
         private const val ANN_PROPERTY = "$ANN_PKG.Property"
         private const val ANN_CONSTANT = "$ANN_PKG.Constant"
 
@@ -141,6 +144,10 @@ class KlangScriptProcessor(
         val allMethods = resolver.getSymbolsWithAnnotation(ANN_METHOD)
             .filterIsInstance<KSFunctionDeclaration>().toList()
         for (method in allMethods) {
+            val scriptName = getAnnotationStringArg(method, ANN_METHOD, "name")
+                .let { if (it.isNullOrEmpty()) method.simpleName.asString() else it }
+            InvokeShape.methodSpelledInvoke(method.simpleName.asString(), scriptName)?.let { logger.error(it, method) }
+
             val parent = method.parentDeclaration
             if (parent !is KSClassDeclaration || parent !in validParents) {
                 logger.error(
@@ -149,6 +156,24 @@ class KlangScriptProcessor(
                             "top-level functions use @KlangScript.Function.",
                     method
                 )
+            }
+        }
+
+        // @Invoke is the one call form of a callable object: `operator fun invoke` inside an
+        // @Object or @TypeExtensions class, at most one per class (KlangScript has no overloads).
+        val allInvokes = resolver.getSymbolsWithAnnotation(ANN_INVOKE)
+            .filterIsInstance<KSFunctionDeclaration>().toList()
+        val invokesPerClass = allInvokes.groupingBy { it.parentDeclaration }.eachCount()
+        for (fn in allInvokes) {
+            val parent = fn.parentDeclaration
+            val problems = InvokeShape.problems(
+                functionName = fn.simpleName.asString(),
+                isOperator = Modifier.OPERATOR in fn.modifiers,
+                insideRegisteredClass = parent is KSClassDeclaration && parent in validParents,
+                invokeCountInClass = invokesPerClass[parent] ?: 1,
+            )
+            for (problem in problems) {
+                logger.error(problem, fn)
             }
         }
 
@@ -428,17 +453,26 @@ class KlangScriptProcessor(
     }
 
     private fun collectMethods(cls: KSClassDeclaration): List<MethodEntry> {
+        fun KSFunctionDeclaration.hasAnnotation(fqn: String): Boolean = annotations.any { ann ->
+            ann.annotationType.resolve().declaration.qualifiedName?.asString() == fqn
+        }
+
         return cls.declarations
             .filterIsInstance<KSFunctionDeclaration>()
-            .filter { fn ->
-                fn.annotations.any { ann ->
-                    ann.annotationType.resolve().declaration.qualifiedName?.asString() == ANN_METHOD
+            .mapNotNull { fn ->
+                when {
+                    // The call form of a callable object registers under the fixed name; a
+                    // wrong shape was already reported by the scope validation.
+                    fn.hasAnnotation(ANN_INVOKE) -> MethodEntry(KlangScript.Invoke.NAME, fn)
+
+                    fn.hasAnnotation(ANN_METHOD) -> {
+                        val methodName = getAnnotationStringArg(fn, ANN_METHOD, "name")
+                            .let { if (it.isNullOrEmpty()) fn.simpleName.asString() else it }
+                        MethodEntry(methodName, fn)
+                    }
+
+                    else -> null
                 }
-            }
-            .map { fn ->
-                val methodName = getAnnotationStringArg(fn, ANN_METHOD, "name")
-                    .let { if (it.isNullOrEmpty()) fn.simpleName.asString() else it }
-                MethodEntry(methodName, fn)
             }
             .toList()
     }
@@ -601,7 +635,7 @@ class KlangScriptProcessor(
                 logger.error(
                     "Duplicate KlangScript registration: '$scriptName' on receiver '${receiver ?: "<top-level>"}' " +
                             "is registered by both [$prior] and [$sourceDesc]. " +
-                            "Only one @KlangScript.Method / @KlangScript.Function / @KlangScript.Property / @KlangScript.Constant " +
+                            "Only one @KlangScript.Method / @KlangScript.Invoke / @KlangScript.Function / @KlangScript.Property / @KlangScript.Constant " +
                             "per (name, receiver) is allowed."
                 )
             }

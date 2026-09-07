@@ -51,8 +51,8 @@ stack(
     .gain(1.00).distort(0.300, "tube", 4).postgain("<0.800!48 0.325!16>")
     .adsr(0.01, 3.0, 0.0, 0.05).clip(0.8)
     .adsr(release = "<0.25!16 0.15!16>")
-    .phaser(1/8).phaserWet(0.15).phasersweep(1000).phasercenter(1800)
-    .shuffle("<1!64 0!16 1!1 4/8!14 1!33>").coarse(2).coarseos(8)
+    .phaser(rate = 1/8, wet = 0.15, sweep = 1000, center = 1800)
+    .shuffle("<1!64 0!16 1!1 4/8!14 1!33>").coarse(amount = 2, oversample = 8)
     .superimpose(x => x.transpose(12).spread(0.10).velocity("<0!32 0.15!32>").pan(0.3).late(0.001),
                  x => x.transpose(12).spread(0.15).velocity("<0!32 0.15!32>").pan(0.7).late(0.0015))
     .mute("<1!32 0!256>").pipeline("pedal"),
@@ -76,7 +76,7 @@ stack(
     .hpf(180).hpq(1.0).lpf(1400).lpe(12).lpq(2.50)
     .adsr(0.009, 3.0, 0.0, 0.005).adsrCurves("square", "exp", "cube").lpadsr(0.007, 1.0, 0.0, 0.005).velocity("1.00 0.95!3 0.98 0.95!3".fast(2))
     .clip("<0.96!31 0.9 0.96!31 0.825>".fast(2)).gain(0.8).distort(1, "tube", 4).distort(1.0)
-    .coarse(2).coarseos(2)
+    .coarse(amount = 2, oversample = 2)
     .pan(0.35).postgain(0.275).superimpose(
       x => x.pan(0.65),
       x => x.postgain(0.25).hpf(180).lpf(1900)
@@ -94,7 +94,7 @@ stack(
     .early(0.002).orbit(5).gain(0.95).hpf(180).lpf(7000).adsr(0.006, 0.25, 0.1, 0.1).superimpose(bpf(220).bpq(4).gain(0.4)),
   sound("<[hh hh oh hh]!48 [cr hh cr hh]!16 [0 hh 0 hh]!16>").fast(2).mute("<0!128 1!32>")
     .late(0.004).orbit(5).gain(1.00).hpf(3000).lpf(6000).lpq(1.2).adsr(0.01, 0.2, 0.5, 0.2)
-).roomWet(0.02, 5).compressor(-6, 3, 10, 0.02, 0.25).seed(42)
+).room(0.02, 5).compressor(-6, 3, 10, 0.02, 0.25).seed(42)
     """.trimIndent()
 
     val entries: List<Entry> = listOf(

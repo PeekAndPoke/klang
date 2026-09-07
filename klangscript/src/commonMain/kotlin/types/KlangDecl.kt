@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.script.types
 
+import io.peekandpoke.klang.script.runtime.NativeOperatorNames
+
 /** Base interface for a KlangScript declaration (callable or property). */
 sealed interface KlangDecl {
     /** Human-readable description of this declaration. */
@@ -48,7 +50,7 @@ data class KlangCallable(
     override val signature: String
         get() = buildString {
             // A callable object's `invoke` renders as the call the user writes: `Master(...)`.
-            if (name == "invoke" && receiver != null) {
+            if (name == NativeOperatorNames.INVOKE && receiver != null) {
                 append(receiver.render())
             } else {
                 receiver?.let { append("${it.render()}.") }

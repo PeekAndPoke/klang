@@ -80,12 +80,12 @@ object SongBenchmarkCases {
                     """.superimpose(x => x.transpose(12).spread(0.12).velocity(0.10).pan(0.15).superimpose(pan(0.85)))""",
             "5 +analog(feel)" to """.analog(feel)""",
             "6 +pipeline(pedal)" to """.pipeline("pedal")""",
-            "7 +room(0.3:5:0.1)" to """.roomWet(0.3, 5, 0.1)""",
+            "7 +room(0.3:5:0.1)" to """.room(0.3, 5, 0.1)""",
             // The ladder had NO delay coverage before the master round needed to price a
             // per-sample guard on DelayLine's ring store (2026-08-31). Feedback is deliberately
             // real (0.35) so the recirculating path — the one that carries the store cost — is
             // exercised, not just a single tap.
-            "8 +delay(0.3:1/8:0.35)" to """.delayWet(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.35)""",
+            "8 +delay(0.3:1/8:0.35)" to """.delay(wet = 0.3, time = pure(1/8).div(cps), feedback = 0.35)""",
         ),
     )
 
@@ -111,12 +111,12 @@ object SongBenchmarkCases {
                     """.lpadsr(0.005, 1.1, 0.0, 0.015).hpf("<550!16 360!16 550!16 800!16>").lpf("3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4)).lpe(8.1).lpq(2.0)""",
             "2 +distortx2 (1:tube:4 + 0.80)+clip" to
                     """.distort(1, "tube", 4).distort(0.80).clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2))""",
-            "3 +coarse(2,os4)" to """.coarse(2).coarseos(4)""",
+            "3 +coarse(2,os4)" to """.coarse(amount = 2, oversample = 4)""",
             "4 +superimpose#1 (pan copy)" to """.pan(0.15).superimpose(pan(0.85))""",
             "5 +superimpose#2 (hpf/lpf air)" to """.superimpose(hpf(3800).lpf(6700).postgain(0.03))""",
             "6 +pipeline(pedal)" to """.pipeline("pedal")""",
             "7 +body(wood, mix0.3)" to """.body("wood").bodyWet(0.3)""",
-            "8 +room(0.10:8:0.12)" to """.roomWet(0.10, 8, 0.12)""",
+            "8 +room(0.10:8:0.12)" to """.room(0.10, 8, 0.12)""",
         ),
     )
 
@@ -309,7 +309,7 @@ object SongBenchmarkCases {
           .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort(1, "tube", 4).distort(0.85)
           .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpadsr(0.005, 1.0, 0.0, 0.01)
           .hpf(120).lpf(3200).lpe(8.1).lpq(1.8)
-          .coarse(2).coarseos(4).pan(0.3).superimpose(
+          .coarse(amount = 2, oversample = 4).pan(0.3).superimpose(
             x => x.pan(0.7),
             x => x.postgain(0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
                  .pan(0.2).superimpose(pan(0.8))
@@ -375,7 +375,7 @@ object SongBenchmarkCases {
     // Unison sweep on the FULL guitar-1 effect chain (osc-gen scales with unison; fixed effects don't).
     private val fullChainTail =
         """.lpadsr(0.005, 1.1, 0.0, 0.015).hpf(400).lpf(3000).lpe(8.1).lpq(2.0)""" +
-                """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(2).coarseos(4)""" +
+                """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(amount = 2, oversample = 4)""" +
                 """.pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))""" +
                 """.pipeline("pedal").body("wood").bodyWet(0.3)"""
 
@@ -401,8 +401,8 @@ object SongBenchmarkCases {
         voice("FX: base +body(wood)", "exp-fx", """$fxBase.body("wood").bodyWet(0.3)"""),
         voice("FX: base +body(glass)", "exp-fx", """$fxBase.body("glass").bodyWet(0.3)"""),
         voice("FX: base +vowel(a)", "exp-fx", """$fxBase.vowel("a").vowelWet(0.3)"""),
-        voice("FX: base +room", "exp-fx", """$fxBase.roomWet(0.10, 8, 0.12)"""),
-        voice("FX: base +pipeline+body+room", "exp-fx", """$fxBase.pipeline("pedal").body("wood").bodyWet(0.3).roomWet(0.10, 8, 0.12)"""),
+        voice("FX: base +room", "exp-fx", """$fxBase.room(0.10, 8, 0.12)"""),
+        voice("FX: base +pipeline+body+room", "exp-fx", """$fxBase.pipeline("pedal").body("wood").bodyWet(0.3).room(0.10, 8, 0.12)"""),
     )
 
     // 2x2 interaction: does `superimpose` MULTIPLY the cost of a per-voice effect (`body`)?

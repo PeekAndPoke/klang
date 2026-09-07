@@ -216,7 +216,7 @@ object analog : FieldAccessor({ it.oscParams?.get("analog") }) {
      * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
      * @return A [PatternMapperFn] that sets analog drift.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.analog(amount, callInfo) }
 }
@@ -304,7 +304,7 @@ object duty : FieldAccessor({ it.oscParams?.get("duty") }) {
      *
      * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.duty(amount, callInfo) }
 }
@@ -407,7 +407,7 @@ object onepole : FieldAccessor({ it.oscParams?.get("onepole") }) {
      *
      * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
      */
-    @KlangScript.Method(name = "invoke")
+    @KlangScript.Invoke
     operator fun invoke(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
         { p -> p.onepole(freq, callInfo) }
 }

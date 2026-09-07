@@ -13,40 +13,40 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangDelayFeedbackSpec : StringSpec({
 
-    "delayfeedback() sets VoiceData.delayFeedback" {
-        val p = note("a b").apply(delayfeedback("0.5 0.7"))
+    "delay(feedback = ...) sets VoiceData.delayFeedback" {
+        val p = note("a b").apply(delay(feedback = "0.5 0.7"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.delayFeedback } shouldBe listOf(0.5, 0.7)
     }
 
-    "delayfeedback() works as pattern extension" {
-        val p = note("c").delayfeedback("0.5")
+    "delay(feedback = ...) works as pattern extension" {
+        val p = note("c").delay(feedback = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delayFeedback shouldBe 0.5
     }
 
-    "delayfeedback() works as string extension" {
-        val p = "c".delayfeedback("0.5")
+    "delay(feedback = ...) works as string extension" {
+        val p = "c".delay(feedback = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delayFeedback shouldBe 0.5
     }
 
-    "delayfeedback() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delayfeedback("0.5")""")
+    "delay(feedback = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").delay(feedback = "0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.delayFeedback shouldBe 0.5
     }
 
-    "delayfeedback() with continuous pattern sets delayFeedback correctly" {
+    "delay(feedback = ...) with continuous pattern sets delayFeedback correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").delayfeedback(sine)
+        val p = note("a b c d").delay(feedback = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -60,51 +60,4 @@ class LangDelayFeedbackSpec : StringSpec({
         events[3].data.delayFeedback shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    // Alias tests
-
-    "delayfb() is an alias for delayfeedback()" {
-        val p = note("a").apply(delayfb("0.6"))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.delayFeedback shouldBe 0.6
-    }
-
-    "delayfb() works as pattern extension" {
-        val p = note("c").delayfb("0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.delayFeedback shouldBe 0.6
-    }
-
-    "delayfb() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delayfb("0.6")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.delayFeedback shouldBe 0.6
-    }
-
-    "dfb() is an alias for delayfeedback()" {
-        val p = note("a").apply(dfb("0.8"))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.delayFeedback shouldBe 0.8
-    }
-
-    "dfb() works as pattern extension" {
-        val p = note("c").dfb("0.8")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.delayFeedback shouldBe 0.8
-    }
-
-    "dfb() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").dfb("0.8")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.delayFeedback shouldBe 0.8
-    }
 })

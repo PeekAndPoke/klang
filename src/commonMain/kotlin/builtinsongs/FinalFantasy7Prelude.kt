@@ -43,7 +43,7 @@ stack(
   // Hover the param and click the little icon!
   .adsr(0.07, 0.2, 0.5, 0.15)
 
-).roomWet(0.25).rsize(roomSize).analog(5)
+).room(wet = 0.25, size = roomSize).analog(5)
 
 
 

@@ -2,6 +2,11 @@
 
 Follow-up to `docs/tasks/sprudel-field-accessors.md`, opened 2026-09-07 after the numeric sweep.
 
+Status 2026-09-07: option 1 below is the decided shape. `adsr` piloted it; the seven compound
+effects (`room`, `delay`, `phaser`, `tremolo`, `distort`, `crush`, `coarse`) followed in batch E,
+each an object with slot children and the setter as `invoke`, their per-knob doors removed. The
+filter envelopes in the table are batch F.
+
 ## The gap
 
 An accessor exists per FIELD, and every field with a single-field door has one. Sixteen numeric

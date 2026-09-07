@@ -173,7 +173,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
 
     "roomFade alone is audible on both buses — it overrides roomSize, so it must gate on itself" {
         // The parity defect this spec exists to catch, in its second form: the orbit's roomSize
-        // defaults to 0, so gating audibility on roomSize alone made `room(0.6).roomfade(0.1)`
+        // defaults to 0, so gating audibility on roomSize alone made `room(wet = 0.6, fade = 0.1)`
         // silent on an orbit while the identical intent worked on the master (whose roomSize
         // defaults to 5). Both gates now ask `roomFade ?: roomSize`.
         val chain = MasterChain.build(

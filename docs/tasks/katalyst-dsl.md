@@ -82,7 +82,7 @@ Decided during the Der Schmetterling guitar-amp work; the empirical driver is in
   + outboard (shared, mostly linear).**
 - **Params: `Kat.param("name", default, doc)` in the builder, `.katp("name", v)` from sprudel.**
   Semantics deliberately differ from `oscp`: NO per-note snapshot — orbit-scoped continuous state,
-  read per block, last-writer-wins per orbit (the existing `roomWet`/`compressor` rule). Values may
+  read per block, last-writer-wins per orbit (the existing `room(wet)`/`compressor` rule). Values may
   be patterns → control-rate automation of the bus.
 - **The EQ stage reuses the fused `EqCore` / `IgnitorDsl.Eq` sections** — same section vocabulary
   (lowpass/highpass/bell/tap/notch), same per-block param reads, hosted on the orbit.

@@ -4,7 +4,7 @@ Last updated: 2026-07-04.
 
 Recent progress:
 
-- Distortion oversampling (`distos()`) landed — see archived
+- Distortion oversampling (`distort(oversample = ...)`) landed — see archived
   `2026-04/20260409-distortion-oversampling.md`.
 - New "pedal" engine mode landed (commit `3c32351f`). Voice pipeline now has a Motor-branded
   engine DSL with `modern` and `pedal` flavors (see `engines/AudioEngine.kt`).

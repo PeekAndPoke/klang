@@ -80,59 +80,61 @@ class LangFieldAccessorsSpec : StringSpec({
         row("bpq", """note("c e").bpq(5).lpq(bpq)""", { it.resonance }, 5.0, note("c e").bpq(5).lpq(bpq)),
     )
 
-    // Batch two: the effects fields.
+    // Effects: one row per slot of the seven compound objects (distort, crush, coarse, room, delay, phaser, tremolo).
     val mappedEffects = listOf(
-        row("distort", """s("bd sd").distort(0.4).distort(mul(2))""", { it.distort }, 0.8, s("bd sd").distort(0.4).distort(mul(2))),
-        row("distos", """s("bd sd").distort(0.5).distos(2).distos(mul(2))""", { it.distortOversample?.toDouble() }, 4.0, s("bd sd").distort(0.5).distos(2).distos(mul(2))),
-        row("crush", """s("bd sd").crush(8).crush(mul(0.5))""", { it.crush }, 4.0, s("bd sd").crush(8).crush(mul(0.5))),
-        row("crushos", """s("bd sd").crush(8).crushos(1).crushos(add(1))""", { it.crushOversample?.toDouble() }, 2.0, s("bd sd").crush(8).crushos(1).crushos(add(1))),
-        row("coarse", """s("bd sd").coarse(4).coarse(mul(2))""", { it.coarse }, 8.0, s("bd sd").coarse(4).coarse(mul(2))),
-        row("coarseos", """s("bd sd").coarse(4).coarseos(1).coarseos(add(1))""", { it.coarseOversample?.toDouble() }, 2.0, s("bd sd").coarse(4).coarseos(1).coarseos(add(1))),
-        row("roomWet", """s("bd sd").roomWet(0.3).roomWet(mul(2))""", { it.room }, 0.6, s("bd sd").roomWet(0.3).roomWet(mul(2))),
-        row("roomsize", """s("bd sd").roomsize(4).roomsize(mul(2))""", { it.roomSize }, 8.0, s("bd sd").roomsize(4).roomsize(mul(2))),
-        row("roomfade", """s("bd sd").roomfade(1).roomfade(mul(2))""", { it.roomFade }, 2.0, s("bd sd").roomfade(1).roomfade(mul(2))),
-        row("roomlp", """s("bd sd").roomlp(4000).roomlp(mul(0.5))""", { it.roomLp }, 2000.0, s("bd sd").roomlp(4000).roomlp(mul(0.5))),
-        row("roomdim", """s("bd sd").roomdim(3000).roomdim(add(1000))""", { it.roomDim }, 4000.0, s("bd sd").roomdim(3000).roomdim(add(1000))),
-        row("delayWet", """s("bd sd").delayWet(0.3).delayWet(mul(2))""", { it.delay }, 0.6, s("bd sd").delayWet(0.3).delayWet(mul(2))),
-        row("delaytime", """s("bd sd").delaytime(0.25).delaytime(mul(2))""", { it.delayTime }, 0.5, s("bd sd").delaytime(0.25).delaytime(mul(2))),
-        row("delayfeedback", """s("bd sd").delayfeedback(0.4).delayfeedback(add(0.2))""", { it.delayFeedback }, 0.6, s("bd sd").delayfeedback(0.4).delayfeedback(add(0.2))),
-        row("phaser", """s("bd sd").phaser(0.5).phaser(mul(4))""", { it.phaserRate }, 2.0, s("bd sd").phaser(0.5).phaser(mul(4))),
-        row("phaserWet", """s("bd sd").phaserWet(0.5).phaserWet(mul(0.5))""", { it.phaserDepth }, 0.25, s("bd sd").phaserWet(0.5).phaserWet(mul(0.5))),
-        row("phaserFloor", """s("bd sd").phaserFloor(0.2).phaserFloor(add(0.3))""", { it.phaserFloor }, 0.5, s("bd sd").phaserFloor(0.2).phaserFloor(add(0.3))),
-        row("phasercenter", """s("bd sd").phasercenter(1000).phasercenter(mul(2))""", { it.phaserCenter }, 2000.0, s("bd sd").phasercenter(1000).phasercenter(mul(2))),
-        row("phasersweep", """s("bd sd").phasersweep(2000).phasersweep(mul(0.5))""", { it.phaserSweep }, 1000.0, s("bd sd").phasersweep(2000).phasersweep(mul(0.5))),
-        row("tremolosync", """s("bd sd").tremolosync(4).tremolosync(mul(2))""", { it.tremoloSync }, 8.0, s("bd sd").tremolosync(4).tremolosync(mul(2))),
-        row("tremolodepth", """s("bd sd").tremolodepth(0.5).tremolodepth(mul(0.5))""", { it.tremoloDepth }, 0.25, s("bd sd").tremolodepth(0.5).tremolodepth(mul(0.5))),
-        row("tremoloskew", """s("bd sd").tremoloskew(0.5).tremoloskew(add(0.3))""", { it.tremoloSkew }, 0.8, s("bd sd").tremoloskew(0.5).tremoloskew(add(0.3))),
-        row("tremolophase", """s("bd sd").tremolophase(0.25).tremolophase(add(0.5))""", { it.tremoloPhase }, 0.75, s("bd sd").tremolophase(0.25).tremolophase(add(0.5))),
-        row("delaycap", """s("bd sd").delaycap(0.5).delaycap(mul(2))""", { it.delayCap }, 1.0, s("bd sd").delaycap(0.5).delaycap(mul(2))),
+        row("distort.amount", """s("bd sd").distort(0.4).distort(mul(0.5))""", { it.distort }, 0.2, s("bd sd").distort(0.4).distort(mul(0.5))),
+        row("distort.oversample", """s("bd sd").distort(oversample = 2).distort(oversample = mul(2))""", { it.distortOversample?.toDouble() }, 4.0, s("bd sd").distort(oversample = 2).distort(oversample = mul(2))),
+        row("crush.amount", """s("bd sd").crush(8).crush(div(2))""", { it.crush }, 4.0, s("bd sd").crush(8).crush(div(2))),
+        row("crush.oversample", """s("bd sd").crush(oversample = 2).crush(oversample = mul(2))""", { it.crushOversample?.toDouble() }, 4.0, s("bd sd").crush(oversample = 2).crush(oversample = mul(2))),
+        row("coarse.amount", """s("bd sd").coarse(4).coarse(mul(2))""", { it.coarse }, 8.0, s("bd sd").coarse(4).coarse(mul(2))),
+        row("coarse.oversample", """s("bd sd").coarse(oversample = 2).coarse(oversample = mul(2))""", { it.coarseOversample?.toDouble() }, 4.0, s("bd sd").coarse(oversample = 2).coarse(oversample = mul(2))),
+        row("room.wet", """s("bd sd").room(0.3).room(add(0.2))""", { it.room }, 0.5, s("bd sd").room(0.3).room(add(0.2))),
+        row("room.size", """s("bd sd").room(size = 4).room(size = mul(2))""", { it.roomSize }, 8.0, s("bd sd").room(size = 4).room(size = mul(2))),
+        row("room.fade", """s("bd sd").room(fade = 1).room(fade = mul(2))""", { it.roomFade }, 2.0, s("bd sd").room(fade = 1).room(fade = mul(2))),
+        row("room.lowpass", """s("bd sd").room(lowpass = 4000).room(lowpass = div(2))""", { it.roomLp }, 2000.0, s("bd sd").room(lowpass = 4000).room(lowpass = div(2))),
+        row("room.dim", """s("bd sd").room(dim = 3000).room(dim = sub(1000))""", { it.roomDim }, 2000.0, s("bd sd").room(dim = 3000).room(dim = sub(1000))),
+        row("delay.wet", """s("bd sd").delay(0.3).delay(add(0.2))""", { it.delay }, 0.5, s("bd sd").delay(0.3).delay(add(0.2))),
+        row("delay.time", """s("bd sd").delay(time = 0.25).delay(time = mul(2))""", { it.delayTime }, 0.5, s("bd sd").delay(time = 0.25).delay(time = mul(2))),
+        row("delay.feedback", """s("bd sd").delay(feedback = 0.4).delay(feedback = mul(0.5))""", { it.delayFeedback }, 0.2, s("bd sd").delay(feedback = 0.4).delay(feedback = mul(0.5))),
+        row("delay.cap", """s("bd sd").delay(cap = 0.5).delay(cap = mul(2))""", { it.delayCap }, 1.0, s("bd sd").delay(cap = 0.5).delay(cap = mul(2))),
+        row("phaser.rate", """s("bd sd").phaser(0.5).phaser(mul(4))""", { it.phaserRate }, 2.0, s("bd sd").phaser(0.5).phaser(mul(4))),
+        row("phaser.wet", """s("bd sd").phaser(wet = 0.5).phaser(wet = mul(0.5))""", { it.phaserDepth }, 0.25, s("bd sd").phaser(wet = 0.5).phaser(wet = mul(0.5))),
+        row("phaser.center", """s("bd sd").phaser(center = 1000).phaser(center = mul(2))""", { it.phaserCenter }, 2000.0, s("bd sd").phaser(center = 1000).phaser(center = mul(2))),
+        row("phaser.sweep", """s("bd sd").phaser(sweep = 2000).phaser(sweep = mul(0.5))""", { it.phaserSweep }, 1000.0, s("bd sd").phaser(sweep = 2000).phaser(sweep = mul(0.5))),
+        row("phaser.floor", """s("bd sd").phaser(floor = 0.2).phaser(floor = add(0.3))""", { it.phaserFloor }, 0.5, s("bd sd").phaser(floor = 0.2).phaser(floor = add(0.3))),
+        row("tremolo.depth", """s("bd sd").tremolo(0.5).tremolo(mul(0.5))""", { it.tremoloDepth }, 0.25, s("bd sd").tremolo(0.5).tremolo(mul(0.5))),
+        row("tremolo.sync", """s("bd sd").tremolo(sync = 4).tremolo(sync = mul(2))""", { it.tremoloSync }, 8.0, s("bd sd").tremolo(sync = 4).tremolo(sync = mul(2))),
+        row("tremolo.skew", """s("bd sd").tremolo(skew = 0.5).tremolo(skew = add(0.3))""", { it.tremoloSkew }, 0.8, s("bd sd").tremolo(skew = 0.5).tremolo(skew = add(0.3))),
+        row("tremolo.phase", """s("bd sd").tremolo(phase = 0.25).tremolo(phase = add(0.5))""", { it.tremoloPhase }, 0.75, s("bd sd").tremolo(phase = 0.25).tremolo(phase = add(0.5))),
     )
 
+    // The children of a compound read their slot bare. Slots apply in declaration order within one
+    // call, so a child read of a LATER slot in the same call sees the old value; chain instead.
     val readEffects = listOf(
-        row("distort", """s("bd sd").distort(0.4).pan(distort)""", { it.pan }, 0.4, s("bd sd").distort(0.4).pan(distort)),
-        row("distos", """s("bd sd").distos(2).crushos(distos)""", { it.crushOversample?.toDouble() }, 2.0, s("bd sd").distos(2).crushos(distos)),
-        row("crush", """s("bd sd").crush(8).coarse(crush)""", { it.coarse }, 8.0, s("bd sd").crush(8).coarse(crush)),
-        row("crushos", """s("bd sd").crushos(2).coarseos(crushos)""", { it.coarseOversample?.toDouble() }, 2.0, s("bd sd").crushos(2).coarseos(crushos)),
-        row("coarse", """s("bd sd").coarse(4).crush(coarse)""", { it.crush }, 4.0, s("bd sd").coarse(4).crush(coarse)),
-        row("coarseos", """s("bd sd").coarseos(2).distos(coarseos)""", { it.distortOversample?.toDouble() }, 2.0, s("bd sd").coarseos(2).distos(coarseos)),
-        row("roomWet", """s("bd sd").roomWet(0.3).delayWet(roomWet)""", { it.delay }, 0.3, s("bd sd").roomWet(0.3).delayWet(roomWet)),
-        row("roomsize", """s("bd sd").roomsize(4).roomfade(roomsize)""", { it.roomFade }, 4.0, s("bd sd").roomsize(4).roomfade(roomsize)),
-        row("roomfade", """s("bd sd").roomfade(1).delaytime(roomfade)""", { it.delayTime }, 1.0, s("bd sd").roomfade(1).delaytime(roomfade)),
-        row("roomlp", """s("bd sd").roomlp(4000).lpf(roomlp)""", { it.cutoff }, 4000.0, s("bd sd").roomlp(4000).lpf(roomlp)),
-        row("roomdim", """s("bd sd").roomdim(3000).roomlp(roomdim)""", { it.roomLp }, 3000.0, s("bd sd").roomdim(3000).roomlp(roomdim)),
-        row("delayWet", """s("bd sd").delayWet(0.3).roomWet(delayWet)""", { it.room }, 0.3, s("bd sd").delayWet(0.3).roomWet(delayWet)),
-        row("delaytime", """s("bd sd").delaytime(0.25).roomfade(delaytime)""", { it.roomFade }, 0.25, s("bd sd").delaytime(0.25).roomfade(delaytime)),
-        row("delayfeedback", """s("bd sd").delayfeedback(0.4).pan(delayfeedback)""", { it.pan }, 0.4, s("bd sd").delayfeedback(0.4).pan(delayfeedback)),
-        row("phaser", """s("bd sd").phaser(0.5).tremolosync(phaser)""", { it.tremoloSync }, 0.5, s("bd sd").phaser(0.5).tremolosync(phaser)),
-        row("phaserWet", """s("bd sd").phaserWet(0.5).pan(phaserWet)""", { it.pan }, 0.5, s("bd sd").phaserWet(0.5).pan(phaserWet)),
-        row("phaserFloor", """s("bd sd").phaserFloor(0.2).pan(phaserFloor)""", { it.pan }, 0.2, s("bd sd").phaserFloor(0.2).pan(phaserFloor)),
-        row("phasercenter", """s("bd sd").phasercenter(1000).lpf(phasercenter)""", { it.cutoff }, 1000.0, s("bd sd").phasercenter(1000).lpf(phasercenter)),
-        row("phasersweep", """s("bd sd").phasersweep(2000).phasercenter(phasersweep)""", { it.phaserCenter }, 2000.0, s("bd sd").phasersweep(2000).phasercenter(phasersweep)),
-        row("tremolosync", """s("bd sd").tremolosync(4).phaser(tremolosync)""", { it.phaserRate }, 4.0, s("bd sd").tremolosync(4).phaser(tremolosync)),
-        row("tremolodepth", """s("bd sd").tremolodepth(0.5).pan(tremolodepth)""", { it.pan }, 0.5, s("bd sd").tremolodepth(0.5).pan(tremolodepth)),
-        row("tremoloskew", """s("bd sd").tremoloskew(0.5).tremolophase(tremoloskew)""", { it.tremoloPhase }, 0.5, s("bd sd").tremoloskew(0.5).tremolophase(tremoloskew)),
-        row("tremolophase", """s("bd sd").tremolophase(0.25).tremoloskew(tremolophase)""", { it.tremoloSkew }, 0.25, s("bd sd").tremolophase(0.25).tremoloskew(tremolophase)),
-        row("delaycap", """s("bd sd").delaycap(0.5).pan(delaycap)""", { it.pan }, 0.5, s("bd sd").delaycap(0.5).pan(delaycap)),
+        row("distort.amount", """s("bd sd").distort(0.4).pan(distort.amount)""", { it.pan }, 0.4, s("bd sd").distort(0.4).pan(distort.amount)),
+        row("distort.oversample", """s("bd sd").distort(oversample = 2).crush(oversample = distort.oversample)""", { it.crushOversample?.toDouble() }, 2.0, s("bd sd").distort(oversample = 2).crush(oversample = distort.oversample)),
+        row("crush.amount", """s("bd sd").crush(8).coarse(crush.amount)""", { it.coarse }, 8.0, s("bd sd").crush(8).coarse(crush.amount)),
+        row("crush.oversample", """s("bd sd").crush(oversample = 2).coarse(oversample = crush.oversample)""", { it.coarseOversample?.toDouble() }, 2.0, s("bd sd").crush(oversample = 2).coarse(oversample = crush.oversample)),
+        row("coarse.amount", """s("bd sd").coarse(4).crush(coarse.amount)""", { it.crush }, 4.0, s("bd sd").coarse(4).crush(coarse.amount)),
+        row("coarse.oversample", """s("bd sd").coarse(oversample = 2).distort(oversample = coarse.oversample)""", { it.distortOversample?.toDouble() }, 2.0, s("bd sd").coarse(oversample = 2).distort(oversample = coarse.oversample)),
+        row("room.wet", """s("bd sd").room(0.3).delay(room.wet)""", { it.delay }, 0.3, s("bd sd").room(0.3).delay(room.wet)),
+        row("room.size", """s("bd sd").room(size = 4, fade = room.size)""", { it.roomFade }, 4.0, s("bd sd").room(size = 4, fade = room.size)),
+        row("room.fade", """s("bd sd").room(fade = 1).delay(time = room.fade)""", { it.delayTime }, 1.0, s("bd sd").room(fade = 1).delay(time = room.fade)),
+        row("room.lowpass", """s("bd sd").room(lowpass = 4000).lpf(room.lowpass)""", { it.cutoff }, 4000.0, s("bd sd").room(lowpass = 4000).lpf(room.lowpass)),
+        row("room.dim", """s("bd sd").room(dim = 3000).room(lowpass = room.dim)""", { it.roomLp }, 3000.0, s("bd sd").room(dim = 3000).room(lowpass = room.dim)),
+        row("delay.wet", """s("bd sd").delay(0.3).room(delay.wet)""", { it.room }, 0.3, s("bd sd").delay(0.3).room(delay.wet)),
+        row("delay.time", """s("bd sd").delay(time = 0.25).room(fade = delay.time)""", { it.roomFade }, 0.25, s("bd sd").delay(time = 0.25).room(fade = delay.time)),
+        row("delay.feedback", """s("bd sd").delay(feedback = 0.4).pan(delay.feedback)""", { it.pan }, 0.4, s("bd sd").delay(feedback = 0.4).pan(delay.feedback)),
+        row("delay.cap", """s("bd sd").delay(cap = 0.5).pan(delay.cap)""", { it.pan }, 0.5, s("bd sd").delay(cap = 0.5).pan(delay.cap)),
+        row("phaser.rate", """s("bd sd").phaser(0.5).tremolo(sync = phaser.rate)""", { it.tremoloSync }, 0.5, s("bd sd").phaser(0.5).tremolo(sync = phaser.rate)),
+        row("phaser.wet", """s("bd sd").phaser(wet = 0.5).pan(phaser.wet)""", { it.pan }, 0.5, s("bd sd").phaser(wet = 0.5).pan(phaser.wet)),
+        row("phaser.center", """s("bd sd").phaser(center = 1000).lpf(phaser.center)""", { it.cutoff }, 1000.0, s("bd sd").phaser(center = 1000).lpf(phaser.center)),
+        row("phaser.sweep", """s("bd sd").phaser(sweep = 2000).phaser(center = phaser.sweep)""", { it.phaserCenter }, 2000.0, s("bd sd").phaser(sweep = 2000).phaser(center = phaser.sweep)),
+        row("phaser.floor", """s("bd sd").phaser(floor = 0.2).pan(phaser.floor)""", { it.pan }, 0.2, s("bd sd").phaser(floor = 0.2).pan(phaser.floor)),
+        row("tremolo.depth", """s("bd sd").tremolo(0.5).pan(tremolo.depth)""", { it.pan }, 0.5, s("bd sd").tremolo(0.5).pan(tremolo.depth)),
+        row("tremolo.sync", """s("bd sd").tremolo(sync = 4).phaser(tremolo.sync)""", { it.phaserRate }, 4.0, s("bd sd").tremolo(sync = 4).phaser(tremolo.sync)),
+        row("tremolo.skew", """s("bd sd").tremolo(skew = 0.5, phase = tremolo.skew)""", { it.tremoloPhase }, 0.5, s("bd sd").tremolo(skew = 0.5, phase = tremolo.skew)),
+        row("tremolo.phase", """s("bd sd").tremolo(phase = 0.25).tremolo(skew = tremolo.phase)""", { it.tremoloSkew }, 0.25, s("bd sd").tremolo(phase = 0.25).tremolo(skew = tremolo.phase)),
     )
 
     // Every alias is a constant of the canonical object: it sets the canonical field and reads it bare.
@@ -141,26 +143,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("lowpass", """s("bd sd").apply(lowpass(2))""", { it.cutoff }, 2.0, s("bd sd").apply(lowpass(2))),
         row("highpass", """s("bd sd").apply(highpass(2))""", { it.hcutoff }, 2.0, s("bd sd").apply(highpass(2))),
         row("bandpass", """s("bd sd").apply(bandpass(2))""", { it.bandf }, 2.0, s("bd sd").apply(bandpass(2))),
-        row("dist", """s("bd sd").apply(dist(2))""", { it.distort }, 2.0, s("bd sd").apply(dist(2))),
-        row("distortOversampling", """s("bd sd").apply(distortOversampling(2))""", { it.distortOversample?.toDouble() }, 2.0, s("bd sd").apply(distortOversampling(2))),
-        row("crushOversampling", """s("bd sd").apply(crushOversampling(2))""", { it.crushOversample?.toDouble() }, 2.0, s("bd sd").apply(crushOversampling(2))),
-        row("coarseOversampling", """s("bd sd").apply(coarseOversampling(2))""", { it.coarseOversample?.toDouble() }, 2.0, s("bd sd").apply(coarseOversampling(2))),
-        row("rsize", """s("bd sd").apply(rsize(2))""", { it.roomSize }, 2.0, s("bd sd").apply(rsize(2))),
-        row("sz", """s("bd sd").apply(sz(2))""", { it.roomSize }, 2.0, s("bd sd").apply(sz(2))),
-        row("size", """s("bd sd").apply(size(2))""", { it.roomSize }, 2.0, s("bd sd").apply(size(2))),
-        row("rfade", """s("bd sd").apply(rfade(2))""", { it.roomFade }, 2.0, s("bd sd").apply(rfade(2))),
-        row("rlp", """s("bd sd").apply(rlp(2))""", { it.roomLp }, 2.0, s("bd sd").apply(rlp(2))),
-        row("rdim", """s("bd sd").apply(rdim(2))""", { it.roomDim }, 2.0, s("bd sd").apply(rdim(2))),
-        row("delayfb", """s("bd sd").apply(delayfb(2))""", { it.delayFeedback }, 2.0, s("bd sd").apply(delayfb(2))),
-        row("dfb", """s("bd sd").apply(dfb(2))""", { it.delayFeedback }, 2.0, s("bd sd").apply(dfb(2))),
-        row("ph", """s("bd sd").apply(ph(2))""", { it.phaserRate }, 2.0, s("bd sd").apply(ph(2))),
-        row("phc", """s("bd sd").apply(phc(2))""", { it.phaserCenter }, 2.0, s("bd sd").apply(phc(2))),
-        row("phs", """s("bd sd").apply(phs(2))""", { it.phaserSweep }, 2.0, s("bd sd").apply(phs(2))),
-        row("tremsync", """s("bd sd").apply(tremsync(2))""", { it.tremoloSync }, 2.0, s("bd sd").apply(tremsync(2))),
-        row("tremdepth", """s("bd sd").apply(tremdepth(2))""", { it.tremoloDepth }, 2.0, s("bd sd").apply(tremdepth(2))),
-        row("tremskew", """s("bd sd").apply(tremskew(2))""", { it.tremoloSkew }, 2.0, s("bd sd").apply(tremskew(2))),
-        row("tremphase", """s("bd sd").apply(tremphase(2))""", { it.tremoloPhase }, 2.0, s("bd sd").apply(tremphase(2))),
-        row("dcap", """s("bd sd").apply(dcap(2))""", { it.delayCap }, 2.0, s("bd sd").apply(dcap(2))),
     )
 
     val aliasReads = listOf(
@@ -168,26 +150,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("lowpass", """s("bd sd").lowpass(2).pan(lowpass)""", { it.pan }, 2.0, s("bd sd").lowpass(2).pan(lowpass)),
         row("highpass", """s("bd sd").highpass(2).pan(highpass)""", { it.pan }, 2.0, s("bd sd").highpass(2).pan(highpass)),
         row("bandpass", """s("bd sd").bandpass(2).pan(bandpass)""", { it.pan }, 2.0, s("bd sd").bandpass(2).pan(bandpass)),
-        row("dist", """s("bd sd").dist(2).pan(dist)""", { it.pan }, 2.0, s("bd sd").dist(2).pan(dist)),
-        row("distortOversampling", """s("bd sd").distortOversampling(2).pan(distortOversampling)""", { it.pan }, 2.0, s("bd sd").distortOversampling(2).pan(distortOversampling)),
-        row("crushOversampling", """s("bd sd").crushOversampling(2).pan(crushOversampling)""", { it.pan }, 2.0, s("bd sd").crushOversampling(2).pan(crushOversampling)),
-        row("coarseOversampling", """s("bd sd").coarseOversampling(2).pan(coarseOversampling)""", { it.pan }, 2.0, s("bd sd").coarseOversampling(2).pan(coarseOversampling)),
-        row("rsize", """s("bd sd").rsize(2).pan(rsize)""", { it.pan }, 2.0, s("bd sd").rsize(2).pan(rsize)),
-        row("sz", """s("bd sd").sz(2).pan(sz)""", { it.pan }, 2.0, s("bd sd").sz(2).pan(sz)),
-        row("size", """s("bd sd").size(2).pan(size)""", { it.pan }, 2.0, s("bd sd").size(2).pan(size)),
-        row("rfade", """s("bd sd").rfade(2).pan(rfade)""", { it.pan }, 2.0, s("bd sd").rfade(2).pan(rfade)),
-        row("rlp", """s("bd sd").rlp(2).pan(rlp)""", { it.pan }, 2.0, s("bd sd").rlp(2).pan(rlp)),
-        row("rdim", """s("bd sd").rdim(2).pan(rdim)""", { it.pan }, 2.0, s("bd sd").rdim(2).pan(rdim)),
-        row("delayfb", """s("bd sd").delayfb(2).pan(delayfb)""", { it.pan }, 2.0, s("bd sd").delayfb(2).pan(delayfb)),
-        row("dfb", """s("bd sd").dfb(2).pan(dfb)""", { it.pan }, 2.0, s("bd sd").dfb(2).pan(dfb)),
-        row("ph", """s("bd sd").ph(2).pan(ph)""", { it.pan }, 2.0, s("bd sd").ph(2).pan(ph)),
-        row("phc", """s("bd sd").phc(2).pan(phc)""", { it.pan }, 2.0, s("bd sd").phc(2).pan(phc)),
-        row("phs", """s("bd sd").phs(2).pan(phs)""", { it.pan }, 2.0, s("bd sd").phs(2).pan(phs)),
-        row("tremsync", """s("bd sd").tremsync(2).pan(tremsync)""", { it.pan }, 2.0, s("bd sd").tremsync(2).pan(tremsync)),
-        row("tremdepth", """s("bd sd").tremdepth(2).pan(tremdepth)""", { it.pan }, 2.0, s("bd sd").tremdepth(2).pan(tremdepth)),
-        row("tremskew", """s("bd sd").tremskew(2).pan(tremskew)""", { it.pan }, 2.0, s("bd sd").tremskew(2).pan(tremskew)),
-        row("tremphase", """s("bd sd").tremphase(2).pan(tremphase)""", { it.pan }, 2.0, s("bd sd").tremphase(2).pan(tremphase)),
-        row("dcap", """s("bd sd").dcap(2).pan(dcap)""", { it.pan }, 2.0, s("bd sd").dcap(2).pan(dcap)),
     )
 
     // Batch three: sample, synthesis, vowel, body, tonal, notch and filter envelope fields.
@@ -480,14 +442,14 @@ class LangFieldAccessorsSpec : StringSpec({
             it.bandq shouldBe 3.0
         }
         // batch two: the compound effect doors, positional and named
-        both(s("bd sd").apply(roomWet(0.3, 4)), """s("bd sd").apply(roomWet(0.3, 4))""") {
+        both(s("bd sd").apply(room(0.3, 4)), """s("bd sd").apply(room(0.3, 4))""") {
             it.room shouldBe 0.3
             it.roomSize shouldBe 4.0
         }
-        both(s("bd sd").apply(roomWet(size = 4)), """s("bd sd").apply(roomWet(size = 4))""") {
+        both(s("bd sd").apply(room(size = 4)), """s("bd sd").apply(room(size = 4))""") {
             it.roomSize shouldBe 4.0
         }
-        both(s("bd sd").apply(delayWet(0.3, 0.25, 0.4)), """s("bd sd").apply(delayWet(0.3, 0.25, 0.4))""") {
+        both(s("bd sd").apply(delay(0.3, 0.25, 0.4)), """s("bd sd").apply(delay(0.3, 0.25, 0.4))""") {
             it.delay shouldBe 0.3
             it.delayTime shouldBe 0.25
             it.delayFeedback shouldBe 0.4
@@ -631,6 +593,111 @@ class LangFieldAccessorsSpec : StringSpec({
                 }
                 c.kotlin.cycles().map { events -> events.map { it.whole to c.field(it.data) } } shouldBe
                         compiled.cycles().map { events -> events.map { it.whole to c.field(it.data) } }
+            }
+        }
+    }
+
+    "effects: a mapper on one slot leaves the other slots alone, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val check: (SprudelVoiceData) -> Unit)
+        listOf(
+            Case("room(size = mul(2))", s("bd sd").room(0.3, 4, 1.5).room(size = mul(2)), """s("bd sd").room(0.3, 4, 1.5).room(size = mul(2))""") {
+                it.room shouldBe 0.3
+                it.roomSize shouldBe 8.0
+                it.roomFade shouldBe 1.5
+            },
+            Case("delay(feedback = mul(2))", s("bd sd").delay(0.3, 0.25, 0.2).delay(feedback = mul(2)), """s("bd sd").delay(0.3, 0.25, 0.2).delay(feedback = mul(2))""") {
+                it.delay shouldBe 0.3
+                it.delayTime shouldBe 0.25
+                it.delayFeedback shouldBe 0.4
+            },
+            Case("phaser(center = mul(2))", s("bd sd").phaser(0.5, 0.6, 1000, 2000).phaser(center = mul(2)), """s("bd sd").phaser(0.5, 0.6, 1000, 2000).phaser(center = mul(2))""") {
+                it.phaserRate shouldBe 0.5
+                it.phaserDepth shouldBe 0.6
+                it.phaserCenter shouldBe 2000.0
+                it.phaserSweep shouldBe 2000.0
+            },
+            Case("tremolo(skew = add(0.2))", s("bd sd").tremolo(0.5, 4, "sine", 0.3).tremolo(skew = add(0.2)), """s("bd sd").tremolo(0.5, 4, "sine", 0.3).tremolo(skew = add(0.2))""") {
+                it.tremoloDepth shouldBe 0.5
+                it.tremoloSync shouldBe 4.0
+                it.tremoloShape shouldBe "sine"
+                it.tremoloSkew shouldBe 0.5
+            },
+            Case("distort(oversample = mul(2))", s("bd sd").distort(0.5, "soft", 2).distort(oversample = mul(2)), """s("bd sd").distort(0.5, "soft", 2).distort(oversample = mul(2))""") {
+                it.distort shouldBe 0.5
+                it.distortShape shouldBe "soft"
+                it.distortOversample shouldBe 4
+            },
+            Case("crush(amount = div(2))", s("bd sd").crush(8, 2).crush(amount = div(2)), """s("bd sd").crush(8, 2).crush(amount = div(2))""") {
+                it.crush shouldBe 4.0
+                it.crushOversample shouldBe 2
+            },
+            Case("coarse(oversample = mul(2))", s("bd sd").coarse(4, 2).coarse(oversample = mul(2)), """s("bd sd").coarse(4, 2).coarse(oversample = mul(2))""") {
+                it.coarse shouldBe 4.0
+                it.coarseOversample shouldBe 4
+            },
+        ).forEach { case ->
+            withClue(case.name) {
+                listOf("kotlin" to case.kotlin, "script" to SprudelPattern.compile(case.script).shouldNotBeNull()).forEach { (door, p) ->
+                    withClue(door) { p.cycles().forEach { events -> events shouldHaveSize 2; events.forEach { case.check(it.data) } } }
+                }
+            }
+        }
+    }
+
+    "effects: every compound head keeps its value where the control pattern has a gap, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
+        listOf(
+            Case("room", s("bd sd").room(0.8).room("<0.5 ~>"), """s("bd sd").room(0.8).room("<0.5 ~>")""") { it.room },
+            Case("delay", s("bd sd").delay(0.8).delay("<0.5 ~>"), """s("bd sd").delay(0.8).delay("<0.5 ~>")""") { it.delay },
+            Case("phaser", s("bd sd").phaser(0.8).phaser("<0.5 ~>"), """s("bd sd").phaser(0.8).phaser("<0.5 ~>")""") { it.phaserRate },
+            Case("tremolo", s("bd sd").tremolo(0.8).tremolo("<0.5 ~>"), """s("bd sd").tremolo(0.8).tremolo("<0.5 ~>")""") { it.tremoloDepth },
+            Case("distort", s("bd sd").distort(0.8).distort("<0.5 ~>"), """s("bd sd").distort(0.8).distort("<0.5 ~>")""") { it.distort },
+            Case("crush", s("bd sd").crush(0.8).crush("<0.5 ~>"), """s("bd sd").crush(0.8).crush("<0.5 ~>")""") { it.crush },
+            Case("coarse", s("bd sd").coarse(0.8).coarse("<0.5 ~>"), """s("bd sd").coarse(0.8).coarse("<0.5 ~>")""") { it.coarse },
+        ).forEach { case ->
+            withClue(case.name) {
+                listOf("kotlin" to case.kotlin, "script" to SprudelPattern.compile(case.script).shouldNotBeNull()).forEach { (door, p) ->
+                    withClue(door) {
+                        p.queryArc(0.0, 1.0).map { case.field(it.data) } shouldBe listOf(0.5, 0.5)
+                        p.queryArc(1.0, 2.0).map { case.field(it.data) } shouldBe listOf(0.8, 0.8)
+                    }
+                }
+            }
+        }
+    }
+
+    "effects: every numeric slot takes a control pattern per event, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
+        listOf(
+            Case("room.wet", s("bd sd").room(wet = "0.1 0.5"), """s("bd sd").room(wet = "0.1 0.5")""") { it.room },
+            Case("room.size", s("bd sd").room(size = "0.1 0.5"), """s("bd sd").room(size = "0.1 0.5")""") { it.roomSize },
+            Case("room.fade", s("bd sd").room(fade = "0.1 0.5"), """s("bd sd").room(fade = "0.1 0.5")""") { it.roomFade },
+            Case("room.lowpass", s("bd sd").room(lowpass = "0.1 0.5"), """s("bd sd").room(lowpass = "0.1 0.5")""") { it.roomLp },
+            Case("room.dim", s("bd sd").room(dim = "0.1 0.5"), """s("bd sd").room(dim = "0.1 0.5")""") { it.roomDim },
+            Case("delay.wet", s("bd sd").delay(wet = "0.1 0.5"), """s("bd sd").delay(wet = "0.1 0.5")""") { it.delay },
+            Case("delay.time", s("bd sd").delay(time = "0.1 0.5"), """s("bd sd").delay(time = "0.1 0.5")""") { it.delayTime },
+            Case("delay.feedback", s("bd sd").delay(feedback = "0.1 0.5"), """s("bd sd").delay(feedback = "0.1 0.5")""") { it.delayFeedback },
+            Case("delay.cap", s("bd sd").delay(cap = "0.1 0.5"), """s("bd sd").delay(cap = "0.1 0.5")""") { it.delayCap },
+            Case("phaser.rate", s("bd sd").phaser(rate = "0.1 0.5"), """s("bd sd").phaser(rate = "0.1 0.5")""") { it.phaserRate },
+            Case("phaser.wet", s("bd sd").phaser(wet = "0.1 0.5"), """s("bd sd").phaser(wet = "0.1 0.5")""") { it.phaserDepth },
+            Case("phaser.center", s("bd sd").phaser(center = "0.1 0.5"), """s("bd sd").phaser(center = "0.1 0.5")""") { it.phaserCenter },
+            Case("phaser.sweep", s("bd sd").phaser(sweep = "0.1 0.5"), """s("bd sd").phaser(sweep = "0.1 0.5")""") { it.phaserSweep },
+            Case("phaser.floor", s("bd sd").phaser(floor = "0.1 0.5"), """s("bd sd").phaser(floor = "0.1 0.5")""") { it.phaserFloor },
+            Case("tremolo.depth", s("bd sd").tremolo(depth = "0.1 0.5"), """s("bd sd").tremolo(depth = "0.1 0.5")""") { it.tremoloDepth },
+            Case("tremolo.sync", s("bd sd").tremolo(sync = "0.1 0.5"), """s("bd sd").tremolo(sync = "0.1 0.5")""") { it.tremoloSync },
+            Case("tremolo.skew", s("bd sd").tremolo(skew = "0.1 0.5"), """s("bd sd").tremolo(skew = "0.1 0.5")""") { it.tremoloSkew },
+            Case("tremolo.phase", s("bd sd").tremolo(phase = "0.1 0.5"), """s("bd sd").tremolo(phase = "0.1 0.5")""") { it.tremoloPhase },
+            Case("distort.amount", s("bd sd").distort(amount = "0.1 0.5"), """s("bd sd").distort(amount = "0.1 0.5")""") { it.distort },
+            Case("crush.amount", s("bd sd").crush(amount = "0.1 0.5"), """s("bd sd").crush(amount = "0.1 0.5")""") { it.crush },
+            Case("coarse.amount", s("bd sd").coarse(amount = "0.1 0.5"), """s("bd sd").coarse(amount = "0.1 0.5")""") { it.coarse },
+        ).forEach { case ->
+            withClue(case.name) {
+                listOf("kotlin" to case.kotlin, "script" to SprudelPattern.compile(case.script).shouldNotBeNull()).forEach { (door, p) ->
+                    withClue(door) {
+                        val events = p.queryArc(0.0, 1.0)
+                        events.map { case.field(it.data) } shouldBe listOf(0.1, 0.5)
+                    }
+                }
             }
         }
     }

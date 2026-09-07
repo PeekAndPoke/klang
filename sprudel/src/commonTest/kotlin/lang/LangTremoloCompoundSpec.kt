@@ -3,16 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.sprudel.lang.addons
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
-import io.peekandpoke.klang.sprudel.lang.apply
-import io.peekandpoke.klang.sprudel.lang.note
 
-class LangTremoloSpec : StringSpec({
+class LangTremoloCompoundSpec : StringSpec({
 
     // -- dsl interface tests -----------------------------------------------------------------------------------------
 
@@ -33,7 +31,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- depth only --------------------------------------------------------------------------------------------------
 
-    "tremolo(\"0.8\") sets depth only" {
+    "tremolo(0.8) sets depth only" {
         val p = note("c3").tremolo(0.8)
         val events = p.queryArc(0.0, 1.0)
 
@@ -45,7 +43,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- depth:rate --------------------------------------------------------------------------------------------------
 
-    "tremolo(\"0.5:4\") sets depth and rate" {
+    "tremolo(0.5, 4) sets depth and rate" {
         val p = note("c3").tremolo(0.5, 4)
         val events = p.queryArc(0.0, 1.0)
 
@@ -56,7 +54,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- depth:rate:shape --------------------------------------------------------------------------------------------
 
-    "tremolo(\"0.8:8:square\") sets depth, rate and shape" {
+    "tremolo(0.8, 8, \"square\") sets depth, rate and shape" {
         val p = note("c3").tremolo(0.8, 8, "square")
         val events = p.queryArc(0.0, 1.0)
 
@@ -68,7 +66,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- depth:rate:shape:skew ---------------------------------------------------------------------------------------
 
-    "tremolo(\"0.5:4:sine:0.6\") sets depth, rate, shape and skew" {
+    "tremolo(0.5, 4, \"sine\", 0.6) sets depth, rate, shape and skew" {
         val p = note("c3").tremolo(0.5, 4, "sine", 0.6)
         val events = p.queryArc(0.0, 1.0)
 
@@ -81,7 +79,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- all five params ---------------------------------------------------------------------------------------------
 
-    "tremolo(\"0.5:4:sine:0.6:0.25\") sets all five params" {
+    "tremolo(0.5, 4, \"sine\", 0.6, 0.25) sets all five params" {
         val p = note("c3").tremolo(0.5, 4, "sine", 0.6, 0.25)
         val events = p.queryArc(0.0, 1.0)
 

@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.script.intel
 
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.runtime.NativeOperatorNames
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangDecl
 import io.peekandpoke.klang.script.types.KlangProperty
@@ -82,7 +83,7 @@ class CompletionProvider(private val registry: KlangDocsRegistry) {
                 continue
             }
             // `invoke` is what makes `Master(...)` callable; nobody types `Master.invoke(...)`.
-            if (symbol.name == "invoke") {
+            if (symbol.name == NativeOperatorNames.INVOKE) {
                 continue
             }
             suggestions.add(symbol.toMemberSuggestion(receiverType))

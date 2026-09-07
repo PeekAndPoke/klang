@@ -129,18 +129,18 @@ sealed interface MasterStageDsl {
      * was once raw 0..1 here while sprudel's was 0..10, so the same `3` meant a 1 s tail on an orbit
      * and a 12.5 s one on the master.)
      *
-     * @param wet how much of the bus is sent into the reverb (0.0 = off). Orbit twin: `roomWet(x)`.
-     * @param roomSize tail length on the **sprudel `roomsize()` scale, ~0..10** (the backend divides
+     * @param wet how much of the bus is sent into the reverb (0.0 = off). Orbit twin: `room(wet = x)`.
+     * @param roomSize tail length on the **sprudel `room(size = ...)` scale, ~0..10** (the backend divides
      *   by 10 — see `Reverb.normalizeRoomSize`). 3 ≈ 1 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest
      *   reachable tail is ~0.7 s. Values above 10 are bounded — past unity the comb network has no
-     *   steady state and runs away (see `Reverb.normalizeRoomSize`). Orbit twin: `roomsize()`/`rsize()`.
+     *   steady state and runs away (see `Reverb.normalizeRoomSize`). Orbit twin: `room(size = ...)`.
      * @param damp Freeverb high-frequency damping, 0 = bright .. 1 = dark. **Ignored when [roomLp]
-     *   is set.** No orbit twin (sprudel reaches damping through `roomlp` instead).
+     *   is set.** No orbit twin (sprudel reaches damping through `room(lowpass = ...)` instead).
      * @param roomFade **overrides [roomSize]** for the tail, and is NOT on the same scale — it is
      *   the normalized 0..1 value directly, and despite the name it is not a time. Orbit twin:
-     *   `roomfade()` / `rfade()`. Null = no override.
+     *   `room(fade = ...)`. Null = no override.
      * @param roomLp high-frequency damping as an absolute cutoff **in Hz**; overrides [damp].
-     *   Orbit twin: `roomlp()` / `rlp()`. Null = no override.
+     *   Orbit twin: `room(lowpass = ...)`. Null = no override.
      */
     @WireName("reverb")
     data class Reverb(
@@ -165,12 +165,12 @@ sealed interface MasterStageDsl {
      * Master delay — the shared `DelayLine` (audio_be `effects/`) used as an *insert* (same
      * send-copy trick as [Reverb]).
      *
-     * @param wet how much of the bus is sent into the delay (0.0 = off). Orbit twin: `delayWet(x)`.
-     * @param timeSeconds delay time in seconds. Orbit twin: `delaytime()`.
+     * @param wet how much of the bus is sent into the delay (0.0 = off). Orbit twin: `delay(wet = x)`.
+     * @param timeSeconds delay time in seconds. Orbit twin: `delay(time = ...)`.
      * @param feedback feedback amount; ≥ 1.0 recirculates without loss and self-oscillates — allowed
-     *   (raw engine), with [cap] deciding how loud. Orbit twin: `delayfeedback()` / `delayfb()`.
+     *   (raw engine), with [cap] deciding how loud. Orbit twin: `delay(feedback = ...)`.
      * @param cap ceiling the feedback saturates toward (default 1.0 = unchanged). Orbit twin:
-     *   `delaycap()` / `dcap()`.
+     *   `delay(cap = ...)`.
      */
     @WireName("delay")
     data class Delay(

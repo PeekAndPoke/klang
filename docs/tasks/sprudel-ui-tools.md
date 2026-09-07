@@ -61,7 +61,7 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 | 29 | ~~`detune()`~~ **OBSOLETE**                | —                                | `detune()` renamed to `spread()` (unison freq-spread); the freq-spread editor is now #39's sibling |
 | 30 | `transpose()`                              | `SprudelTransposeEditorTool`     | semitone slider (-24 to +24)                                                                       |
 | 31 | `swing()`                                  | `SprudelSwingEditorTool`         | numeric slider (0–1) with timing diagram                                                           |
-| 32 | `distort()` / `dist()`                     | `SprudelDistortEditorTool`       | numeric slider (0–1)                                                                               |
+| 32 | `distort()`                                | `SprudelDistortEditorTool`       | numeric slider (0–1)                                                                               |
 | 33 | `shape()`                                  | `SprudelShapeEditorTool`         | numeric slider (0–1) waveshaper                                                                    |
 
 ### Tier 3 — Lower Priority (advanced / less frequent)
@@ -99,11 +99,15 @@ All tools are registered in `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`.
 
 | DSL Function                      | Editor                       | Sequence Editor                      | Format          |
 |-----------------------------------|------------------------------|--------------------------------------|-----------------|
-| `delayWet()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | per-param `(wet, time, feedback)` |
-| `delaytime()`                     | `SprudelDelayTimeEditor`     | `SprudelDelayTimeSequenceEditor`     | single value    |
-| `delayfeedback()` / `delayfb()`   | `SprudelDelayFeedbackEditor` | `SprudelDelayFeedbackSequenceEditor` | single value    |
-| `roomWet()`                          | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
-| `roomsize()` / `rsize()` / `sz()` | `SprudelRoomSizeEditor`      | `SprudelRoomSizeSequenceEditor`      | single value    |
+| `delay()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | slots `(wet, time, feedback)`; the `cap` slot has no control yet (2026-09-07) |
+| `delay(time = ...)`                     | `SprudelDelayTimeEditor`     | `SprudelDelayTimeSequenceEditor`     | single value    |
+| `delay(feedback = ...)`           | `SprudelDelayFeedbackEditor` | `SprudelDelayFeedbackSequenceEditor` | single value    |
+| `room()`                          | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
+| `room(size = ...)`                | `SprudelRoomSizeEditor`      | `SprudelRoomSizeSequenceEditor`      | single value    |
+
+Named arguments resolve by position today (`docs/tasks/editor-tools-named-arguments.md`).
+Compound slots carry no aliases since 2026-09-07 (`room(size = ...)`, `delay(feedback = ...)`, ...
+are the only spellings); the phaser editor has no `floor` control and the delay editor no `cap`.
 
 ## Low Pass Filter
 

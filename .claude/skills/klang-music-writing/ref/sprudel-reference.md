@@ -67,7 +67,7 @@ stack(
   note("a1 ~ ~ ~").sound(kick).gain(0.8),
   sound("~ ~ cp ~").gain(0.4),
   sound("hh*8").gain(0.3)
-).roomWet(0.2).rsize(5)
+).room(wet = 0.2, size = 5)
 ```
 
 ---
@@ -184,7 +184,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
+> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room` (slots `wet`/`size`/`fade`/`lowpass`/`dim`, plus `ir`), `delay` (slots `wet`/`time`/`feedback`/`cap`), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 
@@ -320,7 +320,7 @@ selection — extended to ignitor variants and per-note gain.
 | `gain(amt)`      |            | Volume (0-1+)                  | `s("bd").gain(0.8)`                   |
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
-| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).roomWet(0.5)`       |
+| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).room(0.5, 4)`       |
 | `adsr(a, d, s, r)` |          | Amplitude envelope; omitted slots keep their value, named slots take a mapper | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)`, `.adsr(attack = mul(2))` |
 | `adsr.attack` `.decay` `.sustain` `.release` | | Read a slot back into another setter | `note("c3").adsr(0.3, 0.2).adsr(release = adsr.attack)` |
 | `adsrOff()`      |            | Voice envelope OFF — the instrument owns amplitude | `note("c3").sound(gtr).adsrOff()` |
@@ -375,26 +375,19 @@ at the cutoff). Same third slot on the ignitor door.
 
 | Function                | Aliases                                                                                  | Description                                   | Example                                   |
 |-------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------------------|
-| `roomWet(mix)`             |                                                                                          | Reverb amount (0-1)                           | `note("c3").roomWet(0.3)`                    |
-| `roomsize(size)`        | `rsize`, `sz`, `size`                                                                    | Reverb room size                              | `note("c3").roomWet(0.3).rsize(5)`           |
-| `roomdim(dim)`          | `rdim`                                                                                   | Reverb damping/dimension                      | `note("c3").roomWet(0.3).rdim(0.5)`          |
-| `roomfade(x)` / `rfade` | Reverb tail **override**, 0..1 (NOT seconds) — wins over `roomsize`, which is then inert | `note("c3").roomWet(0.3).roomsize(8).rfade(0.1)` |
-| `roomlp(freq)`          | `rlp`                                                                                    | Reverb lowpass                                | `note("c3").roomWet(0.3).rlp(3000)`          |
-| `delayWet(mix)`            |                                                                                          | Delay amount (0-1)                            | `s("sd").delayWet(0.5)`                      |
-| `delaytime(time)`       |                                                                                          | Delay time in cycles                          | `s("sd").delayWet(0.5).delaytime(0.33)`      |
-| `delayfeedback(fb)`     | `delayfb`, `dfb`                                                                         | Delay feedback                                | `s("sd").delayWet(0.5).delayfeedback(0.3)`   |
-| `distort(amt)`          | `dist`                                                                                   | Distortion amount                             | `s("bd").distort(0.5)`                    |
-| `distortshape(shape)`   | `distshape`, `dshape`                                                                    | Distortion shape                              | `s("bd").distort(2).distshape("fold")`    |
-| `crush(bits)`           |                                                                                          | Bitcrusher                                    | `s("hh").crush(8)`                        |
-| `coarse(amt)`           |                                                                                          | Sample-rate reduction                         | `note("c3").s("saw").coarse(3)`           |
-| `phaser(params)`        | `ph`                                                                                     | Phaser effect                                 | `note("c3").phaser(1)`                    |
-| `phaserWet(d)`        |                                                                                          | Phaser wet (additive by default)              | `note("c3").phaser(1).phaserWet(0.5)`   |
-| `phasercenter(hz)`      | `phc`                                                                                    | Phaser center freq                            | `note("c3").phaser(1).phc(1000)`          |
-| `phasersweep(hz)`       | `phs`                                                                                    | Phaser sweep range                            | `note("c3").phaser(1).phs(500)`           |
-| `tremolo(params)`       |                                                                                          | Tremolo rate                                  | `note("c3").tremolo(4)`                   |
-| `tremolodepth(d)`       | `tremdepth`                                                                              | Tremolo depth                                 | `note("c3").tremolo(4).tremolodepth(0.5)` |
-| `tremolosync(n)`        | `tremsync`                                                                               | Sync tremolo to cycle                         | `note("c3").tremolosync(8)`               |
-| `tremoloshape(s)`       | `tremshape`                                                                              | Tremolo LFO shape                             | `note("c3").tremolo(4).tremshape("sine")` |
+| `room(wet, size, fade, lowpass, dim)`                                       |          | Reverb: send 0..1, room size ~0..10, tail override 0..1 (`fade` wins over `size`), damping cutoff Hz, `dim` (reserved). A bare `room(wet)` is silent: the engine gates on `size`/`fade` | `note("c3").room(wet = 0.3, size = 5)`                       |
+| `room(size = mul(2))`                                                       |          | A mapper on one slot maps that slot on its own value; the other slots stay                                                                                       | `p.room(0.3, 4).room(size = mul(2))`                         |
+| `room.wet` / `room.size` / `room.fade` / `room.lowpass` / `room.dim`        |          | Read a reverb slot into another setter                                                                                                                           | `p.room(size = 4).delay(time = room.size.div(8))`            |
+| `delay(wet, time, feedback, cap)`                                           |          | Delay: send 0..1, time in seconds, feedback 0..1, feedback cap. A bare `delay(wet)` is silent until `time` is set                                                | `s("sd").delay(wet = 0.5, time = 0.33, feedback = 0.3)`      |
+| `delay.wet` / `delay.time` / `delay.feedback` / `delay.cap`                 |          | Read a delay slot                                                                                                                                                | `p.delay(time = 0.25).room(fade = delay.time)`               |
+| `distort(amount, shape, oversample)`                                        |          | Distortion amount, shape name (`soft`, `hard`, `fold`, `exp`, ...), oversample factor (Int)                                                                      | `s("bd").distort(amount = 2, shape = "fold")`                |
+| `distort.amount` / `distort.oversample`                                     |          | Read a distortion slot (`shape` is a string, no reader)                                                                                                          | `p.distort(0.4).pan(distort.amount)`                         |
+| `crush(amount, oversample)`                                                 |          | Bitcrusher bits, oversample factor; readers `crush.amount`, `crush.oversample`                                                                                   | `s("hh").crush(8)`                                           |
+| `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor; readers `coarse.amount`, `coarse.oversample`                                                                    | `note("c3").s("saw").coarse(3)`                              |
+| `phaser(rate, wet, center, sweep, floor)`                                   |          | Phaser: LFO rate in Hz, wet (additive by default), center Hz, sweep range Hz, floor                                                                              | `note("c3").phaser(rate = 1, wet = 0.5, center = 1000)`      |
+| `phaser.rate` / `phaser.wet` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
+| `tremolo(depth, sync, shape, skew, phase)`                                  |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`sync`), LFO shape name, skew, phase                                                                               | `note("c3").tremolo(depth = 0.5, sync = 4, shape = "sine")`  |
+| `tremolo.depth` / `tremolo.sync` / `tremolo.skew` / `tremolo.phase`         |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(tremolo.sync)`                     |
 | `compressor(threshold, ratio, knee, attack, release)`    | `comp`                                                                                   | Compressor (per-param)        | `s("bd sd").comp(-20, 4, 3, 0.01, 0.3)`     |
 | `iresponse(path)`       | `ir`                                                                                     | Impulse response convolution                  | `note("c3").ir("hall.wav")`               |
 
@@ -512,7 +505,7 @@ note("c3").s("saw").lpf(sine.range(200, 2000).slow(4))
 s("hh*8").pan(rand)
 
 // Tempo-synced delay
-s("sd").delayWet(0.5).delaytime(pure(1/8).div(cps))
+s("sd").delay(wet = 0.5, time = pure(1/8).div(cps))
 
 // Organic modulation
 note("c3").s("supersaw").spread(perlin.range(0.0, 0.3).slow(16))
@@ -627,7 +620,7 @@ n("0 ~ 0 3 ~ 0 5 ~").scale("C2:minor")
 n("<0 3 5 7>").scale("C3:minor")
   .sound("supersaw").lpf(sine.range(400, 1200).slow(8))
   .adsr(0.5, 0.5, 0.8, 1.0).legato(2)
-  .roomWet(0.3).rsize(8).gain(0.2)
+  .room(wet = 0.3, size = 8).gain(0.2)
 ```
 
 ### Polyrhythmic pattern
@@ -665,7 +658,7 @@ let chorus = stack(
 )
 
 arrange([8, verse], [8, chorus], [8, verse], [8, chorus])
-  .roomWet(0.15).rsize(4)
+  .room(wet = 0.15, size = 4)
 ```
 
 ### Timed layer entry with filterWhen
@@ -678,14 +671,14 @@ stack(
     .filterWhen(x => x >= 8),                              // enters at cycle 8
   chord("<Am C F G>").voicing().s("supersaw").gain(0.15)
     .filterWhen(x => x >= 16)                              // enters at cycle 16
-).roomWet(0.1).rsize(5)
+).room(wet = 0.1, size = 5)
 ```
 
 ### Delay synced to tempo
 
 ```javascript
 note("c4 ~ e4 ~").sound("pluck")
-  .delayWet(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.4)
+  .delay(wet = 0.3, time = pure(1/8).div(cps), feedback = 0.4)
 ```
 
 ---
@@ -708,9 +701,7 @@ stack(
     .gain(0.8)
     .lpf("2000")                 // gentle lowpass
     .lpadsr(0.01, 0.1, 0.2, 0.1) // filter envelope
-    .tremolosync(8)              // tremolo synced to 8 per cycle
-    .tremolodepth(0.33)
-    .tremoloshape("sine")
+    .tremolo(depth = 0.33, sync = 8, shape = "sine") // 8 Hz tremolo
     .analog(1)                   // warm analog drift
 
   // Bass: pluck + triangle layered
@@ -728,5 +719,5 @@ stack(
   // Kick-snare
   , s("<[[bd sd]!2]!8>").adsr(0.02, 0.1, 0.7, 1.0).gain(0.75)
 )
-  .roomWet(0.02).rsize(3)  // subtle room reverb
+  .room(wet = 0.02, size = 3)  // subtle room reverb
 ```

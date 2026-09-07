@@ -11,9 +11,7 @@ import io.peekandpoke.klang.sprudel.lang.addons.flipSign
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.arrange
 import io.peekandpoke.klang.sprudel.lang.clip
-import io.peekandpoke.klang.sprudel.lang.delayWet
-import io.peekandpoke.klang.sprudel.lang.delayfeedback
-import io.peekandpoke.klang.sprudel.lang.delaytime
+import io.peekandpoke.klang.sprudel.lang.delay
 import io.peekandpoke.klang.sprudel.lang.distort
 import io.peekandpoke.klang.sprudel.lang.early
 import io.peekandpoke.klang.sprudel.lang.fast
@@ -28,8 +26,7 @@ import io.peekandpoke.klang.sprudel.lang.pan
 import io.peekandpoke.klang.sprudel.lang.panSpread
 import io.peekandpoke.klang.sprudel.lang.perlin
 import io.peekandpoke.klang.sprudel.lang.range
-import io.peekandpoke.klang.sprudel.lang.roomWet
-import io.peekandpoke.klang.sprudel.lang.rsize
+import io.peekandpoke.klang.sprudel.lang.room
 import io.peekandpoke.klang.sprudel.lang.s
 import io.peekandpoke.klang.sprudel.lang.scale
 import io.peekandpoke.klang.sprudel.lang.silence
@@ -63,8 +60,8 @@ object TestKotlinPatterns {
 //            .struct("x(5,8,2)")
             .orbit(0).gain(0.375)
             .pan(sine.slow(48).range(0.3, 0.7).flipSign())
-            .delayWet(0.2).delaytime(0.4).delayfeedback(0.1)
-            .roomWet(0.2).rsize(0.1)
+            .delay(wet = 0.2, time = 0.4, feedback = 0.1)
+            .room(wet = 0.2, size = 0.1)
             .clip(0.3)
             .hpf(600)
 //            .adsr(0.025, 0.2, 0.5, 0.0)
@@ -91,7 +88,7 @@ object TestKotlinPatterns {
             .pan(sine.slow(48).range(0.3, 0.7))
             .adsr(0.01, 0.3, 0.4, 0.5)
 //            .lpf(4000)
-            .roomWet(0.02).rsize(0.5)
+            .room(wet = 0.02, size = 0.5)
             .superimpose({ x -> x.transpose("<0 12 0 -12>/8") })
 //            .rev(4).rev(3)
         ,
@@ -118,7 +115,7 @@ object TestKotlinPatterns {
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
             .orbit(3).pan(-0.0).gain(1.0)
-            .roomWet(0.02).rsize(0.5)
+            .room(wet = 0.02, size = 0.5)
             .adsr(0.01, 0.2, 0.8, 0.5)
             .fast(2)
 //            .rev(4).rev(3),
@@ -160,8 +157,8 @@ object TestKotlinPatterns {
             .orbit(4)
             .pan(0.5)
             .gain(0.8)
-            .delayWet("0.2").delaytime(0.25).delayfeedback(0.3),
-    ).roomWet(0.025).rsize(5.0)
+            .delay(wet = "0.2", time = 0.25, feedback = 0.3),
+    ).room(wet = 0.025, size = 5.0)
 
     val strangerThings = stack(
         n("0 2 4 6 7 6 4 2")
