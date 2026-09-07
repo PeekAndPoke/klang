@@ -40,13 +40,13 @@ even when they are valuable.
 | ~~8~~ | ~~`per-playback-engine` **D4** cylinder eviction~~ | same, step 2f | ✅ **DONE 2026-09-04** as engine disposal: the end of a playback returns every unit. Idle cylinders inside a live engine stay (maintainer, settled) |
 | ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
 
-## Layer 2: widen and harden the interface (11 open, 2 done)
+## Layer 2: widen and harden the interface (11 open, 2 done; reviewed 2026-09-07)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
 | 10 | **Katalyst DSL** | [`katalyst-dsl.md`](katalyst-dsl.md) | Maintainer call. The last missing authoring surface; tutorials cannot teach per-orbit chains without it. **Still a stub, needs a design round before it can be sized** |
 | ~~11~~ | ~~**Filter unification C6** (canonical NAMES only)~~ | [`plans/filter-unification.md`](../plans/filter-unification.md) | ✅ **DONE 2026-08-31.** The whole plan is COMPLETE (C6a → C0 → C1+C2 → C3 → C4 → C5 → C6); 50 alias names deleted. The filter vocabulary tutorials are written against is now settled |
-| 12 | `snd*` sound-function surface redesign | [`sprudel-sound-function-surface.md`](sprudel-sound-function-surface.md) | Real DSL debt (per-param patternable sound selection). Shape change |
+| 12 | `snd*` sound-function surface redesign | [`sprudel-sound-function-surface.md`](sprudel-sound-function-surface.md), [`sprudel-sound-doors-compound.md`](sprudel-sound-doors-compound.md) | Real DSL debt (per-param patternable sound selection). Shape change. **Review 2026-09-07:** the general "compound colon-string vs named" question this doc asked is ANSWERED by the field-accessor rollout — every compound door is now an object with named slots (archived `20260907-sprudel-field-accessors.md`, `-compound-slots.md`). What remains is the `snd*` family itself (19 per-sound functions, the last surface not on objects): the follow-up doc; maintainer "not fully sure" → a design word, then a batch like the others |
 | 13 | Pipeline DSL coefficient exposure | [`pipeline-dsl-coefficient-exposure.md`](pipeline-dsl-coefficient-exposure.md) | This *is* "widen the interface": ~35 engine coefficients with no DSL home |
 | 14 | Engine tuning **Part B** | [`engine-tuning-profile.md`](engine-tuning-profile.md) | The `Double`-vs-node resolution decision gates the tuning surface |
 | 15 | KlangScript: `^`-as-power + `pow()` | [`klangscript-caret-as-power.md`](klangscript-caret-as-power.md), [`klangscript-number-methods.md`](klangscript-number-methods.md) | `^` already shipped wrong in Der Schmetterling and survived two versions. A tutorial teaching arithmetic would teach the footgun |
@@ -58,6 +58,9 @@ even when they are valuable.
 | 21 | Effect scope (per-orbit vs per-voice) in the docs | [`orbit-level-effect-docs.md`](orbit-level-effect-docs.md) | Cheap and load-bearing: the tutorial round already shipped a **wrong** ground truth about `room` and had to re-author two sections |
 
 | ~~22~~ | ~~**Configure lambdas + builder types on every DSL door**~~ | [`20260906-dsl-configure-lambdas.md`](../tasks-archive/2026-09/20260906-dsl-configure-lambdas.md), [`20260906-klangscript-libs-split.md`](../tasks-archive/2026-09/20260906-klangscript-libs-split.md) | ✅ **DONE 2026-09-06.** Every sub-typed door (16 oscillators, eq/phaser/shimmer, Master, Pipeline) takes `configure: x => x.knob()` on an immutable builder; the stdlib moved to `klangscript-libs`; every song, doc and skill migrated; no backward compatibility kept. Standing rules in `/dsl-design`. |
+
+| 23 | **Sprudel arithmetic: a continuous control is evaluated once per query arc** | [`sprudel-arithmetic-continuous-controls.md`](sprudel-arithmetic-continuous-controls.md) | **Added 2026-09-07 (found piloting the accessors).** `seq("1 1 1").mul(sine)` gives one value per cycle; the setters (`.pan(sine.range(0,1))`) sweep per event. Passes the sorting rule twice: it changes how things SOUND and the shape a tutorial teaches (`.mul(perlin.seg(4)…)` as a workaround is exactly what a tutorial must not teach). Option 1 in the doc (arithmetic joins like the setters) is decision-free in intent; the blast radius (every operator, golden fixtures) makes it a review-loop item |
+| — | Editor tools: named arguments resolve the wrong slot | [`editor-tools-named-arguments.md`](editor-tools-named-arguments.md) | **Added 2026-09-07.** Not the shape, not the sound — a UI bug — but it is what a tutorial reader touches first. Maintainer: "the editor tools get a rework of their own"; listed here so it is not lost, sorted as **maintainer call** |
 
 **Applied as a gate, not as its own item:** [`dsl-kotlin-surface-parity.md`](dsl-kotlin-surface-parity.md).
 Every surface addition above lands on **both doors** (script stdlib + Kotlin extensions) in the same
@@ -134,6 +137,9 @@ Tracked in the order they bite. See the conversation record for the reasoning.
    the only V1 item that is a stub with no design.
 2. **Engine tuning Part B**: the `Double`-vs-node resolution path (blocks #14).
 ~~3. **Track B1**~~ — done 2026-09-03 as a clock convention, no design pass needed.
+4. **`snd*` as compound objects** (#12's remainder, `sprudel-sound-doors-compound.md`): a design word.
+5. **`^` as the power operator** (#15): a language decision, still PROPOSED.
+6. **Editor tools rework** (the named-argument slot bug): scope.
 
 ~~C6 chunk walkthrough~~ — moot, C6 shipped 2026-08-31.
 
