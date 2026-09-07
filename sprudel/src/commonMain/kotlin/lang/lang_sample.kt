@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -79,7 +79,7 @@ fun String.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("begin")
-object Begin : FieldAccessor({ it.begin }) {
+object begin : FieldAccessor({ it.begin }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the sample start position (0–1).
@@ -96,8 +96,6 @@ object Begin : FieldAccessor({ it.begin }) {
         { p -> p.begin(pos, callInfo) }
 }
 
-/** The [Begin] accessor as a value, so the Kotlin door reads like the script. */
-val begin: Begin = Begin
 
 /** Chains a begin onto this [PatternMapperFn]; sets the sample start position (0–1). */
 @KlangScript.Function
@@ -165,7 +163,7 @@ fun String.end(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("end")
-object End : FieldAccessor({ it.end }) {
+object end : FieldAccessor({ it.end }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the sample end position (0–1).
@@ -182,8 +180,6 @@ object End : FieldAccessor({ it.end }) {
         { p -> p.end(pos, callInfo) }
 }
 
-/** The [End] accessor as a value, so the Kotlin door reads like the script. */
-val end: End = End
 
 /** Chains an end onto this [PatternMapperFn]; sets the sample end position (0–1). */
 @KlangScript.Function
@@ -252,7 +248,7 @@ fun String.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("speed")
-object Speed : FieldAccessor({ it.speed }) {
+object speed : FieldAccessor({ it.speed }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the sample playback speed.
@@ -269,8 +265,6 @@ object Speed : FieldAccessor({ it.speed }) {
         { p -> p.speed(rate, callInfo) }
 }
 
-/** The [Speed] accessor as a value, so the Kotlin door reads like the script. */
-val speed: Speed = Speed
 
 /** Chains a speed onto this [PatternMapperFn]; sets the sample playback speed. */
 @KlangScript.Function
@@ -465,7 +459,7 @@ fun String.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("loopBegin")
-object LoopBegin : FieldAccessor({ it.loopBegin }) {
+object loopBegin : FieldAccessor({ it.loopBegin }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the loop start position (0–1).
@@ -482,8 +476,6 @@ object LoopBegin : FieldAccessor({ it.loopBegin }) {
         { p -> p.loopBegin(pos, callInfo) }
 }
 
-/** The [LoopBegin] accessor as a value, so the Kotlin door reads like the script. */
-val loopBegin: LoopBegin = LoopBegin
 
 /** Chains a loopBegin onto this [PatternMapperFn]; sets the loop start position. */
 @KlangScript.Function
@@ -514,7 +506,7 @@ fun String.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @tags loopb, loopBegin, accessor
  */
 @KlangScript.Constant
-val loopb: LoopBegin = LoopBegin
+val loopb: loopBegin = loopBegin
 
 /** Chains a loopb (alias for [loopBegin]) onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -586,7 +578,7 @@ fun String.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("loopEnd")
-object LoopEnd : FieldAccessor({ it.loopEnd }) {
+object loopEnd : FieldAccessor({ it.loopEnd }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the loop end position (0–1).
@@ -603,8 +595,6 @@ object LoopEnd : FieldAccessor({ it.loopEnd }) {
         { p -> p.loopEnd(pos, callInfo) }
 }
 
-/** The [LoopEnd] accessor as a value, so the Kotlin door reads like the script. */
-val loopEnd: LoopEnd = LoopEnd
 
 /** Chains a loopEnd onto this [PatternMapperFn]; sets the loop end position. */
 @KlangScript.Function
@@ -635,7 +625,7 @@ fun String.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @tags loope, loopEnd, accessor
  */
 @KlangScript.Constant
-val loope: LoopEnd = LoopEnd
+val loope: loopEnd = loopEnd
 
 /** Chains a loope (alias for [loopEnd]) onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -892,7 +882,7 @@ fun String.cut(group: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("cut")
-object Cut : FieldAccessor({ it.cut?.toDouble() }) {
+object cut : FieldAccessor({ it.cut?.toDouble() }) {
 
     /**
      * Returns a [PatternMapperFn] that assigns the sample to a cut group.
@@ -909,8 +899,6 @@ object Cut : FieldAccessor({ it.cut?.toDouble() }) {
         { p -> p.cut(group, callInfo) }
 }
 
-/** The [Cut] accessor as a value, so the Kotlin door reads like the script. */
-val cut: Cut = Cut
 
 /** Chains a cut onto this [PatternMapperFn]; assigns the sample to the given cut group. */
 @KlangScript.Function

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -183,7 +183,7 @@ fun String.distort(amount: PatternLike? = null, shape: PatternLike? = null, over
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("distort")
-object Distort : FieldAccessor({ it.distort }) {
+object distort : FieldAccessor({ it.distort }) {
 
     /**
      * Returns a [PatternMapperFn] that applies waveshaper distortion.
@@ -212,8 +212,6 @@ object Distort : FieldAccessor({ it.distort }) {
         { p -> p.distort(amount, shape, oversample, callInfo) }
 }
 
-/** The [Distort] accessor as a value, so the Kotlin door reads like the script. */
-val distort: Distort = Distort
 
 /**
  * Creates a chained [PatternMapperFn] that applies waveshaper distortion after the previous mapper.
@@ -295,7 +293,7 @@ fun String.dist(amount: PatternLike? = null, shape: PatternLike? = null, oversam
  * @tags dist, distort, accessor
  */
 @KlangScript.Constant
-val dist: Distort = Distort
+val dist: distort = distort
 
 /**
  * Creates a chained [PatternMapperFn] that applies waveshaper distortion (alias for [distort]) after the previous mapper.
@@ -380,7 +378,7 @@ fun String.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("distos")
-object Distos : FieldAccessor({ it.distortOversample?.toDouble() }) {
+object distos : FieldAccessor({ it.distortOversample?.toDouble() }) {
 
     /** `distos(...)`: the setter, see the pattern form. */
     @KlangScript.Method(name = "invoke")
@@ -388,8 +386,6 @@ object Distos : FieldAccessor({ it.distortOversample?.toDouble() }) {
         { p -> p.distos(factor, callInfo) }
 }
 
-/** The [Distos] accessor as a value, so the Kotlin door reads like the script. */
-val distos: Distos = Distos
 
 @KlangScript.Function
 fun PatternMapperFn.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -410,7 +406,7 @@ fun String.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? 
  * @tags distortOversampling, distos, accessor
  */
 @KlangScript.Constant
-val distortOversampling: Distos = Distos
+val distortOversampling: distos = distos
 
 @KlangScript.Function
 fun PatternMapperFn.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -742,7 +738,7 @@ fun String.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("crush")
-object Crush : FieldAccessor({ it.crush }) {
+object crush : FieldAccessor({ it.crush }) {
 
     /**
      * Returns a [PatternMapperFn] that applies bit-crushing.
@@ -767,8 +763,6 @@ object Crush : FieldAccessor({ it.crush }) {
         { p -> p.crush(amount, callInfo) }
 }
 
-/** The [Crush] accessor as a value, so the Kotlin door reads like the script. */
-val crush: Crush = Crush
 
 /**
  * Creates a chained [PatternMapperFn] that applies bit-crushing after the previous mapper.
@@ -848,7 +842,7 @@ fun String.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("crushos")
-object Crushos : FieldAccessor({ it.crushOversample?.toDouble() }) {
+object crushos : FieldAccessor({ it.crushOversample?.toDouble() }) {
 
     /** `crushos(...)`: the setter, see the pattern form. */
     @KlangScript.Method(name = "invoke")
@@ -856,8 +850,6 @@ object Crushos : FieldAccessor({ it.crushOversample?.toDouble() }) {
         { p -> p.crushos(factor, callInfo) }
 }
 
-/** The [Crushos] accessor as a value, so the Kotlin door reads like the script. */
-val crushos: Crushos = Crushos
 
 @KlangScript.Function
 fun PatternMapperFn.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -878,7 +870,7 @@ fun String.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = 
  * @tags crushOversampling, crushos, accessor
  */
 @KlangScript.Constant
-val crushOversampling: Crushos = Crushos
+val crushOversampling: crushos = crushos
 
 @KlangScript.Function
 fun PatternMapperFn.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -963,7 +955,7 @@ fun String.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("coarse")
-object Coarse : FieldAccessor({ it.coarse }) {
+object coarse : FieldAccessor({ it.coarse }) {
 
     /**
      * Returns a [PatternMapperFn] that applies sample-rate reduction.
@@ -988,8 +980,6 @@ object Coarse : FieldAccessor({ it.coarse }) {
         { p -> p.coarse(amount, callInfo) }
 }
 
-/** The [Coarse] accessor as a value, so the Kotlin door reads like the script. */
-val coarse: Coarse = Coarse
 
 /**
  * Creates a chained [PatternMapperFn] that applies sample-rate reduction after the previous mapper.
@@ -1072,7 +1062,7 @@ fun String.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("coarseos")
-object Coarseos : FieldAccessor({ it.coarseOversample?.toDouble() }) {
+object coarseos : FieldAccessor({ it.coarseOversample?.toDouble() }) {
 
     /** `coarseos(...)`: the setter, see the pattern form. */
     @KlangScript.Method(name = "invoke")
@@ -1080,8 +1070,6 @@ object Coarseos : FieldAccessor({ it.coarseOversample?.toDouble() }) {
         { p -> p.coarseos(factor, callInfo) }
 }
 
-/** The [Coarseos] accessor as a value, so the Kotlin door reads like the script. */
-val coarseos: Coarseos = Coarseos
 
 @KlangScript.Function
 fun PatternMapperFn.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -1102,7 +1090,7 @@ fun String.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? =
  * @tags coarseOversampling, coarseos, accessor
  */
 @KlangScript.Constant
-val coarseOversampling: Coarseos = Coarseos
+val coarseOversampling: coarseos = coarseos
 
 @KlangScript.Function
 fun PatternMapperFn.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -1229,7 +1217,7 @@ fun String.roomWet(wet: PatternLike? = null, size: PatternLike? = null, fade: Pa
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("roomWet")
-object RoomWet : FieldAccessor({ it.room }) {
+object roomWet : FieldAccessor({ it.room }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the reverb send (see [SprudelPattern.roomWet]).
@@ -1253,8 +1241,6 @@ object RoomWet : FieldAccessor({ it.room }) {
         { p -> p.roomWet(wet, size, fade, lowpass, dim, callInfo) }
 }
 
-/** The [RoomWet] accessor as a value, so the Kotlin door reads like the script. */
-val roomWet: RoomWet = RoomWet
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb send after the previous mapper.
@@ -1357,7 +1343,7 @@ fun String.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("roomsize")
-object RoomSize : FieldAccessor({ it.roomSize }) {
+object roomsize : FieldAccessor({ it.roomSize }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the reverb room size.
@@ -1382,8 +1368,6 @@ object RoomSize : FieldAccessor({ it.roomSize }) {
         { p -> p.roomsize(amount, callInfo) }
 }
 
-/** The [RoomSize] accessor as a value, so the Kotlin door reads like the script. */
-val roomsize: RoomSize = RoomSize
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size after the previous mapper.
@@ -1442,7 +1426,7 @@ fun String.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @tags rsize, roomsize, accessor
  */
 @KlangScript.Constant
-val rsize: RoomSize = RoomSize
+val rsize: roomsize = roomsize
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1501,7 +1485,7 @@ fun String.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @tags sz, roomsize, accessor
  */
 @KlangScript.Constant
-val sz: RoomSize = RoomSize
+val sz: roomsize = roomsize
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1559,7 +1543,7 @@ fun String.size(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags size, roomsize, accessor
  */
 @KlangScript.Constant
-val size: RoomSize = RoomSize
+val size: roomsize = roomsize
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1665,7 +1649,7 @@ fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("roomfade")
-object RoomFade : FieldAccessor({ it.roomFade }) {
+object roomfade : FieldAccessor({ it.roomFade }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the reverb tail override (0..1).
@@ -1691,8 +1675,6 @@ object RoomFade : FieldAccessor({ it.roomFade }) {
         { p -> p.roomfade(time, callInfo) }
 }
 
-/** The [RoomFade] accessor as a value, so the Kotlin door reads like the script. */
-val roomfade: RoomFade = RoomFade
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb tail override (0..1) after the previous mapper.
@@ -1767,7 +1749,7 @@ fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @tags rfade, roomfade, accessor
  */
 @KlangScript.Constant
-val rfade: RoomFade = RoomFade
+val rfade: roomfade = roomfade
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb tail override (0..1) (alias for roomfade) after the previous mapper.
@@ -1870,7 +1852,7 @@ fun String.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("roomlp")
-object RoomLp : FieldAccessor({ it.roomLp }) {
+object roomlp : FieldAccessor({ it.roomLp }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the reverb lowpass start frequency.
@@ -1895,8 +1877,6 @@ object RoomLp : FieldAccessor({ it.roomLp }) {
         { p -> p.roomlp(freq, callInfo) }
 }
 
-/** The [RoomLp] accessor as a value, so the Kotlin door reads like the script. */
-val roomlp: RoomLp = RoomLp
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency after the previous mapper.
@@ -1965,7 +1945,7 @@ fun String.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @tags rlp, roomlp, accessor
  */
 @KlangScript.Constant
-val rlp: RoomLp = RoomLp
+val rlp: roomlp = roomlp
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency (alias for roomlp) after the previous mapper.
@@ -2066,7 +2046,7 @@ fun String.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("roomdim")
-object RoomDim : FieldAccessor({ it.roomDim }) {
+object roomdim : FieldAccessor({ it.roomDim }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the reserved reverb damping frequency (the engine does not use it yet).
@@ -2090,8 +2070,6 @@ object RoomDim : FieldAccessor({ it.roomDim }) {
         { p -> p.roomdim(freq, callInfo) }
 }
 
-/** The [RoomDim] accessor as a value, so the Kotlin door reads like the script. */
-val roomdim: RoomDim = RoomDim
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB after the previous mapper.
@@ -2161,7 +2139,7 @@ fun String.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @tags rdim, roomdim, accessor
  */
 @KlangScript.Constant
-val rdim: RoomDim = RoomDim
+val rdim: roomdim = roomdim
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb -60 dB frequency (alias for roomdim) after the previous
@@ -2441,7 +2419,7 @@ fun String.delayWet(wet: PatternLike? = null, time: PatternLike? = null, feedbac
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("delayWet")
-object DelayWet : FieldAccessor({ it.delay }) {
+object delayWet : FieldAccessor({ it.delay }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the delay send (see [SprudelPattern.delayWet]).
@@ -2467,8 +2445,6 @@ object DelayWet : FieldAccessor({ it.delay }) {
         { p -> p.delayWet(wet, time, feedback, callInfo) }
 }
 
-/** The [DelayWet] accessor as a value, so the Kotlin door reads like the script. */
-val delayWet: DelayWet = DelayWet
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay send after the previous mapper.
@@ -2567,7 +2543,7 @@ fun String.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("delaytime")
-object DelayTime : FieldAccessor({ it.delayTime }) {
+object delaytime : FieldAccessor({ it.delayTime }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the delay time in seconds.
@@ -2591,8 +2567,6 @@ object DelayTime : FieldAccessor({ it.delayTime }) {
         { p -> p.delaytime(time, callInfo) }
 }
 
-/** The [DelayTime] accessor as a value, so the Kotlin door reads like the script. */
-val delaytime: DelayTime = DelayTime
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay time after the previous mapper.
@@ -2692,7 +2666,7 @@ fun String.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("delayfeedback")
-object DelayFeedback : FieldAccessor({ it.delayFeedback }) {
+object delayfeedback : FieldAccessor({ it.delayFeedback }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the delay feedback amount.
@@ -2716,8 +2690,6 @@ object DelayFeedback : FieldAccessor({ it.delayFeedback }) {
         { p -> p.delayfeedback(amount, callInfo) }
 }
 
-/** The [DelayFeedback] accessor as a value, so the Kotlin door reads like the script. */
-val delayfeedback: DelayFeedback = DelayFeedback
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback amount after the previous mapper.
@@ -2788,7 +2760,7 @@ fun String.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @tags delayfb, delayfeedback, accessor
  */
 @KlangScript.Constant
-val delayfb: DelayFeedback = DelayFeedback
+val delayfb: delayfeedback = delayfeedback
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback (alias for delayfeedback) after the previous
@@ -2859,7 +2831,7 @@ fun String.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @tags dfb, delayfeedback, accessor
  */
 @KlangScript.Constant
-val dfb: DelayFeedback = DelayFeedback
+val dfb: delayfeedback = delayfeedback
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback (alias for delayfeedback) after the previous
@@ -2990,7 +2962,7 @@ fun String.phaser(rate: PatternLike? = null, wet: PatternLike? = null, center: P
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("phaser")
-object Phaser : FieldAccessor({ it.phaserRate }) {
+object phaser : FieldAccessor({ it.phaserRate }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the phaser LFO rate.
@@ -3020,8 +2992,6 @@ object Phaser : FieldAccessor({ it.phaserRate }) {
         { p -> p.phaser(rate, wet, center, sweep, callInfo) }
 }
 
-/** The [Phaser] accessor as a value, so the Kotlin door reads like the script. */
-val phaser: Phaser = Phaser
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate after the previous mapper.
@@ -3105,7 +3075,7 @@ fun String.ph(rate: PatternLike? = null, wet: PatternLike? = null, center: Patte
  * @tags ph, phaser, accessor
  */
 @KlangScript.Constant
-val ph: Phaser = Phaser
+val ph: phaser = phaser
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate (alias for phaser) after the previous mapper.
@@ -3211,7 +3181,7 @@ fun String.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("phaserWet")
-object PhaserWet : FieldAccessor({ it.phaserDepth }) {
+object phaserWet : FieldAccessor({ it.phaserDepth }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the phaser wet amount.
@@ -3235,8 +3205,6 @@ object PhaserWet : FieldAccessor({ it.phaserDepth }) {
         { p -> p.phaserWet(wet, callInfo) }
 }
 
-/** The [PhaserWet] accessor as a value, so the Kotlin door reads like the script. */
-val phaserWet: PhaserWet = PhaserWet
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser wet after the previous mapper.
@@ -3318,7 +3286,7 @@ fun String.phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): 
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("phaserFloor")
-object PhaserFloor : FieldAccessor({ it.phaserFloor }) {
+object phaserFloor : FieldAccessor({ it.phaserFloor }) {
 
     /** Returns a [PatternMapperFn] that sets the phaser floor (see [SprudelPattern.phaserFloor]). */
     @KlangScript.Method(name = "invoke")
@@ -3326,8 +3294,6 @@ object PhaserFloor : FieldAccessor({ it.phaserFloor }) {
         { p -> p.phaserFloor(floor, callInfo) }
 }
 
-/** The [PhaserFloor] accessor as a value, so the Kotlin door reads like the script. */
-val phaserFloor: PhaserFloor = PhaserFloor
 
 /** Creates a chained [PatternMapperFn] that sets the phaser floor after the previous mapper. */
 @KlangScript.Function
@@ -3413,7 +3379,7 @@ fun String.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): 
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("phasercenter")
-object PhaserCenter : FieldAccessor({ it.phaserCenter }) {
+object phasercenter : FieldAccessor({ it.phaserCenter }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the phaser center frequency.
@@ -3437,8 +3403,6 @@ object PhaserCenter : FieldAccessor({ it.phaserCenter }) {
         { p -> p.phasercenter(freq, callInfo) }
 }
 
-/** The [PhaserCenter] accessor as a value, so the Kotlin door reads like the script. */
-val phasercenter: PhaserCenter = PhaserCenter
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser center frequency after the previous mapper.
@@ -3508,7 +3472,7 @@ fun String.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @tags phc, phasercenter, accessor
  */
 @KlangScript.Constant
-val phc: PhaserCenter = PhaserCenter
+val phc: phasercenter = phasercenter
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser center frequency (alias for phasercenter) after the
@@ -3608,7 +3572,7 @@ fun String.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null):
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("phasersweep")
-object PhaserSweep : FieldAccessor({ it.phaserSweep }) {
+object phasersweep : FieldAccessor({ it.phaserSweep }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the phaser sweep range.
@@ -3632,8 +3596,6 @@ object PhaserSweep : FieldAccessor({ it.phaserSweep }) {
         { p -> p.phasersweep(amount, callInfo) }
 }
 
-/** The [PhaserSweep] accessor as a value, so the Kotlin door reads like the script. */
-val phasersweep: PhaserSweep = PhaserSweep
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser sweep range after the previous mapper.
@@ -3703,7 +3665,7 @@ fun String.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @tags phs, phasersweep, accessor
  */
 @KlangScript.Constant
-val phs: PhaserSweep = PhaserSweep
+val phs: phasersweep = phasersweep
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser sweep range (alias for phasersweep) after the previous
@@ -3803,7 +3765,7 @@ fun String.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): S
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("tremolosync")
-object TremoloSync : FieldAccessor({ it.tremoloSync }) {
+object tremolosync : FieldAccessor({ it.tremoloSync }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the tremolo LFO rate.
@@ -3827,8 +3789,6 @@ object TremoloSync : FieldAccessor({ it.tremoloSync }) {
         { p -> p.tremolosync(rate, callInfo) }
 }
 
-/** The [TremoloSync] accessor as a value, so the Kotlin door reads like the script. */
-val tremolosync: TremoloSync = TremoloSync
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO rate after the previous mapper.
@@ -3898,7 +3858,7 @@ fun String.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @tags tremsync, tremolosync, accessor
  */
 @KlangScript.Constant
-val tremsync: TremoloSync = TremoloSync
+val tremsync: tremolosync = tremolosync
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO rate (alias for tremolosync) after the previous
@@ -3998,7 +3958,7 @@ fun String.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null)
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("tremolodepth")
-object TremoloDepth : FieldAccessor({ it.tremoloDepth }) {
+object tremolodepth : FieldAccessor({ it.tremoloDepth }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the tremolo depth.
@@ -4022,8 +3982,6 @@ object TremoloDepth : FieldAccessor({ it.tremoloDepth }) {
         { p -> p.tremolodepth(amount, callInfo) }
 }
 
-/** The [TremoloDepth] accessor as a value, so the Kotlin door reads like the script. */
-val tremolodepth: TremoloDepth = TremoloDepth
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo depth after the previous mapper.
@@ -4093,7 +4051,7 @@ fun String.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): S
  * @tags tremdepth, tremolodepth, accessor
  */
 @KlangScript.Constant
-val tremdepth: TremoloDepth = TremoloDepth
+val tremdepth: tremolodepth = tremolodepth
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo depth (alias for tremolodepth) after the previous mapper.
@@ -4192,7 +4150,7 @@ fun String.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null):
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("tremoloskew")
-object TremoloSkew : FieldAccessor({ it.tremoloSkew }) {
+object tremoloskew : FieldAccessor({ it.tremoloSkew }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the tremolo LFO skew.
@@ -4216,8 +4174,6 @@ object TremoloSkew : FieldAccessor({ it.tremoloSkew }) {
         { p -> p.tremoloskew(amount, callInfo) }
 }
 
-/** The [TremoloSkew] accessor as a value, so the Kotlin door reads like the script. */
-val tremoloskew: TremoloSkew = TremoloSkew
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO skew after the previous mapper.
@@ -4287,7 +4243,7 @@ fun String.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @tags tremskew, tremoloskew, accessor
  */
 @KlangScript.Constant
-val tremskew: TremoloSkew = TremoloSkew
+val tremskew: tremoloskew = tremoloskew
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO skew (alias for tremoloskew) after the previous
@@ -4390,7 +4346,7 @@ fun String.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null):
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("tremolophase")
-object TremoloPhase : FieldAccessor({ it.tremoloPhase }) {
+object tremolophase : FieldAccessor({ it.tremoloPhase }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase.
@@ -4414,8 +4370,6 @@ object TremoloPhase : FieldAccessor({ it.tremoloPhase }) {
         { p -> p.tremolophase(phase, callInfo) }
 }
 
-/** The [TremoloPhase] accessor as a value, so the Kotlin door reads like the script. */
-val tremolophase: TremoloPhase = TremoloPhase
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO starting phase after the previous mapper.
@@ -4485,7 +4439,7 @@ fun String.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @tags tremphase, tremolophase, accessor
  */
 @KlangScript.Constant
-val tremphase: TremoloPhase = TremoloPhase
+val tremphase: tremolophase = tremolophase
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO starting phase (alias for tremolophase) after the
@@ -4744,7 +4698,7 @@ fun String.delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("delaycap")
-object DelayCap : FieldAccessor({ it.delayCap }) {
+object delaycap : FieldAccessor({ it.delayCap }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the delay feedback ceiling.
@@ -4761,8 +4715,6 @@ object DelayCap : FieldAccessor({ it.delayCap }) {
         { p -> p.delaycap(amount, callInfo) }
 }
 
-/** The [DelayCap] accessor as a value, so the Kotlin door reads like the script. */
-val delaycap: DelayCap = DelayCap
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback ceiling after the previous mapper.
@@ -4817,7 +4769,7 @@ fun String.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags dcap, delaycap, accessor
  */
 @KlangScript.Constant
-val dcap: DelayCap = DelayCap
+val dcap: delaycap = delaycap
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback ceiling. Alias for [delaycap].

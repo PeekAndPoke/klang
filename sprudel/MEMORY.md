@@ -2,6 +2,10 @@
 
 ## Recent Work (2026-09-07)
 
+- **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are
+  gone: one declaration per concept in both doors. `"ClassName"` is suppressed at file level in
+  the lang files for this. Alias constants read `val rsize: roomsize = roomsize`.
+
 - **One Kotlin door per accessor.** The 139 unannotated factories (`fun gain(...)`, the alias
   `fun rsize(...)`) are gone; `val gain: Gain` plus `operator fun invoke` is the Kotlin call form
   (`apply(gain(0.5))` still compiles, through the invoke convention). The `val` stays unannotated,

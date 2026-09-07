@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang.addons
@@ -116,7 +116,7 @@ fun String.notchf(freq: PatternLike? = null, q: PatternLike? = null, callInfo: C
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("notchf")
-object Notchf : FieldAccessor({ it.notchf }) {
+object notchf : FieldAccessor({ it.notchf }) {
 
     /**
      * Returns a [PatternMapperFn] that applies a Notch Filter.
@@ -137,8 +137,6 @@ object Notchf : FieldAccessor({ it.notchf }) {
         { p -> p.notchf(freq, q, callInfo) }
 }
 
-/** The [Notchf] accessor as a value, so the Kotlin door reads like the script. */
-val notchf: Notchf = Notchf
 
 /**
  * Creates a chained [PatternMapperFn] that applies a Notch Filter after the previous mapper.
@@ -242,7 +240,7 @@ fun String.nresonance(q: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("nresonance")
-object Nresonance : FieldAccessor({ it.nresonance }) {
+object nresonance : FieldAccessor({ it.nresonance }) {
 
     /**
      * Returns a [PatternMapperFn] that sets notch filter resonance.
@@ -263,8 +261,6 @@ object Nresonance : FieldAccessor({ it.nresonance }) {
         { p -> p.nresonance(q, callInfo) }
 }
 
-/** The [Nresonance] accessor as a value, so the Kotlin door reads like the script. */
-val nresonance: Nresonance = Nresonance
 
 /**
  * Creates a chained [PatternMapperFn] that sets notch resonance after the previous mapper.
@@ -328,7 +324,7 @@ fun String.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @tags notchq, nresonance, accessor, addon
  */
 @KlangScript.Constant
-val notchq: Nresonance = Nresonance
+val notchq: nresonance = nresonance
 
 /**
  * Creates a chained [PatternMapperFn] that sets notch resonance (alias for [nresonance]) after the previous mapper.
@@ -412,7 +408,7 @@ fun String.nfattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("nfattack")
-object Nfattack : FieldAccessor({ it.nfattack }) {
+object nfattack : FieldAccessor({ it.nfattack }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope attack time. */
     @KlangScript.Method(name = "invoke")
@@ -420,8 +416,6 @@ object Nfattack : FieldAccessor({ it.nfattack }) {
         { p -> p.nfattack(seconds, callInfo) }
 }
 
-/** The [Nfattack] accessor as a value, so the Kotlin door reads like the script. */
-val nfattack: Nfattack = Nfattack
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter envelope attack time after the previous mapper. */
 @KlangScript.Function
@@ -462,7 +456,7 @@ fun String.nfa(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags nfa, nfattack, accessor, addon
  */
 @KlangScript.Constant
-val nfa: Nfattack = Nfattack
+val nfa: nfattack = nfattack
 
 /** Creates a chained [PatternMapperFn] that sets notch filter attack (alias for [nfattack]) after the previous mapper. */
 @KlangScript.Function
@@ -533,7 +527,7 @@ fun String.nfdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("nfdecay")
-object Nfdecay : FieldAccessor({ it.nfdecay }) {
+object nfdecay : FieldAccessor({ it.nfdecay }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope decay time. */
     @KlangScript.Method(name = "invoke")
@@ -541,8 +535,6 @@ object Nfdecay : FieldAccessor({ it.nfdecay }) {
         { p -> p.nfdecay(seconds, callInfo) }
 }
 
-/** The [Nfdecay] accessor as a value, so the Kotlin door reads like the script. */
-val nfdecay: Nfdecay = Nfdecay
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter envelope decay time after the previous mapper. */
 @KlangScript.Function
@@ -583,7 +575,7 @@ fun String.nfd(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags nfd, nfdecay, accessor, addon
  */
 @KlangScript.Constant
-val nfd: Nfdecay = Nfdecay
+val nfd: nfdecay = nfdecay
 
 /** Creates a chained [PatternMapperFn] that sets notch filter decay (alias for [nfdecay]) after the previous mapper. */
 @KlangScript.Function
@@ -655,7 +647,7 @@ fun String.nfsustain(level: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("nfsustain")
-object Nfsustain : FieldAccessor({ it.nfsustain }) {
+object nfsustain : FieldAccessor({ it.nfsustain }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level. */
     @KlangScript.Method(name = "invoke")
@@ -663,8 +655,6 @@ object Nfsustain : FieldAccessor({ it.nfsustain }) {
         { p -> p.nfsustain(level, callInfo) }
 }
 
-/** The [Nfsustain] accessor as a value, so the Kotlin door reads like the script. */
-val nfsustain: Nfsustain = Nfsustain
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter sustain level after the previous mapper. */
 @KlangScript.Function
@@ -705,7 +695,7 @@ fun String.nfs(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @tags nfs, nfsustain, accessor, addon
  */
 @KlangScript.Constant
-val nfs: Nfsustain = Nfsustain
+val nfs: nfsustain = nfsustain
 
 /** Creates a chained [PatternMapperFn] that sets notch filter sustain (alias for [nfsustain]) after the previous mapper. */
 @KlangScript.Function
@@ -776,7 +766,7 @@ fun String.nfrelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): 
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("nfrelease")
-object Nfrelease : FieldAccessor({ it.nfrelease }) {
+object nfrelease : FieldAccessor({ it.nfrelease }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope release time. */
     @KlangScript.Method(name = "invoke")
@@ -784,8 +774,6 @@ object Nfrelease : FieldAccessor({ it.nfrelease }) {
         { p -> p.nfrelease(seconds, callInfo) }
 }
 
-/** The [Nfrelease] accessor as a value, so the Kotlin door reads like the script. */
-val nfrelease: Nfrelease = Nfrelease
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter envelope release time after the previous mapper. */
 @KlangScript.Function
@@ -826,7 +814,7 @@ fun String.nfr(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags nfr, nfrelease, accessor, addon
  */
 @KlangScript.Constant
-val nfr: Nfrelease = Nfrelease
+val nfr: nfrelease = nfrelease
 
 /** Creates a chained [PatternMapperFn] that sets notch filter release (alias for [nfrelease]) after the previous mapper. */
 @KlangScript.Function
@@ -920,7 +908,7 @@ fun String.nfenv(depth: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("nfenv")
-object Nfenv : FieldAccessor({ it.nfenv }) {
+object nfenv : FieldAccessor({ it.nfenv }) {
 
     /** Creates a [PatternMapperFn] that sets the notch filter envelope depth. */
     @KlangScript.Method(name = "invoke")
@@ -928,8 +916,6 @@ object Nfenv : FieldAccessor({ it.nfenv }) {
         { p -> p.nfenv(depth, callInfo) }
 }
 
-/** The [Nfenv] accessor as a value, so the Kotlin door reads like the script. */
-val nfenv: Nfenv = Nfenv
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter envelope depth after the previous mapper. */
 @KlangScript.Function
@@ -970,7 +956,7 @@ fun String.nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @tags nfe, nfenv, accessor, addon
  */
 @KlangScript.Constant
-val nfe: Nfenv = Nfenv
+val nfe: nfenv = nfenv
 
 /** Creates a chained [PatternMapperFn] that sets notch filter envelope depth (alias for [nfenv]) after the previous mapper. */
 @KlangScript.Function
@@ -1010,7 +996,7 @@ fun String.notch(freq: PatternLike? = null, q: PatternLike? = null, callInfo: Ca
  * @tags notch, notchf, accessor, addon
  */
 @KlangScript.Constant
-val notch: Notchf = Notchf
+val notch: notchf = notchf
 
 /** Chains a notch step onto this [PatternMapperFn] (see [SprudelPattern.notch]). */
 @KlangScript.Function
@@ -1047,7 +1033,7 @@ fun String.ntf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @tags ntf, notchf, accessor, addon
  */
 @KlangScript.Constant
-val ntf: Notchf = Notchf
+val ntf: notchf = notchf
 
 /** Chains an ntf step onto this [PatternMapperFn] (see [SprudelPattern.ntf]). */
 @KlangScript.Function
@@ -1083,7 +1069,7 @@ fun String.ntq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatte
  * @tags ntq, nresonance, accessor, addon
  */
 @KlangScript.Constant
-val ntq: Nresonance = Nresonance
+val ntq: nresonance = nresonance
 
 /** Chains an ntq step onto this [PatternMapperFn] (see [SprudelPattern.ntq]). */
 @KlangScript.Function

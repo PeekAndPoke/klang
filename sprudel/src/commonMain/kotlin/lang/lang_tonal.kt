@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -590,7 +590,7 @@ fun String.legato(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("legato")
-object Legato : FieldAccessor({ it.legato }) {
+object legato : FieldAccessor({ it.legato }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the legato factor for each event.
@@ -605,8 +605,6 @@ object Legato : FieldAccessor({ it.legato }) {
         { p -> p.legato(amount, callInfo) }
 }
 
-/** The [Legato] accessor as a value, so the Kotlin door reads like the script. */
-val legato: Legato = Legato
 
 /** Chains a legato operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -630,7 +628,7 @@ fun String.clip(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags clip, legato, accessor
  */
 @KlangScript.Constant
-val clip: Legato = Legato
+val clip: legato = legato
 
 /** Chains a clip operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -706,7 +704,7 @@ fun String.vibrato(hz: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("vibrato")
-object Vibrato : FieldAccessor({ it.vibrato }) {
+object vibrato : FieldAccessor({ it.vibrato }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the vibrato frequency in Hz.
@@ -721,8 +719,6 @@ object Vibrato : FieldAccessor({ it.vibrato }) {
         { p -> p.vibrato(hz, callInfo) }
 }
 
-/** The [Vibrato] accessor as a value, so the Kotlin door reads like the script. */
-val vibrato: Vibrato = Vibrato
 
 /** Chains a vibrato operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -746,7 +742,7 @@ fun String.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPatt
  * @tags vib, vibrato, accessor
  */
 @KlangScript.Constant
-val vib: Vibrato = Vibrato
+val vib: vibrato = vibrato
 
 /** Chains a vib operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -818,7 +814,7 @@ fun String.vibratoMod(semitones: PatternLike? = null, callInfo: CallInfo? = null
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("vibratoMod")
-object VibratoMod : FieldAccessor({ it.vibratoMod }) {
+object vibratoMod : FieldAccessor({ it.vibratoMod }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the vibrato depth in semitones.
@@ -833,8 +829,6 @@ object VibratoMod : FieldAccessor({ it.vibratoMod }) {
         { p -> p.vibratoMod(semitones, callInfo) }
 }
 
-/** The [VibratoMod] accessor as a value, so the Kotlin door reads like the script. */
-val vibratoMod: VibratoMod = VibratoMod
 
 /** Chains a vibratoMod operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -906,7 +900,7 @@ fun String.pattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("pattack")
-object Pattack : FieldAccessor({ it.pAttack }) {
+object pattack : FieldAccessor({ it.pAttack }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the pitch envelope attack time.
@@ -920,8 +914,6 @@ object Pattack : FieldAccessor({ it.pAttack }) {
         { p -> p.pattack(seconds, callInfo) }
 }
 
-/** The [Pattack] accessor as a value, so the Kotlin door reads like the script. */
-val pattack: Pattack = Pattack
 
 /** Chains a pattack operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -945,7 +937,7 @@ fun String.patt(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @tags patt, pattack, accessor
  */
 @KlangScript.Constant
-val patt: Pattack = Pattack
+val patt: pattack = pattack
 
 /** Chains a patt operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1017,7 +1009,7 @@ fun String.pdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("pdecay")
-object Pdecay : FieldAccessor({ it.pDecay }) {
+object pdecay : FieldAccessor({ it.pDecay }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the pitch envelope decay time.
@@ -1031,8 +1023,6 @@ object Pdecay : FieldAccessor({ it.pDecay }) {
         { p -> p.pdecay(seconds, callInfo) }
 }
 
-/** The [Pdecay] accessor as a value, so the Kotlin door reads like the script. */
-val pdecay: Pdecay = Pdecay
 
 /** Chains a pdecay operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1056,7 +1046,7 @@ fun String.pdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @tags pdec, pdecay, accessor
  */
 @KlangScript.Constant
-val pdec: Pdecay = Pdecay
+val pdec: pdecay = pdecay
 
 /** Chains a pdec operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1127,7 +1117,7 @@ fun String.prelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("prelease")
-object Prelease : FieldAccessor({ it.pRelease }) {
+object prelease : FieldAccessor({ it.pRelease }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the pitch envelope release time.
@@ -1141,8 +1131,6 @@ object Prelease : FieldAccessor({ it.pRelease }) {
         { p -> p.prelease(seconds, callInfo) }
 }
 
-/** The [Prelease] accessor as a value, so the Kotlin door reads like the script. */
-val prelease: Prelease = Prelease
 
 /** Chains a prelease operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1166,7 +1154,7 @@ fun String.prel(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @tags prel, prelease, accessor
  */
 @KlangScript.Constant
-val prel: Prelease = Prelease
+val prel: prelease = prelease
 
 /** Chains a prel operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1238,7 +1226,7 @@ fun String.penv(semitones: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("penv")
-object Penv : FieldAccessor({ it.pEnv }) {
+object penv : FieldAccessor({ it.pEnv }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the pitch envelope depth in semitones.
@@ -1252,8 +1240,6 @@ object Penv : FieldAccessor({ it.pEnv }) {
         { p -> p.penv(semitones, callInfo) }
 }
 
-/** The [Penv] accessor as a value, so the Kotlin door reads like the script. */
-val penv: Penv = Penv
 
 /** Chains a penv operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1277,7 +1263,7 @@ fun String.pamt(semitones: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @tags pamt, penv, accessor
  */
 @KlangScript.Constant
-val pamt: Penv = Penv
+val pamt: penv = penv
 
 /** Chains a pamt operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1349,7 +1335,7 @@ fun String.pcurve(curve: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("pcurve")
-object Pcurve : FieldAccessor({ it.pCurve }) {
+object pcurve : FieldAccessor({ it.pCurve }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the pitch envelope curve shape.
@@ -1363,8 +1349,6 @@ object Pcurve : FieldAccessor({ it.pCurve }) {
         { p -> p.pcurve(curve, callInfo) }
 }
 
-/** The [Pcurve] accessor as a value, so the Kotlin door reads like the script. */
-val pcurve: Pcurve = Pcurve
 
 /** Chains a pcurve operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1388,7 +1372,7 @@ fun String.pcrv(curve: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @tags pcrv, pcurve, accessor
  */
 @KlangScript.Constant
-val pcrv: Pcurve = Pcurve
+val pcrv: pcurve = pcurve
 
 /** Chains a pcrv operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1460,7 +1444,7 @@ fun String.panchor(anchor: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("panchor")
-object Panchor : FieldAccessor({ it.pAnchor }) {
+object panchor : FieldAccessor({ it.pAnchor }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the pitch envelope anchor point.
@@ -1474,8 +1458,6 @@ object Panchor : FieldAccessor({ it.pAnchor }) {
         { p -> p.panchor(anchor, callInfo) }
 }
 
-/** The [Panchor] accessor as a value, so the Kotlin door reads like the script. */
-val panchor: Panchor = Panchor
 
 /** Chains a panchor operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1499,7 +1481,7 @@ fun String.panc(anchor: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags panc, panchor, accessor
  */
 @KlangScript.Constant
-val panc: Panchor = Panchor
+val panc: panchor = panchor
 
 /** Chains a panc operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1571,7 +1553,7 @@ fun String.accelerate(semitones: PatternLike? = null, callInfo: CallInfo? = null
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("accelerate")
-object Accelerate : FieldAccessor({ it.accelerate }) {
+object accelerate : FieldAccessor({ it.accelerate }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the playback acceleration (pitch ramp).
@@ -1586,8 +1568,6 @@ object Accelerate : FieldAccessor({ it.accelerate }) {
         { p -> p.accelerate(semitones, callInfo) }
 }
 
-/** The [Accelerate] accessor as a value, so the Kotlin door reads like the script. */
-val accelerate: Accelerate = Accelerate
 
 /** Chains an accelerate operation onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1764,7 +1744,7 @@ private fun applyFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("freq")
-object Freq : FieldAccessor({ it.freqHz }) {
+object freq : FieldAccessor({ it.freqHz }) {
 
     /**
      * Sets the playback frequency in Hz directly, bypassing note name resolution.
@@ -1793,8 +1773,6 @@ object Freq : FieldAccessor({ it.freqHz }) {
         { p -> p.freq(hz, callInfo) }
 }
 
-/** The [Freq] accessor as a value, so the Kotlin door reads like the script: `bpf(freq)`. */
-val freq: Freq = Freq
 
 /** Sets the playback frequency in Hz on this pattern. */
 @KlangScript.Function

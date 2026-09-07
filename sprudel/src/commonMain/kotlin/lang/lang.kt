@@ -34,7 +34,7 @@ typealias PatternMapperFn = (source: SprudelPattern) -> SprudelPattern
  *
  * An accessor is deliberately NOT a [PatternMapperFn] itself: a `Function1` carries a member
  * `invoke(SprudelPattern)`, which would sit next to the accessor's setter `invoke(hz)` and give
- * `Freq(pattern)` and `freq(pattern)` opposite meanings in Kotlin. The provider keeps one meaning
+ * `freq(x)` two meanings in Kotlin depending on the argument type. The provider keeps one meaning
  * per spelling. A setter that receives a provider unwraps it with [mapper] and applies the result
  * to its own field (see `_mapNumericField`); `docs/tasks/sprudel-field-accessors.md`.
  */

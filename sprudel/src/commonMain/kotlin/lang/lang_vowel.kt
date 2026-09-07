@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -128,7 +128,7 @@ fun String.vowelWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("vowelWet")
-object VowelWet : FieldAccessor({ it.vowelMix }) {
+object vowelWet : FieldAccessor({ it.vowelMix }) {
 
     /** Returns a [PatternMapperFn] that sets the vowel formant wet balance. */
     @KlangScript.Method(name = "invoke")
@@ -136,8 +136,6 @@ object VowelWet : FieldAccessor({ it.vowelMix }) {
         { p -> p.vowelWet(wet, callInfo) }
 }
 
-/** The [VowelWet] accessor as a value, so the Kotlin door reads like the script. */
-val vowelWet: VowelWet = VowelWet
 
 /** Chains a vowelWet step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -197,7 +195,7 @@ fun String.vowelFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): S
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("vowelFloor")
-object VowelFloor : FieldAccessor({ it.vowelFloor }) {
+object vowelFloor : FieldAccessor({ it.vowelFloor }) {
 
     /** Returns a [PatternMapperFn] that sets the vowel formant floor. */
     @KlangScript.Method(name = "invoke")
@@ -205,8 +203,6 @@ object VowelFloor : FieldAccessor({ it.vowelFloor }) {
         { p -> p.vowelFloor(floor, callInfo) }
 }
 
-/** The [VowelFloor] accessor as a value, so the Kotlin door reads like the script. */
-val vowelFloor: VowelFloor = VowelFloor
 
 /** Chains a vowelFloor step onto this [PatternMapperFn]. */
 @KlangScript.Function

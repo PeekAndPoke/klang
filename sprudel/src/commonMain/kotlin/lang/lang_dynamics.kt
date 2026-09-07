@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -88,7 +88,7 @@ fun String.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("gain")
-object Gain : FieldAccessor({ it.gain }) {
+object gain : FieldAccessor({ it.gain }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
@@ -104,8 +104,6 @@ object Gain : FieldAccessor({ it.gain }) {
         { p -> p.gain(amount, callInfo) }
 }
 
-/** The [Gain] accessor as a value, so the Kotlin door reads like the script: `pan(gain)`. */
-val gain: Gain = Gain
 
 /**
  * Creates a chained [PatternMapperFn] that sets the gain after the previous mapper.
@@ -191,7 +189,7 @@ fun String.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("pan")
-object Pan : FieldAccessor({ it.pan }) {
+object pan : FieldAccessor({ it.pan }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the pan for each event in a pattern.
@@ -205,8 +203,6 @@ object Pan : FieldAccessor({ it.pan }) {
         { p -> p.pan(amount, callInfo) }
 }
 
-/** The [Pan] accessor as a value, so the Kotlin door reads like the script: `pan(pan)`. */
-val pan: Pan = Pan
 
 /**
  * Creates a chained [PatternMapperFn] that sets the pan after the previous mapper.
@@ -290,7 +286,7 @@ fun String.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("velocity")
-object Velocity : FieldAccessor({ it.velocity }) {
+object velocity : FieldAccessor({ it.velocity }) {
 
     /**
      * Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
@@ -306,8 +302,6 @@ object Velocity : FieldAccessor({ it.velocity }) {
         { p -> p.velocity(amount, callInfo) }
 }
 
-/** The [Velocity] accessor as a value, so the Kotlin door reads like the script: `pan(velocity)`. */
-val velocity: Velocity = Velocity
 
 /**
  * Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
@@ -363,7 +357,7 @@ fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @tags vel, velocity, accessor
  */
 @KlangScript.Constant
-val vel: Velocity = Velocity
+val vel: velocity = velocity
 
 /**
  * Alias for [velocity]. Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
@@ -447,7 +441,7 @@ fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("postgain")
-object Postgain : FieldAccessor({ it.postGain }) {
+object postgain : FieldAccessor({ it.postGain }) {
 
     /**
      * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
@@ -463,8 +457,6 @@ object Postgain : FieldAccessor({ it.postGain }) {
         { p -> p.postgain(amount, callInfo) }
 }
 
-/** The [Postgain] accessor as a value, so the Kotlin door reads like the script: `pan(postgain)`. */
-val postgain: Postgain = Postgain
 
 /**
  * Creates a chained [PatternMapperFn] that sets the post-gain after the previous mapper.
@@ -648,7 +640,7 @@ fun String.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("compressor")
-object Compressor : FieldAccessor({ it.compressorThreshold }) {
+object compressor : FieldAccessor({ it.compressorThreshold }) {
 
     /**
      * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
@@ -663,8 +655,6 @@ object Compressor : FieldAccessor({ it.compressorThreshold }) {
         { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
 }
 
-/** The [Compressor] accessor as a value, so the Kotlin door reads like the script. */
-val compressor: Compressor = Compressor
 
 /**
  * Creates a chained [PatternMapperFn] that sets compressor parameters after the previous mapper.
@@ -734,7 +724,7 @@ fun String.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee
  * @tags comp, compressor, accessor
  */
 @KlangScript.Constant
-val comp: Compressor = Compressor
+val comp: compressor = compressor
 
 /**
  * Alias for [compressor]. Creates a chained [PatternMapperFn] that sets compressor parameters after the previous
@@ -825,7 +815,7 @@ fun String.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("unison")
-object Unison : FieldAccessor({ it.oscParams?.get("voices") }) {
+object unison : FieldAccessor({ it.oscParams?.get("voices") }) {
 
     /**
      * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
@@ -841,8 +831,6 @@ object Unison : FieldAccessor({ it.oscParams?.get("voices") }) {
         { p -> p.unison(voices, callInfo) }
 }
 
-/** The [Unison] accessor as a value, so the Kotlin door reads like the script. */
-val unison: Unison = Unison
 
 /**
  * Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous mapper.
@@ -896,7 +884,7 @@ fun String.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * @tags uni, unison, accessor
  */
 @KlangScript.Constant
-val uni: Unison = Unison
+val uni: unison = unison
 
 /**
  * Alias for [unison]. Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous
@@ -953,7 +941,7 @@ fun String.voices(voices: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @tags voices, unison, accessor
  */
 @KlangScript.Constant
-val voices: Unison = Unison
+val voices: unison = unison
 
 /**
  * Alias for [unison]. Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous
@@ -1039,7 +1027,7 @@ fun String.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("spread")
-object Spread : FieldAccessor({ it.oscParams?.get("spread") }) {
+object spread : FieldAccessor({ it.oscParams?.get("spread") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the unison frequency spread for a pattern.
@@ -1054,8 +1042,6 @@ object Spread : FieldAccessor({ it.oscParams?.get("spread") }) {
         { p -> p.spread(amount, callInfo) }
 }
 
-/** The [Spread] accessor as a value, so the Kotlin door reads like the script. */
-val spread: Spread = Spread
 
 /**
  * Creates a chained [PatternMapperFn] that sets the unison frequency spread after the previous mapper.
@@ -1134,7 +1120,7 @@ fun String.panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): S
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("panSpread")
-object PanSpread : FieldAccessor({ it.oscParams?.get("panSpread") }) {
+object panSpread : FieldAccessor({ it.oscParams?.get("panSpread") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
@@ -1146,8 +1132,6 @@ object PanSpread : FieldAccessor({ it.oscParams?.get("panSpread") }) {
         { p -> p.panSpread(amount, callInfo) }
 }
 
-/** The [PanSpread] accessor as a value, so the Kotlin door reads like the script. */
-val panSpread: PanSpread = PanSpread
 
 /**
  * Creates a chained [PatternMapperFn] that sets the stereo pan spread after the previous mapper.
@@ -1231,7 +1215,7 @@ fun String.density(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("density")
-object Density : FieldAccessor({ it.oscParams?.get("density") }) {
+object density : FieldAccessor({ it.oscParams?.get("density") }) {
 
     /**
      * Parses this string as a pattern and sets the oscillator or noise density.
@@ -1246,8 +1230,6 @@ object Density : FieldAccessor({ it.oscParams?.get("density") }) {
         { p -> p.density(amount, callInfo) }
 }
 
-/** The [Density] accessor as a value, so the Kotlin door reads like the script. */
-val density: Density = Density
 
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the previous mapper.
@@ -1303,7 +1285,7 @@ fun String.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
  * @tags d, density, accessor
  */
 @KlangScript.Constant
-val d: Density = Density
+val d: density = density
 
 /**
  * Alias for [density]. Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the
@@ -1447,7 +1429,7 @@ fun String.adsr(
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("adsr")
-object Adsr {
+object adsr {
 
     /** The attack time of each event, as a value other setters can read. */
     @KlangScript.Property
@@ -1488,8 +1470,6 @@ object Adsr {
         { p -> p.adsr(attack, decay, sustain, release, callInfo) }
 }
 
-/** The [Adsr] object as a value, so the Kotlin door reads like the script: `adsr.attack`. */
-val adsr: Adsr = Adsr
 
 // -- ADSR curves ------------------------------------------------------------------------------------------------------
 
@@ -1784,7 +1764,7 @@ fun String.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("orbit")
-object Orbit : FieldAccessor({ it.cylinder?.toDouble() }) {
+object orbit : FieldAccessor({ it.cylinder?.toDouble() }) {
 
     /**
      * Creates a [PatternMapperFn] that routes events to the given audio output orbit.
@@ -1800,8 +1780,6 @@ object Orbit : FieldAccessor({ it.cylinder?.toDouble() }) {
         { p -> p.orbit(index, callInfo) }
 }
 
-/** The [Orbit] accessor as a value, so the Kotlin door reads like the script. */
-val orbit: Orbit = Orbit
 
 /**
  * Creates a chained [PatternMapperFn] that routes events to the given orbit after the previous mapper.
@@ -1857,7 +1835,7 @@ fun String.o(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * @tags o, orbit, accessor
  */
 @KlangScript.Constant
-val o: Orbit = Orbit
+val o: orbit = orbit
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Ducking / Sidechain
@@ -1936,7 +1914,7 @@ fun String.duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("duckorbit")
-object DuckOrbit : FieldAccessor({ it.duckCylinder?.toDouble() }) {
+object duckorbit : FieldAccessor({ it.duckCylinder?.toDouble() }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
@@ -1952,8 +1930,6 @@ object DuckOrbit : FieldAccessor({ it.duckCylinder?.toDouble() }) {
         { p -> p.duckorbit(orbitIndex, callInfo) }
 }
 
-/** The [DuckOrbit] accessor as a value, so the Kotlin door reads like the script. */
-val duckorbit: DuckOrbit = DuckOrbit
 
 /**
  * Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the previous mapper.
@@ -2008,7 +1984,7 @@ fun String.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @tags duck, duckorbit, accessor
  */
 @KlangScript.Constant
-val duck: DuckOrbit = DuckOrbit
+val duck: duckorbit = duckorbit
 
 /**
  * Alias for [duckorbit]. Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the
@@ -2096,7 +2072,7 @@ fun String.duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("duckattack")
-object DuckAttack : FieldAccessor({ it.duckAttack }) {
+object duckattack : FieldAccessor({ it.duckAttack }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the duck release time.
@@ -2112,8 +2088,6 @@ object DuckAttack : FieldAccessor({ it.duckAttack }) {
         { p -> p.duckattack(time, callInfo) }
 }
 
-/** The [DuckAttack] accessor as a value, so the Kotlin door reads like the script. */
-val duckattack: DuckAttack = DuckAttack
 
 /**
  * Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous mapper.
@@ -2169,7 +2143,7 @@ fun String.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * @tags duckatt, duckattack, accessor
  */
 @KlangScript.Constant
-val duckatt: DuckAttack = DuckAttack
+val duckatt: duckattack = duckattack
 
 /**
  * Alias for [duckattack]. Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous
@@ -2253,7 +2227,7 @@ fun String.duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): S
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("duckdepth")
-object DuckDepth : FieldAccessor({ it.duckDepth }) {
+object duckdepth : FieldAccessor({ it.duckDepth }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the ducking depth.
@@ -2269,8 +2243,6 @@ object DuckDepth : FieldAccessor({ it.duckDepth }) {
         { p -> p.duckdepth(amount, callInfo) }
 }
 
-/** The [DuckDepth] accessor as a value, so the Kotlin door reads like the script. */
-val duckdepth: DuckDepth = DuckDepth
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ducking depth after the previous mapper.

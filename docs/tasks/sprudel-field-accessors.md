@@ -271,7 +271,9 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   compressor, see `docs/tasks/sprudel-accessors-compound-slots.md`.
 - 2026-09-07: the unannotated Kotlin factories (`fun gain(...)`, `fun rsize(...)`, 139 of them)
   were removed; the object's `invoke` is the Kotlin door through the invoke convention, so each
-  name has exactly one Kotlin form.
+  name has exactly one Kotlin form. Then the objects took the script name itself (`object gain`,
+  `object adsr`) and the 85 `val` twins went too: one declaration per concept, the Kotlin naming
+  convention suppressed at file level.
 - OPEN: the remaining compound doors (above); a diagnostic when a mapper reaches a setter without
   the branch (today the value is dropped), and for a compound object used as a value (`pan(adsr)`
   is accepted by `PatternLike` and writes nothing useful, since `Adsr` is not a `FieldAccessor`);

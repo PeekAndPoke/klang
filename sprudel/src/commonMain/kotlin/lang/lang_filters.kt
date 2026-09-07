@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -118,7 +118,7 @@ fun String.lpf(freq: PatternLike? = null, q: PatternLike? = null, passes: Patter
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("lpf")
-object Lpf : FieldAccessor({ it.cutoff }) {
+object lpf : FieldAccessor({ it.cutoff }) {
 
     /**
      * Returns a [PatternMapperFn] that applies a Low Pass Filter.
@@ -144,8 +144,6 @@ object Lpf : FieldAccessor({ it.cutoff }) {
         { p -> p.lpf(freq, q, passes, callInfo) }
 }
 
-/** The [Lpf] accessor as a value, so the Kotlin door reads like the script: `pan(lpf)`. */
-val lpf: Lpf = Lpf
 
 /**
  * Creates a chained [PatternMapperFn] that applies a Low Pass Filter after the previous mapper.
@@ -267,7 +265,7 @@ fun String.hpf(freq: PatternLike? = null, q: PatternLike? = null, passes: Patter
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("hpf")
-object Hpf : FieldAccessor({ it.hcutoff }) {
+object hpf : FieldAccessor({ it.hcutoff }) {
 
     /**
      * Returns a [PatternMapperFn] that applies a High Pass Filter.
@@ -290,8 +288,6 @@ object Hpf : FieldAccessor({ it.hcutoff }) {
         { p -> p.hpf(freq, q, passes, callInfo) }
 }
 
-/** The [Hpf] accessor as a value, so the Kotlin door reads like the script: `pan(hpf)`. */
-val hpf: Hpf = Hpf
 
 /**
  * Creates a chained [PatternMapperFn] that applies a High Pass Filter after the previous mapper.
@@ -424,7 +420,7 @@ fun PatternMapperFn.bpf(freq: PatternLike? = null, q: PatternLike? = null, callI
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("bpf")
-object Bpf : FieldAccessor({ it.bandf }) {
+object bpf : FieldAccessor({ it.bandf }) {
 
     /**
      * Returns a [PatternMapperFn] that applies a Band Pass Filter.
@@ -446,8 +442,6 @@ object Bpf : FieldAccessor({ it.bandf }) {
         { p -> p.bpf(freq, q, callInfo) }
 }
 
-/** The [Bpf] accessor as a value, so the Kotlin door reads like the script: `pan(bpf)`. */
-val bpf: Bpf = Bpf
 
 // -- lpq() - Low Pass Filter resonance ---------------------------------------------------------------------------------
 
@@ -546,7 +540,7 @@ fun PatternMapperFn.lpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("lpq")
-object Lpq : FieldAccessor({ it.resonance }) {
+object lpq : FieldAccessor({ it.resonance }) {
 
     /**
      * Returns a [PatternMapperFn] that sets LPF resonance.
@@ -567,8 +561,6 @@ object Lpq : FieldAccessor({ it.resonance }) {
         { p -> p.lpq(q, callInfo) }
 }
 
-/** The [Lpq] accessor as a value, so the Kotlin door reads like the script: `pan(lpq)`. */
-val lpq: Lpq = Lpq
 
 // -- hpq() - High Pass Filter resonance --------------------------------------------------------------------------------
 
@@ -667,7 +659,7 @@ fun PatternMapperFn.hpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("hpq")
-object Hpq : FieldAccessor({ it.hresonance }) {
+object hpq : FieldAccessor({ it.hresonance }) {
 
     /**
      * Returns a [PatternMapperFn] that sets HPF resonance.
@@ -688,8 +680,6 @@ object Hpq : FieldAccessor({ it.hresonance }) {
         { p -> p.hpq(q, callInfo) }
 }
 
-/** The [Hpq] accessor as a value, so the Kotlin door reads like the script: `pan(hpq)`. */
-val hpq: Hpq = Hpq
 
 // -- bpq() - Band Pass Filter resonance --------------------------------------------------------------------------------
 
@@ -788,7 +778,7 @@ fun PatternMapperFn.bpq(q: PatternLike? = null, callInfo: CallInfo? = null): Pat
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("bpq")
-object Bpq : FieldAccessor({ it.bandq }) {
+object bpq : FieldAccessor({ it.bandq }) {
 
     /**
      * Returns a [PatternMapperFn] that sets BPF Q.
@@ -809,8 +799,6 @@ object Bpq : FieldAccessor({ it.bandq }) {
         { p -> p.bpq(q, callInfo) }
 }
 
-/** The [Bpq] accessor as a value, so the Kotlin door reads like the script: `pan(bpq)`. */
-val bpq: Bpq = Bpq
 
 
 // -- lpe() - Low Pass Filter Envelope Depth ----------------------------------------------------------------------------
@@ -902,7 +890,7 @@ fun PatternMapperFn.lpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("lpe")
-object Lpe : FieldAccessor({ it.lpenv }) {
+object lpe : FieldAccessor({ it.lpenv }) {
 
     /** Creates a [PatternMapperFn] that sets the LPF envelope depth. */
     @KlangScript.Method(name = "invoke")
@@ -910,8 +898,6 @@ object Lpe : FieldAccessor({ it.lpenv }) {
         { p -> p.lpe(semitones, callInfo) }
 }
 
-/** The [Lpe] accessor as a value, so the Kotlin door reads like the script. */
-val lpe: Lpe = Lpe
 
 
 // -- lpx() -----------------------------------------------------------------------------------------------------------
@@ -980,7 +966,7 @@ fun String.lpx(passes: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("lpx")
-object Lpx : FieldAccessor({ it.lpPasses }) {
+object lpx : FieldAccessor({ it.lpPasses }) {
 
     /** Returns a [PatternMapperFn] that sets the lowpass cascade count (see [SprudelPattern.lpx]). */
     @KlangScript.Method(name = "invoke")
@@ -988,8 +974,6 @@ object Lpx : FieldAccessor({ it.lpPasses }) {
         { p -> p.lpx(passes, callInfo) }
 }
 
-/** The [Lpx] accessor as a value, so the Kotlin door reads like the script. */
-val lpx: Lpx = Lpx
 
 /** Chains a lpx step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1085,7 +1069,7 @@ fun PatternMapperFn.hpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("hpe")
-object Hpe : FieldAccessor({ it.hpenv }) {
+object hpe : FieldAccessor({ it.hpenv }) {
 
     /** Creates a [PatternMapperFn] that sets the HPF envelope depth. */
     @KlangScript.Method(name = "invoke")
@@ -1093,8 +1077,6 @@ object Hpe : FieldAccessor({ it.hpenv }) {
         { p -> p.hpe(semitones, callInfo) }
 }
 
-/** The [Hpe] accessor as a value, so the Kotlin door reads like the script. */
-val hpe: Hpe = Hpe
 
 
 // -- hpx() -----------------------------------------------------------------------------------------------------------
@@ -1157,7 +1139,7 @@ fun String.hpx(passes: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("hpx")
-object Hpx : FieldAccessor({ it.hpPasses }) {
+object hpx : FieldAccessor({ it.hpPasses }) {
 
     /** Returns a [PatternMapperFn] that sets the highpass cascade count (see [SprudelPattern.hpx]). */
     @KlangScript.Method(name = "invoke")
@@ -1165,8 +1147,6 @@ object Hpx : FieldAccessor({ it.hpPasses }) {
         { p -> p.hpx(passes, callInfo) }
 }
 
-/** The [Hpx] accessor as a value, so the Kotlin door reads like the script. */
-val hpx: Hpx = Hpx
 
 /** Chains a hpx step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -1262,7 +1242,7 @@ fun PatternMapperFn.bpe(semitones: PatternLike? = null, callInfo: CallInfo? = nu
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("bpe")
-object Bpe : FieldAccessor({ it.bpenv }) {
+object bpe : FieldAccessor({ it.bpenv }) {
 
     /** Creates a [PatternMapperFn] that sets the BPF envelope depth. */
     @KlangScript.Method(name = "invoke")
@@ -1270,8 +1250,6 @@ object Bpe : FieldAccessor({ it.bpenv }) {
         { p -> p.bpe(semitones, callInfo) }
 }
 
-/** The [Bpe] accessor as a value, so the Kotlin door reads like the script. */
-val bpe: Bpe = Bpe
 
 // -- lowpass() --------------------------------------------------------------------------------------------------------
 
@@ -1307,7 +1285,7 @@ fun String.lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: Pa
  * @tags lowpass, lpf, accessor
  */
 @KlangScript.Constant
-val lowpass: Lpf = Lpf
+val lowpass: lpf = lpf
 
 /** Chains a lowpass step onto this [PatternMapperFn] (see [SprudelPattern.lowpass]). */
 @KlangScript.Function
@@ -1349,7 +1327,7 @@ fun String.highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: P
  * @tags highpass, hpf, accessor
  */
 @KlangScript.Constant
-val highpass: Hpf = Hpf
+val highpass: hpf = hpf
 
 /** Chains a highpass step onto this [PatternMapperFn] (see [SprudelPattern.highpass]). */
 @KlangScript.Function
@@ -1390,7 +1368,7 @@ fun String.bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo:
  * @tags bandpass, bpf, accessor
  */
 @KlangScript.Constant
-val bandpass: Bpf = Bpf
+val bandpass: bpf = bpf
 
 /** Chains a bandpass step onto this [PatternMapperFn] (see [SprudelPattern.bandpass]). */
 @KlangScript.Function

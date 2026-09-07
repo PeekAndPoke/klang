@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang.addons
@@ -204,7 +204,7 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("analog")
-object Analog : FieldAccessor({ it.oscParams?.get("analog") }) {
+object analog : FieldAccessor({ it.oscParams?.get("analog") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the analog drift amount.
@@ -221,8 +221,6 @@ object Analog : FieldAccessor({ it.oscParams?.get("analog") }) {
         { p -> p.analog(amount, callInfo) }
 }
 
-/** The [Analog] accessor as a value, so the Kotlin door reads like the script. */
-val analog: Analog = Analog
 
 /**
  * Chains an analog-drift-set onto this [PatternMapperFn].
@@ -299,7 +297,7 @@ fun String.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("duty")
-object Duty : FieldAccessor({ it.oscParams?.get("duty") }) {
+object duty : FieldAccessor({ it.oscParams?.get("duty") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the pulse duty cycle.
@@ -311,8 +309,6 @@ object Duty : FieldAccessor({ it.oscParams?.get("duty") }) {
         { p -> p.duty(amount, callInfo) }
 }
 
-/** The [Duty] accessor as a value, so the Kotlin door reads like the script. */
-val duty: Duty = Duty
 
 /**
  * Chains a duty-set onto this [PatternMapperFn].
@@ -400,7 +396,7 @@ fun String.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("onepole")
-object Onepole : FieldAccessor({ it.oscParams?.get("onepole") }) {
+object onepole : FieldAccessor({ it.oscParams?.get("onepole") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the oscillator one-pole lowpass.
@@ -416,8 +412,6 @@ object Onepole : FieldAccessor({ it.oscParams?.get("onepole") }) {
         { p -> p.onepole(freq, callInfo) }
 }
 
-/** The [Onepole] accessor as a value, so the Kotlin door reads like the script. */
-val onepole: Onepole = Onepole
 
 /**
  * Chains a onepole-set onto this [PatternMapperFn], applying the one-pole lowpass after the

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -132,7 +132,7 @@ fun String.bodyWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("bodyWet")
-object BodyWet : FieldAccessor({ it.bodyMix }) {
+object bodyWet : FieldAccessor({ it.bodyMix }) {
 
     /** Returns a [PatternMapperFn] that sets the body resonator wet balance. */
     @KlangScript.Method(name = "invoke")
@@ -140,8 +140,6 @@ object BodyWet : FieldAccessor({ it.bodyMix }) {
         { p -> p.bodyWet(wet, callInfo) }
 }
 
-/** The [BodyWet] accessor as a value, so the Kotlin door reads like the script. */
-val bodyWet: BodyWet = BodyWet
 
 /** Chains a bodyWet step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -202,7 +200,7 @@ fun String.bodyFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("bodyFloor")
-object BodyFloor : FieldAccessor({ it.bodyFloor }) {
+object bodyFloor : FieldAccessor({ it.bodyFloor }) {
 
     /** Returns a [PatternMapperFn] that sets the body resonator floor. */
     @KlangScript.Method(name = "invoke")
@@ -210,8 +208,6 @@ object BodyFloor : FieldAccessor({ it.bodyFloor }) {
         { p -> p.bodyFloor(floor, callInfo) }
 }
 
-/** The [BodyFloor] accessor as a value, so the Kotlin door reads like the script. */
-val bodyFloor: BodyFloor = BodyFloor
 
 /** Chains a bodyFloor step onto this [PatternMapperFn]. */
 @KlangScript.Function

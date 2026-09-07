@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions", "ClassName")
 @file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
@@ -142,7 +142,7 @@ fun String.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("fmh")
-object Fmh : FieldAccessor({ it.fmh }) {
+object fmh : FieldAccessor({ it.fmh }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the FM harmonicity ratio on the source pattern.
@@ -158,8 +158,6 @@ object Fmh : FieldAccessor({ it.fmh }) {
         { p -> p.fmh(ratio, callInfo) }
 }
 
-/** The [Fmh] accessor as a value, so the Kotlin door reads like the script. */
-val fmh: Fmh = Fmh
 
 /** Chains a fmh onto this [PatternMapperFn]; sets the FM harmonicity ratio on the result. */
 @KlangScript.Function
@@ -230,7 +228,7 @@ fun String.fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("fmattack")
-object Fmattack : FieldAccessor({ it.fmAttack }) {
+object fmattack : FieldAccessor({ it.fmAttack }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the FM modulation envelope attack time on the source pattern.
@@ -246,8 +244,6 @@ object Fmattack : FieldAccessor({ it.fmAttack }) {
         { p -> p.fmattack(seconds, callInfo) }
 }
 
-/** The [Fmattack] accessor as a value, so the Kotlin door reads like the script. */
-val fmattack: Fmattack = Fmattack
 
 /** Chains a fmattack onto this [PatternMapperFn]; sets the FM envelope attack time on the result. */
 @KlangScript.Function
@@ -277,7 +273,7 @@ fun String.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @tags fmatt, fmattack, accessor
  */
 @KlangScript.Constant
-val fmatt: Fmattack = Fmattack
+val fmatt: fmattack = fmattack
 
 /** Chains a fmatt onto this [PatternMapperFn]; alias for [PatternMapperFn.fmattack]. */
 @KlangScript.Function
@@ -348,7 +344,7 @@ fun String.fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("fmdecay")
-object Fmdecay : FieldAccessor({ it.fmDecay }) {
+object fmdecay : FieldAccessor({ it.fmDecay }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the FM modulation envelope decay time on the source pattern.
@@ -364,8 +360,6 @@ object Fmdecay : FieldAccessor({ it.fmDecay }) {
         { p -> p.fmdecay(seconds, callInfo) }
 }
 
-/** The [Fmdecay] accessor as a value, so the Kotlin door reads like the script. */
-val fmdecay: Fmdecay = Fmdecay
 
 /** Chains a fmdecay onto this [PatternMapperFn]; sets the FM envelope decay time on the result. */
 @KlangScript.Function
@@ -395,7 +389,7 @@ fun String.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @tags fmdec, fmdecay, accessor
  */
 @KlangScript.Constant
-val fmdec: Fmdecay = Fmdecay
+val fmdec: fmdecay = fmdecay
 
 /** Chains a fmdec onto this [PatternMapperFn]; alias for [PatternMapperFn.fmdecay]. */
 @KlangScript.Function
@@ -467,7 +461,7 @@ fun String.fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("fmsustain")
-object Fmsustain : FieldAccessor({ it.fmSustain }) {
+object fmsustain : FieldAccessor({ it.fmSustain }) {
 
     /**
      * Returns a [PatternMapperFn] that sets the FM modulation envelope sustain level on the source pattern.
@@ -483,8 +477,6 @@ object Fmsustain : FieldAccessor({ it.fmSustain }) {
         { p -> p.fmsustain(level, callInfo) }
 }
 
-/** The [Fmsustain] accessor as a value, so the Kotlin door reads like the script. */
-val fmsustain: Fmsustain = Fmsustain
 
 /** Chains a fmsustain onto this [PatternMapperFn]; sets the FM envelope sustain level on the result. */
 @KlangScript.Function
@@ -514,7 +506,7 @@ fun String.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @tags fmsus, fmsustain, accessor
  */
 @KlangScript.Constant
-val fmsus: Fmsustain = Fmsustain
+val fmsus: fmsustain = fmsustain
 
 /** Chains a fmsus onto this [PatternMapperFn]; alias for [PatternMapperFn.fmsustain]. */
 @KlangScript.Function
@@ -556,7 +548,7 @@ private fun applyFmenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("fmenv")
-object Fmenv : FieldAccessor({ it.fmEnv }) {
+object fmenv : FieldAccessor({ it.fmEnv }) {
 
     /**
      * Sets the FM modulation depth (the peak modulation amount in Hz).
@@ -582,8 +574,6 @@ object Fmenv : FieldAccessor({ it.fmEnv }) {
         listOf(depth).asSprudelDslArgs(callInfo).toPattern(fmenvMutation)
 }
 
-/** The [Fmenv] accessor as a value, so the Kotlin door reads like the script. */
-val fmenv: Fmenv = Fmenv
 
 /** Sets the FM modulation depth on this pattern. */
 @KlangScript.Function
@@ -602,7 +592,7 @@ fun String.fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern
  * @tags fmmod, fmenv, accessor
  */
 @KlangScript.Constant
-val fmmod: Fmenv = Fmenv
+val fmmod: fmenv = fmenv
 
 /** Alias for [fmenv] on this pattern. */
 @KlangScript.Function
