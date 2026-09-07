@@ -15,7 +15,6 @@ import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.lang.addons.notch
 
 /**
  * C1 parity pin (docs/plans/filter-unification.md): ONE default q = 0.707 for every filter

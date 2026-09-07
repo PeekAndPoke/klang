@@ -7,7 +7,6 @@
 
 package io.peekandpoke.klang
 
-import io.peekandpoke.klang.sprudel.lang.addons.flipSign
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.arrange
 import io.peekandpoke.klang.sprudel.lang.clip
@@ -16,6 +15,7 @@ import io.peekandpoke.klang.sprudel.lang.distort
 import io.peekandpoke.klang.sprudel.lang.early
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.filterWhen
+import io.peekandpoke.klang.sprudel.lang.flipSign
 import io.peekandpoke.klang.sprudel.lang.gain
 import io.peekandpoke.klang.sprudel.lang.hpf
 import io.peekandpoke.klang.sprudel.lang.lpf

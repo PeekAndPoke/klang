@@ -8,7 +8,7 @@ package io.peekandpoke.klang.sprudel.lang.parser
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.lang.addons.applyTweaks
+import io.peekandpoke.klang.sprudel.lang.applyTweaks
 import io.peekandpoke.klang.sprudel.lang.degradeBy
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.seq

@@ -31,8 +31,6 @@ import io.peekandpoke.klang.sprudel._withQuerySpan
 import io.peekandpoke.klang.sprudel._withQueryTime
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.lang.addons.not
-import io.peekandpoke.klang.sprudel.lang.addons.timeLoop
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.sprudel.map
 import io.peekandpoke.klang.sprudel.mapEvents

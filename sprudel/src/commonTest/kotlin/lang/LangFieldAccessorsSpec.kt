@@ -13,10 +13,6 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
-import io.peekandpoke.klang.sprudel.lang.addons.analog
-import io.peekandpoke.klang.sprudel.lang.addons.duty
-import io.peekandpoke.klang.sprudel.lang.addons.onepole
-import io.peekandpoke.klang.sprudel.lang.addons.notch
 
 /**
  * One row per field accessor, each run through BOTH doors: the Kotlin pattern and the same text

@@ -15,7 +15,6 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
-import io.peekandpoke.klang.sprudel.lang.addons.lateInCycle
 
 class LangInsideSpec : StringSpec({
 
