@@ -258,9 +258,12 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   envelopes: 36 accessors, 22 aliases.
 - DONE (batch four, 2026-09-07): dynamics leftovers, routing fields, compressor threshold, fmenv.
   Phase 2 numeric sweep complete: 88 accessors, 54 alias constants.
-- OPEN: string and boolean setters (`note, n, sound, bank, scale, vowel, body, unit, loop,
-  *shape, *curve`), a diagnostic when a mapper reaches one of them (today the value is dropped),
-  and the engine gaps listed above.
+- WON'T IMPLEMENT (maintainer, 2026-09-07): string and boolean setters (`note, n, sound, bank,
+  scale, vowel, body, unit, loop, *shape, *curve`). "Apply a mapper to a name" has no use case,
+  and the maintainer expects it never will.
+- OPEN: fields that only have a compound door (the filter envelope stages, the compressor's
+  other slots), see `docs/tasks/sprudel-accessors-compound-slots.md`; a diagnostic when a mapper
+  reaches a setter without the branch (today the value is dropped); the engine gaps listed above.
 - Engine gaps the examples exposed (2026-09-07, batch three review), documented as "reserved" in
   the object KDocs: `pcurve` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not
   read by `VoiceFactory` (it loops between `begin` and `end`); negative `speed` is silence, not

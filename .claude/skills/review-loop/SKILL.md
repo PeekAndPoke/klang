@@ -170,6 +170,15 @@ Mutation checking is the antidote: it tests the test.
   jsBrowserDevelopmentRun` or similar). The maintainer often has one open; the build lock cannot
   serialize against it. Report instead of building when one is running.
 - Don't fuss over whitespace/blank-line findings — codefactor.io auto-fixes formatting.
+- **Generated batches: review the prose, trust the structure.** Across 88 script-generated accessor
+  objects (2026-09-07) the reviewers found zero read/update or parameter slips; every finding was
+  in the KDoc, the examples, or a claim about the engine. Point the reviewer at meaning
+  (engine gates, units, sign, direction), and let the specs and mutation checks cover structure.
+- **Background Gradle chains get killed under memory pressure.** The harness stops a background
+  command when the machine runs low; a foreground run of the same chain survives. Before a long
+  chain, stop the project's own Kotlin compile daemon (the one whose marker file says
+  `klangengine`, 4 to 5 GB when warm); Gradle respawns it. Never `pkill -f` a pattern that also
+  matches your own shell's command line.
 
 ## Changelog
 
@@ -184,6 +193,11 @@ Mutation checking is the antidote: it tests the test.
   the agent reviews first WITHOUT the previous findings, then reconciles against them (withdraw, or
   stick to its judgement by naming what is factually wrong in the rejection reason). Review first,
   context after: fresh eyes stay fresh, and settled findings still stay settled.
+- **2026-09-07** — Evidence for the two-phase reconcile from the accessor sweep (four batches, eight
+  rounds): the reconcile phase twice proved a triage REASON factually wrong (a file the triage said
+  did not exist, an engine claim the triage repeated), and each time the correction mattered.
+  Reviewers also caught an inverted engine direction (ducking) that a fix had introduced. Keep the
+  phase; it is where triage errors surface.
 - **2026-08-28** — Standard 2 scope split into MANDATORY (core: audio_be/audio_bridge/wire/sprudel
   timing core/KSP processors, regression guards and threshold assertions anywhere) and LIGHT
   (direct-oracle surface, UI/docs), per the maintainer; plus two testing principles: no value-echo

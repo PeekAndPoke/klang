@@ -228,7 +228,9 @@ return applyCat(patterns)
 
 ### Audio Effects — Filter Envelopes
 
-- LP: `lpattack()` / `lpa`, `lpdecay()` / `lpd`, `lpsustain()` / `lps`, `lprelease()` / `lpr`, `lpenv()` / `lpe`
+- LP: `lpadsr(a, d, s, r)` and `lpe` (the stage doors `lpattack/lpa`, `lpdecay/lpd`, `lpsustain/lps`,
+  `lprelease/lpr` and `lpenv` were retired by the C6a alias cleanup, see `LangDeletedFilterAliasesSpec`;
+  the stages have no accessors yet, `docs/tasks/sprudel-accessors-compound-slots.md`)
 - HP: `hpattack()` / `hpa`, `hpdecay()` / `hpd`, `hpsustain()` / `hps`, `hprelease()` / `hpr`, `hpenv()` / `hpe`
 - BP: `bpattack()` / `bpa`, `bpdecay()` / `bpd`, `bpsustain()` / `bps`, `bprelease()` / `bpr`, `bpenv()` / `bpe`
 - Notch (Klang extension): `nfattack()` / `nfa`, `nfdecay()` / `nfd`, `nfsustain()` / `nfs`, `nfrelease()` / `nfr`,

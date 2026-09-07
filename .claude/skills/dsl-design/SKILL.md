@@ -214,3 +214,9 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
 7. Wire changes: sealed `@WireName` types, not enums.
 8. No frontend DSP, no cycles over the wire.
 9. Docs that feed the editor popup (KDoc on the door and the builder) updated in the same diff.
+10. Every example in the diff is AUDIBLE, not just compilable: the stage the knob drives is
+    actually built (read the `VoiceFactory` gate: a tremolo needs depth > 0, a delay needs a time,
+    a filter envelope needs its cutoff, a decay needs a sustain below 1, ducking needs depth and a
+    trigger on the named orbit) and the comment describes what the engine does. Lesson of the
+    accessor sweep (2026-09-07): every MAJOR across four batches was an example that compiled,
+    queried and demonstrated nothing; `DslDocExamplesSpec` cannot hear.
