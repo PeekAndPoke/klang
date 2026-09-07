@@ -102,6 +102,7 @@ let bass = (() => {
   let pGrindLo = Osc.param("grindlo",  100.000, "Grind highpass — where the bass starts biting")
   let pGrindHi = Osc.param("grindhi", 1100.000, "Grind lowpass — where the bass stops biting")
   let pGrind   = Osc.param("grind",       0.55, "Grind Volume")
+  let pHarm    = Osc.param("harmonics",   1.00, "Harmonics Volume")
   // ----------------------------------------------------------------------------------------------
 
   // Sub: a bare sine. No filter — a sine has no harmonics to remove. This is the weight,
@@ -119,13 +120,9 @@ let bass = (() => {
     .highpass(freq = pGrindLo, q = 0.707)
     .mul(pGrind)
 
-  let harmonics = Osc.sine(freq = Osc.freq().mul(2)).mul(1/2)
-    .add(Osc.sine(freq = Osc.freq().mul(3)).mul(1/3))
-    .add(Osc.sine(freq = Osc.freq().mul(4)).mul(1/4))
-    .add(Osc.sine(freq = Osc.freq().mul(5)).mul(1/5))
-    .add(Osc.sine(freq = Osc.freq().mul(6)).mul(1/6))
-    .add(Osc.sine(freq = Osc.freq().mul(7)).mul(1/7))
-    .add(Osc.sine(freq = Osc.freq().mul(8)).mul(1/8))
+  // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
+  // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
+  let harmonics = Osc.sine(x => x.harmonics(7).fundamental(0)).mul(pHarm)
       
   return sub.plus(grind).plus(harmonics)
 })()

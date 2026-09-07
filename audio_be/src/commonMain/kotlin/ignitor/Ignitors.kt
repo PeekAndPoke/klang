@@ -182,6 +182,295 @@ object Ignitors {
         }
     }
 
+
+    // ── Sine partial bank ────────────────────────────────────────────────────────
+
+    /** Engine cap per bank (coerced, like every count): a runaway `count` signal cannot allocate without bound. */
+    private const val PARTIAL_BANK_MAX_COUNT = 64
+
+    /**
+     * A sine carrying banks of sine partials at multiples of its own frequency, rendered in ONE
+     * block pass (`docs/plans/sine-partial-banks.md`). Replaces the hand-rolled
+     * `Osc.sine().add(Osc.sine(freq * 2).mul(1/2)).add(...)` stacks: same partials, same gains,
+     * one loop per partial instead of three block passes per partial.
+     *
+     * Partial 0 is the sine itself at gain [fundamental]. [harmonics] adds partials at `2f, 3f, ...`,
+     * [octaves] at `2f, 4f, 8f, ...`, [suboctaves] at `f/2, f/4, ...`; an added partial at `m * f` or
+     * `f / m` has gain `m ^ -rolloff` of its bank (the distance from the fundamental is `m` in both
+     * directions). Banks sum without deduplication. Every knob is read once per block (control rate,
+     * the `voices` pattern). Each bank owns its partial state, so a count change in one bank never
+     * re-indexes another; surviving partials keep their phase, a partial that (re)activates starts
+     * at phase 0, which is a zero crossing, so adds are step-free. Removals are not: a count
+     * decrement drops its partial at whatever phase it has (a step of up to that partial's gain),
+     * so automate `rolloff`, not `count`, when it must move smoothly. A partial at or above Nyquist,
+     * judged at block start on the base pitch, is silenced (gain 0); there is no lower limit.
+     *
+     * Drift: [analog] is the depth for every lane, latched at the first block like the plain sine.
+     * [analogSpread] blends per partial between one SHARED walk (0: the bank wobbles as one physical
+     * oscillator, the spectrum stays exactly harmonic) and the partial's OWN walk (1: independent
+     * lanes, the beating of the hand-rolled stack), with constant-power weights `sqrt(1 - s)` and
+     * `sqrt(s)` so the depth stays [analog] at every setting. Lanes are created lazily in a fixed
+     * order (shared, fundamental, then each bank's partials by index) so a seeded voice RNG renders
+     * reproducibly.
+     *
+     * The per-sample loop mirrors [SineIgnitor] (radian phase, `sin(phase)`, `wrapPhase(TWO_PI)`),
+     * so a bank of one partial with `analog = 0` is bit-identical to the plain sine (with drift the
+     * two seed their lanes in a different order).
+     */
+    fun sinePartials(
+        freq: Ignitor = FreqIgnitor,
+        analog: Ignitor = analogDefault,
+        fundamental: Ignitor = ConstantIgnitor(1.0),
+        harmonics: Ignitor = ConstantIgnitor(0.0),
+        harmonicsRolloff: Ignitor = ConstantIgnitor(1.0),
+        octaves: Ignitor = ConstantIgnitor(0.0),
+        octavesRolloff: Ignitor = ConstantIgnitor(1.0),
+        suboctaves: Ignitor = ConstantIgnitor(0.0),
+        suboctavesRolloff: Ignitor = ConstantIgnitor(1.0),
+        analogSpread: Ignitor = ConstantIgnitor(1.0),
+    ): Ignitor = PartialBankIgnitor(
+        freq, analog, fundamental,
+        harmonics, harmonicsRolloff, octaves, octavesRolloff, suboctaves, suboctavesRolloff,
+        analogSpread,
+    )
+
+    private class PartialBankIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+        private val fundamental: Ignitor,
+        private val harmonics: Ignitor,
+        private val harmonicsRolloff: Ignitor,
+        private val octaves: Ignitor,
+        private val octavesRolloff: Ignitor,
+        private val suboctaves: Ignitor,
+        private val suboctavesRolloff: Ignitor,
+        private val analogSpread: Ignitor,
+    ) : Ignitor {
+        /** One bank's partial state: growth-only arrays, a live [count], (re)activated partials restart at phase 0. */
+        private class Bank {
+            var count: Int = 0
+            var phase: DoubleArray = DoubleArray(0)
+            var gain: DoubleArray = DoubleArray(0)
+            var inc: DoubleArray = DoubleArray(0)
+            var lanes: Array<AnalogDrift> = emptyArray()
+
+            fun resize(newCount: Int, analogAmt: Double, ctx: IgniteContext) {
+                if (newCount > phase.size) {
+                    phase = phase.copyOf(newCount)
+                    gain = gain.copyOf(newCount)
+                    inc = inc.copyOf(newCount)
+                }
+
+                if (analogAmt > 0.0 && newCount > lanes.size) {
+                    val old = lanes
+                    lanes = Array(newCount) { i -> if (i < old.size) old[i] else AnalogDrift(analogAmt, ctx.sampleRate, ctx.random) }
+                }
+
+                for (i in count until newCount) {
+                    phase[i] = 0.0 // a (re)activated partial starts at a zero crossing: step-free
+                }
+
+                count = newCount
+            }
+        }
+
+        private var fundPhase: Double = 0.0
+        private var fundGain: Double = 0.0
+        private var fundInc: Double = 0.0
+        private var fundLane: AnalogDrift? = null
+
+        private val harmonicsBank = Bank()
+        private val octavesBank = Bank()
+        private val suboctavesBank = Bank()
+        private val banks = arrayOf(harmonicsBank, octavesBank, suboctavesBank)
+
+        /** Drift depth, latched at the first block like the plain sine; a NaN read latches as inactive. */
+        private var analogAmt: Double = 0.0
+        private var latched: Boolean = false
+        private var shared: AnalogDrift? = null
+        private var sharedDevBuf: DoubleArray = DoubleArray(0)
+
+        /** Coerces a count signal to `0..PARTIAL_BANK_MAX_COUNT`; NaN reads as 0. */
+        private fun count(param: Ignitor, freqHz: Double, ctx: IgniteContext): Int =
+            readParam(param, freqHz, ctx).toInt().coerceIn(0, PARTIAL_BANK_MAX_COUNT)
+
+        /** `m ^ -rolloff`, 0 when the law overflows (a huge negative rolloff); NaN-guard: never NaN. */
+        private fun law(m: Double, rolloff: Double): Double {
+            val g = m.pow(-rolloff)
+            return if (g.isFinite()) g else 0.0
+        }
+
+        /** Gain of a partial at [partialFreq]: [g], or 0 at or above Nyquist. */
+        private fun gate(partialFreq: Double, g: Double, ctx: IgniteContext): Double =
+            if (partialFreq >= ctx.sampleRateD * 0.5) 0.0 else g
+
+        /** Growth-only scratch for the shared drift deviations; sized to the block, allocated once. */
+        private fun sharedDevBuf(size: Int): DoubleArray {
+            if (sharedDevBuf.size < size) {
+                sharedDevBuf = DoubleArray(size)
+            }
+
+            return sharedDevBuf
+        }
+
+        /**
+         * Renders one partial into [buffer] (writes when [first], adds otherwise) and returns its new
+         * phase. One tight loop per partial with the phase in a local: the shape the JIT renders
+         * fastest (see the sine stack; a sample-major loop over phase arrays measured 2x slower).
+         */
+        private fun renderPartial(
+            buffer: AudioBuffer, off: Int, end: Int, first: Boolean,
+            phaseIn: Double, d: Double, g: Double,
+            pm: DoubleArray?, sharedDev: DoubleArray?, wShared: Double, own: AnalogDrift?, wOwn: Double,
+        ): Double {
+            var ph = phaseIn
+
+            for (i in off until end) {
+                val s = g * sin(ph)
+                buffer[i] = if (first) s else buffer[i] + s
+
+                var step = d
+
+                if (pm != null) {
+                    step *= pm[i]
+                }
+
+                if (sharedDev != null || own != null) {
+                    var dev = 0.0
+
+                    if (sharedDev != null) {
+                        dev += wShared * sharedDev[i]
+                    }
+
+                    if (own != null) {
+                        dev += wOwn * (own.nextMultiplier() - 1.0)
+                    }
+
+                    step *= 1.0 + dev
+                }
+
+                ph = (ph + step).wrapPhase(TWO_PI)
+            }
+
+            return ph
+        }
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val actualFreq = resolveFreq(freq, freqHz, ctx)
+
+            if (!latched) {
+                latched = true
+                analogAmt = readParam(analog, actualFreq, ctx)
+
+                if (analogAmt > 0.0) {
+                    shared = AnalogDrift(analogAmt, ctx.sampleRate, ctx.random)
+                    fundLane = AnalogDrift(analogAmt, ctx.sampleRate, ctx.random)
+                }
+            }
+
+            val h = count(harmonics, actualFreq, ctx)
+            val o = count(octaves, actualFreq, ctx)
+            val sub = count(suboctaves, actualFreq, ctx)
+            harmonicsBank.resize(h, analogAmt, ctx)
+            octavesBank.resize(o, analogAmt, ctx)
+            suboctavesBank.resize(sub, analogAmt, ctx)
+
+            val baseInc = TWO_PI * actualFreq / ctx.sampleRateD
+            val fund = readParam(fundamental, actualFreq, ctx)
+            // NaN-guard: a non-finite fundamental gain reads as 0 (the hand-rolled `.mul(gain)` scrubbed NaN too).
+            fundGain = gate(actualFreq, if (fund.isFinite()) fund else 0.0, ctx)
+            fundInc = baseInc
+
+            val rh = readParam(harmonicsRolloff, actualFreq, ctx)
+            val ro = readParam(octavesRolloff, actualFreq, ctx)
+            val rs = readParam(suboctavesRolloff, actualFreq, ctx)
+
+            for (i in 0 until h) {
+                val m = (2 + i).toDouble()
+                harmonicsBank.gain[i] = gate(m * actualFreq, law(m, rh), ctx)
+                harmonicsBank.inc[i] = TWO_PI * (m * actualFreq) / ctx.sampleRateD
+            }
+
+            var m = 1.0
+
+            for (i in 0 until o) {
+                m *= 2.0
+                octavesBank.gain[i] = gate(m * actualFreq, law(m, ro), ctx)
+                octavesBank.inc[i] = TWO_PI * (m * actualFreq) / ctx.sampleRateD
+            }
+
+            m = 1.0
+
+            for (i in 0 until sub) {
+                m *= 2.0
+                val partialFreq = actualFreq / m
+                suboctavesBank.gain[i] = gate(partialFreq, law(m, rs), ctx)
+                suboctavesBank.inc[i] = TWO_PI * partialFreq / ctx.sampleRateD
+            }
+
+            val pm = ctx.phaseMod
+            val off = ctx.offset
+            val end = ctx.windowEnd
+            val sh = shared
+
+            // Shared drift walk, advanced once per sample for the whole bank and sampled into a
+            // scratch array so every partial's loop sees the same sequence.
+            var wShared = 0.0
+            var wOwn = 0.0
+            var sharedDev: DoubleArray? = null
+            var useOwn = false
+
+            if (sh != null) {
+                val rawSpread = readParam(analogSpread, actualFreq, ctx)
+                // NaN-guard: a NaN spread reads as the default (1, independent lanes); coerceIn passes NaN through.
+                val spread = if (rawSpread.isNaN()) 1.0 else rawSpread.coerceIn(0.0, 1.0)
+                wShared = sqrt(1.0 - spread)
+                wOwn = sqrt(spread)
+                useOwn = spread > 0.0
+
+                if (spread < 1.0) {
+                    val dev = sharedDevBuf(end)
+
+                    for (i in off until end) {
+                        dev[i] = sh.nextMultiplier() - 1.0
+                    }
+
+                    sharedDev = dev
+                }
+            }
+
+            var first = true
+
+            if (fundGain != 0.0) {
+                fundPhase = renderPartial(
+                    buffer, off, end, first, fundPhase, fundInc, fundGain,
+                    pm, sharedDev, wShared, if (useOwn) fundLane else null, wOwn,
+                )
+                first = false
+            }
+
+            for (bank in banks) {
+                for (i in 0 until bank.count) {
+                    val g = bank.gain[i]
+
+                    if (g == 0.0) {
+                        continue // silent (Nyquist): nothing to add, nothing to advance
+                    }
+
+                    bank.phase[i] = renderPartial(
+                        buffer, off, end, first, bank.phase[i], bank.inc[i], g,
+                        pm, sharedDev, wShared, if (useOwn) bank.lanes[i] else null, wOwn,
+                    )
+                    first = false
+                }
+            }
+
+            if (first) {
+                buffer.fill(0.0, off, end)
+            }
+        }
+    }
+
     // ── One waveform engine ──────────────────────────────────────────────────────
     // saw / ramp / square / pulse / triangle (+ raw zaw / zamp / pulze) all render through the SAME
     // shape ([waveTrapezoid] via [WaveVoiceState]) and the same hot loop — see [WaveIgnitor].

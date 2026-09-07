@@ -78,7 +78,7 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 
 | Method                | Description                              |
 |-----------------------|------------------------------------------|
-| `Osc.sine(freq?)`     | Pure sine wave                           |
+| `Osc.sine(freq?)`     | Pure sine wave; its builder adds partial banks (below) |
 | `Osc.saw(freq?)`      | Sawtooth, anti-aliased (PolyBLEP)        |
 | `Osc.square(freq?)`   | Square wave, anti-aliased                |
 | `Osc.triangle(freq?)` | Triangle wave                            |
@@ -106,6 +106,26 @@ and returns it. The builder carries exactly that oscillator's knobs; processing 
 
 ```javascript
 Osc.supersaw(x => x.voices(9).spread(0.1).analog(0.2)).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
+```
+
+**Sine partial banks** (`Osc.sine` builder knobs; `docs/plans/sine-partial-banks.md`). The sine can carry banks
+of sine partials at multiples of ITS OWN frequency, rendered in one pass: `harmonics(count, rolloff = 1)` adds
+`count` partials at `2f, 3f, 4f ...`, `octaves(count, rolloff = 1)` at `2f, 4f, 8f ...`, `suboctaves(count,
+rolloff = 1)` at `f/2, f/4 ...`. An added partial at `m * f` or at `f / m` has gain `m ^ -rolloff` of its bank:
+rolloff 1 is the sawtooth law, 2 is triangle-soft, 0 is flat. `fundamental(gain)`
+levels the sine itself (0 = overtones only). `analogSpread(0..1)` sets whether the partials drift as one
+oscillator (0) or each on its own lane (1, default) under `analog`. Every knob is a signal read once per block.
+Partials at or above Nyquist stay silent; there is no lower limit. Multiples follow the door's `freq`, so
+`Osc.sine(Osc.freq().mul(2), x => x.harmonics(3))` is the even series `2f, 4f, 6f, 8f`. A sub-octave at a
+comparable level moves the perceived pitch down an octave (the missing-fundamental effect), which is the point of
+a sub oscillator. Without bank knobs `Osc.sine` is the plain sine.
+
+```javascript
+Osc.sine(x => x.harmonics(7))                          // bass: f plus 2f .. 8f, the ear rebuilds 41 Hz on a phone speaker
+Osc.sine(x => x.harmonics(7).fundamental(0)).mul(0.5)  // the overtones only, on their own fader next to a sub sine
+Osc.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
+Osc.sine(Osc.freq().mul(2), x => x.octaves(5)).mul(1/2) // 2f .. 64f at 1/2 .. 1/64: an octave stack over a saw
+Osc.sine(x => x.harmonics(12, Osc.param("rolloff", 1))) // brightness from the pattern
 ```
 
 **Builder knobs of the super oscillators** (each returns the builder): `voices(x)` (default 8), `spread(x)`

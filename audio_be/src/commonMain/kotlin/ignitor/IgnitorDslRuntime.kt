@@ -382,7 +382,20 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Sources: apply accumulated mod ──
 
-        is IgnitorDsl.Sine -> pitchedSource(freq, Ignitors.sine(freq.noMod(), analog.noMod()))
+        // Literal defaults build the plain sine, bit-identical to before the partial banks existed;
+        // any bank knob set builds the bank (a Param included: its value is only known at voice build).
+        is IgnitorDsl.Sine -> if (isPlainSine()) {
+            pitchedSource(freq, Ignitors.sine(freq.noMod(), analog.noMod()))
+        } else {
+            pitchedSource(
+                freq,
+                Ignitors.sinePartials(
+                    freq.noMod(), analog.noMod(), fundamental.noMod(),
+                    harmonics.noMod(), harmonicsRolloff.noMod(), octaves.noMod(), octavesRolloff.noMod(),
+                    suboctaves.noMod(), suboctavesRolloff.noMod(), analogSpread.noMod(),
+                ),
+            )
+        }
         is IgnitorDsl.Sawtooth -> pitchedSource(
             freq,
             Ignitors.sawtooth(freq.noMod(), analog.noMod(), resetSamples = resetSamples, shapeMax = shapeMax),
