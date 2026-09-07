@@ -4,6 +4,87 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-09-07) Field accessors ... v0.3.8
+
+- every compound is an object with named slots now ... adsr(attack = 0.1) sets, adsr.attack reads
+- the per-knob doors are gone: room*, delay*, phaser*, tremolo*, lpq/hpq/bpq, vibratoMod, fm*, duck* ... one word per concept
+- @KlangScript.Invoke replaces the "invoke" method spelling
+- lang/addons dissolved ... sprudel is not a Strudel port, so "what Strudel lacks" named nothing
+- every DSL file is lang_<group>_<subgroup>.kt now, split by what it does
+
+### (2026-09-06) Configure lambdas + a rules register ... v0.3.7.1
+
+- knobs moved onto a builder behind a trailing configure lambda, construction inputs stay on the door
+- the standard library split out of the language module (klangscript-libs)
+- memory and rules housekeeping ... CLAUDE.md now carries every rule with a hardness (stone / rule / guideline / guardrail)
+
+### (2026-09-03) Resource warehouse + first-run warmup ... v0.3.7
+
+- delay rings, reverb networks, scratch buffers and cylinders are rented from one shelf ... never allocated in render
+- a grow migrates the ring and the seam is inaudible; best-fit-up is bounded, and so is the ready wait
+- a warmup vocabulary executes every ignitor node kind before the first song
+- "is it still ringing" answered in closed form ... no more tail scans on the audio thread
+- the motor title toggles to warehouse stats (five review rounds to a clean one)
+
+### (2026-09-02) Soundfont looping
+
+- root cause: the playhead never started at the start
+- and the worklet dropped every sample's metadata on reassembly
+- a loop is a loop, and the sample is the envelope
+
+### (2026-08-31) Mini-notation tweaks + the test audit ... v0.3.6
+
+- a name in braces finally means something ... the attribute block retires
+- the MIDI note stops waiting for a timer, the command ring is drained on send
+- audit F5-F20: tests that named a behaviour and checked nothing now check it (two bullets were simply wrong)
+- every DSL doc example compiles now ... 46 of them did not
+
+### (2026-08-28) Block-framing invariance audit ... v0.3.5
+
+- a note sounds the same wherever it lands inside a render block ... proven node by node (O, D, W batches)
+- no late voices, ever ... the startup race was one whole block
+- FM depth per-sample, the delay drains, the phaser and tremolo LFOs are clocks, the fused distort retires
+- the voice envelope can be switched off explicitly, never inferred
+
+### (2026-08-29) MIDI
+
+- MIDI MVP ... device panel and the full KeyLab Essential 49 mk3 map
+- a held key releases into its own tail
+- the bookkeeping moves to the playback, the scheduler gets its name
+
+### (2026-08-25) Renames ... v0.3.4
+
+- Klangmotör is Klangmotor now, plain o ... "too much ego" (Motörhead keeps its umlaut)
+- a filter's frequency is freq on every surface; Ignitor.clip() is shape()
+- sprudel's bitwise family says what it does
+
+### (2026-08-23) Parameter unification (C series) ... v0.3.2 / v0.3.3
+
+- one default q = 0.707 everywhere, unity-peak bandpass family, WetDryMix as THE wet/dry law
+- compound colon-parameters became per-param functions on both doors; the compressor leaves the wire as a colon string
+- envelope depth and pitch params say SEMITONES; ADSR curve default is EXP everywhere
+- passes on lowpass/highpass ... a staggered Butterworth cascade
+- klangblocks removed, strudel-heritage filter aliases deleted ... one surface fewer to keep consistent
+
+### (2026-08-19) Unified EQ + graph optimizer ... v0.3.1.4 / v0.3.1.5
+
+- EqCore: serial LP/HP/BP/NOTCH plus a peaking bell and a parallel raw tap, shape chosen by bake-off
+- the optimizer fuses adjacent filter chains into one EqCore pass ... .eq() / .band() / .tap() on both doors
+- constant-folding through the ignitor graph, 15 scalar overrides
+- seeded per-voice RNG (the coreRandom derivation tree), .tag() semantic event tags
+- swallowed runtime errors surfaced, and "no such method" made useful
+
+### (2026-08-15) Tutorials + the motor face ... v0.3.1 to v0.3.1.3
+
+- the generated tutorial corpus wiped ... the curriculum starts again, hand-written and certified
+- A1-A7, B4-B10 written and certified; markdown prose blocks, section blocks, an ADSR visual
+- MotorBackground reworked, look and feel pass
+- highlights get cancelled on stop and on live update
+
+### (2026-08-13) Klangmotör ... v0.3.0
+
+- "Klang Audio Motör" is "Klangmotör" ... one word
+
 ### (2026-08-12) Unison phase pool ... v0.2.0
 
 - the super-osc "fundamental lottery" is dead ... banded start-phase selection + per-orbit pools
