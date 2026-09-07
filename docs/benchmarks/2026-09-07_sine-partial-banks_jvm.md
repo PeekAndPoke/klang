@@ -1,5 +1,10 @@
 # Audio Benchmark Results
 
+> **Read as relative numbers only.** This run was made with the harness calling the scheduler
+> AND `renderBlock` per block, which rendered every voice twice; every absolute value here is
+> about double the real cost. Fixed the same day in `IgnitorBenchmark.kt`; the ratios between
+> rows hold.
+
 - **Platform:** JVM 17.0.17 (Amazon.com Inc.) / Linux / AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics (16 cores)
 - **Sample rate:** 44100 Hz
 - **Block size:** 128 frames

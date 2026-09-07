@@ -242,7 +242,9 @@ writes the buffer and the rest add to it; a fully silent bank writes zeros. Sile
 SHAPE decided the result, not the block-pass count. A first, sample-major version (one loop over
 samples, an inner loop over partials reading and writing phase arrays) rendered `harmonics(7)` at
 41 µs per block against 24 µs for the hand-rolled tree: slower than what it replaced. Rewritten
-partial-major it is 22 µs against the tree's 24 µs, and `octaves(6)` is 17 µs. `sin()` dominates
+partial-major it is 22 µs against the tree's 24 µs, and `octaves(6)` is 17 µs (all three about
+double the true cost: the harness rendered every voice twice per block, fixed the same day; the
+ratios hold). `sin()` dominates
 either way, so the native bank is only a little cheaper than the tree per partial; its value is the
 knobs as signals, the growth-only arrays, and one node instead of three per partial. The real
 speed-up is 5.3.

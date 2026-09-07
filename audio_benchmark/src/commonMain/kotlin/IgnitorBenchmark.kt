@@ -149,10 +149,11 @@ class IgnitorBenchmark(
             )
         }
 
-        // Warmup — prime JIT, allocate lazy buffers
+        // Warmup — prime JIT, allocate lazy buffers. renderBlock() advances the scheduler itself;
+        // calling scheduler.process() as well rendered every voice twice per block and doubled
+        // every number this benchmark ever reported (found 2026-09-07).
         var frame = 0.0
         repeat(warmupBlocks) {
-            scheduler.process(frame)
             renderer.renderBlock(frame, outBuffer)
             frame += blockFrames
         }
@@ -161,7 +162,6 @@ class IgnitorBenchmark(
         val mark = TimeSource.Monotonic.markNow()
 
         repeat(measureBlocks) {
-            scheduler.process(frame)
             renderer.renderBlock(frame, outBuffer)
             frame += blockFrames
         }
