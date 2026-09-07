@@ -108,7 +108,7 @@ stages as slots, `bpf` and `notch` the same without `passes`); the singular `ads
 refuses the old one). The sprudel `lang/addons/` directory, the package
 `io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag (gone 2026-09-07: sprudel is not a Strudel port,
 so "what Strudel does not have" named nothing a reader could use; every DSL file is now
-`lang_<group>_<subgroup>.kt` in `sprudel/.../lang/`, see `docs/tasks/sprudel-lang-file-reorganisation.md`).
+`lang_<group>_<subgroup>.kt` in `sprudel/.../lang/`, see `docs/tasks-archive/2026-09/20260907-sprudel-lang-file-reorganisation.md`).
 
 ## Available Agent
 

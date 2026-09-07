@@ -131,7 +131,7 @@
 "does the original Strudel have this?", and sprudel diverged far enough that the answer stopped
 describing anything a reader could use: it only made them guess which of two directories a function
 sits in. Every DSL file now lives in `lang/` as `lang_<group>_<subgroup>.kt`, none over ~700 lines
-(`docs/tasks/sprudel-lang-file-reorganisation.md`).
+(`docs/tasks-archive/2026-09/20260907-sprudel-lang-file-reorganisation.md`).
 
 **Immutable at construction, mutable at runtime, both deliberate.** Every combinator returns a new
 pattern (the project-wide DSL principle, see `audio/MEMORY.md` Architecture Decisions and
