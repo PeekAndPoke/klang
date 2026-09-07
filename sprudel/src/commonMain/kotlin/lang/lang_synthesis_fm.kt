@@ -14,6 +14,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FM Synthesis
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,7 +164,14 @@ private fun applyFmSustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @tags fm, env, h, attack, decay, sustain
  */
 @KlangScript.Function
-fun SprudelPattern.fm(env: PatternLike? = null, h: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, sustain: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.fm(
+    env: PatternLike? = null,
+    h: PatternLike? = null,
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern {
     // A tail-only call must not touch env: reinterpret runs only on a fully bare call.
     var p = if (env != null || !(h != null || attack != null || decay != null || sustain != null)) {
         applyFmEnv(this, listOfNotNull(env).asSprudelDslArgs(callInfo))
@@ -179,12 +187,26 @@ fun SprudelPattern.fm(env: PatternLike? = null, h: PatternLike? = null, attack: 
 
 /** Parses this string as a pattern, then applies [fm]. */
 @KlangScript.Function
-fun String.fm(env: PatternLike? = null, h: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, sustain: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+fun String.fm(
+    env: PatternLike? = null,
+    h: PatternLike? = null,
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fm(env, h, attack, decay, sustain, callInfo)
 
 /** Chains a [fm] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.fm(env: PatternLike? = null, h: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, sustain: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+fun PatternMapperFn.fm(
+    env: PatternLike? = null,
+    h: PatternLike? = null,
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    callInfo: CallInfo? = null
+): PatternMapperFn =
     this.chain { p -> p.fm(env, h, attack, decay, sustain, callInfo) }
 
 /**
@@ -220,6 +242,13 @@ object fm {
 
     /** The setter, see [SprudelPattern.fm]. */
     @KlangScript.Invoke
-    operator fun invoke(env: PatternLike? = null, h: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, sustain: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    operator fun invoke(
+        env: PatternLike? = null,
+        h: PatternLike? = null,
+        attack: PatternLike? = null,
+        decay: PatternLike? = null,
+        sustain: PatternLike? = null,
+        callInfo: CallInfo? = null
+    ): PatternMapperFn =
         { p -> p.fm(env, h, attack, decay, sustain, callInfo) }
 }

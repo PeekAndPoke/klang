@@ -35,7 +35,7 @@ private fun applyStruct(source: SprudelPattern, structArg: SprudelDslArg<Any?>?)
  * The mask provides the rhythmic structure; the source pattern provides the values. Only source
  * events that overlap with truthy events in the mask are kept, clipped to the mask's timing.
  *
- * @param mask Pattern whose truthy events define the new rhythmic structure.
+ * @param args Patterns whose truthy events define the new rhythmic structure.
  * @return The source pattern reshaped to the mask's rhythm.
  *
  * ```KlangScript(Playable)
@@ -61,7 +61,7 @@ fun String.struct(vararg args: PatternLike, callInfo: CallInfo? = null): Sprudel
 /**
  * Returns a [PatternMapperFn] that restructures the source pattern using the mask's timing.
  *
- * @param mask Pattern whose truthy events define the new rhythmic structure.
+ * @param args Patterns whose truthy events define the new rhythmic structure.
  * @return A [PatternMapperFn] that reshapes the source pattern to the mask's rhythm.
  *
  * ```KlangScript(Playable)
@@ -100,7 +100,7 @@ private fun applyStructAll(source: SprudelPattern, structArg: SprudelDslArg<Any?
  * While [struct] filters to only truthy mask events, `structAll` uses the mask purely for timing
  * without filtering by value. Useful when the mask defines structure but all events should pass.
  *
- * @param mask Pattern that defines the rhythmic structure.
+ * @param args Patterns that defines the rhythmic structure.
  * @return The source pattern reshaped to the mask's rhythm, with all overlapping events kept.
  *
  * ```KlangScript(Playable)
@@ -126,7 +126,7 @@ fun String.structAll(vararg args: PatternLike, callInfo: CallInfo? = null): Spru
 /**
  * Returns a [PatternMapperFn] that reshapes the source using the mask, keeping all overlapping events.
  *
- * @param mask Pattern that defines the rhythmic structure.
+ * @param args Patterns that defines the rhythmic structure.
  * @return A [PatternMapperFn] that reshapes the source keeping all overlapping events.
  *
  * ```KlangScript(Playable)
@@ -164,7 +164,7 @@ private fun applyMask(source: SprudelPattern, maskArg: SprudelDslArg<Any?>?): Sp
  * Unlike [struct], which uses the mask's timing for structure, `mask` keeps the source pattern's
  * original timing and gates out events where the mask is falsy.
  *
- * @param mask Boolean pattern — truthy events let the source through, falsy events silence it.
+ * @param args Boolean pattern — truthy events let the source through, falsy events silence it.
  * @return The source pattern gated by the mask.
  *
  * ```KlangScript(Playable)
@@ -190,7 +190,7 @@ fun String.mask(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPa
 /**
  * Returns a [PatternMapperFn] that filters the source using a boolean mask.
  *
- * @param mask Boolean pattern — truthy events let the source through, falsy events silence it.
+ * @param args Boolean pattern — truthy events let the source through, falsy events silence it.
  * @return A [PatternMapperFn] that gates the source pattern by the mask.
  *
  * ```KlangScript(Playable)
@@ -225,7 +225,7 @@ private fun applyMaskAll(source: SprudelPattern, maskArg: SprudelDslArg<Any?>?):
 /**
  * Like [mask], but keeps all source events overlapping the mask structure regardless of truthiness.
  *
- * @param mask Pattern that defines the gating structure (all values allowed, not just truthy).
+ * @param args Pattern that defines the gating structure (all values allowed, not just truthy).
  * @return The source pattern gated by the mask's structure, with all overlapping events kept.
  *
  * ```KlangScript(Playable)
@@ -247,7 +247,7 @@ fun String.maskAll(vararg args: PatternLike, callInfo: CallInfo? = null): Sprude
 /**
  * Returns a [PatternMapperFn] that gates the source using the mask's structure (all values pass).
  *
- * @param mask Pattern that defines the gating structure.
+ * @param args Pattern that defines the gating structure.
  * @return A [PatternMapperFn] that gates the source, keeping all overlapping events.
  *
  * ```KlangScript(Playable)

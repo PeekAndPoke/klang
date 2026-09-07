@@ -46,7 +46,13 @@ private fun applySndPluck(source: SprudelPattern): SprudelPattern =
  * @tags pluck, string, karplus-strong, physical-model, snd
  */
 @KlangScript.Function
-fun SprudelPattern.sndPluck(decay: PatternLike? = null, brightness: PatternLike? = null, pickPosition: PatternLike? = null, stiffness: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.sndPluck(
+    decay: PatternLike? = null,
+    brightness: PatternLike? = null,
+    pickPosition: PatternLike? = null,
+    stiffness: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern {
     var p = applySndPluck(this)
     if (decay != null) p = p.oscparam("decay", decay, callInfo?.forParam(0, 1))
     if (brightness != null) p = p.oscparam("brightness", brightness, callInfo?.forParam(1, 1))
@@ -67,7 +73,13 @@ fun SprudelPattern.sndPluck(decay: PatternLike? = null, brightness: PatternLike?
  * @tags pluck, string, karplus-strong, physical-model, snd
  */
 @KlangScript.Function
-fun String.sndPluck(decay: PatternLike? = null, brightness: PatternLike? = null, pickPosition: PatternLike? = null, stiffness: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+fun String.sndPluck(
+    decay: PatternLike? = null,
+    brightness: PatternLike? = null,
+    pickPosition: PatternLike? = null,
+    stiffness: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndPluck(decay, brightness, pickPosition, stiffness, callInfo)
 
 /**
@@ -86,7 +98,13 @@ fun String.sndPluck(decay: PatternLike? = null, brightness: PatternLike? = null,
  * @tags pluck, string, karplus-strong, physical-model, snd
  */
 @KlangScript.Function
-fun sndPluck(decay: PatternLike? = null, brightness: PatternLike? = null, pickPosition: PatternLike? = null, stiffness: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+fun sndPluck(
+    decay: PatternLike? = null,
+    brightness: PatternLike? = null,
+    pickPosition: PatternLike? = null,
+    stiffness: PatternLike? = null,
+    callInfo: CallInfo? = null
+): PatternMapperFn =
     { p -> p.sndPluck(decay, brightness, pickPosition, stiffness, callInfo) }
 
 /**
@@ -98,7 +116,13 @@ fun sndPluck(decay: PatternLike? = null, brightness: PatternLike? = null, pickPo
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  */
 @KlangScript.Function
-fun PatternMapperFn.sndPluck(decay: PatternLike? = null, brightness: PatternLike? = null, pickPosition: PatternLike? = null, stiffness: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+fun PatternMapperFn.sndPluck(
+    decay: PatternLike? = null,
+    brightness: PatternLike? = null,
+    pickPosition: PatternLike? = null,
+    stiffness: PatternLike? = null,
+    callInfo: CallInfo? = null
+): PatternMapperFn =
     this.chain { p -> p.sndPluck(decay, brightness, pickPosition, stiffness, callInfo) }
 
 // -- sndSuperPluck() --------------------------------------------------------------------------------------------------
@@ -131,7 +155,15 @@ private fun applySndSuperPluck(source: SprudelPattern): SprudelPattern =
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd
  */
 @KlangScript.Function
-fun SprudelPattern.sndSuperPluck(voices: PatternLike? = null, spread: PatternLike? = null, decay: PatternLike? = null, brightness: PatternLike? = null, pickPosition: PatternLike? = null, stiffness: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.sndSuperPluck(
+    voices: PatternLike? = null,
+    spread: PatternLike? = null,
+    decay: PatternLike? = null,
+    brightness: PatternLike? = null,
+    pickPosition: PatternLike? = null,
+    stiffness: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern {
     var p = applySndSuperPluck(this)
     if (voices != null) p = p.oscparam("voices", voices, callInfo?.forParam(0, 1))
     if (spread != null) p = p.oscparam("spread", spread, callInfo?.forParam(1, 1))
@@ -156,7 +188,15 @@ fun SprudelPattern.sndSuperPluck(voices: PatternLike? = null, spread: PatternLik
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd
  */
 @KlangScript.Function
-fun String.sndSuperPluck(voices: PatternLike? = null, spread: PatternLike? = null, decay: PatternLike? = null, brightness: PatternLike? = null, pickPosition: PatternLike? = null, stiffness: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+fun String.sndSuperPluck(
+    voices: PatternLike? = null,
+    spread: PatternLike? = null,
+    decay: PatternLike? = null,
+    brightness: PatternLike? = null,
+    pickPosition: PatternLike? = null,
+    stiffness: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperPluck(voices, spread, decay, brightness, pickPosition, stiffness, callInfo)
 
 /**
@@ -173,7 +213,15 @@ fun String.sndSuperPluck(voices: PatternLike? = null, spread: PatternLike? = nul
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd
  */
 @KlangScript.Function
-fun sndSuperPluck(voices: PatternLike? = null, spread: PatternLike? = null, decay: PatternLike? = null, brightness: PatternLike? = null, pickPosition: PatternLike? = null, stiffness: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+fun sndSuperPluck(
+    voices: PatternLike? = null,
+    spread: PatternLike? = null,
+    decay: PatternLike? = null,
+    brightness: PatternLike? = null,
+    pickPosition: PatternLike? = null,
+    stiffness: PatternLike? = null,
+    callInfo: CallInfo? = null
+): PatternMapperFn =
     { p -> p.sndSuperPluck(voices, spread, decay, brightness, pickPosition, stiffness, callInfo) }
 
 /**
@@ -187,7 +235,15 @@ fun sndSuperPluck(voices: PatternLike? = null, spread: PatternLike? = null, deca
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  */
 @KlangScript.Function
-fun PatternMapperFn.sndSuperPluck(voices: PatternLike? = null, spread: PatternLike? = null, decay: PatternLike? = null, brightness: PatternLike? = null, pickPosition: PatternLike? = null, stiffness: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+fun PatternMapperFn.sndSuperPluck(
+    voices: PatternLike? = null,
+    spread: PatternLike? = null,
+    decay: PatternLike? = null,
+    brightness: PatternLike? = null,
+    pickPosition: PatternLike? = null,
+    stiffness: PatternLike? = null,
+    callInfo: CallInfo? = null
+): PatternMapperFn =
     this.chain { p -> p.sndSuperPluck(voices, spread, decay, brightness, pickPosition, stiffness, callInfo) }
 
 // -- sndSuperSaw() ----------------------------------------------------------------------------------------------------
