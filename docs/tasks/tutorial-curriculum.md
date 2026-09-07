@@ -27,6 +27,22 @@
 > is **A9**'s job (ladder and obligations register below); no other lesson should introduce it in
 > passing.
 
+> **Third hand-off, the mini-notation tweaks, shipped 2026-08-31**
+> (`docs/tasks-archive/2026-08/20260831-mini-notation-tweaks.md`): a single note can carry a named
+> bundle of modifications, so per-note treatment no longer needs a parallel pattern:
+> ```klangscript
+> note("c3 e3{swell} g3{swell bend}").tweaks({
+>     swell: x => x.attack(0.3).gain(0.6),
+>     bend:  x => x.detune(20).accelerate(0.5),
+> })
+> ```
+> It replaced the `{key=value}` attribute block, whose fixed key table is gone: `c4{g=0.5}` is a
+> parse error now, and nothing shipped still spells it. **No slot teaches this yet** and it has
+> no ladder row; it wants one in Stage 3 or 4 (nearest neighbours: B9 The Transform Toolkit, B10
+> Gates). Caveat, the same one A9 carries: a misspelled tweak name is silently inert until the
+> unknown-tweak editor diagnostic lands
+> (`docs/tasks/future/mini-notation-tweaks-followups.md`).
+
 Status: **ACTIVE**, last updated 2026-08-31. **17 lessons shipped**: the Stage-1 onramp (B1-B3), all of
 Stage 2 (A1-A4, B4-B7), and Stage 3 so far (A5, A6, A7, B8, B9, B10). The ladder below is no longer a
 proposal, it is the contract; the obligations register is the debt ledger against it. Next slots: **A8
