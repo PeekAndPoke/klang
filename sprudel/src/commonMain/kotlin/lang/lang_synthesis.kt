@@ -570,34 +570,72 @@ fun PatternMapperFn.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null
 private val fmenvMutation = voiceSetter { fmEnv = it?.asDoubleOrNull() }
 
 private fun applyFmenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.fmEnv }, update = fmenvMutation)
+    }
+
     return source._liftNumericField(args, fmenvMutation)
 }
 
 /**
- * Sets the FM modulation depth (the peak modulation amount in Hz).
+ * Builds a control pattern of FM envelope depths.
  *
- * This is the primary intensity control for FM synthesis. Low values (10–100 Hz) add subtle
- * harmonic richness; high values (500+ Hz) create complex, metallic, or noise-like timbres.
- * Can be driven by a continuous pattern for dynamic timbre evolution.
- *
- * ```KlangScript(Playable)
- * note("c3").s("sine").fmh(2).fmenv(50)               // light FM — subtle richness
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3").s("sine").fmh(1.4).fmenv(500)             // heavy FM — complex timbre
- * ```
- *
- * @param depth FM modulation amount in Hz. 10–100 = subtle harmonic richness,
- *   200–500 = bright/brassy, 500+ = complex/metallic/noisy. Default: 0.0 (FM inactive).
- *   Typical range: 50–1000. FM is active when both fmh and fmenv are set.
- * @alias fmmod
- * @category synthesis
- * @tags fmenv, fmmod, FM, modulation, depth, amount, synthesis
+ * Kotlin door only: the script reaches this through `fmenv(...)`, which is [Fmenv.invoke].
  */
-@KlangScript.Function
 fun fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     listOf(depth).asSprudelDslArgs(callInfo).toPattern(fmenvMutation)
+
+/**
+ * The FM envelope depth of each event, as a value other setters can read.
+ *
+ * Bare `fmenv` reads what the chain has set so far, so it comes after whatever set the field
+ * (`note(...).fmenv(...)` or `fmmod`). Calling it, `fmenv(depth)`, builds a control pattern of
+ * depths (like `note(...)`); a mapper argument applies to the field on the pattern form only,
+ * `note("c3").fmenv(mul(2))`.
+ *
+ * Aliases: `fmmod`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmh(2).fmenv(200).fmenv(mul("1 3"))            // the second note brighter
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("sine").fmh(2).fmenv("100 400").fmattack(fmenv.div(2000))   // deeper, slower
+ * ```
+ *
+ * @category synthesis
+ * @tags fmenv, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("fmenv")
+object Fmenv : FieldAccessor({ it.fmEnv }) {
+
+    /**
+     * Sets the FM modulation depth (the peak modulation amount in Hz).
+     *
+     * This is the primary intensity control for FM synthesis. Low values (10–100 Hz) add subtle
+     * harmonic richness; high values (500+ Hz) create complex, metallic, or noise-like timbres.
+     * Can be driven by a continuous pattern for dynamic timbre evolution.
+     *
+     * ```KlangScript(Playable)
+     * note("c3").s("sine").fmh(2).fmenv(50)               // light FM, subtle richness
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3").s("sine").fmh(1.4).fmenv(500)             // heavy FM, complex timbre
+     * ```
+     *
+     * @param depth FM modulation amount in Hz. 10–100 = subtle harmonic richness,
+     *   200–500 = bright/brassy, 500+ = complex/metallic/noisy. Default: 0.0 (FM inactive).
+     *   Typical range: 50–1000. FM is active when both fmh and fmenv are set.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+        fmenv(depth, callInfo)
+}
+
+/** The [Fmenv] accessor as a value, so the Kotlin door reads like the script. */
+val fmenv: Fmenv = Fmenv
 
 /** Sets the FM modulation depth on this pattern. */
 @KlangScript.Function
@@ -609,16 +647,18 @@ fun SprudelPattern.fmenv(depth: PatternLike, callInfo: CallInfo? = null): Sprude
 fun String.fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmenv(depth, callInfo)
 
-/**
- * Alias for [fmenv]. Sets the FM modulation depth.
- *
- * @alias fmenv
- * @category synthesis
- * @tags fmmod, fmenv, FM, modulation, depth, amount, synthesis
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [fmenv]; the script reaches it through `fmmod(...)`. */
 fun fmmod(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     fmenv(depth, callInfo)
+
+/**
+ * Alias of [fmenv]: the same accessor under another name.
+ *
+ * @category synthesis
+ * @tags fmmod, fmenv, accessor
+ */
+@KlangScript.Constant
+val fmmod: Fmenv = Fmenv
 
 /** Alias for [fmenv] on this pattern. */
 @KlangScript.Function

@@ -14,6 +14,9 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.addons.nfa
+import io.peekandpoke.klang.sprudel.lang.addons.analog
+import io.peekandpoke.klang.sprudel.lang.addons.duty
+import io.peekandpoke.klang.sprudel.lang.addons.onepole
 import io.peekandpoke.klang.sprudel.lang.addons.nfattack
 import io.peekandpoke.klang.sprudel.lang.addons.nfd
 import io.peekandpoke.klang.sprudel.lang.addons.nfdecay
@@ -324,6 +327,60 @@ class LangFieldAccessorsSpec : StringSpec({
         row("nfe", """s("bd sd").nfenv(2).pan(nfe)""", { it.pan }, 2.0, s("bd sd").nfenv(2).pan(nfe)),
     )
 
+    // Batch four: the dynamics leftovers, the routing fields, the compressor threshold and fmenv.
+    val mappedBatchFour = listOf(
+        row("unison", """s("bd sd").unison(3).unison(mul(2))""", { it.oscParams?.get("voices") }, 6.0, s("bd sd").unison(3).unison(mul(2))),
+        row("spread", """s("bd sd").spread(0.2).spread(mul(2))""", { it.oscParams?.get("spread") }, 0.4, s("bd sd").spread(0.2).spread(mul(2))),
+        row("panSpread", """s("bd sd").panSpread(0.5).panSpread(mul(2))""", { it.oscParams?.get("panSpread") }, 1.0, s("bd sd").panSpread(0.5).panSpread(mul(2))),
+        row("density", """s("bd sd").density(0.5).density(mul(2))""", { it.oscParams?.get("density") }, 1.0, s("bd sd").density(0.5).density(mul(2))),
+        row("orbit", """s("bd sd").orbit(1).orbit(add(1))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").orbit(1).orbit(add(1))),
+        row("duckorbit", """s("bd sd").duckorbit(1).duckorbit(add(1))""", { it.duckCylinder?.toDouble() }, 2.0, s("bd sd").duckorbit(1).duckorbit(add(1))),
+        row("duckattack", """s("bd sd").duckattack(0.05).duckattack(mul(2))""", { it.duckAttack }, 0.1, s("bd sd").duckattack(0.05).duckattack(mul(2))),
+        row("duckdepth", """s("bd sd").duckdepth(0.5).duckdepth(mul(2))""", { it.duckDepth }, 1.0, s("bd sd").duckdepth(0.5).duckdepth(mul(2))),
+        row("compressor", """s("bd sd").compressor(-12).compressor(add(-6))""", { it.compressorThreshold }, -18.0, s("bd sd").compressor(-12).compressor(add(-6))),
+        row("fmenv", """s("bd sd").fmenv(200).fmenv(mul(2))""", { it.fmEnv }, 400.0, s("bd sd").fmenv(200).fmenv(mul(2))),
+        row("analog", """s("bd sd").analog(2).analog(mul(2))""", { it.oscParams?.get("analog") }, 4.0, s("bd sd").analog(2).analog(mul(2))),
+        row("duty", """s("bd sd").duty(0.25).duty(mul(2))""", { it.oscParams?.get("duty") }, 0.5, s("bd sd").duty(0.25).duty(mul(2))),
+        row("onepole", """s("bd sd").onepole(1000).onepole(mul(2))""", { it.oscParams?.get("onepole") }, 2000.0, s("bd sd").onepole(1000).onepole(mul(2))),
+    )
+
+    val readBatchFour = listOf(
+        row("unison", """s("bd sd").unison(3).pan(unison)""", { it.pan }, 3.0, s("bd sd").unison(3).pan(unison)),
+        row("spread", """s("bd sd").spread(0.2).pan(spread)""", { it.pan }, 0.2, s("bd sd").spread(0.2).pan(spread)),
+        row("panSpread", """s("bd sd").panSpread(0.5).pan(panSpread)""", { it.pan }, 0.5, s("bd sd").panSpread(0.5).pan(panSpread)),
+        row("density", """s("bd sd").density(0.5).pan(density)""", { it.pan }, 0.5, s("bd sd").density(0.5).pan(density)),
+        row("orbit", """s("bd sd").orbit(1).pan(orbit)""", { it.pan }, 1.0, s("bd sd").orbit(1).pan(orbit)),
+        row("duckorbit", """s("bd sd").duckorbit(1).pan(duckorbit)""", { it.pan }, 1.0, s("bd sd").duckorbit(1).pan(duckorbit)),
+        row("duckattack", """s("bd sd").duckattack(0.05).pan(duckattack)""", { it.pan }, 0.05, s("bd sd").duckattack(0.05).pan(duckattack)),
+        row("duckdepth", """s("bd sd").duckdepth(0.5).pan(duckdepth)""", { it.pan }, 0.5, s("bd sd").duckdepth(0.5).pan(duckdepth)),
+        row("compressor", """s("bd sd").compressor(-12).pan(compressor)""", { it.pan }, -12.0, s("bd sd").compressor(-12).pan(compressor)),
+        row("fmenv", """s("bd sd").fmenv(200).pan(fmenv)""", { it.pan }, 200.0, s("bd sd").fmenv(200).pan(fmenv)),
+        row("analog", """s("bd sd").analog(2).pan(analog)""", { it.pan }, 2.0, s("bd sd").analog(2).pan(analog)),
+        row("duty", """s("bd sd").duty(0.25).pan(duty)""", { it.pan }, 0.25, s("bd sd").duty(0.25).pan(duty)),
+        row("onepole", """s("bd sd").onepole(1000).pan(onepole)""", { it.pan }, 1000.0, s("bd sd").onepole(1000).pan(onepole)),
+    )
+
+    val aliasSetsBatchFour = listOf(
+        row("uni", """s("bd sd").apply(uni(2))""", { it.oscParams?.get("voices") }, 2.0, s("bd sd").apply(uni(2))),
+        row("voices", """s("bd sd").apply(voices(2))""", { it.oscParams?.get("voices") }, 2.0, s("bd sd").apply(voices(2))),
+        row("d", """s("bd sd").apply(d(2))""", { it.oscParams?.get("density") }, 2.0, s("bd sd").apply(d(2))),
+        row("o", """s("bd sd").apply(o(2))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").apply(o(2))),
+        row("duck", """s("bd sd").apply(duck(2))""", { it.duckCylinder?.toDouble() }, 2.0, s("bd sd").apply(duck(2))),
+        row("duckatt", """s("bd sd").apply(duckatt(2))""", { it.duckAttack }, 2.0, s("bd sd").apply(duckatt(2))),
+        row("comp", """s("bd sd").apply(comp(2))""", { it.compressorThreshold }, 2.0, s("bd sd").apply(comp(2))),
+    )
+
+    val aliasReadsBatchFour = listOf(
+        row("uni", """s("bd sd").unison(2).pan(uni)""", { it.pan }, 2.0, s("bd sd").unison(2).pan(uni)),
+        row("voices", """s("bd sd").unison(2).pan(voices)""", { it.pan }, 2.0, s("bd sd").unison(2).pan(voices)),
+        row("d", """s("bd sd").density(2).pan(d)""", { it.pan }, 2.0, s("bd sd").density(2).pan(d)),
+        row("o", """s("bd sd").orbit(2).pan(o)""", { it.pan }, 2.0, s("bd sd").orbit(2).pan(o)),
+        row("duck", """s("bd sd").duckorbit(2).pan(duck)""", { it.pan }, 2.0, s("bd sd").duckorbit(2).pan(duck)),
+        row("duckatt", """s("bd sd").duckattack(2).pan(duckatt)""", { it.pan }, 2.0, s("bd sd").duckattack(2).pan(duckatt)),
+        row("comp", """s("bd sd").compressor(2).pan(comp)""", { it.pan }, 2.0, s("bd sd").compressor(2).pan(comp)),
+        row("fmmod", """s("bd sd").fmenv(2).pan(fmmod)""", { it.pan }, 2.0, s("bd sd").fmenv(2).pan(fmmod)),
+    )
+
     fun SprudelPattern.cycles() = (0 until 12).map { c -> queryArc(c.toDouble(), c + 1.0) }
 
     fun check(rows: List<Row>) {
@@ -380,6 +437,19 @@ class LangFieldAccessorsSpec : StringSpec({
     "batch three: every alias constant sets and reads like its canonical object, in both doors" {
         check(aliasSetsBatchThree)
         check(aliasReadsBatchThree)
+    }
+
+    "batch four: a mapper argument applies to the setter's own field, in both doors" {
+        check(mappedBatchFour)
+    }
+
+    "batch four: the bare accessor reads its field into another setter, in both doors" {
+        check(readBatchFour)
+    }
+
+    "batch four: every alias constant sets and reads like its canonical object, in both doors" {
+        check(aliasSetsBatchFour)
+        check(aliasReadsBatchFour)
     }
 
     "multi-parameter setters dispatch through the accessor's invoke in both doors" {
@@ -453,10 +523,26 @@ class LangFieldAccessorsSpec : StringSpec({
             it.notchf shouldBe 1000.0
             it.nresonance shouldBe 5.0
         }
+        both(s("bd sd").apply(compressor(-12, 4, 6)), """s("bd sd").apply(compressor(-12, 4, 6))""") {
+            it.compressorThreshold shouldBe -12.0
+            it.compressorRatio shouldBe 4.0
+            it.compressorKnee shouldBe 6.0
+        }
         // a named argument that skips the first parameter
         both(note("c e").lpf(700).apply(lpf(q = 6)), """note("c e").lpf(700).apply(lpf(q = 6))""") {
             it.cutoff shouldBe 700.0
             it.resonance shouldBe 6.0
+        }
+    }
+
+    "fmenv and fmmod, whose call form builds a control pattern, dispatch through invoke in the script door" {
+        listOf("fmenv" to fmenv("0.3 0.7"), "fmmod" to fmmod("0.3 0.7")).forEach { (name, kotlin) ->
+            withClue(name) {
+                val script = SprudelPattern.compile("""$name("0.3 0.7")""").shouldNotBeNull()
+                kotlin.cycles().map { events -> events.map { it.whole to it.data.fmEnv } } shouldBe
+                        script.cycles().map { events -> events.map { it.whole to it.data.fmEnv } }
+                kotlin.cycles().first().map { it.data.fmEnv } shouldBe listOf(0.3, 0.7)
+            }
         }
     }
 

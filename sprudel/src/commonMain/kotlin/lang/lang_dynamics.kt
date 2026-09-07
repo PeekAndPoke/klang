@@ -537,6 +537,10 @@ private val compressorReleaseMutation = voiceSetter {
 }
 
 private fun applyCompressorThreshold(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.compressorThreshold }, update = compressorThresholdMutation)
+    }
+
     return source._applyControlFromParams(args, compressorThresholdMutation) { src, ctrl ->
         src.compressorThreshold = ctrl.compressorThreshold ?: src.compressorThreshold
         src
@@ -658,16 +662,52 @@ fun String.compressor(threshold: PatternLike? = null, ratio: PatternLike? = null
     this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(threshold, ratio, knee, attack, release, callInfo)
 
 /**
- * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
+ * Returns a [PatternMapperFn] for `compressor(...)`.
  *
- * ```KlangScript(Playable)
- * s("bd*4").apply(compressor("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>"))   // alternate settings
- * ```
-
+ * Kotlin door only: the script reaches this through `compressor(...)`, which is [Compressor.invoke].
  */
-@KlangScript.Function
 fun compressor(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
+
+/**
+ * The compressor threshold of each event in dB, as a value other setters can read.
+ *
+ * Bare `compressor` reads what the chain has set so far, so it comes after whatever set the field
+ * (`compressor(...)` or an alias). Call it, `compressor(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `comp`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("saw").compressor(-12, 4).compressor(add("0 -6 0 -6"))   // harder on every second note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").compressor("-6 -18", 4).postgain(compressor.div(-6))   // more squash, more make-up
+ * ```
+ *
+ * @category dynamics
+ * @tags compressor, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("compressor")
+object Compressor : FieldAccessor({ it.compressorThreshold }) {
+
+    /**
+     * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
+     *
+     * ```KlangScript(Playable)
+     * s("bd*4").apply(compressor("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>"))   // alternate settings
+     * ```
+
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        compressor(threshold, ratio, knee, attack, release, callInfo)
+}
+
+/** The [Compressor] accessor as a value, so the Kotlin door reads like the script. */
+val compressor: Compressor = Compressor
 
 /**
  * Creates a chained [PatternMapperFn] that sets compressor parameters after the previous mapper.
@@ -730,22 +770,18 @@ fun SprudelPattern.comp(threshold: PatternLike? = null, ratio: PatternLike? = nu
 fun String.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(threshold, ratio, knee, attack, release, callInfo)
 
-/**
- * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
- *
- * ```KlangScript(Playable)
- * s("bd*4").apply(comp("<-10 -30>", "<2 8>", "<1 5>", "<0.01 0.005>", "<0.1 0.5>"))   // alternate settings
- * ```
- *
- * @param threshold Level in dB above which compression starts (e.g. -20).
- * @param ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold).
- * @param knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft).
- * @param attack How quickly compression engages, in seconds (e.g. 0.003).
- * @param release How quickly compression releases, in seconds (e.g. 0.1).
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [compressor]; the script reaches it through `comp(...)`. */
 fun comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.compressor(threshold, ratio, knee, attack, release, callInfo) }
+
+/**
+ * Alias of [compressor]: the same accessor under another name.
+ *
+ * @category dynamics
+ * @tags comp, compressor, accessor
+ */
+@KlangScript.Constant
+val comp: Compressor = Compressor
 
 /**
  * Alias for [compressor]. Creates a chained [PatternMapperFn] that sets compressor parameters after the previous
@@ -770,6 +806,10 @@ fun PatternMapperFn.comp(threshold: PatternLike? = null, ratio: PatternLike? = n
 private val unisonMutation = voiceSetter { putOscParam("voices", it?.asDoubleOrNull()) }
 
 private fun applyUnison(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("voices") }, update = unisonMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, unisonMutation)
 }
 
@@ -811,17 +851,53 @@ fun String.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
 
 /**
- * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
+ * Returns a [PatternMapperFn] for `unison(...)`.
  *
- * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).spread(0.3).note()  // unison pattern
- * ```
- *
- * @param voices The number of unison voices.
+ * Kotlin door only: the script reaches this through `unison(...)`, which is [Unison.invoke].
  */
-@KlangScript.Function
 fun unison(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.unison(voices, callInfo) }
+
+/**
+ * The unison voice count of each event, as a value other setters can read.
+ *
+ * Bare `unison` reads what the chain has set so far, so it comes after whatever set the field
+ * (`unison(...)` or an alias). Call it, `unison(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `uni`, `voices`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").unison(3).unison(mul("1 2"))                // the second note thicker
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").unison("3 7").spread(unison.div(20))        // more voices, wider
+ * ```
+ *
+ * @category dynamics
+ * @tags unison, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("unison")
+object Unison : FieldAccessor({ it.oscParams?.get("voices") }) {
+
+    /**
+     * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
+     *
+     * ```KlangScript(Playable)
+     * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).spread(0.3).note()  // unison pattern
+     * ```
+     *
+     * @param voices The number of unison voices.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        unison(voices, callInfo)
+}
+
+/** The [Unison] accessor as a value, so the Kotlin door reads like the script. */
+val unison: Unison = Unison
 
 /**
  * Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous mapper.
@@ -868,18 +944,18 @@ fun SprudelPattern.uni(voices: PatternLike? = null, callInfo: CallInfo? = null):
 fun String.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
 
-/**
- * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
- *
- * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).spread(0.3).note()  // unison pattern
- * ```
- *
- * @param voices The number of unison voices.
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [unison]; the script reaches it through `uni(...)`. */
 fun uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.unison(voices, callInfo) }
+
+/**
+ * Alias of [unison]: the same accessor under another name.
+ *
+ * @category dynamics
+ * @tags uni, unison, accessor
+ */
+@KlangScript.Constant
+val uni: Unison = Unison
 
 /**
  * Alias for [unison]. Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous
@@ -929,18 +1005,18 @@ fun SprudelPattern.voices(voices: PatternLike? = null, callInfo: CallInfo? = nul
 fun String.voices(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
 
-/**
- * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
- *
- * ```KlangScript(Playable)
- * "c3 e3 g3".s("supersaw").apply(voices("<1 5 10 16>")).spread(0.3).note()  // unison-count pattern
- * ```
- *
- * @param voices The number of unison voices.
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [unison]; the script reaches it through `voices(...)`. */
 fun voices(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.unison(voices, callInfo) }
+
+/**
+ * Alias of [unison]: the same accessor under another name.
+ *
+ * @category dynamics
+ * @tags voices, unison, accessor
+ */
+@KlangScript.Constant
+val voices: Unison = Unison
 
 /**
  * Alias for [unison]. Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous
@@ -961,6 +1037,10 @@ fun PatternMapperFn.voices(voices: PatternLike? = null, callInfo: CallInfo? = nu
 private val spreadMutation = voiceSetter { putOscParam("spread", it?.asDoubleOrNull()) }
 
 private fun applySpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("spread") }, update = spreadMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, spreadMutation)
 }
 
@@ -1003,16 +1083,50 @@ fun String.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).spread(amount, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the unison frequency spread for a pattern.
+ * Returns a [PatternMapperFn] for `spread(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3*4").s("supersaw").apply(spread("<0.05 0.10 0.20 0.40>"))  // escalating spread each beat
- * ```
- * @param amount The unison spread in semitones.
+ * Kotlin door only: the script reaches this through `spread(...)`, which is [Spread.invoke].
  */
-@KlangScript.Function
 fun spread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.spread(amount, callInfo) }
+
+/**
+ * The unison detune spread of each event, as a value other setters can read.
+ *
+ * Bare `spread` reads what the chain has set so far, so it comes after whatever set the field
+ * (`spread(...)` or an alias). Call it, `spread(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").unison(5).spread(0.2).spread(mul("1 2"))    // the second note wider
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").unison(5).spread("0.1 0.4").analog(spread.mul(10))   // wider detune, more drift
+ * ```
+ *
+ * @category dynamics
+ * @tags spread, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("spread")
+object Spread : FieldAccessor({ it.oscParams?.get("spread") }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the unison frequency spread for a pattern.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").s("supersaw").apply(spread("<0.05 0.10 0.20 0.40>"))  // escalating spread each beat
+     * ```
+     * @param amount The unison spread in semitones.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        spread(amount, callInfo)
+}
+
+/** The [Spread] accessor as a value, so the Kotlin door reads like the script. */
+val spread: Spread = Spread
 
 /**
  * Creates a chained [PatternMapperFn] that sets the unison frequency spread after the previous mapper.
@@ -1032,6 +1146,10 @@ fun PatternMapperFn.spread(amount: PatternLike? = null, callInfo: CallInfo? = nu
 private val panSpreadMutation = voiceSetter { putOscParam("panSpread", it?.asDoubleOrNull()) }
 
 private fun applyPanSpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("panSpread") }, update = panSpreadMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, panSpreadMutation)
 }
 
@@ -1067,13 +1185,48 @@ fun String.panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).panSpread(amount, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
+ * Returns a [PatternMapperFn] for `panSpread(...)`.
  *
- * @param amount The stereo pan spread, between 0 and 1.
+ * Kotlin door only: the script reaches this through `panSpread(...)`, which is [PanSpread.invoke].
  */
-@KlangScript.Function
 fun panSpread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.panSpread(amount, callInfo) }
+
+/**
+ * The unison stereo spread of each event, as a value other setters can read. Reserved: no engine
+ * stage reads `panSpread` yet, the value travels but changes nothing.
+ *
+ * Bare `panSpread` reads what the chain has set so far, so it comes after whatever set the field
+ * (`panSpread(...)` or an alias). Call it, `panSpread(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").unison(5).panSpread(0.5).panSpread(mul("1 0.5"))   // reserved, inaudible for now
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").unison(5).panSpread("0.2 0.8").spread(panSpread.div(4))   // the detune follows a reserved value
+ * ```
+ *
+ * @category dynamics
+ * @tags panSpread, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("panSpread")
+object PanSpread : FieldAccessor({ it.oscParams?.get("panSpread") }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
+     *
+     * @param amount The stereo pan spread, between 0 and 1.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        panSpread(amount, callInfo)
+}
+
+/** The [PanSpread] accessor as a value, so the Kotlin door reads like the script. */
+val panSpread: PanSpread = PanSpread
 
 /**
  * Creates a chained [PatternMapperFn] that sets the stereo pan spread after the previous mapper.
@@ -1089,6 +1242,10 @@ fun PatternMapperFn.panSpread(amount: PatternLike? = null, callInfo: CallInfo? =
 private val densityMutation = voiceSetter { putOscParam("density", it?.asDoubleOrNull()) }
 
 private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("density") }, update = densityMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, densityMutation)
 }
 
@@ -1100,7 +1257,7 @@ private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * (Note: `crackle` is a chaotic generator now — it is driven by `chaos`, not `density`.)
  *
  * ```KlangScript(Playable)
- * note("a").s("dust").density(40)   // 40 noise events per second
+ * note("a").s("dust").density(0.2)   // 40 noise events per second
  * ```
  *
  * ```KlangScript(Playable)
@@ -1121,7 +1278,7 @@ fun SprudelPattern.density(amount: PatternLike? = null, callInfo: CallInfo? = nu
  * Parses this string as a pattern and sets the oscillator or noise density.
  *
  * ```KlangScript(Playable)
- * "a".density(40).s("dust").note()   // 40 noise events per second
+ * "a".density(0.2).s("dust").note()   // 40 noise events per second
  * ```
  *
  * @param amount The oscillator density.
@@ -1131,16 +1288,53 @@ fun String.density(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
     this.toVoiceValuePattern(callInfo?.receiverLocation).density(amount, callInfo)
 
 /**
- * Parses this string as a pattern and sets the oscillator or noise density.
+ * Returns a [PatternMapperFn] for `density(...)`.
  *
- * ```KlangScript(Playable)
- * "a".apply(density(40)).s("dust").note()   // 40 noise events per second
- * ```
- * @param amount The oscillator density.
+ * Kotlin door only: the script reaches this through `density(...)`, which is [Density.invoke].
  */
-@KlangScript.Function
 fun density(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.density(amount, callInfo) }
+
+/**
+ * The noise density of each event (`dust`; 0..1, mapped to grains per second), as a value
+ * other setters can read.
+ *
+ * Bare `density` reads what the chain has set so far, so it comes after whatever set the field
+ * (`density(...)` or an alias). Call it, `density(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `d`.
+ *
+ * ```KlangScript(Playable)
+ * s("dust*2").density(0.3).density(add("0 0.4"))                           // the second grain cloud denser
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("dust*2").density("0.2 0.8").gain(density)                             // denser, louder
+ * ```
+ *
+ * @category dynamics
+ * @tags density, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("density")
+object Density : FieldAccessor({ it.oscParams?.get("density") }) {
+
+    /**
+     * Parses this string as a pattern and sets the oscillator or noise density.
+     *
+     * ```KlangScript(Playable)
+     * "a".apply(density(0.2)).s("dust").note()   // 40 noise events per second
+     * ```
+     * @param amount The oscillator density.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        density(amount, callInfo)
+}
+
+/** The [Density] accessor as a value, so the Kotlin door reads like the script. */
+val density: Density = Density
 
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the previous mapper.
@@ -1189,18 +1383,18 @@ fun SprudelPattern.d(amount: PatternLike? = null, callInfo: CallInfo? = null): S
 fun String.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).density(amount, callInfo)
 
-/**
- * Alias for [density]. Creates a [PatternMapperFn] that sets the oscillator or noise density.
- *
- * ```KlangScript(Playable)
- * note("a").apply(d(40)).s("dust")   // 40 noise events per second
- * ```
- *
- * @param amount The oscillator density.
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [density]; the script reaches it through `d(...)`. */
 fun d(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.density(amount, callInfo) }
+
+/**
+ * Alias of [density]: the same accessor under another name.
+ *
+ * @category dynamics
+ * @tags d, density, accessor
+ */
+@KlangScript.Constant
+val d: Density = Density
 
 /**
  * Alias for [density]. Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the
@@ -1955,6 +2149,10 @@ private val orbitMutation = voiceSetter {
 }
 
 private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.cylinder?.toDouble() }, update = orbitMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, orbitMutation)
 }
 
@@ -1996,17 +2194,53 @@ fun String.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).orbit(index, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that routes events to the given audio output orbit.
+ * Returns a [PatternMapperFn] for `orbit(...)`.
  *
- * ```KlangScript(Playable)
- * s("bd sd").apply(orbit(1))   // send drums to orbit 1
- * ```
- *
- * @param index The orbit index to route events to.
+ * Kotlin door only: the script reaches this through `orbit(...)`, which is [Orbit.invoke].
  */
-@KlangScript.Function
 fun orbit(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.orbit(index, callInfo) }
+
+/**
+ * The orbit (effect bus) of each event, as a value other setters can read.
+ *
+ * Bare `orbit` reads what the chain has set so far, so it comes after whatever set the field
+ * (`orbit(...)` or an alias). Call it, `orbit(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `o`.
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").orbit(0).orbit(add("0 1"))                                    // the snare on orbit 1
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").orbit("0 1").roomWet(orbit.mul(0.3))                         // more reverb on the higher orbit
+ * ```
+ *
+ * @category dynamics
+ * @tags orbit, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("orbit")
+object Orbit : FieldAccessor({ it.cylinder?.toDouble() }) {
+
+    /**
+     * Creates a [PatternMapperFn] that routes events to the given audio output orbit.
+     *
+     * ```KlangScript(Playable)
+     * s("bd sd").apply(orbit(1))   // send drums to orbit 1
+     * ```
+     *
+     * @param index The orbit index to route events to.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        orbit(index, callInfo)
+}
+
+/** The [Orbit] accessor as a value, so the Kotlin door reads like the script. */
+val orbit: Orbit = Orbit
 
 /**
  * Creates a chained [PatternMapperFn] that routes events to the given orbit after the previous mapper.
@@ -2055,18 +2289,18 @@ fun SprudelPattern.o(index: PatternLike? = null, callInfo: CallInfo? = null): Sp
 fun String.o(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).orbit(index, callInfo)
 
-/**
- * Alias for [orbit]. Creates a [PatternMapperFn] that routes events to the given audio output orbit.
- *
- * ```KlangScript(Playable)
- * s("bd sd").apply(o(1))   // send drums to orbit 1
- * ```
- *
- * @param index The orbit index to route events to.
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [orbit]; the script reaches it through `o(...)`. */
 fun o(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.orbit(index, callInfo) }
+
+/**
+ * Alias of [orbit]: the same accessor under another name.
+ *
+ * @category dynamics
+ * @tags o, orbit, accessor
+ */
+@KlangScript.Constant
+val o: Orbit = Orbit
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Ducking / Sidechain
@@ -2079,6 +2313,10 @@ private val duckOrbitMutation = voiceSetter {
 }
 
 private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.duckCylinder?.toDouble() }, update = duckOrbitMutation)
+    }
+
     return source._liftNumericField(args, duckOrbitMutation)
 }
 
@@ -2120,17 +2358,53 @@ fun String.duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckorbit(orbitIndex, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
+ * Returns a [PatternMapperFn] for `duckorbit(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3 e3 g3").apply(duckorbit(1)).duckdepth(0.8)   // duck when orbit 1 plays
- * ```
- *
- * @param orbitIndex The orbit index to listen to for the sidechain trigger.
+ * Kotlin door only: the script reaches this through `duckorbit(...)`, which is [DuckOrbit.invoke].
  */
-@KlangScript.Function
 fun duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.duckorbit(orbitIndex, callInfo) }
+
+/**
+ * The orbit each event ducks, as a value other setters can read.
+ *
+ * Bare `duckorbit` reads what the chain has set so far, so it comes after whatever set the field
+ * (`duckorbit(...)` or an alias). Call it, `duckorbit(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `duck`.
+ *
+ * ```KlangScript(Playable)
+ * stack(note("c3").s("saw").duckdepth(0.8).duckorbit(1).duckorbit(add("<0 1>")), s("bd*4").orbit(1), s("hh*8").orbit(2))   // ducked by the kick, next cycle by the hats
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * stack(note("c3").s("saw").duckorbit("<1 2>").duckdepth(duckorbit.mul(0.4)), s("bd*4").orbit(1), s("hh*8").orbit(2))   // ducked deeper by the hats than by the kick
+ * ```
+ *
+ * @category dynamics
+ * @tags duckorbit, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("duckorbit")
+object DuckOrbit : FieldAccessor({ it.duckCylinder?.toDouble() }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3 g3").apply(duckorbit(1)).duckdepth(0.8)   // duck when orbit 1 plays
+     * ```
+     *
+     * @param orbitIndex The orbit index to listen to for the sidechain trigger.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        duckorbit(orbitIndex, callInfo)
+}
+
+/** The [DuckOrbit] accessor as a value, so the Kotlin door reads like the script. */
+val duckorbit: DuckOrbit = DuckOrbit
 
 /**
  * Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the previous mapper.
@@ -2178,18 +2452,18 @@ fun SprudelPattern.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = n
 fun String.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckorbit(orbitIndex, callInfo)
 
-/**
- * Alias for [duckorbit]. Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(duck(0)).duckdepth(0.8)   // duck when orbit 0 plays
- * ```
- *
- * @param orbitIndex The orbit index to listen to for the sidechain trigger.
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [duckorbit]; the script reaches it through `duck(...)`. */
 fun duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.duckorbit(orbitIndex, callInfo) }
+
+/**
+ * Alias of [duckorbit]: the same accessor under another name.
+ *
+ * @category dynamics
+ * @tags duck, duckorbit, accessor
+ */
+@KlangScript.Constant
+val duck: DuckOrbit = DuckOrbit
 
 /**
  * Alias for [duckorbit]. Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the
@@ -2210,6 +2484,10 @@ fun PatternMapperFn.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = 
 private val duckAttackMutation = voiceSetter { duckAttack = it?.asDoubleOrNull() }
 
 private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.duckAttack }, update = duckAttackMutation)
+    }
+
     return source._liftNumericField(args, duckAttackMutation)
 }
 
@@ -2251,17 +2529,54 @@ fun String.duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckattack(time, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the duck release time.
+ * Returns a [PatternMapperFn] for `duckattack(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(duckattack(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
- * ```
- *
- * @param time The recovery time in seconds.
+ * Kotlin door only: the script reaches this through `duckattack(...)`, which is [DuckAttack.invoke].
  */
-@KlangScript.Function
 fun duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.duckattack(time, callInfo) }
+
+/**
+ * The ducking recovery time of each event, as a value other setters can read. The duck-down is
+ * instant; this smooths the return (named attack for strudel compatibility).
+ *
+ * Bare `duckattack` reads what the chain has set so far, so it comes after whatever set the field
+ * (`duckattack(...)` or an alias). Call it, `duckattack(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `duckatt`.
+ *
+ * ```KlangScript(Playable)
+ * stack(note("c3").s("saw").duckorbit(1).duckdepth(0.8).duckattack(0.05).duckattack(mul("<1 4>")), s("bd*4").orbit(1))   // a slower recovery every other cycle
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * stack(note("c3").s("saw").duckorbit(1).duckattack("<0.02 0.1>").duckdepth(duckattack.mul(5)), s("bd*4").orbit(1))   // slower recovery, deeper duck
+ * ```
+ *
+ * @category dynamics
+ * @tags duckattack, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("duckattack")
+object DuckAttack : FieldAccessor({ it.duckAttack }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the duck release time.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(duckattack(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
+     * ```
+     *
+     * @param time The recovery time in seconds.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        duckattack(time, callInfo)
+}
+
+/** The [DuckAttack] accessor as a value, so the Kotlin door reads like the script. */
+val duckattack: DuckAttack = DuckAttack
 
 /**
  * Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous mapper.
@@ -2310,18 +2625,18 @@ fun SprudelPattern.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null
 fun String.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckattack(time, callInfo)
 
-/**
- * Alias for [duckattack]. Creates a [PatternMapperFn] that sets the duck release time.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(duckatt(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
- * ```
- *
- * @param time The recovery time in seconds.
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [duckattack]; the script reaches it through `duckatt(...)`. */
 fun duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.duckattack(time, callInfo) }
+
+/**
+ * Alias of [duckattack]: the same accessor under another name.
+ *
+ * @category dynamics
+ * @tags duckatt, duckattack, accessor
+ */
+@KlangScript.Constant
+val duckatt: DuckAttack = DuckAttack
 
 /**
  * Alias for [duckattack]. Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous
@@ -2342,6 +2657,10 @@ fun PatternMapperFn.duckatt(time: PatternLike? = null, callInfo: CallInfo? = nul
 private val duckDepthMutation = voiceSetter { duckDepth = it?.asDoubleOrNull() }
 
 private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.duckDepth }, update = duckDepthMutation)
+    }
+
     return source._liftNumericField(args, duckDepthMutation)
 }
 
@@ -2382,17 +2701,51 @@ fun String.duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).duckdepth(amount, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the ducking depth.
+ * Returns a [PatternMapperFn] for `duckdepth(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3*4").apply(duckdepth("<0.3 0.6 0.9 1.0>"))   // escalating ducking depth
- * ```
- *
- * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
+ * Kotlin door only: the script reaches this through `duckdepth(...)`, which is [DuckDepth.invoke].
  */
-@KlangScript.Function
 fun duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.duckdepth(amount, callInfo) }
+
+/**
+ * The ducking depth of each event, as a value other setters can read.
+ *
+ * Bare `duckdepth` reads what the chain has set so far, so it comes after whatever set the field
+ * (`duckdepth(...)` or an alias). Call it, `duckdepth(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * stack(note("c3").s("saw").duckorbit(1).duckdepth(0.5).duckdepth(mul("<1 0.5>")), s("bd*4").orbit(1))   // a shallower duck every other cycle
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * stack(note("c3").s("saw").duckorbit(1).duckdepth("<0.3 0.9>").duckattack(duckdepth.div(10)), s("bd*4").orbit(1))   // deeper duck, slower recovery
+ * ```
+ *
+ * @category dynamics
+ * @tags duckdepth, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("duckdepth")
+object DuckDepth : FieldAccessor({ it.duckDepth }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the ducking depth.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").apply(duckdepth("<0.3 0.6 0.9 1.0>"))   // escalating ducking depth
+     * ```
+     *
+     * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        duckdepth(amount, callInfo)
+}
+
+/** The [DuckDepth] accessor as a value, so the Kotlin door reads like the script. */
+val duckdepth: DuckDepth = DuckDepth
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ducking depth after the previous mapper.

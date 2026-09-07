@@ -34,6 +34,15 @@ Rewritten 2026-09-06 after a design session; the previous draft (context-key bin
   pattern, not a mapper), `orbit` and `duckOrbit` (Int routing fields). String and boolean setters
   (`note, n, sound, bank, scale, vowel, body, unit, loop, *shape, *curve`) are out of scope: the
   value register carries text, but "apply a mapper to a name" has no use case yet.
+- 2026-09-07: batch four, the last numeric group: `unison, spread, panSpread, density` (unison
+  oscillator params, read from `oscParams`), `orbit, duckorbit` (Int routing fields), `duckattack,
+  duckdepth`, `compressor` (its first slot, the threshold; the other knobs have no single-field
+  door) and `fmenv` (whose global door builds a control pattern, so its `invoke` returns a
+  pattern), plus `analog, duty, onepole` from the oscillator addons. Aliases `uni, voices, d, o, duck,
+  duckatt, comp, fmmod`. Every numeric single-field setter in sprudel is now an accessor; only
+  string and boolean setters remain outside. Engine gaps found here: `panSpread` has no engine
+  stage (documented reserved); `density` is the dust grain rate, not a unison knob;
+  `duckattack` is the recovery time (the duck-down is instant).
 
 ## Goal
 
@@ -247,7 +256,11 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   rule: `@KlangScript.Constant val <alias>: <Obj> = <Obj>`, the alias factory stays for Kotlin.
 - DONE (batch three, 2026-09-07): sample, synthesis, vowel, body, tonal, notch addons, filter
   envelopes: 36 accessors, 22 aliases.
-- NEXT: the dynamics leftovers and the two Int routing fields, then decide about `fmenv`.
+- DONE (batch four, 2026-09-07): dynamics leftovers, routing fields, compressor threshold, fmenv.
+  Phase 2 numeric sweep complete: 88 accessors, 54 alias constants.
+- OPEN: string and boolean setters (`note, n, sound, bank, scale, vowel, body, unit, loop,
+  *shape, *curve`), a diagnostic when a mapper reaches one of them (today the value is dropped),
+  and the engine gaps listed above.
 - Engine gaps the examples exposed (2026-09-07, batch three review), documented as "reserved" in
   the object KDocs: `pcurve` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not
   read by `VoiceFactory` (it loops between `begin` and `end`); negative `speed` is silence, not

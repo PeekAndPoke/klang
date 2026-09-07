@@ -12,12 +12,15 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
+import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.lang.FieldAccessor
 import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.asDoubleOrNull
 import io.peekandpoke.klang.sprudel.lang.chain
+import io.peekandpoke.klang.sprudel.lang.singleMapperOrNull
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.lang.voiceSetter
 import io.peekandpoke.klang.sprudel.putOscParam
@@ -127,6 +130,10 @@ private val analogMutation = voiceSetter {
 }
 
 private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("analog") }, update = analogMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, analogMutation)
 }
 
@@ -179,20 +186,51 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).analog(amount, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the analog drift amount.
+ * Returns a [PatternMapperFn] for `analog(...)`.
  *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(analog(4))
- * ```
- *
- * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
- * @return A [PatternMapperFn] that sets analog drift.
- * @category tonal
- * @tags analog, drift, oscillator, warmth, vco, addon
+ * Kotlin door only: the script reaches this through `analog(...)`, which is [Analog.invoke].
  */
-@KlangScript.Function
 fun analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.analog(amount, callInfo) }
+
+/**
+ * The analog drift amount of each event, as a value other setters can read.
+ *
+ * Bare `analog` reads what the chain has set so far, so it comes after whatever set the field
+ * (`analog(...)`). Call it, `analog(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").analog(2).analog(mul("1 3"))                 // the second note drifts more
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").analog("1 4").spread(analog.div(20))       // more drift, wider
+ * ```
+ *
+ * @category tonal
+ * @tags analog, accessor, addon
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("analog")
+object Analog : FieldAccessor({ it.oscParams?.get("analog") }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the analog drift amount.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(analog(4))
+     * ```
+     *
+     * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
+     * @return A [PatternMapperFn] that sets analog drift.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        analog(amount, callInfo)
+}
+
+/** The [Analog] accessor as a value, so the Kotlin door reads like the script. */
+val analog: Analog = Analog
 
 /**
  * Chains an analog-drift-set onto this [PatternMapperFn].
@@ -214,6 +252,10 @@ private val dutyMutation = voiceSetter {
 }
 
 private fun applyDuty(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("duty") }, update = dutyMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, dutyMutation)
 }
 
@@ -247,13 +289,46 @@ fun String.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).duty(amount, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the pulse duty cycle.
+ * Returns a [PatternMapperFn] for `duty(...)`.
  *
- * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+ * Kotlin door only: the script reaches this through `duty(...)`, which is [Duty.invoke].
  */
-@KlangScript.Function
 fun duty(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.duty(amount, callInfo) }
+
+/**
+ * The pulse duty cycle of each event, as a value other setters can read.
+ *
+ * Bare `duty` reads what the chain has set so far, so it comes after whatever set the field
+ * (`duty(...)`). Call it, `duty(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("pulze").duty(0.5).duty(mul("1 0.5"))                    // the second note thinner
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("pulze").duty("0.2 0.5").pan(duty)                      // wider pulse, further right
+ * ```
+ *
+ * @category tonal
+ * @tags duty, accessor, addon
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("duty")
+object Duty : FieldAccessor({ it.oscParams?.get("duty") }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the pulse duty cycle.
+     *
+     * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        duty(amount, callInfo)
+}
+
+/** The [Duty] accessor as a value, so the Kotlin door reads like the script. */
+val duty: Duty = Duty
 
 /**
  * Chains a duty-set onto this [PatternMapperFn].
@@ -271,6 +346,10 @@ private val onepoleMutation = voiceSetter {
 }
 
 private fun applyOnepole(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("onepole") }, update = onepoleMutation)
+    }
+
     return source._liftOrReinterpretStringField(args, onepoleMutation)
 }
 
@@ -319,17 +398,50 @@ fun String.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
     this.toVoiceValuePattern(callInfo?.receiverLocation).onepole(freq, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the oscillator one-pole lowpass.
+ * Returns a [PatternMapperFn] for `onepole(...)`.
  *
- * ```KlangScript(Playable)
- * note("c d e f").apply(onepole("<12000 3700 1700>"))  // stepwise darker
- * ```
- *
- * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
+ * Kotlin door only: the script reaches this through `onepole(...)`, which is [Onepole.invoke].
  */
-@KlangScript.Function
 fun onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.onepole(freq, callInfo) }
+
+/**
+ * The one-pole lowpass cutoff of each event, as a value other setters can read.
+ *
+ * Bare `onepole` reads what the chain has set so far, so it comes after whatever set the field
+ * (`onepole(...)`). Call it, `onepole(...)`, to set the field; a mapper argument applies to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").onepole(2000).onepole(mul("1 2"))                // the second note brighter
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").onepole("1000 4000").lpf(onepole.mul(2))         // the SVF an octave above the one-pole
+ * ```
+ *
+ * @category tonal
+ * @tags onepole, accessor, addon
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("onepole")
+object Onepole : FieldAccessor({ it.oscParams?.get("onepole") }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets the oscillator one-pole lowpass.
+     *
+     * ```KlangScript(Playable)
+     * note("c d e f").apply(onepole("<12000 3700 1700>"))  // stepwise darker
+     * ```
+     *
+     * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        onepole(freq, callInfo)
+}
+
+/** The [Onepole] accessor as a value, so the Kotlin door reads like the script. */
+val onepole: Onepole = Onepole
 
 /**
  * Chains a onepole-set onto this [PatternMapperFn], applying the one-pole lowpass after the

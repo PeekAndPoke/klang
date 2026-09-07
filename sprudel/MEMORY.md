@@ -2,6 +2,11 @@
 
 ## Recent Work (2026-09-07)
 
+- **Field accessors, batch four**: `unison, spread, panSpread, density, orbit, duckorbit,
+  duckattack, duckdepth, compressor, fmenv, analog, duty, onepole` and eight aliases. The numeric
+  sweep is complete: every numeric single-field setter is an accessor (88 objects, 54
+  alias constants).
+
 - **Field accessors, batch three**: 36 objects and 22 aliases across sample, synthesis, vowel,
   body, tonal, the notch addons and the filter envelopes. Tonal's inline update lambdas became
   named `<name>Update` values. Addon accessors live in `lang.addons` and carry the `addon` tag.
