@@ -66,8 +66,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-one accessor is an object with a call form and the first-step operators" {
-        listOf("gain", "velocity", "pan", "postgain", "lpf", "hpf", "bpf", "lpq", "hpq", "bpq",
-            "attack", "decay", "sustain", "release").forEach { name ->
+        listOf("gain", "velocity", "pan", "postgain", "lpf", "hpf", "bpf", "lpq", "hpq", "bpq").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -128,6 +127,23 @@ class FreqAccessorIntelSpec : StringSpec({
             analyze("$alias(0.5)").diagnostics.size shouldBe 0
             CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("mul")
         }
+    }
+
+    "adsr is an object whose children are the slot accessors and whose call form is the setter" {
+        val type = registry.get("adsr").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+        type.simpleName shouldBe "adsr"
+        registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "adsr(attack"
+        val members = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
+        members shouldContainAll listOf("attack", "decay", "sustain", "release")
+        members shouldNotContain "invoke"
+        val code = "adsr.attack.mul(2)"
+        val a = analyze(code)
+        a.typeOf(a.top()).shouldNotBeNull()
+        val child = a.receiverTypeBeforeDot(code.indexOf(".mul")).shouldNotBeNull()
+        child.simpleName shouldBe "FieldAccessor"
+        a.diagnostics.size shouldBe 0
+        CompletionProvider(registry).memberCompletions(child, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
+        analyze("adsr(attack = 0.1, release = 0.5)").diagnostics.size shouldBe 0
     }
 
     "named-argument diagnostics reach the setter through invoke" {

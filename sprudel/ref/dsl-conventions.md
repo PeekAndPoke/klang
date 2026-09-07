@@ -80,6 +80,11 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
   Never make the accessor a `PatternMapperFn`: see `MEMORY.md` 2026-09-06 for the ambiguity.
 - Every new accessor gets two rows in `LangFieldAccessorsSpec`: a mapper on its own field and the
   bare accessor read into another field, both doors.
+- A compound door whose slots have no doors of their own (`adsr`) is an object with the slot
+  accessors as children: `@KlangScript.Object("adsr") object Adsr { @KlangScript.Property val
+  attack: FieldAccessor = FieldAccessor { it.attack } ... @Method("invoke") ... }`; the slot
+  helpers stay private and take the mapper branch, so `adsr(attack = mul(2))` works and
+  `adsr.attack` reads. Do not add single doors for such slots.
 - A setter whose lift call carries an inline update lambda (`_liftOrReinterpretNumericalField(args)
   { v -> copy(x = v) }`) gets a named `private val <name>Update: SprudelVoiceData.(Double?) ->
   SprudelVoiceData` so the mapper branch and the lift share one update (tonal, 2026-09-07).

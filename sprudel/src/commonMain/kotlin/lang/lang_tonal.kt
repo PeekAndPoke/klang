@@ -590,7 +590,7 @@ fun legato(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").legato("0.5 1.5").release(legato.mul(0.2))                 // release follows legato
+ * note("c3 e3").legato("0.5 1.5").adsr(release = legato.mul(0.2))                 // release follows legato
  * ```
  *
  * @category tonal

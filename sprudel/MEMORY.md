@@ -2,10 +2,17 @@
 
 ## Recent Work (2026-09-07)
 
+- **Compound pilot: `adsr` is an object with children.** `adsr.attack/.decay/.sustain/.release`
+  read the slots, `adsr(attack = mul(2))` maps one slot, and the single doors `attack()`,
+  `decay()`, `sustain()`, `release()` are GONE from both doors (`LangRetiredEnvelopeDoorsSpec`).
+  Sakura's `adsr("0.1:1:1:0.1")` never meant four values (no colon form exists; the string went to
+  the attack slot and the mini-notation kept 0.1); rewritten as `adsr(0.1, 1, 1, 0.1)` per the
+  maintainer, which changes those three noise beds.
+
 - **Field accessors, batch four**: `unison, spread, panSpread, density, orbit, duckorbit,
   duckattack, duckdepth, compressor, fmenv, analog, duty, onepole` and eight aliases. The numeric
-  sweep is complete: every numeric single-field setter is an accessor (88 objects, 54
-  alias constants).
+  sweep is complete: every numeric single-field setter is an accessor (84 objects after the
+  adsr pilot removed the four stage objects, plus the four `adsr.*` children; 54 alias constants).
 
 - **Field accessors, batch three**: 36 objects and 22 aliases across sample, synthesis, vowel,
   body, tonal, the notch addons and the filter envelopes. Tonal's inline update lambdas became
@@ -321,7 +328,7 @@ return applyCat(patterns)
 - `gain()`, `pan()`, `legato()` / `clip()`
 - `vibrato()` / `vib`, `vibratoMod()` / `vibmod`
 - `accelerate()`, `unison()` / `uni`, `detune()`, `spread()`, `density()` / `d`
-- `attack()`, `decay()`, `sustain()`, `release()`, `adsr()`
+- `adsr()` (its stages are slots and `adsr.*` children; the single doors were removed 2026-09-07)
 - `onepole()` (Klang extension; formerly `warmth`, now Hz)
 - `velocity()`, `postgain()`
 - FM synthesis: `fmh()`, `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`

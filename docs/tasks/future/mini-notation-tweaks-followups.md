@@ -10,7 +10,7 @@ A tweak is a named bundle of per-note modifications. Mini-notation attaches the 
 
 ```klangscript
 note("c3 e3{swell} g3{swell bend}").tweaks({
-    swell: x => x.attack(0.3).gain(0.6),
+    swell: x => x.adsr(attack = 0.3).gain(0.6),
     bend:  x => x.detune(20).accelerate(0.5),
 })
 ```

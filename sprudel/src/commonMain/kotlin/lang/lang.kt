@@ -49,7 +49,7 @@ fun interface PatternMapperProvider {
  * setter can consume it (`pan(gain)`, `hpf(lpf.mul(2))`). Each accessor object adds the setter as
  * its `invoke` member, so `gain(0.5)` stays the setter. See `docs/tasks/sprudel-field-accessors.md`.
  */
-abstract class FieldAccessor(private val read: (SprudelVoiceData) -> Double?) : PatternMapperProvider {
+open class FieldAccessor(private val read: (SprudelVoiceData) -> Double?) : PatternMapperProvider {
     override fun mapper(): PatternMapperFn = { p -> p.reinterpretVoice { it.copy(value = read(it)?.asVoiceValue()) } }
 }
 

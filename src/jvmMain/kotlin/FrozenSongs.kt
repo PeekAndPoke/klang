@@ -18,7 +18,9 @@ package io.peekandpoke.klang
  * SYNTAX-ONLY migrations are permitted when the DSL itself changes shape (renames,
  * colon-compound -> per-param), because a frozen song that no longer parses guards
  * nothing. Values must never change; each such migration keeps the sound identical.
- * Applied so far: C6a filter-alias renames, C0 per-param argument split, C3 lpe semitone re-expression, C4 wet renames (room->roomWet, delay->delayWet, phaserdepth->phaserWet), P pitch-param unification (warmth(w) -> onepole(Hz) via fc = sr/pi*atan((1-w)/w), sound-identical at 48k).
+ * Applied so far: C6a filter-alias renames, C0 per-param argument split, C3 lpe semitone re-expression, C4 wet renames (room->roomWet, delay->delayWet, phaserdepth->phaserWet), P pitch-param unification (warmth(w) -> onepole(Hz) via fc = sr/pi*atan((1-w)/w), sound-identical at 48k),
+ * 2026-09-07 envelope slots (`.release(x)` -> `.adsr(release = x)`) and the all-named form of a mixed call
+ * (`delayWet(0.2, feedback = 0.5)` -> `delayWet(wet = 0.2, feedback = 0.5)`, which the language no longer parses mixed).
  *
  * Source at snapshot time:
  *  - Der Schmetterling  → builtinsongs/DerSchmetterling.kt  (rpm 34.5)
@@ -41,7 +43,7 @@ stack(                                                                          
     .hpf(1500).lpf(1575).lpe(berlin.range(19.0, 19.6).fast(4)).lpq(2.3).lpadsr(0.007, 1.3, 0.0, 0.01)                                    //                  //.
     .gain(0.50).distort(0.620, "tube", 4).postgain("<0.220!48 0.110!16 0.220!48 0.330!16>") // . solo()                                 //       //      //.
     .adsr(0.007, 4.0, 0.0, 0.01).clip(0.89)  // . mute()                                                                              //     //.   //    //.
-    .release("<0.04!16 0.11!16>").vibrato(8).vibratoMod(0.01)                                                                           //   //.         //  //.
+    .adsr(release = "<0.04!16 0.11!16>").vibrato(8).vibratoMod(0.01)                                                                           //   //.         //  //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                        // //.              // //.
     .superimpose(x => x.transpose(12).spread(0.12).mute("<1!16 0!16>").velocity(0.10).pan(0.15).superimpose(pan(0.85)))           //.                      //.
     .mute("<1!32 0!192>").analog(feel).pipeline("pedal").roomWet(0.3, 5, 0.1)
@@ -168,7 +170,7 @@ stack(
     .orbit(0).gain(0.12).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(perlin.range(440, 440 * 4).segment(16).slow(48)).bpq(sine.range(0.25, 5.0).slow(48).early(12))
   ,
-).delayWet(0.2, feedback = 0.5).delaytime(pure(1/8).div(cps)).roomWet(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
+).delayWet(wet = 0.2, feedback = 0.5).delaytime(pure(1/8).div(cps)).roomWet(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
 
 
 

@@ -124,8 +124,8 @@ Listen, in this order:
 - `note("c3 e3 g3").s("gm_accordion")` — **JCLive, variant 0: now sustains via 1–5 ms loops.**
   Any buzz or beating on the held tone is the single-cycle loop itself; that is the font, not us.
 - `s("gm_acoustic_guitar_nylon")` — the pluck is back AND the ring lasts its full ~4 s. If it now
-  feels too long under a fast pattern, that is what `.adsr()` / `.release()` are for, per note.
-- `note("c3").s("gm_church_organ").sustain(4)` — should breathe in and hold cleanly across the loop.
+  feels too long under a fast pattern, that is what `.adsr()` / `.adsr(release = ...)` are for, per note.
+- `note("c3").s("gm_church_organ").adsr(attack = 1, sustain = 1)` — should breathe in and hold cleanly across the loop.
 
 **The one knob:** `SOUNDFONT_RELEASE_SEC = 0.05` in `SoundFont.kt`. Shortest click-free cut that
 reads as a note ending. A reed might want less, a bowed string more — but anything instrument-

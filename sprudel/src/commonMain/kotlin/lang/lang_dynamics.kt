@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftNumericField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
@@ -1410,432 +1411,39 @@ val d: Density = Density
 fun PatternMapperFn.d(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.density(amount, callInfo) }
 
-// -- ADSR attack() ----------------------------------------------------------------------------------------------------
+// -- ADSR stages ------------------------------------------------------------------------------------------------------
+// attack, decay, sustain and release are slots of adsr(), not doors of their own (the single doors
+// were removed 2026-09-07, see docs/tasks/sprudel-field-accessors.md). Read them as adsr.attack etc.
 
 private val attackMutation = voiceSetter { attack = it?.asDoubleOrNull() }
-
-private fun applyAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.attack }, update = attackMutation)
-    }
-
-    return source._liftOrReinterpretStringField(args, attackMutation)
-}
-
-/**
- * Sets the ADSR envelope attack time in seconds for synthesised notes.
- *
- * Controls how quickly the note rises from silence to full volume at the start.
- * Short values produce a sharp, percussive onset; longer values create a gradual fade-in.
- *
- * ```KlangScript(Playable)
- * note("c3 e3 g3").s("sine").attack(0.01)     // sharp attack
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").attack("<0.01 0.1 0.5 1.0>")   // varying attacks
- * ```
- *
- * @param time The attack time in seconds.
- *
- * @category dynamics
- * @tags attack, adsr, envelope, fade-in
- */
-@KlangScript.Function
-fun SprudelPattern.attack(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyAttack(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern and sets the ADSR envelope attack time.
- *
- * ```KlangScript(Playable)
- * "c3*4".attack("<0.01 0.1 0.5 1.0>").note()  // varying attacks
- * ```
- *
- * @param time The attack time in seconds.
- */
-@KlangScript.Function
-fun String.attack(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).attack(time, callInfo)
-
-/**
- * Returns a [PatternMapperFn] for `attack(...)`.
- *
- * Kotlin door only: the script reaches this through `attack(...)`, which is [Attack.invoke].
- */
-fun attack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.attack(time, callInfo) }
-
-/**
- * The envelope attack of each event, as a value other setters can read.
- *
- * Bare `attack` reads what the chain has set so far, so it comes after whatever set the field
- * (`attack(...)`, `adsr(...)`, an alias). Call it, `attack(...)`, to set the field; a mapper argument applies to the field.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").s("saw").attack(0.05).attack(mul("1 4"))                 // every second note swells
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3 e3").s("saw").attack("0.01 0.2").release(attack)               // symmetric envelope
- * ```
- *
- * @category dynamics
- * @tags attack, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("attack")
-object Attack : FieldAccessor({ it.attack }) {
-
-    /**
-     * Creates a [PatternMapperFn] that sets the ADSR envelope attack time for each event.
-     *
-     * ```KlangScript(Playable)
-     * note("c3*4").s("sine").apply(attack("<0.01 0.1 0.5 1.0>"))  // varying attacks
-     * ```
-     *
-     * @param time The attack time in seconds.
-     */
-    @KlangScript.Method(name = "invoke")
-    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        attack(time, callInfo)
-}
-
-/** The [Attack] accessor as a value, so the Kotlin door reads like the script: `pan(attack)`. */
-val attack: Attack = Attack
-
-/**
- * Creates a chained [PatternMapperFn] that sets the ADSR attack time after the previous mapper.
- *
- * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(attack(0.1).decay(0.2))  // attack + decay chained
- * ```
- *
- * @param time The attack time in seconds.
- */
-@KlangScript.Function
-fun PatternMapperFn.attack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.attack(time, callInfo) }
-
-// -- ADSR decay() -----------------------------------------------------------------------------------------------------
-
 private val decayMutation = voiceSetter { decay = it?.asDoubleOrNull() }
-
-private fun applyDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.decay }, update = decayMutation)
-    }
-
-    return source._liftOrReinterpretStringField(args, decayMutation)
-}
-
-/**
- * Sets the ADSR envelope decay time in seconds for synthesised notes.
- *
- * Controls how quickly the volume falls from its peak to the sustain level after the attack phase.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").s("sawtooth").decay(0.2)       // short decay
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").decay("<0.05 0.2 0.5 1.0>")    // varying decays
- * ```
- *
- * @param time The decay time in seconds.
- *
- * @category dynamics
- * @tags decay, adsr, envelope
- */
-@KlangScript.Function
-fun SprudelPattern.decay(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyDecay(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern and sets the ADSR envelope decay time.
- *
- * ```KlangScript(Playable)
- * "c3*4".decay("<0.05 0.2 0.5 1.0>").note()   // varying decays
- * ```
- *
- * @param time The decay time in seconds.
- */
-@KlangScript.Function
-fun String.decay(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).decay(time, callInfo)
-
-/**
- * Returns a [PatternMapperFn] for `decay(...)`.
- *
- * Kotlin door only: the script reaches this through `decay(...)`, which is [Decay.invoke].
- */
-fun decay(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.decay(time, callInfo) }
-
-/**
- * The envelope decay of each event, as a value other setters can read.
- *
- * Bare `decay` reads what the chain has set so far, so it comes after whatever set the field
- * (`decay(...)`, `adsr(...)`, an alias). Call it, `decay(...)`, to set the field; a mapper argument applies to the field.
- *
- * ```KlangScript(Playable)
- * s("bd*4").decay(0.2).decay(mul(perlin.seg(4).range(0.5, 1.5)))        // uneven decays
- * ```
- *
- * ```KlangScript(Playable)
- * s("bd*4").decay("0.1 0.3").release(decay)                               // release follows decay
- * ```
- *
- * @category dynamics
- * @tags decay, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("decay")
-object Decay : FieldAccessor({ it.decay }) {
-
-    /**
-     * Creates a [PatternMapperFn] that sets the ADSR envelope decay time for each event.
-     *
-     * ```KlangScript(Playable)
-     * note("c3*4").s("sawtooth").apply(decay("<0.05 0.2 0.5 1.0>"))  // varying decays
-     * ```
-     *
-     * @param time The decay time in seconds.
-     */
-    @KlangScript.Method(name = "invoke")
-    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        decay(time, callInfo)
-}
-
-/** The [Decay] accessor as a value, so the Kotlin door reads like the script: `pan(decay)`. */
-val decay: Decay = Decay
-
-/**
- * Creates a chained [PatternMapperFn] that sets the ADSR decay time after the previous mapper.
- *
- * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(attack(0.01).decay(0.2))  // attack + decay chained
- * ```
- *
- * @param time The decay time in seconds.
- */
-@KlangScript.Function
-fun PatternMapperFn.decay(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.decay(time, callInfo) }
-
-// -- ADSR sustain() ---------------------------------------------------------------------------------------------------
-
 private val sustainMutation = voiceSetter { sustain = it?.asDoubleOrNull() }
-
-private fun applySustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.sustain }, update = sustainMutation)
-    }
-
-    return source._liftOrReinterpretStringField(args, sustainMutation)
-}
-
-/**
- * Sets the ADSR envelope sustain level (0–1) for synthesised notes.
- *
- * The sustain level is held while the note is pressed, after the attack and decay phases.
- * `0` = silence after decay; `1` = hold at full peak level.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").s("sine").sustain(0.7)        // 70% sustain level
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").sustain("<0 0.3 0.7 1.0>")    // varying sustain
- * ```
- *
- * @param level The sustain level between 0 and 1.
- *
- * @category dynamics
- * @tags sustain, adsr, envelope, hold
- */
-@KlangScript.Function
-fun SprudelPattern.sustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applySustain(this, listOfNotNull(level).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern and sets the ADSR envelope sustain level.
- *
- * ```KlangScript(Playable)
- * "c3*4".sustain("<0 0.3 0.7 1.0>").note()   // varying sustain
- * ```
- *
- * @param level The sustain level between 0 and 1.
- */
-@KlangScript.Function
-fun String.sustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).sustain(level, callInfo)
-
-/**
- * Returns a [PatternMapperFn] for `sustain(...)`.
- *
- * Kotlin door only: the script reaches this through `sustain(...)`, which is [Sustain.invoke].
- */
-fun sustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.sustain(level, callInfo) }
-
-/**
- * The envelope sustain level of each event, as a value other setters can read.
- *
- * Bare `sustain` reads what the chain has set so far, so it comes after whatever set the field
- * (`sustain(...)`, `adsr(...)`, an alias). Call it, `sustain(...)`, to set the field; a mapper argument applies to the field.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").s("saw").sustain(0.8).sustain(mul("1 0.5"))              // every second note thinner
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3 e3").s("saw").sustain("0.9 0.4").gain(sustain)                 // level follows sustain
- * ```
- *
- * @category dynamics
- * @tags sustain, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("sustain")
-object Sustain : FieldAccessor({ it.sustain }) {
-
-    /**
-     * Creates a [PatternMapperFn] that sets the ADSR envelope sustain level for each event.
-     *
-     * ```KlangScript(Playable)
-     * note("c3*4").s("sine").apply(sustain("<0 0.3 0.7 1.0>"))  // varying sustain
-     * ```
-     *
-     * @param level The sustain level between 0 and 1.
-     */
-    @KlangScript.Method(name = "invoke")
-    operator fun invoke(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        sustain(level, callInfo)
-}
-
-/** The [Sustain] accessor as a value, so the Kotlin door reads like the script: `pan(sustain)`. */
-val sustain: Sustain = Sustain
-
-/**
- * Creates a chained [PatternMapperFn] that sets the ADSR sustain level after the previous mapper.
- *
- * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(attack(0.01).sustain(0.7))  // attack + sustain chained
- * ```
- *
- * @param level The sustain level between 0 and 1.
- */
-@KlangScript.Function
-fun PatternMapperFn.sustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.sustain(level, callInfo) }
-
-// -- ADSR release() ---------------------------------------------------------------------------------------------------
-
 private val releaseMutation = voiceSetter { release = it?.asDoubleOrNull() }
 
-private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyStage(
+    source: SprudelPattern,
+    args: List<SprudelDslArg<Any?>>,
+    read: (SprudelVoiceData) -> Double?,
+    update: VoiceModifierFn,
+): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.release }, update = releaseMutation)
+        return source._mapNumericField(mapper, read = read, update = update)
     }
 
-    return source._liftOrReinterpretStringField(args, releaseMutation)
+    return source._liftOrReinterpretStringField(args, update)
 }
 
-/**
- * Sets the ADSR envelope release time in seconds for synthesised notes.
- *
- * Controls how long the note takes to fade to silence after a note-off event.
- * Short values produce an abrupt cut; longer values create a smooth fade-out.
- *
- * ```KlangScript(Playable)
- * note("c3 e3 g3").s("sine").release(0.5)     // half-second release
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").release("<0.1 0.3 0.8 2.0>")  // varying releases
- * ```
- *
- * @param time The release time in seconds.
- *
- * @category dynamics
- * @tags release, adsr, envelope, fade-out
- */
-@KlangScript.Function
-fun SprudelPattern.release(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyRelease(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
+private fun applyAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+    applyStage(source, args, read = { it.attack }, update = attackMutation)
 
-/**
- * Parses this string as a pattern and sets the ADSR envelope release time.
- *
- * ```KlangScript(Playable)
- * "c3*4".release("<0.1 0.3 0.8 2.0>").note()  // varying releases
- * ```
- *
- * @param time The release time in seconds.
- */
-@KlangScript.Function
-fun String.release(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).release(time, callInfo)
+private fun applyDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+    applyStage(source, args, read = { it.decay }, update = decayMutation)
 
-/**
- * Returns a [PatternMapperFn] for `release(...)`.
- *
- * Kotlin door only: the script reaches this through `release(...)`, which is [Release.invoke].
- */
-fun release(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.release(time, callInfo) }
+private fun applySustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+    applyStage(source, args, read = { it.sustain }, update = sustainMutation)
 
-/**
- * The envelope release of each event, as a value other setters can read.
- *
- * Bare `release` reads what the chain has set so far, so it comes after whatever set the field
- * (`release(...)`, `adsr(...)`, an alias). Call it, `release(...)`, to set the field; a mapper argument applies to the field.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").s("saw").release(0.3).release(add("0 0.5"))              // every second note rings on
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3 e3").s("saw").release("0.1 0.6").attack(release)               // symmetric envelope
- * ```
- *
- * @category dynamics
- * @tags release, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("release")
-object Release : FieldAccessor({ it.release }) {
-
-    /**
-     * Creates a [PatternMapperFn] that sets the ADSR envelope release time for each event.
-     *
-     * ```KlangScript(Playable)
-     * note("c3*4").s("sine").apply(release("<0.1 0.3 0.8 2.0>"))  // varying releases
-     * ```
-     *
-     * @param time The release time in seconds.
-     */
-    @KlangScript.Method(name = "invoke")
-    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        release(time, callInfo)
-}
-
-/** The [Release] accessor as a value, so the Kotlin door reads like the script: `pan(release)`. */
-val release: Release = Release
-
-/**
- * Creates a chained [PatternMapperFn] that sets the ADSR release time after the previous mapper.
- *
- * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(attack(0.01).release(0.5))  // attack + release chained
- * ```
- *
- * @param time The release time in seconds.
- */
-@KlangScript.Function
-fun PatternMapperFn.release(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.release(time, callInfo) }
+private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+    applyStage(source, args, read = { it.release }, update = releaseMutation)
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
@@ -1851,6 +1459,17 @@ fun PatternMapperFn.release(time: PatternLike? = null, callInfo: CallInfo? = nul
  *
  * ```KlangScript(Playable)
  * note("c3*4").adsr("<0.01 0.5>", "<0.1 0.5>", "<0.5 0.8>", "<0.2 1.0>")  // alternate envelopes
+ * ```
+ *
+ * A mapper on a slot applies to that slot and leaves the others alone; the slots can be read
+ * back as `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release`:
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").adsr(0.01, 0.2, 0.7, 0.5).adsr(attack = mul("1 10"))   // the second note swells
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").adsr("0.05 0.3", 0.2, 0.7).adsr(release = adsr.attack)   // symmetric envelope
  * ```
  *
  * @param attack Attack time in seconds — how quickly the note rises from silence to full volume.
@@ -1871,10 +1490,10 @@ fun SprudelPattern.adsr(
     callInfo: CallInfo? = null,
 ): SprudelPattern {
     var p = this
-    if (attack != null) p = p.attack(attack, callInfo?.forParam(0))
-    if (decay != null) p = p.decay(decay, callInfo?.forParam(1))
-    if (sustain != null) p = p.sustain(sustain, callInfo?.forParam(2))
-    if (release != null) p = p.release(release, callInfo?.forParam(3))
+    if (attack != null) p = applyAttack(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(0)))
+    if (decay != null) p = applyDecay(p, listOf<Any?>(decay).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (sustain != null) p = applySustain(p, listOf<Any?>(sustain).asSprudelDslArgs(callInfo?.forParam(2)))
+    if (release != null) p = applyRelease(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(3)))
     return p
 }
 
@@ -1901,18 +1520,10 @@ fun String.adsr(
     this.toVoiceValuePattern(callInfo?.receiverLocation).adsr(attack, decay, sustain, release, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that sets the ADSR envelope parameters for each event.
+ * Returns a [PatternMapperFn] that sets the ADSR envelope.
  *
- * ```KlangScript(Playable)
- * note("c3*4").s("sine").apply(adsr(0.01, 0.1, 0.5, 0.2))
- * ```
- *
- * @param attack Attack time in seconds.
- * @param decay Decay time in seconds.
- * @param sustain Sustain level (0–1).
- * @param release Release time in seconds.
+ * Kotlin door only: the script reaches this through `adsr(...)`, which is [Adsr.invoke].
  */
-@KlangScript.Function
 fun adsr(
     attack: PatternLike? = null,
     decay: PatternLike? = null,
@@ -1921,6 +1532,70 @@ fun adsr(
     callInfo: CallInfo? = null,
 ): PatternMapperFn =
     { p -> p.adsr(attack, decay, sustain, release, callInfo) }
+
+/**
+ * The amplitude envelope of each event: `adsr(attack, decay, sustain, release)` sets it, and its
+ * four slots can be read back as `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release`.
+ *
+ * Each slot is independent: an omitted slot keeps its value, a mapper on a slot applies to that
+ * slot (`adsr(attack = mul(2))`), and a read comes after whatever set the slot in the chain.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").adsr("0.05 0.3", 0.2, 0.7).adsr(release = adsr.attack)   // symmetric envelope
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").adsr("0.05 0.3", 0.2, 0.7, 0.4).lpf(adsr.attack.mul(8000))   // slower attack, brighter
+ * ```
+ *
+ * @category dynamics
+ * @tags adsr, attack, decay, sustain, release, envelope, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("adsr")
+object Adsr {
+
+    /** The attack time of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val attack: FieldAccessor = FieldAccessor { it.attack }
+
+    /** The decay time of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val decay: FieldAccessor = FieldAccessor { it.decay }
+
+    /** The sustain level of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val sustain: FieldAccessor = FieldAccessor { it.sustain }
+
+    /** The release time of each event, as a value other setters can read. */
+    @KlangScript.Property
+    val release: FieldAccessor = FieldAccessor { it.release }
+
+    /**
+     * Creates a [PatternMapperFn] that sets the ADSR envelope parameters for each event.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").s("sine").apply(adsr(0.01, 0.1, 0.5, 0.2))
+     * ```
+     *
+     * @param attack Attack time in seconds.
+     * @param decay Decay time in seconds.
+     * @param sustain Sustain level (0–1).
+     * @param release Release time in seconds.
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(
+        attack: PatternLike? = null,
+        decay: PatternLike? = null,
+        sustain: PatternLike? = null,
+        release: PatternLike? = null,
+        callInfo: CallInfo? = null,
+    ): PatternMapperFn =
+        adsr(attack, decay, sustain, release, callInfo)
+}
+
+/** The [Adsr] object as a value, so the Kotlin door reads like the script: `adsr.attack`. */
+val adsr: Adsr = Adsr
 
 // -- ADSR curves ------------------------------------------------------------------------------------------------------
 

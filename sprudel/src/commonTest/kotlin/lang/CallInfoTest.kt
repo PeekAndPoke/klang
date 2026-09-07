@@ -59,19 +59,19 @@ class CallInfoTest : StringSpec({
     }
 
     "attack passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").attack("0.01")""")
+        assertCallInfoPresent("""seq("0 1").adsr(attack = "0.01")""")
     }
 
     "decay passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").decay("0.2")""")
+        assertCallInfoPresent("""seq("0 1").adsr(decay = "0.2")""")
     }
 
     "sustain passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").sustain("0.7")""")
+        assertCallInfoPresent("""seq("0 1").adsr(sustain = "0.7")""")
     }
 
     "release passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").release("0.5")""")
+        assertCallInfoPresent("""seq("0 1").adsr(release = "0.5")""")
     }
 
     "adsr passes CallInfo from KlangScript" {

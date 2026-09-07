@@ -88,7 +88,9 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 ### Retired, do not restore or cite
 
 `klangblocks` (removed 2026-08-23, never user-visible); the `Motör` spelling; the sub-type method
-chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors.
+chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors; the single
+envelope doors `attack()`, `decay()`, `sustain()`, `release()` (gone 2026-09-07, `adsr(attack = ...)`
+sets a slot and `adsr.attack` reads it; guard `LangRetiredEnvelopeDoorsSpec`).
 
 ## Available Agent
 

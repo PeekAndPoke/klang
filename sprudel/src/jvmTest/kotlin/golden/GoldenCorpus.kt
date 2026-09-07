@@ -50,7 +50,7 @@ stack(
     .hpf(1350).lpf(1625).lpe(berlin.range(24.0, 24.0)).lpq(1.2).lpadsr(0.005, 3.0, 0.5, 0.05)
     .gain(1.00).distort(0.300, "tube", 4).postgain("<0.800!48 0.325!16>")
     .adsr(0.01, 3.0, 0.0, 0.05).clip(0.8)
-    .release("<0.25!16 0.15!16>")
+    .adsr(release = "<0.25!16 0.15!16>")
     .phaser(1/8).phaserWet(0.15).phasersweep(1000).phasercenter(1800)
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>").coarse(2).coarseos(8)
     .superimpose(x => x.transpose(12).spread(0.10).velocity("<0!32 0.15!32>").pan(0.3).late(0.001),

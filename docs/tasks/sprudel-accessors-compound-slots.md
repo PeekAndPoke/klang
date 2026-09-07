@@ -15,8 +15,9 @@ mapper handed to their compound door is still silently dropped:
 | `bpadsr(a, d, s, r)`         | `bpattack, bpdecay, bpsustain, bprelease`               |
 | `nfadsr(a, d, s, r)`         | `nfattack, nfdecay, nfsustain, nfrelease`, DONE: these four have doors and accessors |
 
-`adsr(a, d, s, r)` is not in the gap: `attack, decay, sustain, release` have doors and accessors,
-and `adsr` delegates to them. The compressor's `ratio, knee, attack, release` slots are the same
+`adsr(a, d, s, r)` was the PILOT for this shape (2026-09-07): its four stages have no doors of
+their own any more (the maintainer removed `attack()`, `decay()`, `sustain()`, `release()`), and
+`adsr` is an object whose children `adsr.attack` etc. are the slot accessors. The compressor's `ratio, knee, attack, release` slots are the same
 shape (only `compressor`, the threshold, has an accessor); listed here for completeness, lower
 priority.
 
@@ -42,7 +43,7 @@ feature list still named them as implemented; corrected 2026-09-07.
 3. **Won't implement**: envelope stages stay compound-only; a mapper on `lpadsr` is documented as
    unsupported (or reported as a diagnostic, see the OPEN diagnostic item in the main plan).
 
-Recommendation: option 1. It is the one convention that scales to every compound door without
-inventing names, and it keeps the top-level namespace as it is after C6a. Decide before building;
-the member-accessor shape is new for KSP-registered objects and deserves the same pilot-first
-approach the field accessors had (one compound, `lpadsr`, first).
+Decision (maintainer, 2026-09-07): option 1, piloted on `adsr` (`object Adsr` with
+`@KlangScript.Property val attack: FieldAccessor` children and the setter as `invoke`; see
+`sprudel/ref/dsl-conventions.md`). Next: `lpadsr`, `hpadsr`, `bpadsr` in the same shape, then the
+compressor's remaining slots.

@@ -199,10 +199,7 @@ object TestTextPatterns {
     val asdrTest = """
             note("c3")
               .s("sine")
-              .attack(0.5)
-              .decay(0.2)
-              .sustain(0.3)
-              .release(1.0)            
+              .adsr(0.5, 0.2, 0.3, 1.0)
         """.trimIndent()
 
     /**
@@ -346,8 +343,8 @@ object TestTextPatterns {
 
     val euclidean_3_8 = """
         stack(        
-            note("[a b c d e f g]/8(3,8,1)").release(0.2),
-//            note("[a b](1,2)").release(0.2),
+            note("[a b c d e f g]/8(3,8,1)").adsr(release = 0.2),
+//            note("[a b](1,2)").adsr(release = 0.2),
             sound("hh").fast(2)
         )
     """.trimIndent()

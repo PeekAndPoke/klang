@@ -185,7 +185,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > | Scope | Effects |
 > |-------|---------|
 > | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
-> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 
 **Master limiter knobs.** `m.limiter(l => l...)` takes: `thresholdDb(db)` `ratio(x)` `kneeDb(db)`
@@ -321,11 +321,8 @@ selection — extended to ignitor variants and per-note gain.
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
 | `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).roomWet(0.5)`       |
-| `adsr(params)`   |            | Amplitude envelope             | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)` |
-| `attack(sec)`    |            | Envelope attack                | `note("c3").attack(0.01)`             |
-| `decay(sec)`     |            | Envelope decay                 | `note("c3").decay(0.2)`               |
-| `sustain(level)` |            | Envelope sustain level         | `note("c3").sustain(0.7)`             |
-| `release(sec)`   |            | Envelope release               | `note("c3").release(0.5)`             |
+| `adsr(a, d, s, r)` |          | Amplitude envelope; omitted slots keep their value, named slots take a mapper | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)`, `.adsr(attack = mul(2))` |
+| `adsr.attack` `.decay` `.sustain` `.release` | | Read a slot back into another setter | `note("c3").adsr(0.3, 0.2).adsr(release = adsr.attack)` |
 | `adsrOff()`      |            | Voice envelope OFF — the instrument owns amplitude | `note("c3").sound(gtr).adsrOff()` |
 | `adsrOn(flag?)`  |            | Voice envelope ON (the default) | `note("c3").adsrOn()`                |
 | `legato(amt)`    | `clip`     | Note duration scaling          | `note("c3").legato(1.5)`              |

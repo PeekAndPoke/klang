@@ -65,10 +65,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("lpq", """note("c e").lpq(4).lpq(mul(2))""", { it.resonance }, 8.0, note("c e").lpq(4).lpq(mul(2))),
         row("hpq", """note("c e").hpq(3).hpq(add(1))""", { it.hresonance }, 4.0, note("c e").hpq(3).hpq(add(1))),
         row("bpq", """note("c e").bpq(5).bpq(mul(2))""", { it.bandq }, 10.0, note("c e").bpq(5).bpq(mul(2))),
-        row("attack", """note("c e").attack(0.1).attack(mul(2))""", { it.attack }, 0.2, note("c e").attack(0.1).attack(mul(2))),
-        row("decay", """note("c e").decay(0.2).decay(add(0.1))""", { it.decay }, 0.3, note("c e").decay(0.2).decay(add(0.1))),
-        row("sustain", """note("c e").sustain(0.5).sustain(mul(0.5))""", { it.sustain }, 0.25, note("c e").sustain(0.5).sustain(mul(0.5))),
-        row("release", """note("c e").release(0.4).release(mul(0.5))""", { it.release }, 0.2, note("c e").release(0.4).release(mul(0.5))),
     )
 
     val read = listOf(
@@ -82,10 +78,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("lpq", """note("c e").lpq(4).hpq(lpq)""", { it.hresonance }, 4.0, note("c e").lpq(4).hpq(lpq)),
         row("hpq", """note("c e").hpq(3).bpq(hpq)""", { it.bandq }, 3.0, note("c e").hpq(3).bpq(hpq)),
         row("bpq", """note("c e").bpq(5).lpq(bpq)""", { it.resonance }, 5.0, note("c e").bpq(5).lpq(bpq)),
-        row("attack", """note("c e").attack(0.1).decay(attack)""", { it.decay }, 0.1, note("c e").attack(0.1).decay(attack)),
-        row("decay", """note("c e").decay(0.2).release(decay)""", { it.release }, 0.2, note("c e").decay(0.2).release(decay)),
-        row("sustain", """note("c e").sustain(0.5).pan(sustain)""", { it.pan }, 0.5, note("c e").sustain(0.5).pan(sustain)),
-        row("release", """note("c e").release(0.4).attack(release)""", { it.attack }, 0.4, note("c e").release(0.4).attack(release)),
     )
 
     // Batch two: the effects fields.
@@ -542,6 +534,103 @@ class LangFieldAccessorsSpec : StringSpec({
                 kotlin.cycles().map { events -> events.map { it.whole to it.data.fmEnv } } shouldBe
                         script.cycles().map { events -> events.map { it.whole to it.data.fmEnv } }
                 kotlin.cycles().first().map { it.data.fmEnv } shouldBe listOf(0.3, 0.7)
+            }
+        }
+    }
+
+    "adsr: a mapper on one slot leaves the other slots alone, in both doors" {
+        listOf(
+            "kotlin" to note("c e").adsr(0.01, 0.2, 0.7, 0.5).adsr(attack = mul(10)),
+            "script" to SprudelPattern.compile("""note("c e").adsr(0.01, 0.2, 0.7, 0.5).adsr(attack = mul(10))""").shouldNotBeNull(),
+        ).forEach { (door, p) ->
+            withClue(door) {
+                p.cycles().forEach { events ->
+                    events shouldHaveSize 2
+                    events.forEach {
+                        it.data.attack shouldBe (0.1 plusOrMinus 1e-9)
+                        it.data.decay shouldBe 0.2
+                        it.data.sustain shouldBe 0.7
+                        it.data.release shouldBe 0.5
+                    }
+                }
+            }
+        }
+    }
+
+    "adsr: a mapper on each slot reads that slot's own value, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?, val expected: Double)
+
+        listOf(
+            Case("decay = add(0.1)", note("c e").adsr(0.1, 0.2, 0.7, 0.5).adsr(decay = add(0.1)),
+                """note("c e").adsr(0.1, 0.2, 0.7, 0.5).adsr(decay = add(0.1))""", { it.decay }, 0.3),
+            Case("sustain = mul(0.5)", note("c e").adsr(0.1, 0.2, 0.7, 0.5).adsr(sustain = mul(0.5)),
+                """note("c e").adsr(0.1, 0.2, 0.7, 0.5).adsr(sustain = mul(0.5))""", { it.sustain }, 0.35),
+            Case("release = mul(0.5)", note("c e").adsr(0.1, 0.2, 0.7, 0.5).adsr(release = mul(0.5)),
+                """note("c e").adsr(0.1, 0.2, 0.7, 0.5).adsr(release = mul(0.5))""", { it.release }, 0.25),
+        ).forEach { c ->
+            withClue(c.name) {
+                listOf(c.kotlin, SprudelPattern.compile(c.script).shouldNotBeNull()).forEach { p ->
+                    p.cycles().forEach { events ->
+                        events shouldHaveSize 2
+                        events.forEach {
+                            c.field(it.data).shouldNotBeNull() shouldBe (c.expected plusOrMinus 1e-9)
+                            it.data.attack shouldBe 0.1
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    "adsr: every slot takes a control pattern and a continuous pattern per event, in both doors" {
+        val fields = mapOf<String, (SprudelVoiceData) -> Double?>("attack" to { it.attack }, "decay" to { it.decay }, "sustain" to { it.sustain }, "release" to { it.release })
+
+        fields.forEach { (slot, field) ->
+            withClue("$slot control pattern") {
+                val script = SprudelPattern.compile("""note("a b").adsr($slot = "0.1 0.5")""").shouldNotBeNull()
+                val kotlin = when (slot) {
+                    "attack" -> note("a b").adsr(attack = "0.1 0.5")
+                    "decay" -> note("a b").adsr(decay = "0.1 0.5")
+                    "sustain" -> note("a b").adsr(sustain = "0.1 0.5")
+                    else -> note("a b").adsr(release = "0.1 0.5")
+                }
+                listOf(kotlin, script).forEach { p ->
+                    p.cycles().forEach { events -> events.map { field(it.data) } shouldBe listOf(0.1, 0.5) }
+                }
+            }
+        }
+
+        withClue("attack follows a continuous pattern per event") {
+            listOf(note("a b c d").adsr(attack = sine), SprudelPattern.compile("""note("a b c d").adsr(attack = sine)""").shouldNotBeNull()).forEach { p ->
+                val values = p.queryArc(0.0, 1.0).map { it.data.attack.shouldNotBeNull() }
+                values[0] shouldBe (0.5 plusOrMinus 1e-9)
+                values[1] shouldBe (1.0 plusOrMinus 1e-9)
+                values[2] shouldBe (0.5 plusOrMinus 1e-9)
+                values[3] shouldBe (0.0 plusOrMinus 1e-9)
+            }
+        }
+    }
+
+    "adsr: the slots read back as adsr.attack, adsr.decay, adsr.sustain, adsr.release, in both doors" {
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?, val expected: Double)
+
+        listOf(
+            Case("release = adsr.attack", note("c e").adsr(0.3, 0.2, 0.7, 0.5).adsr(release = adsr.attack),
+                """note("c e").adsr(0.3, 0.2, 0.7, 0.5).adsr(release = adsr.attack)""", { it.release }, 0.3),
+            Case("pan(adsr.decay)", note("c e").adsr(0.3, 0.2, 0.7, 0.5).pan(adsr.decay),
+                """note("c e").adsr(0.3, 0.2, 0.7, 0.5).pan(adsr.decay)""", { it.pan }, 0.2),
+            Case("gain(adsr.sustain)", note("c e").adsr(0.3, 0.2, 0.7, 0.5).gain(adsr.sustain),
+                """note("c e").adsr(0.3, 0.2, 0.7, 0.5).gain(adsr.sustain)""", { it.gain }, 0.7),
+            Case("lpf(adsr.release.mul(1000))", note("c e").adsr(0.3, 0.2, 0.7, 0.5).lpf(adsr.release.mul(1000)),
+                """note("c e").adsr(0.3, 0.2, 0.7, 0.5).lpf(adsr.release.mul(1000))""", { it.cutoff }, 500.0),
+        ).forEach { c ->
+            withClue(c.name) {
+                val compiled = SprudelPattern.compile(c.script).shouldNotBeNull()
+                listOf(c.kotlin, compiled).forEach { p ->
+                    p.cycles().forEach { events -> events.forEach { c.field(it.data).shouldNotBeNull() shouldBe (c.expected plusOrMinus 1e-9) } }
+                }
+                c.kotlin.cycles().map { events -> events.map { it.whole to c.field(it.data) } } shouldBe
+                        compiled.cycles().map { events -> events.map { it.whole to c.field(it.data) } }
             }
         }
     }

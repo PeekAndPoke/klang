@@ -806,7 +806,7 @@ private fun ObjectValue.toTweakDefs(): Map<String, PatternMapperFn> = buildMap {
  *
  * ```KlangScript
  * note("c3 e3{swell} g3{swell bend}").tweaks({
- *     swell: x => x.attack(0.3).gain(1.1),
+ *     swell: x => x.adsr(attack = 0.3).gain(1.1),
  *     bend:  x => x.transpose(-2).accelerate(0.5),
  * })
  * ```

@@ -20,7 +20,7 @@ val shapeOfANoteTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    So far, every note held for its whole step and then stopped. That was a shape all along, just a hidden default. `adsr()` writes it out as four numbers separated by colons: **attack** (seconds to fade in), **decay** (seconds to settle), **sustain** (the level it holds while the note lasts, 0 to 1), **release** (seconds to fade out after the note ends).
+                    So far, every note held for its whole step and then stopped. That was a shape all along, just a hidden default. `adsr()` writes it out as four numbers separated by commas: **attack** (seconds to fade in), **decay** (seconds to settle), **sustain** (the level it holds while the note lasts, 0 to 1), **release** (seconds to fade out after the note ends).
 
                     The melody from ${Tut.firstNotes} is too quick for shapes this size, so this lesson stretches its opening leap (`a3` up to `c4`) into two long notes with room around them.
 
