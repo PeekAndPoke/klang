@@ -4,7 +4,15 @@ Opened 2026-09-07. Maintainer request: "our sprudel impl has diverged significan
 so the whole addons concept does not even make sense anymore" plus "some files are enormous, which
 is not ideal for coding agents".
 
-Status: PLANNED, not started. Written to be executed by an Opus agent with no prior context.
+Status: IN EXECUTION since 2026-09-07. Written to be executed by an Opus agent with no prior context.
+
+**Revised 2026-09-07 after the accessor rework landed** (commits `d9b6c8e3` batch E, `0c535555`
+batch F, `95705370` batch G). Compound doors became single objects with slot children, which
+collapsed whole runs of per-knob sections into one: `lang_dynamics.kt` fell 2 198 -> 1 556,
+`lang_tonal.kt` 2 294 -> 1 764, `lang_synthesis.kt` 606 -> 226, `lang_body.kt` 216 -> 122,
+`lang_vowel.kt` 211 -> 120. The dynamics, tonal, synthesis and effects tables below are the revised
+ones. Everything else measured unchanged. The conflict risk this plan was written around is gone:
+that work is committed and the tree is clean.
 
 ## The two goals
 
@@ -18,7 +26,7 @@ Status: PLANNED, not started. Written to be executed by an Opus agent with no pr
    `lang_<group>_<subgroup>.kt`.
 
 Result: `lang/` plus `lang/addons/` is 30 files and 26 495 lines today. Twenty-three of them get
-split or merged into **67 files, largest ~664 lines**. Six are already right and stay untouched:
+split or merged into **62 files, largest ~664 lines**. Six are already right and stay untouched:
 `lang.kt`, `lang_helpers.kt`, `KlangScriptStrudelLib.kt`, and the three small sectioned files
 `lang_conditional.kt` (401), `lang_master.kt` (111), `lang_pipeline.kt` (108). One, `lang_misc.kt`,
 is deleted: it is a header and a package line.
@@ -232,27 +240,32 @@ size of the moved sections on 2026-09-07, before the per-file header and imports
 | `lang_continuous_waves.kt` | 484 | `signal`, `steady`, `sine / sine2`, `cosine / cosine2`, `saw / saw2`, `isaw / isaw2`, `tri / tri2`, `itri / itri2`, `square / square2`, `perlin / perlin2`, `berlin / berlin2` |
 | `lang_structural_sources.kt` | +59 | `silence / rest / nothing`. This file is the structural group's; create it here if the structural group has not run yet, otherwise append. |
 
-#### dynamics: from `lang_dynamics.kt`, `lang_dynamics_addons.kt` (2386 lines) into 6 files
+#### dynamics: from `lang_dynamics.kt`, `lang_dynamics_addons.kt` (1 743 lines) into 5 files
+
+Revised: batch G folded `spread()` and `panSpread()` into the `unison` object, and the three duck
+knobs into one `duck` section, so `lang_dynamics.kt` is 12 sections now, not 16.
 
 | new file | ~lines | sections, in source order |
 |---|---|---|
-| `lang_dynamics_adsr.kt` | 435 | `ADSR stages`, `ADSR adsr()`, `ADSR curves`, `ADSR adsrOn() / adsrOff()` |
-| `lang_dynamics_compressor.kt` | 272 | `compressor() / comp()` |
-| `lang_dynamics_duck.kt` | 413 | `duckorbit() / duck()`, `duckattack() / duckatt()`, `duckdepth()` |
-| `lang_dynamics_level.kt` | 554 | `(preamble)`, `gain()`, `pan()`, `velocity() / vel()`, `postgain()`, `panSpread()` |
-| `lang_dynamics_orbit.kt` | 244 | `orbit() / o()` from `lang_dynamics.kt`; the `cylinder()` alias section from `lang_dynamics_addons.kt` |
-| `lang_dynamics_unison.kt` | 468 | `unison() / uni()`, `spread()`, `density() / d()` |
+| `lang_dynamics_level.kt` | 446 | `gain()`, `pan()`, `velocity() / vel()`, `postgain()` |
+| `lang_dynamics_compressor.kt` | 179 | `compressor` |
+| `lang_dynamics_unison.kt` | 305 | `unison`, `density() / d()` |
+| `lang_dynamics_adsr.kt` | 435 | `ADSR stages`, `ADSR adsr()`, `ADSR curves` from `lang_dynamics.kt`; the `adsrOn()` / `adsrOff()` section from `lang_dynamics_addons.kt` |
+| `lang_dynamics_orbit.kt` | 332 | `orbit() / o()`, `duck` from `lang_dynamics.kt`; the `cylinder()` alias section from `lang_dynamics_addons.kt` |
 
-#### effects: from `lang_effects.kt`, `lang_body.kt`, `lang_vowel.kt` (1517 lines) into 6 files
+#### effects: from `lang_effects.kt`, `lang_body.kt`, `lang_vowel.kt` (1 332 lines) into 6 files
+
+Revised: `lang_body.kt` and `lang_vowel.kt` are one section each now (122 and 120 lines), so each
+is a straight rename, not a split.
 
 | new file | ~lines | sections, in source order |
 |---|---|---|
-| `lang_effects_body.kt` | 216 | `(preamble)`, `body()`, `bodyWet()`, `bodyFloor()` |
-| `lang_effects_delay.kt` | 139 | `delay, the wet slot`, `delay.time`, `delay.feedback`, `delay.cap` |
-| `lang_effects_distortion.kt` | 319 | `(preamble)`, `distort, the amount slot`, `distort.oversample`, `distort, the shape slot`, `crush, the amount slot`, `crush.oversample`, `coarse, the amount slot`, `coarse.oversample` |
-| `lang_effects_modulation.kt` | 308 | `phaser, the rate slot`, `phaser.wet`, `phaser.floor`, `phaser.center`, `phaser.sweep`, `tremolo.sync`, `tremolo.depth`, `tremolo.skew`, `tremolo.phase`, `tremolo, the shape slot` |
+| `lang_effects_distortion.kt` | 319 | `distort, the amount slot`, `distort.oversample`, `distort, the shape slot`, `crush, the amount slot`, `crush.oversample`, `coarse, the amount slot`, `coarse.oversample` |
 | `lang_effects_reverb.kt` | 324 | `room, the wet slot`, `room.size`, `room.fade`, `room.lowpass`, `room.dim`, `iresponse() / ir()` |
-| `lang_effects_vowel.kt` | 211 | `(preamble)`, `vowel()`, `vowelWet()`, `vowelFloor()` |
+| `lang_effects_delay.kt` | 139 | `delay, the wet slot`, `delay.time`, `delay.feedback`, `delay.cap` |
+| `lang_effects_modulation.kt` | 308 | `phaser, the rate slot`, `phaser.wet`, `phaser.floor`, `phaser.center`, `phaser.sweep`, `tremolo.sync`, `tremolo.depth`, `tremolo.skew`, `tremolo.phase`, `tremolo, the shape slot` |
+| `lang_effects_body.kt` | 122 | the whole of `lang_body.kt` (one `body` section); rename the file, do not split it |
+| `lang_effects_vowel.kt` | 120 | the whole of `lang_vowel.kt` (one `vowel` section); rename the file, do not split it |
 
 #### filters: from `lang_filters.kt`, `lang_filters_addons.kt` (867 lines) into 4 files
 
@@ -322,13 +335,16 @@ the declaration. Only the three in `lang_picking_core.kt` become `internal`.
 | `lang_structural_tag.kt` | 262 | `tag()`, `tweak()`, `tweaks()` |
 | `lang_structural_window.kt` | 551 | `zoom()`, `within()`, `linger()`, `bite()`, `ribbon()` |
 
-#### synthesis: from `lang_synthesis.kt`, `lang_osc_addons.kt`, `lang_snd_addons.kt` (2042 lines) into 4 files
+#### synthesis: from `lang_synthesis.kt`, `lang_osc_addons.kt`, `lang_snd_addons.kt` (1 660 lines) into 4 files
+
+Revised: batch G folded the five FM knobs into one `fm` object, so `lang_synthesis.kt` is 226 lines
+and one section. It is not split; it is renamed and keeps its own file.
 
 | new file | ~lines | sections, in source order |
 |---|---|---|
-| `lang_synthesis_fm.kt` | 606 | `(preamble)`, `fmh()`, `fmattack() / fmatt()`, `fmdecay() / fmdec()`, `fmsustain() / fmsus()`, `fmenv() / fmmod()` |
-| `lang_synthesis_oscparam.kt` | 429 | `(preamble)`, `oscparam() / oscp()`, `analog()`, `duty()`, `onepole()` |
-| `lang_synthesis_snd_basic.kt` | 541 | `(preamble)`, `sndSine()`, `sndSaw()`, `sndSquare()`, `sndTriangle()`, `sndRamp()`, `sndZamp()`, `sndNoise()`, `sndBrown()`, `sndPink()`, `sndPulze()`, `sndDust()`, `sndCrackle()` |
+| `lang_synthesis_fm.kt` | 226 | the whole of `lang_synthesis.kt` (one `fm` section); rename the file, do not split it |
+| `lang_synthesis_oscparam.kt` | 429 | `oscparam() / oscp()`, `analog()`, `duty()`, `onepole()` from `lang_osc_addons.kt` |
+| `lang_synthesis_snd_basic.kt` | 541 | `sndSine()`, `sndSaw()`, `sndSquare()`, `sndTriangle()`, `sndRamp()`, `sndZamp()`, `sndNoise()`, `sndBrown()`, `sndPink()`, `sndPulze()`, `sndDust()`, `sndCrackle()` |
 | `lang_synthesis_snd_super.kt` | 466 | `sndPluck()`, `sndSuperPluck()`, `sndSuperSaw()`, `sndSuperSine()`, `sndSuperSquare()`, `sndSuperTri()`, `sndSuperRamp()` |
 
 #### tempo: from `lang_tempo.kt`, `lang_tempo_addons.kt` (1712 lines) into 5 files
@@ -341,16 +357,19 @@ the declaration. Only the three in `lang_picking_core.kt` become `internal`.
 | `lang_tempo_speed.kt` | 450 | `slow()`, `fast()`, `hurry()`, `fastGap()` from `lang_tempo.kt`; `stretchBy()` from `lang_tempo_addons.kt` |
 | `lang_tempo_swing.kt` | 216 | `inside()`, `outside()`, `swingBy()`, `swing()` |
 
-#### tonal: from `lang_tonal.kt` (2294 lines) into 6 files
+#### tonal: from `lang_tonal.kt` (1 764 lines) into 5 files
+
+Revised: batch G folded the six pitch-envelope knobs into one `penv` object and the two vibrato
+knobs into one `vibrato`, so `lang_tonal.kt` is 15 sections now, not 21. `lang_tonal_pitchenv.kt`
+is no longer worth its own file; `penv` joins `vibrato` and `accelerate` in `lang_tonal_pitchmod.kt`.
 
 | new file | ~lines | sections, in source order |
 |---|---|---|
-| `lang_tonal_chord.kt` | 379 | `chord()`, `rootNotes()`, `voicing()` |
-| `lang_tonal_note.kt` | 459 | `(preamble)`, `note()`, `n()`, `legato() / clip()`, `freq()` |
-| `lang_tonal_pitchenv.kt` | 653 | `pattack() / patt()`, `pdecay() / pdec()`, `prelease() / prel()`, `penv() / pamt()`, `pcurve() / pcrv()`, `panchor() / panc()` |
-| `lang_tonal_pitchmod.kt` | 286 | `vibrato()`, `vibratoMod()`, `accelerate()` |
-| `lang_tonal_scale.kt` | 322 | `scale()`, `transpose()`, `scaleTranspose()` |
+| `lang_tonal_note.kt` | 345 | `note()`, `n()`, `legato() / clip()`, `freq()`, plus `resolveNote` from the preamble |
 | `lang_tonal_sound.kt` | 195 | `sound() / s()`, `bank()` |
+| `lang_tonal_scale.kt` | 322 | `scale()`, `transpose()`, `scaleTranspose()`, plus `cleanScaleName` from the preamble |
+| `lang_tonal_chord.kt` | 379 | `chord()`, `rootNotes()`, `voicing()` |
+| `lang_tonal_pitchmod.kt` | 411 | `vibrato`, `penv`, `accelerate()` |
 
 ## Phase 3: the documents that describe the old layout (one commit)
 
