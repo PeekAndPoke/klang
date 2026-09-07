@@ -21,6 +21,7 @@ private val notchFreqMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
     notchf = str.toDoubleOrNull()
 }
+
 private fun applyNotchFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
         return source._mapNumericField(mapper, read = { it.notchf }, update = notchFreqMutation)
@@ -28,6 +29,7 @@ private fun applyNotchFreq(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
     return source._liftOrReinterpretNumericalField(args, notchFreqMutation)
 }
+
 private val notchQMutation = voiceSetter { nresonance = it?.asDoubleOrNull() }
 private fun applyNotchQ(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -36,6 +38,7 @@ private fun applyNotchQ(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 
     return source._liftOrReinterpretNumericalField(args, notchQMutation)
 }
+
 private val notchEnvMutation = voiceSetter { nfenv = it?.asDoubleOrNull() }
 private fun applyNotchEnv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -44,6 +47,7 @@ private fun applyNotchEnv(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 
     return source._liftOrReinterpretNumericalField(args, notchEnvMutation)
 }
+
 private val notchAttackMutation = voiceSetter { nfattack = it?.asDoubleOrNull() ?: nfattack }
 private fun applyNotchAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -52,6 +56,7 @@ private fun applyNotchAttack(source: SprudelPattern, args: List<SprudelDslArg<An
 
     return source._liftOrReinterpretNumericalField(args, notchAttackMutation)
 }
+
 private val notchDecayMutation = voiceSetter { nfdecay = it?.asDoubleOrNull() ?: nfdecay }
 private fun applyNotchDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -60,6 +65,7 @@ private fun applyNotchDecay(source: SprudelPattern, args: List<SprudelDslArg<Any
 
     return source._liftOrReinterpretNumericalField(args, notchDecayMutation)
 }
+
 private val notchSustainMutation = voiceSetter { nfsustain = it?.asDoubleOrNull() ?: nfsustain }
 private fun applyNotchSustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -68,6 +74,7 @@ private fun applyNotchSustain(source: SprudelPattern, args: List<SprudelDslArg<A
 
     return source._liftOrReinterpretNumericalField(args, notchSustainMutation)
 }
+
 private val notchReleaseMutation = voiceSetter { nfrelease = it?.asDoubleOrNull() ?: nfrelease }
 private fun applyNotchRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -118,7 +125,16 @@ private fun applyNotchRelease(source: SprudelPattern, args: List<SprudelDslArg<A
  * @tags notch, freq, q, env, attack, decay, sustain, release, notch.freq, notch filter, filter, envelope
  */
 @KlangScript.Function
-fun SprudelPattern.notch(freq: PatternLike? = null, q: PatternLike? = null, env: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, sustain: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.notch(
+    freq: PatternLike? = null,
+    q: PatternLike? = null,
+    env: PatternLike? = null,
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern {
     // A tail-only call must not touch freq: reinterpret runs only on a fully bare call.
     var p = if (freq != null || !(q != null || env != null || attack != null || decay != null || sustain != null || release != null)) {
         applyNotchFreq(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
@@ -136,12 +152,30 @@ fun SprudelPattern.notch(freq: PatternLike? = null, q: PatternLike? = null, env:
 
 /** Parses this string as a pattern, then applies [notch]. */
 @KlangScript.Function
-fun String.notch(freq: PatternLike? = null, q: PatternLike? = null, env: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, sustain: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+fun String.notch(
+    freq: PatternLike? = null,
+    q: PatternLike? = null,
+    env: PatternLike? = null,
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).notch(freq, q, env, attack, decay, sustain, release, callInfo)
 
 /** Chains a [notch] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.notch(freq: PatternLike? = null, q: PatternLike? = null, env: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, sustain: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+fun PatternMapperFn.notch(
+    freq: PatternLike? = null,
+    q: PatternLike? = null,
+    env: PatternLike? = null,
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    sustain: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null
+): PatternMapperFn =
     this.chain { p -> p.notch(freq, q, env, attack, decay, sustain, release, callInfo) }
 
 /**
@@ -185,6 +219,15 @@ object notch {
 
     /** The setter, see [SprudelPattern.notch]. */
     @KlangScript.Invoke
-    operator fun invoke(freq: PatternLike? = null, q: PatternLike? = null, env: PatternLike? = null, attack: PatternLike? = null, decay: PatternLike? = null, sustain: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    operator fun invoke(
+        freq: PatternLike? = null,
+        q: PatternLike? = null,
+        env: PatternLike? = null,
+        attack: PatternLike? = null,
+        decay: PatternLike? = null,
+        sustain: PatternLike? = null,
+        release: PatternLike? = null,
+        callInfo: CallInfo? = null
+    ): PatternMapperFn =
         { p -> p.notch(freq, q, env, attack, decay, sustain, release, callInfo) }
 }
