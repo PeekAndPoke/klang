@@ -183,9 +183,16 @@ accessor rework's territory).
 
 ### Private helpers that cross a new file boundary
 
-Seven `private` top-level helpers are used by sections that land in different files. Change each to
+Eight `private` top-level helpers are used by sections that land in different files. Change each to
 `internal` (module scope, so no import is needed) and leave it in the file named below. Everything
 else stays `private`.
+
+**Do not trust this table on its own.** The first version of it had seven rows and missed
+`applySignal`, because the analysis that built it skipped any line that itself declares a private
+member, and `applySignal`'s eighth caller is the initialiser of `private val timeBase`. The
+`continuous` agent caught it. The table was rebuilt with that bug fixed and the remaining groups
+re-checked, which confirmed the rest, but **verify the file you are splitting yourself**: map every
+private helper's call sites to their target files before you move anything.
 
 | helper | declared in | lands in | also used by |
 |---|---|---|---|
@@ -196,6 +203,7 @@ else stays `private`.
 | `applySeq` | `lang_structural.kt` | `lang_structural_seq.kt` | `lang_structural_chunk.kt` (`chunk`) |
 | `applySound` | `lang_tonal.kt` | `lang_tonal_sound.kt` | `lang_tonal_note.kt` (`note`) |
 | `soundMutation` | `lang_tonal.kt` | `lang_tonal_sound.kt` | `lang_tonal_note.kt` (`note`) |
+| `applySignal` | `lang_continuous.kt` | `lang_continuous_waves.kt` | `lang_continuous_clock.kt` (`time`) |
 
 `applyArithmetic` and `applyUnaryOp` (preamble of `lang_arithmetic.kt`) are already `internal`;
 they stay in `lang_arithmetic_math.kt` and the other three arithmetic files use them as-is.
@@ -401,7 +409,9 @@ The specs that actually prove this refactor did nothing:
 Two extra checks worth running once, at the end of Phase 2:
 
 ```bash
-# every lang file declares the library, or its functions silently vanish
+# every lang file declares the library, or its functions silently vanish.
+# lang_helpers.kt is the one expected hit: it carries no @KlangScript annotations at all,
+# so it has nothing to lose. Any other name in this output is a real bug.
 grep -L '@file:KlangScript.Library("sprudel")' sprudel/src/commonMain/kotlin/lang/lang_*.kt
 
 # nothing is over the size budget
