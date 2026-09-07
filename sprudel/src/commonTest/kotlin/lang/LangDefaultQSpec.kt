@@ -15,7 +15,6 @@ import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.lang.addons.notchf
 
 /**
  * C1 parity pin (docs/plans/filter-unification.md): ONE default q = 0.707 for every filter
@@ -35,14 +34,14 @@ class LangDefaultQSpec : StringSpec({
         (firstFilter(note("c").lpf(800)) as FilterDef.LowPass).q shouldBe q
         (firstFilter(note("c").hpf(200)) as FilterDef.HighPass).q shouldBe q
         (firstFilter(note("c").bpf(1000)) as FilterDef.BandPass).q shouldBe q
-        (firstFilter(note("c").notchf(1000)) as FilterDef.Notch).q shouldBe q
+        (firstFilter(note("c").notch(1000)) as FilterDef.Notch).q shouldBe q
     }
 
     "sprudel script door: bare filters build q = 0.707" {
         (firstFilter(SprudelPattern.compile("""note("c").lpf(800)""")) as FilterDef.LowPass).q shouldBe q
         (firstFilter(SprudelPattern.compile("""note("c").hpf(200)""")) as FilterDef.HighPass).q shouldBe q
         (firstFilter(SprudelPattern.compile("""note("c").bpf(1000)""")) as FilterDef.BandPass).q shouldBe q
-        (firstFilter(SprudelPattern.compile("""note("c").notchf(1000)""")) as FilterDef.Notch).q shouldBe q
+        (firstFilter(SprudelPattern.compile("""note("c").notch(1000)""")) as FilterDef.Notch).q shouldBe q
     }
 
     "ignitor DSL door: every filter/eq default is Constant(0.707)" {

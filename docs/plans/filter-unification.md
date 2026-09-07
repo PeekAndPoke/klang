@@ -82,11 +82,11 @@ A filter is `freq / q / passes`. Its envelope is a DEPTH plus a SHAPE, and each 
 
 ```
 .lpf(800, 0.707, 2)              // freq, q, passes
-.lpe(12)                         // envelope depth, in SEMITONES
-.lpadsr(0.01, 0.3, 0.2, 0.1)     // envelope shape: attack, decay, sustain, release
+.lpf(env = 12)                         // envelope depth, in SEMITONES
+.lpf(attack = 0.01, decay = 0.3, sustain = 0.2, release = 0.1)     // envelope shape: attack, decay, sustain, release
 ```
 
-`lpadsr` takes the SAME parameters in the SAME order with the SAME units as `adsr()` (seconds,
+The filter envelope (`lpadsr` then, the `attack, decay, sustain, release` slots of `lpf` since 2026-09-07) takes the SAME parameters in the SAME order with the SAME units as `adsr()` (seconds,
 seconds, 0..1 level, seconds). Identical units, not normalised variants, or the sameness is
 cosmetic. Any of the four can be a pattern on its own, which the old `"a:d:s:r"` string could
 never express.
@@ -103,24 +103,24 @@ up, `-12` = one octave down), no dead zone, unbounded, round numbers for the com
 (`12`, `24`, `36`), and it shares a unit with `transpose`. This is the DAW convention (Ableton
 semitones, Serum/Vital octaves, Eurorack V/oct); linear-Hz is the one convention nobody uses.
 
-**Negative depth becomes first-class**, not an edge case: `lpe(-24)` is a closing-filter pluck.
+**Negative depth becomes first-class**, not an edge case: `lpf(env = -24)` is a closing-filter pluck.
 
 **Three consequences to put in the docs, not discover by ear:**
 - *Saturation at the ceiling.* `bilinearK` clamps `fc` to `[5, sr/2 - 1]`, so no bad coefficient
   is possible, but the round numbers the docs will teach reach the clamp fast: `36` is 8x, so any
   base above 3 kHz clips at 48 k, and the same patch clips DIFFERENTLY at 44.1 k. At the clamp a
   LOWPASS degenerates to passthrough (harmless) but HIGHPASS and BANDPASS degenerate to SILENCE,
-  so `hpe(+36)` on a mid-high base can mute the voice at the peak of its own envelope. C3's
+  so `hpf(env = +36)` on a mid-high base can mute the voice at the peak of its own envelope. C3's
   guards include a clamp-saturation row; the docs name the ceiling.
 - *Two smoothing policies for one parameter.* `SvfIgnitor` lerps coefficients across every sample;
   the class-form path ramps for 32 samples of a 128-frame block then snaps. The geometric law
   concentrates the fastest Hz movement at the TOP of the sweep, into the door that snaps. Not a
   blocker; listen to the deep-sweep basses specifically, and note the inconsistency (it is the
   ramp-API gap D9 is blocked on, seen from the other side).
-- *`lpe` is the one change here that keeps its name while changing meaning.* `lpe(2)` stays legal
+- *`lpe` (today the `env` slot of `lpf`) is the one change here that keeps its name while changing meaning.* `lpf(env = 2)` stays legal
   and silently means a tenth of what it meant. Every other breaking change in this plan gets a new
   spelling. Decision for the chunk review: either rename the depth call too, or teach intellisense
-  to flag small values (`lpe(2)` = 2 semitones, almost certainly a stale linear value).
+  to flag small values (`lpf(env = 2)` = 2 semitones, almost certainly a stale linear value).
 
 **Migration: there is NO exact conversion, and the deep sweeps are the ones that move most.**
 `new = 12 * log2(1 + old)` reproduces the old cutoff only at `env = 0` and `env = 1`. In between,
@@ -132,10 +132,10 @@ trajectory of every sweep changes shape. Measured worst-case deviation mid-envel
 | 0.25 | 3.9 | 11 cents | negligible |
 | 2 | 19 | 257 cents | audible |
 | 15 (`TetrisRemix`) | 48 | 1512 cents | 12 semitones off |
-| 25 (`Tetris` `lpf(200).lpe(25)`) | 56 | 2022 cents | 1.7 OCTAVES off |
+| 25 (`Tetris` `lpf(200).lpf(env = 25)`) | 56 | 2022 cents | 1.7 OCTAVES off |
 
 An earlier draft of this plan had the risk backwards: it flagged patterned depths as the risky
-case and called constants exact. The patterned `lpe(perlin.range(2.5, 4.0))` deviates by ~27
+case and called constants exact. The patterned `lpf(env = perlin.range(2.5, 4.0))` deviates by ~27
 cents at endpoint conversion; the deep constants are the ones whose entire identity is the
 trajectory. **Every constant with `old > ~1` needs the maintainer's ear**, starting with the
 bass sweeps. The endpoint formula is the starting point, not the answer.
@@ -150,7 +150,7 @@ defaults for one concept on the two doors this plan is unifying; pick one.
 
 **Blast radius, measured:** 27 envelope usages across built-in songs, 12 in tutorials, plus the
 music-writing skill reference. Heaviest: `IrishLamentTechno`. Engine change and migration land
-in ONE commit, never apart: a tutorial teaching `lpe(2)` against a semitone engine would silently
+in ONE commit, never apart: a tutorial teaching `lpf(env = 2)` against a semitone engine would silently
 sweep a different amount.
 
 ### One default `q` everywhere: 0.707
@@ -281,7 +281,7 @@ of sprudel's unordered model, not a naming preference; document it so nobody lat
 up" into the ordered form that cannot work. `blend`, `bodyMix`, `vowelMix` go. Note `bodyFloor()`
 and `vowelFloor()` ALREADY exist on sprudel with exactly these names; they are kept, not added.
 **COLLISION on the ignitor door:** `floor()` = round-down already exists as an arithmetic
-function on `SprudelPattern` (`lang_arithmetic.kt`). A `.floor()` meaning "minimum dry
+function on `SprudelPattern` (`lang_arithmetic_numeric.kt`). A `.floor()` meaning "minimum dry
 coefficient" on the ignitor effect nodes is one word for two concepts across doors. The
 prefixed sprudel names (`bodyFloor`) do not collide; the bare ignitor `.floor()` does. Decide
 in the C4 review: a different word on the ignitor (`dryFloor`?) or accept the cross-door
@@ -440,10 +440,10 @@ for the doomed. C6a removes the doomed; C0 then reshapes what remains.
     exactly the "colon is already taken" reason the compound-parameter form must go, and they
     are untouched.
 - **THE TRAP in the filter migration:** today's third colon slot of `lpf/hpf/bpf/notchf` is the
-  ENVELOPE DEPTH (`lang_filters.kt:26`: `lpenv = parts[2]`), while the plan's per-param shape is
+  ENVELOPE DEPTH (`lang_filters_lpf.kt`: `lpenv = parts[2]`), while the plan's per-param shape is
   `(freq, q, passes)`. A mechanical `"a:b:c"` -> `(a, b, c)` sweep COMPILES, looks right, and
   reinterprets depth as pass count: `IrishLamentTechno.kt:102` `lpf("80:1.2:60")` would become
-  a bass with SIXTY filter passes. The correct target is `.lpf(f, q).lpe(env)`, and it must land
+  a bass with SIXTY filter passes. The correct target is `.lpf(freq = f, q = q, env = env)`, and it must land
   BEFORE C3 converts depths to semitones, or the value is gone by then. Live sites:
   `TetrisRemix.kt:49`, `IrishLamentTechno.kt:102`, `SoundOfTheSea.kt:51`.
 - **Migration size (measured in songs + tutorials):** `adsr` x111, `lpadsr` x20, `distort` x9,
@@ -577,10 +577,10 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     available to custom pipelines only. `phaserFloor` is exact by default now. Guard:
     `PipelinePresetSpec` ("built-in presets carry NO Phaser stage"). Original finding below.
     ⚠ EAR LIST addition: single-pass HALVES the effective phaser wet on shipped songs —
-    Tetris phaserWet(0.15), IrishLamentTechno phaserWet(0.25 / saw.range 0.3..0.6) were
+    Tetris phaser(wet = 0.15), IrishLamentTechno phaser(wet = 0.25 / saw.range 0.3..0.6) were
     dialled against the double pass; retune by ear (values likely go UP). Also note: the
     per-voice mono component is gone (bus is stereo) — listen for image changes.
-    Structural footgun (documented in phaserWet KDoc): orbit knobs are first-writer-wins,
+    Structural footgun (documented in the `phaser` KDoc): orbit knobs are first-writer-wins,
     so a non-lease voice's phaser knobs are now fully inert (no corpus instance today).
   - 44.1 kHz note for the warmth->onepole migration: four converted values (23846, 23688,
     23197, 22309 Hz) sit above 44.1k's Nyquist clamp (22049) and become exact bypass there;
@@ -595,7 +595,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     `Voice.Phaser` knobs. Pre-existing (at the additive floor-1 default the second pass only
     adds more wet; that is the shipped sound and why the goldens hold). But with the new
     `phaserFloor < 1` the dry is floored in BOTH passes (`dryC²`), so a full crossfade
-    (`phaserWet(1).phaserFloor(0)`) does NOT leave the phased signal alone. KDoc now states
+    (`phaser(wet = 1).phaser(floor = 0)`) does NOT leave the phased signal alone. KDoc now states
     the real path. Decide: which path OWNS the phaser (and should the two bypass gates —
     strip `> 0`, katalyst `>= 0.01` — agree)? Also note: the C4 orbit-phaser retune numbers
     in Decisions were computed single-application.
@@ -612,9 +612,9 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     ear retunes. Every song site in C4.2 is a pure RENAME (values kept), so the corpus ships
     at the C4.1 level shift (Tetris body wet about -6.4 dB, Tetris orbit phaser -8.8 dB,
     IrishLamentTechno -4.6 dB per the corrected p=2 numbers above) until the user's listening
-    pass moves the values UP by ear. Sites: Tetris bodyWet(0.2)/phaserWet(0.15),
-    IrishLamentTechno phaserWet(saw.range 0.3..0.6)/phaserWet(0.25), StrangerThings
-    vowelWet(0.40), GoldenCorpus phaserWet(0.15), plus every bare bodyWet/vowelWet user song.
+    pass moves the values UP by ear. Sites: Tetris bodyWet(0.2)/phaser(wet = 0.15),
+    IrishLamentTechno phaser(wet = saw.range 0.3..0.6)/phaser(wet = 0.25), StrangerThings
+    vowelWet(0.40), GoldenCorpus phaser(wet = 0.15), plus every bare bodyWet/vowelWet user song.
   - REJECTED in round 3 (reason recorded): mapping a `+Inf` floor to 1.0 instead of the
     law's uniform non-finite -> 0.0. The law treats EVERY non-finite input (w or floor) the
     same way; special-casing +Inf floor would make the coercion input-dependent for an input
@@ -622,7 +622,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
     (`WetDryMixSpec` pins +/-Inf floor -> 0.0.)
   - (session ledger, not a C4 item) ADSR curve default unified to EXP (user decision,
     2026-08-24, own commit after the pitch-param work): UNSET = Exponential on every stage
-    and every door, single authority `AdsrCurve.Default`. Ignitor door: bare adsrCurve()
+    and every door, single authority `AdsrCurve.Default`. Ignitor door: bare adsrCurve() (the singular, removed 2026-09-07)
     and typos coerce to exp; sprudel door keeps its control-pattern semantics (bare = no-op,
     typo = keep prior) — only the unset default is cross-door. The ignitor door used
     to default Square attack/release (runtime fallback + engine factory + script method
@@ -650,11 +650,12 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
 - C4.2 decisions AS BUILT: (a) the ignitor floor knob is `dryFloor` (the plan's own rule:
   `floor()` is the arithmetic round-down, one word one concept); (b) `room`/`delay` HEAD
   functions renamed to `roomWet`/`delayWet` (their first slot IS the wet, and keeping
-  `room(x)` alongside `roomWet(x)` would be two names for one knob - the C6a disease); the
+  `room(x)` alongside `roomWet(x)` would be two names for one knob - the C6a disease; the wet
+  folded back into the `room(wet = x)` slot 2026-09-07, `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`); the
   `room*`/`delay*` tails keep their names; (c) wet/dryFloor are NOT builder params on the
   ignitor - `phaser(rate, center, sweep)` / `shimmer(feedback, tone, pitches)` plus the
   typed knobs `.wet()`/`.dryFloor()` on the node (both doors), so the knob exists in exactly
-  one place; (d) NEW wire field `phaserFloor` (sprudel `phaserFloor()`, engine default 1.0 =
+  one place; (d) NEW wire field `phaserFloor` (sprudel `phaser(floor = ...)`, engine default 1.0 =
   additive) reaches BOTH phaser paths; `IgnitorDsl.Phaser/Shimmer` gained `dryFloor` and
   renamed `blend`->`wet` on the node (goldens carry no ignitor param names - byte-identical);
   (e) sprudel `phd`/`phasdp` aliases stay, re-pointed at `phaserWet` (alias deletion is C6);
@@ -724,7 +725,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   so it belongs to the audio_be optimisation workstream, not to C5.
 - **Resource ceiling (C5 review finding 2), flagged for the maintainer:** `passes` is coerced to
   `1..16` in ONE place (`coercePasses` in `FilterDef.kt`). It is a resource count, not a tone
-  knob - unbounded, a live-typed `lpx(1e9)` allocates a billion filter stages inside a note-on on
+  knob - unbounded, a live-typed `lpf(passes = 1e9)` allocates a billion filter stages inside a note-on on
   the render thread. 16 = 192 dB/oct, far past any musical use. If you want it raw, the ceiling is
   a one-line change.
 

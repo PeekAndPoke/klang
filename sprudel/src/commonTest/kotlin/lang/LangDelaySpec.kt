@@ -14,40 +14,40 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangDelaySpec : StringSpec({
 
-    "delayWet() sets VoiceData.delay" {
-        val p = note("a b").apply(delayWet("0.5 0.8"))
+    "delay() sets VoiceData.delay" {
+        val p = note("a b").apply(delay("0.5 0.8"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.delay } shouldBe listOf(0.5, 0.8)
     }
 
-    "delayWet() works as pattern extension" {
-        val p = note("c").delayWet("0.5")
+    "delay() works as pattern extension" {
+        val p = note("c").delay("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delay shouldBe 0.5
     }
 
-    "delayWet() works as string extension" {
-        val p = "c".delayWet("0.5")
+    "delay() works as string extension" {
+        val p = "c".delay("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delay shouldBe 0.5
     }
 
-    "delayWet() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delayWet("0.5")""")
+    "delay() works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").delay("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.delay shouldBe 0.5
     }
 
-    "delayWet() with continuous pattern sets delay correctly" {
+    "delay() with continuous pattern sets delay correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").delayWet(sine)
+        val p = note("a b c d").delay(sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -63,8 +63,8 @@ class LangDelaySpec : StringSpec({
 
     // -- per-param (amount, time, feedback) --------------------------------------------
 
-    "delayWet() per-param sets all three VoiceData fields" {
-        val p = note("c").delayWet(0.5, 0.25, 0.6)
+    "delay() per-param sets all three VoiceData fields" {
+        val p = note("c").delay(0.5, 0.25, 0.6)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -75,8 +75,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delayWet() per-param with partial params sets only specified fields" {
-        val p = note("c").delayWet(0.8, 0.125)
+    "delay() per-param with partial params sets only specified fields" {
+        val p = note("c").delay(0.8, 0.125)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -87,8 +87,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delayWet() per-param works as string extension" {
-        val p = "c".delayWet(0.5, 0.25, 0.6)
+    "delay() per-param works as string extension" {
+        val p = "c".delay(0.5, 0.25, 0.6)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -99,8 +99,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delayWet() per-param works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delayWet(0.5, 0.25, 0.6)""")
+    "delay() per-param works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").delay(0.5, 0.25, 0.6)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {
@@ -110,8 +110,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delayWet() per-param mini-notation patterns" {
-        val p = note("c3 e3").delayWet("<0.3 0.6>", "<0.125 0.25>", "<~ 0.8>")
+    "delay() per-param mini-notation patterns" {
+        val p = note("c3 e3").delay("<0.3 0.6>", "<0.125 0.25>", "<~ 0.8>")
         val cycle0 = p.queryArc(0.0, 1.0)
         val cycle1 = p.queryArc(1.0, 2.0)
 
@@ -128,8 +128,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delayWet() per-param works chained with other effects" {
-        val p = note("c").apply(gain(0.8).delayWet(0.5, 0.25, 0.6))
+    "delay() per-param works chained with other effects" {
+        val p = note("c").apply(gain(0.8).delay(0.5, 0.25, 0.6))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -141,8 +141,8 @@ class LangDelaySpec : StringSpec({
         }
     }
 
-    "delayWet() single value still works (backward compat)" {
-        val p = note("c").delayWet(0.7)
+    "delay() single value still works (backward compat)" {
+        val p = note("c").delay(0.7)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -151,10 +151,10 @@ class LangDelaySpec : StringSpec({
         events[0].data.delayFeedback shouldBe null
     }
 
-    "delayWet(tail-only) does not touch the head field" {
+    "delay(tail-only) does not touch the head field" {
         // numeric receiver: without the tail-only guard the head apply would REINTERPRET
         // the values ("3"/"4") into the delay field
-        val p = SprudelPattern.compile("""seq("3 4").delayWet(time = 0.25)""")
+        val p = SprudelPattern.compile("""seq("3 4").delay(time = 0.25)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

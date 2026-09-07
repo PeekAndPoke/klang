@@ -26,7 +26,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  *
  * Unit conversions live HERE, once (parameter parity: one conversion site per quantity).
  * [rate] arrives in Hz and [startPhase] in cycles (`0..1` = one full LFO cycle, the sprudel
- * `tremolophase` unit); both become radians at construction.
+ * `tremolo(phase)` unit); both become radians at construction.
  *
  * NO parameter has a default, deliberately. This renderer spent its whole life dropping
  * skew/phase/shape on the floor because the one call site passed rate and depth only (ledger
@@ -54,7 +54,7 @@ class TremoloRenderer(
      * Seeded from the authored cycle offset, so the LFO starts at that position in its own
      * cycle (the midpoint rising for sine and triangle, the top for square and ramp, the
      * bottom for sawtooth). `wrapPhase` does the whole job: it folds an out-of-range seed
-     * (`tremolophase(3.25)` is a quarter cycle) and returns 0.0 for a non-finite one, so a
+     * (`tremolo(phase = 3.25)` is a quarter cycle) and returns 0.0 for a non-finite one, so a
      * hostile pattern value cannot poison the accumulator.
      */
     private var phase: Double = (startPhase * TWO_PI).wrapPhase(TWO_PI)

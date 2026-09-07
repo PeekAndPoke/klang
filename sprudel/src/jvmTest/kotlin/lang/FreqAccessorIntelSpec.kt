@@ -1,0 +1,214 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.sprudel.lang
+
+import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContainAll
+import io.kotest.matchers.collections.shouldNotContain
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldStartWith
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.generated.generatedSprudelDocs
+import io.peekandpoke.klang.script.intel.AnalyzedAst
+import io.peekandpoke.klang.script.intel.CompletionProvider
+import io.peekandpoke.klang.script.types.KlangProperty
+
+/**
+ * The editor's view of the `freq` accessor, against the real generated sprudel registry:
+ * bare `freq` is a typed constant, `freq(...)` resolves through `invoke`, and `freq.` offers the
+ * first-step operators registered on `PatternMapperProvider`.
+ */
+class FreqAccessorIntelSpec : StringSpec({
+
+    val registry = KlangDocsRegistry().apply { registerAll(generatedSprudelDocs) }
+
+    fun analyze(code: String) = AnalyzedAst.build(code, registry)
+    fun AnalyzedAst.top() = (ast.statements.first() as ExpressionStatement).expression
+
+    val freqType = registry.get("freq").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+
+    "bare freq is an object whose type displays as freq" {
+        freqType.simpleName shouldBe "freq"
+    }
+
+    "the object's KDoc examples reach the registry as samples" {
+        val prop = registry.get("freq").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }
+        prop.samples.size shouldBe 2
+        prop.samples.first().code shouldContain "bpf(freq)"
+    }
+
+    "freq(440) resolves through invoke and the signature renders as the call the user writes" {
+        val invoke = registry.getCallable("invoke", freqType).shouldNotBeNull()
+        invoke.signature shouldStartWith "freq(hz"
+
+        val a = analyze("freq(440)")
+        a.typeOf(a.top()).shouldNotBeNull()
+        a.diagnostics.size shouldBe 0
+    }
+
+    "freq.mul(2) is typed through the provider supertype" {
+        val code = "freq.mul(2)"
+        val a = analyze(code)
+        a.receiverTypeBeforeDot(code.indexOf(".mul"))?.simpleName shouldBe "freq"
+        a.typeOf(a.top()).shouldNotBeNull()
+    }
+
+    "completions after freq. offer the first-step operators and hide invoke" {
+        val names = CompletionProvider(registry).memberCompletions(freqType, "").map { it.name }
+        names shouldContainAll listOf("add", "sub", "mul", "div")
+        names shouldNotContain "invoke"
+    }
+
+    "every batch-one accessor is an object with a call form and the first-step operators" {
+        listOf("gain", "velocity", "pan", "postgain").forEach { name ->
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+            type.simpleName shouldBe name
+            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
+            analyze("$name(0.5)").diagnostics.size shouldBe 0
+            analyze("$name.mul(2)").typeOf(analyze("$name.mul(2)").top()).shouldNotBeNull()
+        }
+    }
+
+    "every effects compound is an object whose children are the slot accessors and whose call form is the setter" {
+        mapOf(
+            "distort" to listOf("amount", "oversample"),
+            "crush" to listOf("amount", "oversample"),
+            "coarse" to listOf("amount", "oversample"),
+            "room" to listOf("wet", "size", "fade", "lowpass", "dim"),
+            "delay" to listOf("wet", "time", "feedback", "cap"),
+            "phaser" to listOf("rate", "wet", "center", "sweep", "floor"),
+            "tremolo" to listOf("depth", "sync", "skew", "phase"),
+            "lpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
+            "hpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
+            "bpf" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
+            "notch" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
+            "compressor" to listOf("threshold", "ratio", "knee", "attack", "release"),
+            "unison" to listOf("voices", "spread", "pan"),
+            "duck" to listOf("orbit", "depth", "attack"),
+            "vibrato" to listOf("rate", "depth"),
+            "penv" to listOf("amount", "attack", "decay", "release", "curve", "anchor"),
+            "fm" to listOf("env", "h", "attack", "decay", "sustain")).forEach { (name, slots) ->
+            withClue(name) {
+                val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+                type.simpleName shouldBe name
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name(${slots.first()}"
+                val children = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
+                children shouldContainAll slots
+                children shouldNotContain "invoke"
+                analyze("$name(0.5)").diagnostics.size shouldBe 0
+                slots.forEach { slot ->
+                    withClue("$name.$slot") {
+                        analyze("$name.$slot.mul(2)").let { it.typeOf(it.top()).shouldNotBeNull() }
+                        analyze("$name($slot = mul(2))").diagnostics.size shouldBe 0
+                    }
+                }
+            }
+        }
+    }
+
+    "every batch-three accessor is an object with a call form and the first-step operators" {
+        listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "legato", "accelerate").forEach { name ->
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+            type.simpleName shouldBe name
+            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
+            analyze("$name(0.5)").diagnostics.size shouldBe 0
+        }
+    }
+
+    "every batch-four accessor is an object with a call form and the first-step operators" {
+        listOf("density", "orbit", "analog", "duty", "onepole").forEach { name ->
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+            type.simpleName shouldBe name
+            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
+            analyze("$name(0.5)").diagnostics.size shouldBe 0
+        }
+    }
+
+    "every alias constant carries its canonical object's type, so it calls and reads like the original" {
+        mapOf("d" to "density", "o" to "orbit", "clip" to "legato", "loopb" to "loopBegin", "loope" to "loopEnd", "vel" to "velocity").forEach { (alias, canonical) ->
+            val symbol = registry.get(alias).shouldNotBeNull()
+            // An alias constant's KDoc carries the category: the property entry merges first and
+            // would otherwise turn the whole symbol "uncategorized" on the docs page.
+            (symbol.category != "uncategorized") shouldBe true
+            val type = symbol.variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+            type.simpleName shouldBe canonical
+            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical("
+            analyze("$alias(0.5)").diagnostics.size shouldBe 0
+            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("mul")
+        }
+    }
+
+    "the alias constants of the compound objects carry the object type" {
+        mapOf("lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "comp" to "compressor", "uni" to "unison", "vib" to "vibrato", "pamt" to "penv").forEach { (alias, canonical) ->
+            withClue(alias) {
+                val symbol = registry.get(alias).shouldNotBeNull()
+                (symbol.category != "uncategorized") shouldBe true
+                val type = symbol.variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+                type.simpleName shouldBe canonical
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical("
+                CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldNotContain "invoke"
+                analyze("$alias(5)").diagnostics.size shouldBe 0
+            }
+        }
+    }
+
+    "vowel and body: the name slot has no child, the numeric slots do" {
+        mapOf("vowel" to listOf("wet", "floor"), "body" to listOf("wet", "floor")).forEach { (name, slots) ->
+            withClue(name) {
+                val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+                type.simpleName shouldBe name
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+                val children = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
+                children shouldContainAll slots
+                children shouldNotContain name
+                children shouldNotContain "material"
+                analyze("""$name("a", wet = 0.5)""").diagnostics.size shouldBe 1
+                analyze("""$name(wet = mul(2))""").diagnostics.size shouldBe 0
+            }
+        }
+    }
+
+    "adsrCurves is an object with the setter only: no children, the slots are names" {
+        val type = registry.get("adsrCurves").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+        type.simpleName shouldBe "adsrCurves"
+        registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "adsrCurves(attack"
+        val members = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
+        members shouldNotContain "attack"
+        members shouldNotContain "invoke"
+        analyze("""adsrCurves(attack = "scurve", release = "linear")""").diagnostics.size shouldBe 0
+    }
+
+    "adsr is an object whose children are the slot accessors and whose call form is the setter" {
+        val type = registry.get("adsr").shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
+        type.simpleName shouldBe "adsr"
+        registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "adsr(attack"
+        val members = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
+        members shouldContainAll listOf("attack", "decay", "sustain", "release")
+        members shouldNotContain "invoke"
+        val code = "adsr.attack.mul(2)"
+        val a = analyze(code)
+        a.typeOf(a.top()).shouldNotBeNull()
+        val child = a.receiverTypeBeforeDot(code.indexOf(".mul")).shouldNotBeNull()
+        child.simpleName shouldBe "FieldAccessor"
+        a.diagnostics.size shouldBe 0
+        CompletionProvider(registry).memberCompletions(child, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
+        analyze("adsr(attack = 0.1, release = 0.5)").diagnostics.size shouldBe 0
+    }
+
+    "named-argument diagnostics reach the setter through invoke" {
+        val bad = analyze("freq(hzz = 440)")
+        bad.diagnostics.size shouldBe 1
+        bad.diagnostics.single().message shouldContain "Unknown parameter 'hzz'"
+        analyze("freq(hz = 440)").diagnostics.size shouldBe 0
+    }
+})

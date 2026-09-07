@@ -96,8 +96,8 @@ class LangVowelSpec : StringSpec({
         formant.mix shouldBe 0.5
     }
 
-    "vowelWet() overrides the formant dry/wet amount" {
-        val p = note("c3").vowel("a").vowelWet(0.3)
+    "vowel(wet = ...) overrides the formant dry/wet amount" {
+        val p = note("c3").vowel(vowel = "a", wet = 0.3)
 
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()

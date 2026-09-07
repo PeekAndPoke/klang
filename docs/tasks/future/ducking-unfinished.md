@@ -13,14 +13,14 @@ returns nothing, so nothing here is a regression risk — it is unfinished work,
 Sidechain ducking: one orbit's output pulls down another's, the kick-and-bass pump.
 
 ```klangscript
-note("c3 e3 g3").duckorbit(1).duckdepth(0.8)   // duck when orbit 1 plays
+note("c3 e3 g3").duck(orbit = 1, depth = 0.8)   // duck when orbit 1 plays
 ```
 
 The chain is complete from DSL to DSP:
 
 | layer | file | tested? |
 |-------|------|---------|
-| DSL — `duckorbit()` / `duckdepth()` / `duckattack()` | `sprudel/lang_dynamics.kt:1778+` | ✅ `LangDuckingSpec` |
+| DSL — `duck()` / `duck(depth = ...)` / `duck(attack = ...)` | `sprudel/lang_dynamics_orbit.kt` | ✅ `LangDuckingSpec` |
 | wire | `VoiceData.ducking` → `Voice.Ducking(cylinderId, attackSeconds, depth)` | — |
 | **per-voice → per-orbit join** | `Cylinder.kt:198-203` configures the cylinder's `KatalystDuckingEffect` from whichever voice owns it | ❌ **nothing** |
 | **cross-orbit sidechain resolution** | `Cylinders.kt:87-89`, step 2 of `processAndMix`, after every cylinder has rendered | ❌ **nothing** |
@@ -38,7 +38,7 @@ parameter never arrived.
 From `Ducking.kt`'s own KDoc: *"the duck-down is instantaneous; this parameter only controls the
 return smoothing. Named 'attack' for strudel compatibility."*
 
-So `duckattack` sets the **release**. Worse, `Compressor.kt` in the same directory also has an
+So `duck(attack)` (then `duckattack`) sets the **release**. Worse, `Compressor.kt` in the same directory also has an
 `attackSeconds`, and there it is a genuine attack — though a one-pole τ rather than a rise time, which
 is audit finding [F17](../../audio-audit/FINDINGS.md#f17)(a). **Two parameters, same name, same
 directory, two different meanings, neither matching what a DAW would print.** This is exactly the
@@ -48,7 +48,7 @@ before anyone writes a song against the name.
 ### 2. The duck-down is a step
 
 Instantaneous attack means the gain drops discontinuously the moment the sidechain crosses. At
-`duckdepth(0.8)` that is a large step, and a step in a gain multiplier is a click by construction.
+`duck(depth = 0.8)` that is a large step, and a step in a gain multiplier is a click by construction.
 Whether it is audible depends on programme material and depth, but it should be *decided* rather than
 discovered.
 

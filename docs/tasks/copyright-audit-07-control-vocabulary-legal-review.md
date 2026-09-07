@@ -34,8 +34,8 @@ the *reproduced-as-a-set* aliases and the *arbitrary field orderings* are where 
 would live. This needs an IP lawyer's eye before relying on it in a commercial product — **do not rewrite
 preemptively** (compatibility with the Strudel/Tidal vocabulary is a deliberate product feature).
 
-- **Ours:** `sprudel/src/commonMain/kotlin/lang/lang_filters.kt`, `lang_effects.kt`, `lang_dynamics.kt`,
-  `lang_sample.kt`, `lang_continuous.kt`, `lang_tonal.kt`, `lang/addons/lang_effects_addons.kt`
+- **Ours:** `sprudel/src/commonMain/kotlin/lang/lang_filters_*.kt`, `lang_effects_*.kt`,
+  `lang_dynamics_*.kt`, `lang_sample_*.kt`, `lang_continuous_*.kt`, `lang_tonal_*.kt`
   (the `@alias` tags + the `parts.getOrNull(0..n)` compound packing).
 - **Theirs (AGPL):** `/opt/dev/strudel/packages/core/controls.mjs` — `registerControl([...], aliases…)`.
 

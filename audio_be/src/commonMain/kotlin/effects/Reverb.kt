@@ -55,13 +55,13 @@ import kotlin.math.ln
  * **Parameter mapping — note the two different scales.** Everything a user authors goes through
  * [normalizeRoomSize] or lands here raw; both buses (per-orbit and master) MUST agree:
  * - `room` / `wet` → send amount (caller-side; not a parameter here), 0..1.
- * - `roomsize` / `roomSize` → [roomSize]. Authored on the **~0..10** scale
+ * - `room(size)` / `roomSize` → [roomSize]. Authored on the **~0..10** scale
  *   ([AUTHORED_ROOM_SIZE_SCALE]), normalized to 0..1 here. Tail length, via comb feedback
  *   `feedback = (roomFade ?: roomSize) · FEEDBACK_SCALE + FEEDBACK_OFFSET`: authored 3 ≈ 1.0 s,
  *   5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest reachable tail is ~0.7 s ([FEEDBACK_OFFSET]).
- * - `roomfade` / `roomFade` → [roomFade]. **Overrides [roomSize], and is NOT on the same scale** —
+ * - `room(fade)` / `roomFade` → [roomFade]. **Overrides [roomSize], and is NOT on the same scale** —
  *   it is the normalized 0..1 value directly, and it is *not* a time despite the name.
- * - `roomlp` / `roomLp` → [roomLp] (HF damping cutoff in Hz; overrides [damp]).
+ * - `room(lowpass)` / `roomLp` → [roomLp] (HF damping cutoff in Hz; overrides [damp]).
  *
  * Values above the normalized 1.0 are clamped by [normalizeRoomSize] — not for taste, but because a
  * comb network above unity has no steady state: it grows without bound to Inf/NaN (see that
@@ -456,7 +456,7 @@ class Reverb(
 
     companion object {
         /**
-         * The **authored** room-size scale — what `roomsize()` (sprudel) and
+         * The **authored** room-size scale — what `room(size = ...)` (sprudel) and
          * the master reverb's `roomSize` knob speak: roughly 0..10.
          *
          * [roomSize] itself is normalized 0..1. Keeping the conversion here means both buses go

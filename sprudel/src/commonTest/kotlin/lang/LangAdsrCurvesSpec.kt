@@ -73,18 +73,8 @@ class LangAdsrCurvesSpec : StringSpec({
         }
     }
 
-    "adsrCurve() applies same curve to all three stages" {
-        val p = "0".apply(adsrCurve("cube"))
-        val events = p.queryArc(0.0, 1.0)
-        with(events[0].data) {
-            attackCurve shouldBe AdsrCurve.Cube
-            decayCurve shouldBe AdsrCurve.Cube
-            releaseCurve shouldBe AdsrCurve.Cube
-        }
-    }
-
-    "adsrCurve('linear') restores plastic feel on all stages" {
-        val p = "0".apply(adsrCurve("linear"))
+    "adsrCurves with one name on every stage restores the plastic feel" {
+        val p = "0".apply(adsrCurves("linear", "linear", "linear"))
         val events = p.queryArc(0.0, 1.0)
         with(events[0].data) {
             attackCurve shouldBe AdsrCurve.Linear

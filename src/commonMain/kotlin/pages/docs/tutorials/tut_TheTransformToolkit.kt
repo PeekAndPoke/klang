@@ -11,7 +11,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * Keeps two promises: B4's `*n` gets connected to `.fast(n)` (the same
  * multiplication, one step vs the whole line), and A5's preview of fast()/
  * slow() on signals gets its full pattern-level story. `clip` is a true alias
- * of `legato` (both call `p.legato` in lang_tonal.kt) — the finale shows the
+ * of `legato` (both call `p.legato` in lang_tonal_note.kt) — the finale shows the
  * alias once (the songs spell it BOTH ways, legato slightly more often), so
  * later lessons may use either name.
  * `superimpose` is taught in the chained-mapper form (`superimpose(transpose(12))`),

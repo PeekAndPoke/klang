@@ -12,7 +12,7 @@ new `body()` materials from real instruments instead of hand-tuning every mode b
 
 ## Background — what we have today
 
-The `body()` / `bodyWet()` resonator is a **parametric modal model**: a parallel bank of resonant SVF bandpasses
+The `body()` / `body(wet = ...)` resonator is a **parametric modal model**: a parallel bank of resonant SVF bandpasses
 (`BodyFilter`), one per mode, mixed over the dry source via `ParallelMixFilter` (floor + peaks). Materials are
 hand-authored tables:
 
@@ -23,7 +23,7 @@ hand-authored tables:
 - `audio_be/src/commonMain/kotlin/filters/BodyFilter.kt` — the parallel SVF-BPF bank; divides each band by `Q`
   so `db` is the *actual* peak emphasis (independent of sharpness).
 - `audio_bridge/src/commonMain/kotlin/FilterDef.kt` — `FilterDef.Body` / `Body.Mode` wire contract (+ nullable
-  `floor`, set by the `bodyFloor()` DSL).
+  `floor`, set by the `body(floor = ...)` DSL).
 
 These tables are authored by ear — caricatures anchored on a few real acoustic "tells" (see the credited
 sources), the rest sparse fill. This task is about **deriving** them from real recordings instead.
@@ -112,5 +112,5 @@ the extractor should land near them for a comparable recording.
 
 ## Related
 
-- Memory: `project_body_resonator` (the `body()`/`bodyWet()`/`vowel()` POC), `feedback_raw_motor`.
+- Memory: `project_body_resonator` (the `body()`/`body(wet = ...)`/`vowel()` POC), `feedback_raw_motor`.
 - Code: `SprudelVoiceData.resolveBodyModes()`, `BodyFilter`, `ParallelMixFilter`, `FilterDef.Body`.

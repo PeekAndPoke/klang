@@ -18,7 +18,7 @@ Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measu
 | `RepeatCyclesPattern.kt`                       | Cycle repetition (shifting)                                                                                                                |
 | `AtomicPattern.kt`                             | Basic event creation                                                                                                                       |
 | `SprudelPlayback.kt`                           | Schedules events, filters by `isOnset`                                                                                                     |
-| `lang_*.kt`                                    | User-facing DSL API                                                                                                                        |
+| `lang_<group>_<subgroup>.kt`                   | User-facing DSL API, one file per subgroup (`lang_effects_reverb.kt`, `lang_picking_pick.kt`); grep `lang/` by name                        |
 
 ## Reference Files — Read Only What You Need
 
@@ -27,7 +27,6 @@ Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measu
 | Event structure, part/whole, operation categories, common operations | `ref/event-model.md`      |
 | Control patterns (`_innerJoin`), `fmap`/`squeezeJoin`, when stuck    | `ref/control-patterns.md` |
 | Adding/documenting DSL functions, KDoc format, KSP                   | `ref/dsl-conventions.md`  |
-| Addon functions in `lang/addons/` (non-strudel extensions)           | `ref/dsl-addons.md`       |
 | Running tests, 12-cycle rule, isOnset, JS compat                     | `ref/testing.md`          |
 | Building or modifying UI editor tools, registry, @param-tool         | `ref/uitools.md`          |
 

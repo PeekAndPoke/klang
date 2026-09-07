@@ -45,7 +45,7 @@ object JsCompatTestSongs {
                         // bass
                         note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                         .orbit(3)
-                        .sound("supersaw").unison(4).spread(0.1)
+                        .sound("supersaw").unison(voices = 4, spread = 0.1)
                         .adsr(0.0, 0.3, 0.0, 0.8)
                         .lpf(800)
                         .gain(0.8).pan(-0.5),
@@ -55,8 +55,8 @@ object JsCompatTestSongs {
                          .orbit(4)
                          .pan(0.5)
                          .gain(0.4)
-                         .delayWet("0.2").delaytime(0.25).delayfeedback(0.3),
-                    ).roomWet(0.025).rsize(5.0)
+                         .delay(wet = "0.2", time = 0.25, feedback = 0.3),
+                    ).room(wet = 0.025, size = 5.0)
             """.trimIndent()
         ),
         Example(
@@ -74,8 +74,8 @@ object JsCompatTestSongs {
                         >`).sound("triangle").orbit(0)
                         .gain("0.3")
                         .fast(0.5)
-                        .roomWet(0.01).rsize(3.0)
-                        .delayWet("0.25").delaytime(0.25).delayfeedback(0.75),
+                        .room(wet = 0.01, size = 3.0)
+                        .delay(wet = "0.25", time = 0.25, feedback = 0.75),
 
                         note(`<
                             [[e2 e3]*4]
@@ -88,12 +88,12 @@ object JsCompatTestSongs {
                             [[a1 a2]*4]
                         >`).sound("supersaw").orbit(1)
                         .pan(0.6).gain(0.6)
-                        .roomWet(0.01).rsize(3.0),
+                        .room(wet = 0.01, size = 3.0),
 
                         sound("bd hh sd hh").orbit(2)
                         .pan(-0.7).gain(0.8)
-                        .roomWet(0.01).rsize(3.0)
-                        .delayWet("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
+                        .room(wet = 0.01, size = 3.0)
+                        .delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.75)
                         .fast(2),
                     )
             """.trimIndent()
@@ -112,8 +112,8 @@ object JsCompatTestSongs {
                     .scale("<c3:major>/2")
                     .s("supersaw")
                     .distort(0.7)
-                    .superimpose((x) => x.spread("<0.5>"))
-                    //.lpe(perlin.slow(3).range(12, 27.9))
+                    .superimpose((x) => x.unison(spread = "<0.5>"))
+                    //.lpf(env = perlin.slow(3).range(12, 27.9))
                     .lpf(sine.slow(2).range(100, 2000))
                     .gain(0.3)
             """.trimIndent()
@@ -125,8 +125,8 @@ object JsCompatTestSongs {
                         .scale("<c3:major>/2")
                         .s("supersaw")
                         .distort(0.7)
-                        .superimpose((x) => x.spread("<0.5>"))
-                        //.lpe(perlin.slow(3).range(12, 27.9))
+                        .superimpose((x) => x.unison(spread = "<0.5>"))
+                        //.lpf(env = perlin.slow(3).range(12, 27.9))
                         .lpf(sine.slow(2).range(100, 2000))
                         .gain(0.3),
                         
@@ -146,7 +146,7 @@ object JsCompatTestSongs {
             "Drums with Delay", """
                 sound("bd hh sd oh")
                     .gain(0.8)
-                    .delayWet("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
+                    .delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.5)
                     .pan(sine.slow(8))
                     .fast(2)
             """.trimIndent()
@@ -155,7 +155,7 @@ object JsCompatTestSongs {
             "Drums with Reverb", """
                 sound("bd hh sd oh")
                     .gain(0.8)
-                    .roomWet(0.01).rsize(3.0)
+                    .room(wet = 0.01, size = 3.0)
                     .pan(sine.slow(8))
                     .fast(2)
             """.trimIndent()
@@ -164,29 +164,29 @@ object JsCompatTestSongs {
             "Off-Beat Drums", """
                 sound("bd hh sd oh")
                      .gain(1.0)
-                    //         .delayWet("0.0 0.0 0.5 0.0")
-                     .delayWet(0.5)
-                     .delaytime(0.25)
-                     .delayfeedback(0.5)
+                    //         .delay("0.0 0.0 0.5 0.0")
+                     .delay(0.5)
+                     .delay(time = 0.25)
+                     .delay(feedback = 0.5)
             """.trimIndent()
         ),
         Example(
             "Dub Triplets", """
                 sound("bd hh sd oh")
-                      .delayWet(0.6)
-                      .delaytime(0.375)
+                      .delay(0.6)
+                      .delay(time = 0.375)
                       // High feedback for long tails
-                      .delayfeedback(0.7)
+                      .delay(feedback = 0.7)
             """.trimIndent()
         ),
         Example(
             "Slapback", """
                 sound("bd hh sd oh")
-                      .delayWet(0.4)
+                      .delay(0.4)
                        // 50ms
-                      .delaytime(0.05)
+                      .delay(time = 0.05)
                       // Low feedback
-                      .delayfeedback(0.2)
+                      .delay(feedback = 0.2)
             """.trimIndent()
         ),
         Example(
@@ -215,9 +215,9 @@ object JsCompatTestSongs {
             "Two Orbits", """
                 stack(
                       // Snare only delay on the drums
-                      sound("bd hh sd oh").gain(0.7).delayWet("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5).orbit(0),
+                      sound("bd hh sd oh").gain(0.7).delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.5).orbit(0),
                       // Full delay on the melody
-                      note("c ~ d ~ e ~ f ~").delayWet("0.0").delaytime(0.25).orbit(1),
+                      note("c ~ d ~ e ~ f ~").delay(wet = "0.0", time = 0.25).orbit(1),
                     )
             """.trimIndent()
         )

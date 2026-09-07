@@ -20,12 +20,12 @@ Pipeline/Stage, Master)?
 Known asymmetries already spotted, as a starting list:
 
 - ~~**`room` (orbit) vs `wet` (master)** — same thing, two words.~~ RESOLVED by C4.2
-  (2026-08-24): the orbit knob is `roomWet`/`delayWet` now; both doors say `wet`.
-- **`roomsize` is ~0..10 but `roomfade` is 0..1**, and `roomfade` silently makes `roomsize` inert. Inherited from the
+  (2026-08-24): the orbit knob is the `wet` slot of `room`/`delay` (2026-09-07; `roomWet`/`delayWet` between 2026-08-24 and then); both doors say `wet`.
+- **`room(size)` is ~0..10 but `room(fade)` is 0..1**, and `fade` silently makes `size` inert. Inherited from the
   old `room("a:b:c")` colon packing (removed in C0, semantics kept); documented rather than fixed, because redefining it
   would retune shipped songs.
-- **`damp` is master-only**; sprudel reaches damping through `roomlp` (Hz) instead.
-- **`delaycap`/`dcap` is not a `delayWet()` parameter** (the per-param C0 form covers amount/time/feedback only), while
+- **`damp` is master-only**; sprudel reaches damping through `room(lowpass)` (Hz) instead.
+- RESOLVED 2026-09-07: `cap` is the fourth slot of `delay(wet, time, feedback, cap)`. Was: **`delaycap`/`dcap` is not a `delay()` parameter** (the per-param C0 form covers amount/time/feedback only), while
   the reverb family exposes all five of its knobs.
 - **`roomDim` / `iResponse`** are stored but never read on **both** paths (`Reverb.kt` TODO) — dead vocabulary that
   still appears in the DSL and docs.
@@ -53,7 +53,7 @@ leaked engine per stop, and the drone survives deleting the pattern line.
 
 Both are the same question ("when is a tail finished, and how do we stop rendering it politely"), so a shared fix is
 likely better than two. Options for the master half: fade the engine out over the last N blocks before disposal; raise
-the bound; or accept the step. The new `delaycap` knob and its doc example (`delayfeedback(1.0).delaycap(2.0)`) actively
+the bound; or accept the step. The `cap` slot of `delay` and its doc example (`delay(feedback = 1.0).delay(cap = 2.0)`) actively
 invite the orbit half.
 
 ## 3. Cache eviction can rebuild a master chain on the audio thread
@@ -102,9 +102,9 @@ full parametric EQ.
 
 ## 6. Small documentation / convention debts
 
-- The `delaycap` KDoc example `delayfeedback(1.0).delaycap(2.0) // endless echo, held at 2.0` is misleading: at exactly
+- The `delay(cap)` KDoc example `delay(feedback = 1.0).delay(cap = 2.0) // endless echo, held at 2.0` is misleading: at exactly
   1.0 the cap never engages (the echo holds at the *input* level); the cap only sets the level once feedback > 1.
-- Several `dcap` overloads (top-level, `String.dcap`, both `PatternMapperFn` forms) lack
+- RESOLVED 2026-09-07 (the `dcap` doors are gone, `delay(cap = ...)` is the one form). Was: several `dcap` overloads (top-level, `String.dcap`, both `PatternMapperFn` forms) lack
   `@category`/`@tags`/`@alias`, which `sprudel/ref/dsl-conventions.md` requires — so they will not surface in the
   effects category or in search.
 - Freeverb's ~0.71 s tail floor (`FEEDBACK_OFFSET = 0.7`): nothing on either bus can go shorter. Worth stating in the

@@ -40,7 +40,7 @@ that have no delay at all. `MasterChain` already does it right (ring sized to `t
   Fibonacci's tighter packing solves a memory problem right-sizing already solved 15×. `log2`
   indexing is a bonus. Class 0 holds a 0.5 s delay INCLUDING the 64-frame interpolation margin
   (review round 2: flat 0.5 s pushed exactly-0.5 s, a quarter at 120 BPM, into class 1).
-- **No maximum.** `delaytime(60)` gets a 46 MB ring and the one-time allocation it asked for.
+- **No maximum.** `delay(time = 60)` gets a 46 MB ring and the one-time allocation it asked for.
   **Known cost (review round 2):** two audio-thread scans are O(ring) and were bounded by the old
   10 s ceiling — `DelayLine.hasTail()` (orbit cleanup polling, every block once the mix is silent)
   and `drainSamplesUntilSilent`. A 64 s ring is a 6 M-element scan inside one block. The typical
@@ -93,7 +93,7 @@ demand the session has seen, quantised to classes, never above the budget.
 Today it is fatal: cylinders allocate inside `SendRenderer.render` → `process()`, and an uncaught
 throw there stops the `AudioWorkletProcessor` **permanently** (`processorerror`; `process()` is never
 called again). `MasterBus.chainFor` is the same. The JVM's `OutOfMemoryError` kills the render
-thread. A live coder who typos `delaytime(6000)` loses the set until a reload.
+thread. A live coder who typos `delay(time = 6000)` loses the set until a reload.
 
 - The warehouse is **the only allocation site** for the resources it owns, so it is the only catch
   site. It returns **nullable** — `DelayLine?`, `Reverb?` — and the compiler forces every consumer

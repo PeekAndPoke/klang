@@ -12,7 +12,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 class LangNewFeaturesIntegrationSpec : StringSpec({
 
     "All new pitch envelope functions compile and work" {
-        val p = SprudelPattern.compile("""note("c").pattack("0.1").penv("12")""")
+        val p = SprudelPattern.compile("""note("c").penv(attack = "0.1", amount = "12")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.pAttack shouldBe 0.1

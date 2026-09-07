@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
@@ -21,63 +20,30 @@ class LangHpeSpec : StringSpec({
 
     // ---- hpenv ----
 
-
-    "reinterpret voice data as hpenv | seq(\"0.5 1.0\").hpe()" {
-        val p = seq("0.5 1.0").hpe()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.hpenv shouldBe 0.5
-            events[1].data.hpenv shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as hpenv | \"0.5 1.0\".hpe()" {
-        val p = "0.5 1.0".hpe()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.hpenv shouldBe 0.5
-            events[1].data.hpenv shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as hpenv | seq(\"0.5 1.0\").apply(hpe())" {
-        val p = seq("0.5 1.0").apply(hpe())
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.hpenv shouldBe 0.5
-            events[1].data.hpenv shouldBe 1.0
-        }
-    }
-
-
-    "hpe() works as pattern extension" {
-        val p = note("c").hpe("0.6")
+    "hpf(env = ...) works as pattern extension" {
+        val p = note("c").hpf(env = "0.6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.hpenv shouldBe 0.6
     }
 
-    "hpe() works as string extension" {
-        val p = "c".hpe("0.6")
+    "hpf(env = ...) works as string extension" {
+        val p = "c".hpf(env = "0.6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.hpenv shouldBe 0.6
     }
 
-    "hpe() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").hpe("0.6")""")
+    "hpf(env = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").hpf(env = "0.6")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.hpenv shouldBe 0.6
     }
 
-
-    "hpe() creates FilterEnvDef in FilterDef" {
+    "hpf(env = ...) creates FilterEnvDef in FilterDef" {
         val data = createSprudelVoiceData {
             hcutoff = 2000.0
             hpenv = 0.7
@@ -89,17 +55,16 @@ class LangHpeSpec : StringSpec({
         hpf.envelope?.depth shouldBe 0.7
     }
 
-
     "hpe dsl interface" {
         val pat = "a b"
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
-            "pattern.hpe(ctrl)" to seq(pat).hpe(ctrl),
-            "script pattern.hpe(ctrl)" to SprudelPattern.compile("""seq("$pat").hpe("$ctrl")"""),
-            "string.hpe(ctrl)" to pat.hpe(ctrl),
-            "script string.hpe(ctrl)" to SprudelPattern.compile(""""$pat".hpe("$ctrl")"""),
-            "hpe(ctrl)" to seq(pat).apply(hpe(ctrl)),
-            "script hpe(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpe("$ctrl"))"""),
+            "pattern.hpf(env = ctrl)" to seq(pat).hpf(env = ctrl),
+            "script pattern.hpf(env = ctrl)" to SprudelPattern.compile("""seq("$pat").hpf(env = "$ctrl")"""),
+            "string.hpf(env = ctrl)" to pat.hpf(env = ctrl),
+            "script string.hpf(env = ctrl)" to SprudelPattern.compile(""""$pat".hpf(env = "$ctrl")"""),
+            "hpf(env = ctrl)" to seq(pat).apply(hpf(env = ctrl)),
+            "script hpf(env = ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpf(env = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hpenv shouldBe 0.5
@@ -107,9 +72,9 @@ class LangHpeSpec : StringSpec({
         }
     }
 
-    "hpe() with continuous pattern sets hpenv correctly" {
+    "hpf(env = ...) with continuous pattern sets hpenv correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").hpe(sine)
+        val p = note("a b c d").hpf(env = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

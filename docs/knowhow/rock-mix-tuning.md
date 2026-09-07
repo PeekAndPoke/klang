@@ -61,8 +61,8 @@ clearly at LOWER level. The two mechanisms:
   sounds huge on headphones and empty on speakers. Fixes that put energy where speakers can play
   it: **bass saturation** (asymmetric shapes — `tube`, `diode`, `stomp` — generate the even
   harmonics; symmetric ones like `gentle`/`soft` generate none) and the **pitch-tracking
-  highpass resonance trick** (`hpq` > 0.707 puts the filter's resonant peak ON the note's
-  fundamental: at cutoff, gain = Q, so hpq 0.9 ≈ −0.9 dB where 0.55 was −5.2 dB — measured
+  highpass resonance trick** (`hpf(q)` > 0.707 puts the filter's resonant peak ON the note's
+  fundamental: at cutoff, gain = Q, so q 0.9 ≈ −0.9 dB where 0.55 was −5.2 dB — measured
   +6 dB at 79 Hz on the low guitar from that one change).
 - **A fixed notch in a melodic voice's fundamental range is a footgun**: notes whose fundamental
   lands on the notch get quieter than their neighbors — pitch-dependent unevenness. Prefer a

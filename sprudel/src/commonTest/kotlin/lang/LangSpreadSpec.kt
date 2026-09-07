@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
@@ -21,18 +20,18 @@ class LangSpreadSpec : StringSpec({
         val ctrl = "0 0.25"
 
         dslInterfaceTests(
-            "pattern.spread(ctrl)" to
-                    seq(pat).spread(ctrl),
-            "script pattern.spread(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").spread("$ctrl")"""),
-            "string.spread(ctrl)" to
-                    pat.spread(ctrl),
-            "script string.spread(ctrl)" to
-                    SprudelPattern.compile(""""$pat".spread("$ctrl")"""),
-            "spread(ctrl)" to
-                    seq(pat).apply(spread(ctrl)),
+            "pattern.unison(spread = ctrl)" to
+                    seq(pat).unison(spread = ctrl),
+            "script pattern.unison(spread = ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").unison(spread = "$ctrl")"""),
+            "string.unison(spread = ctrl)" to
+                    pat.unison(spread = ctrl),
+            "script string.unison(spread = ctrl)" to
+                    SprudelPattern.compile(""""$pat".unison(spread = "$ctrl")"""),
+            "unison(spread = ctrl)" to
+                    seq(pat).apply(unison(spread = ctrl)),
             "script detune(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(spread("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(unison(spread = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("spread") shouldBe 0.0
@@ -40,76 +39,40 @@ class LangSpreadSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as spread | seq(\"0 1\").spread()" {
-        val p = seq("0 1").spread()
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.oscParams?.get("spread") shouldBe 0.0
-            events[1].data.oscParams?.get("spread") shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as spread | \"0 1\".spread()" {
-        val p = "0 1".spread()
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.oscParams?.get("spread") shouldBe 0.0
-            events[1].data.oscParams?.get("spread") shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as spread | seq(\"0 1\").apply(spread())" {
-        val p = seq("0 1").apply(spread())
-
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.oscParams?.get("spread") shouldBe 0.0
-            events[1].data.oscParams?.get("spread") shouldBe 1.0
-        }
-    }
-
-    "spread() sets VoiceData.spread" {
-        val p = "0 1".apply(spread("0.1 0.2"))
+    "unison(spread = ...) sets VoiceData.spread" {
+        val p = "0 1".apply(unison(spread = "0.1 0.2"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.oscParams?.get("spread") } shouldBe listOf(0.1, 0.2)
     }
 
-    "spread() works as pattern extension" {
-        val p = note("c").spread("0.1")
+    "unison(spread = ...) works as pattern extension" {
+        val p = note("c").unison(spread = "0.1")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("spread") shouldBe 0.1
     }
 
-    "spread() works as string extension" {
-        val p = "c".spread("0.1")
+    "unison(spread = ...) works as string extension" {
+        val p = "c".unison(spread = "0.1")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("spread") shouldBe 0.1
     }
 
-    "spread() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").spread("0.1")""")
+    "unison(spread = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").unison(spread = "0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.oscParams?.get("spread") shouldBe 0.1
     }
 
-    "spread() with continuous pattern sets spread correctly" {
+    "unison(spread = ...) with continuous pattern sets spread correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").spread(sine)
+        val p = note("a b c d").unison(spread = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

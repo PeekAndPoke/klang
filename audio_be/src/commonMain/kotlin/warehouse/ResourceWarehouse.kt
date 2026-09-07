@@ -151,7 +151,7 @@ class ResourceWarehouse(
 
     companion object {
         /**
-         * The smallest ring class, in seconds. Every `delaytime` in the shipped corpus is 1/8–1/4 of
+         * The smallest ring class, in seconds. Every `delay(time)` in the shipped corpus is 1/8–1/4 of
          * a cycle, i.e. at most 0.5 s at 60 BPM, so the smallest class covers all of it.
          */
         const val MIN_RING_SECONDS: Double = 0.5

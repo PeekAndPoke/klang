@@ -77,7 +77,7 @@ class KatalystReverbEffectSpec : StringSpec({
 
     "an explicit roomFade of 0.0 is ACTIVE — it overrides roomSize; 0.0 is the shortest tail, not off" {
         // The parity defect's second form: roomSize defaults to 0.0, so gating on it alone made
-        // `room(0.6).roomfade(0.1)` silent (see MasterOrbitReverbParitySpec).
+        // `room(wet = 0.6, fade = 0.1)` silent (see MasterOrbitReverbParitySpec).
         val effect = createEffect(roomSize = 0.0, roomFade = 0.0)
         val ctx = createCtx()
 

@@ -43,10 +43,10 @@ import kotlin.math.exp
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param roomWet(wet, size, fade, lowpass, dim) / reverb(wet, ...) call.
+ * [KlangUiToolEmbeddable] for the room(wet, size, fade, lowpass, dim) call.
  *
  * Two modes (C0.3 two-tool-tier design):
- * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the reverb send (roomWet) and size
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the reverb send (wet) and size
  *   plus the optional fade/lowpass/dim params of the host call and commits the full argument
  *   list. Unset optionals stay omitted (null slots).
  * - Scalar fallback (embedded / sequence atom): edits a single wet (send) value.

@@ -19,6 +19,7 @@ import io.peekandpoke.klang.script.types.KlangDecl
 import io.peekandpoke.klang.script.types.KlangMutability
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.script.types.KlangType
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -80,7 +81,8 @@ private val libraryDocsProviders: Map<String, (KlangDocsRegistry) -> Unit> = map
  */
 private val libraryAutoImports: Map<String, List<KlangScriptLibrary>> = mapOf(
     "sprudel" to listOf(stdlibLib, sprudelLib),
-    "stdlib" to listOf(stdlibLib),
+    // stdlib object examples (`OscSlot`) play their sound through sprudel, like the sprudel page.
+    "stdlib" to listOf(stdlibLib, sprudelLib),
 )
 
 @Suppress("FunctionName")
@@ -129,9 +131,19 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
     private val filteredSymbols: List<KlangSymbol>
         get() {
             val terms = LibraryDocSearch.parseTerms(searchQuery)
-            // `invoke` is the operator behind a callable object (`Master(...)`); it is documented on
-            // the object itself and is never typed, so it gets no card of its own.
-            val all = registry.symbols.values.filter { it.name != "invoke" }.sortedBy { it.name }
+            // `invoke` is the operator behind a callable object (`Master(...)`, `freq(...)`); it is
+            // never typed, so it gets no card of its own. Its variants (the call form, with the
+            // setter's parameters and examples) join the card of the object they are called on.
+            val symbols = registry.symbols.values
+            val callForms = symbols.firstOrNull { it.name == "invoke" }
+                ?.variants?.filterIsInstance<KlangCallable>().orEmpty()
+
+            val all = symbols.filter { it.name != "invoke" }.map { symbol ->
+                val objectType = symbol.variants.filterIsInstance<KlangProperty>().firstOrNull()?.type
+                val calls = objectType?.let { t -> callForms.filter { sameType(it.receiver, t) } }.orEmpty()
+
+                if (calls.isEmpty()) symbol else symbol.copy(variants = symbol.variants + calls)
+            }.sortedBy { it.name }
 
             return when {
                 terms.isNotEmpty() -> all
@@ -141,6 +153,19 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
                 else -> all
             }
         }
+
+    /** Same identity rule as the registry: FQCN when both carry one, otherwise the simple name. */
+    private fun sameType(a: KlangType?, b: KlangType): Boolean {
+        if (a == null) {
+            return false
+        }
+
+        if (a.fqcn != null && b.fqcn != null) {
+            return a.fqcn == b.fqcn
+        }
+
+        return a.simpleName == b.simpleName
+    }
 
     //  RENDERING  //////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -284,10 +309,10 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
             // Variant type badge
             ui.label {
                 +when (decl) {
-                    is KlangCallable -> if (decl.receiver == null) {
-                        "Top Level Function"
-                    } else {
-                        "${decl.receiver} Extension Function"
+                    is KlangCallable -> when {
+                        decl.receiver == null -> "Top Level Function"
+                        decl.name == "invoke" -> "Call Form"
+                        else -> "${decl.receiver} Extension Function"
                     }
 
                     is KlangProperty -> when (decl.mutability) {

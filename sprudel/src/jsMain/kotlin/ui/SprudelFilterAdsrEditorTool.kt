@@ -38,12 +38,15 @@ import kotlinx.html.div
 // ── Configurable tool class ─────────────────────────────────────────────────
 
 /**
- * Configurable [KlangUiToolEmbeddable] for the per-param filter envelope calls
- * lpadsr/hpadsr/bpadsr/nfadsr(attack, decay, sustain, release).
+ * Configurable [KlangUiToolEmbeddable] written for the retired per-param calls
+ * lpadsr/hpadsr/bpadsr/nfadsr(attack, decay, sustain, release). Since 2026-09-07 the envelope
+ * stages are the `attack, decay, sustain, release` slots of lpf/hpf/bpf/notch, at positions 4..7
+ * (3..6 for bpf/notch); this tool still edits argument slots 0..3 of its host call, so it is bound
+ * to no door until the tools rework (`docs/tasks/editor-tools-named-arguments.md`).
  *
  * Two modes (C0.3 two-tool-tier design):
- * - Whole-call modal: when [KlangUiToolContext.call] is present, edits all four envelope
- *   params of the host call and commits the full argument list.
+ * - Whole-call modal: when [KlangUiToolContext.call] is present, edits argument slots 0..3 of
+ *   the host call as attack, decay, sustain, release and commits the full argument list.
  * - Scalar fallback (embedded / sequence atom): edits a single attack value in seconds.
  */
 class SprudelFilterAdsrEditorTool(

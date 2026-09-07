@@ -218,8 +218,8 @@ class LangDynamicsSpec : StringSpec({
         }
     }
 
-    "apply(unison().spread()) chains unison and detune mappers" {
-        val p = note("a").apply(unison(5).spread(0.3))
+    "apply(unison().unison(spread = ...)) chains the voices and spread slots" {
+        val p = note("a").apply(unison(5).unison(spread = 0.3))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -237,44 +237,44 @@ class LangDynamicsSpec : StringSpec({
 
     // ---- detune() ---------------------------------------------------------------------------------------
 
-    "detune dsl interface" {
+    "unison(spread = ...) dsl interface" {
         dslInterfaceTests(
-            "pattern.spread(amount)" to note("a").spread(0.3),
-            "script pattern.spread(amount)" to SprudelPattern.compile("""note("a").spread(0.3)"""),
-            "string.spread(amount)" to "a".spread(0.3),
-            "script string.spread(amount)" to SprudelPattern.compile(""""a".spread(0.3)"""),
-            "spread(amount) via apply" to note("a").apply(spread(0.3)),
-            "script detune(amount) via apply" to SprudelPattern.compile("""note("a").apply(spread(0.3))"""),
+            "pattern.unison(spread = amount)" to note("a").unison(spread = 0.3),
+            "script pattern.unison(spread = amount)" to SprudelPattern.compile("""note("a").unison(spread = 0.3)"""),
+            "string.unison(spread = amount)" to "a".unison(spread = 0.3),
+            "script string.unison(spread = amount)" to SprudelPattern.compile(""""a".unison(spread = 0.3)"""),
+            "unison(spread = amount) via apply" to note("a").apply(unison(spread = 0.3)),
+            "script unison(spread = amount) via apply" to SprudelPattern.compile("""note("a").apply(unison(spread = 0.3))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "script apply(spread()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(spread(0.3))""")!!
+    "script apply(unison(spread = ...)) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(unison(spread = 0.3))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.oscParams?.get("spread") shouldBe 0.3
     }
 
-    // ---- spread() ---------------------------------------------------------------------------------------
+    // ---- unison(spread = ...) ---------------------------------------------------------------------------------------
 
-    "spread dsl interface" {
+    "unison(spread = ...) dsl interface, the second value set" {
         dslInterfaceTests(
-            "pattern.panSpread(amount)" to note("a").panSpread(0.8),
-            "script pattern.panSpread(amount)" to SprudelPattern.compile("""note("a").panSpread(0.8)"""),
-            "string.panSpread(amount)" to "a".panSpread(0.8),
-            "script string.panSpread(amount)" to SprudelPattern.compile(""""a".panSpread(0.8)"""),
-            "panSpread(amount) via apply" to note("a").apply(panSpread(0.8)),
-            "script spread(amount) via apply" to SprudelPattern.compile("""note("a").apply(panSpread(0.8))"""),
+            "pattern.unison(pan = amount)" to note("a").unison(pan = 0.8),
+            "script pattern.unison(pan = amount)" to SprudelPattern.compile("""note("a").unison(pan = 0.8)"""),
+            "string.unison(pan = amount)" to "a".unison(pan = 0.8),
+            "script string.unison(pan = amount)" to SprudelPattern.compile(""""a".unison(pan = 0.8)"""),
+            "unison(pan = amount) via apply" to note("a").apply(unison(pan = 0.8)),
+            "script unison(spread = amount) via apply" to SprudelPattern.compile("""note("a").apply(unison(pan = 0.8))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "apply(unison().spread().panSpread()) chains three mappers" {
-        val p = note("a").apply(unison(5).spread(0.3).panSpread(0.8))
+    "apply(unison().unison(spread = ..., pan = ...)) chains three mappers" {
+        val p = note("a").apply(unison(5).unison(spread = 0.3, pan = 0.8))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -283,8 +283,8 @@ class LangDynamicsSpec : StringSpec({
         events[0].data.oscParams?.get("panSpread") shouldBe 0.8
     }
 
-    "script apply(panSpread()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(panSpread(0.8))""")!!
+    "script apply(unison(pan = ...)) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(unison(pan = 0.8))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -327,23 +327,23 @@ class LangDynamicsSpec : StringSpec({
         events[0].data.oscParams?.get("density") shouldBe 40.0
     }
 
-    // ---- attack() ---------------------------------------------------------------------------------------
+    // ---- adsr(attack = ...) ---------------------------------------------------------------------------------------
 
     "attack dsl interface" {
         dslInterfaceTests(
-            "pattern.attack(time)" to note("a").attack(0.01),
-            "script pattern.attack(time)" to SprudelPattern.compile("""note("a").attack(0.01)"""),
-            "string.attack(time)" to "a".attack(0.01),
-            "script string.attack(time)" to SprudelPattern.compile(""""a".attack(0.01)"""),
-            "attack(time) via apply" to note("a").apply(attack(0.01)),
-            "script attack(time) via apply" to SprudelPattern.compile("""note("a").apply(attack(0.01))"""),
+            "pattern.adsr(attack = time)" to note("a").adsr(attack = 0.01),
+            "script pattern.adsr(attack = time)" to SprudelPattern.compile("""note("a").adsr(attack = 0.01)"""),
+            "string.adsr(attack = time)" to "a".adsr(attack = 0.01),
+            "script string.adsr(attack = time)" to SprudelPattern.compile(""""a".adsr(attack = 0.01)"""),
+            "adsr(attack = time) via apply" to note("a").apply(adsr(attack = 0.01)),
+            "script adsr(attack = time) via apply" to SprudelPattern.compile("""note("a").apply(adsr(attack = 0.01))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "apply(attack().decay().sustain().release()) chains all ADSR mappers" {
-        val p = note("a").apply(attack(0.01).decay(0.2).sustain(0.7).release(0.5))
+    "apply(adsr(attack = ...).adsr(decay = ..., sustain = ..., release = ...)) chains all ADSR mappers" {
+        val p = note("a").apply(adsr(attack = 0.01).adsr(decay = 0.2, sustain = 0.7, release = 0.5))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -353,77 +353,77 @@ class LangDynamicsSpec : StringSpec({
         events[0].data.release shouldBe 0.5
     }
 
-    "script apply(attack()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(attack(0.01))""")!!
+    "script apply(adsr(attack = ...)) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(adsr(attack = 0.01))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.attack shouldBe 0.01
     }
 
-    // ---- decay() ----------------------------------------------------------------------------------------
+    // ---- adsr(decay = ...) ----------------------------------------------------------------------------------------
 
     "decay dsl interface" {
         dslInterfaceTests(
-            "pattern.decay(time)" to note("a").decay(0.2),
-            "script pattern.decay(time)" to SprudelPattern.compile("""note("a").decay(0.2)"""),
-            "string.decay(time)" to "a".decay(0.2),
-            "script string.decay(time)" to SprudelPattern.compile(""""a".decay(0.2)"""),
-            "decay(time) via apply" to note("a").apply(decay(0.2)),
-            "script decay(time) via apply" to SprudelPattern.compile("""note("a").apply(decay(0.2))"""),
+            "pattern.adsr(decay = time)" to note("a").adsr(decay = 0.2),
+            "script pattern.adsr(decay = time)" to SprudelPattern.compile("""note("a").adsr(decay = 0.2)"""),
+            "string.adsr(decay = time)" to "a".adsr(decay = 0.2),
+            "script string.adsr(decay = time)" to SprudelPattern.compile(""""a".adsr(decay = 0.2)"""),
+            "adsr(decay = time) via apply" to note("a").apply(adsr(decay = 0.2)),
+            "script adsr(decay = time) via apply" to SprudelPattern.compile("""note("a").apply(adsr(decay = 0.2))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "script apply(decay()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(decay(0.2))""")!!
+    "script apply(adsr(decay = ...)) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(adsr(decay = 0.2))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.decay shouldBe 0.2
     }
 
-    // ---- sustain() --------------------------------------------------------------------------------------
+    // ---- adsr(sustain = ...) --------------------------------------------------------------------------------------
 
     "sustain dsl interface" {
         dslInterfaceTests(
-            "pattern.sustain(level)" to note("a").sustain(0.7),
-            "script pattern.sustain(level)" to SprudelPattern.compile("""note("a").sustain(0.7)"""),
-            "string.sustain(level)" to "a".sustain(0.7),
-            "script string.sustain(level)" to SprudelPattern.compile(""""a".sustain(0.7)"""),
-            "sustain(level) via apply" to note("a").apply(sustain(0.7)),
-            "script sustain(level) via apply" to SprudelPattern.compile("""note("a").apply(sustain(0.7))"""),
+            "pattern.adsr(sustain = level)" to note("a").adsr(sustain = 0.7),
+            "script pattern.adsr(sustain = level)" to SprudelPattern.compile("""note("a").adsr(sustain = 0.7)"""),
+            "string.adsr(sustain = level)" to "a".adsr(sustain = 0.7),
+            "script string.adsr(sustain = level)" to SprudelPattern.compile(""""a".adsr(sustain = 0.7)"""),
+            "adsr(sustain = level) via apply" to note("a").apply(adsr(sustain = 0.7)),
+            "script adsr(sustain = level) via apply" to SprudelPattern.compile("""note("a").apply(adsr(sustain = 0.7))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "script apply(sustain()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(sustain(0.7))""")!!
+    "script apply(adsr(sustain = ...)) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(adsr(sustain = 0.7))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.sustain shouldBe 0.7
     }
 
-    // ---- release() --------------------------------------------------------------------------------------
+    // ---- adsr(release = ...) --------------------------------------------------------------------------------------
 
     "release dsl interface" {
         dslInterfaceTests(
-            "pattern.release(time)" to note("a").release(0.5),
-            "script pattern.release(time)" to SprudelPattern.compile("""note("a").release(0.5)"""),
-            "string.release(time)" to "a".release(0.5),
-            "script string.release(time)" to SprudelPattern.compile(""""a".release(0.5)"""),
-            "release(time) via apply" to note("a").apply(release(0.5)),
-            "script release(time) via apply" to SprudelPattern.compile("""note("a").apply(release(0.5))"""),
+            "pattern.adsr(release = time)" to note("a").adsr(release = 0.5),
+            "script pattern.adsr(release = time)" to SprudelPattern.compile("""note("a").adsr(release = 0.5)"""),
+            "string.adsr(release = time)" to "a".adsr(release = 0.5),
+            "script string.adsr(release = time)" to SprudelPattern.compile(""""a".adsr(release = 0.5)"""),
+            "adsr(release = time) via apply" to note("a").apply(adsr(release = 0.5)),
+            "script adsr(release = time) via apply" to SprudelPattern.compile("""note("a").apply(adsr(release = 0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "script apply(release()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(release(0.5))""")!!
+    "script apply(adsr(release = ...)) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(adsr(release = 0.5))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -514,22 +514,9 @@ class LangDynamicsSpec : StringSpec({
         events[0].data.cylinder shouldBe 2
     }
 
-    // ---- duckorbit() / duck() ---------------------------------------------------------------------------
+    // ---- duck() ---------------------------------------------------------------------------
 
-    "duckorbit dsl interface" {
-        dslInterfaceTests(
-            "pattern.duckorbit(index)" to note("a").duckorbit(1),
-            "script pattern.duckorbit(index)" to SprudelPattern.compile("""note("a").duckorbit(1)"""),
-            "string.duckorbit(index)" to "a".duckorbit(1),
-            "script string.duckorbit(index)" to SprudelPattern.compile(""""a".duckorbit(1)"""),
-            "duckorbit(index) via apply" to note("a").apply(duckorbit(1)),
-            "script duckorbit(index) via apply" to SprudelPattern.compile("""note("a").apply(duckorbit(1))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-        }
-    }
-
-    "duck dsl interface" {
+    "duck() dsl interface" {
         dslInterfaceTests(
             "pattern.duck(index)" to note("a").duck(1),
             "script pattern.duck(index)" to SprudelPattern.compile("""note("a").duck(1)"""),
@@ -542,8 +529,8 @@ class LangDynamicsSpec : StringSpec({
         }
     }
 
-    "apply(duck().duckdepth()) chains duck and duckdepth mappers" {
-        val p = note("a").apply(duck(1).duckdepth(0.8))
+    "apply(duck().duck(depth = ...)) chains the orbit and depth slots" {
+        val p = note("a").apply(duck(1).duck(depth = 0.8))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -559,37 +546,24 @@ class LangDynamicsSpec : StringSpec({
         events[0].data.duckCylinder shouldBe 1
     }
 
-    // ---- duckattack() / duckatt() -----------------------------------------------------------------------
+    // ---- duck(attack = ...) -----------------------------------------------------------------------
 
-    "duckattack dsl interface" {
+    "duck(attack = ...) dsl interface" {
         dslInterfaceTests(
-            "pattern.duckattack(time)" to note("a").duckattack(0.2),
-            "script pattern.duckattack(time)" to SprudelPattern.compile("""note("a").duckattack(0.2)"""),
-            "string.duckattack(time)" to "a".duckattack(0.2),
-            "script string.duckattack(time)" to SprudelPattern.compile(""""a".duckattack(0.2)"""),
-            "duckattack(time) via apply" to note("a").apply(duckattack(0.2)),
-            "script duckattack(time) via apply" to
-                    SprudelPattern.compile("""note("a").apply(duckattack(0.2))"""),
+            "pattern.duck(attack = time)" to note("a").duck(attack = 0.2),
+            "script pattern.duck(attack = time)" to SprudelPattern.compile("""note("a").duck(attack = 0.2)"""),
+            "string.duck(attack = time)" to "a".duck(attack = 0.2),
+            "script string.duck(attack = time)" to SprudelPattern.compile(""""a".duck(attack = 0.2)"""),
+            "duck(attack = time) via apply" to note("a").apply(duck(attack = 0.2)),
+            "script duck(attack = time) via apply" to
+                    SprudelPattern.compile("""note("a").apply(duck(attack = 0.2))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "duckatt dsl interface" {
-        dslInterfaceTests(
-            "pattern.duckatt(time)" to note("a").duckatt(0.2),
-            "script pattern.duckatt(time)" to SprudelPattern.compile("""note("a").duckatt(0.2)"""),
-            "string.duckatt(time)" to "a".duckatt(0.2),
-            "script string.duckatt(time)" to SprudelPattern.compile(""""a".duckatt(0.2)"""),
-            "duckatt(time) via apply" to note("a").apply(duckatt(0.2)),
-            "script duckatt(time) via apply" to SprudelPattern.compile("""note("a").apply(duckatt(0.2))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-        }
-    }
-
-    "apply(duck().duckattack().duckdepth()) chains ducking mappers" {
-        val p = note("a").apply(duck(1).duckattack(0.2).duckdepth(0.8))
+    "apply(duck().duck(attack = ..., depth = ...)) chains the attack and depth slots" {
+        val p = note("a").apply(duck(1).duck(attack = 0.2, depth = 0.8))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -598,31 +572,31 @@ class LangDynamicsSpec : StringSpec({
         events[0].data.duckDepth shouldBe 0.8
     }
 
-    "script apply(duckattack()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(duckattack(0.2))""")!!
+    "script apply(duck(attack = ...)) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(duck(attack = 0.2))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.duckAttack shouldBe 0.2
     }
 
-    // ---- duckdepth() ------------------------------------------------------------------------------------
+    // ---- duck(depth = ...) ------------------------------------------------------------------------------------
 
-    "duckdepth dsl interface" {
+    "duck(depth = ...) dsl interface" {
         dslInterfaceTests(
-            "pattern.duckdepth(amount)" to note("a").duckdepth(0.8),
-            "script pattern.duckdepth(amount)" to SprudelPattern.compile("""note("a").duckdepth(0.8)"""),
-            "string.duckdepth(amount)" to "a".duckdepth(0.8),
-            "script string.duckdepth(amount)" to SprudelPattern.compile(""""a".duckdepth(0.8)"""),
-            "duckdepth(amount) via apply" to note("a").apply(duckdepth(0.8)),
-            "script duckdepth(amount) via apply" to SprudelPattern.compile("""note("a").apply(duckdepth(0.8))"""),
+            "pattern.duck(depth = amount)" to note("a").duck(depth = 0.8),
+            "script pattern.duck(depth = amount)" to SprudelPattern.compile("""note("a").duck(depth = 0.8)"""),
+            "string.duck(depth = amount)" to "a".duck(depth = 0.8),
+            "script string.duck(depth = amount)" to SprudelPattern.compile(""""a".duck(depth = 0.8)"""),
+            "duck(depth = amount) via apply" to note("a").apply(duck(depth = 0.8)),
+            "script duck(depth = amount) via apply" to SprudelPattern.compile("""note("a").apply(duck(depth = 0.8))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
     }
 
-    "script apply(duckdepth()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(duckdepth(0.8))""")!!
+    "script apply(duck(depth = ...)) works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").apply(duck(depth = 0.8))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

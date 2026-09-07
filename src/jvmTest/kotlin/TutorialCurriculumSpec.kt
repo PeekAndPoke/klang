@@ -342,8 +342,13 @@ class TutorialCurriculumSpec : StringSpec({
                             val perParamCall = parts.joinToString(", ") { n ->
                                 if (n == n.toInt().toDouble()) n.toInt().toString() else n.toString()
                             }
+                            // A filter envelope lives in named slots of `lpf(...)` (2026-09-07), so the
+                            // same four numbers may also appear as `attack = a, decay = d, sustain = s, release = r`.
+                            val namedCall = listOf("attack", "decay", "sustain", "release")
+                                .zip(perParamCall.split(", "))
+                                .joinToString(", ") { (slot, n) -> "$slot = $n" }
                             val matchesCode = codes.any { code ->
-                                visual.value in code || perParamCall in code
+                                visual.value in code || perParamCall in code || namedCall in code
                             }
                             if (codes.isNotEmpty() && !matchesCode) {
                                 violations.add(

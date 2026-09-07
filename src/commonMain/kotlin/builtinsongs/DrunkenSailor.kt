@@ -24,8 +24,8 @@ stack(
   // Melody
   n(`<[8@2 8 8 8@2 8 8] [8 4  6  8]  [7@2 7 7 7@2 7 7] [7 3  5  7]
       [8@2 8 8 8@2 8 8] [8 9 10 11]  [10 8 7 5]        [4@2 4@2  ]
-  >`).sndPluck(0.999, 0.8).clip(0.8).scale("c3:dorian").gain(0.8).lpf("2000").lpadsr(0.01, 0.1, 0.2, 0.1)
- .tremolosync(8).tremolodepth(0.33).tremoloshape("sine").analog(1)
+  >`).sndPluck(0.999, 0.8).clip(0.8).scale("c3:dorian").gain(0.8).lpf(freq = "2000", attack = 0.01, decay = 0.1, sustain = 0.2, release = 0.1)
+ .tremolo(sync = 8, depth = 0.33, shape = "sine").analog(1)
   // . solo(0.99)
 
   // Bass
@@ -38,7 +38,7 @@ stack(
   // Drums 2
   , s("<[[bd sd]!2]!8>").adsr(0.02, 0.1, 0.7, 1.0).gain(0.75) // . solo()
 )
-  .roomWet(0.02).rsize(3)
+  .room(wet = 0.02, size = 3)
 
             """,
 )

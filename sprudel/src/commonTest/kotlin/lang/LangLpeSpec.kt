@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
@@ -21,63 +20,30 @@ class LangLpeSpec : StringSpec({
 
     // ---- lpenv ----
 
-
-    "reinterpret voice data as lpenv | seq(\"0.5 1.0\").lpe()" {
-        val p = seq("0.5 1.0").lpe()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.lpenv shouldBe 0.5
-            events[1].data.lpenv shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as lpenv | \"0.5 1.0\".lpe()" {
-        val p = "0.5 1.0".lpe()
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.lpenv shouldBe 0.5
-            events[1].data.lpenv shouldBe 1.0
-        }
-    }
-
-    "reinterpret voice data as lpenv | seq(\"0.5 1.0\").apply(lpe())" {
-        val p = seq("0.5 1.0").apply(lpe())
-        val events = p.queryArc(0.0, 1.0)
-        assertSoftly {
-            events.size shouldBe 2
-            events[0].data.lpenv shouldBe 0.5
-            events[1].data.lpenv shouldBe 1.0
-        }
-    }
-
-
-    "lpe() works as pattern extension" {
-        val p = note("c").lpe("0.5")
+    "lpf(env = ...) works as pattern extension" {
+        val p = note("c").lpf(env = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.lpenv shouldBe 0.5
     }
 
-    "lpe() works as string extension" {
-        val p = "c".lpe("0.5")
+    "lpf(env = ...) works as string extension" {
+        val p = "c".lpf(env = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.lpenv shouldBe 0.5
     }
 
-    "lpe() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").lpe("0.5")""")
+    "lpf(env = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").lpf(env = "0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.lpenv shouldBe 0.5
     }
 
-
-    "lpe() creates FilterEnvDef in FilterDef" {
+    "lpf(env = ...) creates FilterEnvDef in FilterDef" {
         val data = createSprudelVoiceData {
             cutoff = 1000.0
             lpenv = 0.7
@@ -89,17 +55,16 @@ class LangLpeSpec : StringSpec({
         lpf.envelope?.depth shouldBe 0.7
     }
 
-
     "lpe dsl interface" {
         val pat = "a b"
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
-            "pattern.lpe(ctrl)" to seq(pat).lpe(ctrl),
-            "script pattern.lpe(ctrl)" to SprudelPattern.compile("""seq("$pat").lpe("$ctrl")"""),
-            "string.lpe(ctrl)" to pat.lpe(ctrl),
-            "script string.lpe(ctrl)" to SprudelPattern.compile(""""$pat".lpe("$ctrl")"""),
-            "lpe(ctrl)" to seq(pat).apply(lpe(ctrl)),
-            "script lpe(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(lpe("$ctrl"))"""),
+            "pattern.lpf(env = ctrl)" to seq(pat).lpf(env = ctrl),
+            "script pattern.lpf(env = ctrl)" to SprudelPattern.compile("""seq("$pat").lpf(env = "$ctrl")"""),
+            "string.lpf(env = ctrl)" to pat.lpf(env = ctrl),
+            "script string.lpf(env = ctrl)" to SprudelPattern.compile(""""$pat".lpf(env = "$ctrl")"""),
+            "lpf(env = ctrl)" to seq(pat).apply(lpf(env = ctrl)),
+            "script lpf(env = ctrl)" to SprudelPattern.compile("""seq("$pat").apply(lpf(env = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.lpenv shouldBe 0.5
@@ -107,9 +72,9 @@ class LangLpeSpec : StringSpec({
         }
     }
 
-    "lpe() with continuous pattern sets lpenv correctly" {
+    "lpf(env = ...) with continuous pattern sets lpenv correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").lpe(sine)
+        val p = note("a b c d").lpf(env = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

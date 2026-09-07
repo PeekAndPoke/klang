@@ -55,7 +55,7 @@ sharing one onset).
 **send** stage stops it *feeding* those resonators while their own high-Q state keeps ringing out.
 
 That is exactly the acoustic caricature we want, for free: **the string stops, the body does not.**
-Der Schmetterling already runs `.body("violin").bodyWet(0.3)`, so it benefits immediately.
+Der Schmetterling already runs `.body(material = "violin", wet = 0.3)`, so it benefits immediately.
 
 ### Why the fade can be short
 
@@ -128,9 +128,9 @@ regenerates. Add the field to the `WireCodecRoundTripSpec` fixture.
 - `SvdGroups.kt` — new `SvdTakeover(takeover: Double?)` group + `mergeSvdTakeover` (field-wise, `over`
   wins), plus the flat accessor on `SprudelVoiceData` in the established idiom.
 - `SprudelVoiceData.toVoiceData` — map it (near `cut`, `:1043`).
-- `lang_dynamics.kt` — `takeover()` in all four DSL forms (`SprudelPattern.`, `String.`, bare
+- `lang_dynamics_level.kt` (or a new `lang_dynamics_*` subgroup) — `takeover()` in all four DSL forms (`SprudelPattern.`, `String.`, bare
   `PatternMapperFn`, and the **chained** `PatternMapperFn.` form). Use
-  `_liftOrReinterpretNumericalField`, same shape as `cut()` (`lang_sample.kt:708`). See
+  `_liftOrReinterpretNumericalField`, same shape as `cut()` (`lang_sample_playback.kt`). See
   `[[Sprudel DSL test coverage]]` — cover the chained form, it is the codebase-wide gap.
 - Mirror into the KlangScript stdlib in the **same commit** — parameter parity.
 

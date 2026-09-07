@@ -1,6 +1,14 @@
 # Plan: surface runtime errors in the editor, with a clickable source location
 
-**Status: phases 1-3 SHIPPED 2026-08-22. Phase 4 open, plus one known gap (below).**
+**Status: phases 1-3 SHIPPED 2026-08-22. Phase 4 audited 2026-09-07, one decision left, plus one
+known gap (below).**
+
+Re-verified in the tree 2026-09-07, after the lang files were split
+(`docs/tasks-archive/2026-09/20260907-sprudel-lang-file-reorganisation.md`): `SprudelDiagnostics.report(context, error)` and
+`collectingInto(into, block)` exist, and all three swallow sites call `report` and no longer
+`println`. Phase 4's audit is done and written up below; what remains of it is a judgement call,
+not an investigation.
+
 Supersedes the capture note in `silent-shape-discard-on-error.md` (that file describes the
 symptom; this is the fix).
 
@@ -65,14 +73,17 @@ Measured, not assumed:
 `println(stackTraceToString())` and return the input unchanged, discarding the object that
 carries the location.
 
-| Site | Message seen in console |
-|---|---|
-| `sprudel/.../lang/lang_structural.kt:2015` | "Error applying layer transform: ..." (the one hit in this case) |
-| `sprudel/.../lang/lang_helpers.kt:148` | "Error while chaining pattern mappers: ..." |
-| `sprudel/.../lang/lang_helpers.kt:172` | "Error while invoking pattern mapper: ..." |
+These three are FIXED. The table is the pre-fix state, kept because it is what the bug looked
+like from the console; the right-hand column is what the site does today.
 
-There are 8 `catch (e/_: Exception)` sites across `sprudel` + `klangscript` commonMain; the other
-five need an audit to see which can hide a user-authored mistake.
+| Site | Console message before | Today |
+|---|---|---|
+| `lang_structural_layer.kt` | "Error applying layer transform: ..." (the one hit in this case) | `SprudelDiagnostics.report("layer transform", e)` |
+| `lang_helpers.kt` | "Error while chaining pattern mappers: ..." | `SprudelDiagnostics.report("pattern mapper chain", e)` |
+| `lang_helpers.kt` | "Error while invoking pattern mapper: ..." | `SprudelDiagnostics.report("pattern mapper", e)` |
+
+Do not go looking for those three strings in the source. They are gone, and their absence is the
+fix, not a sign that this document drifted.
 
 ## Keep the catch
 
@@ -173,7 +184,21 @@ the console remains unexplained and was not reproduced on the JVM.
    Ranking needed a NEW `osaDistance`, not the existing `levenshtein`: a transposition costs 2
    there and could not be suggested at all. The method LIST was never broken (see the correction
    above); only the type name was.
-4. **Audit the remaining five catch sites** and route the ones that can hide a user mistake.
+4. **Audit the remaining catch sites** and route the ones that can hide a user mistake.
+   **The audit is done (2026-09-07); the routing decision is not.** The count of eight was right
+   but included one false hit: `klangscript/runtime/Errors.kt:31` is a KDoc line showing a
+   `catch` in prose, not a catch site. That leaves four real ones beyond the three already fixed:
+
+   | Site | What it swallows | Verdict |
+   |---|---|---|
+   | `klangscript/runtime/Interpreter.kt:305` | `engine.loadLibrary` failing | **Nothing to do.** It does not swallow: it rethrows as `KlangScriptImportError` carrying `importStmt.location`, which is exactly the shape this plan asks for. |
+   | `lang_tonal_chord.kt:129` | root-note resolution, falls back to the voice unchanged | **Candidate.** A bad root in `chord("Xmaj7")` is a user typo and currently produces silence-by-degradation with no word anywhere. |
+   | `lang_tonal_chord.kt:204` | voicing ranking, falls back to `emptyList()` | **Candidate.** Same class: bad voicing arguments yield no notes and no message. |
+   | `lang_tonal_scale.kt:297` | scale transposition, falls back to chromatic | **Leave.** The fallback is deliberate and documented in the code ("On any error, fallback to chromatic transposition"); it is a musical choice, not a hidden failure. |
+
+   So the open work is two sites, both in `lang_tonal_chord.kt`, and the question for the
+   maintainer is whether a bad chord or voicing argument deserves a red underline or is better
+   left as a quiet degradation. That is taste, not analysis, which is why this phase stops here.
 
 ## Traps
 

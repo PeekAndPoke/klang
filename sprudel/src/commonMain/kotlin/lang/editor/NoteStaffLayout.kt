@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang.editor
 
-import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.buildInsertTargets
 import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.buildLayoutItems
 import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
@@ -169,7 +168,7 @@ object NoteStaffLayout {
             }
 
             is MnNode.Stack -> {
-                val stackNodes = buildList<MnNode> {
+                val stackNodes = buildList {
                     node.walk { n ->
                         if ((n is MnNode.Atom || (n is MnNode.Rest && n.sourceRange != null)) && n.inRange()) add(n)
                     }

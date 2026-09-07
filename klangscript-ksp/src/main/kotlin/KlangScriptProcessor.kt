@@ -21,8 +21,10 @@ import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeAlias
 import com.google.devtools.ksp.symbol.KSValueParameter
+import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.symbol.Nullability
 import com.google.devtools.ksp.validate
+import io.peekandpoke.klang.script.annotations.KlangScript
 
 /**
  * KSP processor that generates registration and documentation code
@@ -54,6 +56,7 @@ class KlangScriptProcessor(
         private const val ANN_TYPE_EXTENSIONS = "$ANN_PKG.TypeExtensions"
         private const val ANN_FUNCTION = "$ANN_PKG.Function"
         private const val ANN_METHOD = "$ANN_PKG.Method"
+        private const val ANN_INVOKE = "$ANN_PKG.Invoke"
         private const val ANN_PROPERTY = "$ANN_PKG.Property"
         private const val ANN_CONSTANT = "$ANN_PKG.Constant"
 
@@ -141,6 +144,10 @@ class KlangScriptProcessor(
         val allMethods = resolver.getSymbolsWithAnnotation(ANN_METHOD)
             .filterIsInstance<KSFunctionDeclaration>().toList()
         for (method in allMethods) {
+            val scriptName = getAnnotationStringArg(method, ANN_METHOD, "name")
+                .let { if (it.isNullOrEmpty()) method.simpleName.asString() else it }
+            InvokeShape.methodSpelledInvoke(method.simpleName.asString(), scriptName)?.let { logger.error(it, method) }
+
             val parent = method.parentDeclaration
             if (parent !is KSClassDeclaration || parent !in validParents) {
                 logger.error(
@@ -149,6 +156,24 @@ class KlangScriptProcessor(
                             "top-level functions use @KlangScript.Function.",
                     method
                 )
+            }
+        }
+
+        // @Invoke is the one call form of a callable object: `operator fun invoke` inside an
+        // @Object or @TypeExtensions class, at most one per class (KlangScript has no overloads).
+        val allInvokes = resolver.getSymbolsWithAnnotation(ANN_INVOKE)
+            .filterIsInstance<KSFunctionDeclaration>().toList()
+        val invokesPerClass = allInvokes.groupingBy { it.parentDeclaration }.eachCount()
+        for (fn in allInvokes) {
+            val parent = fn.parentDeclaration
+            val problems = InvokeShape.problems(
+                functionName = fn.simpleName.asString(),
+                isOperator = Modifier.OPERATOR in fn.modifiers,
+                insideRegisteredClass = parent is KSClassDeclaration && parent in validParents,
+                invokeCountInClass = invokesPerClass[parent] ?: 1,
+            )
+            for (problem in problems) {
+                logger.error(problem, fn)
             }
         }
 
@@ -428,17 +453,26 @@ class KlangScriptProcessor(
     }
 
     private fun collectMethods(cls: KSClassDeclaration): List<MethodEntry> {
+        fun KSFunctionDeclaration.hasAnnotation(fqn: String): Boolean = annotations.any { ann ->
+            ann.annotationType.resolve().declaration.qualifiedName?.asString() == fqn
+        }
+
         return cls.declarations
             .filterIsInstance<KSFunctionDeclaration>()
-            .filter { fn ->
-                fn.annotations.any { ann ->
-                    ann.annotationType.resolve().declaration.qualifiedName?.asString() == ANN_METHOD
+            .mapNotNull { fn ->
+                when {
+                    // The call form of a callable object registers under the fixed name; a
+                    // wrong shape was already reported by the scope validation.
+                    fn.hasAnnotation(ANN_INVOKE) -> MethodEntry(KlangScript.Invoke.NAME, fn)
+
+                    fn.hasAnnotation(ANN_METHOD) -> {
+                        val methodName = getAnnotationStringArg(fn, ANN_METHOD, "name")
+                            .let { if (it.isNullOrEmpty()) fn.simpleName.asString() else it }
+                        MethodEntry(methodName, fn)
+                    }
+
+                    else -> null
                 }
-            }
-            .map { fn ->
-                val methodName = getAnnotationStringArg(fn, ANN_METHOD, "name")
-                    .let { if (it.isNullOrEmpty()) fn.simpleName.asString() else it }
-                MethodEntry(methodName, fn)
             }
             .toList()
     }
@@ -601,7 +635,7 @@ class KlangScriptProcessor(
                 logger.error(
                     "Duplicate KlangScript registration: '$scriptName' on receiver '${receiver ?: "<top-level>"}' " +
                             "is registered by both [$prior] and [$sourceDesc]. " +
-                            "Only one @KlangScript.Method / @KlangScript.Function / @KlangScript.Property / @KlangScript.Constant " +
+                            "Only one @KlangScript.Method / @KlangScript.Invoke / @KlangScript.Function / @KlangScript.Property / @KlangScript.Constant " +
                             "per (name, receiver) is allowed."
                 )
             }
@@ -779,7 +813,10 @@ class KlangScriptProcessor(
         val hasCallInfo = hasCallInfoParam(fn)
         val ownerName = ownerCls.simpleName.asString()
         val isFileLevelFn = fn.parentDeclaration !is KSClassDeclaration
-        val fnQualifier = if (isFileLevelFn) "" else "$ownerName."
+        // The owner is spelled out in full: a slot named like its object (`vowel(vowel = ...)`)
+        // becomes a local `val vowel` in the generated call and would shadow the simple name.
+        val ownerQualified = ownerCls.qualifiedName?.asString() ?: ownerName
+        val fnQualifier = if (isFileLevelFn) "" else "$ownerQualified."
 
         val scriptParams = if (isTypeExtension && allParams.isNotEmpty()) allParams.drop(1) else allParams
         val selfArg = if (isTypeExtension) {
@@ -1167,6 +1204,10 @@ class KlangScriptProcessor(
                 appendLine()
                 val objFqcn = obj.cls.qualifiedName?.asString()
                 val objFqcnArg = if (objFqcn != null) ", fqcn = \"$objFqcn\"" else ""
+                // An object's type carries its supertypes like a property type does, so a method
+                // registered on a base type (sprudel's `PatternMapperProvider.mul`) resolves on the
+                // object (`freq.mul(2)`), mirroring the runtime's isInstance walk.
+                val objSupertypes = supertypeListExpr(obj.cls).let { if (it.isEmpty()) "" else ", supertypes = $it" }
                 appendLine("    \"${obj.name}\" to KlangSymbol(")
                 appendLine("        name = \"${obj.name}\",")
                 appendLine("        category = \"$category\",")
@@ -1176,8 +1217,20 @@ class KlangScriptProcessor(
                 appendLine("        variants = listOf(")
                 appendLine("            KlangProperty(")
                 appendLine("                name = \"${obj.name}\",")
-                appendLine("                type = KlangType(simpleName = \"${obj.name}\"$objFqcnArg),")
+                appendLine("                type = KlangType(simpleName = \"${obj.name}\"$objFqcnArg$objSupertypes),")
                 appendLine("                description = \"\"\"$description\"\"\",")
+                // The class KDoc's code fences are samples, like a property's: without this an
+                // object's examples were stripped from the description and emitted nowhere.
+                if (kdoc.samples.isNotEmpty()) {
+                    appendLine("                samples = listOf(")
+                    kdoc.samples.forEachIndexed { sIdx, sample ->
+                        val comma = if (sIdx < kdoc.samples.lastIndex) "," else ""
+                        appendLine("                    KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})$comma")
+                    }
+                    appendLine("                ),")
+                } else {
+                    appendLine("                samples = emptyList(),")
+                }
                 appendLine("                library = \"$libraryName\",")
                 appendLine("            )")
                 appendLine("        )")

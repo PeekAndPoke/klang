@@ -54,14 +54,14 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 
 | #  | DSL Function                               | Proposed Editor                  | Format / UI Idea                                                                                   |
 |----|--------------------------------------------|----------------------------------|----------------------------------------------------------------------------------------------------|
-| 25 | `fmh()`                                    | `SprudelFmHarmonicityEditorTool` | numeric slider with harmonic ratio presets                                                         |
-| 26 | `fmenv()`                                  | `SprudelFmEnvEditorTool`         | numeric slider (0–5000 Hz depth)                                                                   |
-| 27 | `fmattack()` / `fmdecay()` / `fmsustain()` | reuse `SprudelNumericEditorTool` | individual ADSR component sliders                                                                  |
+| 25 | `fm(h = ...)`                                    | `SprudelFmHarmonicityEditorTool` | numeric slider with harmonic ratio presets                                                         |
+| 26 | `fm(env = ...)`                         | `SprudelFmEnvEditorTool`         | numeric slider (0–5000 Hz depth)                                                                   |
+| 27 | `fm(attack = ...)` / `fm(decay = ...)` / `fm(sustain = ...)` | reuse `SprudelNumericEditorTool` | individual ADSR component sliders                                                                  |
 | 28 | `unison()` / `uni()`                       | `SprudelUnisonEditorTool`        | integer picker (1–8 voices)                                                                        |
-| 29 | ~~`detune()`~~ **OBSOLETE**                | —                                | `detune()` renamed to `spread()` (unison freq-spread); the freq-spread editor is now #39's sibling |
+| 29 | ~~`detune()`~~ **OBSOLETE**                | —                                | `detune()` renamed to `unison(spread = ...)` (unison freq-spread); the freq-spread editor is now #39's sibling |
 | 30 | `transpose()`                              | `SprudelTransposeEditorTool`     | semitone slider (-24 to +24)                                                                       |
 | 31 | `swing()`                                  | `SprudelSwingEditorTool`         | numeric slider (0–1) with timing diagram                                                           |
-| 32 | `distort()` / `dist()`                     | `SprudelDistortEditorTool`       | numeric slider (0–1)                                                                               |
+| 32 | `distort()`                                | `SprudelDistortEditorTool`       | numeric slider (0–1)                                                                               |
 | 33 | `shape()`                                  | `SprudelShapeEditorTool`         | numeric slider (0–1) waveshaper                                                                    |
 
 ### Tier 3 — Lower Priority (advanced / less frequent)
@@ -73,7 +73,7 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 | 36 | `loop()` / `loopBegin()` / `loopEnd()` | `SprudelLoopEditorTool`      | toggle + range bar                  |
 | 37 | `phaser*()` family                     | `SprudelPhaserEditorTool`    | combined center/depth/sweep editor  |
 | 38 | `tremolo*()` family                    | `SprudelTremoloEditorTool`   | combined depth/rate/shape editor    |
-| 39 | `panSpread()` (was `spread()`)         | `SprudelPanSpreadEditorTool` | numeric slider (0–1) stereo width   |
+| 39 | `unison(pan = ...)` (was `panSpread()`, before that `spread()`)         | `SprudelPanSpreadEditorTool` | numeric slider (0–1) stereo width   |
 | 40 | `freq()`                               | `SprudelFreqEditorTool`      | frequency slider (20–20000 Hz, log) |
 
 ## Tool Registry
@@ -99,51 +99,55 @@ All tools are registered in `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`.
 
 | DSL Function                      | Editor                       | Sequence Editor                      | Format          |
 |-----------------------------------|------------------------------|--------------------------------------|-----------------|
-| `delayWet()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | per-param `(wet, time, feedback)` |
-| `delaytime()`                     | `SprudelDelayTimeEditor`     | `SprudelDelayTimeSequenceEditor`     | single value    |
-| `delayfeedback()` / `delayfb()`   | `SprudelDelayFeedbackEditor` | `SprudelDelayFeedbackSequenceEditor` | single value    |
-| `roomWet()`                          | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
-| `roomsize()` / `rsize()` / `sz()` | `SprudelRoomSizeEditor`      | `SprudelRoomSizeSequenceEditor`      | single value    |
+| `delay()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | slots `(wet, time, feedback)`; the `cap` slot has no control yet (2026-09-07) |
+| `delay(time = ...)`                     | `SprudelDelayTimeEditor`     | `SprudelDelayTimeSequenceEditor`     | single value    |
+| `delay(feedback = ...)`           | `SprudelDelayFeedbackEditor` | `SprudelDelayFeedbackSequenceEditor` | single value    |
+| `room()`                          | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
+| `room(size = ...)`                | `SprudelRoomSizeEditor`      | `SprudelRoomSizeSequenceEditor`      | single value    |
+
+Named arguments resolve by position today (`docs/tasks/editor-tools-named-arguments.md`).
+Compound slots carry no aliases since 2026-09-07 (`room(size = ...)`, `delay(feedback = ...)`, ...
+are the only spellings); the phaser editor has no `floor` control and the delay editor no `cap`.
 
 ## Low Pass Filter
 
 | DSL Function                            | Editor                     | Sequence Editor                    | Format               |
 |-----------------------------------------|----------------------------|------------------------------------|----------------------|
 | `lpf()` | `SprudelLpFilterEditor`    | `SprudelLpFilterSequenceEditor`    | `freq:resonance:env` |
-| `lpq()` | `SprudelLpResonanceEditor` | `SprudelLpResonanceSequenceEditor` | single value         |
-| `lpe()` | `SprudelLpEnvEditor`       | `SprudelLpEnvSequenceEditor`       | single value         |
-| `lpadsr()`                              | `SprudelLpAdsrEditor`      | `SprudelLpAdsrSequenceEditor`      | `a:d:s:r`            |
+| `lpf(q = ...)` | `SprudelLpResonanceEditor` | `SprudelLpResonanceSequenceEditor` | single value         |
+| `lpf(env = ...)` | `SprudelLpEnvEditor`       | `SprudelLpEnvSequenceEditor`       | single value         |
+| whole envelope of `lpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelLpAdsrEditor` | `SprudelLpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## High Pass Filter
 
 | DSL Function                        | Editor                     | Sequence Editor                    | Format               |
 |-------------------------------------|----------------------------|------------------------------------|----------------------|
 | `hpf()` | `SprudelHpFilterEditor`    | `SprudelHpFilterSequenceEditor`    | `freq:resonance:env` |
-| `hpq()` | `SprudelHpResonanceEditor` | `SprudelHpResonanceSequenceEditor` | single value         |
-| `hpe()` | `SprudelHpEnvEditor`       | `SprudelHpEnvSequenceEditor`       | single value         |
-| `hpadsr()`                          | `SprudelHpAdsrEditor`      | `SprudelHpAdsrSequenceEditor`      | `a:d:s:r`            |
+| `hpf(q = ...)` | `SprudelHpResonanceEditor` | `SprudelHpResonanceSequenceEditor` | single value         |
+| `hpf(env = ...)` | `SprudelHpEnvEditor`       | `SprudelHpEnvSequenceEditor`       | single value         |
+| whole envelope of `hpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelHpAdsrEditor` | `SprudelHpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Band Pass Filter
 
 | DSL Function                 | Editor                   | Sequence Editor                  | Format       |
 |------------------------------|--------------------------|----------------------------------|--------------|
 | `bpf()` | `SprudelBpFilterEditor`  | `SprudelBpFilterSequenceEditor`  | `freq:q:env` |
-| `bpq()` | `SprudelBpQEditor`       | `SprudelBpQSequenceEditor`       | single value |
-| `bpe()` | `SprudelBpEnvEditor`     | `SprudelBpEnvSequenceEditor`     | single value |
-| `bpadsr()`                   | `SprudelBpAdsrEditor`    | `SprudelBpAdsrSequenceEditor`    | `a:d:s:r`    |
+| `bpf(q = ...)` | `SprudelBpQEditor`       | `SprudelBpQSequenceEditor`       | single value |
+| `bpf(env = ...)` | `SprudelBpEnvEditor`     | `SprudelBpEnvSequenceEditor`     | single value |
+| whole envelope of `bpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelBpAdsrEditor` | `SprudelBpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Notch Filter
 
 | DSL Function                | Editor                                            | Sequence Editor                    | Format       |
 |-----------------------------|---------------------------------------------------|------------------------------------|--------------|
-| `notchf()`                  | `SprudelNotchFilterEditor`                        | `SprudelNotchFilterSequenceEditor` | `freq:q:env` |
-| `nresonance()` / `notchq()` | `SprudelNResonanceEditor` / `SprudelNotchQEditor` | Sequence variants                  | single value |
-| `nfenv()` / `nfe()`         | `SprudelNfEnvEditor`                              | `SprudelNfEnvSequenceEditor`       | single value |
-| `nfattack()` / `nfa()`      | `SprudelNfAttackEditor`                           | `SprudelNfAttackSequenceEditor`    | single value |
-| `nfdecay()` / `nfd()`       | `SprudelNfDecayEditor`                            | `SprudelNfDecaySequenceEditor`     | single value |
-| `nfsustain()` / `nfs()`     | `SprudelNfSustainEditor`                          | `SprudelNfSustainSequenceEditor`   | single value |
-| `nfrelease()` / `nfr()`     | `SprudelNfReleaseEditor`                          | `SprudelNfReleaseSequenceEditor`   | single value |
-| `nfadsr()`                  | `SprudelNfAdsrEditor`                             | `SprudelNfAdsrSequenceEditor`      | `a:d:s:r`    |
+| `notch()`                  | `SprudelNotchFilterEditor`                        | `SprudelNotchFilterSequenceEditor` | `freq:q:env` |
+| `notch(q = ...)`                  | `SprudelNResonanceEditor` (`SprudelNotchQEditor` is unwired since 2026-09-07) | Sequence variants | single value |
+| `notch(env = ...)`                | `SprudelNfEnvEditor`                              | `SprudelNfEnvSequenceEditor`       | single value |
+| `notch(attack = ...)`             | `SprudelNfAttackEditor`                           | `SprudelNfAttackSequenceEditor`    | single value |
+| `notch(decay = ...)`              | `SprudelNfDecayEditor`                            | `SprudelNfDecaySequenceEditor`     | single value |
+| `notch(sustain = ...)`            | `SprudelNfSustainEditor`                          | `SprudelNfSustainSequenceEditor`   | single value |
+| `notch(release = ...)`            | `SprudelNfReleaseEditor`                          | `SprudelNfReleaseSequenceEditor`   | single value |
+| whole envelope (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelNfAdsrEditor` | `SprudelNfAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Other
 

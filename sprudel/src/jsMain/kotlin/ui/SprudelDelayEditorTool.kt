@@ -43,7 +43,7 @@ import kotlin.math.exp
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param delayWet(wet, time, feedback) call.
+ * [KlangUiToolEmbeddable] for the delay(wet, time, feedback, cap) call (no control for cap yet).
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the wet (send) plus the optional

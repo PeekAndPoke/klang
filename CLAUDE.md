@@ -88,7 +88,27 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 ### Retired, do not restore or cite
 
 `klangblocks` (removed 2026-08-23, never user-visible); the `Motör` spelling; the sub-type method
-chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors.
+chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors; the single
+envelope doors `attack()`, `decay()`, `sustain()`, `release()` (gone 2026-09-07, `adsr(attack = ...)`
+sets a slot and `adsr.attack` reads it); the per-knob effect doors and their aliases (`roomWet`,
+`roomsize`/`rsize`/`sz`/`size`, `roomfade`, `roomlp`, `roomdim`, `delayWet`, `delaytime`, `delayfeedback`/`delayfb`,
+`delaycap`/`dcap`, `ph`, `phaserWet`, `phasercenter`/`phc`, `phasersweep`/`phs`, `phaserFloor`, the `tremolo*`/`trem*`
+knobs, `dist`, `distos`, `distortshape`/`dshape`, `crushos`, `coarseos`, the `*Oversampling` spellings; gone
+2026-09-07: `room`, `delay`, `phaser`, `tremolo`, `distort`, `crush`, `coarse` are objects with named slots,
+`room(fade = 0.3)` sets, `room.fade` reads); the filter per-knob doors `lpq`, `lpx`, `lpe`, `lpadsr`, `hpq`, `hpx`, `hpe`,
+`hpadsr`, `bpq`, `bpe`, `bpadsr`, `notchf`, `nresonance`/`nres`/`notchq`/`ntq`, `ntf`, `nfadsr`, `nfattack`/`nfa`, `nfdecay`/`nfd`,
+`nfsustain`/`nfs`, `nfrelease`/`nfr`, `nfenv`/`nfe` (gone 2026-09-07: `lpf` and `hpf` carry `q`, `passes`, `env` and the envelope
+stages as slots, `bpf` and `notch` the same without `passes`); the singular `adsrCurve` on every surface (`adsrCurves(a, d, r)` only); the batch G per-knob doors `vibratoMod`,
+`pattack`/`patt`, `pdecay`/`pdec`, `prelease`/`prel`, `pcurve`/`pcrv`, `panchor`/`panc`, `fmenv`/`fmmod`, `fmh`, `fmattack`/`fmatt`,
+`fmdecay`/`fmdec`, `fmsustain`/`fmsus`, `duckorbit`, `duckattack`/`duckatt`, `duckdepth`, the pattern-level `voices`, `spread`, `panSpread`
+(the ignitor builders keep their own `voices()`/`spread()`),
+`vowelWet`, `vowelFloor`, `bodyWet`, `bodyFloor` (gone 2026-09-07: `compressor`, `unison`, `duck`, `vibrato`, `penv`, `fm`,
+`vowel`, `body` carry them as slots; `comp`, `uni`, `vib`, `pamt` stay). Guard for all: `LangRetiredDoorsSpec`. The spelling
+`@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
+refuses the old one). The sprudel `lang/addons/` directory, the package
+`io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag (gone 2026-09-07: sprudel is not a Strudel port,
+so "what Strudel does not have" named nothing a reader could use; every DSL file is now
+`lang_<group>_<subgroup>.kt` in `sprudel/.../lang/`, see `docs/tasks-archive/2026-09/20260907-sprudel-lang-file-reorganisation.md`).
 
 ## Available Agent
 

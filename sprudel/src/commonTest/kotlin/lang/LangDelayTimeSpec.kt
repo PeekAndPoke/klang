@@ -13,40 +13,40 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangDelayTimeSpec : StringSpec({
 
-    "delaytime() sets VoiceData.delayTime" {
-        val p = note("a b").apply(delaytime("0.25 0.5"))
+    "delay(time = ...) sets VoiceData.delayTime" {
+        val p = note("a b").apply(delay(time = "0.25 0.5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.delayTime } shouldBe listOf(0.25, 0.5)
     }
 
-    "delaytime() works as pattern extension" {
-        val p = note("c").delaytime("0.25")
+    "delay(time = ...) works as pattern extension" {
+        val p = note("c").delay(time = "0.25")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delayTime shouldBe 0.25
     }
 
-    "delaytime() works as string extension" {
-        val p = "c".delaytime("0.25")
+    "delay(time = ...) works as string extension" {
+        val p = "c".delay(time = "0.25")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.delayTime shouldBe 0.25
     }
 
-    "delaytime() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delaytime("0.25")""")
+    "delay(time = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").delay(time = "0.25")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.delayTime shouldBe 0.25
     }
 
-    "delaytime() with continuous pattern sets delayTime correctly" {
+    "delay(time = ...) with continuous pattern sets delayTime correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").delaytime(sine)
+        val p = note("a b c d").delay(time = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

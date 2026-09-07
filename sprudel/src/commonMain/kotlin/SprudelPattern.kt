@@ -15,6 +15,8 @@ import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.VoiceMergerFn
 import io.peekandpoke.klang.sprudel.lang.VoiceModifierFn
@@ -1023,6 +1025,38 @@ fun SprudelPattern._liftNumericField(
         sourceEvent.copy(data = sourceEvent.data.update(value))
             .prependLocations(controlEvent?.sourceLocations)
     }
+}
+
+/**
+ * Applies a pattern mapper to ONE numeric field of every event: `freq(mul(2))`, `bpf(freq)`.
+ *
+ * Three passes, one chain, no join: [read] copies the field into the value register, [mapper]
+ * runs on that, and [update] writes the value register back into the field. The value register is
+ * drained afterwards, which is the state `note()` and `sound()` leave it in.
+ *
+ * A mapper that yields nothing leaves the field unchanged: `bpf(freq)` on an event without a
+ * frequency keeps whatever `bandf` was, instead of clearing it. Copying an unset field must not
+ * destroy the target, and this holds for every setter regardless of how its own update treats
+ * `null` (decided 2026-09-07).
+ *
+ * Because there is no join, nothing is paired by time: every chord note maps its own field. The
+ * mapper may change structure (`freq(fast(2))` is legal and means what it says).
+ *
+ * See `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`.
+ */
+fun SprudelPattern._mapNumericField(
+    mapper: PatternMapperFn,
+    read: (SprudelVoiceData) -> Double?,
+    update: SprudelVoiceData.(Double?) -> SprudelVoiceData,
+): SprudelPattern {
+    return this
+        .reinterpretVoice { it.copy(value = read(it)?.asVoiceValue()) }
+        .let(mapper)
+        .reinterpretVoice { voice ->
+            val mapped = voice.value?.asDouble
+            val written = if (mapped == null) voice else voice.update(mapped)
+            written.copy(value = null)
+        }
 }
 
 /**

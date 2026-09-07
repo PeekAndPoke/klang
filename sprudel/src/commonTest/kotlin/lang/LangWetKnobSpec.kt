@@ -31,29 +31,29 @@ class LangWetKnobSpec : StringSpec({
         (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data
 
     "sprudel Kotlin door: wet knobs write the (unchanged) wire fields" {
-        firstData(note("c").roomWet(0.4)).room shouldBe 0.4
-        firstData(note("c").delayWet(0.3)).delay shouldBe 0.3
-        firstData(note("c").phaserWet(0.8)).phaserDepth shouldBe 0.8
-        firstData(note("c").phaserFloor(0.3)).phaserFloor shouldBe 0.3
-        firstData(note("c").bodyWet(0.5)).bodyMix shouldBe 0.5
-        firstData(note("c").vowelWet(0.6)).vowelMix shouldBe 0.6
+        firstData(note("c").room(0.4)).room shouldBe 0.4
+        firstData(note("c").delay(0.3)).delay shouldBe 0.3
+        firstData(note("c").phaser(wet = 0.8)).phaserDepth shouldBe 0.8
+        firstData(note("c").phaser(floor = 0.3)).phaserFloor shouldBe 0.3
+        firstData(note("c").body(wet = 0.5)).bodyMix shouldBe 0.5
+        firstData(note("c").vowel(wet = 0.6)).vowelMix shouldBe 0.6
     }
 
     "sprudel script door: wet knobs dispatch and write the same fields" {
-        firstData(SprudelPattern.compile("""note("c").roomWet(0.4)""")).room shouldBe 0.4
-        firstData(SprudelPattern.compile("""note("c").delayWet(0.3)""")).delay shouldBe 0.3
-        firstData(SprudelPattern.compile("""note("c").phaserWet(0.8)""")).phaserDepth shouldBe 0.8
-        firstData(SprudelPattern.compile("""note("c").phaserFloor(0.3)""")).phaserFloor shouldBe 0.3
-        firstData(SprudelPattern.compile("""note("c").bodyWet(0.5)""")).bodyMix shouldBe 0.5
-        firstData(SprudelPattern.compile("""note("c").vowelWet(0.6)""")).vowelMix shouldBe 0.6
+        firstData(SprudelPattern.compile("""note("c").room(0.4)""")).room shouldBe 0.4
+        firstData(SprudelPattern.compile("""note("c").delay(0.3)""")).delay shouldBe 0.3
+        firstData(SprudelPattern.compile("""note("c").phaser(wet = 0.8)""")).phaserDepth shouldBe 0.8
+        firstData(SprudelPattern.compile("""note("c").phaser(floor = 0.3)""")).phaserFloor shouldBe 0.3
+        firstData(SprudelPattern.compile("""note("c").body(wet = 0.5)""")).bodyMix shouldBe 0.5
+        firstData(SprudelPattern.compile("""note("c").vowel(wet = 0.6)""")).vowelMix shouldBe 0.6
     }
 
     "compound heads: the wet slot stays the head's first/second slot" {
-        val room = firstData(note("c").roomWet(0.4, 5.0))
+        val room = firstData(note("c").room(0.4, 5.0))
         room.room shouldBe 0.4
         room.roomSize shouldBe 5.0
 
-        val delay = firstData(note("c").delayWet(0.5, 0.25, 0.6))
+        val delay = firstData(note("c").delay(0.5, 0.25, 0.6))
         delay.delay shouldBe 0.5
         delay.delayTime shouldBe 0.25
         delay.delayFeedback shouldBe 0.6
@@ -64,15 +64,15 @@ class LangWetKnobSpec : StringSpec({
     }
 
     "phaserFloor stays ABSENT unless set — the engine's additive default 1.0 must rule" {
-        firstData(note("c").phaserWet(0.5)).phaserFloor shouldBe null
+        firstData(note("c").phaser(wet = 0.5)).phaserFloor shouldBe null
     }
 
     "phaserFloor crosses the WIRE boundary (toVoiceData) — set passes through, unset stays null" {
         // The sprudel accessor rows above stop BEFORE the wire; a dropped mapping line in
-        // toVoiceData() would make phaserFloor() a silent no-op in real playback while
+        // toVoiceData() would make phaser(floor = ...) a silent no-op in real playback while
         // every accessor row stays green.
-        firstData(note("c").phaserFloor(0.25)).toVoiceData().phaserFloor shouldBe 0.25
-        firstData(note("c").phaserWet(0.5)).toVoiceData().phaserFloor shouldBe null
+        firstData(note("c").phaser(floor = 0.25)).toVoiceData().phaserFloor shouldBe 0.25
+        firstData(note("c").phaser(wet = 0.5)).toVoiceData().phaserFloor shouldBe null
     }
 
     "ignitor Kotlin door: .wet()/.dryFloor() typed onto the node" {

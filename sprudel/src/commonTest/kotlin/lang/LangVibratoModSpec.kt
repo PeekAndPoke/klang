@@ -20,76 +20,52 @@ class LangVibratoModSpec : StringSpec({
         val amount = 0.5
 
         dslInterfaceTests(
-            "pattern.vibratoMod(depth)" to note(pat).vibratoMod(amount),
-            "script pattern.vibratoMod(depth)" to SprudelPattern.compile("""note("$pat").vibratoMod($amount)"""),
-            "string.vibratoMod(depth)" to pat.vibratoMod(amount),
-            "script string.vibratoMod(depth)" to SprudelPattern.compile(""""$pat".vibratoMod($amount)"""),
-            "vibratoMod(depth)" to note(pat).apply(vibratoMod(amount)),
-            "script vibratoMod(depth)" to SprudelPattern.compile("""note("$pat").apply(vibratoMod($amount))"""),
+            "pattern.vibrato(depth = depth)" to note(pat).vibrato(depth = amount),
+            "script pattern.vibrato(depth = depth)" to SprudelPattern.compile("""note("$pat").vibrato(depth = $amount)"""),
+            "string.vibrato(depth = depth)" to pat.vibrato(depth = amount),
+            "script string.vibrato(depth = depth)" to SprudelPattern.compile(""""$pat".vibrato(depth = $amount)"""),
+            "vibrato(depth = depth)" to note(pat).apply(vibrato(depth = amount)),
+            "script vibrato(depth = depth)" to SprudelPattern.compile("""note("$pat").apply(vibrato(depth = $amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.vibratoMod shouldBe amount
         }
     }
 
-    "reinterpret voice data as vibratoMod | seq(\"0.1 0.5\").vibratoMod()" {
-        val p = seq("0.1 0.5").vibratoMod()
+    "vibrato(depth = ...) sets VoiceData.vibratoMod depth" {
+        val p = note("a b").vibrato(depth = "0.1 0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.vibratoMod } shouldBe listOf(0.1, 0.5)
     }
 
-    "reinterpret voice data as vibratoMod | \"0.1 0.5\".vibratoMod()" {
-        val p = "0.1 0.5".vibratoMod()
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.vibratoMod } shouldBe listOf(0.1, 0.5)
-    }
-
-    "reinterpret voice data as vibratoMod | seq(\"0.1 0.5\").apply(vibratoMod())" {
-        val p = seq("0.1 0.5").apply(vibratoMod())
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.vibratoMod } shouldBe listOf(0.1, 0.5)
-    }
-
-    "vibratoMod() sets VoiceData.vibratoMod depth" {
-        val p = note("a b").vibratoMod("0.1 0.5")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.vibratoMod } shouldBe listOf(0.1, 0.5)
-    }
-
-    "vibratoMod() works as pattern extension" {
-        val p = note("c").vibratoMod("0.1")
+    "vibrato(depth = ...) works as pattern extension" {
+        val p = note("c").vibrato(depth = "0.1")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.vibratoMod shouldBe 0.1
     }
 
-    "vibratoMod() works as string extension" {
-        val p = "c".vibratoMod("0.1")
+    "vibrato(depth = ...) works as string extension" {
+        val p = "c".vibrato(depth = "0.1")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.vibratoMod shouldBe 0.1
     }
 
-    "vibratoMod() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").vibratoMod("0.1")""")
+    "vibrato(depth = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").vibrato(depth = "0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.vibratoMod shouldBe 0.1
     }
 
-    "vibratoMod() with continuous pattern sets vibratoMod correctly" {
+    "vibrato(depth = ...) with continuous pattern sets vibratoMod correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").vibratoMod(sine)
+        val p = note("a b c d").vibrato(depth = sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

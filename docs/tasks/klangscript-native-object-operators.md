@@ -28,7 +28,7 @@ checks for these names during operator and call dispatch. No new storage infrast
 > `runtime/ArgAlignment`), and the editor analyzer resolves callables from the KSP-emitted
 > docs registry. The `invoke` operator is now a prerequisite of two consumers:
 > `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md` (`Master(m => ...)`, `Pipeline(p => ...)`, later `Katalyst(...)`)
-> and `sprudel-field-accessors.md` (`gain(0.5)` on a callable accessor constant). This revision
+> and `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md` (`gain(0.5)` on a callable accessor constant). This revision
 > supersedes Steps 1 to 3a for `invoke`; Steps 3b/3c (arithmetic, comparison, unary) remain
 > valid designs but are NOT part of the configure-lambda work and stay unscheduled.
 
@@ -41,8 +41,8 @@ checks for these names during operator and call dispatch. No new storage infrast
 
 ### What changes
 
-**Registration is an annotation, not a helper.** `@KlangScript.Method(name = "invoke")` on a
-member of an `@KlangScript.Object` (or of a `@KlangScript.TypeExtensions` object) is all a library
+**Registration is an annotation, not a helper.** `@KlangScript.Invoke` on the `operator fun invoke`
+member of an `@KlangScript.Object` (2026-09-07; before that `@KlangScript.Method(name = "invoke")`) (or of a `@KlangScript.TypeExtensions` object) is all a library
 author writes. KSP already emits such a method as an extension method on the object's class with
 full `ParamSpec`s, so `Master(configure = m => ...)`, `Master()` and the trailing-lambda rule
 work exactly like on any other method. The `register*Operator` helpers of Step 2 are dropped;
@@ -59,8 +59,8 @@ tested against a form that already works:
 object KlangScriptMaster {
     @KlangScript.Method fun build(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = ...
     @KlangScript.Method fun default(): MasterDsl = MasterDsl.default
-    @KlangScript.Method(name = "invoke")
-    fun invoke(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = build(configure)
+    @KlangScript.Invoke
+    operator fun invoke(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = build(configure)
 }
 ```
 
@@ -93,8 +93,8 @@ when `name == "invoke"` and a receiver exists, render `Master(configure: ...)`. 
 the object's receiver like any method, so completion after `Master.` does not show `invoke`
 (filter it out there, it is not meant to be typed).
 
-**Field accessors (second consumer).** `sprudel-field-accessors.md` wants `gain` to be a
-`@KlangScript.Constant` whose class carries `@KlangScript.Method("invoke")`. Same mechanism, no
+**Field accessors (second consumer).** `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md` wants `gain` to be a
+`@KlangScript.Constant` whose class carries `@KlangScript.Invoke`. Same mechanism, no
 special casing: the constant's value is a `NativeObjectValue`, the interpreter finds `invoke` on
 its class. The only difference is the analyzer fallback above resolving through a registry
 PROPERTY (the constant) rather than an object; that is the same code path.

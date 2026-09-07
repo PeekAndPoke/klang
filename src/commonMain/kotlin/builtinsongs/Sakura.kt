@@ -57,7 +57,7 @@ let sub = Osc.sine().lowpass(200)
 
 let pad = Osc.supertri(x => x.voices(5).analog(5.0))
       .lowpass(freq = Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), q = 3, analog = Osc.slot.analog)
-      .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve("scurve")
+      .adsr(1.5, 3.0, 0.6, 1.5).adsrCurves("scurve", "scurve", "scurve")
 
 
 stack(
@@ -105,14 +105,15 @@ stack(
     ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.45).hpf(800)
     // High fifth
     ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.7).hpf(1000)
-  ).orbit(4).coarse(2).coarseos(2).filterWhen(x => x >= wait * 3).body("tube").bodyWet(0.3)
+  // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
+  ).orbit(4).coarse(amount = 2, oversample = 1).filterWhen(x => x >= wait * 3).body(material = "tube", wet = 0.3)
 
   // Noise
-  , sound("dust!2").gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr("0.1:1:1:0.1")
-  , sound("pink!3").gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr("0.1:1:1:0.1")
-  , sound("brown!4").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr("0.1:1:1:0.1")
+  , sound("dust!2").gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound("pink!3").gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound("brown!4").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr(0.1, 1, 1, 0.1)
  
-).roomWet(0.35, 7, 0.75).delayWet(0.3).delaytime(pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
+).room(0.35, 7, 0.75).delay(wet = 0.3, time = pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
 
 
 

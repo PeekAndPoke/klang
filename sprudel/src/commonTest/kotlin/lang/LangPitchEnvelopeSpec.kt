@@ -20,60 +20,46 @@ class LangPitchEnvelopeSpec : StringSpec({
         val amount = 0.1
 
         dslInterfaceTests(
-            "pattern.pattack(v)" to note(pat).pattack(amount),
-            "script pattern.pattack(v)" to SprudelPattern.compile("""note("$pat").pattack($amount)"""),
-            "string.pattack(v)" to pat.pattack(amount),
-            "script string.pattack(v)" to SprudelPattern.compile(""""$pat".pattack($amount)"""),
-            "pattack(v)" to note(pat).apply(pattack(amount)),
-            "script pattack(v)" to SprudelPattern.compile("""note("$pat").apply(pattack($amount))"""),
+            "pattern.penv(attack = v)" to note(pat).penv(attack = amount),
+            "script pattern.penv(attack = v)" to SprudelPattern.compile("""note("$pat").penv(attack = $amount)"""),
+            "string.penv(attack = v)" to pat.penv(attack = amount),
+            "script string.penv(attack = v)" to SprudelPattern.compile(""""$pat".penv(attack = $amount)"""),
+            "penv(attack = v)" to note(pat).apply(penv(attack = amount)),
+            "script penv(attack = v)" to SprudelPattern.compile("""note("$pat").apply(penv(attack = $amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pAttack shouldBe amount
         }
     }
 
-    "reinterpret voice data as pAttack | seq(\"0.1 0.2\").pattack()" {
-        val p = seq("0.1 0.2").pattack()
+    "penv(attack = ...) sets SprudelVoiceData.pAttack" {
+        val p = note("a b").penv(attack = "0.1 0.2")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.pAttack } shouldBe listOf(0.1, 0.2)
     }
 
-    "pattack() sets SprudelVoiceData.pAttack" {
-        val p = note("a b").pattack("0.1 0.2")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.pAttack } shouldBe listOf(0.1, 0.2)
-    }
-
-    "pattack() works as pattern extension" {
-        val p = note("c").pattack("0.1")
+    "penv(attack = ...) works as pattern extension" {
+        val p = note("c").penv(attack = "0.1")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.pAttack shouldBe 0.1
     }
 
-    "pattack() works as string extension" {
-        val p = "c".pattack("0.1")
+    "penv(attack = ...) works as string extension" {
+        val p = "c".penv(attack = "0.1")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.pAttack shouldBe 0.1
     }
 
-    "pattack() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").pattack("0.1")""")
+    "penv(attack = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").penv(attack = "0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.pAttack shouldBe 0.1
-    }
-
-    "patt() is an alias for pattack()" {
-        val p = note("c").patt("0.1")
-        val events = p.queryArc(0.0, 1.0)
         events[0].data.pAttack shouldBe 0.1
     }
 
@@ -84,45 +70,31 @@ class LangPitchEnvelopeSpec : StringSpec({
         val amount = 0.3
 
         dslInterfaceTests(
-            "pattern.pdecay(v)" to note(pat).pdecay(amount),
-            "script pattern.pdecay(v)" to SprudelPattern.compile("""note("$pat").pdecay($amount)"""),
-            "string.pdecay(v)" to pat.pdecay(amount),
-            "script string.pdecay(v)" to SprudelPattern.compile(""""$pat".pdecay($amount)"""),
-            "pdecay(v)" to note(pat).apply(pdecay(amount)),
-            "script pdecay(v)" to SprudelPattern.compile("""note("$pat").apply(pdecay($amount))"""),
+            "pattern.penv(decay = v)" to note(pat).penv(decay = amount),
+            "script pattern.penv(decay = v)" to SprudelPattern.compile("""note("$pat").penv(decay = $amount)"""),
+            "string.penv(decay = v)" to pat.penv(decay = amount),
+            "script string.penv(decay = v)" to SprudelPattern.compile(""""$pat".penv(decay = $amount)"""),
+            "penv(decay = v)" to note(pat).apply(penv(decay = amount)),
+            "script penv(decay = v)" to SprudelPattern.compile("""note("$pat").apply(penv(decay = $amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pDecay shouldBe amount
         }
     }
 
-    "reinterpret voice data as pDecay | seq(\"0.3 0.4\").pdecay()" {
-        val p = seq("0.3 0.4").pdecay()
+    "penv(decay = ...) sets SprudelVoiceData.pDecay" {
+        val p = note("a b").penv(decay = "0.3 0.4")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.pDecay } shouldBe listOf(0.3, 0.4)
     }
 
-    "pdecay() sets SprudelVoiceData.pDecay" {
-        val p = note("a b").pdecay("0.3 0.4")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.pDecay } shouldBe listOf(0.3, 0.4)
-    }
-
-    "pdecay() works as pattern extension" {
-        val p = note("c").pdecay("0.3")
+    "penv(decay = ...) works as pattern extension" {
+        val p = note("c").penv(decay = "0.3")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.pDecay shouldBe 0.3
-    }
-
-    "pdec() is an alias for pdecay()" {
-        val p = note("c").pdec("0.3")
-        val events = p.queryArc(0.0, 1.0)
         events[0].data.pDecay shouldBe 0.3
     }
 
@@ -133,45 +105,31 @@ class LangPitchEnvelopeSpec : StringSpec({
         val amount = 0.5
 
         dslInterfaceTests(
-            "pattern.prelease(v)" to note(pat).prelease(amount),
-            "script pattern.prelease(v)" to SprudelPattern.compile("""note("$pat").prelease($amount)"""),
-            "string.prelease(v)" to pat.prelease(amount),
-            "script string.prelease(v)" to SprudelPattern.compile(""""$pat".prelease($amount)"""),
-            "prelease(v)" to note(pat).apply(prelease(amount)),
-            "script prelease(v)" to SprudelPattern.compile("""note("$pat").apply(prelease($amount))"""),
+            "pattern.penv(release = v)" to note(pat).penv(release = amount),
+            "script pattern.penv(release = v)" to SprudelPattern.compile("""note("$pat").penv(release = $amount)"""),
+            "string.penv(release = v)" to pat.penv(release = amount),
+            "script string.penv(release = v)" to SprudelPattern.compile(""""$pat".penv(release = $amount)"""),
+            "penv(release = v)" to note(pat).apply(penv(release = amount)),
+            "script penv(release = v)" to SprudelPattern.compile("""note("$pat").apply(penv(release = $amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pRelease shouldBe amount
         }
     }
 
-    "reinterpret voice data as pRelease | seq(\"0.5 0.6\").prelease()" {
-        val p = seq("0.5 0.6").prelease()
+    "penv(release = ...) sets SprudelVoiceData.pRelease" {
+        val p = note("a b").penv(release = "0.5 0.6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.pRelease } shouldBe listOf(0.5, 0.6)
     }
 
-    "prelease() sets SprudelVoiceData.pRelease" {
-        val p = note("a b").prelease("0.5 0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.pRelease } shouldBe listOf(0.5, 0.6)
-    }
-
-    "prelease() works as pattern extension" {
-        val p = note("c").prelease("0.5")
+    "penv(release = ...) works as pattern extension" {
+        val p = note("c").penv(release = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.pRelease shouldBe 0.5
-    }
-
-    "prel() is an alias for prelease()" {
-        val p = note("c").prel("0.5")
-        val events = p.queryArc(0.0, 1.0)
         events[0].data.pRelease shouldBe 0.5
     }
 
@@ -231,45 +189,31 @@ class LangPitchEnvelopeSpec : StringSpec({
         val amount = 0.5
 
         dslInterfaceTests(
-            "pattern.pcurve(v)" to note(pat).pcurve(amount),
-            "script pattern.pcurve(v)" to SprudelPattern.compile("""note("$pat").pcurve($amount)"""),
-            "string.pcurve(v)" to pat.pcurve(amount),
-            "script string.pcurve(v)" to SprudelPattern.compile(""""$pat".pcurve($amount)"""),
-            "pcurve(v)" to note(pat).apply(pcurve(amount)),
-            "script pcurve(v)" to SprudelPattern.compile("""note("$pat").apply(pcurve($amount))"""),
+            "pattern.penv(curve = v)" to note(pat).penv(curve = amount),
+            "script pattern.penv(curve = v)" to SprudelPattern.compile("""note("$pat").penv(curve = $amount)"""),
+            "string.penv(curve = v)" to pat.penv(curve = amount),
+            "script string.penv(curve = v)" to SprudelPattern.compile(""""$pat".penv(curve = $amount)"""),
+            "penv(curve = v)" to note(pat).apply(penv(curve = amount)),
+            "script penv(curve = v)" to SprudelPattern.compile("""note("$pat").apply(penv(curve = $amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pCurve shouldBe amount
         }
     }
 
-    "reinterpret voice data as pCurve | seq(\"0.5 1.5\").pcurve()" {
-        val p = seq("0.5 1.5").pcurve()
+    "penv(curve = ...) sets SprudelVoiceData.pCurve" {
+        val p = note("a b").penv(curve = "0.5 1.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.pCurve } shouldBe listOf(0.5, 1.5)
     }
 
-    "pcurve() sets SprudelVoiceData.pCurve" {
-        val p = note("a b").pcurve("0.5 1.5")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.pCurve } shouldBe listOf(0.5, 1.5)
-    }
-
-    "pcurve() works as pattern extension" {
-        val p = note("c").pcurve("0.5")
+    "penv(curve = ...) works as pattern extension" {
+        val p = note("c").penv(curve = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.pCurve shouldBe 0.5
-    }
-
-    "pcrv() is an alias for pcurve()" {
-        val p = note("c").pcrv("0.5")
-        val events = p.queryArc(0.0, 1.0)
         events[0].data.pCurve shouldBe 0.5
     }
 
@@ -280,52 +224,38 @@ class LangPitchEnvelopeSpec : StringSpec({
         val amount = 0.0
 
         dslInterfaceTests(
-            "pattern.panchor(v)" to note(pat).panchor(amount),
-            "script pattern.panchor(v)" to SprudelPattern.compile("""note("$pat").panchor($amount)"""),
-            "string.panchor(v)" to pat.panchor(amount),
-            "script string.panchor(v)" to SprudelPattern.compile(""""$pat".panchor($amount)"""),
-            "panchor(v)" to note(pat).apply(panchor(amount)),
-            "script panchor(v)" to SprudelPattern.compile("""note("$pat").apply(panchor($amount))"""),
+            "pattern.penv(anchor = v)" to note(pat).penv(anchor = amount),
+            "script pattern.penv(anchor = v)" to SprudelPattern.compile("""note("$pat").penv(anchor = $amount)"""),
+            "string.penv(anchor = v)" to pat.penv(anchor = amount),
+            "script string.penv(anchor = v)" to SprudelPattern.compile(""""$pat".penv(anchor = $amount)"""),
+            "penv(anchor = v)" to note(pat).apply(penv(anchor = amount)),
+            "script penv(anchor = v)" to SprudelPattern.compile("""note("$pat").apply(penv(anchor = $amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pAnchor shouldBe amount
         }
     }
 
-    "reinterpret voice data as pAnchor | seq(\"0.0 1.0\").panchor()" {
-        val p = seq("0.0 1.0").panchor()
+    "penv(anchor = ...) sets SprudelVoiceData.pAnchor" {
+        val p = note("a b").penv(anchor = "0.0 1.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.pAnchor } shouldBe listOf(0.0, 1.0)
     }
 
-    "panchor() sets SprudelVoiceData.pAnchor" {
-        val p = note("a b").panchor("0.0 1.0")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.pAnchor } shouldBe listOf(0.0, 1.0)
-    }
-
-    "panchor() works as pattern extension" {
-        val p = note("c").panchor("0.0")
+    "penv(anchor = ...) works as pattern extension" {
+        val p = note("c").penv(anchor = "0.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.pAnchor shouldBe 0.0
     }
 
-    "panc() is an alias for panchor()" {
-        val p = note("c").panc("0.0")
-        val events = p.queryArc(0.0, 1.0)
-        events[0].data.pAnchor shouldBe 0.0
-    }
-
     // ---- Combined test ----
 
     "pitch envelope functions work together" {
-        val p = note("c").pattack("0.1").pdecay("0.3").prelease("0.5").penv("12")
+        val p = note("c").penv(attack = "0.1", decay = "0.3", release = "0.5", amount = "12")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

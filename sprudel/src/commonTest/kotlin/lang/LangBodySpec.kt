@@ -71,36 +71,36 @@ class LangBodySpec : StringSpec({
         voiceData.filters.filters.size shouldBe 0
     }
 
-    "bodyWet() overrides the dry/wet mix" {
-        val events = note("c3").body("tube").bodyWet(0.6).queryArc(0.0, 1.0)
+    "body(wet = ...) overrides the dry/wet mix" {
+        val events = note("c3").body(material = "tube", wet = 0.6).queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
 
         val bodyFilter = voiceData.filters.filters[0] as FilterDef.Body
         bodyFilter.mix shouldBe 0.6
     }
 
-    "bodyWet() passes raw values to the wire (the [0, 1] coercion is the ENGINE's, since C4)" {
+    "body(wet = ...) passes raw values to the wire (the [0, 1] coercion is the ENGINE's, since C4)" {
         listOf(1.5, 5.0, 100.0).forEach { mix ->
-            val events = note("c3").body("brass").bodyWet(mix).queryArc(0.0, 1.0)
+            val events = note("c3").body(material = "brass", wet = mix).queryArc(0.0, 1.0)
             val bodyFilter = events[0].data.toVoiceData().filters.filters[0] as FilterDef.Body
             bodyFilter.mix shouldBe mix
         }
     }
 
-    "bodyFloor() is null by default (engine default) and settable" {
+    "body(floor = ...) is null by default (engine default) and settable" {
         val defaulted = note("c3").body("wood").queryArc(0.0, 1.0)[0]
             .data.toVoiceData().filters.filters[0] as FilterDef.Body
         defaulted.floor shouldBe null
 
-        val overridden = note("c3").body("wood").bodyFloor(0.2).queryArc(0.0, 1.0)[0]
+        val overridden = note("c3").body(material = "wood", floor = 0.2).queryArc(0.0, 1.0)[0]
             .data.toVoiceData().filters.filters[0] as FilterDef.Body
         overridden.floor shouldBe 0.2
     }
 
-    "body params survive the grouped merge (body + bodyWet + bodyFloor)" {
+    "body params survive the grouped merge (material + wet + floor)" {
         // The wire carries the raw value; the [0, 1] coercion is the ENGINE's
         // (ParallelMixFilter, C4) — the surface knob is documented as [0, 1].
-        val events = note("c3").body("brass").bodyWet(0.8).bodyFloor(0.15).queryArc(0.0, 1.0)
+        val events = note("c3").body(material = "brass", wet = 0.8, floor = 0.15).queryArc(0.0, 1.0)
         val bodyFilter = events[0].data.toVoiceData().filters.filters[0] as FilterDef.Body
         events[0].data.body shouldBe "brass"
         bodyFilter.mix shouldBe 0.8

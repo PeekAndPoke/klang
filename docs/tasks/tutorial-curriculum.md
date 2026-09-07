@@ -14,10 +14,24 @@
 > The song-usage counts below (line "Master: 5/14 songs ...") predate this; the five songs now use
 > the `Master(m => ...)` form.
 
+> **Second hand-off, from the sprudel field accessors, 2026-09-07**
+> (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`, four batches, all specced and reviewed): every numeric
+> setter is now also a READER and accepts a mapper, so two spellings that did nothing before are
+> real surface:
+> - `gain(mul(0.5))`: change a knob relative to what the chain already set.
+> - `bpf(freq)`, `bpf(freq.mul(2))`: one knob reads another field of the same event.
+>
+> 88 accessors, 54 alias constants, and a built-in song (**Greensleeves**) built on it. This is
+> **purely additive**: before the sweep a mapper handed to a setter was silently dropped and the
+> field cleared, which was a bug nobody taught, so no shipped lesson needs rewriting. Teaching it
+> is **A9**'s job (ladder and obligations register below); no other lesson should introduce it in
+> passing.
+
 Status: **ACTIVE**, last updated 2026-08-31. **17 lessons shipped**: the Stage-1 onramp (B1-B3), all of
 Stage 2 (A1-A4, B4-B7), and Stage 3 so far (A5, A6, A7, B8, B9, B10). The ladder below is no longer a
 proposal, it is the contract; the obligations register is the debt ledger against it. Next slots: **A8
-Body** and **B11 Chords & voicing**, which close Stage 3. Stage 4 (C1-C10, the Motor track) is unwritten.
+Body**, **B11 Chords & voicing** and **A9 The note moves the knobs** (recorded 2026-09-07, the surface
+shipped before the lesson), which close Stage 3. Stage 4 (C1-C10, the Motor track) is unwritten.
 A6 and A7 are authored but have NOT been through the review loop, and the by-ear pass is owed on both.
 
 ## Why (diagnosis, short version)
@@ -32,7 +46,7 @@ Ignitor / Master / Pipeline (they weren't on the generator's function allow-list
 Ground truth from the 14 built-in songs (full tally in session analysis, key facts):
 
 - Used by **all 14** songs: `stack`, `note`/`n`, `sound`/`s`, `gain`, `adsr`. Second tier (10+):
-  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `roomWet`, `postgain`, `distort`, `onepole`, `analog`.
+  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `room`, `postgain`, `distort`, `onepole`, `analog`.
 - Signals-as-modulators is the highest-value intermediate concept: 72 `.range(` calls across 7 songs.
 - Mini-notation actually used: sequences, `~`, `[]`, `<>`, `*`, `!`, `@`, comma-chords, `|`, `` >/n `` suffix,
   `struct` gates. Never used: polymeter. `.euclid()` in one song only.
@@ -130,9 +144,9 @@ stages must not carry it.
 | A2 | ADSR — a note's shape in time | `adsr` (amp envelope), dedicated lesson (currently missing) | — | Same phrase morphs pluck → organ → pad by moving one letter at a time. *Listen for: attack snap vs. fade-in.* |
 | B4 | Subdivision | `[]`, `*` | — | Hi-hat line densifies. *Listen for: how `[hh hh]` fits the same time slot.* |
 | B5 | Alternation & repetition | `<>`, `!`, `@` | — | Bassline that changes per cycle (Sandsturm's `<bar1 bar2 bar3 bar4>` idiom). *Listen for: the 4-bar rotation.* |
-| A3 | Filters — LPF & HPF | `lpf`, `hpf`, `lpq` | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |
-| A4 | The filter envelope | `lpadsr`, `lpe` | `lpq` | The classic synth pluck: cutoff rides its own envelope. *Listen for: the "öw" the filter sweep adds to each note.* (Zero coverage today.) |
-| B6 | Layers — stack & orbit | `stack`, `orbit` | `roomWet`+`rsize` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
+| A3 | Filters — LPF & HPF | `lpf`, `hpf` (with the `q` slot) | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |
+| A4 | The filter envelope | the `env`, `attack`, `decay`, `sustain`, `release` slots of `lpf` | `q` | The classic synth pluck: cutoff rides its own envelope. *Listen for: the "öw" the filter sweep adds to each note.* (Zero coverage today.) |
+| B6 | Layers — stack & orbit | `stack`, `orbit` | `room(wet, size)` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
 | B7 | Chords in one step | comma-chords `[0,7,12]`, random pick `\|` | — | Power-chord stabs; a step that gambles. *Listen for: which variant played this cycle.* |
 
 ### Stage 3 — Where the tracks meet
@@ -143,10 +157,11 @@ stages must not carry it.
 | B8 | Scales & melodies | `n()`, `scale()`, `transpose` | — | Numbers instead of note names; same line, swap the scale. *Listen for: major vs. minor mood flip.* |
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
-| A6 | Thickness — unison, spread, analog | `unison`, `spread`, `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
-| A7 | Space & dirt | `roomWet`/`rsize`, `delayWet` family, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
-| A8 | Body | `body()`, `bodyWet` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
+| A6 | Thickness — unison, spread, analog | `unison` (with the `spread` slot), `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
+| A7 | Space & dirt | `room`, `delay`, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
+| A8 | Body | `body(material, wet)` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
+| A9 | The note moves the knobs | field accessors: a knob changed relative to itself (`gain(mul(0.5))`), and a knob that reads another field (`bpf(freq)`, `bpf(freq.mul(2))`) | `bpf` and the `mul`/`add` mappers, none of which anything teaches yet | Pink noise through a bandpass sitting on the note: the wind whistles the melody. *Listen for: noise turning into a pitch as the filter locks onto each note.* Built-in song **Greensleeves** is the reference; the surface landed 2026-09-07, the lesson did not. |
 
 ### Stage 4 — Track C: the Motor
 
@@ -191,19 +206,20 @@ stages must not carry it.
 - **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
   literally; redeems B1's mixing promise by name in §2. ⚠️ Engine truth learned in its review
   (recorded in the lesson's KDoc + docs/tasks/orbit-level-effect-docs.md): reverb processor is
-  per-orbit but `roomWet` is a per-voice SEND; bare `roomWet()` is SILENT (gate needs roomsize); orbit
+  per-orbit but `room(wet)` is a per-voice SEND; a bare `room(wet)` is SILENT (gate needs `size`); orbit
   bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
 - **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
-  `roomWet` + `rsize` preview under its own intuitions, plus the delay family, `distort`,
-  `onepole` and `postgain`. Biggest `teaches` list in the corpus (8) and the only `Standard`
+  `room(wet, size)` preview under its own intuitions, plus the delay family, `distort`,
+  `onepole` and `postgain`. One of the two biggest `teaches` lists in the corpus (5) and the only `Standard`
   scope; if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
   (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
   (a) BOTH space effects are sends WITH A GATE and the gate is the SECOND number, not the
   send: reverb is inactive unless `roomSize >= 0.01` (defaults to 0.0) and delay is Off
-  unless `time >= 0.01` (defaults to 0.0), so a bare `roomWet(0.4)` and a bare
-  `delayWet(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
-  three silent `KlangScript(Playable)` KDoc examples were fixed at source in `lang_effects.kt`.
+  unless `time >= 0.01` (defaults to 0.0), so a bare `room(0.4)` and a bare
+  `delay(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
+  three silent `KlangScript(Playable)` KDoc examples were fixed at source in the reverb and delay
+  files (`lang_effects_reverb.kt`, `lang_effects_delay.kt`).
   (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
   distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
   (c) `gain` and `postgain` are BOTH applied at the voice output in SendRenderer, so `gain`
@@ -212,13 +228,13 @@ stages must not carry it.
   and mute/solo scale `gain` only, which is now what §6 teaches (and the misleading
   "applied before synthesis" line in the `postgain` KDoc was corrected at source too).
   Open: review loop not run; the dry-vs-distorted pair is a render-QA level item by nature.
-- **A7 (space & dirt):** B6 previews `roomWet` + `rsize` ("how much goes in" / "how big the room is")
+- **A7 (space & dirt):** B6 previews `room(wet, size)` ("how much goes in" / "how big the room is")
   and points to "a Sound-track lesson still to come" — A7 must deliver both under those intuitions.
 - **B11 (chords & voicing):** B7 defers harmony ("Which notes agree like this, and which clash …
   a chords lesson still to come takes that up properly") and licenses only the power chord; B11
   must pick that up. B7 also glossed "riff" ("a short figure that repeats") — reuse, don't re-gloss.
 - **A8 (body resonator):** A3 spends **"body"** as the standing term for the low half of the
-  spectrum ("body below, sparkle above"). A8 teaches `body()`/`bodyWet` — the cabinet resonator —
+  spectrum ("body below, sparkle above"). A8 teaches `body(material, wet)` — the cabinet resonator —
   and must disambiguate the collision explicitly at first use, the way A6 must for "voice".
 - **B5 re-licences "bar" (decided in review):** B1 retired the word; B5 brings it back with a
   split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth
@@ -248,8 +264,8 @@ stages must not carry it.
   the stack is SUM-NORMALIZED, so layer-count A/Bs are level-matched by construction; defaults
   are `voices` 8, `spread` 0.2, `analog` 0.0, so a bare `sound("supersaw")` is already eight
   layers; `spread` is in SEMITONES and `analog` is peak drift in CENTS (the sprudel KDoc claimed
-  0.0-1.0 and was WRONG, corrected at source in `lang_osc_addons.kt` the way A4's `lpe` was, and
-  eight stale `.detune(0.3)` examples on `unison`/`uni`/`voices` were repaired at the same time,
+  0.0-1.0 and was WRONG, corrected at source in `lang_synthesis_oscparam.kt` the way A4's `lpe`
+  was, and eight stale `.detune(0.3)` examples on `unison`/`uni`/`voices` were repaired at the same time,
   since sprudel's `detune()` no longer exists); the slow drift layer is seeded at CENTRE, so
   drift only develops on HELD notes, which is why the lesson's drift section wears A2's pad
   shape plus B9's `.slow(2)`. Licensed term: "unison layers". Open: the compile gate has not
@@ -262,6 +278,54 @@ stages must not carry it.
   ENGINE sense ("Voices are routed to a Cylinder by their Orbit") — resolve that collision once,
   in one place, when a lesson first touches engine voices. A1 also names `supersaw` among the
   "further voices" promised for later lessons; A6 owns delivering it.
+
+- **A9 (field accessors) NOT WRITTEN, recorded 2026-09-07 so it cannot be forgotten.** The surface
+  shipped before its lesson. Every other row here is a promise one lesson made to another; this one
+  is a promise the ENGINE made to the curriculum. 88 accessors and 54 alias constants landed with
+  specs in a pilot plus four batches (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`), a built-in song was
+  written on them (**Greensleeves**, the wind whistling the tune), and the curriculum says nothing.
+  What the lesson owes:
+  - **Both roles, one idea.** A name like `gain` is the setter it always was, AND takes a mapper
+    that changes the field relative to what the chain already set (`gain(mul(0.5))`), AND, bare,
+    reads its own field so another knob can use it (`bpf(freq)`, `bpf(freq.mul(2))`). Same text in
+    KlangScript and Kotlin, character for character (door-parity spec exists).
+  - **The order rule, which is the one thing a reader will trip over.** An accessor reads what the
+    chain has set SO FAR: `note("c e").bpf(freq)` works, `bpf(freq).note("c e")` writes nothing,
+    because `freqHz` was still unset when it read. Decision D6 in the plan: documented, not
+    engineered around. A "Try it" that swaps the two lines and gets silence teaches it honestly.
+  - **It is the sequel to Signals Move the Knobs**, and should be written as one: A5 taught that
+    something from OUTSIDE the pattern (`sine`, `perlin`, `.range()`) can move a knob; A9 teaches
+    that the pattern's OWN numbers can. Track A for that reason, even though the mechanism is
+    pattern-surface. Difficulty is probably Advanced; A5 is the prerequisite, not the carrier kit.
+  - **Prerequisites nothing teaches yet.** `bpf` appears in NO lesson (A3 teaches `lpf`, `hpf`
+    only), and `mul`/`add` as standalone mappers appear in NO lesson. Both are needed for the
+    headline example, so A9 either introduces them as declared previews (principle 3) or picks a
+    demo built from taught filters. The bandpass is the better teacher here (a filter that keeps a
+    band is what makes a pitch out of noise), so introducing it is the likelier call.
+  - **The finale is Greensleeves REDUCED, not Greensleeves.** The song also uses `chord()` +
+    `voicing()` (B11's), `filterWhen` (C8's), `perlin.seg()` and `late()` (nothing teaches either),
+    so it cannot be pasted in whole without breaking principle 5. Take the whistle line
+    (`s("pink").bpf(freq = freq.mul(...), q = ...)`) over a melody the reader already has, and link the
+    song for the full thing.
+  - **"Every knob" is FALSE in two ways, so never say it.** String and boolean setters (`note`, `n`,
+    `sound`, `bank`, `scale`, `vowel`, `body`, `unit`, `loop`, the `*shape`/`*curve` family) are
+    won't-implement (maintainer, 2026-09-07), and the fields that only have a compound door and no accessor yet are down to the compressor's
+    other slots (the filter envelope stages got theirs 2026-09-07 as `lpf.attack` and friends)
+    (`docs/tasks-archive/2026-09/20260907-sprudel-accessors-compound-slots.md`). "Every NUMBER knob, with a door of its own"
+    is the true sentence.
+  - **A mapper handed to a setter that lacks the branch is still silently dropped, with no
+    diagnostic** (OPEN in the accessor plan). If that is still true when A9 is written, the lesson
+    must not encourage exploratory guessing at which knobs read.
+  - ⚠️ **Engine gaps found during the sweep, documented as "reserved" in the object KDocs, that must
+    never appear in a lesson example:** `unison(pan)` (was `panSpread`) has no engine stage at all; `density` is the
+    dust grain rate, not a unison knob; `duck(attack)` is the recovery time (the duck-down is
+    instant); `penv(curve)` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not read by
+    `VoiceFactory`; negative `speed` is silence, not reverse.
+  - **Title is provisional.** "The note moves the knobs" pairs with A5 and matches the headline
+    example, but §2 generalizes past the note (`pan(gain)` is just as legal). Settle it when the
+    lesson is written; it goes in `Tut` (`TutorialModel.kt`) either way.
+  - **Also owed: a Lexikon entry** for the concept (Pattern domain, `Mapping` category fits), per
+    principle 7, since the per-function docs already generate themselves from the KDoc.
 
 ### Extras shelf (not on the path)
 

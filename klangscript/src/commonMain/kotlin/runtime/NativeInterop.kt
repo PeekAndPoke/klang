@@ -7,6 +7,7 @@ package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptEngine
+import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
 import io.peekandpoke.klang.script.runtime.CallArgs.Companion.resolve
 import kotlin.reflect.KClass
@@ -534,7 +535,7 @@ sealed class CallArgs {
  */
 object NativeOperatorNames {
     /** `obj(a, b)`: a callable object, e.g. `Master(m => m.gain(2))`. */
-    const val INVOKE = "invoke"
+    const val INVOKE = KlangScript.Invoke.NAME
 }
 
 /**

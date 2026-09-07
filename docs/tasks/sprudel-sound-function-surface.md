@@ -43,7 +43,8 @@ problems with their current surface:
 
 ## Current state (grounding)
 
-- Defined in `sprudel/src/commonMain/kotlin/lang/addons/lang_snd_addons.kt`.
+- Defined in `sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt` and
+  `lang_synthesis_snd_super.kt`.
 - Each function: a `voiceModifier` splits the single string on `":"`, `toDoubleOrNull()`s each field, and
   maps them onto oscParams via `withOscParams("decay" to parts[0], "brightness" to parts[1], …)`. Empty
   args → bare `copy(sound = Named(...))`; non-empty → `_applyControlFromParams(...)` so the **composite

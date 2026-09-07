@@ -55,26 +55,26 @@ let guitar = (() => {
 
 stack( // Gitarre! ------------------------------------------------------------------------------------------------------------------------------------------
   morse("Gitarre!").n("-5").scale("c4:chromatic").sound("tri").clip(0.5).orbit(7).fast(2).transpose(tp)
-    .gain(0.8).distort(1).onepole(17814).postgain("0.25 0.10 0.15 0.25".slow(stay)).hpf(1800).lpf(2450).lpe(19).lpq(1.5).pan(0.5) // .solo()
+    .gain(0.8).distort(1).onepole(17814).postgain("0.25 0.10 0.15 0.25".slow(stay)).hpf(1800).lpf(freq = 2450, env = 19, q = 1.5).pan(0.5) // .solo()
   ,// Melody 1 ----------------------------------------------------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").hpf(600).lpf(3100).lpe(15.9).lpq(1.50).clip(0.96) // .solo()
-    .s(guitar).adsrOff().oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.05).postgain(0.120).body("mahogany").bodyWet(0.5)
+    .orbit(1).fast(4).scale("C3:chromatic").hpf(600).lpf(freq = 3100, env = 15.9, q = 1.50).clip(0.96) // .solo()
+    .s(guitar).adsrOff().oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.05).postgain(0.120).body(material = "mahogany", wet = 0.5)
     .transpose(tp).pan(0.25).superimpose(pan(0.75)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 16)
   , // Melody 2 ---------------------------------------------------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0  8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").hpf(1200).lpf(3200).lpe(15.9).lpq(1.50).clip(0.96).late(0.001)  // . solo()
-    .s(guitar).adsrOff().oscp("drive", drive * 0.9).oscp("brightness", 6200).oscp("spread", 0.04).postgain(0.110).body("oak").bodyWet(0.5)
+    .orbit(2).fast(4).scale("C4:chromatic").hpf(1200).lpf(freq = 3200, env = 15.9, q = 1.50).clip(0.96).late(0.001)  // . solo()
+    .s(guitar).adsrOff().oscp("drive", drive * 0.9).oscp("brightness", 6200).oscp("spread", 0.04).postgain(0.110).body(material = "oak", wet = 0.5)
     .transpose(tp).pan(0.10).superimpose(pan(0.90)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,5|10|10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|10|17|17|17|17|22]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9925).hpf(110).lpf(2950).lpe(14).lpq(1.50).postgain(0.15)
-    .s(guitar).adsrOff().oscparam("drive", drive).oscp("brightness", 6000).oscp("spread", 0.09).body("cedar").bodyWet(0.5) //  . mute()
+  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9925).hpf(110).lpf(freq = 2950, env = 14, q = 1.50).postgain(0.15)
+    .s(guitar).adsrOff().oscparam("drive", drive).oscp("brightness", 6000).oscp("spread", 0.09).body(material = "cedar", wet = 0.5) //  . mute()
     .transpose(tp).pan(0.40).superimpose(pan(0.60).late(0.001)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay >= 4) //  .solo()
   , // Bass -------------------------------------------------------------------------------------------------------------------------------------------------
   cat(n(`<[0]                                     [[0]!3 ~                     ~!12]
@@ -82,18 +82,19 @@ stack( // Gitarre! -------------------------------------------------------------
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8] [7]]                    [[[8]!4 [8]!3 [10]]          [10]*8]>`).repeat(2),
   ).orbit(4).scale("C2:chromatic").clip(0.95).sound("saw").gain(1.5).distort(0.8, "tube", 4).analog(1).postgain(0.17)
-    .adsr(0.005, 0.5, 0.2, 0.025).lpadsr(0.005, 0.1, 0.0, 0.075).hpf(70).lpf(180).lpe(52.7).lpq(1).velocity("<[1.0 0.95 0.975 0.95]>")
+    .adsr(0.005, 0.5, 0.2, 0.025).lpf(attack = 0.005, decay = 0.1, sustain = 0.0, release = 0.075).hpf(70).lpf(freq = 180, env = 52.7, q = 1).velocity("<[1.0 0.95 0.975 0.95]>")
     .pan(0.55).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()
   , // Noise ------------------------------------------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").orbit(5).bpf("1800 600 1200 600").gain("0.1") // .solo()
-  ,note("a").sound("brown").gain(0.1).hpf(3000).lpf(13500).crush(6).crushos(4) // .solo()
+  // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
+  ,note("a").sound("brown").gain(0.1).hpf(3000).lpf(13500).crush(amount = 6, oversample = 1) // .solo()
   , // Drums 1 ----------------------------------------------------------------------------------------------------------------------------------------------
   cat(s(`<[lt,sd]                                 [[lt,sd]!3 ~                ~!12]
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
   ).orbit(6).early(0.002).adsr(0.005, 0.2, 0.2, 0.5).gain(0.60).hpf(90).lpf(11500)
-    .superimpose(bpf(195).bpq(1.1).gain(0.2)).filterWhen(t => t % stay >= 3.95)  // .solo()
+    .superimpose(bpf(195).bpf(q = 1.1).gain(0.2)).filterWhen(t => t % stay >= 3.95)  // .solo()
   , // Drums 1 ----------------------------------------------------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
     .orbit(7).late(0.001).adsr(0.007, 0.2, 0.9, 0.7).gain(0.85).hpf(800).lpf(12500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()

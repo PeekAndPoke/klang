@@ -27,7 +27,7 @@ package io.peekandpoke.klang.audio_be.filters
  * 32 samples ≈ 0.67 ms at 48 kHz. Long enough to mask the click, short enough
  * to add no audible lag to a swept envelope.
  *
- * If fast-attack `lpe` patches start to feel "soft" / lagging, drop to 8 or 16
+ * If fast-attack `lpf(env)` patches start to feel "soft" / lagging, drop to 8 or 16
  * — but verify with a click test on a static-cutoff patch first to make sure
  * the discontinuity is still masked.
  *

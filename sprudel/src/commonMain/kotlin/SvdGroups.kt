@@ -124,7 +124,7 @@ data class SvdDelay(
     var delay: Double? = null,
     var delayTime: Double? = null,
     var delayFeedback: Double? = null,
-    /** Ceiling the delay feedback saturates toward. `delaycap`/`dcap`; default 1.0 at the engine. */
+    /** Ceiling the delay feedback saturates toward. `delay(cap = ...)`; default 1.0 at the engine. */
     var delayCap: Double? = null,
 )
 

@@ -1,10 +1,15 @@
-# Configurable filter envelopes (lpadsr curves, and beyond)
+# Configurable filter envelopes (filter curves, and beyond)
 
 ## Context
 
-The filter envelope (`lpadsr`) is only *partly* configurable today: you can set its **times** (`.lpadsr`),
-**depth** (`.lpe`), **Q** (`.lpq`) and base **cutoff** (`.lpf`) — but **not its curve shapes**. Unlike the amp
-ADSR (`.adsrCurves("a", "d", "r")`), there is no `lpadsrCurves`, and `FilterEnvDef` carries no curve fields, so the
+Decided 2026-09-07 (maintainer, in `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`): when the engine grows the fields, the doors
+are `lpCurves`, `hpCurves`, `bpCurves` (not `lpadsrCurves`), each an object with the setter only, like
+`adsrCurves`; the singular curve door does not come back.
+
+The filter envelope is only *partly* configurable today: you can set its **times** (`lpf(attack, decay,
+sustain, release)`), **depth** (`lpf(env)`), **Q** (`lpf(q)`) and base **cutoff** (`lpf(freq)`) — but **not its
+curve shapes**. Unlike the amp ADSR (`adsrCurves("a", "d", "r")`), there is no filter curve door, and
+`FilterEnvDef` carries no curve fields, so the
 filter sweep is locked to whatever `Voice.Envelope`'s defaults are.
 
 As of 2026-06-19 those defaults are **Exponential / Exponential / Exponential** for all envelopes (amp, filter,
@@ -24,8 +29,8 @@ Sprudel DSL** — plus a note on ignitor-internal filters.
   (`Voice.kt:157-159`). The renderer already supports per-curve filter envelopes
   (`EnvelopeCalc.calculateControlRateEnvelope` reads `env.decayCurve` / `env.releaseCurve`) — it's just never
   fed anything but the default.
-- **Sprudel:** `.lpadsr` / `.lpe` / `.lpq` / `.lpf` set times/depth/Q/cutoff (`lang_filters.kt`,
-  `lang_effects_addons.kt`); `FilterEnvDef` is assembled in `SprudelVoiceData.kt:~772-782` from the `Svd*`
+- **Sprudel:** the `lpf` compound sets cutoff, Q, depth and the envelope times through its slots
+  (`lang_filters_lpf.kt`, since 2026-09-07); `FilterEnvDef` is assembled in `SprudelVoiceData.kt:~772-782` from the `Svd*`
   filter fields. **No curve fields, no curve DSL.**
 
 The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → `AdsrDef.Std` curves → resolve →
@@ -56,14 +61,14 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 
 - `SprudelVoiceData.kt`: add `lpAttackCurve / lpDecayCurve / lpReleaseCurve` (nullable) to the `Svd*` filter
   group; thread into the `FilterEnvDef` construction (`:~772-782`).
-- New DSL function **`lpadsrCurves(attack, decay, release)`** (mirror of the per-param `adsrCurves`, parse `AdsrCurve` per stage) in
-  `lang_filters.kt` (or `lang_effects_addons.kt`); plus mapper/string-receiver overloads per the DSL
+- New DSL object **`lpCurves(attack, decay, release)`** (mirror of `adsrCurves`, setter only, parse `AdsrCurve` per stage) in
+  `lang_filters_lpf.kt` next to the `lpf` compound; plus mapper/string-receiver overloads per the DSL
   conventions. Follow [[feedback_klangscript_no_named_params]] / `/sprudel-dev-knowhow` for the function shape.
 - KlangScript surface only if the amp `adsrCurves` is exposed there (match it).
 
 ## Decisions / open questions (resolve before building)
 
-- **Name:** `lpadsrCurves` (consistent with `adsrCurves` + `lpadsr`) — recommended — vs `lpcurve` / `lpenvCurves`.
+- **Name:** `lpCurves` (decided 2026-09-07; `lpadsrCurves` was the earlier candidate, `lpadsr` itself is gone).
 - **Default:** Exponential (just set globally); this feature is override-only, no behaviour change until used.
 - **Scope:** LPF env only (it's the only filter envelope that exists). **No `hpadsr`** today — adding a
   high-pass/band-pass envelope is a separate, larger feature; list as out-of-scope.
@@ -76,10 +81,10 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 - `audio_be`: a filter env rendered with e.g. `Linear` vs `Exponential` release produces a measurably
   different cutoff trajectory (reuse the `EnvelopeDeclickSpec` / filter-env render harness); default (no curve
   set) stays Exponential.
-- `sprudel`: `.lpadsrCurves("lin:exp:lin")` sets the three `FilterEnvDef` curves; round-trips through
+- `sprudel`: `.lpCurves("lin", "exp", "lin")` sets the three `FilterEnvDef` curves (no colon form exists); round-trips through
   `toVoiceData`.
 - `./gradlew :audio_bridge:jvmTest :audio_be:jvmTest :sprudel:jvmTest`.
-- By-ear: an exp vs linear filter *release* should be audibly different on a plucky `lpadsr` patch.
+- By-ear: an exp vs linear filter *release* should be audibly different on a plucky `lpf(attack, decay, sustain, release)` patch.
 
 ## Critical files
 
@@ -87,5 +92,5 @@ The amp path to mirror: `.adsrCurves()` → `SprudelVoiceData` curve fields → 
 |-----------|---------------------------------------------------------------------------------------------------------------------------|
 | Wire      | `audio_bridge/.../FilterEnvDef.kt`, `FilterDef.kt`; codec ([[project_worklet_serialization]])                             |
 | Backend   | `audio_be/.../voices/VoiceFactory.kt` (~428), `voices/Voice.kt`, `voices/strip/EnvelopeCalc.kt`                           |
-| DSL       | `sprudel/.../SprudelVoiceData.kt` (~772-782 + `Svd*` group), `lang/lang_filters.kt`, `lang/addons/lang_effects_addons.kt` |
+| DSL       | `sprudel/.../SprudelVoiceData.kt` (~772-782 + `Svd*` group), `lang/lang_filters_lpf.kt` |
 | Templates | amp curves: `.adsrCurves` → `AdsrDef` → `Voice.Envelope.of` (`VoiceFactory.kt:479`)                                       |

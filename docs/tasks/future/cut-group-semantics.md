@@ -20,7 +20,7 @@ and cost a voice each; a cut group keeps exactly one alive.
 
 ## The mismatch that started this
 
-`sprudel/lang_sample.kt:690` documents:
+`sprudel/lang_sample_playback.kt` documents:
 
 > *"Group `0` means no choke."* — with the example `s("bd sd").cut("<0 1>")` annotated
 > *"alternate between no-cut and cut-group-1"*.

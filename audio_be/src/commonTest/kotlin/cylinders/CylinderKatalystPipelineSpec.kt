@@ -418,7 +418,7 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.phaser.phaser.center shouldBe 800.0
         cylinder.phaser.phaser.sweep shouldBe 600.0
         // C4.2: the floor must be FORWARDED (a dropped line falls back to additive 1.0
-        // and phaserFloor() becomes a silent no-op on the bus path)
+        // and phaser(floor = ...) becomes a silent no-op on the bus path)
         cylinder.phaser.phaser.floor shouldBe 0.25
     }
 

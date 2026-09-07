@@ -24,12 +24,12 @@ A coefficient exposed here may already exist on sprudel, `IgnitorDsl`, the cylin
 field:
 
 1. **Grep the other surfaces for the concept**, not for the name — the same idea often ships under a different word (see
-   S3: the phaser's wet knob — `phaserWet`/`phaserFloor` in sprudel, `.wet()`/`.dryFloor()`
+   S3: the phaser's wet knob — `phaser(wet)`/`phaser(floor)` in sprudel, `.wet()`/`.dryFloor()`
 on `IgnitorDsl` — was exactly this case until C4 unified it onto one law, `WetDryMix`).
 2. **Match the name where the surface conventions allow.** They differ deliberately:
-   sprudel is lowercase-jammed strudel-style (`phasercenter`, `tremolodepth`, `bodyFloor`, `distos`), the pipeline DSL /
+   sprudel is lowercase-jammed strudel-style (`onepole`, `postgain`, `accelerate`; the effect compounds moved to named slots 2026-09-07), the pipeline DSL /
    KlangScript is camelCase methods (`cutoffOffset`, `drivePerAnalog`, `expK`). Parity means the *stem* matches
-   (`center` ↔ `phasercenter`), not that the casing does. When a stem has to differ, say why in the KDoc on both sides.
+   (`center` ↔ `phaser(center)`), not that the casing does. When a stem has to differ, say why in the KDoc on both sides.
 3. **Match the scale exactly.** Same unit, same range, same reference point — no surface may apply a conversion the
    other does not. Shared conversions live in ONE function. This is the rule the
    `roomSize` 10× bug was born from; `driftRelToOsc` is the same shape of hazard (it is a *ratio to another
@@ -130,7 +130,7 @@ not after. Three surfaces share `PhaserCore` and disagree:
 
 | surface             | mix param            | mix law                                              |
 |---------------------|----------------------|------------------------------------------------------|
-| sprudel             | `phaserWet` + `phaserFloor` | shared C4 law, `floor = 1` default (additive) |
+| sprudel             | `phaser(wet)` + `phaser(floor)` | shared C4 law, `floor = 1` default (additive) |
 | cylinder bus        | `depth` + `floor`    | shared C4 law (same knob, same law)                  |
 | `IgnitorDsl.Phaser` | `.wet()` + `.dryFloor()` | shared C4 law, `dryFloor = 0` default (crossfade) |
 
@@ -154,7 +154,7 @@ no KDoc, no home. It sets how fast the perceptual drive curve climbs, so it is s
 Steps: name it in `audio_bridge/constants/`, add `StageDsl.Distort(driveExponent = …)` — which turns another marker
 object into a data class — thread it, add the KlangScript method.
 
-**Parity check:** sprudel has `distort(amount)` / the compound `distort(1, "tube", 4)` and `distos()`
+**Parity check:** sprudel has `distort(amount)` / the compound `distort(1, "tube", 4)` and `distort(oversample = ...)`
 for oversampling. `amount` stays per-note; the exponent is per-engine. Make sure the KDoc on both sides states the
 relationship (`drive = 10^(amount × exponent)`) so nobody re-derives the scale wrongly — an author changing the exponent
 changes what every existing `distort(0.8)` in every song sounds like, which is worth a warning in the KDoc.
@@ -220,8 +220,8 @@ blocker (`docs/tasks/sprudel-sound-function-surface.md`).
 
 | coefficient   | default | reachable today                                                                            |
 |---------------|---------|--------------------------------------------------------------------------------------------|
-| `BODY_FLOOR`  | `0.4`   | per-note `bodyFloor()` (sprudel) → `FilterDef.Body.floor`; **no engine-level default**     |
-| `VOWEL_FLOOR` | `0.2`   | per-note `vowelFloor()` (sprudel) → `FilterDef.Formant.floor`; **no engine-level default** |
+| `BODY_FLOOR`  | `0.4`   | per-note `body(floor = ...)` (sprudel) → `FilterDef.Body.floor`; **no engine-level default**     |
+| `VOWEL_FLOOR` | `0.2`   | per-note `vowel(floor = ...)` (sprudel) → `FilterDef.Formant.floor`; **no engine-level default** |
 | `VOWEL_TAME`  | `0.05`  | ❌ nowhere                                                                                 |
 
 Body/vowel run as orbit-level Katalyst effects (`KatalystBodyEffect` / `KatalystFormantEffect`), not as voice-strip

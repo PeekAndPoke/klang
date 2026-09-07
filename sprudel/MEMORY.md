@@ -1,8 +1,102 @@
 # Sprudel — Memory
 
+## Recent Work (2026-09-07)
+
+- **Batch G, the last compounds.** `compressor(threshold, ratio, knee, attack, release)`,
+  `unison(voices, spread, pan)`, `duck(orbit, depth, attack)`, `vibrato(rate, depth)`,
+  `penv(amount, attack, decay, release, curve, anchor)`, `fm(env, h, attack, decay, sustain)`,
+  `vowel(vowel, wet, floor)`, `body(material, wet, floor)`: objects with a child per numeric slot;
+  the name slots `vowel` and `material` have no readers (`docs/tasks/future/string-slot-readers.md`).
+  Retired: `vibratoMod`, the `p*` pitch stage doors, `fmenv/fmmod/fmh/fmattack/fmdecay/fmsustain`,
+  `duckorbit/duckattack/duckdepth`, `voices/spread/panSpread`, `vowelWet/vowelFloor`,
+  `bodyWet/bodyFloor`; `comp`, `uni`, `vib`, `pamt` stay as aliases. Every compound head keeps its
+  value on a control gap and reinterprets on a bare call (the old `compressor()` no-op is gone). KSP
+  now qualifies the owner in generated calls, because a slot named like its object (`vowel(vowel)`)
+  shadowed it. The ignitor builders keep their own `voices`/`spread`; the migration skipped those.
+
+- **Filters are objects with named slots (batch F).** `lpf(freq, q, passes, env, attack, decay,
+  sustain, release)`, `hpf` the same, `bpf(freq, q, env, attack, decay, sustain, release)`,
+  `notch` the same; `lpf(q = mul(2))` maps, `hpf(lpf.freq.div(2))` reads. Per-knob doors and
+  aliases (`lpq`, `lpe`, `lpadsr`, `notchf`, `nfenv`, ...) are GONE (`LangRetiredDoorsSpec`).
+  The long names `lowpass`/`highpass`/`bandpass` stay as constants. Compound objects have NO bare
+  read: children only, one rule for every compound. `adsrCurves` is an object with the setter
+  only (name slots, no readers); the singular `adsrCurve` went from sprudel and the ignitor door.
+  Filter curve objects wait for engine fields (`docs/tasks/filter-envelope-configuration.md`).
+
+- **Compound effects are objects with named slots (batch E).** `room(wet, size, fade, lowpass,
+  dim)`, `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,
+  `tremolo(depth, sync, shape, skew, phase)`, `distort(amount, shape, oversample)`,
+  `crush(amount, oversample)`, `coarse(amount, oversample)`: `room(fade = 0.3)` sets one slot,
+  `room(size = mul(2))` maps it on its own value, `lpf(room.lowpass)` reads it. Every per-knob
+  door and alias (`roomWet`, `rsize`, `delayfb`, `ph`, `tremsync`, `dist`, `crushos`, ...) is
+  GONE from both doors (`LangRetiredDoorsSpec`). Slots apply in declaration order inside one
+  call, so `room(dim = 3000, lowpass = room.dim)` reads the old dim: chain two calls for that. A slot name that is also a top-level symbol (`lowpass`, the
+  `lpf` alias) shows two property variants under one docs symbol; intel tests filter on
+  `owner == null`. Tutorials name the object in `teaches`/`previews` (`room`, `delay`), not the
+  slots: the curriculum lint reads call names.
+
+- **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are
+  gone: one declaration per concept in both doors. `"ClassName"` is suppressed at file level in
+  the lang files for this. Alias constants read `val vel: velocity = velocity`.
+
+- **One Kotlin door per accessor.** The 139 unannotated factories (`fun gain(...)`, the alias
+  `fun vel(...)`) are gone; `val gain: Gain` plus `operator fun invoke` is the Kotlin call form
+  (`apply(gain(0.5))` still compiles, through the invoke convention). The `val` stays unannotated,
+  the `@KlangScript.Object` registers the script name.
+
+- **Compound pilot: `adsr` is an object with children.** `adsr.attack/.decay/.sustain/.release`
+  read the slots, `adsr(attack = mul(2))` maps one slot, and the single doors `attack()`,
+  `decay()`, `sustain()`, `release()` are GONE from both doors (`LangRetiredDoorsSpec`).
+  Sakura's `adsr("0.1:1:1:0.1")` never meant four values (no colon form exists; the string went to
+  the attack slot and the mini-notation kept 0.1); rewritten as `adsr(0.1, 1, 1, 0.1)` per the
+  maintainer, which changes those three noise beds.
+
+- **Field accessors, batch four**: `unison, spread, panSpread, density, orbit, duckorbit,
+  duckattack, duckdepth, compressor, fmenv, analog, duty, onepole` and eight aliases. The numeric
+  sweep is complete: every numeric single-field setter is an accessor (84 objects after the
+  adsr pilot removed the four stage objects, plus the four `adsr.*` children; 54 alias constants).
+
+- **Field accessors, batch three**: 36 objects and 22 aliases across sample, synthesis, vowel,
+  body, tonal, notch and the filter envelopes. Tonal's inline update lambdas became named
+  `<name>Update` values.
+
+- **Field accessors, batch two** (effects): 24 objects, 20 alias constants (`val rsize: RoomSize =
+  RoomSize`). Bug found by the new rows and fixed: `crushOversampleMutation` and
+  `coarseOversampleMutation` used `toString()?.toIntOrNull()`, which is `null` for `"2.0"`, so
+  `crushos(2)` never wrote its field from a number. Now `asDoubleOrNull()?.toInt()`.
+
+- **Field accessors, batch one** (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`): fourteen objects on the
+  new `FieldAccessor` base (`lang.kt`): `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq, hpq,
+  bpq, attack, decay, sustain, release`. Recipe in `ref/dsl-conventions.md`. Null rule decided:
+  on the mapper path a `null` result leaves the field unchanged (`_mapNumericField`).
+  Specs: `LangFieldAccessorsSpec` (two rows per accessor, both doors), `FreqAccessorIntelSpec`.
+
+## Recent Work (2026-09-06)
+
+- **Field accessors, pilot on `freq`** (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`). Two rules:
+  1. A MAPPER argument to a setter applies to the setter's own field: `freq(mul(2))`,
+     `freq(add(50))`, `bpf(freq)`. Implemented by `_mapNumericField(mapper, read, update)`:
+     read the field into the value register, run the mapper, write the value register back,
+     drain it. One chain, no join, so chords map each note on its own. Before this a mapper
+     argument was silently dropped and the field CLEARED (`toListOfPatterns` returned null).
+  2. Bare `freq` is an object (`@KlangScript.Object("freq") object Freq : PatternMapperProvider`)
+     whose `mapper()` reads the frequency into the value register; its `@Invoke` member is the
+     setter, so `freq(440)` is unchanged. `PatternMapperProvider` is deliberately NOT a
+     `PatternMapperFn`: a `Function1` member `invoke(SprudelPattern)` next to the setter would give
+     `Freq(pattern)` and `freq(pattern)` opposite meanings in Kotlin. First-step twins
+     (`PatternMapperProvider.add/sub/mul/div`) unwrap once; after that the mapper library composes.
+  - Rejected on the way, with reasons in the plan: a `QueryContext` key binding the source event
+    (per-event context copy, and any join inside the control rebinds); a provider re-joined by
+    time (`sampleAt` gives every chord note the first note's field); `Freq : PatternMapperFn`.
+  - KSP: object symbols now carry their supertypes (`KlangScriptProcessor`, object docs), so
+    `freq.mul(2)` resolves in the editor. Guard: `FreqAccessorIntelSpec`.
+  - Found on the way: arithmetic evaluates a continuous control once per query arc
+    (`seq("1 1 1").mul(sine)` is flat), `docs/tasks/sprudel-arithmetic-continuous-controls.md`.
+    Use `perlin.seg(4)` until that is decided.
+
 ## Recent Work (2026-08-20)
 
-- `tag(name)` addon (`lang_structural_addons.kt`): semantic event tags for visualizations/analysis.
+- `tag(name)` (`lang_structural_tag.kt`): semantic event tags for visualizations/analysis.
   Tags live in `SprudelVoiceData.tags: Set<String>?` (unique, NO ordering guarantee), accumulate by
   chaining (`.tag("a").tag("b")`), union through `merge()`/`mergeFrom()`, and are copied into engine
   `VoiceData.tags` by `toVoiceData()` — they cross the wire (deliberate; analysis tools may use them).
@@ -12,14 +106,15 @@
   parse `"guitar 1"` as mini-notation into two events. `reinterpretVoice { }` is the literal path.
 - `LangTagSpec` includes a merge-overlay test because the `SprudelVoiceDataSpec` mergeFrom==merge
   oracle cannot see a SYMMETRIC bug in the shared `mergeTags` helper (mutation-verified).
-- `ref/dsl-conventions.md` + `ref/dsl-addons.md` rewritten to current reality: the old delegate API
-  (`@SprudelDsl`, `dslFunction`, init sentinels) is gone; plain `fun` + `@KlangScript.Function`.
+- `ref/dsl-conventions.md` rewritten to current reality: the old delegate API (`@SprudelDsl`,
+  `dslFunction`, init sentinels) is gone; plain `fun` + `@KlangScript.Function`. (`ref/dsl-addons.md`
+  was rewritten in the same pass and deleted 2026-09-07 with the addons split.)
 
 ## Current Status
 
 - **Features**: ~263 / 303 implemented (~87%)
 - **Tests**: All JVM tests passing ✅
-- **KDoc**: All `@SprudelDsl` items fully documented across all `lang_*.kt` files ✅
+- **KDoc**: All `@KlangScript.Function` items fully documented across all `lang_*.kt` files ✅
 
 ## Recent Work (2026-02)
 
@@ -31,13 +126,20 @@
 
 ## Lessons Learned
 
+**The addons split is gone (2026-09-07).** `lang/addons/`, the package
+`io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag are retired. The split asked
+"does the original Strudel have this?", and sprudel diverged far enough that the answer stopped
+describing anything a reader could use: it only made them guess which of two directories a function
+sits in. Every DSL file now lives in `lang/` as `lang_<group>_<subgroup>.kt`, none over ~700 lines
+(`docs/tasks-archive/2026-09/20260907-sprudel-lang-file-reorganisation.md`).
+
 **Immutable at construction, mutable at runtime, both deliberate.** Every combinator returns a new
 pattern (the project-wide DSL principle, see `audio/MEMORY.md` Architecture Decisions and
 `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`). The query/render path uses mutable single-owner
 `SprudelVoiceData` on purpose (leaf clone ~17x faster). Do not "fix" either side toward the other.
 
 **`.scale()` applies exactly once per chain** (decided 2026-08-20 on Der Schmetterling):
-`resolveNote()` (`lang/lang_tonal.kt`) consumes the note index on first resolution (writes
+`resolveNote()` (`lang/lang_tonal_note.kt`) consumes the note index on first resolution (writes
 `note`/`freqHz`, clears `value` and the step source), so a later `.scale()` finds no index and is
 inert for pitch. Consequences: exported Klangbuch parts carry NO scale, not even a default (a
 part-level default would flatten a song-level scale journey such as `<e4:minor!48 e5:minor!16>`);
@@ -110,6 +212,7 @@ return applyCat(patterns)
 - `stackLeft()`, `stackRight()`, `stackCentre()`, `stackBy()`
 - `run(n)`, `binary(n)`, `binaryN()`, `binaryL()`, `binaryNL()`
 - `sequenceP()`, `pure(value)`, `silence`, `rest`, `nothing`
+- `morse(text)`
 
 ### Time Modification
 
@@ -163,6 +266,7 @@ return applyCat(patterns)
 
 - `add()`, `sub()`, `mul()`, `div()`, `mod()`, `pow()`, `log2()`
 - `round()`, `floor()`, `ceil()`
+- `flipSign()`, `oneMinusValue()`, `not()`
 
 ### Bitwise Operators
 
@@ -175,35 +279,28 @@ return applyCat(patterns)
 
 ### Audio Effects — Filters
 
-- `lpf()` / `cutoff` / `ctf` / `lp`, `lpq()` / `resonance` / `res`
-- `hpf()` / `hp` / `hcutoff`, `hpq()` / `hresonance` / `hres`
-- `bpf()` / `bandf` / `bp`, `bpq()` / `bandq`
-- `notchf()`, `nresonance()` / `nres`
+- `lpf(freq, q, passes, env, attack, decay, sustain, release)` / `lowpass`; readers `lpf.freq/.q/.passes/.env/.attack/.decay/.sustain/.release`
+- `hpf(...)` / `highpass` the same; `bpf(freq, q, env, attack, decay, sustain, release)` / `bandpass`
+- `notch(freq, q, env, attack, decay, sustain, release)`; readers `notch.*`
 - `vowel()`
 
 ### Audio Effects — Filter Envelopes
 
-- LP: `lpattack()` / `lpa`, `lpdecay()` / `lpd`, `lpsustain()` / `lps`, `lprelease()` / `lpr`, `lpenv()` / `lpe`
-- HP: `hpattack()` / `hpa`, `hpdecay()` / `hpd`, `hpsustain()` / `hps`, `hprelease()` / `hpr`, `hpenv()` / `hpe`
-- BP: `bpattack()` / `bpa`, `bpdecay()` / `bpd`, `bpsustain()` / `bps`, `bprelease()` / `bpr`, `bpenv()` / `bpe`
-- Notch (Klang extension): `nfattack()` / `nfa`, `nfdecay()` / `nfd`, `nfsustain()` / `nfs`, `nfrelease()` / `nfr`,
-  `nfenv()` / `nfe`
-- Filter envelope audio engine integration complete
+- The envelope of each filter is its own slots (`lpf(env = 24, attack = 0.01, decay = 0.3, sustain = 0.2)`);
+  the old stage doors and `lpadsr`/`hpadsr`/`bpadsr`/`nfadsr` are retired (2026-09-07, `LangRetiredDoorsSpec`)
 
 ### Audio Effects — Pitch Envelope
 
-- `pattack()` / `patt`, `pdecay()` / `pdec`, `prelease()` / `prel`
-- `penv()` / `pamt`, `pcurve()` / `pcrv`, `panchor()` / `panc`
+- `penv(amount, attack, decay, release, curve, anchor)` / `pamt`; readers `penv.*`
 
 ### Audio Effects — Waveshaping / Distortion
 
-- `crush()`, `coarse()`, `distort()` / `dist`
+- `distort(amount, shape, oversample)`, `crush(amount, oversample)`, `coarse(amount, oversample)`;
+  readers `distort.amount`, `distort.oversample`, `crush.*`, `coarse.*` (2026-09-07, batch E)
 
 ### Audio Effects — Tremolo / AM
 
-- `tremolosync()` / `tremsync`, `tremolodepth()` / `tremdepth`
-- `tremoloskew()` / `tremskew`, `tremolophase()` / `tremphase`
-- `tremoloshape()` / `tremshape`
+- `tremolo(depth, sync, shape, skew, phase)`; readers `tremolo.depth/.sync/.skew/.phase`
 
 ### Audio Effects — Dynamics & Panning
 
@@ -212,21 +309,19 @@ return applyCat(patterns)
 
 ### Audio Effects — Reverb
 
-- `roomWet()`, `roomsize()` / `rsize` / `sz` / `size`
-- `roomfade()` / `rfade`, `roomlp()` / `rlp`, `roomdim()` / `rdim`, `iresponse()` / `ir`
+- `room(wet, size, fade, lowpass, dim)`; readers `room.wet/.size/.fade/.lowpass/.dim`; `iresponse()` / `ir`
 
 ### Audio Effects — Delay
 
-- `delayWet()`, `delaytime()`, `delayfeedback()` / `delayfb` / `dfb`
+- `delay(wet, time, feedback, cap)`; readers `delay.wet/.time/.feedback/.cap`
 
 ### Audio Effects — Phaser
 
-- `phaser()` / `ph`, `phaserWet()` / `phd` / `phasdp`, `phaserFloor()`
-- `phasercenter()` / `phc`, `phasersweep()` / `phs`
+- `phaser(rate, wet, center, sweep, floor)`; readers `phaser.rate/.wet/.center/.sweep/.floor`
 
 ### Audio Effects — Duck / Sidechain
 
-- `duckorbit()` / `duck`, `duckattack()` / `duckatt`, `duckdepth()`
+- `duck(orbit, depth, attack)`; readers `duck.*`
 
 ### Audio Effects — Other
 
@@ -272,21 +367,13 @@ return applyCat(patterns)
 ### Synthesis Parameters
 
 - `gain()`, `pan()`, `legato()` / `clip()`
-- `vibrato()` / `vib`, `vibratoMod()` / `vibmod`
-- `accelerate()`, `unison()` / `uni`, `detune()`, `spread()`, `density()` / `d`
-- `attack()`, `decay()`, `sustain()`, `release()`, `adsr()`
+- `vibrato(rate, depth)` / `vib`; readers `vibrato.rate`, `vibrato.depth`
+- `accelerate()`, `unison(voices, spread, pan)` / `uni`, `density()` / `d` (`detune()` and `spread()` are gone)
+- `adsr()` (its stages are slots and `adsr.*` children; the single doors were removed 2026-09-07)
 - `onepole()` (Klang extension; formerly `warmth`, now Hz)
 - `velocity()`, `postgain()`
-- FM synthesis: `fmh()`, `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`
-- Pitch envelope: `pattack`, `pdecay`, `prelease`, `penv`
-
-### Arithmetic Addons (Non-Strudel)
-
-- `flipSign()`, `oneMinusValue()`, `not()`
-
-### Structural Addons (Non-Strudel)
-
-- `morse(text)`
+- FM synthesis: `fm(env, h, attack, decay, sustain)`; readers `fm.*`
+- Pitch envelope: `penv(amount, attack, decay, release, curve, anchor)`
 
 ### System Functions
 

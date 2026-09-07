@@ -52,7 +52,7 @@ Per-effect oversampling lives in the effect params and renderers:
 
 - `audio_be/.../Oversampler.kt` — the per-effect up/down helper (repurpose this into region resamplers).
 - `voices/strip/filter/DistortionRenderer.kt`, `CrushRenderer.kt`, `CoarseRenderer.kt` — each owns its factor.
-- DSL params: `distort(amt, shape, OS)`, `coarseos`, `crushos` — these **go away** (see Migration).
+- DSL params: `distort(amount, shape, oversample)`, `coarse(oversample)`, `crush(oversample)` — these **go away** (see Migration).
 
 ## Proposed model
 
@@ -129,7 +129,7 @@ mismatch. So the control-resampler is needed for exactly that subset, not everyt
    The example scopes tightly (`oversample(0)` before `lowpass`). This is the #1 user-education point: **keep
    regions minimal — wrap only the nonlinear stages that need it.**
 5. **Oversample is STRUCTURAL, not a signal — and for a load-bearing reason, not "it's a count."** The
-   ignitor-DSL norm is "everything is a signal": even a *count* like `voices()`/`unison()` can take an LFO
+   ignitor-DSL norm is "everything is a signal": even a *count* like `unison(voices)` (once `voices()`/`unison()`) can take an LFO
    (allocate the full stack, modulate how many voices are active / their gains — the super-ignitor is built
    for this). So "it's an integer" does NOT make something structural. Oversample is different: a signal is
    *sampled onto the buffer's timeline*, whereas **oversample DEFINES that timeline** — the buffer's
@@ -168,12 +168,12 @@ mismatch. So the control-resampler is needed for exactly that subset, not everyt
 
 ## Migration & user education (non-trivial)
 
-- **Remove** the oversample params from `distort`/`coarse`/`crush` (`:OS` suffix, `coarseos`, `crushos`); add
+- **Remove** the oversample params from `distort`/`coarse`/`crush` (the `oversample` slots; before 2026-09-07 `:OS`, `coarseos`, `crushos`); add
   the `oversample()` marker.
 - **Codemod the built-in songs + goldens.** Smart migration: detect a *run* of oversampled effects and wrap the
   whole run in one region (this is the intended sound change), rather than one region per effect (which would
   reproduce the old sound but defeat the point). Der Schmetterling's guitars (`distort(1, "tube", 4)` +
-  `coarse(2).coarseos(4)`) are the canonical case to get right.
+  `coarse(2).coarse(oversample = 4)`) are the canonical case to get right.
 - Consider a **deprecation window**: the old per-effect param still parses and maps to a tight one-effect region
   (old sound), with a warning, so existing user songs don't break on day one.
 - Docs: a clear "oversampling regions" section — the region concept, keep-regions-minimal, structural-not-signal,

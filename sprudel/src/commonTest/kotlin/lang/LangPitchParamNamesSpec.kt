@@ -17,7 +17,8 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 /**
  * Pitch-param unification guard (2026-08-24): params that mean SEMITONES are NAMED
  * `semitones` on every door — `pitchEnvelope`, `vibrato`, `vibratoMod`, `accelerate`
- * (unit converted from octaves, values ×12), `lpe`/`hpe`/`bpe`. The one-pole lowpass is
+ * (unit converted from octaves, values ×12), the vibrato depth, which is the `depth` slot of `vibrato(rate, depth)` since 2026-09-07 (semitones,
+ * named for what it is on the compound), and the filter envelope depth, which is the `env` slot of `lpf`/`hpf`/`bpf`/`notch` since 2026-09-07 (semitones, named for the envelope it scales rather than the unit). The one-pole lowpass is
  * `onepole(freq)` in Hz on both doors (formerly sprudel `warmth(0..1 coefficient)` and
  * ignitor `warmth`/`onePoleLowpass`). Old param/function names must FAIL, not alias.
  */
@@ -27,16 +28,16 @@ class LangPitchParamNamesSpec : StringSpec({
         (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data
 
     "sprudel script door: semitone params dispatch by name" {
-        firstData(SprudelPattern.compile("""note("c").vibratoMod(semitones = 0.5)""")).vibratoMod shouldBe 0.5
+        firstData(SprudelPattern.compile("""note("c").vibrato(depth = 0.5)""")).vibratoMod shouldBe 0.5
         firstData(SprudelPattern.compile("""note("c").accelerate(semitones = 12)""")).accelerate shouldBe 12.0
-        firstData(SprudelPattern.compile("""note("c").lpf(800).lpe(semitones = 24)""")).lpenv shouldBe 24.0
+        firstData(SprudelPattern.compile("""note("c").lpf(freq = 800, env = 24)""")).lpenv shouldBe 24.0
         firstData(SprudelPattern.compile("""note("c").onepole(freq = 3743)""")).oscParams?.get("onepole") shouldBe 3743.0
     }
 
     "sprudel script door: the OLD param names fail dispatch" {
-        shouldThrowAny { SprudelPattern.compile("""note("c").vibratoMod(depth = 0.5)""") }
+        shouldThrowAny { SprudelPattern.compile("""note("c").vibrato(semitones = 0.5)""") }
         shouldThrowAny { SprudelPattern.compile("""note("c").accelerate(amount = 12)""") }
-        shouldThrowAny { SprudelPattern.compile("""note("c").lpf(800).lpe(depth = 24)""") }
+        shouldThrowAny { SprudelPattern.compile("""note("c").lpf(freq = 800, depth = 24)""") }
         shouldThrowAny { SprudelPattern.compile("""note("c").warmth(0.5)""") }
     }
 

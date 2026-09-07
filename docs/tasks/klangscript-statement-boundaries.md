@@ -22,7 +22,7 @@ The chain is:
 3. `parseStatement` falls through every keyword arm to
    `parser/KlangScriptParser.kt:1692` — `else -> parseExpression().let { ExpressionStatement(it, it.location) }`.
 4. `tag("hats")` resolves to the bare mapper overload
-   `sprudel/.../lang/addons/lang_structural_addons.kt:687` —
+   `sprudel/.../lang/lang_structural_tag.kt` —
    `fun tag(name: String, callInfo: CallInfo?): PatternMapperFn`. It is a perfectly valid expression
    that evaluates to a `PatternMapperFn`.
 5. That value is the result of an `ExpressionStatement` at top level. Nothing consumes it. It is dropped.

@@ -586,7 +586,7 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
   [F18](#f18). But no shipped song uses ducking, so this is unfinished work rather than a coverage
   hole in something live. Moved with its design questions to
   [`docs/tasks/future/ducking-unfinished.md`](../tasks/future/ducking-unfinished.md) — including the
-  one worth fixing before anyone writes a song against it: `duckattack` sets the **release**, and
+  one worth fixing before anyone writes a song against it: `duck(attack)` (then `duckattack`) sets the **release**, and
   `Compressor` in the same directory has an `attackSeconds` that means something else again.
 - ~~**`Voice.Compressor`'s DSP is untested.**~~ ❌ **WITHDRAWN 2026-08-31.** The DSP has two dedicated
   specs: `effects/CompressorSpec` asserts gain reduction above threshold, transparency below it,
@@ -817,7 +817,7 @@ choked sample voices in its group perfectly well, while being immune to ever bei
 No reading of cut/choke intends "cuts others, cannot be cut".
 
 **Blast radius: none today.** A repo-wide grep found **zero** uses of `.cut(` in any shipped song, so
-the fix moves no shipped sound. The DSL surface lives in `sprudel/lang_sample.kt` and all its KDoc
+the fix moves no shipped sound. The DSL surface lives in `sprudel/lang_sample_playback.kt` and all its KDoc
 examples are sample-based, which is the likeliest reason the gap survived: cut reads as a
 sample-only feature, and on samples it always worked.
 
@@ -842,7 +842,7 @@ Found 2026-08-31 while explaining cut/choke to the maintainer, and verified rath
 
 **The DSL says:**
 
-> *"Group `0` means no choke."* — `sprudel/lang_sample.kt:690`
+> *"Group `0` means no choke."* — `sprudel/lang_sample_playback.kt`
 >
 > ```
 > s("bd sd").cut("<0 1>")   // alternate between no-cut and cut-group-1
@@ -853,7 +853,7 @@ Found 2026-08-31 while explaining cut/choke to the maintainer, and verified rath
 
 | stage | what happens to `cut(0)` |
 |-------|--------------------------|
-| `lang_sample.kt:681` | `cut = it?.asIntOrNull()` → `0` |
+| `lang_sample_playback.kt` | `cut = it?.asIntOrNull()` → `0` |
 | `VoiceData.cut` | `Int?` → `0` |
 | `VoiceScheduler:553` | `0 != null` → **the sweep runs** |
 | `VoiceScheduler:557` | victims are voices with `voice.cut == 0` → **group 0 chokes group 0** |

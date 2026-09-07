@@ -31,8 +31,8 @@ Created 2026-08-31.
 in the BUILD-LOCK. The oldest debt in this folder and the one with the most new sound in it.
 
 Six shipped sprudel functions were **inert end to end** (full KDoc, examples and aliases, dropped at
-`FilterPipelineBuilder`): `tremoloskew`/`tremskew`, `tremolophase`/`tremphase`,
-`tremoloshape`/`tremshape`. All three are now implemented, plus a new `LfoShape.kt` with five
+`FilterPipelineBuilder`): `tremolo(skew)`, `tremolo(phase)`,
+`tremolo(shape)` (then `tremoloskew`, `tremolophase`, `tremoloshape` with aliases). All three are now implemented, plus a new `LfoShape.kt` with five
 waveforms drawn from the oscillator vocabulary.
 
 What to listen for:
@@ -86,8 +86,8 @@ Long-term path if hand-tuning stops paying:
 Live in the working tree as of 2026-08-31, not committed, not reviewed:
 
 - supersaw `voices` 17 to 21, `spread` 0.11 to 0.10, `spreadPower` 6.0 to 8.0
-- guitar bus `rsize` 3.0 to 1.0
-- drum bus `roomWet` 0.20 to 0.30
+- guitar bus `room(size)` 3.0 to 1.0
+- drum bus `room(wet)` 0.20 to 0.30
 
 This sits on top of the master-round fix that changed how the song opens: the first master
 application used to crossfade the opening 60 ms up from unmastered, so Der Schmetterling started
@@ -124,8 +124,8 @@ Listen, in this order:
 - `note("c3 e3 g3").s("gm_accordion")` — **JCLive, variant 0: now sustains via 1–5 ms loops.**
   Any buzz or beating on the held tone is the single-cycle loop itself; that is the font, not us.
 - `s("gm_acoustic_guitar_nylon")` — the pluck is back AND the ring lasts its full ~4 s. If it now
-  feels too long under a fast pattern, that is what `.adsr()` / `.release()` are for, per note.
-- `note("c3").s("gm_church_organ").sustain(4)` — should breathe in and hold cleanly across the loop.
+  feels too long under a fast pattern, that is what `.adsr()` / `.adsr(release = ...)` are for, per note.
+- `note("c3").s("gm_church_organ").adsr(attack = 1, sustain = 1)` — should breathe in and hold cleanly across the loop.
 
 **The one knob:** `SOUNDFONT_RELEASE_SEC = 0.05` in `SoundFont.kt`. Shortest click-free cut that
 reads as a note ending. A reed might want less, a bowed string more — but anything instrument-

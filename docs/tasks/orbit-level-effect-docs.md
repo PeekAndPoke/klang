@@ -5,21 +5,21 @@ Captured 2026-08-17 (user, mid tutorial session — B6 "Layers" teaches exactly 
 ## The problem
 
 Whether a function is a **per-orbit (bus) effect** or a **per-voice setting** is load-bearing
-knowledge — `roomWet()` on one pattern wets every pattern sharing the orbit — but today it lives
+knowledge — `room()` on one pattern wets every pattern sharing the orbit — but today it lives
 only in one table inside `.claude/skills/klang-music-writing/ref/sprudel-reference.md`
 ("Effect scope" section). The user-facing docs (KDoc on the `lang_*.kt` DSL functions, and
 whatever the editor docs popup renders from them) don't carry it at all.
 
 Ground truth (from the skill ref — verify against the engine before publishing):
 
-- **PER-ORBIT (bus)**, shared by all voices on the orbit: `body`/`vowel`, `roomWet`/`reverb`
-  (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` family, `compressor`, ducking.
+- **PER-ORBIT (bus)**, shared by all voices on the orbit: `body`/`vowel`, `room` (slots
+  `wet`/`size`/`fade`/`lowpass`/`dim`, plus `ir`), `delay` (slots `wet`/`time`/`feedback`/`cap`), `compressor`, ducking.
   ⚠ UPDATED (P chunk, 2026-08-24, supersedes the C4.2 correction): THE BUS OWNS THE
   PHASER — the built-in pipeline presets carry no per-voice phaser stage anymore, so the
   `phaser` family IS per-orbit (one sweep over the summed mix, first-writer-wins on the
   knobs). Only a CUSTOM pipeline that adds `StageDsl.Phaser` gets an extra per-voice pass
   (then a floor below 1 floors the dry twice). Document it as per-orbit with that caveat.
-- **PER-VOICE**: filters (`lpf`/`hpf`/`bandf`/`notchf` + envs/qs), `distort`, `crush`,
+- **PER-VOICE**: filters (`lpf`/`hpf`/`bpf`/`notch` with their env and q slots), `distort`, `crush`,
   `coarse`, `gain`/`velocity`/`pan`/`postgain`, envelopes, `vibrato`/`tremolo`, `fm*`,
   pitch env, `unison`/`spread`, `analog`, `sound`/`n`/`note`.
   ⚠️ Note `distort` is per-voice — the user's shorthand ("room, reverb, body, distort etc.")
@@ -34,11 +34,11 @@ review (2026-08-17, verified in audio_be):
   (`SendRenderer.kt`: only voices with `room > 0` are summed into the orbit's reverb send
   buffer). "Shared by all voices on the orbit" is wrong for the send — a dry voice on a
   wet orbit stays dry.
-- A bare `.roomWet(x)` is **silent**: the reverb reads that config as OFF
+- A bare `.room(x)` is **silent**: the reverb reads that config as OFF
   (`KatalystReverbEffect.configure`'s active test against `MIN_ACTIVE_ROOM_SIZE` — since the
   drain lifecycle it drains a leftover tail instead of freezing it), and `roomSize` defaults
-  to 0.0. Every real song pairs `roomWet`
-  with `rsize`/`roomfade` (the colon form is gone since C0).
+  to 0.0. Every real song pairs `room(wet)`
+  with `size`/`fade` (the colon form is gone since C0).
 - Orbit bus **settings** are first-writer-wins (`Cylinder.kt`: "ONE owner per orbit … route
   to a different orbit if you want different bus settings"). The skill ref's scope box says
   "last-writer-wins" — stale; Cylinder.kt explicitly replaced last-writer-wins with the lease.

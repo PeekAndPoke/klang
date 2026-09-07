@@ -119,12 +119,12 @@ class LangCompressorSpec : StringSpec({
         }
     }
 
-    "bare compressor() is a no-op (the old string reinterpret is gone)" {
+    "bare compressor() reinterprets the pattern's values as the threshold, like every compound head (2026-09-07)" {
         val p = seq("3 4").compressor()
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.compressorThreshold shouldBe null
+        events.map { it.data.compressorThreshold } shouldBe listOf(3.0, 4.0)
         events[0].data.compressorRatio shouldBe null
     }
 

@@ -8,7 +8,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 /**
  * Curriculum slot A7 — see docs/tasks/tutorial-curriculum.md
  *
- * Keeps Layers' promise: B6 previewed `roomWet` + `rsize` as "how much goes in" and
+ * Keeps Layers' promise: B6 previewed `room(wet, size)` as "how much goes in" and
  * "how big the room is" and pointed at a Sound-track lesson still to come. This is it,
  * and it opens under exactly those two intuitions.
  *
@@ -18,13 +18,13 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *   send. The reverb is inactive unless `roomFade` is set or `roomSize >= 0.01`
  *   (KatalystReverbEffect.MIN_ACTIVE_ROOM_SIZE), and roomSize defaults to 0.0; the delay
  *   is Off unless `time >= 0.01` (KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS), and the
- *   time defaults to 0.0. So a bare `roomWet(0.4)` and a bare `delayWet(0.4)` are both
+ *   time defaults to 0.0. So a bare `room(0.4)` and a bare `delay(0.4)` are both
  *   SILENT. §1 introduces the pair and §2 proves it by ear.
  *   Two `KlangScript(Playable)` KDoc examples were silent for this reason and were fixed
- *   at source in the same change (lang_effects.kt).
- * - `roomWet(wet, size, fade, ...)`: slot 3 `roomfade` OVERRIDES slot 2 `roomsize`. The
- *   lesson never uses the compound form, so it cannot walk into that.
- * - `rsize` scale is ~0..10 (3 ≈ 1 s tail, 5 ≈ 1.4 s, 10 ≈ 12.5 s). Prose stays at
+ *   at source in the same change (lang_effects_reverb.kt, lang_effects_delay.kt).
+ * - `room(wet, size, fade, ...)`: the `fade` slot OVERRIDES `size` in the engine. The
+ *   lesson never sets `fade`, so it cannot walk into that.
+ * - `room(size)` scale is ~0..10 (3 ≈ 1 s tail, 5 ≈ 1.4 s, 10 ≈ 12.5 s). Prose stays at
  *   "bigger room", never at seconds, per the flux ruling.
  * - `onepole` is a one-pole lowpass in Hz, deliberately NOT `lpf` (which is the resonant
  *   SVF). It was renamed from `warmth(0..1)` in the 2026-08-24 pitch/unit unification,
@@ -44,7 +44,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *   `gain = baseGain * velocity`), `postgain` is the untouched whole-line trim. §6 says that
  *   and stages an audible level A/B instead of an inaudible gain-vs-postgain one.
  * - At this lesson's 30 RPM a cycle is 2 s and a step is 0.25 s, which is why
- *   `delaytime(0.25)` lands each echo exactly one step later. B1 licensed the "at 30 RPM"
+ *   `delay(time = 0.25)` lands each echo exactly one step later. B1 licensed the "at 30 RPM"
  *   caveat; §3 restates it rather than assuming it.
  *
  * ⚠️ NO ORDER A/B HERE, by plan ruling. The per-voice chain order comes from the
@@ -52,7 +52,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * order does NOT reorder the chain. The order-matters demo belongs to the Pipeline lesson
  * (C7) via `.pipeline()`. §4 forward-references it by topic, since C7 has no name yet.
  *
- * Biggest `teaches` list in the corpus (8). The plan assigns all of it to this one slot,
+ * One of the two biggest `teaches` lists in the corpus (5). The plan assigns all of it to this one slot,
  * and it is one theme in three moves: dress it, dirty it, lift it. If a review panel finds
  * it dense, the natural split is space (§§1-3) and dirt-plus-level (§§4-6).
  *
@@ -67,26 +67,26 @@ val spaceAndDirtTutorial = Tutorial(
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Standard,
     tags = listOf(TutorialTag.Effects, TutorialTag.Mixing),
-    teaches = listOf("roomWet", "rsize", "delayWet", "delaytime", "delayfb", "distort", "onepole", "postgain"),
+    teaches = listOf("room", "delay", "distort", "onepole", "postgain"),
     sections = listOf(
         TutorialSection(
-            heading = "How much goes in: roomWet and rsize",
+            heading = "How much goes in: wet and size",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
                     ${Tut.layers} borrowed two settings to give its melody a space of its own, and promised the full story later. Here it is, on the melody you have carried since ${Tut.firstNotes}, played by the bright voice from ${Tut.theFourWaveforms} with the pluck shape from ${Tut.shapeOfANote} so every note ends cleanly and you can hear what is left behind.
 
-                    **Reverb** is the wash of reflections a space adds. It takes two numbers, and they answer different questions. `roomWet()` is how much of the sound is sent into the room, from 0 to 1. `rsize()` is how big that room is.
+                    **Reverb** is the wash of reflections a space adds. `room()` puts a sound in one, and its first two numbers answer different questions. `wet` is how much of the sound is sent into the room, from 0 to 1. `size` is how big that room is.
 
-                    **Try it:** swap the `//` and press **Update**. Then, with the first line live, grow `rsize` to 8, and shrink it to 1.
+                    **Try it:** swap the `//` and press **Update**. Then, with the first line live, grow `size` to 8, and shrink it to 1.
 
-                    **Listen for:** the rests. Dry, each note stops and leaves silence. Wet, the silence is full of the note that just ended, and at `rsize` 8 the tail is still going when the next note arrives.
+                    **Listen for:** the rests. Dry, each note stops and leaves silence. Wet, the silence is full of the note that just ended, and at `size` 8 the tail is still going when the next note arrives.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).roomWet(0.4).rsize(4).gain(0.5)  // 0.4 goes into a room of size 4
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)                     // dry, swap to compare
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).room(wet = 0.4, size = 4).gain(0.5)  // 0.4 goes into a room of size 4
+                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)                         // dry, swap to compare
                     """.trimIndent(),
                 ),
             ),
@@ -98,44 +98,44 @@ val spaceAndDirtTutorial = Tutorial(
                     markdown = """
                     That pairing is not decoration, and it is the one thing in this lesson worth memorizing. A send says how much sound to hand over. It does not say what receives it, and with no room to receive it there is nowhere for the sound to go.
 
-                    **Try it:** delete `.rsize(4)` from the line below and press **Update**. Then put it back.
+                    **Try it:** delete `.room(size = 4)` from the line below and press **Update**. Then put it back.
 
                     **Listen for:** total silence from the room. Not a smaller tail, no tail: the send is turned up and there is nothing on the other end of it. Every send in Klang works this way, and the next section is the same trap wearing different clothes.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")  // the same melody all lesson
-                      .adsr(0.001, 0.3, 0, 0.1)                  // the pluck: clean ends, so tails show
-                      .roomWet(0.4)                              // how much goes in
-                      .rsize(4)                                  // what it goes into: delete this and the room disappears
-                      .gain(0.5)                                 // synths sit at 0.5
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")        // the same melody all lesson
+                      .adsr(0.001, 0.3, 0, 0.1)                        // the pluck: clean ends, so tails show
+                      .room(0.4)                                       // how much goes in
+                      .room(size = 4)                                  // what it goes into: delete this and the room disappears
+                      .gain(0.5)                                       // synths sit at 0.5
                     """.trimIndent(),
                 ),
             ),
         ),
         TutorialSection(
-            heading = "The other space: delayWet",
+            heading = "The other space: delay",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    A room blurs a sound. A **delay** repeats it: the same note again, a moment later, and again, quieter each time. `delayWet()` is its send, the twin of `roomWet()`, and its second number is a time in seconds.
+                    A room blurs a sound. A **delay** repeats it: the same note again, a moment later, and again, quieter each time. `delay()` is its send, the twin of `room()`, and its second number is a time in seconds.
 
-                    This lesson runs at 30 RPM, so a cycle is two seconds and each of the eight steps is a quarter of one. `delaytime(0.25)` therefore drops each echo exactly one step behind the note that made it, which is why the line sounds doubled rather than smeared. `delayfb()` is how much of each echo is fed back in to echo again: how many repeats you get.
+                    This lesson runs at 30 RPM, so a cycle is two seconds and each of the eight steps is a quarter of one. `delay(time = 0.25)` therefore drops each echo exactly one step behind the note that made it, which is why the line sounds doubled rather than smeared. `feedback` is how much of each echo is fed back in to echo again: how many repeats you get.
 
-                    **Try it:** press play, then change `delayfb` to 0.75 and press **Update**. Then set `delaytime` to 0.125, half a step.
+                    **Try it:** press play, then change `feedback` to 0.75 and press **Update**. Then set `time` to 0.125, half a step.
 
-                    **Listen for:** the melody answering itself a step later. At `delayfb` 0.75 the answers pile up until the line is more echo than notes; at a time of 0.125 the echoes fall between the steps and the line doubles in speed instead.
+                    **Listen for:** the melody answering itself a step later. At `feedback` 0.75 the answers pile up until the line is more echo than notes; at a time of 0.125 the echoes fall between the steps and the line doubles in speed instead.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")  // the same melody
-                      .adsr(0.001, 0.3, 0, 0.1)                  // the pluck shape
-                      .delayWet(0.4)                             // how much goes in, exactly like roomWet
-                      .delaytime(0.25)                           // and what it goes into: one step, at 30 RPM
-                      .delayfb(0.4)                              // how much of each echo echoes again
-                      .gain(0.5)                                 // synths sit at 0.5
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")           // the same melody
+                      .adsr(0.001, 0.3, 0, 0.1)                           // the pluck shape
+                      .delay(0.4)                                         // how much goes in, exactly like room
+                      .delay(time = 0.25)                                 // and what it goes into: one step, at 30 RPM
+                      .delay(feedback = 0.4)                              // how much of each echo echoes again
+                      .gain(0.5)                                          // synths sit at 0.5
                     """.trimIndent(),
                 ),
             ),
@@ -222,15 +222,15 @@ val spaceAndDirtTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")  // the melody, unchanged all course
-                      .adsr(0.001, 0.3, 0, 0.1)                  // the pluck shape
-                      .roomWet(0.3).rsize(3)                     // a small room: how much, and what into
-                      .delayWet(0.25).delaytime(0.25)            // an echo one step behind
-                      .delayfb(0.3)                              // a couple of repeats, no more
-                      .distort(0.4)                              // driven, but not shouting
-                      .onepole(3500)                             // the glare taken off the drive
-                      .gain(0.5)                                 // how hard it is played
-                      .postgain(0.45)                            // how loud it leaves
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")           // the melody, unchanged all course
+                      .adsr(0.001, 0.3, 0, 0.1)                           // the pluck shape
+                      .room(wet = 0.3, size = 3)                          // a small room: how much, and what into
+                      .delay(wet = 0.25, time = 0.25)                     // an echo one step behind
+                      .delay(feedback = 0.3)                              // a couple of repeats, no more
+                      .distort(0.4)                                       // driven, but not shouting
+                      .onepole(3500)                                      // the glare taken off the drive
+                      .gain(0.5)                                          // how hard it is played
+                      .postgain(0.45)                                     // how loud it leaves
                     """.trimIndent(),
                 ),
             ),

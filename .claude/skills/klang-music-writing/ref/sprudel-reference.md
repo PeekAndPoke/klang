@@ -67,7 +67,7 @@ stack(
   note("a1 ~ ~ ~").sound(kick).gain(0.8),
   sound("~ ~ cp ~").gain(0.4),
   sound("hh*8").gain(0.3)
-).roomWet(0.2).rsize(5)
+).room(wet = 0.2, size = 5)
 ```
 
 ---
@@ -184,8 +184,8 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `roomWet` (+ `roomsize`/`roomdim`/`roomfade`/`roomlp`/`ir`), `delayWet` (+ `delaytime`/`delayfeedback`), `phaser` (+ `phaserWet`/`phaserFloor`/`phasercenter`/`phasersweep`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
-> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notchf` (+ their `*e`/`*q`), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr`/`attack`/`decay`/`sustain`/`release`, `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room` (slots `wet`/`size`/`fade`/`lowpass`/`dim`, plus `ir`), `delay` (slots `wet`/`time`/`feedback`/`cap`), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
+> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 
 **Master limiter knobs.** `m.limiter(l => l...)` takes: `thresholdDb(db)` `ratio(x)` `kneeDb(db)`
@@ -281,7 +281,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 | `rootNotes()`           |         | Extract chord root notes      | `chord("Am C").rootNotes()`                     |
 | `freq(hz)`              |         | Set frequency in Hz           | `freq("440 880")`                               |
 | `accelerate(semitones)` |         | Pitch ramp during playback (SEMITONES over the event; 12 = one octave) | `s("cr").accelerate(24)`                        |
-| `vibrato(hz)` + `vibratoMod(semitones)` | `vib` | Pitch vibrato (sprudel-level) | `note("c3").vibrato(5).vibratoMod(0.3)`         |
+| `vibrato(rate, depth)`                                                 | `vib`      | Vibrato LFO rate in Hz and depth in semitones; readers `vibrato.rate`, `.depth`                                                                        | `note("c4").s("saw").vibrato(5, 0.5)`                                                                |
 
 #### `:soundIndex:gain` suffix (universal variant picker)
 
@@ -320,17 +320,13 @@ selection — extended to ignitor variants and per-note gain.
 | `gain(amt)`      |            | Volume (0-1+)                  | `s("bd").gain(0.8)`                   |
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
-| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).roomWet(0.5)`       |
-| `adsr(params)`   |            | Amplitude envelope             | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)` |
-| `attack(sec)`    |            | Envelope attack                | `note("c3").attack(0.01)`             |
-| `decay(sec)`     |            | Envelope decay                 | `note("c3").decay(0.2)`               |
-| `sustain(level)` |            | Envelope sustain level         | `note("c3").sustain(0.7)`             |
-| `release(sec)`   |            | Envelope release               | `note("c3").release(0.5)`             |
+| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).room(0.5, 4)`       |
+| `adsr(a, d, s, r)` |          | Amplitude envelope; omitted slots keep their value, named slots take a mapper | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)`, `.adsr(attack = mul(2))` |
+| `adsr.attack` `.decay` `.sustain` `.release` | | Read a slot back into another setter | `note("c3").adsr(0.3, 0.2).adsr(release = adsr.attack)` |
 | `adsrOff()`      |            | Voice envelope OFF — the instrument owns amplitude | `note("c3").sound(gtr).adsrOff()` |
 | `adsrOn(flag?)`  |            | Voice envelope ON (the default) | `note("c3").adsrOn()`                |
 | `legato(amt)`    | `clip`     | Note duration scaling          | `note("c3").legato(1.5)`              |
 | `postgain(amt)`  |            | Post-processing gain           | `s("bd").distort(3).postgain(0.1)`    |
-| `spread(value)`  |            | Distribute value across events | `s("bd sd").spread(1.0)`              |
 
 ### Sound Selection
 
@@ -338,8 +334,7 @@ selection — extended to ignitor variants and per-note gain.
 |--------------------|-----------------|---------------------------------|----------------------------------------|
 | `sound(name)`      | `s`             | Set sound/instrument            | `sound("bd sd hh cp")`                 |
 | `analog(amt)`      |                 | Analog oscillator drift         | `note("c3").s("supersaw").analog(0.2)` |
-| `unison(n)`        | `uni`, `voices` | Voice doubling                  | `note("c3").s("saw").unison(6)`        |
-| `spread(amt)`      |                 | Frequency spread between voices | `note("c3").s("supersaw").spread(0.1)` |
+| `unison(voices, spread, pan)`                                          | `uni`      | Unison voices, detune spread in semitones, stereo spread (reserved); readers `unison.voices`, `.spread`, `.pan`                                        | `note("c3").s("supersaw").unison(5, 0.3)`                                                            |
 | `density(amt)`     | `d`             | Oscillator density (noise)      | `note("a").s("dust").density(40)`      |
 | `onepole(freq)`    |                 | One-pole lowpass in Hz (warmth) | `s("bd").distort(3).onepole(17814)`    |
 | `sndPluck(params)` |                 | Karplus-Strong shorthand        | `note("c3").sndPluck(0.999, 0.8)`     |
@@ -348,7 +343,7 @@ selection — extended to ignitor variants and per-note gain.
 
 ### Filters
 
-All filters accept pattern values and have envelope variants (`lpe` for depth, `lpadsr` for shape; same for `hp*`/`bp*`)
+All filters accept pattern values on every slot, and each carries its own envelope as slots: `env` for the depth in semitones, `attack`, `decay`, `sustain`, `release` for the shape (`lpf(freq = 400, env = 24, attack = 0.01, decay = 0.3, sustain = 0.2)`; same on `hpf`, `bpf`, `notch`)
 
 Lowpass and highpass also take a **cascade count** as their third argument: `lpf(freq, q, passes)`.
 At the default q the cascade keeps its -3 dB point AT the cutoff (`lpf(800, 0.707, 2)` still means
@@ -357,48 +352,33 @@ at the cutoff). Same third slot on the ignitor door.
 
 | Function         | Aliases               | Description                | Example                                                      |
 |------------------|-----------------------|----------------------------|--------------------------------------------------------------|
-| `lpf(freq)`      |  | Lowpass filter cutoff (Hz) | `note("c3").s("saw").lpf(800)`                               |
-| `lpq(q)`         |  | Lowpass resonance/Q        | `note("c3").lpf(400).lpq(5)`                                 |
-| `lpe(depth)`     |  | LP env depth in SEMITONES (+12 doubles the cutoff at full env; negative sweeps down) | `note("c3").lpf(200).lpe(24)`           |
-| `lpadsr(params)` |  | LP envelope ADSR           | `note("c3").lpf(200).lpe(24).lpadsr(0.01, 0.3, 0.5, 0.5)`      |
-| `lpx(passes)`    |  | LP cascade count: `2` = 24 dB/oct, `3` = 36 (also the third slot of `lpf`) | `note("c3").lpf(800).lpx("<1 2>")`      |
-| `hpf(freq)`      |  | Highpass filter cutoff     | `s("bd").hpf(200)`                                           |
-| `hpq(q)`         |  | Highpass resonance         | `s("bd").hpf(200).hpq(2)`                                    |
-| `hpe(depth)`     |  | HP env depth in SEMITONES | `note("c3").hpf(100).hpe(24)`                               |
-| `hpadsr(params)` |  | HP envelope ADSR           | `note("c3").hpf(100).hpe(24).hpadsr(0.01, 0.2, 0.3, 0.5)`      |
-| `hpx(passes)`    |  | HP cascade count (also the third slot of `hpf`) | `s("bd").hpf(200).hpx(2)`      |
-| `bpf(freq)`      |  | Bandpass center freq       | `s("sd").bpf(1000)`                                          |
-| `bpq(q)`         |  | Bandpass Q                 | `s("sd").bpf(1000).bpq(5)`                                   |
-| `bpe(depth)`     |  | BP env depth in SEMITONES | `note("c3").bpf(200).bpe(27.9)`                               |
-| `bpadsr(params)` |  | BP envelope ADSR           | `note("c3").bpf(200).bpe(27.9).bpadsr(0.01, 0.3, 0.5, 0.5)`      |
-| `notchf(freq)`   |                       | Notch (band-reject) freq   | `s("sd").notchf(1000)`                                       |
-| `notchq(q)`      | `nresonance`          | Notch Q                    | `s("sd").notchf(1000).notchq(2)`                             |
+| `lpf(freq, q, passes, env, attack, decay, sustain, release)`           | `lowpass`  | Lowpass: cutoff Hz, resonance, cascade count (2 = 24 dB/oct), envelope depth in SEMITONES (+12 doubles the cutoff, negative sweeps down) and the envelope stages | `note("c3").s("saw").lpf(freq = 400, q = 5, env = 24, attack = 0.01, decay = 0.3, sustain = 0.2)`    |
+| `lpf.freq` / `lpf.q` / `lpf.passes` / `lpf.env` / `lpf.attack` ...     |            | Read a lowpass slot; `lpf(q = mul(2))` maps one slot on its own value                                                                                  | `p.lpf(800).hpf(lpf.freq.div(2))`                                                                    |
+| `hpf(freq, q, passes, env, attack, decay, sustain, release)`           | `highpass` | Highpass, same slots and readers as `lpf` (`hpf.freq`, `hpf.env`, ...)                                                                                 | `s("bd").hpf(freq = 200, q = 2)`                                                                     |
+| `bpf(freq, q, env, attack, decay, sustain, release)`                   | `bandpass` | Bandpass: centre Hz, Q, envelope depth in semitones and the stages; readers `bpf.freq`, `bpf.q`, ...                                                   | `note("c3").bpf(freq.mul(4), 3)`                                                                     |
+| `notch(freq, q, env, attack, decay, sustain, release)`                 |            | Notch (band reject), same slots as `bpf`; readers `notch.freq`, `notch.q`, ...                                                                         | `s("sd").notch(freq = 1000, q = 2)`                                                                  |
 
 ### Effects
 
 | Function                | Aliases                                                                                  | Description                                   | Example                                   |
 |-------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------------------|
-| `roomWet(mix)`             |                                                                                          | Reverb amount (0-1)                           | `note("c3").roomWet(0.3)`                    |
-| `roomsize(size)`        | `rsize`, `sz`, `size`                                                                    | Reverb room size                              | `note("c3").roomWet(0.3).rsize(5)`           |
-| `roomdim(dim)`          | `rdim`                                                                                   | Reverb damping/dimension                      | `note("c3").roomWet(0.3).rdim(0.5)`          |
-| `roomfade(x)` / `rfade` | Reverb tail **override**, 0..1 (NOT seconds) — wins over `roomsize`, which is then inert | `note("c3").roomWet(0.3).roomsize(8).rfade(0.1)` |
-| `roomlp(freq)`          | `rlp`                                                                                    | Reverb lowpass                                | `note("c3").roomWet(0.3).rlp(3000)`          |
-| `delayWet(mix)`            |                                                                                          | Delay amount (0-1)                            | `s("sd").delayWet(0.5)`                      |
-| `delaytime(time)`       |                                                                                          | Delay time in cycles                          | `s("sd").delayWet(0.5).delaytime(0.33)`      |
-| `delayfeedback(fb)`     | `delayfb`, `dfb`                                                                         | Delay feedback                                | `s("sd").delayWet(0.5).delayfeedback(0.3)`   |
-| `distort(amt)`          | `dist`                                                                                   | Distortion amount                             | `s("bd").distort(0.5)`                    |
-| `distortshape(shape)`   | `distshape`, `dshape`                                                                    | Distortion shape                              | `s("bd").distort(2).distshape("fold")`    |
-| `crush(bits)`           |                                                                                          | Bitcrusher                                    | `s("hh").crush(8)`                        |
-| `coarse(amt)`           |                                                                                          | Sample-rate reduction                         | `note("c3").s("saw").coarse(3)`           |
-| `phaser(params)`        | `ph`                                                                                     | Phaser effect                                 | `note("c3").phaser(1)`                    |
-| `phaserWet(d)`        |                                                                                          | Phaser wet (additive by default)              | `note("c3").phaser(1).phaserWet(0.5)`   |
-| `phasercenter(hz)`      | `phc`                                                                                    | Phaser center freq                            | `note("c3").phaser(1).phc(1000)`          |
-| `phasersweep(hz)`       | `phs`                                                                                    | Phaser sweep range                            | `note("c3").phaser(1).phs(500)`           |
-| `tremolo(params)`       |                                                                                          | Tremolo rate                                  | `note("c3").tremolo(4)`                   |
-| `tremolodepth(d)`       | `tremdepth`                                                                              | Tremolo depth                                 | `note("c3").tremolo(4).tremolodepth(0.5)` |
-| `tremolosync(n)`        | `tremsync`                                                                               | Sync tremolo to cycle                         | `note("c3").tremolosync(8)`               |
-| `tremoloshape(s)`       | `tremshape`                                                                              | Tremolo LFO shape                             | `note("c3").tremolo(4).tremshape("sine")` |
-| `compressor(threshold, ratio, knee, attack, release)`    | `comp`                                                                                   | Compressor (per-param)        | `s("bd sd").comp(-20, 4, 3, 0.01, 0.3)`     |
+| `room(wet, size, fade, lowpass, dim)`                                       |          | Reverb: send 0..1, room size ~0..10, tail override 0..1 (`fade` wins over `size`), damping cutoff Hz, `dim` (reserved). A bare `room(wet)` is silent: the engine gates on `size`/`fade` | `note("c3").room(wet = 0.3, size = 5)`                       |
+| `room(size = mul(2))`                                                       |          | A mapper on one slot maps that slot on its own value; the other slots stay                                                                                       | `p.room(0.3, 4).room(size = mul(2))`                         |
+| `room.wet` / `room.size` / `room.fade` / `room.lowpass` / `room.dim`        |          | Read a reverb slot into another setter                                                                                                                           | `p.room(size = 4).delay(time = room.size.div(8))`            |
+| `delay(wet, time, feedback, cap)`                                           |          | Delay: send 0..1, time in seconds, feedback 0..1, feedback cap. A bare `delay(wet)` is silent until `time` is set                                                | `s("sd").delay(wet = 0.5, time = 0.33, feedback = 0.3)`      |
+| `delay.wet` / `delay.time` / `delay.feedback` / `delay.cap`                 |          | Read a delay slot                                                                                                                                                | `p.delay(time = 0.25).room(fade = delay.time)`               |
+| `distort(amount, shape, oversample)`                                        |          | Distortion amount, shape name (`soft`, `hard`, `fold`, `exp`, ...), oversample factor (Int)                                                                      | `s("bd").distort(amount = 2, shape = "fold")`                |
+| `distort.amount` / `distort.oversample`                                     |          | Read a distortion slot (`shape` is a string, no reader)                                                                                                          | `p.distort(0.4).pan(distort.amount)`                         |
+| `crush(amount, oversample)`                                                 |          | Bitcrusher bits, oversample factor; readers `crush.amount`, `crush.oversample`                                                                                   | `s("hh").crush(8)`                                           |
+| `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor; readers `coarse.amount`, `coarse.oversample`                                                                    | `note("c3").s("saw").coarse(3)`                              |
+| `phaser(rate, wet, center, sweep, floor)`                                   |          | Phaser: LFO rate in Hz, wet (additive by default), center Hz, sweep range Hz, floor                                                                              | `note("c3").phaser(rate = 1, wet = 0.5, center = 1000)`      |
+| `phaser.rate` / `phaser.wet` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
+| `tremolo(depth, sync, shape, skew, phase)`                                  |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`sync`), LFO shape name, skew, phase                                                                               | `note("c3").tremolo(depth = 0.5, sync = 4, shape = "sine")`  |
+| `tremolo.depth` / `tremolo.sync` / `tremolo.skew` / `tremolo.phase`         |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(tremolo.sync)`                     |
+| `compressor(threshold, ratio, knee, attack, release)`                  | `comp`     | Orbit compressor; readers `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`                                                             | `s("bd sd hh sd").compressor(-20, 4, 6, 0.003, 0.1)`                                                 |
+| `duck(orbit, depth, attack)`                                           |            | Sidechain: the orbit that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.orbit`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
+| `vowel(vowel, wet, floor)`                                             |            | Vowel formant: the vowel name (no reader), send 0..1, dry floor; readers `vowel.wet`, `.floor`                                                         | `note("c3").s("saw").vowel("a", 0.8)`                                                                |
+| `body(material, wet, floor)`                                           |            | Resonant body: material name (no reader), send 0..1, dry floor; readers `body.wet`, `.floor`                                                           | `note("c3").s("saw").body("wood", 0.7)`                                                              |
 | `iresponse(path)`       | `ir`                                                                                     | Impulse response convolution                  | `note("c3").ir("hall.wav")`               |
 
 Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`
@@ -407,22 +387,15 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 
 | Function           | Aliases | Description          | Example                                |
 |--------------------|---------|----------------------|----------------------------------------|
-| `fmh(ratio)`       |         | FM harmonicity ratio | `note("c3").s("sine").fmh(2)`          |
-| `fmenv(depth)`     | `fmmod` | FM modulation depth  | `note("c3").s("sine").fmenv(500)`      |
-| `fmattack(sec)`    | `fmatt` | FM envelope attack   | `note("c3").fmenv(500).fmattack(0.01)` |
-| `fmdecay(sec)`     | `fmdec` | FM envelope decay    | `note("c3").fmenv(500).fmdecay(0.1)`   |
-| `fmsustain(level)` | `fmsus` | FM envelope sustain  | `note("c3").fmenv(500).fmsustain(0.0)` |
+| `fm(env, h, attack, decay, sustain)`                                   |            | FM: modulation depth in Hz, harmonicity (modulator to carrier ratio), and the modulation envelope; active once `env` and `h` are set                   | `note("c3").s("sine").fm(300, 1.4, 0.01, 0.3, 0)`                                                    |
+| `fm.env` / `fm.h` / `fm.attack` / `fm.decay` / `fm.sustain`            |            | Read an FM slot; `fm(h = mul(2))` maps one slot                                                                                                        | `p.fm(200, 2).fm(env = mul("1 3"))`                                                                  |
 
 ### Pitch Envelope (via pattern params)
 
 | Function          | Aliases | Description          | Example                             |
 |-------------------|---------|----------------------|-------------------------------------|
-| `penv(semitones)` | `pamt`  | Pitch envelope depth | `note("c4").penv(12)`               |
-| `pattack(sec)`    | `patt`  | Pitch env attack     | `note("c4").penv(12).pattack(0.1)`  |
-| `pdecay(sec)`     | `pdec`  | Pitch env decay      | `note("c4").penv(12).pdecay(0.2)`   |
-| `prelease(sec)`   | `prel`  | Pitch env release    | `note("c4").penv(12).prelease(0.3)` |
-| `pcurve(shape)`   | `pcrv`  | Pitch env curve      | `note("c4").penv(12).pcurve(2)`     |
-| `panchor(point)`  | `panc`  | Pitch env anchor     | `note("c4").penv(12).panchor(0)`    |
+| `penv(amount, attack, decay, release, curve, anchor)`                  | `pamt`     | Pitch envelope: depth in semitones, its stages, curve (1 linear, below concave) and sustain anchor                                                     | `s("bd*4").penv(24, 0.001, 0.08)`                                                                    |
+| `penv.amount` / `penv.attack` / ... / `penv.anchor`                    |            | Read a pitch envelope slot                                                                                                                             | `p.penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))`                                    |
 
 ### Sampling
 
@@ -515,10 +488,10 @@ note("c3").s("saw").lpf(sine.range(200, 2000).slow(4))
 s("hh*8").pan(rand)
 
 // Tempo-synced delay
-s("sd").delayWet(0.5).delaytime(pure(1/8).div(cps))
+s("sd").delay(wet = 0.5, time = pure(1/8).div(cps))
 
 // Organic modulation
-note("c3").s("supersaw").spread(perlin.range(0.0, 0.3).slow(16))
+note("c3").s("supersaw").unison(spread = perlin.range(0.0, 0.3).slow(16))
 ```
 
 ---
@@ -630,7 +603,7 @@ n("0 ~ 0 3 ~ 0 5 ~").scale("C2:minor")
 n("<0 3 5 7>").scale("C3:minor")
   .sound("supersaw").lpf(sine.range(400, 1200).slow(8))
   .adsr(0.5, 0.5, 0.8, 1.0).legato(2)
-  .roomWet(0.3).rsize(8).gain(0.2)
+  .room(wet = 0.3, size = 8).gain(0.2)
 ```
 
 ### Polyrhythmic pattern
@@ -668,7 +641,7 @@ let chorus = stack(
 )
 
 arrange([8, verse], [8, chorus], [8, verse], [8, chorus])
-  .roomWet(0.15).rsize(4)
+  .room(wet = 0.15, size = 4)
 ```
 
 ### Timed layer entry with filterWhen
@@ -681,14 +654,14 @@ stack(
     .filterWhen(x => x >= 8),                              // enters at cycle 8
   chord("<Am C F G>").voicing().s("supersaw").gain(0.15)
     .filterWhen(x => x >= 16)                              // enters at cycle 16
-).roomWet(0.1).rsize(5)
+).room(wet = 0.1, size = 5)
 ```
 
 ### Delay synced to tempo
 
 ```javascript
 note("c4 ~ e4 ~").sound("pluck")
-  .delayWet(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.4)
+  .delay(wet = 0.3, time = pure(1/8).div(cps), feedback = 0.4)
 ```
 
 ---
@@ -710,10 +683,8 @@ stack(
     .scale("c3:dorian")          // dorian mode for folk feel
     .gain(0.8)
     .lpf("2000")                 // gentle lowpass
-    .lpadsr(0.01, 0.1, 0.2, 0.1) // filter envelope
-    .tremolosync(8)              // tremolo synced to 8 per cycle
-    .tremolodepth(0.33)
-    .tremoloshape("sine")
+    .lpf(attack = 0.01, decay = 0.1, sustain = 0.2, release = 0.1) // filter envelope
+    .tremolo(depth = 0.33, sync = 8, shape = "sine") // 8 Hz tremolo
     .analog(1)                   // warm analog drift
 
   // Bass: pluck + triangle layered
@@ -731,5 +702,5 @@ stack(
   // Kick-snare
   , s("<[[bd sd]!2]!8>").adsr(0.02, 0.1, 0.7, 1.0).gain(0.75)
 )
-  .roomWet(0.02).rsize(3)  // subtle room reverb
+  .room(wet = 0.02, size = 3)  // subtle room reverb
 ```
