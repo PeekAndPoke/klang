@@ -1,8 +1,11 @@
 # Sine partial banks: `harmonics`, `octaves` and `fundamental` on `Osc.sine()`
 
-**Status: built 2026-09-07 (C1 to C4), in review.** The three open points of section 7 were
-decided on 2026-09-07: band-limit at Nyquist (maintainer's explicit yes), raw sum, `analogSpread`
-default 1. Earlier draft of the same
+**Status: SHIPPED 2026-09-07, commit `6d4056f9` (C1 to C4, two review rounds, 14 mutation
+checks red).** Kept in `docs/plans/` rather than archived, the `filter-unification.md` precedent:
+eight files cite this path (KDocs on the wire node, the engine, the builders, the spec, both
+module memories). The three open points of section 7 were decided on 2026-09-07: band-limit at
+Nyquist (maintainer's explicit yes), raw sum, `analogSpread` default 1. Still open for the
+maintainer: the by-ear checks of section 8 and the gated 5.3 fast path. Earlier draft of the same
 day proposed two separate doors (`Osc.harmonics()`, `Osc.octaves()`); superseded by the knob form
 below, decided in discussion with the maintainer.
 
