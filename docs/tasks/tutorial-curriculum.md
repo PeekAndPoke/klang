@@ -14,10 +14,24 @@
 > The song-usage counts below (line "Master: 5/14 songs ...") predate this; the five songs now use
 > the `Master(m => ...)` form.
 
+> **Second hand-off, from the sprudel field accessors, 2026-09-07**
+> (`docs/tasks/sprudel-field-accessors.md`, four batches, all specced and reviewed): every numeric
+> setter is now also a READER and accepts a mapper, so two spellings that did nothing before are
+> real surface:
+> - `gain(mul(0.5))`: change a knob relative to what the chain already set.
+> - `bpf(freq)`, `bpf(freq.mul(2))`: one knob reads another field of the same event.
+>
+> 88 accessors, 54 alias constants, and a built-in song (**Greensleeves**) built on it. This is
+> **purely additive**: before the sweep a mapper handed to a setter was silently dropped and the
+> field cleared, which was a bug nobody taught, so no shipped lesson needs rewriting. Teaching it
+> is **A9**'s job (ladder and obligations register below); no other lesson should introduce it in
+> passing.
+
 Status: **ACTIVE**, last updated 2026-08-31. **17 lessons shipped**: the Stage-1 onramp (B1-B3), all of
 Stage 2 (A1-A4, B4-B7), and Stage 3 so far (A5, A6, A7, B8, B9, B10). The ladder below is no longer a
 proposal, it is the contract; the obligations register is the debt ledger against it. Next slots: **A8
-Body** and **B11 Chords & voicing**, which close Stage 3. Stage 4 (C1-C10, the Motor track) is unwritten.
+Body**, **B11 Chords & voicing** and **A9 The note moves the knobs** (recorded 2026-09-07, the surface
+shipped before the lesson), which close Stage 3. Stage 4 (C1-C10, the Motor track) is unwritten.
 A6 and A7 are authored but have NOT been through the review loop, and the by-ear pass is owed on both.
 
 ## Why (diagnosis, short version)
@@ -147,6 +161,7 @@ stages must not carry it.
 | A7 | Space & dirt | `roomWet`/`rsize`, `delayWet` family, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
 | A8 | Body | `body()`, `bodyWet` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
+| A9 | The note moves the knobs | field accessors: a knob changed relative to itself (`gain(mul(0.5))`), and a knob that reads another field (`bpf(freq)`, `bpf(freq.mul(2))`) | `bpf`/`bpq` and the `mul`/`add` mappers, none of which anything teaches yet | Pink noise through a bandpass sitting on the note: the wind whistles the melody. *Listen for: noise turning into a pitch as the filter locks onto each note.* Built-in song **Greensleeves** is the reference; the surface landed 2026-09-07, the lesson did not. |
 
 ### Stage 4 — Track C: the Motor
 
@@ -262,6 +277,54 @@ stages must not carry it.
   ENGINE sense ("Voices are routed to a Cylinder by their Orbit") — resolve that collision once,
   in one place, when a lesson first touches engine voices. A1 also names `supersaw` among the
   "further voices" promised for later lessons; A6 owns delivering it.
+
+- **A9 (field accessors) NOT WRITTEN, recorded 2026-09-07 so it cannot be forgotten.** The surface
+  shipped before its lesson. Every other row here is a promise one lesson made to another; this one
+  is a promise the ENGINE made to the curriculum. 88 accessors and 54 alias constants landed with
+  specs in a pilot plus four batches (`docs/tasks/sprudel-field-accessors.md`), a built-in song was
+  written on them (**Greensleeves**, the wind whistling the tune), and the curriculum says nothing.
+  What the lesson owes:
+  - **Both roles, one idea.** A name like `gain` is the setter it always was, AND takes a mapper
+    that changes the field relative to what the chain already set (`gain(mul(0.5))`), AND, bare,
+    reads its own field so another knob can use it (`bpf(freq)`, `bpf(freq.mul(2))`). Same text in
+    KlangScript and Kotlin, character for character (door-parity spec exists).
+  - **The order rule, which is the one thing a reader will trip over.** An accessor reads what the
+    chain has set SO FAR: `note("c e").bpf(freq)` works, `bpf(freq).note("c e")` writes nothing,
+    because `freqHz` was still unset when it read. Decision D6 in the plan: documented, not
+    engineered around. A "Try it" that swaps the two lines and gets silence teaches it honestly.
+  - **It is the sequel to Signals Move the Knobs**, and should be written as one: A5 taught that
+    something from OUTSIDE the pattern (`sine`, `perlin`, `.range()`) can move a knob; A9 teaches
+    that the pattern's OWN numbers can. Track A for that reason, even though the mechanism is
+    pattern-surface. Difficulty is probably Advanced; A5 is the prerequisite, not the carrier kit.
+  - **Prerequisites nothing teaches yet.** `bpf`/`bpq` appear in NO lesson (A3 teaches `lpf`, `hpf`,
+    `lpq` only), and `mul`/`add` as standalone mappers appear in NO lesson. Both are needed for the
+    headline example, so A9 either introduces them as declared previews (principle 3) or picks a
+    demo built from taught filters. The bandpass is the better teacher here (a filter that keeps a
+    band is what makes a pitch out of noise), so introducing it is the likelier call.
+  - **The finale is Greensleeves REDUCED, not Greensleeves.** The song also uses `chord()` +
+    `voicing()` (B11's), `filterWhen` (C8's), `perlin.seg()` and `late()` (nothing teaches either),
+    so it cannot be pasted in whole without breaking principle 5. Take the whistle line
+    (`s("pink").bpf(freq.mul(...)).bpq(...)`) over a melody the reader already has, and link the
+    song for the full thing.
+  - **"Every knob" is FALSE in two ways, so never say it.** String and boolean setters (`note`, `n`,
+    `sound`, `bank`, `scale`, `vowel`, `body`, `unit`, `loop`, the `*shape`/`*curve` family) are
+    won't-implement (maintainer, 2026-09-07), and the fields that only have a compound door (the
+    `lpadsr`/`hpadsr`/`bpadsr` envelope stages, the compressor's other slots) have no accessor yet
+    (`docs/tasks/sprudel-accessors-compound-slots.md`). "Every NUMBER knob, with a door of its own"
+    is the true sentence.
+  - **A mapper handed to a setter that lacks the branch is still silently dropped, with no
+    diagnostic** (OPEN in the accessor plan). If that is still true when A9 is written, the lesson
+    must not encourage exploratory guessing at which knobs read.
+  - ⚠️ **Engine gaps found during the sweep, documented as "reserved" in the object KDocs, that must
+    never appear in a lesson example:** `panSpread` has no engine stage at all; `density` is the
+    dust grain rate, not a unison knob; `duckattack` is the recovery time (the duck-down is
+    instant); `pcurve` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not read by
+    `VoiceFactory`; negative `speed` is silence, not reverse.
+  - **Title is provisional.** "The note moves the knobs" pairs with A5 and matches the headline
+    example, but §2 generalizes past the note (`pan(gain)` is just as legal). Settle it when the
+    lesson is written; it goes in `Tut` (`TutorialModel.kt`) either way.
+  - **Also owed: a Lexikon entry** for the concept (Pattern domain, `Mapping` category fits), per
+    principle 7, since the per-function docs already generate themselves from the KDoc.
 
 ### Extras shelf (not on the path)
 

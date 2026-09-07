@@ -281,6 +281,29 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   the three cutoff mutations (`lpfMutation`, `hpfMutation`, `bpfMutation`) early-return and KEEP.
 - `note` as a string field: decide whether an accessor makes sense.
 
+## Teaching (owed, recorded 2026-09-07)
+
+The surface shipped before any lesson about it, which is the wrong way round for a headline
+feature: nothing in the tutorial ladder mentions that a knob can read a field or take a mapper.
+Recorded as slot **A9** in `docs/tasks/tutorial-curriculum.md` (ladder row, a second hand-off
+block at the top, and a full obligations-register entry with the traps). Summary of what that
+entry pins down, so this side stays honest:
+
+- The lesson is the sequel to "Signals Move the Knobs" (A5): outside shapes move a knob there, the
+  pattern's own numbers move it here.
+- `bpf`/`bpq` and the `mul`/`add` mappers are taught NOWHERE in the corpus today, so the headline
+  example needs them introduced as previews.
+- Greensleeves cannot be pasted in as the finale: it also uses `chord()`/`voicing()`, `filterWhen`,
+  `perlin.seg()` and `late()`, none of which are taught yet. The whistle line alone is the finale.
+- The lesson must never say "every knob": string and boolean setters are won't-implement, and the
+  compound-door fields have no accessor yet (`sprudel-accessors-compound-slots.md`).
+- The engine gaps found during the sweep (`panSpread`, `density`, `duckattack`, `pcurve`,
+  `loopBegin`/`loopEnd`, negative `speed`) are listed there as never-teach.
+- A Lexikon entry for the concept is owed too (`LexikonData.kt`, Pattern domain).
+
+The order rule (D6) is the part most likely to bite a reader, and it is the part that will read as
+a bug report if the lesson does not get to it first.
+
 ## Review checklist mapping (`/dsl-design`)
 
 1. Immutable: `Freq` is a stateless object; every operation returns a new mapper or pattern.
