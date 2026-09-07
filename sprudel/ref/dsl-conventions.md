@@ -80,6 +80,9 @@ fun PatternMapperFn.foo(amount: PatternLike? = null, callInfo: CallInfo? = null)
   Never make the accessor a `PatternMapperFn`: see `MEMORY.md` 2026-09-06 for the ambiguity.
 - Every new accessor gets two rows in `LangFieldAccessorsSpec`: a mapper on its own field and the
   bare accessor read into another field, both doors.
+- An alias (`rsize` for `roomsize`) is `@KlangScript.Constant val rsize: RoomSize = RoomSize` with
+  a one-line KDoc; its factory `fun rsize(...)` stays for Kotlin, unannotated. The editor types it
+  as the canonical object, so `rsize(` shows the `roomsize(...)` signature. One alias row per alias.
 - Design record and rejected alternatives: `docs/tasks/sprudel-field-accessors.md`.
 
 ## KDoc Rules

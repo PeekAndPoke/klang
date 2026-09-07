@@ -77,6 +77,33 @@ class FreqAccessorIntelSpec : StringSpec({
         }
     }
 
+    "every effects accessor is an object with a call form and the first-step operators" {
+        listOf("distort", "distos", "crush", "crushos", "coarse", "coarseos", "roomWet", "roomsize", "roomfade", "roomlp",
+            "roomdim", "delayWet", "delaytime", "delayfeedback", "phaser", "phaserWet", "phaserFloor", "phasercenter",
+            "phasersweep", "tremolosync", "tremolodepth", "tremoloskew", "tremolophase", "delaycap").forEach { name ->
+            val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+            type.simpleName shouldBe name
+            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("add", "sub", "mul", "div")
+            analyze("$name(0.5)").diagnostics.size shouldBe 0
+        }
+    }
+
+    "every alias constant carries its canonical object's type, so it calls and reads like the original" {
+        mapOf("vel" to "velocity", "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "dist" to "distort", "distortOversampling" to "distos", "crushOversampling" to "crushos",
+            "coarseOversampling" to "coarseos", "rsize" to "roomsize", "sz" to "roomsize", "size" to "roomsize",
+            "rfade" to "roomfade", "rlp" to "roomlp", "rdim" to "roomdim", "delayfb" to "delayfeedback",
+            "dfb" to "delayfeedback", "ph" to "phaser", "phc" to "phasercenter", "phs" to "phasersweep",
+            "tremsync" to "tremolosync", "tremdepth" to "tremolodepth", "tremskew" to "tremoloskew",
+            "tremphase" to "tremolophase", "dcap" to "delaycap").forEach { (alias, canonical) ->
+            val type = registry.get(alias).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single().type
+            type.simpleName shouldBe canonical
+            registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$canonical("
+            analyze("$alias(0.5)").diagnostics.size shouldBe 0
+            CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContainAll listOf("mul")
+        }
+    }
+
     "named-argument diagnostics reach the setter through invoke" {
         val bad = analyze("freq(hzz = 440)")
         bad.diagnostics.size shouldBe 1

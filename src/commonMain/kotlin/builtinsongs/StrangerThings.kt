@@ -47,14 +47,16 @@ stack(
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4").clip(0.7).struct("x!4").slow(16)
     .orbit(3).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
-    .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(2).coarseos(2) // solo()
+    // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
+    .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(2).coarseos(1) // solo()
     .superimpose(
       x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
     ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.5).body("glass").vowel("e o e i a u".slow(24)).vowelWet(0.40)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2)).vibrato("0.51".add(perlin.div(20))).vibratoMod(0.06)
-        .crush("2.0".add(berlin2.mul(0.75).slow(4))).crushos(4).lpf(7.75 * 440).hpf(300).postgain(0.45)
+        // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
+        .crush("2.0".add(berlin2.mul(0.75).slow(4))).crushos(1).lpf(7.75 * 440).hpf(300).postgain(0.45)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))

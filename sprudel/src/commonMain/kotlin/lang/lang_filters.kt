@@ -1198,10 +1198,13 @@ fun SprudelPattern.lowpass(freq: PatternLike? = null, q: PatternLike? = null, pa
 fun String.lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.lpf(freq, q, passes, callInfo)
 
-/** Returns a [PatternMapperFn] that applies a Low Pass Filter (LPF) (see [SprudelPattern.lowpass]). */
-@KlangScript.Function
+/** Kotlin door only: alias of [lpf]; the script reaches it through `lowpass(...)`. */
 fun lowpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     lpf(freq, q, passes, callInfo)
+
+/** Alias of [lpf]: the same accessor under another name. */
+@KlangScript.Constant
+val lowpass: Lpf = Lpf
 
 /** Chains a lowpass step onto this [PatternMapperFn] (see [SprudelPattern.lowpass]). */
 @KlangScript.Function
@@ -1236,10 +1239,13 @@ fun SprudelPattern.highpass(freq: PatternLike? = null, q: PatternLike? = null, p
 fun String.highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.hpf(freq, q, passes, callInfo)
 
-/** Returns a [PatternMapperFn] that applies a High Pass Filter (HPF) (see [SprudelPattern.highpass]). */
-@KlangScript.Function
+/** Kotlin door only: alias of [hpf]; the script reaches it through `highpass(...)`. */
 fun highpass(freq: PatternLike? = null, q: PatternLike? = null, passes: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     hpf(freq, q, passes, callInfo)
+
+/** Alias of [hpf]: the same accessor under another name. */
+@KlangScript.Constant
+val highpass: Hpf = Hpf
 
 /** Chains a highpass step onto this [PatternMapperFn] (see [SprudelPattern.highpass]). */
 @KlangScript.Function
@@ -1273,10 +1279,13 @@ fun SprudelPattern.bandpass(freq: PatternLike? = null, q: PatternLike? = null, c
 fun String.bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.bpf(freq, q, callInfo)
 
-/** Returns a [PatternMapperFn] that applies a Band Pass Filter (BPF) (see [SprudelPattern.bandpass]). */
-@KlangScript.Function
+/** Kotlin door only: alias of [bpf]; the script reaches it through `bandpass(...)`. */
 fun bandpass(freq: PatternLike? = null, q: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     bpf(freq, q, callInfo)
+
+/** Alias of [bpf]: the same accessor under another name. */
+@KlangScript.Constant
+val bandpass: Bpf = Bpf
 
 /** Chains a bandpass step onto this [PatternMapperFn] (see [SprudelPattern.bandpass]). */
 @KlangScript.Function

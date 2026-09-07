@@ -54,7 +54,8 @@ stack(                                                                          
     .sound("supersaw").unison(9).spread(0.08).gain(0.75).postgain(0.12).distort(1, "tube", 4).distort(0.80)    
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.029).lpadsr(0.005, 1.1, 0.0, 0.015)    
     .hpf("<550!16 360!16 550!16 800!16>").lpf("3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4)).lpe(8.1).lpq(2.0)
-    .coarse(2).coarseos(4).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))
+    // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
+    .coarse(2).coarseos(1).pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))
     .pipeline("pedal").body("wood").bodyWet(0.3)
   , // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>")  //  . solo()
@@ -63,7 +64,8 @@ stack(                                                                          
     .sound("supersaw").unison(7).spread(0.09).gain(0.75).postgain(0.11).distort(1, "tube", 4).distort(0.85)
     .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpadsr(0.005, 1.0, 0.0, 0.01)    
     .hpf(120).lpf(3200).lpe(8.1).lpq(1.8)
-    .coarse(2).coarseos(4).pan(0.3).superimpose(
+    // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
+    .coarse(2).coarseos(1).pan(0.3).superimpose(
       x => x.pan(0.7),
       x => x.postgain(0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
@@ -140,14 +142,16 @@ stack(
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a2]]>/4").clip(0.67).struct("x!4").slow(16)
     .orbit(2).s("supersaw").unison(9).spread(saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
-    .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(2).coarseos(2) // solo()
+    // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
+    .gain(1.0).adsr(0.01, 0.6, 0.8, 2.75).postgain(0.50).coarse(2).coarseos(1) // solo()
     .superimpose(
       x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.15, 0.8).slow(32)).clip(0.79)
     ).lpf(4.5 * 440).lpq(2.5).hpf(60).notchf(notch).notchq(0.75).body("glass").vowel("i a e".slow(12)).vowelWet(0.2)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0)).vibrato("0.51".add(perlin.div(10))).vibratoMod(0.05)
-        .crush("1.85".add(berlin2.mul(0.5).slow(4))).crushos(2).lpf(5.5 * 440).hpf(300).postgain(0.45)
+        // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.
+        .crush("1.85".add(berlin2.mul(0.5).slow(4))).crushos(1).lpf(5.5 * 440).hpf(300).postgain(0.45)
         .pan(0.2).superimpose(pan(0.8))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))

@@ -86,7 +86,8 @@ stack( // Gitarre! -------------------------------------------------------------
     .pan(0.55).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()
   , // Noise ------------------------------------------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").orbit(5).bpf("1800 600 1200 600").gain("0.1") // .solo()
-  ,note("a").sound("brown").gain(0.1).hpf(3000).lpf(13500).crush(6).crushos(4) // .solo()
+  // coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
+  ,note("a").sound("brown").gain(0.1).hpf(3000).lpf(13500).crush(6).crushos(1) // .solo()
   , // Drums 1 ----------------------------------------------------------------------------------------------------------------------------------------------
   cat(s(`<[lt,sd]                                 [[lt,sd]!3 ~                ~!12]
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),

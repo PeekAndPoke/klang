@@ -2,6 +2,11 @@
 
 ## Recent Work (2026-09-07)
 
+- **Field accessors, batch two** (effects): 24 objects, 20 alias constants (`val rsize: RoomSize =
+  RoomSize`). Bug found by the new rows and fixed: `crushOversampleMutation` and
+  `coarseOversampleMutation` used `toString()?.toIntOrNull()`, which is `null` for `"2.0"`, so
+  `crushos(2)` never wrote its field from a number. Now `asDoubleOrNull()?.toInt()`.
+
 - **Field accessors, batch one** (`docs/tasks/sprudel-field-accessors.md`): fourteen objects on the
   new `FieldAccessor` base (`lang.kt`): `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq, hpq,
   bpq, attack, decay, sustain, release`. Recipe in `ref/dsl-conventions.md`. Null rule decided:

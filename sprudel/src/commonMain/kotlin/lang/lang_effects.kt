@@ -12,6 +12,7 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
+import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
@@ -23,6 +24,10 @@ private val distortMutation = voiceSetter {
 }
 
 private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.distort }, update = distortMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, distortMutation)
 }
 
@@ -157,32 +162,66 @@ fun String.distort(amount: PatternLike? = null, shape: PatternLike? = null, over
     this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, shape, oversample, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that applies waveshaper distortion.
+ * Returns a [PatternMapperFn] for `distort(...)`.
  *
- * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
- *
- * @param amount The distortion amount.
- * @param shape Waveshaper curve name: soft, hard, gentle, softsat, cubic, exp, sineshaper,
- *   zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify. Omit to leave it unchanged.
- * @param oversample Oversampling factor (2/4/8). Omit to leave it unchanged.
- *   Omit to reinterpret the pattern's values as distortion.
- * @param-tool amount SprudelDistortEditor, SprudelDistortSequenceEditor
- * @return A [PatternMapperFn] that applies waveshaper distortion.
- *
- * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").apply(distort(0.5))  // moderate distortion
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, distort(0.8))  // heavy distortion on every 4th cycle
- * ```
- * @alias dist
- * @category effects
- * @tags distort, dist, distortion, waveshaper, overdrive
+ * Kotlin door only: the script reaches this through `distort(...)`, which is [Distort.invoke].
  */
-@KlangScript.Function
-fun distort(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, shape, oversample, callInfo) }
+fun distort(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.distort(amount, shape, oversample, callInfo) }
+
+/**
+ * The distortion drive of each event, as a value other setters can read.
+ *
+ * Bare `distort` reads what the chain has set so far, so it comes after whatever set the field
+ * (`distort(...)` or an alias). Call it, `distort(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `dist`.
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").distort(0.4).distort(mul("1 2 1 2"))                          // every second hit harder
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").distort("0.2 0.8").pan(distort)                               // more drive, further right
+ * ```
+ *
+ * @category effects
+ * @tags distort, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("distort")
+object Distort : FieldAccessor({ it.distort }) {
+
+    /**
+     * Returns a [PatternMapperFn] that applies waveshaper distortion.
+     *
+     * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+     * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
+     *
+     * @param amount The distortion amount.
+     * @param shape Waveshaper curve name: soft, hard, gentle, softsat, cubic, exp, sineshaper,
+     *   zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify. Omit to leave it unchanged.
+     * @param oversample Oversampling factor (2/4/8). Omit to leave it unchanged.
+     *   Omit to reinterpret the pattern's values as distortion.
+     * @param-tool amount SprudelDistortEditor, SprudelDistortSequenceEditor
+     * @return A [PatternMapperFn] that applies waveshaper distortion.
+     *
+     * ```KlangScript(Playable)
+     * note("c2 eb2 g2").s("sawtooth").apply(distort(0.5))  // moderate distortion
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").firstOf(4, distort(0.8))  // heavy distortion on every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        distort(amount, shape, oversample, callInfo)
+}
+
+/** The [Distort] accessor as a value, so the Kotlin door reads like the script. */
+val distort: Distort = Distort
 
 /**
  * Creates a chained [PatternMapperFn] that applies waveshaper distortion after the previous mapper.
@@ -257,33 +296,13 @@ fun SprudelPattern.dist(amount: PatternLike? = null, shape: PatternLike? = null,
 fun String.dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, shape, oversample, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that applies waveshaper distortion. Alias for [distort].
- *
- * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
- *
- * @param amount The distortion amount.
- * @param shape Waveshaper curve name: soft, hard, gentle, softsat, cubic, exp, sineshaper,
- *   zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify. Omit to leave it unchanged.
- * @param oversample Oversampling factor (2/4/8). Omit to leave it unchanged.
- *   Omit to reinterpret the pattern's values as distortion.
- * @param-tool amount SprudelDistortEditor, SprudelDistortSequenceEditor
- * @return A [PatternMapperFn] that applies waveshaper distortion.
- *
- * ```KlangScript(Playable)
- * note("c2 eb2 g2").s("sawtooth").apply(dist(0.5))  // moderate distortion
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").firstOf(4, dist(0.8))  // heavy distortion on every 4th cycle
- * ```
- * @alias distort
- * @category effects
- * @tags dist, distort, distortion, waveshaper, overdrive
- */
-@KlangScript.Function
-fun dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, shape, oversample, callInfo) }
+/** Kotlin door only: alias of [distort]; the script reaches it through `dist(...)`. */
+fun dist(amount: PatternLike? = null, shape: PatternLike? = null, oversample: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.distort(amount, shape, oversample, callInfo) }
+
+/** Alias of [distort]: the same accessor under another name. */
+@KlangScript.Constant
+val dist: Distort = Distort
 
 /**
  * Creates a chained [PatternMapperFn] that applies waveshaper distortion (alias for [distort]) after the previous mapper.
@@ -308,9 +327,13 @@ fun PatternMapperFn.dist(amount: PatternLike? = null, shape: PatternLike? = null
 
 // -- distos() / distortoversampling() ---------------------------------------------------------------------------------
 
-private val distortOversampleMutation = voiceSetter { distortOversample = it?.toString()?.toDoubleOrNull()?.toInt() }
+private val distortOversampleMutation = voiceSetter { distortOversample = it?.asIntOrNull() }
 
 private fun applyDistortOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.distortOversample?.toDouble() }, update = distortOversampleMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, distortOversampleMutation)
 }
 
@@ -342,8 +365,46 @@ fun SprudelPattern.distos(factor: PatternLike? = null, callInfo: CallInfo? = nul
 fun String.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distos(factor, callInfo)
 
-@KlangScript.Function
-fun distos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distos(factor, callInfo) }
+/**
+ * Returns a [PatternMapperFn] for `distos(...)`.
+ *
+ * Kotlin door only: the script reaches this through `distos(...)`, which is [Distos.invoke].
+ */
+fun distos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.distos(factor, callInfo) }
+
+/**
+ * The distortion oversampling factor of each event, as a value other setters can read.
+ *
+ * Bare `distos` reads what the chain has set so far, so it comes after whatever set the field
+ * (`distos(...)` or an alias). Call it, `distos(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `distortOversampling`.
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").distort(0.6).distos(2).distos(mul("1 2 1 2"))                // 2x, then 4x on every second hit
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").distort(0.6).distos("1 4").crush(8).crushos(distos)          // same oversampling on the crusher
+ * ```
+ *
+ * @category effects
+ * @tags distos, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("distos")
+object Distos : FieldAccessor({ it.distortOversample?.toDouble() }) {
+
+    /** `distos(...)`: the setter, see the pattern form. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        distos(factor, callInfo)
+}
+
+/** The [Distos] accessor as a value, so the Kotlin door reads like the script. */
+val distos: Distos = Distos
 
 @KlangScript.Function
 fun PatternMapperFn.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -357,9 +418,13 @@ fun SprudelPattern.distortOversampling(factor: PatternLike? = null, callInfo: Ca
 fun String.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).distortOversampling(factor, callInfo)
 
-@KlangScript.Function
+/** Kotlin door only: alias of [distos]; the script reaches it through `distortOversampling(...)`. */
 fun distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.distortOversampling(factor, callInfo) }
+
+/** Alias of [distos]: the same accessor under another name. */
+@KlangScript.Constant
+val distortOversampling: Distos = Distos
 
 @KlangScript.Function
 fun PatternMapperFn.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -617,6 +682,10 @@ fun PatternMapperFn.dshape(shape: PatternLike, callInfo: CallInfo? = null): Patt
 private val crushMutation = voiceSetter { crush = it?.asDoubleOrNull() }
 
 private fun applyCrush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.crush }, update = crushMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, crushMutation)
 }
 
@@ -668,28 +737,60 @@ fun String.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprud
     this.toVoiceValuePattern(callInfo?.receiverLocation).crush(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that applies bit-crushing.
+ * Returns a [PatternMapperFn] for `crush(...)`.
  *
- * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as crush amounts.
+ * Kotlin door only: the script reaches this through `crush(...)`, which is [Crush.invoke].
+ */
+fun crush(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.crush(amount, callInfo) }
+
+/**
+ * The bit depth of each event, as a value other setters can read.
  *
- * @param amount The bit-depth reduction amount. Lower values produce more lo-fi character.
- *   Omit to reinterpret the pattern's values as crush.
- * @return A [PatternMapperFn] that applies bit-crushing.
+ * Bare `crush` reads what the chain has set so far, so it comes after whatever set the field
+ * (`crush(...)` or an alias). Call it, `crush(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * s("bd sd hh").apply(crush(4))              // 4-bit crunch via mapper
+ * s("bd*4").crush(8).crush(mul("1 0.5 1 0.5"))                           // every second hit coarser
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, crush(2))            // maximum crush every 4th cycle
+ * s("hh*4").crush("4 12").lpf(crush.mul(500))                             // fewer bits, darker
  * ```
  *
  * @category effects
- * @tags crush, bitcrush, lofi, bitdepth, distortion
+ * @tags crush, accessor
  */
-@KlangScript.Function
-fun crush(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.crush(amount, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("crush")
+object Crush : FieldAccessor({ it.crush }) {
+
+    /**
+     * Returns a [PatternMapperFn] that applies bit-crushing.
+     *
+     * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+     * When [amount] is omitted, the pattern's own numeric values are reinterpreted as crush amounts.
+     *
+     * @param amount The bit-depth reduction amount. Lower values produce more lo-fi character.
+     *   Omit to reinterpret the pattern's values as crush.
+     * @return A [PatternMapperFn] that applies bit-crushing.
+     *
+     * ```KlangScript(Playable)
+     * s("bd sd hh").apply(crush(4))              // 4-bit crunch via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, crush(2))            // maximum crush every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        crush(amount, callInfo)
+}
+
+/** The [Crush] accessor as a value, so the Kotlin door reads like the script. */
+val crush: Crush = Crush
 
 /**
  * Creates a chained [PatternMapperFn] that applies bit-crushing after the previous mapper.
@@ -712,9 +813,13 @@ fun PatternMapperFn.crush(amount: PatternLike? = null, callInfo: CallInfo? = nul
 
 // -- crushos() / crushoversampling() ----------------------------------------------------------------------------------
 
-private val crushOversampleMutation = voiceSetter { crushOversample = it?.toString()?.toIntOrNull() }
+private val crushOversampleMutation = voiceSetter { crushOversample = it?.asIntOrNull() }
 
 private fun applyCrushOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.crushOversample?.toDouble() }, update = crushOversampleMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, crushOversampleMutation)
 }
 
@@ -743,8 +848,46 @@ fun SprudelPattern.crushos(factor: PatternLike? = null, callInfo: CallInfo? = nu
 fun String.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).crushos(factor, callInfo)
 
-@KlangScript.Function
-fun crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.crushos(factor, callInfo) }
+/**
+ * Returns a [PatternMapperFn] for `crushos(...)`.
+ *
+ * Kotlin door only: the script reaches this through `crushos(...)`, which is [Crushos.invoke].
+ */
+fun crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.crushos(factor, callInfo) }
+
+/**
+ * The bit crusher oversampling factor of each event, as a value other setters can read.
+ *
+ * Bare `crushos` reads what the chain has set so far, so it comes after whatever set the field
+ * (`crushos(...)` or an alias). Call it, `crushos(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `crushOversampling`.
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").crush(6).crushos(1).crushos(add("0 1 0 1"))                   // 2x on every second hit
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").crush(6).crushos("1 2").coarse(2).coarseos(crushos)           // same oversampling on the decimator
+ * ```
+ *
+ * @category effects
+ * @tags crushos, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("crushos")
+object Crushos : FieldAccessor({ it.crushOversample?.toDouble() }) {
+
+    /** `crushos(...)`: the setter, see the pattern form. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        crushos(factor, callInfo)
+}
+
+/** The [Crushos] accessor as a value, so the Kotlin door reads like the script. */
+val crushos: Crushos = Crushos
 
 @KlangScript.Function
 fun PatternMapperFn.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -758,9 +901,13 @@ fun SprudelPattern.crushOversampling(factor: PatternLike? = null, callInfo: Call
 fun String.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).crushOversampling(factor, callInfo)
 
-@KlangScript.Function
+/** Kotlin door only: alias of [crushos]; the script reaches it through `crushOversampling(...)`. */
 fun crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.crushOversampling(factor, callInfo) }
+
+/** Alias of [crushos]: the same accessor under another name. */
+@KlangScript.Constant
+val crushOversampling: Crushos = Crushos
 
 @KlangScript.Function
 fun PatternMapperFn.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -771,6 +918,10 @@ fun PatternMapperFn.crushOversampling(factor: PatternLike? = null, callInfo: Cal
 private val coarseMutation = voiceSetter { coarse = it?.asDoubleOrNull() }
 
 private fun applyCoarse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.coarse }, update = coarseMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, coarseMutation)
 }
 
@@ -822,28 +973,60 @@ fun String.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).coarse(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that applies sample-rate reduction.
+ * Returns a [PatternMapperFn] for `coarse(...)`.
  *
- * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as coarse amounts.
+ * Kotlin door only: the script reaches this through `coarse(...)`, which is [Coarse.invoke].
+ */
+fun coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.coarse(amount, callInfo) }
+
+/**
+ * The sample rate reduction of each event, as a value other setters can read.
  *
- * @param amount The downsampling amount. Higher values produce more aliasing and lo-fi character.
- *   Omit to reinterpret the pattern's values as coarse.
- * @return A [PatternMapperFn] that applies sample-rate reduction.
+ * Bare `coarse` reads what the chain has set so far, so it comes after whatever set the field
+ * (`coarse(...)` or an alias). Call it, `coarse(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * s("bd sd").apply(coarse(4))        // lo-fi via mapper
+ * s("hh*8").coarse(4).coarse(mul(perlin.seg(8).range(1, 3)))             // a decimator that wanders
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, coarse(8))   // heavy downsampling every 4th cycle
+ * s("hh*4").coarse("2 8").lpf(coarse.mul(1000))                           // coarser, but brighter
  * ```
  *
  * @category effects
- * @tags coarse, samplerate, lofi, aliasing, downsample
+ * @tags coarse, accessor
  */
-@KlangScript.Function
-fun coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.coarse(amount, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("coarse")
+object Coarse : FieldAccessor({ it.coarse }) {
+
+    /**
+     * Returns a [PatternMapperFn] that applies sample-rate reduction.
+     *
+     * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+     * When [amount] is omitted, the pattern's own numeric values are reinterpreted as coarse amounts.
+     *
+     * @param amount The downsampling amount. Higher values produce more aliasing and lo-fi character.
+     *   Omit to reinterpret the pattern's values as coarse.
+     * @return A [PatternMapperFn] that applies sample-rate reduction.
+     *
+     * ```KlangScript(Playable)
+     * s("bd sd").apply(coarse(4))        // lo-fi via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, coarse(8))   // heavy downsampling every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        coarse(amount, callInfo)
+}
+
+/** The [Coarse] accessor as a value, so the Kotlin door reads like the script. */
+val coarse: Coarse = Coarse
 
 /**
  * Creates a chained [PatternMapperFn] that applies sample-rate reduction after the previous mapper.
@@ -866,9 +1049,13 @@ fun PatternMapperFn.coarse(amount: PatternLike? = null, callInfo: CallInfo? = nu
 
 // -- coarseos() / coarseoversampling() --------------------------------------------------------------------------------
 
-private val coarseOversampleMutation = voiceSetter { coarseOversample = it?.toString()?.toIntOrNull() }
+private val coarseOversampleMutation = voiceSetter { coarseOversample = it?.asIntOrNull() }
 
 private fun applyCoarseOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.coarseOversample?.toDouble() }, update = coarseOversampleMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, coarseOversampleMutation)
 }
 
@@ -900,8 +1087,46 @@ fun SprudelPattern.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = n
 fun String.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).coarseos(factor, callInfo)
 
-@KlangScript.Function
-fun coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.coarseos(factor, callInfo) }
+/**
+ * Returns a [PatternMapperFn] for `coarseos(...)`.
+ *
+ * Kotlin door only: the script reaches this through `coarseos(...)`, which is [Coarseos.invoke].
+ */
+fun coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.coarseos(factor, callInfo) }
+
+/**
+ * The decimator oversampling factor of each event, as a value other setters can read.
+ *
+ * Bare `coarseos` reads what the chain has set so far, so it comes after whatever set the field
+ * (`coarseos(...)` or an alias). Call it, `coarseos(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `coarseOversampling`.
+ *
+ * ```KlangScript(Playable)
+ * s("hh*4").coarse(4).coarseos(1).coarseos(add("0 1 0 1"))                // 2x on every second hat
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("hh*4").coarse(4).coarseos("1 2").crush(8).crushos(coarseos)          // same oversampling on the crusher
+ * ```
+ *
+ * @category effects
+ * @tags coarseos, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("coarseos")
+object Coarseos : FieldAccessor({ it.coarseOversample?.toDouble() }) {
+
+    /** `coarseos(...)`: the setter, see the pattern form. */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        coarseos(factor, callInfo)
+}
+
+/** The [Coarseos] accessor as a value, so the Kotlin door reads like the script. */
+val coarseos: Coarseos = Coarseos
 
 @KlangScript.Function
 fun PatternMapperFn.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -915,9 +1140,13 @@ fun SprudelPattern.coarseOversampling(factor: PatternLike? = null, callInfo: Cal
 fun String.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).coarseOversampling(factor, callInfo)
 
-@KlangScript.Function
+/** Kotlin door only: alias of [coarseos]; the script reaches it through `coarseOversampling(...)`. */
 fun coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.coarseOversampling(factor, callInfo) }
+
+/** Alias of [coarseos]: the same accessor under another name. */
+@KlangScript.Constant
+val coarseOversampling: Coarseos = Coarseos
 
 @KlangScript.Function
 fun PatternMapperFn.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -930,6 +1159,10 @@ private val roomMutation = voiceSetter {
 }
 
 private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.room }, update = roomMutation)
+    }
+
     // No args: reinterpret pattern's own values as room mix (backward compat)
     if (args.isEmpty()) {
         return source.reinterpretVoice {
@@ -1021,27 +1254,59 @@ fun String.roomWet(wet: PatternLike? = null, size: PatternLike? = null, fade: Pa
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomWet(wet, size, fade, lowpass, dim, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the reverb send (see [SprudelPattern.roomWet]).
+ * Returns a [PatternMapperFn] for `roomWet(...)`.
  *
- * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
- * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the send amount.
+ * Kotlin door only: the script reaches this through `roomWet(...)`, which is [RoomWet.invoke].
+ */
+fun roomWet(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomWet(wet, size, fade, lowpass, dim, callInfo) }
+
+/**
+ * The reverb send of each event, as a value other setters can read.
  *
- * @param wet The reverb send amount (0–1). Omit to reinterpret the pattern's values.
- * @return A [PatternMapperFn] that sets the reverb send.
+ * Bare `roomWet` reads what the chain has set so far, so it comes after whatever set the field
+ * (`roomWet(...)` or an alias). Call it, `roomWet(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").apply(roomWet(0.5)).clip(0.5)     // 50% reverb send via mapper
+ * s("bd sd").roomWet(0.3).roomWet(mul("1 2"))                             // the snare twice as wet
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, roomWet(0.9)).clip(0.5)      // heavy reverb every 4th cycle
+ * s("bd sd").roomWet("0.1 0.5").delaytime(0.25).delayWet(roomWet)         // as much delay as reverb
  * ```
  *
  * @category effects
- * @tags room, reverb, wet, mix, space
+ * @tags roomWet, accessor
  */
-@KlangScript.Function
-fun roomWet(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomWet(wet, size, fade, lowpass, dim, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("roomWet")
+object RoomWet : FieldAccessor({ it.room }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the reverb send (see [SprudelPattern.roomWet]).
+     *
+     * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+     * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the send amount.
+     *
+     * @param wet The reverb send amount (0–1). Omit to reinterpret the pattern's values.
+     * @return A [PatternMapperFn] that sets the reverb send.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3 g3").apply(roomWet(0.5)).clip(0.5)     // 50% reverb send via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, roomWet(0.9)).clip(0.5)      // heavy reverb every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(wet: PatternLike? = null, size: PatternLike? = null, fade: PatternLike? = null, lowpass: PatternLike? = null, dim: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        roomWet(wet, size, fade, lowpass, dim, callInfo)
+}
+
+/** The [RoomWet] accessor as a value, so the Kotlin door reads like the script. */
+val roomWet: RoomWet = RoomWet
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb send after the previous mapper.
@@ -1066,6 +1331,10 @@ fun PatternMapperFn.roomWet(wet: PatternLike? = null, size: PatternLike? = null,
 private val roomSizeMutation = voiceSetter { roomSize = it?.asDoubleOrNull() }
 
 private fun applyRoomSize(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.roomSize }, update = roomSizeMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, roomSizeMutation)
 }
 
@@ -1119,29 +1388,62 @@ fun String.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the reverb room size.
+ * Returns a [PatternMapperFn] for `roomsize(...)`.
  *
- * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room size.
- *
- * @param amount The room size. Larger values produce longer reverb tails.
- *   Omit to reinterpret the pattern's values as room size.
- * @return A [PatternMapperFn] that sets the reverb room size.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(roomsize(4)).clip(0.5)        // long reverb tail via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, roomsize(8)).clip(0.5)      // huge room every 4th cycle
- * ```
- *
- * @alias rsize, sz, size
- * @category effects
- * @tags roomsize, rsize, sz, size, reverb, room, tail
+ * Kotlin door only: the script reaches this through `roomsize(...)`, which is [RoomSize.invoke].
  */
-@KlangScript.Function
-fun roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
+fun roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomsize(amount, callInfo) }
+
+/**
+ * The reverb room size of each event, as a value other setters can read.
+ *
+ * Bare `roomsize` reads what the chain has set so far, so it comes after whatever set the field
+ * (`roomsize(...)` or an alias). Call it, `roomsize(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `rsize`, `sz`, `size`.
+ *
+ * ```KlangScript(Playable)
+ * s("bd").roomWet(0.4).roomsize(4).roomsize(mul(perlin.seg(1).range(0.5, 2)))   // a room that changes every bar
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").roomWet(0.4).roomsize("2 8").roomfade(roomsize.mul(0.1))     // fade follows size
+ * ```
+ *
+ * @category effects
+ * @tags roomsize, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("roomsize")
+object RoomSize : FieldAccessor({ it.roomSize }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the reverb room size.
+     *
+     * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+     * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room size.
+     *
+     * @param amount The room size. Larger values produce longer reverb tails.
+     *   Omit to reinterpret the pattern's values as room size.
+     * @return A [PatternMapperFn] that sets the reverb room size.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(roomsize(4)).clip(0.5)        // long reverb tail via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, roomsize(8)).clip(0.5)      // huge room every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        roomsize(amount, callInfo)
+}
+
+/** The [RoomSize] accessor as a value, so the Kotlin door reads like the script. */
+val roomsize: RoomSize = RoomSize
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size after the previous mapper.
@@ -1193,22 +1495,13 @@ fun SprudelPattern.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null
 fun String.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
- *
- * @param amount The room size. Omit to reinterpret the pattern's values as room size.
- * @return A [PatternMapperFn] that sets the reverb room size.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(rsize(4)).clip(0.5)   // long reverb tail via mapper
- * ```
- *
- * @alias roomsize, sz, size
- * @category effects
- * @tags rsize, roomsize, sz, size, reverb, room, tail
- */
-@KlangScript.Function
-fun rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
+/** Kotlin door only: alias of [roomsize]; the script reaches it through `rsize(...)`. */
+fun rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomsize(amount, callInfo) }
+
+/** Alias of [roomsize]: the same accessor under another name. */
+@KlangScript.Constant
+val rsize: RoomSize = RoomSize
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1260,22 +1553,13 @@ fun SprudelPattern.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): 
 fun String.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
- *
- * @param amount The room size. Omit to reinterpret the pattern's values as room size.
- * @return A [PatternMapperFn] that sets the reverb room size.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(sz(4)).clip(0.5)   // long reverb tail via mapper
- * ```
- *
- * @alias roomsize, rsize, size
- * @category effects
- * @tags sz, roomsize, rsize, size, reverb, room, tail
- */
-@KlangScript.Function
-fun sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
+/** Kotlin door only: alias of [roomsize]; the script reaches it through `sz(...)`. */
+fun sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomsize(amount, callInfo) }
+
+/** Alias of [roomsize]: the same accessor under another name. */
+@KlangScript.Constant
+val sz: RoomSize = RoomSize
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1326,22 +1610,13 @@ fun SprudelPattern.size(amount: PatternLike? = null, callInfo: CallInfo? = null)
 fun String.size(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
- *
- * @param amount The room size. Omit to reinterpret the pattern's values as room size.
- * @return A [PatternMapperFn] that sets the reverb room size.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(size(4)).clip(0.5)   // long reverb tail via mapper
- * ```
- *
- * @alias roomsize, rsize, sz
- * @category effects
- * @tags size, roomsize, rsize, sz, reverb, room, tail
- */
-@KlangScript.Function
-fun size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
+/** Kotlin door only: alias of [roomsize]; the script reaches it through `size(...)`. */
+fun size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomsize(amount, callInfo) }
+
+/** Alias of [roomsize]: the same accessor under another name. */
+@KlangScript.Constant
+val size: RoomSize = RoomSize
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1366,6 +1641,10 @@ fun PatternMapperFn.size(amount: PatternLike? = null, callInfo: CallInfo? = null
 private val roomFadeMutation = voiceSetter { roomFade = it?.asDoubleOrNull() }
 
 private fun applyRoomFade(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.roomFade }, update = roomFadeMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, roomFadeMutation)
 }
 
@@ -1422,30 +1701,63 @@ fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomfade(time, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the reverb tail override (0..1).
+ * Returns a [PatternMapperFn] for `roomfade(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [time] is omitted, the pattern's own numeric values are reinterpreted as fade time.
- *
- * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s) — NOT seconds, and a different
- *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded —
- *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
- * @return A [PatternMapperFn] that sets the reverb tail override (0..1).
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(roomfade(0.1)).roomWet(0.6)   // short tail via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, roomfade(0.6))            // long tail every 4th cycle
- * ```
- *
- * @alias rfade
- * @category effects
- * @tags roomfade, rfade, reverb, fade, tail
+ * Kotlin door only: the script reaches this through `roomfade(...)`, which is [RoomFade.invoke].
  */
-@KlangScript.Function
-fun roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomfade(time, callInfo) }
+fun roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomfade(time, callInfo) }
+
+/**
+ * The reverb fade time of each event, as a value other setters can read.
+ *
+ * Bare `roomfade` reads what the chain has set so far, so it comes after whatever set the field
+ * (`roomfade(...)` or an alias). Call it, `roomfade(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `rfade`.
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").roomWet(0.4).roomfade(0.3).roomfade(mul("1 2"))              // the snare rings longer
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").roomWet(0.4).roomfade("0.25 1").delayWet(0.3).delaytime(roomfade.div(4))   // delay time follows the fade
+ * ```
+ *
+ * @category effects
+ * @tags roomfade, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("roomfade")
+object RoomFade : FieldAccessor({ it.roomFade }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the reverb tail override (0..1).
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [time] is omitted, the pattern's own numeric values are reinterpreted as fade time.
+     *
+     * @param time Tail override, **0..1** (0 = ~0.7 s, 1 = ~12.5 s), NOT seconds, and a different
+     *   scale from `roomsize` (~0..10). Overrides `roomsize`. Values outside 0..1 are bounded,
+     *   past unity the comb network runs away rather than ringing longer. Omit to reinterpret the pattern's values as the override.
+     * @return A [PatternMapperFn] that sets the reverb tail override (0..1).
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(roomfade(0.1)).roomWet(0.6)   // short tail via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, roomfade(0.6))            // long tail every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        roomfade(time, callInfo)
+}
+
+/** The [RoomFade] accessor as a value, so the Kotlin door reads like the script. */
+val roomfade: RoomFade = RoomFade
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb tail override (0..1) after the previous mapper.
@@ -1513,26 +1825,13 @@ fun SprudelPattern.rfade(time: PatternLike? = null, callInfo: CallInfo? = null):
 fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomfade(time, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the reverb tail override (0..1). Alias for [roomfade].
- *
- * @param time Tail override, **0..1** (not seconds). Overrides `roomsize`.
- * @return A [PatternMapperFn] that sets the reverb tail override (0..1).
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(rfade(0.1)).roomWet(0.6)   // 2-second fade via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, rfade(0.1))            // long fade every 4th cycle
- * ```
- *
- * @alias roomfade
- * @category effects
- * @tags rfade, roomfade, reverb, fade, tail
- */
-@KlangScript.Function
-fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomfade(time, callInfo) }
+/** Kotlin door only: alias of [roomfade]; the script reaches it through `rfade(...)`. */
+fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomfade(time, callInfo) }
+
+/** Alias of [roomfade]: the same accessor under another name. */
+@KlangScript.Constant
+val rfade: RoomFade = RoomFade
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb tail override (0..1) (alias for roomfade) after the previous mapper.
@@ -1559,6 +1858,10 @@ fun PatternMapperFn.rfade(time: PatternLike? = null, callInfo: CallInfo? = null)
 private val roomLpMutation = voiceSetter { roomLp = it?.asDoubleOrNull() }
 
 private fun applyRoomLp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.roomLp }, update = roomLpMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, roomLpMutation)
 }
 
@@ -1610,29 +1913,62 @@ fun String.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprude
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomlp(freq, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the reverb lowpass start frequency.
+ * Returns a [PatternMapperFn] for `roomlp(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [freq] is omitted, the pattern's own numeric values are reinterpreted as the frequency.
- *
- * @param freq The lowpass filter start frequency in Hz.
- *   Omit to reinterpret the pattern's values as lowpass frequency.
- * @return A [PatternMapperFn] that sets the reverb lowpass frequency.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(roomlp(4000)).roomWet(0.6)   // dark reverb via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, roomlp(1000))            // very dark reverb every 4th cycle
- * ```
- *
- * @alias rlp
- * @category effects
- * @tags roomlp, rlp, reverb, lowpass, filter
+ * Kotlin door only: the script reaches this through `roomlp(...)`, which is [RoomLp.invoke].
  */
-@KlangScript.Function
-fun roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomlp(freq, callInfo) }
+fun roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomlp(freq, callInfo) }
+
+/**
+ * The reverb lowpass of each event, as a value other setters can read.
+ *
+ * Bare `roomlp` reads what the chain has set so far, so it comes after whatever set the field
+ * (`roomlp(...)` or an alias). Call it, `roomlp(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `rlp`.
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").roomWet(0.4).roomlp(4000).roomlp(mul("1 0.5"))               // a darker tail on the snare
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").roomWet(0.4).roomlp("2000 8000").lpf(roomlp)                 // the voice as dark as its reverb
+ * ```
+ *
+ * @category effects
+ * @tags roomlp, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("roomlp")
+object RoomLp : FieldAccessor({ it.roomLp }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the reverb lowpass start frequency.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [freq] is omitted, the pattern's own numeric values are reinterpreted as the frequency.
+     *
+     * @param freq The lowpass filter start frequency in Hz.
+     *   Omit to reinterpret the pattern's values as lowpass frequency.
+     * @return A [PatternMapperFn] that sets the reverb lowpass frequency.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(roomlp(4000)).roomWet(0.6)   // dark reverb via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, roomlp(1000))            // very dark reverb every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        roomlp(freq, callInfo)
+}
+
+/** The [RoomLp] accessor as a value, so the Kotlin door reads like the script. */
+val roomlp: RoomLp = RoomLp
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency after the previous mapper.
@@ -1694,29 +2030,13 @@ fun SprudelPattern.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): S
 fun String.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomlp(freq, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the reverb lowpass start frequency. Alias for [roomlp].
- *
- * When [freq] is omitted, the pattern's own numeric values are reinterpreted as the frequency.
- *
- * @param freq The lowpass filter start frequency in Hz.
- *   Omit to reinterpret the pattern's values as lowpass frequency.
- * @return A [PatternMapperFn] that sets the reverb lowpass frequency.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(rlp(4000)).roomWet(0.6)   // dark reverb via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, rlp(1000))            // very dark reverb every 4th cycle
- * ```
- *
- * @alias roomlp
- * @category effects
- * @tags rlp, roomlp, reverb, lowpass, filter
- */
-@KlangScript.Function
-fun rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomlp(freq, callInfo) }
+/** Kotlin door only: alias of [roomlp]; the script reaches it through `rlp(...)`. */
+fun rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomlp(freq, callInfo) }
+
+/** Alias of [roomlp]: the same accessor under another name. */
+@KlangScript.Constant
+val rlp: RoomLp = RoomLp
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency (alias for roomlp) after the previous mapper.
@@ -1742,6 +2062,10 @@ fun PatternMapperFn.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): 
 private val roomDimMutation = voiceSetter { roomDim = it?.asDoubleOrNull() }
 
 private fun applyRoomDim(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.roomDim }, update = roomDimMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, roomDimMutation)
 }
 
@@ -1791,28 +2115,62 @@ fun String.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomdim(freq, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB.
+ * Returns a [PatternMapperFn] for `roomdim(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [freq] is omitted, the pattern's own numeric values are reinterpreted as the frequency.
- *
- * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
- * @return A [PatternMapperFn] that sets the reverb -60 dB frequency.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(roomdim(500)).roomWet(0.6)   // very dark reverb via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, roomdim(200))            // very dim reverb every 4th cycle
- * ```
- *
- * @alias rdim
- * @category effects
- * @tags roomdim, rdim, reverb, lowpass, darkness
+ * Kotlin door only: the script reaches this through `roomdim(...)`, which is [RoomDim.invoke].
  */
-@KlangScript.Function
-fun roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomdim(freq, callInfo) }
+fun roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomdim(freq, callInfo) }
+
+/**
+ * The reverb damping frequency of each event, as a value other setters can read. Reserved: the
+ * engine does not use `roomDim` yet, the value travels but changes nothing.
+ *
+ * Bare `roomdim` reads what the chain has set so far, so it comes after whatever set the field
+ * (`roomdim(...)` or an alias). Call it, `roomdim(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `rdim`.
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").roomWet(0.4).roomdim(3000).roomdim(mul(perlin.seg(2).range(0.5, 2)))   // reserved, inaudible for now
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd sd").roomWet(0.4).roomdim("2000 6000").roomlp(roomdim)            // lowpass follows damping
+ * ```
+ *
+ * @category effects
+ * @tags roomdim, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("roomdim")
+object RoomDim : FieldAccessor({ it.roomDim }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the reserved reverb damping frequency (the engine does not use it yet).
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [freq] is omitted, the pattern's own numeric values are reinterpreted as the frequency.
+     *
+     * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
+     * @return A [PatternMapperFn] that sets the reverb -60 dB frequency.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(roomdim(500)).roomWet(0.6)   // reserved, inaudible for now
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, roomdim(200))            // reserved, inaudible for now
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        roomdim(freq, callInfo)
+}
+
+/** The [RoomDim] accessor as a value, so the Kotlin door reads like the script. */
+val roomdim: RoomDim = RoomDim
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB after the previous mapper.
@@ -1875,22 +2233,13 @@ fun SprudelPattern.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): 
 fun String.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).roomdim(freq, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB. Alias for [roomdim].
- *
- * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
- * @return A [PatternMapperFn] that sets the reverb -60 dB frequency.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(rdim(500)).roomWet(0.6)   // very dark reverb via mapper
- * ```
- *
- * @alias roomdim
- * @category effects
- * @tags rdim, roomdim, reverb, lowpass, darkness
- */
-@KlangScript.Function
-fun rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomdim(freq, callInfo) }
+/** Kotlin door only: alias of [roomdim]; the script reaches it through `rdim(...)`. */
+fun rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.roomdim(freq, callInfo) }
+
+/** Alias of [roomdim]: the same accessor under another name. */
+@KlangScript.Constant
+val rdim: RoomDim = RoomDim
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb -60 dB frequency (alias for roomdim) after the previous
@@ -2077,6 +2426,10 @@ private val delayMutation = voiceSetter {
 }
 
 private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.delay }, update = delayMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, delayMutation)
 }
 
@@ -2147,29 +2500,61 @@ fun String.delayWet(wet: PatternLike? = null, time: PatternLike? = null, feedbac
     this.toVoiceValuePattern(callInfo?.receiverLocation).delayWet(wet, time, feedback, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the delay send (see [SprudelPattern.delayWet]).
+ * Returns a [PatternMapperFn] for `delayWet(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the send amount.
+ * Kotlin door only: the script reaches this through `delayWet(...)`, which is [DelayWet.invoke].
+ */
+fun delayWet(wet: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.delayWet(wet, time, feedback, callInfo) }
+
+/**
+ * The delay send of each event, as a value other setters can read.
  *
- * @param wet The delay send amount (0–1). Omit to reinterpret the pattern's values.
- * @param time Delay time in seconds. Omit to leave it unchanged.
- * @param feedback Feedback amount (0–1). Omit to leave it unchanged.
- * @return A [PatternMapperFn] that sets the delay send.
+ * Bare `delayWet` reads what the chain has set so far, so it comes after whatever set the field
+ * (`delayWet(...)` or an alias). Call it, `delayWet(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(delayWet(0.4))   // 40% delay send via mapper
+ * s("hh*4").delaytime(0.25).delayWet(0.3).delayWet(mul("1 0 1 0"))        // delay on every other hat only
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delayWet(0.8))   // heavy delay every 4th cycle
+ * s("hh*4").delaytime(0.25).delayWet("0.1 0.4").roomWet(delayWet)         // as much reverb as delay
  * ```
  *
  * @category effects
- * @tags delay, echo, wet, mix
+ * @tags delayWet, accessor
  */
-@KlangScript.Function
-fun delayWet(wet: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delayWet(wet, time, feedback, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("delayWet")
+object DelayWet : FieldAccessor({ it.delay }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the delay send (see [SprudelPattern.delayWet]).
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the send amount.
+     *
+     * @param wet The delay send amount (0–1). Omit to reinterpret the pattern's values.
+     * @param time Delay time in seconds. Omit to leave it unchanged.
+     * @param feedback Feedback amount (0–1). Omit to leave it unchanged.
+     * @return A [PatternMapperFn] that sets the delay send.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(delayWet(0.4))   // 40% delay send via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, delayWet(0.8))   // heavy delay every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(wet: PatternLike? = null, time: PatternLike? = null, feedback: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        delayWet(wet, time, feedback, callInfo)
+}
+
+/** The [DelayWet] accessor as a value, so the Kotlin door reads like the script. */
+val delayWet: DelayWet = DelayWet
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay send after the previous mapper.
@@ -2196,6 +2581,10 @@ fun PatternMapperFn.delayWet(wet: PatternLike? = null, time: PatternLike? = null
 private val delayTimeMutation = voiceSetter { delayTime = it?.asDoubleOrNull() }
 
 private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.delayTime }, update = delayTimeMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, delayTimeMutation)
 }
 
@@ -2245,27 +2634,59 @@ fun String.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): Spr
     this.toVoiceValuePattern(callInfo?.receiverLocation).delaytime(time, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the delay time in seconds.
+ * Returns a [PatternMapperFn] for `delaytime(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [time] is omitted, the pattern's own numeric values are reinterpreted as delay time.
+ * Kotlin door only: the script reaches this through `delaytime(...)`, which is [DelayTime.invoke].
+ */
+fun delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.delaytime(time, callInfo) }
+
+/**
+ * The delay time of each event, as a value other setters can read.
  *
- * @param time The delay interval in seconds. Omit to reinterpret the pattern's values as delay time.
- * @return A [PatternMapperFn] that sets the delay time.
+ * Bare `delaytime` reads what the chain has set so far, so it comes after whatever set the field
+ * (`delaytime(...)` or an alias). Call it, `delaytime(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").apply(delaytime(0.25))   // quarter-note delay via mapper
+ * s("sd").delayWet(0.4).delaytime(0.25).delaytime(mul("<1 1.5>"))         // dotted every other bar
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, delaytime(0.125))   // eighth-note delay every 4th cycle
+ * s("sd sd").delayWet(0.4).delaytime("0.25 0.375").roomWet(0.4).roomfade(delaytime.mul(2))   // the tail follows the delay
  * ```
  *
  * @category effects
- * @tags delaytime, delay, echo, time, interval
+ * @tags delaytime, accessor
  */
-@KlangScript.Function
-fun delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delaytime(time, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("delaytime")
+object DelayTime : FieldAccessor({ it.delayTime }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the delay time in seconds.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [time] is omitted, the pattern's own numeric values are reinterpreted as delay time.
+     *
+     * @param time The delay interval in seconds. Omit to reinterpret the pattern's values as delay time.
+     * @return A [PatternMapperFn] that sets the delay time.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(delaytime(0.25))   // quarter-note delay via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, delaytime(0.125))   // eighth-note delay every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        delaytime(time, callInfo)
+}
+
+/** The [DelayTime] accessor as a value, so the Kotlin door reads like the script. */
+val delaytime: DelayTime = DelayTime
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay time after the previous mapper.
@@ -2290,6 +2711,10 @@ fun PatternMapperFn.delaytime(time: PatternLike? = null, callInfo: CallInfo? = n
 private val delayFeedbackMutation = voiceSetter { delayFeedback = it?.asDoubleOrNull() }
 
 private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.delayFeedback }, update = delayFeedbackMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, delayFeedbackMutation)
 }
 
@@ -2340,29 +2765,61 @@ fun String.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null
     this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the delay feedback amount.
+ * Returns a [PatternMapperFn] for `delayfeedback(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as feedback.
- *
- * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
- * @return A [PatternMapperFn] that sets the delay feedback.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(delayfeedback(0.6))   // feedback via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, delayfeedback(0.8))   // lots of echoes every 4th cycle
- * ```
- *
- * @alias delayfb, dfb
- * @category effects
- * @tags delayfeedback, delayfb, dfb, delay, echo, feedback, repeats
+ * Kotlin door only: the script reaches this through `delayfeedback(...)`, which is [DelayFeedback.invoke].
  */
-@KlangScript.Function
 fun delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.delayfeedback(amount, callInfo) }
+
+/**
+ * The delay feedback of each event, as a value other setters can read.
+ *
+ * Bare `delayfeedback` reads what the chain has set so far, so it comes after whatever set the field
+ * (`delayfeedback(...)` or an alias). Call it, `delayfeedback(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `delayfb`, `dfb`.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").delayWet(0.4).delaytime(0.25).delayfeedback(0.4).delayfeedback(add(perlin.seg(1).range(0, 0.3)))   // repeats that vary
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("sd sd").delayWet(0.4).delaytime(0.25).delayfeedback("0.2 0.6").roomWet(delayfeedback)   // more repeats, more room
+ * ```
+ *
+ * @category effects
+ * @tags delayfeedback, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("delayfeedback")
+object DelayFeedback : FieldAccessor({ it.delayFeedback }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the delay feedback amount.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [amount] is omitted, the pattern's own numeric values are reinterpreted as feedback.
+     *
+     * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
+     * @return A [PatternMapperFn] that sets the delay feedback.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(delayfeedback(0.6))   // feedback via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, delayfeedback(0.8))   // lots of echoes every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        delayfeedback(amount, callInfo)
+}
+
+/** The [DelayFeedback] accessor as a value, so the Kotlin door reads like the script. */
+val delayfeedback: DelayFeedback = DelayFeedback
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback amount after the previous mapper.
@@ -2426,22 +2883,13 @@ fun SprudelPattern.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = nu
 fun String.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the delay feedback amount. Alias for [delayfeedback].
- *
- * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
- * @return A [PatternMapperFn] that sets the delay feedback.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(delayfb(0.6))   // feedback via mapper
- * ```
- *
- * @alias delayfeedback, dfb
- * @category effects
- * @tags delayfb, delayfeedback, dfb, delay, echo, feedback, repeats
- */
-@KlangScript.Function
-fun delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delayfeedback(amount, callInfo) }
+/** Kotlin door only: alias of [delayfeedback]; the script reaches it through `delayfb(...)`. */
+fun delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.delayfeedback(amount, callInfo) }
+
+/** Alias of [delayfeedback]: the same accessor under another name. */
+@KlangScript.Constant
+val delayfb: DelayFeedback = DelayFeedback
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback (alias for delayfeedback) after the previous
@@ -2505,22 +2953,13 @@ fun SprudelPattern.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null):
 fun String.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the delay feedback amount. Alias for [delayfeedback].
- *
- * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
- * @return A [PatternMapperFn] that sets the delay feedback.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(dfb(0.6))   // feedback via mapper
- * ```
- *
- * @alias delayfeedback, delayfb
- * @category effects
- * @tags dfb, delayfeedback, delayfb, delay, echo, feedback, repeats
- */
-@KlangScript.Function
-fun dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delayfeedback(amount, callInfo) }
+/** Kotlin door only: alias of [delayfeedback]; the script reaches it through `dfb(...)`. */
+fun dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.delayfeedback(amount, callInfo) }
+
+/** Alias of [delayfeedback]: the same accessor under another name. */
+@KlangScript.Constant
+val dfb: DelayFeedback = DelayFeedback
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback (alias for delayfeedback) after the previous
@@ -2549,6 +2988,10 @@ private val phaserMutation = voiceSetter {
 }
 
 private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.phaserRate }, update = phaserMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, phaserMutation)
 }
 
@@ -2626,34 +3069,67 @@ fun String.phaser(rate: PatternLike? = null, wet: PatternLike? = null, center: P
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, wet, center, sweep, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the phaser LFO rate.
+ * Returns a [PatternMapperFn] for `phaser(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
- *
- * @param rate The phaser LFO rate in Hz.
- * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
- *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
- * @param center Centre frequency in Hz. Omit to leave it unchanged.
- * @param sweep Sweep range in Hz. Omit to leave it unchanged.
- *   Omit to reinterpret the pattern's values as phaser rate.
- * @param-tool rate SprudelPhaserEditor, SprudelPhaserSequenceEditor
- * @return A [PatternMapperFn] that sets the phaser rate.
- *
- * ```KlangScript(Playable)
- * note("c3 e3 g3").apply(phaser(0.5))   // slow phaser via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, phaser(4.0))   // fast phaser every 4th cycle
- * ```
- *
- * @alias ph
- * @category effects
- * @tags phaser, ph, phase, sweep, modulation
+ * Kotlin door only: the script reaches this through `phaser(...)`, which is [Phaser.invoke].
  */
-@KlangScript.Function
-fun phaser(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, wet, center, sweep, callInfo) }
+fun phaser(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.phaser(rate, wet, center, sweep, callInfo) }
+
+/**
+ * The phaser rate of each event, as a value other setters can read.
+ *
+ * Bare `phaser` reads what the chain has set so far, so it comes after whatever set the field
+ * (`phaser(...)` or an alias). Call it, `phaser(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `ph`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").phaser(0.5).phaserWet(0.5).phaser(mul("1 4"))    // the second note swirls faster
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").phaser("0.5 2").phaserWet(phaser.div(4))         // faster, wetter
+ * ```
+ *
+ * @category effects
+ * @tags phaser, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("phaser")
+object Phaser : FieldAccessor({ it.phaserRate }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the phaser LFO rate.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
+     *
+     * @param rate The phaser LFO rate in Hz.
+     * @param wet Wet amount (0–1), the shared wet knob; on the orbit phaser it is additive
+     *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
+     * @param center Centre frequency in Hz. Omit to leave it unchanged.
+     * @param sweep Sweep range in Hz. Omit to leave it unchanged.
+     *   Omit to reinterpret the pattern's values as phaser rate.
+     * @param-tool rate SprudelPhaserEditor, SprudelPhaserSequenceEditor
+     * @return A [PatternMapperFn] that sets the phaser rate.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3 g3").apply(phaser(0.5))   // slow phaser via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, phaser(4.0))   // fast phaser every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        phaser(rate, wet, center, sweep, callInfo)
+}
+
+/** The [Phaser] accessor as a value, so the Kotlin door reads like the script. */
+val phaser: Phaser = Phaser
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate after the previous mapper.
@@ -2730,28 +3206,13 @@ fun SprudelPattern.ph(rate: PatternLike? = null, wet: PatternLike? = null, cente
 fun String.ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, wet, center, sweep, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the phaser LFO rate. Alias for [phaser].
- *
- * @param rate The phaser LFO rate in Hz.
- * @param wet Wet amount (0–1) — the shared wet knob; on the orbit phaser it is additive
- *   by default (`phaserFloor` = 1). Omit to leave it unchanged.
- * @param center Centre frequency in Hz. Omit to leave it unchanged.
- * @param sweep Sweep range in Hz. Omit to leave it unchanged.
- *   Omit to reinterpret the pattern's values as phaser rate.
- * @param-tool rate SprudelPhaserEditor, SprudelPhaserSequenceEditor
- * @return A [PatternMapperFn] that sets the phaser rate.
- *
- * ```KlangScript(Playable)
- * note("c3 e3 g3").apply(ph(0.5))   // slow phaser via mapper
- * ```
- *
- * @alias phaser
- * @category effects
- * @tags ph, phaser, phase, sweep, modulation
- */
-@KlangScript.Function
-fun ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, wet, center, sweep, callInfo) }
+/** Kotlin door only: alias of [phaser]; the script reaches it through `ph(...)`. */
+fun ph(rate: PatternLike? = null, wet: PatternLike? = null, center: PatternLike? = null, sweep: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.phaser(rate, wet, center, sweep, callInfo) }
+
+/** Alias of [phaser]: the same accessor under another name. */
+@KlangScript.Constant
+val ph: Phaser = Phaser
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate (alias for phaser) after the previous mapper.
@@ -2780,6 +3241,10 @@ fun PatternMapperFn.ph(rate: PatternLike? = null, wet: PatternLike? = null, cent
 private val phaserWetMutation = voiceSetter { phaserDepth = it?.asDoubleOrNull() }
 
 private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.phaserDepth }, update = phaserWetMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, phaserWetMutation)
 }
 
@@ -2834,27 +3299,59 @@ fun String.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): Spru
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaserWet(wet, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the phaser wet amount.
+ * Returns a [PatternMapperFn] for `phaserWet(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the wet amount.
+ * Kotlin door only: the script reaches this through `phaserWet(...)`, which is [PhaserWet.invoke].
+ */
+fun phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.phaserWet(wet, callInfo) }
+
+/**
+ * The phaser depth of each event, as a value other setters can read.
  *
- * @param wet The wet amount (0–1). Omit to reinterpret the pattern's values.
- * @return A [PatternMapperFn] that sets the phaser wet.
+ * Bare `phaserWet` reads what the chain has set so far, so it comes after whatever set the field
+ * (`phaserWet(...)` or an alias). Call it, `phaserWet(...)`, to set the field; a mapper argument applies
+ * to the field.
  *
  * ```KlangScript(Playable)
- * note("c3*4").apply(phaserWet(0.8))   // deep phaser via mapper
+ * note("c3 e3").s("saw").phaser(0.5).phaserWet(0.5).phaserWet(mul("1 0.5"))   // the second note drier
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3*4").every(4, phaserWet(1.0))   // full wet every 4th cycle
+ * note("c3 e3").s("saw").phaser(0.5).phaserWet("0.3 0.9").delaytime(0.25).delayWet(phaserWet)   // as much delay as phaser
  * ```
  *
  * @category effects
- * @tags phaserwet, phaserdepth, phaser, depth, modulation, wet
+ * @tags phaserWet, accessor
  */
-@KlangScript.Function
-fun phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserWet(wet, callInfo) }
+@KlangScript.Library("sprudel")
+@KlangScript.Object("phaserWet")
+object PhaserWet : FieldAccessor({ it.phaserDepth }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the phaser wet amount.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [wet] is omitted, the pattern's own numeric values are reinterpreted as the wet amount.
+     *
+     * @param wet The wet amount (0–1). Omit to reinterpret the pattern's values.
+     * @return A [PatternMapperFn] that sets the phaser wet.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").apply(phaserWet(0.8))   // deep phaser via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, phaserWet(1.0))   // full wet every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(wet: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        phaserWet(wet, callInfo)
+}
+
+/** The [PhaserWet] accessor as a value, so the Kotlin door reads like the script. */
+val phaserWet: PhaserWet = PhaserWet
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser wet after the previous mapper.
@@ -2879,6 +3376,10 @@ fun PatternMapperFn.phaserWet(wet: PatternLike? = null, callInfo: CallInfo? = nu
 private val phaserFloorMutation = voiceSetter { phaserFloor = it?.asDoubleOrNull() }
 
 private fun applyPhaserFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.phaserFloor }, update = phaserFloorMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, phaserFloorMutation)
 }
 
@@ -2912,10 +3413,44 @@ fun SprudelPattern.phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? =
 fun String.phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phaserFloor(floor, callInfo)
 
-/** Returns a [PatternMapperFn] that sets the phaser floor (see [SprudelPattern.phaserFloor]). */
-@KlangScript.Function
+/**
+ * Returns a [PatternMapperFn] for `phaserFloor(...)`.
+ *
+ * Kotlin door only: the script reaches this through `phaserFloor(...)`, which is [PhaserFloor.invoke].
+ */
 fun phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.phaserFloor(floor, callInfo) }
+
+/**
+ * The phaser floor of each event, as a value other setters can read.
+ *
+ * Bare `phaserFloor` reads what the chain has set so far, so it comes after whatever set the field
+ * (`phaserFloor(...)` or an alias). Call it, `phaserFloor(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").phaser(0.5).phaserWet(0.5).phaserFloor(0.2).phaserFloor(add("0 0.3"))   // more dry signal on the second note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").phaser(0.5).phaserFloor("0.1 0.5").phaserWet(phaserFloor.add(0.3))   // depth follows the floor
+ * ```
+ *
+ * @category effects
+ * @tags phaserFloor, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("phaserFloor")
+object PhaserFloor : FieldAccessor({ it.phaserFloor }) {
+
+    /** Returns a [PatternMapperFn] that sets the phaser floor (see [SprudelPattern.phaserFloor]). */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(floor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        phaserFloor(floor, callInfo)
+}
+
+/** The [PhaserFloor] accessor as a value, so the Kotlin door reads like the script. */
+val phaserFloor: PhaserFloor = PhaserFloor
 
 /** Creates a chained [PatternMapperFn] that sets the phaser floor after the previous mapper. */
 @KlangScript.Function
@@ -2927,6 +3462,10 @@ fun PatternMapperFn.phaserFloor(floor: PatternLike? = null, callInfo: CallInfo? 
 private val phaserCenterMutation = voiceSetter { phaserCenter = it?.asDoubleOrNull() }
 
 private fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.phaserCenter }, update = phaserCenterMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, phaserCenterMutation)
 }
 
@@ -2976,28 +3515,61 @@ fun String.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): 
     this.toVoiceValuePattern(callInfo?.receiverLocation).phasercenter(freq, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the phaser center frequency.
+ * Returns a [PatternMapperFn] for `phasercenter(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [freq] is omitted, the pattern's own numeric values are reinterpreted as the center frequency.
- *
- * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
- * @return A [PatternMapperFn] that sets the phaser center frequency.
- *
- * ```KlangScript(Playable)
- * note("c3*4").apply(phasercenter(1000))   // 1 kHz center via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, phasercenter(4000))   // high-frequency center every 4th cycle
- * ```
- *
- * @alias phc
- * @category effects
- * @tags phasercenter, phc, phaser, frequency, center
+ * Kotlin door only: the script reaches this through `phasercenter(...)`, which is [PhaserCenter.invoke].
  */
-@KlangScript.Function
-fun phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasercenter(freq, callInfo) }
+fun phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.phasercenter(freq, callInfo) }
+
+/**
+ * The phaser centre frequency of each event, as a value other setters can read.
+ *
+ * Bare `phasercenter` reads what the chain has set so far, so it comes after whatever set the field
+ * (`phasercenter(...)` or an alias). Call it, `phasercenter(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `phc`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").phaser(0.5).phaserWet(0.5).phasercenter(1000).phasercenter(mul("1 2"))   // the second note sweeps an octave up
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").phaser(0.5).phaserWet(0.5).phasercenter("800 2400").lpf(phasercenter.mul(2))   // lowpass above the sweep
+ * ```
+ *
+ * @category effects
+ * @tags phasercenter, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("phasercenter")
+object PhaserCenter : FieldAccessor({ it.phaserCenter }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the phaser center frequency.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [freq] is omitted, the pattern's own numeric values are reinterpreted as the center frequency.
+     *
+     * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
+     * @return A [PatternMapperFn] that sets the phaser center frequency.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").apply(phasercenter(1000))   // 1 kHz center via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, phasercenter(4000))   // high-frequency center every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        phasercenter(freq, callInfo)
+}
+
+/** The [PhaserCenter] accessor as a value, so the Kotlin door reads like the script. */
+val phasercenter: PhaserCenter = PhaserCenter
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser center frequency after the previous mapper.
@@ -3060,22 +3632,13 @@ fun SprudelPattern.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): S
 fun String.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phasercenter(freq, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the phaser center frequency. Alias for [phasercenter].
- *
- * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
- * @return A [PatternMapperFn] that sets the phaser center frequency.
- *
- * ```KlangScript(Playable)
- * note("c3*4").apply(phc(1000))   // 1 kHz center via mapper
- * ```
- *
- * @alias phasercenter
- * @category effects
- * @tags phc, phasercenter, phaser, frequency, center
- */
-@KlangScript.Function
-fun phc(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasercenter(freq, callInfo) }
+/** Kotlin door only: alias of [phasercenter]; the script reaches it through `phc(...)`. */
+fun phc(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.phasercenter(freq, callInfo) }
+
+/** Alias of [phasercenter]: the same accessor under another name. */
+@KlangScript.Constant
+val phc: PhaserCenter = PhaserCenter
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser center frequency (alias for phasercenter) after the
@@ -3101,6 +3664,10 @@ fun PatternMapperFn.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): 
 private val phaserSweepMutation = voiceSetter { phaserSweep = it?.asDoubleOrNull() }
 
 private fun applyPhaserSweep(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.phaserSweep }, update = phaserSweepMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, phaserSweepMutation)
 }
 
@@ -3150,28 +3717,61 @@ fun String.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null):
     this.toVoiceValuePattern(callInfo?.receiverLocation).phasersweep(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the phaser sweep range.
+ * Returns a [PatternMapperFn] for `phasersweep(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the sweep range.
- *
- * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
- * @return A [PatternMapperFn] that sets the phaser sweep range.
- *
- * ```KlangScript(Playable)
- * note("c3*4").apply(phasersweep(2000))   // ±2000 Hz sweep via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, phasersweep(4000))   // wide sweep every 4th cycle
- * ```
- *
- * @alias phs
- * @category effects
- * @tags phasersweep, phs, phaser, sweep, width
+ * Kotlin door only: the script reaches this through `phasersweep(...)`, which is [PhaserSweep.invoke].
  */
-@KlangScript.Function
-fun phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasersweep(amount, callInfo) }
+fun phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.phasersweep(amount, callInfo) }
+
+/**
+ * The phaser sweep range of each event, as a value other setters can read.
+ *
+ * Bare `phasersweep` reads what the chain has set so far, so it comes after whatever set the field
+ * (`phasersweep(...)` or an alias). Call it, `phasersweep(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `phs`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").phaser(0.5).phaserWet(0.5).phasersweep(2000).phasersweep(mul("1 0.5"))   // a narrower sweep on the second note
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").phaser(0.5).phaserWet(0.5).phasersweep("1000 3000").phasercenter(phasersweep)   // centre follows the range
+ * ```
+ *
+ * @category effects
+ * @tags phasersweep, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("phasersweep")
+object PhaserSweep : FieldAccessor({ it.phaserSweep }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the phaser sweep range.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the sweep range.
+     *
+     * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
+     * @return A [PatternMapperFn] that sets the phaser sweep range.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").apply(phasersweep(2000))   // ±2000 Hz sweep via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, phasersweep(4000))   // wide sweep every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        phasersweep(amount, callInfo)
+}
+
+/** The [PhaserSweep] accessor as a value, so the Kotlin door reads like the script. */
+val phasersweep: PhaserSweep = PhaserSweep
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser sweep range after the previous mapper.
@@ -3234,22 +3834,13 @@ fun SprudelPattern.phs(amount: PatternLike? = null, callInfo: CallInfo? = null):
 fun String.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).phasersweep(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the phaser sweep range. Alias for [phasersweep].
- *
- * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
- * @return A [PatternMapperFn] that sets the phaser sweep range.
- *
- * ```KlangScript(Playable)
- * note("c3*4").apply(phs(2000))   // ±2000 Hz sweep via mapper
- * ```
- *
- * @alias phasersweep
- * @category effects
- * @tags phs, phasersweep, phaser, sweep, width
- */
-@KlangScript.Function
-fun phs(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasersweep(amount, callInfo) }
+/** Kotlin door only: alias of [phasersweep]; the script reaches it through `phs(...)`. */
+fun phs(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.phasersweep(amount, callInfo) }
+
+/** Alias of [phasersweep]: the same accessor under another name. */
+@KlangScript.Constant
+val phs: PhaserSweep = PhaserSweep
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser sweep range (alias for phasersweep) after the previous
@@ -3275,6 +3866,10 @@ fun PatternMapperFn.phs(amount: PatternLike? = null, callInfo: CallInfo? = null)
 private val tremoloSyncMutation = voiceSetter { tremoloSync = it?.asDoubleOrNull() }
 
 private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.tremoloSync }, update = tremoloSyncMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, tremoloSyncMutation)
 }
 
@@ -3324,28 +3919,61 @@ fun String.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): S
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolosync(rate, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the tremolo LFO rate.
+ * Returns a [PatternMapperFn] for `tremolosync(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the tremolo rate.
- *
- * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
- * @return A [PatternMapperFn] that sets the tremolo rate.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(4).tremolodepth(0.6))   // 4 Hz tremolo via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(8).tremolodepth(0.6))   // fast tremolo every 4th cycle
- * ```
- *
- * @alias tremsync
- * @category effects
- * @tags tremolosync, tremsync, tremolo, rate, modulation
+ * Kotlin door only: the script reaches this through `tremolosync(...)`, which is [TremoloSync.invoke].
  */
-@KlangScript.Function
-fun tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolosync(rate, callInfo) }
+fun tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremolosync(rate, callInfo) }
+
+/**
+ * The tremolo rate of each event, in Hz, as a value other setters can read.
+ *
+ * Bare `tremolosync` reads what the chain has set so far, so it comes after whatever set the field
+ * (`tremolosync(...)` or an alias). Call it, `tremolosync(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `tremsync`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3").s("saw").tremolodepth(0.6).tremolosync(4).tremolosync(mul("<1 2>"))   // twice as fast every other bar
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").tremolosync("2 8").tremolodepth(tremolosync.div(10))   // faster, deeper
+ * ```
+ *
+ * @category effects
+ * @tags tremolosync, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("tremolosync")
+object TremoloSync : FieldAccessor({ it.tremoloSync }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the tremolo LFO rate.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the tremolo rate.
+     *
+     * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
+     * @return A [PatternMapperFn] that sets the tremolo rate.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(tremolosync(4).tremolodepth(0.6))   // 4 Hz tremolo via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, tremolosync(8).tremolodepth(0.6))   // fast tremolo every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        tremolosync(rate, callInfo)
+}
+
+/** The [TremoloSync] accessor as a value, so the Kotlin door reads like the script. */
+val tremolosync: TremoloSync = TremoloSync
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO rate after the previous mapper.
@@ -3408,22 +4036,13 @@ fun SprudelPattern.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = nul
 fun String.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolosync(rate, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the tremolo LFO rate. Alias for [tremolosync].
- *
- * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
- * @return A [PatternMapperFn] that sets the tremolo rate.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(tremsync(4).tremolodepth(0.6))   // 4 Hz tremolo via mapper
- * ```
- *
- * @alias tremolosync
- * @category effects
- * @tags tremsync, tremolosync, tremolo, rate, modulation
- */
-@KlangScript.Function
-fun tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolosync(rate, callInfo) }
+/** Kotlin door only: alias of [tremolosync]; the script reaches it through `tremsync(...)`. */
+fun tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremolosync(rate, callInfo) }
+
+/** Alias of [tremolosync]: the same accessor under another name. */
+@KlangScript.Constant
+val tremsync: TremoloSync = TremoloSync
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO rate (alias for tremolosync) after the previous
@@ -3449,6 +4068,10 @@ fun PatternMapperFn.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = nu
 private val tremoloDepthMutation = voiceSetter { tremoloDepth = it?.asDoubleOrNull() }
 
 private fun applyTremoloDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.tremoloDepth }, update = tremoloDepthMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, tremoloDepthMutation)
 }
 
@@ -3498,28 +4121,61 @@ fun String.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null)
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolodepth(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the tremolo depth.
+ * Returns a [PatternMapperFn] for `tremolodepth(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as tremolo depth.
- *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
- * @return A [PatternMapperFn] that sets the tremolo depth.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(4).tremolodepth(0.8))   // strong tremolo via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").every(4, tremolosync(4).tremolodepth(1.0))   // max depth every 4th cycle
- * ```
- *
- * @alias tremdepth
- * @category effects
- * @tags tremolodepth, tremdepth, tremolo, depth, modulation
+ * Kotlin door only: the script reaches this through `tremolodepth(...)`, which is [TremoloDepth.invoke].
  */
-@KlangScript.Function
-fun tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolodepth(amount, callInfo) }
+fun tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremolodepth(amount, callInfo) }
+
+/**
+ * The tremolo depth of each event, as a value other setters can read.
+ *
+ * Bare `tremolodepth` reads what the chain has set so far, so it comes after whatever set the field
+ * (`tremolodepth(...)` or an alias). Call it, `tremolodepth(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `tremdepth`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").tremolosync(4).tremolodepth(0.5).tremolodepth(mul("1 0.5"))   // the second note steadier
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").tremolosync(4).tremolodepth("0.3 0.9").gain(tremolodepth)   // deeper, louder
+ * ```
+ *
+ * @category effects
+ * @tags tremolodepth, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("tremolodepth")
+object TremoloDepth : FieldAccessor({ it.tremoloDepth }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the tremolo depth.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [amount] is omitted, the pattern's own numeric values are reinterpreted as tremolo depth.
+     *
+     * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
+     * @return A [PatternMapperFn] that sets the tremolo depth.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").apply(tremolosync(4).tremolodepth(0.8))   // strong tremolo via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").every(4, tremolosync(4).tremolodepth(1.0))   // max depth every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        tremolodepth(amount, callInfo)
+}
+
+/** The [TremoloDepth] accessor as a value, so the Kotlin door reads like the script. */
+val tremolodepth: TremoloDepth = TremoloDepth
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo depth after the previous mapper.
@@ -3582,22 +4238,13 @@ fun SprudelPattern.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = 
 fun String.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolodepth(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the tremolo depth. Alias for [tremolodepth].
- *
- * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
- * @return A [PatternMapperFn] that sets the tremolo depth.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").apply(tremolosync(4).tremdepth(0.8))   // strong tremolo via mapper
- * ```
- *
- * @alias tremolodepth
- * @category effects
- * @tags tremdepth, tremolodepth, tremolo, depth, modulation
- */
-@KlangScript.Function
-fun tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolodepth(amount, callInfo) }
+/** Kotlin door only: alias of [tremolodepth]; the script reaches it through `tremdepth(...)`. */
+fun tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremolodepth(amount, callInfo) }
+
+/** Alias of [tremolodepth]: the same accessor under another name. */
+@KlangScript.Constant
+val tremdepth: TremoloDepth = TremoloDepth
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo depth (alias for tremolodepth) after the previous mapper.
@@ -3622,6 +4269,10 @@ fun PatternMapperFn.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? =
 private val tremoloSkewMutation = voiceSetter { tremoloSkew = it?.asDoubleOrNull() }
 
 private fun applyTremoloSkew(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.tremoloSkew }, update = tremoloSkewMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, tremoloSkewMutation)
 }
 
@@ -3671,28 +4322,61 @@ fun String.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null):
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloskew(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the tremolo LFO skew.
+ * Returns a [PatternMapperFn] for `tremoloskew(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the skew.
- *
- * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
- * @return A [PatternMapperFn] that sets the tremolo skew.
- *
- * ```KlangScript(Playable)
- * note("c3*4").tremolosync(4).tremolodepth(0.6).apply(tremoloskew(0.8))   // skewed tremolo via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").tremolosync(4).tremolodepth(0.6).every(4, tremoloskew(-0.6))   // trough-heavy skew every 4th cycle
- * ```
- *
- * @alias tremskew
- * @category effects
- * @tags tremoloskew, tremskew, tremolo, skew, asymmetry
+ * Kotlin door only: the script reaches this through `tremoloskew(...)`, which is [TremoloSkew.invoke].
  */
-@KlangScript.Function
-fun tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloskew(amount, callInfo) }
+fun tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremoloskew(amount, callInfo) }
+
+/**
+ * The tremolo skew of each event, as a value other setters can read.
+ *
+ * Bare `tremoloskew` reads what the chain has set so far, so it comes after whatever set the field
+ * (`tremoloskew(...)` or an alias). Call it, `tremoloskew(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `tremskew`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").tremolosync(4).tremolodepth(0.6).tremoloskew(0.5).tremoloskew(add("0 0.3"))   // the second note leans
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").tremolosync(4).tremolodepth(0.6).tremoloskew("0.2 0.8").tremolophase(tremoloskew)   // phase follows skew
+ * ```
+ *
+ * @category effects
+ * @tags tremoloskew, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("tremoloskew")
+object TremoloSkew : FieldAccessor({ it.tremoloSkew }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the tremolo LFO skew.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [amount] is omitted, the pattern's own numeric values are reinterpreted as the skew.
+     *
+     * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
+     * @return A [PatternMapperFn] that sets the tremolo skew.
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").tremolosync(4).tremolodepth(0.6).apply(tremoloskew(0.8))   // skewed tremolo via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").tremolosync(4).tremolodepth(0.6).every(4, tremoloskew(-0.6))   // trough-heavy skew every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        tremoloskew(amount, callInfo)
+}
+
+/** The [TremoloSkew] accessor as a value, so the Kotlin door reads like the script. */
+val tremoloskew: TremoloSkew = TremoloSkew
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO skew after the previous mapper.
@@ -3755,22 +4439,13 @@ fun SprudelPattern.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = n
 fun String.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloskew(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the tremolo LFO skew. Alias for [tremoloskew].
- *
- * @param amount The skew (-1..+1, 0 = symmetric). Omit to reinterpret the pattern's values as tremolo skew.
- * @return A [PatternMapperFn] that sets the tremolo skew.
- *
- * ```KlangScript(Playable)
- * note("c3*4").tremolosync(4).tremolodepth(0.6).apply(tremskew(0.8))   // skewed tremolo via mapper
- * ```
- *
- * @alias tremoloskew
- * @category effects
- * @tags tremskew, tremoloskew, tremolo, skew, asymmetry
- */
-@KlangScript.Function
-fun tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloskew(amount, callInfo) }
+/** Kotlin door only: alias of [tremoloskew]; the script reaches it through `tremskew(...)`. */
+fun tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremoloskew(amount, callInfo) }
+
+/** Alias of [tremoloskew]: the same accessor under another name. */
+@KlangScript.Constant
+val tremskew: TremoloSkew = TremoloSkew
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO skew (alias for tremoloskew) after the previous
@@ -3796,6 +4471,10 @@ fun PatternMapperFn.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = 
 private val tremoloPhaseMutation = voiceSetter { tremoloPhase = it?.asDoubleOrNull() }
 
 private fun applyTremoloPhase(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.tremoloPhase }, update = tremoloPhaseMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, tremoloPhaseMutation)
 }
 
@@ -3848,28 +4527,61 @@ fun String.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null):
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolophase(phase, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase.
+ * Returns a [PatternMapperFn] for `tremolophase(...)`.
  *
- * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
- * When [phase] is omitted, the pattern's own numeric values are reinterpreted as the phase.
- *
- * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
- * @return A [PatternMapperFn] that sets the tremolo phase.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").tremolosync(4).tremolodepth(0.6).apply(tremolophase(0.25))   // 90° start via mapper
- * ```
- *
- * ```KlangScript(Playable)
- * note("c3*4").tremolosync(4).tremolodepth(0.6).every(4, tremolophase(0.5))   // 180° start every 4th cycle
- * ```
- *
- * @alias tremphase
- * @category effects
- * @tags tremolophase, tremphase, tremolo, phase, offset
+ * Kotlin door only: the script reaches this through `tremolophase(...)`, which is [TremoloPhase.invoke].
  */
-@KlangScript.Function
-fun tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolophase(phase, callInfo) }
+fun tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremolophase(phase, callInfo) }
+
+/**
+ * The tremolo phase of each event, as a value other setters can read.
+ *
+ * Bare `tremolophase` reads what the chain has set so far, so it comes after whatever set the field
+ * (`tremolophase(...)` or an alias). Call it, `tremolophase(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `tremphase`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").tremolosync(4).tremolodepth(0.6).tremolophase(0).tremolophase(add("0 0.5"))   // the second note half a wave later
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").tremolosync(4).tremolodepth(0.6).tremolophase("0 0.5").pan(tremolophase)   // phase across the stereo field
+ * ```
+ *
+ * @category effects
+ * @tags tremolophase, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("tremolophase")
+object TremoloPhase : FieldAccessor({ it.tremoloPhase }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase.
+     *
+     * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
+     * When [phase] is omitted, the pattern's own numeric values are reinterpreted as the phase.
+     *
+     * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
+     * @return A [PatternMapperFn] that sets the tremolo phase.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 e3").tremolosync(4).tremolodepth(0.6).apply(tremolophase(0.25))   // 90° start via mapper
+     * ```
+     *
+     * ```KlangScript(Playable)
+     * note("c3*4").tremolosync(4).tremolodepth(0.6).every(4, tremolophase(0.5))   // 180° start every 4th cycle
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        tremolophase(phase, callInfo)
+}
+
+/** The [TremoloPhase] accessor as a value, so the Kotlin door reads like the script. */
+val tremolophase: TremoloPhase = TremoloPhase
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO starting phase after the previous mapper.
@@ -3932,22 +4644,13 @@ fun SprudelPattern.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = n
 fun String.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolophase(phase, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase. Alias for [tremolophase].
- *
- * @param phase The starting phase in cycles (0..1 = one full LFO cycle). Omit to reinterpret the pattern's values as tremolo phase.
- * @return A [PatternMapperFn] that sets the tremolo phase.
- *
- * ```KlangScript(Playable)
- * note("c3 e3").tremolosync(4).tremolodepth(0.6).apply(tremphase(0.25))   // 90° start via mapper
- * ```
- *
- * @alias tremolophase
- * @category effects
- * @tags tremphase, tremolophase, tremolo, phase, offset
- */
-@KlangScript.Function
-fun tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolophase(phase, callInfo) }
+/** Kotlin door only: alias of [tremolophase]; the script reaches it through `tremphase(...)`. */
+fun tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremolophase(phase, callInfo) }
+
+/** Alias of [tremolophase]: the same accessor under another name. */
+@KlangScript.Constant
+val tremphase: TremoloPhase = TremoloPhase
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO starting phase (alias for tremolophase) after the
@@ -4137,6 +4840,10 @@ fun PatternMapperFn.tremshape(shape: PatternLike, callInfo: CallInfo? = null): P
 private val delayCapMutation = voiceSetter { delayCap = it?.asDoubleOrNull() }
 
 private fun applyDelayCap(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.delayCap }, update = delayCapMutation)
+    }
+
     return source._liftOrReinterpretNumericalField(args, delayCapMutation)
 }
 
@@ -4181,22 +4888,54 @@ fun String.delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
     this.toVoiceValuePattern(callInfo?.receiverLocation).delaycap(amount, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that sets the delay feedback ceiling.
+ * Returns a [PatternMapperFn] for `delaycap(...)`.
  *
- * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
- * @return A [PatternMapperFn] that sets the delay feedback ceiling.
- *
- * ```KlangScript(Playable)
- * note("c3 ~ ~ ~").apply(delaycap(2.0)).delayWet(0.6).delayfeedback(1.0)
- * ```
- *
- * @alias dcap
- * @category effects
- * @tags delaycap, dcap, delay, feedback, saturation, selfoscillation
+ * Kotlin door only: the script reaches this through `delaycap(...)`, which is [DelayCap.invoke].
  */
-@KlangScript.Function
 fun delaycap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.delaycap(amount, callInfo) }
+
+/**
+ * The delay feedback cap of each event, as a value other setters can read.
+ *
+ * Bare `delaycap` reads what the chain has set so far, so it comes after whatever set the field
+ * (`delaycap(...)` or an alias). Call it, `delaycap(...)`, to set the field; a mapper argument applies
+ * to the field.
+ *
+ * Aliases: `dcap`.
+ *
+ * ```KlangScript(Playable)
+ * s("sd").delayWet(0.4).delaytime(0.25).delayfeedback(0.7).delaycap(0.5).delaycap(mul("<1 2>"))   // a looser cap every other bar
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("sd sd").delayWet(0.4).delaytime(0.25).delaycap("0.5 1").delayfeedback(delaycap.mul(0.5))   // feedback follows the cap
+ * ```
+ *
+ * @category effects
+ * @tags delaycap, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("delaycap")
+object DelayCap : FieldAccessor({ it.delayCap }) {
+
+    /**
+     * Returns a [PatternMapperFn] that sets the delay feedback ceiling.
+     *
+     * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
+     * @return A [PatternMapperFn] that sets the delay feedback ceiling.
+     *
+     * ```KlangScript(Playable)
+     * note("c3 ~ ~ ~").apply(delaycap(2.0)).delayWet(0.6).delayfeedback(1.0)
+     * ```
+     */
+    @KlangScript.Method(name = "invoke")
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        delaycap(amount, callInfo)
+}
+
+/** The [DelayCap] accessor as a value, so the Kotlin door reads like the script. */
+val delaycap: DelayCap = DelayCap
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback ceiling after the previous mapper.
@@ -4244,19 +4983,13 @@ fun SprudelPattern.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null)
 fun String.dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).delaycap(amount, callInfo)
 
-/**
- * Returns a [PatternMapperFn] that sets the delay feedback ceiling. Alias for [delaycap].
- *
- * @param amount The ceiling (default 1.0). Omit to reinterpret the pattern's values as the cap.
- * @return A [PatternMapperFn] that sets the delay feedback ceiling.
- *
- * ```KlangScript(Playable)
- * note("c3 ~ ~ ~").apply(dcap(2.0)).delayWet(0.6).delayfb(1.0)
- * ```
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [delaycap]; the script reaches it through `dcap(...)`. */
 fun dcap(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.delaycap(amount, callInfo) }
+
+/** Alias of [delaycap]: the same accessor under another name. */
+@KlangScript.Constant
+val dcap: DelayCap = DelayCap
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback ceiling. Alias for [delaycap].

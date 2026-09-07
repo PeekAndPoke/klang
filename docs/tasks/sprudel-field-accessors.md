@@ -7,8 +7,23 @@ Rewritten 2026-09-06 after a design session; the previous draft (context-key bin
 
 - 2026-09-06: pilot on `freq` green, reviewed (two rounds), heard. Greensleeves built on it.
 - 2026-09-07: batch one, fourteen accessors: `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq,
-  hpq, bpq, attack, decay, sustain, release`, on the `FieldAccessor` base. Remaining numeric
-  setters (effects, sample, synthesis, tonal, addons; about 70) follow in later batches.
+  hpq, bpq, attack, decay, sustain, release`, on the `FieldAccessor` base.
+- 2026-09-07: batch two, the effects file: 24 accessors (`distort, distos, crush, crushos, coarse,
+  coarseos, roomWet, roomsize, roomfade, roomlp, roomdim, delayWet, delaytime, delayfeedback,
+  phaser, phaserWet, phaserFloor, phasercenter, phasersweep, tremolosync, tremolodepth,
+  tremoloskew, tremolophase, delaycap`) and their 20 aliases as constants of the canonical object
+  (`val rsize: RoomSize = RoomSize`), so an alias sets and reads exactly like the original and
+  the editor shows it as the canonical type. Found and fixed on the way: `crushos` and `coarseos`
+  parsed their value with `toIntOrNull()` on a `Double`'s string and never wrote the field from a
+  numeric argument. Because those calls were inert in shipped songs, the affected calls
+  (ATruthWorthLyingFor, StrangerThings, IrishLamentTechno, Sakura, and the frozen benchmark
+  snapshots in `src/jvmMain/kotlin/FrozenSongs.kt`) are pinned to `1` with a dated
+  comment so the tuned sound is unchanged; MAINTAINER DECISION per song whether to raise them.
+  The batch-one aliases `vel`, `lowpass`, `highpass`, `bandpass` became constants too.
+  Benchmark note: the song benchmark rung `3 +coarse(2,os4)` (`SongBenchmarkCases.kt`) measured
+  coarse WITHOUT oversampling before 2026-09-07 despite its name; tables from before that date
+  (`docs/benchmarks/2026-08-19_*`) are not comparable on that rung.
+  Remaining: sample (7), synthesis (6), tonal (12), vowel, body, addons.
 
 ## Goal
 
@@ -218,8 +233,10 @@ The violin line in the editor (heard 2026-09-06, works), then Greensleeves whist
   as `invoke`; compound setters (`lpf(freq, q, passes)`) keep their signature on `invoke`, only
   the first parameter takes a mapper. Specs: `LangFieldAccessorsSpec` (one mapped row and one
   read row per accessor, both doors, 12 cycles), `FreqAccessorIntelSpec` (all objects).
-- NEXT batches: effects (`lang_effects.kt`, 24 setters), sample (7), synthesis (6), the rest of
-  tonal (12), vowel, body, addons. Same recipe, same two spec rows per accessor.
+- DONE (batch two, 2026-09-07): the effects file, 24 accessors and 20 alias constants; alias
+  rule: `@KlangScript.Constant val <alias>: <Obj> = <Obj>`, the alias factory stays for Kotlin.
+- NEXT batches: sample (7), synthesis (6), the rest of tonal (12), vowel, body, addons. Same
+  recipe, same two spec rows per accessor, one alias row per alias.
 - The same chain in `_liftStringField` and `_applyControlFromParams` for string and control fields.
 - Provider twins on demand.
 - A provider or mapper handed to a setter WITHOUT the mapper branch (`room(freq)` today) is still

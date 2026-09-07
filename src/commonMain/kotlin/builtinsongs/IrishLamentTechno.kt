@@ -117,8 +117,9 @@ let hit = stack(
 let melody3a = note(`<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5  f5 e5] [d5 a4 d5  f5] [c5 g4 bb4 a4] [d5 c5 a4 g4] [d4@2  d4 ~]>`)
 let melody1  = note(`<[d4 f4 e4 d4] [c4 a4 g4 f4] [d4 g4 f4 e4] [c4 bb4 a4 g4] [d5 c5 bb4 a4] [g4 e4 d4 e4]  [a4 g4 f4 e4] [f4 c4 a4 ~]>`)
 
-let mel3 = melody3a.sound("saw").legato(0.75).hpf(450).lpf(3600).adsr(0.35, 0.1, 0.6, 0.85).gain(0.775).orbit(1).pan(0.2).coarse(2).coarseos(4)
-let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3500).adsr(0.35, 0.1, 0.6, 0.85).gain(0.850).orbit(1).pan(0.8).coarse(2).coarseos(4)
+// coarseos/crushos were inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
+let mel3 = melody3a.sound("saw").legato(0.75).hpf(450).lpf(3600).adsr(0.35, 0.1, 0.6, 0.85).gain(0.775).orbit(1).pan(0.2).coarse(2).coarseos(1)
+let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3500).adsr(0.35, 0.1, 0.6, 0.85).gain(0.850).orbit(1).pan(0.8).coarse(2).coarseos(1)
 
 // One big 64-cycle section. saw.slow(64) ramps 0 → 1 across it.
 // Rhythm/bass build via clean gain ramps (no degrade — that was unpleasant).

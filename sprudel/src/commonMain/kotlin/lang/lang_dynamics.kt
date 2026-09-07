@@ -379,18 +379,13 @@ fun SprudelPattern.vel(amount: PatternLike? = null, callInfo: CallInfo? = null):
 fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(amount, callInfo)
 
-/**
- * Alias for [velocity]. Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
- *
- * ```KlangScript(Playable)
- * note("c*4").apply(vel("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
- * ```
- *
- * @param amount The velocity value or pattern to apply to the events.
- */
-@KlangScript.Function
+/** Kotlin door only: alias of [velocity]; the script reaches it through `vel(...)`. */
 fun vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.velocity(amount, callInfo) }
+
+/** Alias of [velocity]: the same accessor under another name. */
+@KlangScript.Constant
+val vel: Velocity = Velocity
 
 /**
  * Alias for [velocity]. Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
