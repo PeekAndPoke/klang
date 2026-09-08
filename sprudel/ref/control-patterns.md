@@ -22,7 +22,7 @@ fun applyPressBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): Spru
 
 | Join | Structure | Control read | Use for |
 |---|---|---|---|
-| `_innerJoin(args)` | the CONTROL (its parts, `weight` and `numSteps`; wholes stay the source's) | one value per control event | structural transforms: `pressBy`, `fast`, anything where the control's steps ARE the rhythm |
+| `_innerJoin(args)` | the CONTROL (its parts, `weight`, `numSteps` and cycle-length estimate; wholes stay the source's) | one value per control event | structural transforms: `pressBy`, `fast`, anything where the control's steps ARE the rhythm |
 | `_outerJoin(control)` | the SOURCE, events unchanged in shape | `sampleAt(onset)`, once per source event | setters (`_liftNumericField`): `.gain("1 0.5")`, `.pan(sine)` |
 | `_appLeft(control)` | the SOURCE wholes, one fragment per overlapping control event | over the source part, clipped to the query arc | arithmetic, comparison, bitwise (`applyArithmetic`) |
 

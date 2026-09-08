@@ -222,7 +222,7 @@ class LangSegmentSpec : StringSpec({
     "the slices are the steps: numSteps counts them, take() sees them | \"0\".seg(8).take(4)" {
         // With the atom's single step, take(4) computed end = 4 / 1 >= 1 and returned the source untouched.
         "0".seg(8).numSteps shouldBe 8.0
-        sine.segment("2 4").numSteps shouldBe 6.0
+        sine.segment("2 4").numSteps shouldBe 2.0 // unequal slices: the control's two steps, subdivided
 
         val p = "0".seg(8).take(4).note()
 

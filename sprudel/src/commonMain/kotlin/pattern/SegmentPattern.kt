@@ -22,8 +22,8 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
  * for a patterned n Strudel keeps n slices per CYCLE, whereas here each control event's span gets
  * n slices (`sine.segment("2 4")` yields 2 + 4 slices, not 3).
  *
- * The slices are the structure, so [numSteps] is the number of slices in a cycle and [weight] is 1,
- * as for `struct`; the source keeps only its cycle length.
+ * The slices are the structure, so [numSteps] counts them (see there for a patterned n) and [weight]
+ * is 1, as for `struct`; the source keeps only its cycle length.
  *
  * @param source The pattern to segment
  * @param nProvider Control value provider for the number of segments
@@ -46,11 +46,23 @@ internal class SegmentPattern(
 
     override val weight: Double get() = 1.0
 
-    /** Slices in the first cycle: the sum of n over the control events there (4 for `seg(4)`, 6 for `seg("2 4")`). */
+    /**
+     * n when the first cycle is one control event covering exactly that cycle (`seg(4)` is four equal
+     * steps, like `"x x x x"`); otherwise the control's own step count, because unequal slices are
+     * subdivisions of the control's steps, not steps (`seg("2 4")` is `"[x x] [x x x x]"`, two steps).
+     */
     override val numSteps: Double? by lazy {
-        nProvider.queryEvents(CycleTime.ZERO, CycleTime.ONE, QueryContext())
-            .sumOf { (it.data.value?.asInt ?: 1).coerceAtLeast(0) }
-            .toDouble()
+        val firstCycle = nProvider.queryEvents(CycleTime.ZERO, CycleTime.ONE, QueryContext())
+        val single = firstCycle.singleOrNull()
+
+        if (single != null && single.part.begin == CycleTime.ZERO && single.part.end == CycleTime.ONE) {
+            (single.data.value?.asInt ?: 1).coerceAtLeast(0).toDouble()
+        } else {
+            when (nProvider) {
+                is ControlValueProvider.Pattern -> nProvider.pattern.numSteps
+                is ControlValueProvider.Static -> 1.0
+            }
+        }
     }
 
     override fun estimateCycleDuration(): Double = source.estimateCycleDuration()

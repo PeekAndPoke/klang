@@ -102,7 +102,8 @@ one note per cycle, and `"c e g a b c d e".seg(4)` played all eight. Strudel's `
 `struct(pure(true).fast(n))`: the slice is the whole. Now it is here too (four onsets, and the
 four notes under the slice starts), and the dead static path is gone; one implementation. Round 2
 added what the re-birth implies: `numSteps` is the slice count and `weight` is 1 (as for `struct`;
-`"0".seg(8).take(4)` was a silent no-op with the atom's 1 step), and the unreferenced
+`"0".seg(8).take(4)` was a silent no-op with the atom's 1 step; round 3 refined a patterned n to the
+control's own step count, `seg("2 4")` is two subdivided steps, not six), and the unreferenced
 `SegmentPattern.static()` (which sliced the QUERY arc, not the cycle) is deleted. Round 2 also made
 every arithmetic fragment own a `clone()` of its voice data: `_appLeft` is the first node that fans one
 source event out into several, and the shallow `copy` shared the mutable groups between siblings
@@ -135,5 +136,6 @@ Stranger Things `bpf(freq = perlin….segment(16).slow(6))`, Tetris `lpf(q = ber
 
 Correction to the first draft of this section, from review round 1: the old inner join never gave
 the result the CONTROL's wholes (`BindPattern` preserves the inner whole); it gave it the control's
-parts, `weight` and `numSteps`. The fragments were the same as now. What changed for discrete
+parts, `weight`, `numSteps` and cycle-length estimate (round 3 added the last: `cat(...)` allots
+cycles from it, no song has the shape). The fragments were the same as now. What changed for discrete
 controls is `numSteps`/`weight` only; the fix is about continuous controls and the segment handoff.
