@@ -93,10 +93,23 @@ Add methods in the same shape, delegating to the same `kotlin.math` calls `Klang
 
 ### Open design questions (the maintainer's, not settled)
 
-1. **How far to go.** Tier 1 is the everyday patch math below. Tier 2 adds `log2`/`log10`/`ln`/`exp`
-   and `sign` (dB and frequency work is logarithmic). Tier 3 is the musical vocabulary further down
-   (`semitones`, `cents`, and a `db`/`toDb` pair), which is where a magic number becomes a statement
-   of intent and is arguably worth more than tiers 1 and 2 together.
+1. ~~How far to go~~ **settled 2026-09-08: all three tiers.** The full list, so the implementer does
+   not have to re-derive it:
+
+   | Tier | Methods |
+   |---|---|
+   | 1, everyday patch math | `pow(exp)`, `abs()`, `sqrt()`, `round()`, `floor()`, `ceil()`, `min(other)`, `max(other)`, `clamp(lo, hi)`, `mod(n)`, `rem(n)` |
+   | 2, logarithmic | `log2()`, `log10()`, `ln()`, `exp()`, `sign()` |
+   | 3, musical | `semitones()`, `cents()`, `toSemitones()`, `db()`, `toDb()`, plus `"P5".ratio()` on String |
+
+   Tier 3 is the one that changes how a song reads: `.oscp("hptrack", "M3".ratio())` says what it
+   means where `1.2599` does not. Tiers 1 and 2 delegate to the same `kotlin.math` calls
+   `KlangScriptMath` already uses, so they are close to free once the lexer lands.
+
+   **Check door parity before writing tier 3** (`/dsl-design` §3, a project rule). Tiers 1 and 2 need
+   no Kotlin door: `kotlin.math` already IS that door. Tier 3 does not exist on either side yet, and
+   `tones/src/commonMain/kotlin/interval/Interval.kt` already carries the interval vocabulary, so the
+   Kotlin door should be built on that rather than on a second conversion written by hand.
 2. ~~`clamp` or `coerceIn`~~ **settled 2026-09-08: `clamp(lo, hi)`.** What musicians and shader/JS
    people already know; `coerceIn` is Kotlin-internal vocabulary that means nothing to a player.
 3. **Kotlin aliases for `min`/`max`: open.** The proposal is to also accept Kotlin's spellings. If it
@@ -181,7 +194,15 @@ parsing (`"P5"`, `"M3"`, `"-2m"`) — so expose that rather than inventing a sch
 7.semitones()     // 1.4983
 (-12).semitones() // 0.5
 50.cents()        // 1.0289
-1.5.toSemitones() // 7.02     — inverse, for analysis
+1.5.toSemitones() // 7.02     the inverse, for analysis
+```
+
+**Decibels, the same idea in the other currency** (approved 2026-09-08 with tier 3). Every mixing
+knob is in dB and every engine gain is linear, so the conversion is written by hand constantly:
+
+```javascript
+(-6).db()         // 0.5012   dB to a linear gain, 10^(dB/20)
+0.5.toDb()        // -6.02    the inverse
 ```
 
 Naming rationale: `ratio()` works on a string because the receiver already carries the interval
