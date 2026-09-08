@@ -40,7 +40,7 @@ even when they are valuable.
 | ~~8~~ | ~~`per-playback-engine` **D4** cylinder eviction~~ | same, step 2f | ✅ **DONE 2026-09-04** as engine disposal: the end of a playback returns every unit. Idle cylinders inside a live engine stay (maintainer, settled) |
 | ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
 
-## Layer 2: widen and harden the interface (11 open, 2 done; reviewed 2026-09-07)
+## Layer 2: widen and harden the interface (11 open of which 1 blocked on a decision, 2 done; reviewed 2026-09-08)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
@@ -51,7 +51,7 @@ even when they are valuable.
 | 14 | Engine tuning **Part B** | [`engine-tuning-profile.md`](engine-tuning-profile.md) | The `Double`-vs-node resolution decision gates the tuning surface |
 | 15 | KlangScript: `^`-as-power + `pow()` | [`klangscript-caret-as-power.md`](klangscript-caret-as-power.md), [`klangscript-number-methods.md`](klangscript-number-methods.md) | `^` already shipped wrong in Der Schmetterling and survived two versions. A tutorial teaching arithmetic would teach the footgun |
 | 16 | KlangScript statement boundaries | [`../tasks-archive/2026-09/20260908-klangscript-statement-boundaries.md`](../tasks-archive/2026-09/20260908-klangscript-statement-boundaries.md) | **DONE 2026-09-08 (Phase 1), review round 1 clean (zero major, minors batched).** Two statements may no longer share a line without a `;`, so the dropped dot that silently ate the hats tag is now a parse error with a `Did you mean '.tag(...)'?` hint. Phase 2 (full newline sensitivity) deliberately not done: it is where every song can stop compiling |
-| 17 | `voice-takeover` **Phase 1** (`takeover`) | [`voice-takeover.md`](voice-takeover.md) | Additive surface, cheap, ready to build. Phase 2 (`glide`) is blocked on #12 and may slip |
+| 17 | `voice-takeover` **Phase 1** (`takeover`) | [`voice-takeover.md`](voice-takeover.md) | **BLOCKED on a design decision (2026-09-08): the maintainer is not sold on the current design.** Was "additive surface, cheap, ready to build"; it is not ready until the design question below is settled. Phase 2 (`glide`) additionally blocked on #12 |
 | 18 | Wire the CodeMirror linter stub | [`klangscript-intellisense.md`](klangscript-intellisense.md) | The `linterSource` is still `[]`. Wiring it once carries every diagnostic behind it |
 | 19 | Unknown-tweak diagnostic | [`future/mini-notation-tweaks-followups.md`](future/mini-notation-tweaks-followups.md) §1 | A misspelled tweak is silently inert today. Tutorials will teach `{swell}` |
 | 20 | Silent shape-discard, query-time gap | [`silent-shape-discard-on-error.md`](silent-shape-discard-on-error.md) | A typo in a shape function discards the whole shape, silently |
@@ -140,6 +140,10 @@ Tracked in the order they bite. See the conversation record for the reasoning.
 4. **`snd*` as compound objects** (#12's remainder, `sprudel-sound-doors-compound.md`): a design word.
 5. **`^` as the power operator** (#15): a language decision, still PROPOSED.
 6. **Editor tools rework** (the named-argument slot bug): scope.
+7. **`voice-takeover` design** (blocks #17, added 2026-09-08). The maintainer is not sold on the
+   design as written in `voice-takeover.md`, so Phase 1 is no longer decision-free and must not be
+   picked up as ready-to-build work. What the alternatives are, and which problem `takeover` is
+   really meant to solve, is the open question.
 
 ~~C6 chunk walkthrough~~ — moot, C6 shipped 2026-08-31.
 

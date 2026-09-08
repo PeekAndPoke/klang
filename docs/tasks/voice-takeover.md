@@ -1,8 +1,15 @@
 # Voice Takeover — a new note displaces the ones still ringing
 
-> Status: **DESIGNED, NOT STARTED.** Phase 1 (`takeover`) is ready to build. Phase 2 (`glide`) is
-> **deliberately deferred and blocked** — see [Phase 2](#phase-2--glide-deferred--blocked).
-> Captured 2026-08-07.
+> Status: **BLOCKED ON A DESIGN DECISION (2026-09-08).** The maintainer is not sold on the design
+> below, so Phase 1 is NOT ready to build and must not be picked up as decision-free work. It was
+> listed as "ready to build" until then, which is why this line is emphatic.
+> Phase 2 (`glide`) remains deferred and additionally blocked, see
+> [Phase 2](#phase-2--glide-deferred--blocked). Captured 2026-08-07.
+>
+> What to settle before any code: which problem `takeover` is really for, and whether the model
+> below (a per-group fade of earlier voices, driven by a seconds knob) is the right shape for it.
+> The reasoning for the doubt is not recorded yet; ask the maintainer rather than assuming this
+> document still represents the intent.
 
 ## Why
 
