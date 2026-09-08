@@ -25,6 +25,7 @@ import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.symbol.Nullability
 import com.google.devtools.ksp.validate
 import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.types.KlangScope
 
 /**
  * KSP processor that generates registration and documentation code
@@ -1213,6 +1214,7 @@ class KlangScriptProcessor(
                 appendLine("        category = \"$category\",")
                 appendLine("        tags = listOf($tagsString),")
                 appendLine("        aliases = listOf(),")
+                append(scopeArgLine(obj.name, listOf(kdoc)))
                 appendLine("        origin = KlangSymbol.Origin.Library(\"$libraryName\"),")
                 appendLine("        variants = listOf(")
                 appendLine("            KlangProperty(")
@@ -1261,6 +1263,7 @@ class KlangScriptProcessor(
                 appendLine("        category = \"$category\",")
                 appendLine("        tags = listOf($tagsString),")
                 appendLine("        aliases = listOf($aliasesString),")
+                append(scopeArgLine(prop.name, listOf(kdoc)))
                 appendLine("        origin = KlangSymbol.Origin.Library(\"$libraryName\"),")
                 appendLine("        variants = listOf(")
                 appendLine("            KlangProperty(")
@@ -1331,6 +1334,7 @@ class KlangScriptProcessor(
                 appendLine("        category = \"$category\",")
                 appendLine("        tags = listOf($tagsString),")
                 appendLine("        aliases = listOf($aliasesString),")
+                append(scopeArgLine(propName, listOf(kdoc)))
                 appendLine("        origin = KlangSymbol.Origin.Library(\"$libraryName\"),")
                 appendLine("        variants = listOf(")
                 variants.forEachIndexed { vIdx, doc ->
@@ -1376,6 +1380,32 @@ class KlangScriptProcessor(
         appendLine("}")
     }
 
+    /**
+     * The `scope = KlangScope.X` argument line for a generated `KlangSymbol`, or "" when no KDoc sets one.
+     *
+     * Also reports what the parser could not make sense of, because both mistakes are otherwise silent:
+     * a `@scope` value that is not one of [KlangScope]'s tags, and any unknown `@tag` (a typo used to be
+     * folded into the previous tag's content).
+     */
+    private fun scopeArgLine(symbolName: String, kdocs: List<ParsedKDoc>): String {
+        kdocs.flatMap { it.unknownTags }.distinct().forEach { unknown ->
+            logger.warn("KlangScript docs: unknown KDoc tag '@$unknown' on '$symbolName' (ignored)")
+        }
+
+        val tag = kdocs.firstNotNullOfOrNull { it.scope } ?: return ""
+        val scope = KlangScope.ofTag(tag)
+
+        if (scope == null) {
+            logger.warn(
+                "KlangScript docs: unknown @scope '$tag' on '$symbolName'," +
+                        " expected one of ${KlangScope.entries.joinToString("|") { it.tag }}"
+            )
+            return ""
+        }
+
+        return "        scope = KlangScope.${scope.name},\n"
+    }
+
     private fun generateDocEntry(
         name: String,
         libraryName: String,
@@ -1401,6 +1431,7 @@ class KlangScriptProcessor(
             appendLine("        category = \"$category\",")
             appendLine("        tags = listOf($tagsString),")
             appendLine("        aliases = listOf($aliasesString),")
+            append(scopeArgLine(name, parsedKDocs))
             appendLine("        origin = KlangSymbol.Origin.Library(\"$libraryName\"),")
             appendLine("        variants = listOf(")
             variants.forEachIndexed { index, variant ->

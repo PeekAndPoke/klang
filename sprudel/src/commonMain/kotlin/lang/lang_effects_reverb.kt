@@ -45,6 +45,13 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 /**
  * The orbit reverb: send, room size, tail, lowpass and damping.
  *
+ * One reverb per orbit, so `size`, `fade` and `lowpass` are set once for everyone by the orbit's
+ * owning voice. `wet` is the exception and the thing to remember: it is a per-voice send, so a dry
+ * voice on a wet orbit stays dry. Give a pattern its own reverb by giving it its own `orbit`.
+ *
+ * A bare `room(0.4)` is silent. The reverb only runs with a room to run in, so pair the send with
+ * `size` or `fade`.
+ *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`room(size = mul(2))`), and the numeric slots read back as `room.wet`, `room.size`, `room.fade`, `room.lowpass`, `room.dim`.
  * With no argument at all, the pattern's own values are reinterpreted as `wet`.
@@ -61,14 +68,15 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * s("bd sd").room("0.1 0.5").delay(wet = room.wet, time = 0.25)            // as much delay as reverb
  * ```
  *
- * @param wet Reverb send, 0 to 1.
- * @param size Room size, about 0 to 10 (the same scale as the master reverb).
- * @param fade Tail override, 0 to 1 (0 is about 0.7 s, 1 about 12.5 s); overrides `size`, bounded.
- * @param lowpass Lowpass on the reverb tail, Hz.
- * @param dim Damping frequency, Hz. Reserved: the engine does not read it yet.
+ * @param wet Send into the orbit reverb, 0 to 1. Per voice.
+ * @param size Room size, about 0 to 10. Orbit-wide.
+ * @param fade Tail length, 0 to 1. Overrides `size`. Orbit-wide.
+ * @param lowpass Lowpass on the tail, Hz. Orbit-wide.
+ * @param dim Damping frequency, Hz. Reserved, not read yet.
  * @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
  * @param-tool size SprudelRoomSizeEditor, SprudelRoomSizeSequenceEditor
  *
+ * @scope orbit-send
  * @category effects
  * @tags room, wet, size, fade, lowpass, dim
  */

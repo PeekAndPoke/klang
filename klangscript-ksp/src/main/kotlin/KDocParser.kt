@@ -44,14 +44,27 @@ data class ParsedKDoc(
     val aliases: List<String>,
     /** @param-tool tags: parameter name -> list of UI tool names */
     val paramTools: Map<String, List<String>>,
+    /** @scope tag (custom): where the thing runs, see KlangSymbol.scope */
+    val scope: String?,
+    /**
+     * Tags that are written like a tag but that this parser does not know.
+     *
+     * They are NOT folded into the preceding tag's content (which is what used to happen, silently:
+     * `@tags room, wet` followed by a misspelled `@scpoe orbit` produced the tag "wet @scpoe orbit").
+     * The processor warns about them, so a typo shows up at build time instead of in the docs.
+     */
+    val unknownTags: List<String>,
 )
 
 /**
  * Parses KDoc string into structured information.
  *
  * Supports standard tags (@param, @return) plus custom tags
- * (@category, @tags, @alias, @param-tool) and
+ * (@category, @tags, @alias, @scope, @param-tool) and
  * KlangScript fenced code blocks as samples.
+ *
+ * A tag this parser does not know is collected into [ParsedKDoc.unknownTags] instead of being
+ * appended to whatever tag came before it.
  */
 object KDocParser {
 
@@ -66,6 +79,8 @@ object KDocParser {
                 tags = emptyList(),
                 aliases = emptyList(),
                 paramTools = emptyMap(),
+                scope = null,
+                unknownTags = emptyList(),
             )
         }
 
@@ -134,6 +149,8 @@ object KDocParser {
         val params = mutableMapOf<String, String>()
         var returnDoc = ""
         var category: String? = null
+        var scope: String? = null
+        val unknownTags = mutableListOf<String>()
         val tags = mutableListOf<String>()
         val aliases = mutableListOf<String>()
         val paramTools = mutableMapOf<String, MutableList<String>>()
@@ -156,6 +173,7 @@ object KDocParser {
 
                 tag == "return" -> returnDoc = content
                 tag == "category" -> category = content
+                tag == "scope" -> scope = content
                 tag == "tags" -> {
                     content.split(",").forEach { t ->
                         val trimmed = t.trim()
@@ -219,10 +237,26 @@ object KDocParser {
                     currentContent = StringBuilder(t.removePrefix("@tags").trim())
                 }
 
+                t.startsWith("@scope") -> {
+                    saveCurrentTag()
+                    currentTag = "scope"
+                    currentContent = StringBuilder(t.removePrefix("@scope").trim())
+                }
+
                 t.startsWith("@alias") -> {
                     saveCurrentTag()
                     currentTag = "alias"
                     currentContent = StringBuilder(t.removePrefix("@alias").trim())
+                }
+
+                // A line that opens with `@` and matched none of the branches above is a tag this parser
+                // does not know (usually a typo). Close whatever tag is open rather than appending to it:
+                // continuation lines belong to their tag, a foreign tag does not.
+                t.startsWith("@") -> {
+                    saveCurrentTag()
+                    currentTag = null
+                    currentContent = StringBuilder()
+                    unknownTags.add(t.substringBefore(' ').removePrefix("@"))
                 }
 
                 else -> {
@@ -243,6 +277,8 @@ object KDocParser {
             tags = tags,
             aliases = aliases,
             paramTools = paramTools,
+            scope = scope,
+            unknownTags = unknownTags,
         )
     }
 }
