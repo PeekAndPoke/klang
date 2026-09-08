@@ -1,5 +1,8 @@
 # Auto-mix advisor — attribution, suggestions, and a deliberately weak auto-master
 
+> **Umbrella plan (2026-09-08):** [`docs/plans/realtime-analysis.md`](../plans/realtime-analysis.md) consolidates this
+> doc with its two siblings, defines "crowded" as distinct from "loud", and gates every UI phase on the UI rework.
+
 > **Status: 🔴 proposed 2026-08-11 (user idea, same-day sketch), not started. Not slotted in
 > [`_priorities.md`](_priorities.md).** Priority proposal: **NICE** — but with an unusual upside, see
 > the framing below.

@@ -1,5 +1,8 @@
 # Realtime analysis in the UI — the measurement loop, built in
 
+> **Umbrella plan (2026-09-08):** [`docs/plans/realtime-analysis.md`](../plans/realtime-analysis.md) consolidates this
+> doc with its two siblings, defines "crowded" as distinct from "loud", and gates every UI phase on the UI rework.
+
 > **Status (2026-08-25)**: PROPOSED, not started. Distilled from ~50 measurement rounds on
 > Der Schmetterling, where every iteration was: edit → offline render → run analysis scripts →
 > read numbers → edit again. The finding: a small, stable set of measurements did nearly all the

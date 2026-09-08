@@ -1,5 +1,8 @@
 # Realtime analytics meters — seeing the mix while it plays
 
+> **Umbrella plan (2026-09-08):** [`docs/plans/realtime-analysis.md`](../plans/realtime-analysis.md) consolidates this
+> doc with its two siblings, defines "crowded" as distinct from "loud", and gates every UI phase on the UI rework.
+
 > **Status: 🔴 proposed 2026-08-11, not started. Not yet slotted in [`_priorities.md`](_priorities.md).**
 > Priority proposal: the balance meter and the limiter GR meter are **SHOULD** ("sound first" — they
 > directly shorten the author's edit-listen loop); the rest are **NICE**.
