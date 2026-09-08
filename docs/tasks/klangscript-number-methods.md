@@ -97,10 +97,28 @@ Add methods in the same shape, delegating to the same `kotlin.math` calls `Klang
    and `sign` (dB and frequency work is logarithmic). Tier 3 is the musical vocabulary further down
    (`semitones`, `cents`, and a `db`/`toDb` pair), which is where a magic number becomes a statement
    of intent and is arguably worth more than tiers 1 and 2 together.
-2. **`clamp(lo, hi)` or Kotlin's `coerceIn(lo, hi)`.** The project rule says the stdlib follows Kotlin
-   conventions, but the existing String extensions are JS-named (`toUpperCase`, `charAt`, `indexOf`,
-   `concat`), so either choice sits next to a counter-example. `clamp` is what musicians and
-   shader/JS people already know; `coerceIn` is Kotlin-internal vocabulary.
+2. ~~`clamp` or `coerceIn`~~ **settled 2026-09-08: `clamp(lo, hi)`.** What musicians and shader/JS
+   people already know; `coerceIn` is Kotlin-internal vocabulary that means nothing to a player.
+3. **Kotlin aliases for `min`/`max`: open.** The proposal is to also accept Kotlin's spellings. If it
+   happens, the mapping is:
+
+   | Our name | Kotlin alias | Returns |
+   |---|---|---|
+   | `max(other)` | `coerceAtLeast(other)` | the LARGER of the two |
+   | `min(other)` | `coerceAtMost(other)` | the SMALLER of the two |
+
+   **Note the direction, it reads backwards at first glance.** "At least x" RAISES a value, so it is
+   `max`; "at most x" LOWERS it, so it is `min`. This repo's own `CycleTime.coerceAtLeast/AtMost`
+   (`common/.../CycleTime.kt:79-80`) are written under a `// Min / max` comment and confirm it. Wire
+   them the other way round and `5.min(3)` returns 5, with no diagnostic: the same silent-wrong-number
+   class as the `^` bug.
+
+   Two arguments against, worth weighing before adding them:
+   - **Coherence.** We just declined `coerceIn` in favour of `clamp`. Taking Kotlin's name for the
+     one-bound cases while rejecting it for the two-bound case is a mixed message; a reader who learns
+     `clamp` has no reason to expect `coerceAtLeast` to exist.
+   - **"One word per concept end to end"** is a project rule (`CLAUDE.md`). Aliases are an accepted
+     pattern in sprudel (`comp`, `uni`, `o`), but those shorten a long name; these lengthen a short one.
 
 ### Both remainders, decided 2026-09-08
 
