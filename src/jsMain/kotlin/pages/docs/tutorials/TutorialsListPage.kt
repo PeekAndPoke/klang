@@ -62,7 +62,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
         const val PARAM_DIFFICULTY = "difficulty"
-        const val PARAM_SCOPE = "scope"
+        const val PARAM_DEPTH = "depth"
         const val PARAM_COMPLETION = "completion"
         const val PARAM_VIEW = "view"
 
@@ -72,8 +72,8 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
         fun difficultyFromParam(param: String?): TutorialDifficulty? =
             TutorialDifficulty.entries.find { it.name.equals(param, ignoreCase = true) }
 
-        fun scopeFromParam(param: String?): TutorialScope? =
-            TutorialScope.entries.find { it.name.equals(param, ignoreCase = true) }
+        fun depthFromParam(param: String?): TutorialDepth? =
+            TutorialDepth.entries.find { it.name.equals(param, ignoreCase = true) }
 
         fun completionFromParam(param: String?): CompletionFilter =
             CompletionFilter.entries.find { it.name.equals(param, ignoreCase = true) } ?: CompletionFilter.All
@@ -88,11 +88,11 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
             difficultyParam = value?.name ?: ""
         }
 
-    private var scopeParam: String by urlParam(name = PARAM_SCOPE, default = "")
-    private var selectedScope: TutorialScope?
-        get() = scopeFromParam(scopeParam)
+    private var depthParam: String by urlParam(name = PARAM_DEPTH, default = "")
+    private var selectedDepth: TutorialDepth?
+        get() = depthFromParam(depthParam)
         set(value) {
-            scopeParam = value?.name ?: ""
+            depthParam = value?.name ?: ""
         }
 
     private var completionParam: String by urlParam(name = PARAM_COMPLETION, default = "")
@@ -124,7 +124,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                 tutorial.tags.any { it.label.contains(searchText, ignoreCase = true) }
 
         val matchesDifficulty = selectedDifficulty == null || tutorial.difficulty == selectedDifficulty
-        val matchesScope = selectedScope == null || tutorial.scope == selectedScope
+        val matchesDepth = selectedDepth == null || tutorial.depth == selectedDepth
         val matchesTags = selectedTags.isEmpty() || selectedTags.all { it in tutorial.tags }
 
         val matchesCompletion = when (completionFilter) {
@@ -133,13 +133,13 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
             CompletionFilter.Open -> !TutorialStorage.isCompleted(tutorial.slug)
         }
 
-        return matchesSearch && matchesDifficulty && matchesScope && matchesTags && matchesCompletion
+        return matchesSearch && matchesDifficulty && matchesDepth && matchesTags && matchesCompletion
     }
 
     private fun filteredTutorials(): List<Tutorial> = allTutorials.filter { matches(it) }
 
     private fun anyFilterActive(): Boolean =
-        searchText.isNotBlank() || selectedDifficulty != null || selectedScope != null ||
+        searchText.isNotBlank() || selectedDifficulty != null || selectedDepth != null ||
                 selectedTags.isNotEmpty() || completionFilter != CompletionFilter.All
 
     override fun VDom.render() {
@@ -200,23 +200,23 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                             }
                         }
 
-                        // Scope filter
+                        // Depth filter
                         noui.column {
-                            ui.mini.givenNot(selectedScope == null) { basic }
-                                .given(selectedScope == null) { with(laf.styles.goldButton()) }
+                            ui.mini.givenNot(selectedDepth == null) { basic }
+                                .given(selectedDepth == null) { with(laf.styles.goldButton()) }
                                 .button {
-                                    onClick { selectedScope = null }
+                                    onClick { selectedDepth = null }
                                     icon.circle()
-                                    +"All Scopes"
+                                    +"All Depths"
                                 }
 
-                            TutorialScope.entries.forEach { scope ->
-                                val isSelected = selectedScope == scope
+                            TutorialDepth.entries.forEach { depth ->
+                                val isSelected = selectedDepth == depth
                                 ui.mini.givenNot(isSelected) { basic }
                                     .given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                        onClick { selectedScope = if (isSelected) null else scope }
-                                        scope.renderIcon(this)
-                                        +scope.label
+                                        onClick { selectedDepth = if (isSelected) null else depth }
+                                        depth.renderIcon(this)
+                                        +depth.label
                                     }
                             }
                         }
@@ -307,7 +307,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                                         marginTop = 0.25.rem
                                     }
                                     difficultyLabel(laf, tutorial.difficulty)
-                                    scopeLabel(laf, tutorial.scope)
+                                    depthLabel(laf, tutorial.depth)
                                 }
                                 noui.description {
                                     css {

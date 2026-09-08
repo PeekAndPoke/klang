@@ -135,7 +135,12 @@ private fun applyFmSustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
 /**
  * FM synthesis: modulation depth, harmonicity and the modulation envelope.
  *
- * `env` is the peak modulation in Hz, `h` the modulator to carrier ratio; the envelope shapes the modulation over the note. FM is active once `env` is set; `h` defaults to 1, a modulator at the carrier's own pitch.
+ * `env` is the peak modulation in Hz, `h` the modulator to carrier ratio, and the envelope shapes
+ * the modulation over the note [per voice](/manuals/lexikon/voice). FM is active once `env` is set;
+ * `h` defaults to 1, a modulator at the carrier's own pitch.
+ *
+ * A depth of 10 to 100 Hz is subtle, 200 to 500 brassy, above 500 metallic. Integer ratios are
+ * harmonic, fractions inharmonic; a modulation sustain of 0 gives a percussive bell.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`fm(h = mul(2))`), and the numeric slots read back as `fm.env`, `fm.h`, `fm.attack`, `fm.decay`, `fm.sustain`.
@@ -153,13 +158,13 @@ private fun applyFmSustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * note("c3 e3").s("sine").fm(200, 2).fm(env = mul("1 3"))                // the second note far more metallic
  * ```
  *
- * @param env Modulation depth in Hz; 10 to 100 is subtle, 200 to 500 brassy, above 500 metallic.
- * @param h Harmonicity, the modulator to carrier ratio; integers are harmonic, fractions inharmonic.
+ * @param env Modulation depth in Hz.
+ * @param h Harmonicity, the modulator to carrier ratio.
  * @param attack Modulation envelope attack in seconds.
  * @param decay Modulation envelope decay in seconds.
- * @param sustain Modulation envelope sustain, 0 to 1; 0 is a percussive bell.
-
+ * @param sustain Modulation envelope sustain, 0 to 1.
  *
+ * @scope voice
  * @category synthesis
  * @tags fm, env, h, attack, decay, sustain
  */
@@ -213,6 +218,7 @@ fun PatternMapperFn.fm(
  * The `fm` object: `fm(...)` sets the slots, and each numeric slot reads back as a child,
  * `fm.env`, `fm.h`, `fm.attack`, `fm.decay`, `fm.sustain`.
  *
+ * @scope voice
  * @category synthesis
  * @tags fm, accessor
  */

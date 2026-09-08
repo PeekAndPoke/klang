@@ -16,9 +16,11 @@ import io.peekandpoke.klang.pages.NotFoundPage
 import io.peekandpoke.klang.pages.SamplesLibraryPage
 import io.peekandpoke.klang.pages.StartPage
 import io.peekandpoke.klang.pages.TourPage
+import io.peekandpoke.klang.pages.VideosPage
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
+import io.peekandpoke.klang.pages.docs.lexikon.LexikonEntryPage
 import io.peekandpoke.klang.pages.docs.lexikon.LexikonPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialTrackPage
@@ -45,6 +47,9 @@ object Nav {
 
     val manualsLexikon = Static("$manualsBase/lexikon")
 
+    /** One term on its own page. The permalink DSL docs link to, see LexikonEntryPage. */
+    val manualsLexikonEntry = Route1("$manualsBase/lexikon/{slug}")
+
     val manualsLibrary = Route1("$manualsBase/library/{library}")
     fun manualsLibrarySearch(library: String, search: String) =
         manualsLibrary(library).withQueryParams(KlangScriptLibraryDocsPage.PARAM_SEARCH to search)
@@ -67,6 +72,8 @@ object Nav {
         else tutorial(slug).withQueryParams(TutorialPage.PARAM_TRACK to trackSlug)
 
     val midiPlayground = Static("/midi-playground")
+
+    val videos = Static("/videos")
 
     val credits = Static("/credits")
 
@@ -96,6 +103,7 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.manuals) { DocsPage() }
         mount(Nav.manualsKlangScript) { KlangScriptDocsPage() }
         mount(Nav.manualsLexikon) { LexikonPage() }
+        mount(Nav.manualsLexikonEntry) { LexikonEntryPage(it["slug"]) }
         mount(Nav.manualsLibrary) { KlangScriptLibraryDocsPage(it["library"]) }
 
         mount(Nav.tutorials) { TutorialsListPage() }
@@ -103,6 +111,8 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.tutorial) { TutorialPage() }
 
         mount(Nav.midiPlayground) { MidiPlaygroundPage() }
+
+        mount(Nav.videos) { VideosPage() }
 
         mount(Nav.credits) { CreditsPage() }
     }

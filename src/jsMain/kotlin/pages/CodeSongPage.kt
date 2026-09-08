@@ -6,17 +6,13 @@
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
-import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
-import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.stdlibLib
-import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
-import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
 import io.peekandpoke.kraft.components.Component
@@ -24,8 +20,6 @@ import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
-import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
-import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -62,12 +56,10 @@ import kotlinx.css.px
 import kotlinx.css.vh
 import kotlinx.css.width
 import kotlinx.html.DIV
-import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.title
 import kotlinx.serialization.builtins.serializer
-import org.w3c.dom.pointerevents.PointerEvent
 
 @Suppress("FunctionName")
 fun Tag.CodeSongPage(
@@ -131,23 +123,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     val isBuiltInModified get() = builtIn != null && builtIn.code != state.code
-
-
-    private val hoverPopup: HoverPopupCtrl by lazy { HoverPopupCtrl(popups = popups) }
-
-    private val hoverContent: FlowContent.(KlangSymbol) -> Unit = { doc ->
-        KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
-    }
-
-    private fun navToDoc(doc: KlangSymbol, event: dynamic) {
-        val uri = Nav.manualsLibrarySearch("sprudel", "function:${doc.name}")
-        val pointerEvent = event as? PointerEvent
-        if (pointerEvent?.shiftKey == true) {
-            router.navToUri(pointerEvent, uri)
-        } else {
-            router.navToUri(uri)
-        }
-    }
 
     // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
@@ -403,7 +378,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // dimmed to match the layout's ambient edge light
                         put(
                             "box-shadow",
-                            "0 -10px 42px ${laf.accentMuted}2e, -10px 0 42px ${laf.accentMuted}2e"
+                            "0 -10px 22px ${laf.accentMuted}2e, -10px 0 22px ${laf.accentMuted}2e"
                         )
                     }
 

@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.script.types
 
+import io.peekandpoke.klang.script.annotations.KlangScope
+
 /**
  * A documented KlangScript symbol (function, method, property, etc.).
  *
@@ -14,6 +16,8 @@ package io.peekandpoke.klang.script.types
  * @param tags Searchable tags for discovery
  * @param origin Where this symbol originates — a registered library, a local binding, or `null` when unknown
  * @param aliases Alternative names this symbol is known by
+ * @param scope Where the thing runs: per voice, on the orbit bus, or on the master. `null` when it is not
+ *   an audio setting at all (structure, pattern maths, sources).
  */
 data class KlangSymbol(
     val name: String,
@@ -22,6 +26,7 @@ data class KlangSymbol(
     val tags: List<String> = emptyList(),
     val origin: Origin? = null,
     val aliases: List<String> = emptyList(),
+    val scope: KlangScope? = null,
 ) {
     /**
      * Origin of a [KlangSymbol]. A library-registered symbol carries the library's name;
@@ -73,6 +78,8 @@ data class KlangSymbol(
             variants = merged,
             tags = (tags + other.tags).distinct(),
             aliases = (aliases + other.aliases).distinct(),
+            // Same rule as `category`: this one wins, the other only fills a gap
+            scope = scope ?: other.scope,
         )
     }
 }

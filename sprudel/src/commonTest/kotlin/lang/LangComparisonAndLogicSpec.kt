@@ -10,6 +10,8 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldHaveSize
 
 class LangComparisonAndLogicSpec : StringSpec({
 
@@ -465,6 +467,35 @@ class LangComparisonAndLogicSpec : StringSpec({
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 10  // 0 || 10 → 10
             events[1].data.value?.asInt shouldBe 5   // 5 || 10 → 5
+        }
+    }
+
+    // -- Structure comes from the source (#23) ------------------------------------------------------------------------
+
+    "comparison samples a continuous control at every onset | seq(\"0.5 0.5 0.5\").lt(sine)" {
+        // sine at the onsets 0, 1/3, 2/3 is 0.5, 0.93, 0.07: only the middle note is below the curve
+        val p = seq("0.5 0.5 0.5").lt(sine)
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 3
+                events.map { it.data.value?.asInt } shouldBe listOf(0, 1, 0)
+            }
+        }
+    }
+
+    "a busier control fragments the source under ONE whole | seq(\"2\").eq(\"2 3\")" {
+        val p = seq("2").eq("2 3")
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 2
+                events.forEach { it.whole.end.toCycles() shouldBe cycle + 1.0 }
+                events.map { it.data.value?.asInt } shouldBe listOf(1, 0) // 2 == 2, then 2 == 3
+                events.count { it.isOnset } shouldBe 1
+            }
         }
     }
 })

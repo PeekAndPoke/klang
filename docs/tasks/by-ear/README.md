@@ -136,3 +136,32 @@ pitches sit **0.4–1.4 semitones below** what was recorded (measured, `soundfon
 investigation.md`). Zone 8 (keys 81–84) plays 1.4 st sharp. FluidR3 is accurate to a quarter-tone
 and is `.n(1)` for the accordion. That is a data / curation item, see `docs/tasks/future/
 soundfont-variant-curation.md`.
+
+### 7. Segmented controls and arithmetic humanisation — written years ago, heard never
+
+**2026-09-07, `docs/tasks/sprudel-arithmetic-continuous-controls.md`.** Two sprudel fixes, one
+listening pass, and nothing here is new sound by design: it is what the songs already SAY.
+
+1. `segment(n)` answered a point query with the first slice of the cycle. Every setter samples its
+   control at the note onset, so every `.seg()` control inside a setter held ONE value per cycle
+   (or per `slow()` span). Now the slice under the note is read.
+2. Arithmetic with a continuous control (`"…".sub(perlin.range(0, 0.1))`) computed the control once
+   at the cycle start. Now it is read at every note.
+
+Listen, deepest change first:
+
+- **Tetris** `lpf(q = berlin.range(1.5, 2.2).seg(32).slow(32))`: q used to sit still for 32 cycles, now
+  it walks once per cycle. Resonance breathing that was never there.
+- **Stranger Things** `bpf(freq = perlin.range(440, 1760).segment(16).slow(6))`: the arpeggio's band-pass
+  centre moved once per six cycles, now sixteen times in six. This is the biggest audible delta in the set.
+- **Greensleeves** `bpf(freq = perlin.seg(4).range(180, 1100), q = 1.5)` on the pad: four centres per
+  cycle instead of one.
+- **Der Schmetterling**: `.clip("<[0.8 0.7 0.6 0.7]>*4".sub(perlin.range(0, 0.1)))` and
+  `velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0, 0.05).slow(4)))` now vary per hit.
+  `guitarClip` / `guitarDyna` are **unchanged by design** (the accent maps were the reason for `_appLeft`),
+  and so are the `.late(berlin….mul(drunk).seg(4))` humanisations: `late` walks its control's events
+  over the arc instead of point-sampling, so it already had four offsets per cycle (review round 2
+  corrected the first draft of this entry, which listed them).
+
+If something now sounds too busy, the fix is in the song (`seg(4)` was chosen when it did nothing),
+not in the engine.

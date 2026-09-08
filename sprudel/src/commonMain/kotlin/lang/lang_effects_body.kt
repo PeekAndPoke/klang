@@ -43,9 +43,20 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
 }
 
 /**
- * The resonant body: the material, its send and its dry floor.
+ * The resonant body: the material, its mix and its dry floor.
  *
- * Runs the sound through a resonating body; the material is a name, `wet` how much goes through it.
+ * Runs the orbit through a resonating body, the way a guitar top or a drum shell colours what passes
+ * through it. One body per [orbit bus](/manuals/lexikon/orbit-bus), so ALL of it, `material`
+ * included, is set once for everyone by the orbit's owning voice.
+ *
+ * `wet` here is a mix, not a [send](/manuals/lexikon/send): the body processes the whole orbit mix,
+ * so unlike `room` and `delay` there is no per-voice amount. Give a pattern its own body by giving
+ * it its own orbit.
+ *
+ * Materials: woods `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`; bowed string
+ * `violin`; voice `croon`; pipe and glass `tube`, `glass`; skin `membrane`; metals `brass`, `steel`,
+ * `bell`. `none` removes the body. One name at a time: `body("wood glass")` is mini-notation, so it
+ * is wood for the first half of the cycle and glass for the second, not a blend of the two.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`body(floor = mul(2))`), and the numeric slots read back as `body.wet`, `body.floor`. `material` is a name and has no reader.
@@ -56,19 +67,19 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").body("wood glass", 0.7).body(wet = mul("<1 0.5>"))   // half as boxy every other bar
+ * note("c3 e3").s("saw").body("wood glass", 0.7).body(wet = mul("<1 0.5>"))   // wood then glass, half as boxy every other bar
  * ```
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").body("tube", "0.2 0.9").room(wet = body.wet)      // as much reverb as body
  * ```
  *
- * @param material Material name. Woods: `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`; bowed string:
- *   `violin`; voice: `croon`; pipe and glass: `tube`, `glass`; skin: `membrane`; metals: `brass`, `steel`, `bell`. `none` removes the body.
- * @param wet Send, 0 to 1.
- * @param floor Minimum dry share of the wet/dry law, 0 to 1.
+ * @param material Material name. See the list above.
+ * @param wet How much of the orbit runs through the body, 0 to 1.
+ * @param floor Minimum dry share kept in the mix, 0 to 1.
  * @param-tool material SprudelBodyEditor, SprudelBodySequenceEditor
  *
+ * @scope orbit
  * @category effects
  * @tags body, material, wet, floor
  */
@@ -114,6 +125,7 @@ fun PatternMapperFn.body(
  * The `body` object: `body(...)` sets the slots, and each numeric slot reads back as a child,
  * `body.wet`, `body.floor`.
  *
+ * @scope orbit
  * @category effects
  * @tags body, accessor
  */

@@ -10,6 +10,11 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.peekandpoke.klang.sprudel.sampleAt
 
 class LangSegmentSpec : StringSpec({
 
@@ -135,6 +140,111 @@ class LangSegmentSpec : StringSpec({
         events1.zip(events2).forEach { (e1, e2) ->
             e1.part.begin shouldBe e2.part.begin
             e1.part.end shouldBe e2.part.end
+        }
+    }
+
+    // -- Point queries ------------------------------------------------------------------------------------------------
+
+    "a point query answers with the slice containing that point | saw.segment(4).sampleAt(t)" {
+        // An atom answers a point query with its whole cycle, so the segmenter must pick the slice
+        // that contains the point itself. Before this row, every point query returned the first slice.
+        val p = saw.segment(4)
+        val ctx = SprudelPattern.QueryContext()
+
+        for (cycle in 0 until 12) {
+            for (i in 0 until 4) {
+                val t = cycle + i / 4.0
+                withClue("t=$t") {
+                    val e = p.sampleAt(t, ctx).shouldNotBeNull()
+                    e.whole.begin.toCycles() shouldBe t
+                    e.whole.end.toCycles() shouldBe t + 0.25
+                    e.data.value?.asDouble shouldBe (i / 4.0 plusOrMinus 1e-9)
+                }
+            }
+        }
+    }
+
+    "a point query inside a slice answers with that slice's start value | saw.segment(4).sampleAt(0.3)" {
+        val p = saw.segment(4)
+        val ctx = SprudelPattern.QueryContext()
+
+        for (cycle in 0 until 12) {
+            val t = cycle + 0.3
+            withClue("t=$t") {
+                val e = p.sampleAt(t, ctx).shouldNotBeNull()
+                e.whole.begin.toCycles() shouldBe cycle + 0.25
+                e.whole.end.toCycles() shouldBe cycle + 0.5
+                e.data.value?.asDouble shouldBe (0.25 plusOrMinus 1e-9)
+            }
+        }
+    }
+
+    "a query shorter than a cycle returns only the slices it overlaps | saw.segment(4).queryArc(c, c + 0.25)" {
+        // Without the arc check the slices after the arc would come back too, every one an onset.
+        val p = saw.segment(4)
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 0.25)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 1
+                events[0].whole.begin.toCycles() shouldBe cycle.toDouble()
+            }
+        }
+    }
+
+    "segment(n) on a discrete pattern re-births the wholes: n onsets per cycle | \"0\".segment(4).note()" {
+        // Strudel's segment is struct(pure(true).fast(n)): the slice is the whole. The KDoc example
+        // promises four notes; with the source's whole kept, only the first slice was an onset.
+        val p = "0".segment(4).note()
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 4
+                events.all { it.isOnset } shouldBe true
+                events.map { it.whole.begin.toCycles() } shouldBe listOf(0.0, 0.25, 0.5, 0.75).map { cycle + it }
+            }
+        }
+    }
+
+    "segment(n) samples a busier pattern: the notes under the slice starts play | \"c e g a b c d e\".seg(4)" {
+        val p = "c e g a b c d e".seg(4).note()
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 8
+                events.filter { it.isOnset }.map { it.data.note } shouldBe listOf("c", "g", "b", "d")
+            }
+        }
+    }
+
+    "the slices are the steps: numSteps counts them, take() sees them | \"0\".seg(8).take(4)" {
+        // With the atom's single step, take(4) computed end = 4 / 1 >= 1 and returned the source untouched.
+        "0".seg(8).numSteps shouldBe 8.0
+        sine.segment("2 4").numSteps shouldBe 2.0 // unequal slices: the control's two steps, subdivided
+
+        val p = "0".seg(8).take(4).note()
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 4
+                events.map { it.whole.begin.toCycles() } shouldBe listOf(0.0, 0.25, 0.5, 0.75).map { cycle + it }
+            }
+        }
+    }
+
+    "a segmented control reaches every note | note(\"c e g a\").gain(saw.segment(4))" {
+        // The setter samples the control at each onset: the second note must see the second slice.
+        val p = note("c e g a").gain(saw.segment(4))
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 4
+                events.map { it.data.gain } shouldBe listOf(0.0, 0.25, 0.5, 0.75)
+            }
         }
     }
 })

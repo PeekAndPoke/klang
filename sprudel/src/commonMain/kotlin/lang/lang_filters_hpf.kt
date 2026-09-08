@@ -96,8 +96,16 @@ private fun applyHpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
 /**
  * The highpass filter: cutoff, resonance, cascade and the cutoff envelope.
  *
- * Only frequencies above the cutoff pass; higher values are thinner. The envelope sweeps `freq` up by `env` semitones along attack, decay,
- * sustain and release; without `env` the filter rests at `freq`.
+ * Only frequencies above the cutoff pass, so higher values sound thinner. Every note carries its
+ * own cutoff, resonance and envelope, [per voice](/manuals/lexikon/voice).
+ *
+ * The envelope sweeps `freq` up by `env` semitones: attack is the time to reach full depth, decay
+ * the fall to the sustain share, release the fall back to `freq` after the note ends. `env = 12`
+ * doubles the cutoff, a negative `env` sweeps down, and without `env` the filter rests at `freq`.
+ *
+ * `passes` cascades the filter: `2` is 24 dB/oct, `3` is 36, omit it for one 12 dB/oct stage. It is
+ * rounded and coerced to 1..16, a resource count, never an error. Resonance compounds across the
+ * stages, so `hpf(200, 10, 4)` peaks far louder than `hpf(200, 10)`.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`hpf(q = mul(2))`), and every slot reads back as a child: `hpf.freq`, `hpf.q`, `hpf.passes`, `hpf.env`, `hpf.attack`, `hpf.decay`, `hpf.sustain`, `hpf.release`.
@@ -115,18 +123,19 @@ private fun applyHpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
  * note("c3 e3").s("saw").hpf("200 800").lpf(hpf.freq.mul(4))                  // a two-octave band above the highpass
  * ```
  *
- * @param freq Cutoff frequency, Hz.
- * @param q Resonance (Q); higher values emphasise the cutoff.
- * @param passes Cascade count: `2` is 24 dB/oct, `3` is 36; omit for one 12 dB/oct stage. Rounded and coerced to 1..16 (a resource count, never an error); a resonant `q` compounds across the stages, `hpf(200, 10, 4)` peaks far louder than `hpf(200, 10)`.
- * @param env Envelope depth in semitones above `freq` at full envelope (+12 doubles the cutoff, negative sweeps down).
- * @param attack Envelope attack, seconds: the time to sweep up to `env`.
- * @param decay Envelope decay, seconds: the time to fall back to the sustain share.
- * @param sustain Envelope sustain, 0 to 1: the share of `env` held while the note lasts.
- * @param release Envelope release, seconds: the time to fall back to `freq` after the note ends.
+ * @param freq Cutoff in Hz.
+ * @param q Resonance, higher emphasises the cutoff.
+ * @param passes Cascade count, 1 to 16.
+ * @param env Envelope depth in semitones.
+ * @param attack Envelope attack in seconds.
+ * @param decay Envelope decay in seconds.
+ * @param sustain Envelope sustain, 0 to 1.
+ * @param release Envelope release in seconds.
  * @param-tool freq SprudelHpFilterEditor, SprudelHpFilterSequenceEditor
  * @param-tool q SprudelHpResonanceEditor, SprudelHpResonanceSequenceEditor
  * @param-tool env SprudelHpEnvEditor, SprudelHpEnvSequenceEditor
  *
+ * @scope voice
  * @category effects
  * @tags hpf, freq, q, passes, env, attack, decay, sustain, release, hcutoff, high pass filter, filter, envelope
  */
@@ -193,6 +202,7 @@ fun PatternMapperFn.hpf(
  * The `hpf` object: `hpf(...)` sets the slots, and each slot reads back as a child,
  * `hpf.freq`, `hpf.q`, `hpf.passes`, `hpf.env`, `hpf.attack`, `hpf.decay`, `hpf.sustain`, `hpf.release`.
  *
+ * @scope voice
  * @category effects
  * @tags hpf, accessor
  */
@@ -258,6 +268,7 @@ object hpf {
  * note("c3").s("saw").highpass(800)
  * ```
  *
+ * @scope voice
  * @category effects
  * @tags highpass, hpf.freq, filter
  */
@@ -293,6 +304,7 @@ fun String.highpass(
 /**
  * Alias of [hpf]: the same object under its long name.
  *
+ * @scope voice
  * @category effects
  * @tags highpass, hpf.freq, accessor
  */

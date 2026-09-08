@@ -228,7 +228,8 @@ stages must not carry it.
 - **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
   `room(wet, size)` preview under its own intuitions, plus the delay family, `distort`,
   `onepole` and `postgain`. One of the two biggest `teaches` lists in the corpus (5) and the only `Standard`
-  scope; if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
+  depth (the field was called `scope` until 2026-09-08, renamed so that "scope" means one thing:
+  where audio runs, see `KlangScope`); if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
   (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
   (a) BOTH space effects are sends WITH A GATE and the gate is the SECOND number, not the
   send: reverb is inactive unless `roomSize >= 0.01` (defaults to 0.0) and delay is Off

@@ -47,8 +47,26 @@ body/analog per superimposed copy.
 - **JVM**: Full audio output via javax.sound.sampled ✅
 - **JS**: Full audio output via Web Audio API + AudioWorklet ✅
 - Synthesis: oscillators (sine, saw/ramp/square/pulze/triangle + raw zaw/zamp, super* unison,
-  karplus, noise family) + sample playback
+  karplus, noise family) + sample playback. Sine partial banks (2026-09-07): `IgnitorDsl.Sine` carries
+  `harmonics`/`octaves`/`suboctaves` counts with rolloffs, `fundamental` gain and `analogSpread`;
+  `Ignitors.sinePartials` renders the bank in one pass, the runtime builds the plain `SineIgnitor` for
+  literal defaults (`Sine.isPlainSine()`), partials at Nyquist are silent. Plan and decisions:
+  `docs/plans/sine-partial-banks.md`; guard: `SinePartialBankSpec` (golden test against the hand-rolled
+  Der Schmetterling stack).
 - Effects: delay, reverb, phaser, compressor, ducking, distortion, bit-crush, tremolo
+
+## Loop shape beats block-pass count (2026-09-07, sine partial banks)
+
+`IgnitorBenchmark` case `sine-harmonics7` against `sine-harmonics7-tree` (the hand-rolled
+`Sine + Sine(2f)*1/2 + ...` tree it replaces): a sample-major bank loop (outer loop over samples,
+inner loop over partials reading/writing `phase[]`, `gain[]`, `inc[]`) rendered at 41 µs/block, the
+tree at 24. Partial-major (outer loop over partials, inner tight loop over samples with the phase
+in a local, the `SineStackIgnitor` shape) brought the bank to 22 µs. So: twenty-one block passes
+cost less than one loop that keeps its phase in an array. When writing a multi-voice or multi-partial
+oscillator, render voice-major with locals, accumulate into the buffer (`if (first) s else buffer[i] + s`),
+and sample any per-sample shared state (here the shared drift walk) into a scratch array first.
+`sin()` dominates the rest; the 2-trig-per-sample recurrence in `docs/plans/sine-partial-banks.md`
+§5.3 is the remaining lever, gated on a song profile.
 
 ## VCA Gain De-click Smoother (2026-06-08)
 

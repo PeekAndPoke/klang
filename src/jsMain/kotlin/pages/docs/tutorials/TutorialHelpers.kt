@@ -24,10 +24,10 @@ fun difficultyColor(laf: KlangLookAndFeel, difficulty: TutorialDifficulty): Stri
     TutorialDifficulty.Pro -> laf.accent
 }
 
-fun scopeColor(laf: KlangLookAndFeel, scope: TutorialScope): String = when (scope) {
-    TutorialScope.Quick -> laf.good
-    TutorialScope.Standard -> laf.gold
-    TutorialScope.DeepDive -> laf.warning
+fun depthColor(laf: KlangLookAndFeel, depth: TutorialDepth): String = when (depth) {
+    TutorialDepth.Quick -> laf.good
+    TutorialDepth.Standard -> laf.gold
+    TutorialDepth.DeepDive -> laf.warning
 }
 
 fun TutorialDifficulty.iconFn(): SemanticIconFn = when (this) {
@@ -39,13 +39,13 @@ fun TutorialDifficulty.iconFn(): SemanticIconFn = when (this) {
 
 fun TutorialDifficulty.renderIcon(tag: FlowContent) = tag.icon.(iconFn())().render()
 
-fun TutorialScope.iconFn(): SemanticIconFn = when (this) {
-    TutorialScope.Quick -> semanticIcon { rocket }
-    TutorialScope.Standard -> semanticIcon { hourglass }
-    TutorialScope.DeepDive -> semanticIcon { hourglass_half }
+fun TutorialDepth.iconFn(): SemanticIconFn = when (this) {
+    TutorialDepth.Quick -> semanticIcon { rocket }
+    TutorialDepth.Standard -> semanticIcon { hourglass }
+    TutorialDepth.DeepDive -> semanticIcon { hourglass_half }
 }
 
-fun TutorialScope.renderIcon(tag: FlowContent) = tag.icon.(iconFn())().render()
+fun TutorialDepth.renderIcon(tag: FlowContent) = tag.icon.(iconFn())().render()
 
 fun TutorialsListPage.CompletionFilter.iconFn(): SemanticIconFn = when (this) {
     TutorialsListPage.CompletionFilter.All -> semanticIcon { circle }
@@ -66,13 +66,13 @@ fun Tag.difficultyLabel(laf: KlangLookAndFeel, difficulty: TutorialDifficulty) {
     }
 }
 
-fun Tag.scopeLabel(laf: KlangLookAndFeel, scope: TutorialScope) {
+fun Tag.depthLabel(laf: KlangLookAndFeel, depth: TutorialDepth) {
     ui.mini.label {
         css {
-            backgroundColor = Color("${scopeColor(laf, scope)} !important")
+            backgroundColor = Color("${depthColor(laf, depth)} !important")
             color = Color("#222 !important")
         }
-        scope.renderIcon(this)
-        +scope.label
+        depth.renderIcon(this)
+        +depth.label
     }
 }

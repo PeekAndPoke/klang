@@ -33,7 +33,15 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 
 
 /**
- * Waveshaper distortion: drive, shape and oversampling.
+ * Waveshaper distortion: drive, shape and oversampling, [per voice](/manuals/lexikon/voice).
+ *
+ * This is not a bus effect. Unlike reverb and delay, distortion runs inside each voice's own chain,
+ * so two voices sharing an orbit can be driven differently.
+ *
+ * `shape` picks the transfer curve. Symmetric and soft: `soft` (tanh), `gentle`, `softsat`,
+ * `cubic`, `exp`, `sineshaper`. Symmetric and hard, plus wavefolding: `hard`, `zerosquare`,
+ * `chebyshev`, `fold`, `linearfold`. Asymmetric, so with even harmonics: `diode`, `tube`, `asym`,
+ * `stompbox`, `rectify`. An `oversample` of 1 keeps the raw aliased character.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`distort(amount = mul(2))`), and the numeric slots read back as `distort.amount`, `distort.oversample`.
@@ -47,14 +55,13 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * s("bd*4").distort("0.2 0.8", "tube").pan(distort.amount)               // more drive, further right
  * ```
  *
- * @param amount Drive, 0 is clean, 1 is heavy; higher values are allowed.
- * @param shape Transfer curve by name. Symmetric soft: `soft` (tanh), `gentle`, `softsat`, `cubic`,
- *   `exp`, `sineshaper`. Symmetric hard and wavefolding: `hard`, `zerosquare`, `chebyshev`, `fold`,
- *   `linearfold`. Asymmetric (even harmonics): `diode`, `tube`, `asym`, `stompbox`, `rectify`.
- * @param oversample Oversampling factor (1, 2, 4); 1 keeps the raw aliased character.
+ * @param amount Drive, 0 is clean, 1 is heavy. Higher is allowed.
+ * @param shape Transfer curve by name, for example `tube`.
+ * @param oversample Oversampling factor: 1, 2, 4 or 8.
  * @param-tool amount SprudelDistortEditor, SprudelDistortSequenceEditor
  * @param-tool shape SprudelDistortShapeEditor, SprudelDistortShapeSequenceEditor
  *
+ * @scope voice
  * @category effects
  * @tags distort, amount, shape, oversample
  */
@@ -100,6 +107,7 @@ fun PatternMapperFn.distort(
  * The `distort` object: `distort(...)` sets the slots, and each numeric slot reads back as a child,
  * `distort.amount`, `distort.oversample`.
  *
+ * @scope voice
  * @category effects
  * @tags distort, accessor
  */
@@ -163,7 +171,10 @@ private fun applyCrush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
 
 /**
- * Bit crusher: bit depth and oversampling.
+ * Bit crusher: bit depth and oversampling, per voice.
+ *
+ * Fewer bits means a coarser, grittier signal. An `oversample` of 1 keeps the raw aliased
+ * character, higher values tame it.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`crush(oversample = mul(2))`), and the numeric slots read back as `crush.amount`, `crush.oversample`.
@@ -177,10 +188,10 @@ private fun applyCrush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * s("hh*4").crush("4 12").lpf(crush.amount.mul(500))                      // fewer bits, darker
  * ```
  *
- * @param amount Bit depth, 1 to 16; fewer bits are harsher.
- * @param oversample Oversampling factor (1, 2, 4).
-
+ * @param amount Bit depth. Fewer bits are harsher, typically 1 to 16.
+ * @param oversample Oversampling factor: 1, 2, 4 or 8.
  *
+ * @scope voice
  * @category effects
  * @tags crush, amount, oversample
  */
@@ -210,6 +221,7 @@ fun PatternMapperFn.crush(amount: PatternLike? = null, oversample: PatternLike? 
  * The `crush` object: `crush(...)` sets the slots, and each numeric slot reads back as a child,
  * `crush.amount`, `crush.oversample`.
  *
+ * @scope voice
  * @category effects
  * @tags crush, accessor
  */
@@ -257,7 +269,10 @@ private fun applyCoarse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 
 
 /**
- * Sample rate reduction (decimator) and oversampling.
+ * Sample rate reduction, a decimator, per voice.
+ *
+ * The divisor throws away samples: 1 is off, 4 runs the voice at a quarter of the rate. An
+ * `oversample` of 1 keeps the raw aliased character, higher values tame it.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`coarse(oversample = mul(2))`), and the numeric slots read back as `coarse.amount`, `coarse.oversample`.
@@ -271,10 +286,10 @@ private fun applyCoarse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * s("hh*4").coarse("2 8").lpf(coarse.amount.mul(1000))                    // coarser, but brighter
  * ```
  *
- * @param amount Sample rate divisor; 1 is off, higher is coarser.
- * @param oversample Oversampling factor (1, 2, 4); 1 keeps the aliased character.
-
+ * @param amount Sample rate divisor, 1 is off, higher is coarser.
+ * @param oversample Oversampling factor: 1, 2, 4 or 8.
  *
+ * @scope voice
  * @category effects
  * @tags coarse, amount, oversample
  */
@@ -304,6 +319,7 @@ fun PatternMapperFn.coarse(amount: PatternLike? = null, oversample: PatternLike?
  * The `coarse` object: `coarse(...)` sets the slots, and each numeric slot reads back as a child,
  * `coarse.amount`, `coarse.oversample`.
  *
+ * @scope voice
  * @category effects
  * @tags coarse, accessor
  */

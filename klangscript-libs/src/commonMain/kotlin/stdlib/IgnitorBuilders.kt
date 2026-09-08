@@ -34,14 +34,88 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
  * Builder for [IgnitorDsl.Sine], handed to the `configure` lambda of `Osc.sine(...)`.
- * Knobs: `analog`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
+ * Knobs: `analog`, and the partial banks `harmonics`, `octaves`, `suboctaves` with `fundamental` and
+ * `analogSpread` (`docs/plans/sine-partial-banks.md`). Immutable: every knob returns a new builder.
+ * `node` is the configured oscillator.
  */
 data class OscSineBuilder(val node: IgnitorDsl.Sine)
 
-/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
+/** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. With partial banks, the depth of every partial. */
 @KlangScript.Function
 fun OscSineBuilder.analog(analog: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+
+/**
+ * Gain of the sine's own partial (default 1). `0` leaves only the partial banks, so
+ * `harmonics(7).fundamental(0)` puts the overtones on their own fader next to a separate sub. A signal
+ * like every knob (an `Osc.param`, an LFO), read once per block.
+ *
+ * ```KlangScript
+ * Osc.sine(x => x.harmonics(7).fundamental(0))    // overtones only, 2f .. 8f
+ * ```
+ */
+@KlangScript.Function
+fun OscSineBuilder.fundamental(gain: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(fundamental = gain.toIgnitorDsl()))
+
+/**
+ * Adds `count` sine partials at `2f, 3f, 4f ...` of THIS sine's frequency, its harmonic series, rendered in
+ * one pass with the sine. A partial at multiple `m` has gain `m ^ -rolloff`: `rolloff` 1 (default) is the
+ * sawtooth law, 2 is triangle-soft, 0 is flat and buzzy. `count` 0 is off, at most 64. The multiples are of the sine, not of
+ * the note: `Osc.sine(Osc.freq().mul(2), x => x.harmonics(3))` is `2f, 4f, 6f, 8f`, the even series. Partials
+ * at or above Nyquist stay silent. Both arguments are signals read once per block, so
+ * `harmonics(12, Osc.param("rolloff", 1))` puts brightness on the pattern; a moving `count` steps on every
+ * removal, a moving `rolloff` does not. Banks sum: `harmonics(7)` plus
+ * `octaves(3)` doubles the shared partials, as two written sines would.
+ *
+ * ```KlangScript
+ * Osc.sine(x => x.harmonics(7))                   // a bass: f plus 2f .. 8f, the ear rebuilds the fundamental on small speakers
+ * Osc.sine(x => x.harmonics(8, Osc.sine(0.2).range(0.7, 2)))   // breathing brightness
+ * ```
+ */
+@KlangScript.Function
+fun OscSineBuilder.harmonics(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
+    copy(node = node.copy(harmonics = count.toIgnitorDsl(), harmonicsRolloff = rolloff.toIgnitorDsl()))
+
+/**
+ * Adds `count` sine partials at `2f, 4f, 8f ...` of THIS sine's frequency, one per octave. A partial at multiple
+ * `m` has gain `m ^ -rolloff` (default 1, the sawtooth law sampled at the octaves). `count` 0 is off, at most 64. Climbs fast:
+ * five octaves reach `32f`, a brightness and grind device rather than fundamental reconstruction. Partials at or
+ * above Nyquist stay silent. Signals read once per block.
+ *
+ * ```KlangScript
+ * Osc.sine(Osc.freq().mul(2), x => x.octaves(5)).mul(1/2)   // 2f .. 64f at 1/2 .. 1/64, an octave stack over a saw
+ * ```
+ */
+@KlangScript.Function
+fun OscSineBuilder.octaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
+    copy(node = node.copy(octaves = count.toIgnitorDsl(), octavesRolloff = rolloff.toIgnitorDsl()))
+
+/**
+ * Adds `count` sine partials at `f/2, f/4, f/8 ...` below THIS sine, the sub oscillator every mono synth has. The
+ * partial at `f/m` has gain `m ^ -rolloff` (default 1: the sub at half gain, `count` at most 64); `suboctaves(1, 0)` is the classic
+ * equal-level sub. A sub at a comparable level MOVES THE PERCEIVED PITCH down an octave (the ear takes `f/2` as the
+ * fundamental), which is the point. No lower limit: two sub-octaves on a low E are 10 Hz, headroom for nothing
+ * audible; the highpass is yours. Signals read once per block.
+ *
+ * ```KlangScript
+ * Osc.sine(x => x.suboctaves(1, 0))    // f and f/2 at equal level
+ * ```
+ */
+@KlangScript.Function
+fun OscSineBuilder.suboctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
+    copy(node = node.copy(suboctaves = count.toIgnitorDsl(), suboctavesRolloff = rolloff.toIgnitorDsl()))
+
+/**
+ * How much the partials drift against each other under `analog`, 0 to 1. `1` (default): every partial walks on
+ * its own lane, the slow beating of a hand-stacked set of sines. `0`: one shared walk, the bank wobbles as a
+ * single physical oscillator and its spectrum stays exactly harmonic. Between is a blend. Nothing happens while
+ * `analog` is 0. Named apart from the supersaw's `spread`, which is static unison detune.
+ *
+ * ```KlangScript
+ * Osc.sine(x => x.harmonics(7).analog(3).analogSpread(0))   // one drifting oscillator with seven harmonics
+ * ```
+ */
+@KlangScript.Function
+fun OscSineBuilder.analogSpread(amount: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
 
 // ── Triangle ─────────────────────────────────────────────────────────────────
 

@@ -9,7 +9,7 @@ import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.Motoer
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
-import io.peekandpoke.klang.pages.docs.tutorials.TutorialScope
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialDepth
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 import io.peekandpoke.klang.pages.docs.tutorials.iconFn
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -87,6 +87,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         data object Songs : State
         data object Samples : State
         data object MidiPlayground : State
+        data object Videos : State
         data object Tutorials : State
         data object Docs : State
         data object Credits : State
@@ -98,6 +99,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         currentRoute.route.pattern.startsWith(Nav.tutorialsBase) -> State.Tutorials
         currentRoute.route.pattern.startsWith(Nav.manualsBase) -> State.Docs
         currentRoute.route == Nav.midiPlayground -> State.MidiPlayground
+        currentRoute.route == Nav.videos -> State.Videos
         currentRoute.route == Nav.credits -> State.Credits
         else -> State.Main
     }
@@ -217,8 +219,10 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
             for (entry in entries) {
                 val isSelected = when (entry.targetState) {
-                    // "More" is selected only when we're on Main, Samples, MidiPlayground, or Credits
-                    State.Main -> state in listOf(State.Main, State.Samples, State.MidiPlayground, State.Credits)
+                    // "More" is selected only when we're on Main, Samples, MidiPlayground, Videos, or Credits
+                    State.Main -> state in listOf(
+                        State.Main, State.Samples, State.MidiPlayground, State.Videos, State.Credits,
+                    )
                     else -> state == entry.targetState
                 }
 
@@ -311,7 +315,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                         flexGrow = 1.0
                     }
                     when (state) {
-                        State.Main, State.MidiPlayground, State.Credits -> renderDefaultMenu()
+                        State.Main, State.MidiPlayground, State.Videos, State.Credits -> renderDefaultMenu()
                         State.Songs -> renderSongsMenu()
                         State.Samples -> renderSamplesMenu()
                         State.Tutorials -> renderTutorialsMenu()
@@ -336,6 +340,10 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             menuItem(state == State.MidiPlayground, "Midi Playground", { keyboard }) {
                 state = State.MidiPlayground
                 router.navToUri(Nav.midiPlayground())
+            }
+            menuItem(state == State.Videos, "Videos", { film }) {
+                state = State.Videos
+                router.navToUri(Nav.videos())
             }
             menuItem(state == State.Credits, "Credits", { bullhorn }) {
                 state = State.Credits
@@ -392,9 +400,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     private fun DIV.renderTutorialsMenu() {
         val activeDifficulty = currentDifficultyFilter()
-        val activeScope = currentScopeFilter()
+        val activeDepth = currentDepthFilter()
         val activeCompletion = currentCompletionFilter()
-        val hasNoFilters = activeDifficulty == null && activeScope == null &&
+        val hasNoFilters = activeDifficulty == null && activeDepth == null &&
                 activeCompletion == TutorialsListPage.CompletionFilter.All
 
         menuItemsList {
@@ -413,10 +421,10 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
             menuGap()
 
-            for (scope in TutorialScope.entries) {
-                val isSelected = activeScope == scope
-                menuItem(isSelected, scope.label, scope.iconFn()) {
-                    toggleTutorialFilter(TutorialsListPage.PARAM_SCOPE, scope.name, isSelected)
+            for (depth in TutorialDepth.entries) {
+                val isSelected = activeDepth == depth
+                menuItem(isSelected, depth.label, depth.iconFn()) {
+                    toggleTutorialFilter(TutorialsListPage.PARAM_DEPTH, depth.name, isSelected)
                 }
             }
 
@@ -436,9 +444,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         return TutorialsListPage.difficultyFromParam(param)
     }
 
-    private fun currentScopeFilter(): TutorialScope? {
-        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_SCOPE]
-        return TutorialsListPage.scopeFromParam(param)
+    private fun currentDepthFilter(): TutorialDepth? {
+        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_DEPTH]
+        return TutorialsListPage.depthFromParam(param)
     }
 
     private fun currentCompletionFilter(): TutorialsListPage.CompletionFilter {

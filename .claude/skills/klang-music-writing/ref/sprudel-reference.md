@@ -178,13 +178,18 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > ## ⚠️ PER-ORBIT (BUS) vs PER-VOICE EFFECTS — READ THIS
 >
 > Some effects run **once per orbit** (on the whole orbit's mixed signal), NOT per note. All voices on the
-> same `orbit(n)` **share** these, and they are configured **last-writer-wins** — if two voices on one orbit
-> ask for different settings, one silently loses. **To give voices independent bus effects, put them on
-> different orbits.**
+> same `orbit(n)` **share** these, and they are configured **first-writer-wins**: the first voice to sound
+> on an orbit owns ALL of its bus effects while it lives, and a later voice asking for different settings is
+> simply ignored (`Cylinder.kt`). **To give voices independent bus effects, put them on different orbits.**
+>
+> Since 2026-09-08 this is also metadata, not just prose: every DSL function carries a `@scope` tag that the
+> docs popup and the library page render as a badge (`KlangScope`, values `voice` / `orbit` / `orbit-send` /
+> `master`). If this table and a badge ever disagree, the badge is generated from the function and wins.
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — shared by all voices on the orbit | `body` / `vowel`, `room` (slots `wet`/`size`/`fade`/`lowpass`/`dim`, plus `ir`), `delay` (slots `wet`/`time`/`feedback`/`cap`), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24 — one sweep over the summed orbit, knobs first-writer-wins; only custom pipelines add a per-voice pass), `compressor`, ducking |
+> | **PER-ORBIT (bus)** — one processor per orbit, settings first-writer-wins | `body` / `vowel` (their `wet` is a bus MIX, not a send), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking, `ir` |
+> | **PER-ORBIT + PER-VOICE SEND** — shared processor, own send amount | `room` (`wet` is the per-voice send; `size`/`fade`/`lowpass`/`dim` are the orbit's) and `delay` (`wet` per voice; `time`/`feedback`/`cap` the orbit's). A dry voice on a wet orbit stays dry: only voices with a send above zero are summed into the effect (`SendRenderer.kt`) |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 

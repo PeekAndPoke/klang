@@ -11,7 +11,10 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.time.DurationUnit
@@ -44,6 +47,8 @@ class IgnitorBenchmark(
         val name: String,
         val voiceCount: Int = 1,
         val voiceData: VoiceData,
+        /** Extra named sounds registered on the renderer before the voices are scheduled (inline DSL cases). */
+        val sounds: Map<String, IgnitorDsl> = emptyMap(),
     )
 
     /**
@@ -123,6 +128,10 @@ class IgnitorBenchmark(
         val scheduler = renderer.voices
         renderer.setBackendStartTime(0.0)
 
+        for ((name, dsl) in case.sounds) {
+            renderer.ignitorRegistry.register(name, dsl)
+        }
+
         val outBuffer = ShortArray(blockFrames * 2)
 
         // Schedule voices
@@ -140,10 +149,11 @@ class IgnitorBenchmark(
             )
         }
 
-        // Warmup — prime JIT, allocate lazy buffers
+        // Warmup — prime JIT, allocate lazy buffers. renderBlock() advances the scheduler itself;
+        // calling scheduler.process() as well rendered every voice twice per block and doubled
+        // every number this benchmark ever reported (found 2026-09-07).
         var frame = 0.0
         repeat(warmupBlocks) {
-            scheduler.process(frame)
             renderer.renderBlock(frame, outBuffer)
             frame += blockFrames
         }
@@ -152,7 +162,6 @@ class IgnitorBenchmark(
         val mark = TimeSource.Monotonic.markNow()
 
         repeat(measureBlocks) {
-            scheduler.process(frame)
             renderer.renderBlock(frame, outBuffer)
             frame += blockFrames
         }
@@ -234,6 +243,28 @@ class IgnitorBenchmark(
                 Case("supersquare", voiceData = voice("supersquare", oscParams = super8v)),
                 Case("supertri", voiceData = voice("supertri", oscParams = super8v)),
                 Case("superramp", voiceData = voice("superramp", oscParams = super8v)),
+
+                // ── Sine partial banks vs the hand-rolled tree they replace ───
+                Case(
+                    "sine-harmonics7",
+                    voiceData = voice("sine-harmonics7"),
+                    sounds = mapOf("sine-harmonics7" to IgnitorDsl.Sine(harmonics = IgnitorDsl.Constant(7.0))),
+                ),
+                Case(
+                    "sine-octaves6",
+                    voiceData = voice("sine-octaves6"),
+                    sounds = mapOf("sine-octaves6" to IgnitorDsl.Sine(octaves = IgnitorDsl.Constant(6.0))),
+                ),
+                Case(
+                    "sine-harmonics7-tree",
+                    voiceData = voice("sine-harmonics7-tree"),
+                    sounds = mapOf(
+                        "sine-harmonics7-tree" to (2..8).fold(IgnitorDsl.Sine() as IgnitorDsl) { acc, k ->
+                            acc + IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(IgnitorDsl.Constant(k.toDouble())))
+                                .mul(IgnitorDsl.Constant(1.0 / k))
+                        },
+                    ),
+                ),
 
                 // ── Physical models ───────────────────────────────────────────
                 Case("pluck", voiceData = voice("pluck")),

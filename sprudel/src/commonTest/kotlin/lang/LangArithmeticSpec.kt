@@ -6,15 +6,19 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
  * Combined tests for arithmetic operations: add, sub, mul, div, mod
@@ -1306,6 +1310,133 @@ class LangArithmeticSpec : StringSpec({
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 3  // ceil(2.1) = 3
             events[1].data.value?.asInt shouldBe 3  // ceil(2.9) = 3
+        }
+    }
+
+    // -- Structure comes from the source (#23) ------------------------------------------------------------------------
+    //
+    // Arithmetic keeps the source's events and wholes. A continuous control is read at each onset; a busier
+    // control splits a source event into fragments that share its whole (so only the first one plays), and
+    // a point query into the result finds the fragment that covers the point; a rest in the control drops
+    // the note.
+
+    "arithmetic samples a continuous control at every onset | seq(\"1 1 1\").mul(sine)" {
+        val p = seq("1 1 1").mul(sine)
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 3
+                events.forEachIndexed { i, e ->
+                    val onset = i / 3.0
+                    val expected = (sin(onset * 2.0 * PI) + 1.0) / 2.0 // sine read AT the onset, not at the cycle start
+                    e.whole.begin.toCycles() shouldBe (cycle + onset plusOrMinus 1e-9)
+                    e.data.value?.asDouble.shouldNotBeNull() shouldBe (expected plusOrMinus 1e-9)
+                }
+            }
+        }
+    }
+
+    "a busier control fragments the source under ONE whole | seq(\"1\").add(\"0 10\")" {
+        val p = seq("1").add("0 10")
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 2
+                events.forEach { e ->
+                    e.whole.begin.toCycles() shouldBe cycle.toDouble()
+                    e.whole.end.toCycles() shouldBe cycle + 1.0
+                }
+                events[0].part.begin.toCycles() shouldBe cycle.toDouble()
+                events[0].part.end.toCycles() shouldBe cycle + 0.5
+                events[0].data.value?.asInt shouldBe 1
+                events[1].part.begin.toCycles() shouldBe cycle + 0.5
+                events[1].part.end.toCycles() shouldBe cycle + 1.0
+                events[1].data.value?.asInt shouldBe 11
+                events.count { it.isOnset } shouldBe 1 // one note plays, not two
+            }
+        }
+    }
+
+    "a point query finds the fragment that covers the point | \"<0.9>\".mul(\"[1.3 0.99!7]\")" {
+        // The accent map of a song: read once per note by a setter, it must say 1.3 for the first eighth
+        // and 0.99 afterwards. Onset sampling would answer 1.3 for the whole cycle.
+        val p = note("c*8").clip("<0.9>".mul("[1.3 0.99!7]"))
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 8
+                events.forEachIndexed { i, e ->
+                    val expected = if (i == 0) 0.9 * 1.3 else 0.9 * 0.99
+                    e.data.legato.shouldNotBeNull() shouldBe (expected plusOrMinus 1e-9)
+                }
+            }
+        }
+    }
+
+    "source events keep their wholes and steps | seq(\"1 1\").add(\"1 2 3\")" {
+        // Two source halves meet three control thirds: four fragments, two wholes, two onsets.
+        // (The inner join produced the same fragments; what it got wrong here is numSteps, 3 from the control.)
+        val p = seq("1 1").add("1 2 3")
+
+        p.numSteps shouldBe 2.0
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 4
+                events.map { it.whole.begin.toCycles() } shouldBe listOf(cycle + 0.0, cycle + 0.0, cycle + 0.5, cycle + 0.5)
+                events.map { it.whole.end.toCycles() } shouldBe listOf(cycle + 0.5, cycle + 0.5, cycle + 1.0, cycle + 1.0)
+                events.map { it.data.value?.asInt } shouldBe listOf(2, 3, 3, 4)
+                events.filter { it.isOnset }.map { it.data.value?.asInt } shouldBe listOf(2, 3) // 1 + 1, 1 + 2
+            }
+        }
+    }
+
+    "a continuous source has no structure: one note per cycle | note(saw.range(48, 60).add(\"0 12\"))" {
+        // A continuous pattern answers a query arc with one event; the control splits it into
+        // fragments under that one whole, so only the first plays. (Strudel plays nothing here: a
+        // signal has no whole at all.) seg() the source first to get one note per step.
+        val p = note(saw.range(48.0, 60.0).add("0 12"))
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 2
+                events.count { it.isOnset } shouldBe 1
+                events.first { it.isOnset }.data.note?.toDouble() shouldBe (48.0 plusOrMinus 1e-9)
+            }
+        }
+    }
+
+    "every fragment owns its voice data | note(\"c\").bpf(freq = 500, q = 4).bpf(freq = mul(\"1 2\"))" {
+        // One source event fans out into two fragments. With a shallow copy they shared the filter
+        // group, and the second fragment's write (1000) landed in the played (first) fragment too.
+        val p = note("c").bpf(freq = 500, q = 4).bpf(freq = mul("1 2"))
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 2
+                events[0].isOnset shouldBe true
+                events[0].data.bandf shouldBe 500.0
+                events[1].data.bandf shouldBe 1000.0
+            }
+        }
+    }
+
+    "a rest in the control drops the source event | seq(\"1 1\").add(\"5 ~\")" {
+        val p = seq("1 1").add("5 ~")
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 1
+                events[0].whole.begin.toCycles() shouldBe cycle.toDouble()
+                events[0].data.value?.asInt shouldBe 6
+            }
         }
     }
 

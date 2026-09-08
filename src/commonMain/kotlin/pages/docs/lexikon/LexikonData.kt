@@ -73,7 +73,21 @@ data class LexikonEntry(
     val trivia: LexikonTrivia? = null,
 ) {
     val domain: LexikonDomain get() = category.domain
+
+    /**
+     * URL name of this entry's own page, derived from [term] ("Orbit bus" -> "orbit-bus").
+     *
+     * These slugs are linked from DSL KDoc, so they are a contract: renaming a term silently breaks
+     * every link to it. `LexikonSpec` guards both halves, that slugs stay unique and that every slug
+     * a KDoc links to still exists.
+     */
+    val slug: String = term.lowercase().replace(slugSeparators, "-").trim('-')
 }
+
+private val slugSeparators = Regex("[^a-z0-9]+")
+
+/** The entry with this [slug], or null. */
+fun lexikonEntryBySlug(slug: String): LexikonEntry? = allLexikonEntries.firstOrNull { it.slug == slug }
 
 // -- All entries ------------------------------------------------------------------------------------------------- //
 
@@ -720,6 +734,52 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
                 "(what they sound like). Each Orbit routes to a Cylinder. " +
                 "Different Orbits = different effect buses = independent sound channels. " +
                 "The Orbit is where Fuel meets the engine.",
+    ),
+
+    LexikonEntry(
+        term = "Voice",
+        category = LexikonCategory.MotorTerms,
+        tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
+        summary = "One sounding note, with its own copy of every per-voice setting.",
+        detail = "Every note a pattern fires becomes a Voice, and each Voice runs its own chain: " +
+                "pitch, then the oscillator or sample, then its filters, then out to the orbit. " +
+                "Anything marked PER VOICE in the docs belongs to that one note and to nothing else, " +
+                "so two notes on the same orbit can have completely different filters, envelopes and levels. " +
+                "Voices are what the engine counts when it runs out of room: the polyphony limit is a " +
+                "voice limit.",
+        conventional = "Voice, note, synth voice",
+    ),
+
+    LexikonEntry(
+        term = "Orbit bus",
+        category = LexikonCategory.MotorTerms,
+        tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
+        summary = "The one shared effect chain an orbit's voices are mixed through.",
+        detail = "Every voice on an orbit is summed into one mix, and that mix runs through a single " +
+                "chain of effects: body, vowel, delay, reverb, phaser, compressor, and ducking last. " +
+                "There is exactly ONE of each per orbit, which is why they are cheap and why they are " +
+                "shared. The settings belong to the FIRST voice that sounds on the orbit while it lives " +
+                "(first-writer-wins): a second voice asking for a different room size is simply ignored, " +
+                "it is not averaged and it does not take over. If you want different bus settings, that " +
+                "is what a second orbit is for. This is the opposite of a per-voice setting, and it is " +
+                "the single most common surprise when a pattern sounds wetter or more compressed than " +
+                "it was written to be.",
+        conventional = "Bus, group, aux channel, DAW insert chain",
+    ),
+
+    LexikonEntry(
+        term = "Send",
+        category = LexikonCategory.MotorTerms,
+        tags = setOf(LexikonTag.Motor, LexikonTag.Effect),
+        summary = "How much of one voice is fed into a shared effect — per voice, not per orbit.",
+        detail = "Reverb and delay sit on the orbit bus, but each voice decides how much of itself to " +
+                "send into them. That amount is the send, and it is the `wet` slot of `room` and " +
+                "`delay`. So a dry voice on a wet orbit stays dry: only voices with a send above zero " +
+                "are mixed into the effect at all. The effect's character (room size, delay time, " +
+                "feedback) is a bus setting and belongs to the orbit; only the amount is yours. " +
+                "Watch out for the word: `body` and `vowel` also have a `wet` slot, but theirs is a " +
+                "bus mix knob, not a send, because those effects process the whole orbit mix.",
+        conventional = "Send, aux send, effect send",
     ),
 
     LexikonEntry(

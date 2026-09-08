@@ -11,11 +11,8 @@ package io.peekandpoke.klang.sprudel.lang
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.mapEvents
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -402,22 +399,26 @@ fun PatternMapperFn.max(other: PatternLike, callInfo: CallInfo? = null): Pattern
 
 // -- clamp ------------------------------------------------------------------------------------------------------------
 
+/**
+ * `clamp(lo, hi)` is the floor and then the cap, each a plain arithmetic join ([applyArithmetic]):
+ * structure from the source, both bounds read where the source event is, a rest in either bound
+ * drops the event there. A non-numeric source value passes through; a non-numeric bound leaves
+ * the value untouched (user input is coerced, never thrown at).
+ */
 private fun applyClampValue(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return pattern._innerJoin(args) { src, vMin: SprudelVoiceValue?, vMax: SprudelVoiceValue? ->
-        val rMin = vMin?.asDouble ?: return@_innerJoin silence
-        val rMax = vMax?.asDouble ?: return@_innerJoin silence
+    val minArg = args.getOrNull(0) ?: return pattern
+    val maxArg = args.getOrNull(1) ?: return pattern
 
-        src.mapEvents { event ->
-            val sourceVal = event.data.value ?: return@mapEvents event
-            val sr = sourceVal.asDouble ?: return@mapEvents event
+    val floored = applyArithmetic(pattern, listOf(minArg)) { a, lo ->
+        val ar = a.asDouble ?: return@applyArithmetic a
+        val lr = lo.asDouble ?: return@applyArithmetic a
+        if (ar < lr) lo else a
+    }
 
-            val clamped = when {
-                sr < rMin -> vMin
-                sr > rMax -> vMax
-                else -> sourceVal
-            }
-            event.copy(data = event.data.copy(value = clamped))
-        }
+    return applyArithmetic(floored, listOf(maxArg)) { a, hi ->
+        val ar = a.asDouble ?: return@applyArithmetic a
+        val hr = hi.asDouble ?: return@applyArithmetic a
+        if (ar > hr) hi else a
     }
 }
 

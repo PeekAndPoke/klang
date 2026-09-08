@@ -12,26 +12,50 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
-import io.peekandpoke.klang.sprudel._innerJoin
+import io.peekandpoke.klang.sprudel._appLeft
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.mapEvents
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
-// Helper for arithmetic operations that modify the 'value' field
+/**
+ * Helper for the binary arithmetic, comparison and bitwise operators: `source op control`, written
+ * into the value register of every source event.
+ *
+ * **Structure from the SOURCE, values from both** ([_appLeft], Strudel's default `add`). It used to
+ * be an inner join: structure, `weight`, `numSteps` and the cycle-length estimate from the CONTROL
+ * (the wholes were the source's even then), and a continuous control queried over a cycle emits one event valued at the
+ * cycle start, so `seq("1 1 1").mul(sine)` gave every note the same number while
+ * `.pan(sine.range(0, 1))` swept (`docs/tasks/sprudel-arithmetic-continuous-controls.md`, 2026-09-07).
+ *
+ * Now a continuous control is read at every onset without a `seg()`, and `weight`, `numSteps` and
+ * `estimateCycleDuration` come from the source (so `cat(seq("0 2").add("<0 12>"), "5")` allots the
+ * arithmetic one cycle, not two, as it does for a setter). A busier control still splits a source event into fragments under the source's
+ * whole, on purpose: arithmetic results are mostly READ, not played (`"<0.9>".mul("[1.3 0.99!7]")` is
+ * a clip map that `.clip(...)` samples once per note), and a point query has to find the control
+ * value that was live at that point. See [_appLeft] for why onset sampling ([_outerJoin]) would
+ * flatten such a map to its first value.
+ *
+ * A continuous SOURCE has no structure of its own (one event per query arc), so
+ * `note(saw.range(48, 60).add("0 12"))` plays one note per cycle; `seg()` the source first.
+ *
+ * A source span that meets no control event (a rest in the control) is dropped, as before and as
+ * in Strudel; so is a control event without a value. A source event without a value passes through.
+ * Every fragment owns its voice data (a clone, never the shallow copy).
+ */
 internal fun applyArithmetic(
     source: SprudelPattern,
     args: List<SprudelDslArg<Any?>>,
     op: (SprudelVoiceValue, SprudelVoiceValue) -> SprudelVoiceValue?,
 ): SprudelPattern {
-    return source._innerJoin(args) { src, controlValue ->
-        val controlVal = controlValue ?: return@_innerJoin silence
+    val control = args.getOrNull(0)?.toPattern() ?: return source
 
-        // Apply the operation to each event in the source pattern
-        src.mapEvents { event ->
-            val sourceVal = event.data.value ?: return@mapEvents event
-            val newVal = op(sourceVal, controlVal)
-            event.copy(data = event.data.copy(value = newVal))
-        }
+    return source._appLeft(control) { event, controlEvent ->
+        val controlVal = controlEvent.data.value ?: return@_appLeft null
+        // clone(), not copy(): one source event fans out into several fragments here, and the
+        // voice-data groups (adsr, lpf, ...) are mutated in place downstream, one owner each
+        val data = event.data.clone()
+        val sourceVal = data.value ?: return@_appLeft event.copy(data = data)
+        data.value = op(sourceVal, controlVal)
+        event.copy(data = data)
     }
 }
 

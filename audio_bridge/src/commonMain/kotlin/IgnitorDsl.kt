@@ -196,15 +196,51 @@ sealed interface IgnitorDsl {
     // Constant(n) = fixed frequency in Hz (e.g. Constant(5.0) for a 5 Hz LFO).
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Sine wave oscillator. */
+    /**
+     * Sine wave oscillator, optionally carrying banks of sine PARTIALS at multiples of its own
+     * frequency (`docs/plans/sine-partial-banks.md`). The sine itself is partial 1 at gain
+     * [fundamental]; [harmonics] adds partials at `2f, 3f, ...`, [octaves] at `2f, 4f, 8f, ...`,
+     * [suboctaves] at `f/2, f/4, ...`. An added partial at `m * f` or `f / m` has gain
+     * `m ^ -rolloff` of its bank (the distance from the fundamental is `m` either way). Banks
+     * sum without deduplication. With the literal defaults (fundamental 1, every count 0) the
+     * engine builds the plain sine, bit-identical to before the banks existed; anything else, a
+     * `Param` included, builds the partial bank. Every knob is a signal read once per block.
+     * Partials at or above Nyquist are silent (decided 2026-09-07). [analogSpread] blends the
+     * drift lanes: 0 = one shared walk for the whole bank, 1 = one walk per partial.
+     */
     @WireName("sine")
     data class Sine(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
+        /** Gain of the sine's own partial; 0 leaves only the banks. */
+        val fundamental: IgnitorDsl = Constant(1.0),
+        /** Number of partials added at `2f, 3f, 4f, ...`; 0 = none. */
+        val harmonics: IgnitorDsl = Constant(0.0),
+        /** Gain law exponent of the [harmonics] bank: partial at `m` gets `m ^ -rolloff`. */
+        val harmonicsRolloff: IgnitorDsl = Constant(1.0),
+        /** Number of partials added at `2f, 4f, 8f, ...`; 0 = none. */
+        val octaves: IgnitorDsl = Constant(0.0),
+        /** Gain law exponent of the [octaves] bank. */
+        val octavesRolloff: IgnitorDsl = Constant(1.0),
+        /** Number of partials added at `f/2, f/4, f/8, ...`; 0 = none. */
+        val suboctaves: IgnitorDsl = Constant(0.0),
+        /** Gain law exponent of the [suboctaves] bank: partial at `f/m` gets `m ^ -rolloff`. */
+        val suboctavesRolloff: IgnitorDsl = Constant(1.0),
+        /** Drift lane blend, 0 = one shared analog walk for every partial, 1 = independent walks. */
+        val analogSpread: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freq.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out); fundamental.collectParams(out)
+            harmonics.collectParams(out); harmonicsRolloff.collectParams(out)
+            octaves.collectParams(out); octavesRolloff.collectParams(out)
+            suboctaves.collectParams(out); suboctavesRolloff.collectParams(out)
+            analogSpread.collectParams(out)
         }
+
+        /** True when every bank knob is its literal default: the engine builds the plain sine. */
+        fun isPlainSine(): Boolean =
+            fundamental == Constant(1.0) && harmonics == Constant(0.0) &&
+                octaves == Constant(0.0) && suboctaves == Constant(0.0)
     }
 
     /** Sawtooth wave oscillator (rising ramp). */

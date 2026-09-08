@@ -91,7 +91,10 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Shimmer -> listOf(inner, wet, feedback, tone, dryFloor)
         is IgnitorDsl.Sign -> listOf(inner)
         is IgnitorDsl.Silence -> emptyList()
-        is IgnitorDsl.Sine -> listOf(freq, analog)
+        is IgnitorDsl.Sine -> listOf(
+            freq, analog, fundamental, harmonics, harmonicsRolloff, octaves, octavesRolloff,
+            suboctaves, suboctavesRolloff, analogSpread,
+        )
         is IgnitorDsl.Sq -> listOf(inner)
         is IgnitorDsl.Sqrt -> listOf(inner)
         is IgnitorDsl.Square -> listOf(freq, analog)
@@ -237,7 +240,11 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Shimmer -> copy(inner = new[0], wet = new[1], feedback = new[2], tone = new[3], dryFloor = new[4])
         is IgnitorDsl.Sign -> copy(inner = new[0])
         is IgnitorDsl.Silence -> this
-        is IgnitorDsl.Sine -> copy(freq = new[0], analog = new[1])
+        is IgnitorDsl.Sine -> copy(
+            freq = new[0], analog = new[1], fundamental = new[2], harmonics = new[3], harmonicsRolloff = new[4],
+            octaves = new[5], octavesRolloff = new[6], suboctaves = new[7], suboctavesRolloff = new[8],
+            analogSpread = new[9],
+        )
         is IgnitorDsl.Sq -> copy(inner = new[0])
         is IgnitorDsl.Sqrt -> copy(inner = new[0])
         is IgnitorDsl.Square -> copy(freq = new[0], analog = new[1])

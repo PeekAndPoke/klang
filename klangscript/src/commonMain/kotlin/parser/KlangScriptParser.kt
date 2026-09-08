@@ -924,11 +924,67 @@ class KlangScriptParser private constructor(
         )
     }
 
-    /** Skip any semicolons (used as optional statement terminators outside for-loop headers) */
-    private fun skipSemicolons() {
+    /**
+     * Skip any semicolons (used as optional statement terminators outside for-loop headers).
+     *
+     * @return true if at least one semicolon was consumed.
+     */
+    private fun skipSemicolons(): Boolean {
+        var consumed = false
+
         while (check(TokenType.SEMICOLON)) {
             advance()
+            consumed = true
         }
+
+        return consumed
+    }
+
+    /**
+     * Rejects a statement that begins on the line the previous one ended on without a `;` between them.
+     *
+     * Newlines are not tokens here and semicolons are optional separators, so two juxtaposed expressions are
+     * simply two statements: `velocity("<1.0 0.85>*4")tag("hats")` (a missing dot, found in Der Schmetterling)
+     * parses as a finished chain plus an orphan `tag(...)` mapper whose value nothing consumes. It compiles, it
+     * renders, it sounds identical, and the tag is silently gone. Almost every pattern method has a bare mapper
+     * overload for `apply`/`superimpose`, so a dropped dot nearly always still resolves.
+     * See `docs/tasks/klangscript-statement-boundaries.md`.
+     *
+     * The rule is deliberately narrow: only a SHARED LINE is an error. Statements on their own lines stay legal,
+     * so no multi-line chain and no leading-dot continuation line can trip over it.
+     */
+    private fun requireStatementBoundary() {
+        val next = peek()
+
+        if (next.line != previous().endLine) {
+            return
+        }
+
+        // A closer or a separator can never begin a statement, so a shared line says nothing about it:
+        // `stack(\n  s("bd")\n)).gain(1)` is a stray bracket, not a missing boundary. Let parseStatement()
+        // report what it actually is, instead of proposing a newline that would not help.
+        val canBeginStatement = when (next.type) {
+            TokenType.RIGHT_PAREN, TokenType.RIGHT_BRACE, TokenType.RIGHT_BRACKET,
+            TokenType.COMMA, TokenType.COLON,
+            -> false
+
+            else -> true
+        }
+
+        if (!canBeginStatement) {
+            return
+        }
+
+        // An identifier that is immediately called is the missing-dot shape
+        if (next.type == TokenType.IDENTIFIER && checkAt(1, TokenType.LEFT_PAREN)) {
+            // Deliberately NOT offering "a newline" here: a newline separates these two statements
+            // just fine, and then the orphan is silently dropped again exactly as before, because
+            // phase 2 (newline sensitivity) is not implemented. The dot is the fix; `;` is the escape
+            // hatch for someone who really did mean two statements.
+            error("Did you mean '.${next.text}(...)'? Otherwise put ';' between the two statements.")
+        }
+
+        error("Expected a newline or ';' between statements.")
     }
 
     private fun Token.toSourceLocation(): SourceLocation {
@@ -1839,12 +1895,22 @@ class KlangScriptParser private constructor(
      */
     private fun parseProgram(): Program {
         val statements = mutableListOf<Statement>()
+        // Nothing precedes the first statement, so it never needs a separator
+        var separated = true
 
         while (!isAtEnd()) {
+            // Only reaches anything on the first iteration (a program may open with `;`); afterwards the
+            // trailing skip below has already eaten every semicolon, which is what sets `separated`.
             skipSemicolons()
+
             if (isAtEnd()) break
+
+            if (!separated) {
+                requireStatementBoundary()
+            }
+
             statements.add(parseStatement())
-            skipSemicolons()
+            separated = skipSemicolons()
         }
 
         return Program(statements)
@@ -1889,12 +1955,23 @@ class KlangScriptParser private constructor(
      */
     private fun parseBlockStatements(): List<Statement> {
         val statements = mutableListOf<Statement>()
+        // The `{` precedes the first statement, so it never needs a separator
+        var separated = true
+
         while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
+            // See parseProgram: only the first iteration can find anything here (`{ ; f() }`)
             skipSemicolons()
+
             if (check(TokenType.RIGHT_BRACE) || isAtEnd()) break
+
+            if (!separated) {
+                requireStatementBoundary()
+            }
+
             statements.add(parseStatement())
-            skipSemicolons()
+            separated = skipSemicolons()
         }
+
         return statements
     }
 

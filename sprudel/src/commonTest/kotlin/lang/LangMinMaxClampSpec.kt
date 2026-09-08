@@ -13,6 +13,9 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.kotest.assertions.withClue
+import kotlin.math.PI
+import kotlin.math.sin
 
 class LangMinMaxClampSpec : StringSpec({
 
@@ -284,5 +287,24 @@ class LangMinMaxClampSpec : StringSpec({
         events[2].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         events[3].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
         events[4].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
+    "clamp() samples continuous bounds at every onset | seq(\"0 0 0\").clamp(sine, \"1\")" {
+        // The lower bound is a curve: every note is lifted to the sine value AT its onset,
+        // and the source keeps its three events (the bounds never restructure it).
+        val p = seq("0 0 0").clamp(sine, "1")
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 3
+                events.forEachIndexed { i, e ->
+                    val onset = i / 3.0
+                    val expected = (sin(onset * 2.0 * PI) + 1.0) / 2.0
+                    e.whole.begin.toCycles() shouldBe (cycle + onset plusOrMinus 1e-9)
+                    e.data.value?.asDouble shouldBe (expected plusOrMinus EPSILON)
+                }
+            }
+        }
     }
 })

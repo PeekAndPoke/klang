@@ -432,7 +432,7 @@ private fun applySndDust(source: SprudelPattern): SprudelPattern =
  *
  * @param tail Impulse tail length.
  * @param-tool density SprudelDustEditor, SprudelDustSequenceEditor
- * @param density Impulse density (impulses per second)
+ * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
  * @return A new pattern with sound set to "dust" and parameters applied.
  * @category tonal
  * @tags dust, impulse, noise, snd
@@ -448,7 +448,7 @@ fun SprudelPattern.sndDust(density: PatternLike? = null, tail: PatternLike? = nu
 /**
  * Parses this string as a pattern and sets sound to dust generator.
  *
- * @param density Impulses per second.
+ * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
  * @param tail Impulse tail length.
  * @return A new pattern with sound set to "dust".
  * @category tonal
@@ -461,7 +461,7 @@ fun String.sndDust(density: PatternLike? = null, tail: PatternLike? = null, call
 /**
  * Returns a [PatternMapperFn] that sets the sound to dust generator.
  *
- * @param density Impulses per second.
+ * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
  * @param tail Impulse tail length.
  * @return A [PatternMapperFn] that sets sound to "dust".
  * @category tonal
@@ -472,7 +472,7 @@ fun sndDust(density: PatternLike? = null, tail: PatternLike? = null, callInfo: C
     { p -> p.sndDust(density, tail, callInfo) }
 
 /** Chains a dust generator sound onto this [PatternMapperFn].
- * @param density Impulses per second.
+ * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
  * @param tail Impulse tail length.
  */
 @KlangScript.Function

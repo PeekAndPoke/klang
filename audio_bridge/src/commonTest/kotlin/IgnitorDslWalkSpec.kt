@@ -141,7 +141,14 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("Shimmer", IgnitorDsl.Shimmer(inner = m(0), wet = m(1), feedback = m(2), tone = m(3), dryFloor = m(4), pitches = listOf(3.0, 7.0)), 5),
         Triple("Sign", IgnitorDsl.Sign(inner = m(0)), 1),
         Triple("Silence", IgnitorDsl.Silence, 0),
-        Triple("Sine", IgnitorDsl.Sine(freq = m(0), analog = m(1)), 2),
+        Triple(
+            "Sine",
+            IgnitorDsl.Sine(
+                freq = m(0), analog = m(1), fundamental = m(2), harmonics = m(3), harmonicsRolloff = m(4),
+                octaves = m(5), octavesRolloff = m(6), suboctaves = m(7), suboctavesRolloff = m(8), analogSpread = m(9),
+            ),
+            10,
+        ),
         Triple("Sq", IgnitorDsl.Sq(inner = m(0)), 1),
         Triple("Sqrt", IgnitorDsl.Sqrt(inner = m(0)), 1),
         Triple("Square", IgnitorDsl.Square(freq = m(0), analog = m(1)), 2),

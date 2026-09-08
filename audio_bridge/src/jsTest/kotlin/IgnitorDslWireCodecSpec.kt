@@ -41,6 +41,18 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Sine default Freq" { check(IgnitorDsl.Sine()) }
     "Sine custom freq param" { check(IgnitorDsl.Sine(freq = IgnitorDsl.Param("freq", 440.0))) }
     "Sine with Freq.div(2)" { check(IgnitorDsl.Sine(freq = IgnitorDsl.Div(IgnitorDsl.Freq, IgnitorDsl.Constant(2.0)))) }
+    // Every partial-bank field non-default, so a dropped one shows up.
+    "Sine with partial banks" {
+        check(
+            IgnitorDsl.Sine(
+                fundamental = IgnitorDsl.Constant(0.5),
+                harmonics = IgnitorDsl.Constant(7.0), harmonicsRolloff = IgnitorDsl.Constant(1.5),
+                octaves = IgnitorDsl.Param("oct", 3.0), octavesRolloff = IgnitorDsl.Constant(0.5),
+                suboctaves = IgnitorDsl.Constant(1.0), suboctavesRolloff = IgnitorDsl.Constant(0.0),
+                analogSpread = IgnitorDsl.Constant(0.25),
+            )
+        )
+    }
     "Sawtooth" { check(IgnitorDsl.Sawtooth()) }
     "Square" { check(IgnitorDsl.Square(freq = IgnitorDsl.Param("freq", 220.0))) }
     "Triangle" { check(IgnitorDsl.Triangle()) }

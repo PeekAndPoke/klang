@@ -30,8 +30,8 @@ class LangFreqAccessorSpec : StringSpec({
     "a novice violin player: freq(mul(perlin.seg(4).range(0.95, 1.05))) wobbles every note within 5 percent" {
         val ratios = mutableSetOf<Double>()
 
-        // mul() takes its structure from the control, so the segmented perlin fragments the notes;
-        // only the onset fragments are scheduled and only they are judged here.
+        // mul() keeps the structure of the source: the segmented perlin splits a note into fragments
+        // under the note's own whole, so only the onset fragment is scheduled and only they are judged here.
         note("a c e").freq(mul(perlin.seg(4).range(0.95, 1.05))).cycles().forEach { all ->
             val events = all.filter { it.isOnset }
             events shouldHaveSize 3

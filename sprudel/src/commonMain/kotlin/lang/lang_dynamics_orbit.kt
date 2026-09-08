@@ -35,10 +35,12 @@ private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 }
 
 /**
- * Routes the pattern to an audio output orbit (channel group) for independent effect processing.
+ * Routes the pattern to an [orbit bus](/manuals/lexikon/orbit-bus), its own channel of shared effects.
  *
- * Each orbit can have its own reverb, delay, and other effects applied independently.
- * Use different orbit numbers to send patterns to different effect buses.
+ * This is the answer whenever two patterns fight over a bus effect. Reverb, delay, phaser,
+ * compressor, body, vowel and ducking exist once per orbit and take their settings from the first
+ * voice that sounds there, so a second pattern asking for a different room size is ignored. Move it
+ * to another orbit and it gets its own.
  *
  * ```KlangScript(Playable)
  * s("bd sd").orbit(1)                           // send drums to orbit 1
@@ -204,7 +206,11 @@ private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any
 /**
  * Sidechain ducking: the orbit that triggers it, the depth and the recovery time.
  *
- * The pattern carrying `duck(...)` is ducked whenever the named orbit plays; the duck-down is instant, `attack` is the recovery.
+ * The pattern carrying `duck(...)` is ducked whenever the named orbit plays. The duck-down is
+ * instant, `attack` is the recovery.
+ *
+ * Ducking belongs to the [orbit bus](/manuals/lexikon/orbit-bus) and runs after every orbit has been
+ * processed, so it ducks the whole orbit, set by its owning voice, not one note at a time.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`duck(depth = mul(2))`), and the numeric slots read back as `duck.orbit`, `duck.depth`, `duck.attack`.
@@ -223,10 +229,10 @@ private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any
  * ```
  *
  * @param orbit Orbit index whose voices trigger the duck.
- * @param depth Depth, 0 (no ducking) to 1 (full silence).
+ * @param depth Depth, 0 for none, 1 for full silence.
  * @param attack Recovery time in seconds after the trigger stops.
-
  *
+ * @scope orbit
  * @category dynamics
  * @tags duck, orbit, depth, attack
  */
@@ -257,6 +263,7 @@ fun PatternMapperFn.duck(orbit: PatternLike? = null, depth: PatternLike? = null,
  * The `duck` object: `duck(...)` sets the slots, and each numeric slot reads back as a child,
  * `duck.orbit`, `duck.depth`, `duck.attack`.
  *
+ * @scope orbit
  * @category dynamics
  * @tags duck, accessor
  */
@@ -282,7 +289,7 @@ object duck {
         { p -> p.duck(orbit, depth, attack, callInfo) }
 }
 
-// -- cylinder() — alias for orbit() ----------------------------------------------------------------------------------
+// -- cylinder(), alias for orbit() ----------------------------------------------------------------------------------
 
 /**
  * Routes events to a specific audio output cylinder (alias for [orbit]).

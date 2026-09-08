@@ -132,7 +132,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                 }
                 difficultyLabel(laf, tutorial.difficulty)
-                scopeLabel(laf, tutorial.scope)
+                depthLabel(laf, tutorial.depth)
                 tutorial.tags.forEach { tag ->
                     ui.mini.basic.label { +tag.label }
                 }

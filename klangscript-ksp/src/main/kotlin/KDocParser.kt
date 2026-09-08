@@ -44,14 +44,28 @@ data class ParsedKDoc(
     val aliases: List<String>,
     /** @param-tool tags: parameter name -> list of UI tool names */
     val paramTools: Map<String, List<String>>,
+    /** @scope tag (custom): where the thing runs, see KlangSymbol.scope */
+    val scope: String?,
+    /**
+     * Tags this parser could not use: an unknown name, or a known one written with no value.
+     *
+     * An unknown tag is NOT folded into the preceding tag's content, which is what used to happen,
+     * silently: `@tags room, wet` followed by a misspelled `@scpoe orbit` produced the tag
+     * "wet @scpoe orbit". The processor warns about everything collected here, so a typo shows up at
+     * build time instead of in the docs.
+     */
+    val unusableTags: List<String>,
 )
 
 /**
  * Parses KDoc string into structured information.
  *
  * Supports standard tags (@param, @return) plus custom tags
- * (@category, @tags, @alias, @param-tool) and
+ * (@category, @tags, @alias, @scope, @param-tool) and
  * KlangScript fenced code blocks as samples.
+ *
+ * A tag this parser cannot use is collected into [ParsedKDoc.unusableTags] instead of being
+ * appended to whatever tag came before it.
  */
 object KDocParser {
 
@@ -66,6 +80,8 @@ object KDocParser {
                 tags = emptyList(),
                 aliases = emptyList(),
                 paramTools = emptyMap(),
+                scope = null,
+                unusableTags = emptyList(),
             )
         }
 
@@ -134,6 +150,8 @@ object KDocParser {
         val params = mutableMapOf<String, String>()
         var returnDoc = ""
         var category: String? = null
+        var scope: String? = null
+        val unusableTags = mutableListOf<String>()
         val tags = mutableListOf<String>()
         val aliases = mutableListOf<String>()
         val paramTools = mutableMapOf<String, MutableList<String>>()
@@ -146,7 +164,12 @@ object KDocParser {
             val content = currentContent.toString()
                 .trim()
                 .replace(Regex("\\s+"), " ")
-            if (content.isEmpty()) return
+
+            if (content.isEmpty()) {
+                // `@scope` with nothing after it would otherwise vanish: no value, no badge, no warning
+                unusableTags.add(tag.substringBefore(':'))
+                return
+            }
 
             when {
                 tag.startsWith("param:") -> {
@@ -156,6 +179,7 @@ object KDocParser {
 
                 tag == "return" -> returnDoc = content
                 tag == "category" -> category = content
+                tag == "scope" -> scope = content
                 tag == "tags" -> {
                     content.split(",").forEach { t ->
                         val trimmed = t.trim()
@@ -180,10 +204,17 @@ object KDocParser {
             }
         }
 
+        // A tag matches only when the name ENDS there: `@return` must not swallow `@returns`, and
+        // `@param` must not swallow `@parameter`. Without this, a typo is parsed as its nearest known
+        // tag and its content silently lands in that tag (review round 1); `@param-tool` still needs
+        // to be tested before `@param`, since `-` is not a boundary character.
+        fun String.isTag(name: String): Boolean =
+            this == "@$name" || startsWith("@$name ") || startsWith("@$name\t")
+
         for (line in tagLines) {
             val t = line.trim()
             when {
-                t.startsWith("@param-tool") -> {
+                t.isTag("param-tool") -> {
                     saveCurrentTag()
                     val match = Regex("@param-tool\\s+(\\w+)\\s*(.*)").matchEntire(t)
                     if (match != null) {
@@ -192,7 +223,7 @@ object KDocParser {
                     }
                 }
 
-                t.startsWith("@param") -> {
+                t.isTag("param") -> {
                     saveCurrentTag()
                     val match = Regex("@param\\s+(\\w+)\\s*(.*)").matchEntire(t)
                     if (match != null) {
@@ -201,28 +232,44 @@ object KDocParser {
                     }
                 }
 
-                t.startsWith("@return") -> {
+                t.isTag("return") -> {
                     saveCurrentTag()
                     currentTag = "return"
                     currentContent = StringBuilder(t.removePrefix("@return").trim())
                 }
 
-                t.startsWith("@category") -> {
+                t.isTag("category") -> {
                     saveCurrentTag()
                     currentTag = "category"
                     currentContent = StringBuilder(t.removePrefix("@category").trim())
                 }
 
-                t.startsWith("@tags") -> {
+                t.isTag("tags") -> {
                     saveCurrentTag()
                     currentTag = "tags"
                     currentContent = StringBuilder(t.removePrefix("@tags").trim())
                 }
 
-                t.startsWith("@alias") -> {
+                t.isTag("scope") -> {
+                    saveCurrentTag()
+                    currentTag = "scope"
+                    currentContent = StringBuilder(t.removePrefix("@scope").trim())
+                }
+
+                t.isTag("alias") -> {
                     saveCurrentTag()
                     currentTag = "alias"
                     currentContent = StringBuilder(t.removePrefix("@alias").trim())
+                }
+
+                // A line that opens with `@` and matched none of the branches above is a tag this parser
+                // does not know (usually a typo). Close whatever tag is open rather than appending to it:
+                // continuation lines belong to their tag, a foreign tag does not.
+                t.startsWith("@") -> {
+                    saveCurrentTag()
+                    currentTag = null
+                    currentContent = StringBuilder()
+                    unusableTags.add(t.substringBefore(' ').removePrefix("@"))
                 }
 
                 else -> {
@@ -243,6 +290,8 @@ object KDocParser {
             tags = tags,
             aliases = aliases,
             paramTools = paramTools,
+            scope = scope,
+            unusableTags = unusableTags,
         )
     }
 }

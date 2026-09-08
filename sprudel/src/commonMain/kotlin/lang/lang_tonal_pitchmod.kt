@@ -41,7 +41,9 @@ private fun applyVibratoDepth(source: SprudelPattern, args: List<SprudelDslArg<A
 /**
  * Vibrato: LFO rate in Hz and depth in semitones.
  *
- * A pitch wobble; the rate is how fast, the depth how far.
+ * A pitch wobble on the note [per voice](/manuals/lexikon/voice): the rate is how fast, the depth
+ * how far. A rate of 3 Hz is gentle, 5 standard, 7 nervous; a depth of 0.2 semitones is subtle,
+ * 0.5 expressive, 1 a wide wobble.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`vibrato(depth = mul(2))`), and the numeric slots read back as `vibrato.rate`, `vibrato.depth`.
@@ -59,10 +61,10 @@ private fun applyVibratoDepth(source: SprudelPattern, args: List<SprudelDslArg<A
  * note("c4 e4").s("saw").vibrato("3 7", 0.5).penv(vibrato.rate)           // a pitch rise as wide as the rate
  * ```
  *
- * @param rate LFO rate in Hz; 3 is gentle, 5 standard, 7 nervous.
- * @param depth Depth in semitones; 0.2 is subtle, 0.5 expressive, 1 a wide wobble.
-
+ * @param rate LFO rate in Hz.
+ * @param depth Depth in semitones.
  *
+ * @scope voice
  * @category tonal
  * @tags vibrato, rate, depth
  */
@@ -92,6 +94,7 @@ fun PatternMapperFn.vibrato(rate: PatternLike? = null, depth: PatternLike? = nul
  * The `vibrato` object: `vibrato(...)` sets the slots, and each numeric slot reads back as a child,
  * `vibrato.rate`, `vibrato.depth`.
  *
+ * @scope voice
  * @category tonal
  * @tags vibrato, accessor
  */
@@ -120,9 +123,9 @@ object vibrato {
  * note("c4 e4").s("saw").vib(5, 0.5)
  * ```
  *
+ * @scope voice
  * @category tonal
  * @tags vib, vibrato
-
  */
 @KlangScript.Function
 fun SprudelPattern.vib(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -136,6 +139,7 @@ fun String.vib(rate: PatternLike? = null, depth: PatternLike? = null, callInfo: 
 /**
  * Alias of [vibrato]: the same object under its short name.
  *
+ * @scope voice
  * @category tonal
  * @tags vib, vibrato, accessor
  */
@@ -212,7 +216,11 @@ private fun applyPenvAnchor(source: SprudelPattern, args: List<SprudelDslArg<Any
 /**
  * The pitch envelope: depth in semitones, its attack, decay and release, curve and sustain anchor.
  *
- * Pitch starts `amount` semitones away and glides home along the envelope.
+ * Pitch starts `amount` semitones away and glides home along the envelope: 12 is an octave up,
+ * -12 an octave down, 0 no pitch envelope at all. An anchor of 0 returns the note to its own pitch.
+ *
+ * `curve` and `release` are reserved: the engine stores them but its pitch ramps are linear and have
+ * no release phase, so neither changes what you hear yet.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`penv(attack = mul(2))`), and the numeric slots read back as `penv.amount`, `penv.attack`, `penv.decay`, `penv.release`, `penv.curve`, `penv.anchor`.
@@ -230,14 +238,14 @@ private fun applyPenvAnchor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * note("c4*4").s("saw").penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))   // brighter with the rise
  * ```
  *
- * @param amount Depth in semitones; 12 is an octave up, -12 an octave down, 0 no pitch envelope.
- * @param attack Attack in seconds; 0.01 is instant, 0.1 snappy.
- * @param decay Decay in seconds; 0.05 is snappy, 0.2 moderate.
- * @param release Release in seconds, how fast the pitch returns after the note ends.
- * @param curve Curve shape: 1 is linear, below 1 concave (fast start), above 1 convex (slow start).
- * @param anchor Sustain pitch offset, -1 to 1; 0 returns to the note.
-
+ * @param amount Depth in semitones.
+ * @param attack Attack in seconds.
+ * @param decay Decay in seconds.
+ * @param release Reserved, not read yet.
+ * @param curve Reserved, not read yet.
+ * @param anchor Sustain pitch offset, -1 to 1.
  *
+ * @scope voice
  * @category tonal
  * @tags penv, amount, attack, decay, release, curve, anchor
  */
@@ -297,6 +305,7 @@ fun PatternMapperFn.penv(
  * The `penv` object: `penv(...)` sets the slots, and each numeric slot reads back as a child,
  * `penv.amount`, `penv.attack`, `penv.decay`, `penv.release`, `penv.curve`, `penv.anchor`.
  *
+ * @scope voice
  * @category tonal
  * @tags penv, accessor
  */
@@ -349,9 +358,9 @@ object penv {
  * s("bd*4").pamt(24, 0.001, 0.08)
  * ```
  *
+ * @scope voice
  * @category tonal
  * @tags pamt, penv
-
  */
 @KlangScript.Function
 fun SprudelPattern.pamt(
@@ -381,6 +390,7 @@ fun String.pamt(
 /**
  * Alias of [penv]: the same object under its short name.
  *
+ * @scope voice
  * @category tonal
  * @tags pamt, penv, accessor
  */
@@ -418,10 +428,10 @@ private fun applyAccelerate(source: SprudelPattern, args: List<SprudelDslArg<Any
  * Sets the playback acceleration (pitch ramp) for each event, in SEMITONES over the event's
  * duration: `accelerate(12)` glides one octave up, `accelerate(-12)` one octave down.
  *
- * Controls a continuous pitch change during sample playback. Useful for pitched percussion
- * or sweep effects. When called with no argument, reinterprets the current event value as
- * the semitone amount. (Unit changed from octaves to semitones in the pitch-param
- * unification, 2026-08-24 — old scripts' values are 12× subtler now.)
+ * A continuous pitch change during sample playback, good for pitched percussion and sweeps. With
+ * no argument it reinterprets the current event value as the semitone amount. (The unit changed
+ * from octaves to semitones in the pitch-param unification, 2026-08-24, so old scripts' values are
+ * 12× subtler now.)
  *
  * ```KlangScript(Playable)
  * s("cr").accelerate(24)             // crash pitches two octaves up during playback
@@ -431,8 +441,9 @@ private fun applyAccelerate(source: SprudelPattern, args: List<SprudelDslArg<Any
  * s("hh").accelerate("<0 -24 24>")   // alternate: no ramp, down, up per cycle
  * ```
  *
- * @param semitones Pitch bend over the voice's duration in SEMITONES. 0.0 = no bend, +12 = one octave up, -12 = one octave down. Default: 0.0. Typical range: -24 to 24.
+ * @param semitones Pitch bend in semitones. Typically -24 to 24.
  *
+ * @scope voice
  * @category tonal
  * @tags accelerate, pitch ramp, pitch bend, playback speed
  */
@@ -460,6 +471,7 @@ fun String.accelerate(semitones: PatternLike? = null, callInfo: CallInfo? = null
  * note("c4 e4").accelerate("2 -2").pan(accelerate.mul(0.25).add(0.5))    // up goes right, down goes left
  * ```
  *
+ * @scope voice
  * @category tonal
  * @tags accelerate, accessor
  */

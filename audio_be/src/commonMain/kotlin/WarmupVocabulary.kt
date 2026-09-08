@@ -106,6 +106,7 @@ object WarmupVocabulary {
         IgnitorDsl.SuperSquare(voices = Constant(5.0)),
         IgnitorDsl.SuperTri(voices = Constant(5.0)),
         IgnitorDsl.SuperRamp(voices = Constant(5.0)),
+        IgnitorDsl.Sine(harmonics = Constant(7.0), octaves = Constant(2.0), suboctaves = Constant(1.0)),
         IgnitorDsl.Pluck(),
         IgnitorDsl.SuperPluck(voices = Constant(3.0)),
     ).reduce { acc, osc -> IgnitorDsl.Plus(acc, osc) }.mul(Constant(0.15))
