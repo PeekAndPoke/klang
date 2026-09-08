@@ -1,7 +1,18 @@
 # KlangScript — number methods (`2.pow(7/12)`), and the lexer change they need
 
-> **Status (2026-08-22)**: NOT IMPLEMENTED. Requested by the maintainer after `^` was mistaken for
-> exponentiation in `DerSchmetterling.kt`. Small feature, one real prerequisite.
+> **Status (2026-09-08)**: NOT IMPLEMENTED, and split across two sessions by the maintainer.
+>
+> | Half | Owner | State |
+> |---|---|---|
+> | **The lexer fix** (`2.pow` must lex at all) | a separate session | to do FIRST |
+> | **The stdlib methods** | this session's successor | BLOCKED until the lexer lands |
+>
+> Do not write the methods before the lexer change is in: without it `2.pow(2)` does not parse, so
+> nothing can be tested end to end and every example in the docs would be a lie.
+>
+> `^`-as-power was the alternative and was DECLINED on 2026-09-08, see
+> `../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md`. This task is now
+> the whole answer to that footgun.
 
 ## Why
 
@@ -49,6 +60,12 @@ while (i < source.length && (codes[i].isAsciiDigit() ||
 `toString` method, which is already registered on numbers (below) but is unreachable on a literal for
 exactly this reason.
 
+**It now fails loudly rather than silently, which changes what to test.** Since statement boundaries
+landed (2026-09-08), `2.pow(7/12)` is a parse error reading "Expected a newline or ';' between
+statements. Did you mean '.pow(...)'?" That diagnostic is correct today and must DISAPPEAR with this
+change: a spec row should assert `2.pow(2)` evaluates to 4, and the boundary spec's own rows must stay
+green, since both features read the same token stream.
+
 Two details to get right:
 
 - **`2.` alone** (trailing dot, no digit) currently lexes as the number 2.0. After the change it becomes
@@ -73,6 +90,22 @@ internal object KlangScriptNumberExtensions {
 
 Add methods in the same shape, delegating to the same `kotlin.math` calls `KlangScriptMath` already uses
 (`KlangScriptMath.kt:188` is `fun pow(base: Double, exp: Double): Double = base.pow(exp)`).
+
+### Open design questions (the maintainer's, not settled)
+
+1. **How far to go.** Tier 1 is the everyday patch math below. Tier 2 adds `log2`/`log10`/`ln`/`exp`
+   and `sign` (dB and frequency work is logarithmic). Tier 3 is the musical vocabulary further down
+   (`semitones`, `cents`, and a `db`/`toDb` pair), which is where a magic number becomes a statement
+   of intent and is arguably worth more than tiers 1 and 2 together.
+2. **`clamp(lo, hi)` or Kotlin's `coerceIn(lo, hi)`.** The project rule says the stdlib follows Kotlin
+   conventions, but the existing String extensions are JS-named (`toUpperCase`, `charAt`, `indexOf`,
+   `concat`), so either choice sits next to a counter-example. `clamp` is what musicians and
+   shader/JS people already know; `coerceIn` is Kotlin-internal vocabulary.
+
+**One to include for a reason that is not obvious:** `mod(n)`. Kotlin's `mod` is floor-mod where `%`
+is remainder, so `(-1) % 12` is `-1` but `(-1).mod(12)` is `11`. Pitch classes and cycle wrapping are
+exactly where that bites, and a plausible wrong number with no diagnostic is the same failure class
+as the `^` bug that started this task.
 
 **Minimum set** — the ones that read better as methods than as `Math.` calls:
 
