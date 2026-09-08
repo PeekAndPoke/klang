@@ -481,6 +481,10 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const raw = 150
                     |console.log("clamped:", raw.clamp(0, 127))    // 127
                     |
+                    |// A pan runs from 0 (left) to 1 (right): an offset that overshoots is clamped back to the edge
+                    |const pan = 0.6 + 0.7
+                    |console.log("pan:", pan.clamp(0, 1))          // 1
+                    |
                     |const drift = 3 - 9
                     |console.log("drift.abs():", drift.abs())      // 6
                     |
