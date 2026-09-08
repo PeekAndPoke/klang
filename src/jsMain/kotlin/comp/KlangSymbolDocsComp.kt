@@ -218,7 +218,9 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                 if (description != null) {
                     noui.item {
                         noui.content {
-                            MarkdownDisplay(description)
+                            // New tab: this popup floats over the editor, and path routing means a
+                            // plain link would reload the app and take the unsaved song with it.
+                            MarkdownDisplay(description, linksInNewTab = true)
                         }
                     }
                 }

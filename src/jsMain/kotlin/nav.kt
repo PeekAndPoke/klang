@@ -20,6 +20,7 @@ import io.peekandpoke.klang.pages.VideosPage
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
+import io.peekandpoke.klang.pages.docs.lexikon.LexikonEntryPage
 import io.peekandpoke.klang.pages.docs.lexikon.LexikonPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialTrackPage
@@ -45,6 +46,9 @@ object Nav {
     val manualsKlangScript = Static("$manualsBase/klang-script")
 
     val manualsLexikon = Static("$manualsBase/lexikon")
+
+    /** One term on its own page. The permalink DSL docs link to, see LexikonEntryPage. */
+    val manualsLexikonEntry = Route1("$manualsBase/lexikon/{slug}")
 
     val manualsLibrary = Route1("$manualsBase/library/{library}")
     fun manualsLibrarySearch(library: String, search: String) =
@@ -99,6 +103,7 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.manuals) { DocsPage() }
         mount(Nav.manualsKlangScript) { KlangScriptDocsPage() }
         mount(Nav.manualsLexikon) { LexikonPage() }
+        mount(Nav.manualsLexikonEntry) { LexikonEntryPage(it["slug"]) }
         mount(Nav.manualsLibrary) { KlangScriptLibraryDocsPage(it["library"]) }
 
         mount(Nav.tutorials) { TutorialsListPage() }
