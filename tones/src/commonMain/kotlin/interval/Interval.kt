@@ -324,7 +324,8 @@ data class Interval(
             // No interval has the number 0 (a unison is 1), and a number that does not fit an Int is
             // not a name either; both used to crash below instead of returning NoInterval
             val num = tokens[0].toIntOrNull() ?: return NoInterval
-            if (num == 0 || kotlin.math.abs(num) > MAX_INTERVAL_NUMBER) {
+            // A range check, not abs(): abs(Int.MIN_VALUE) is still negative and would slip through
+            if (num == 0 || num !in -MAX_INTERVAL_NUMBER..MAX_INTERVAL_NUMBER) {
                 return NoInterval
             }
             val q = tokens[1]

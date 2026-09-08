@@ -129,7 +129,7 @@ data class ArityDispatchItem(
             appendLine("$indent)")
         }
 
-        appendLine("${indent}checkArgsSize(fn = \"$scriptName\", args = args, expected = $requiredCount, location = loc)")
+        appendLine("${indent}${arityCheck(scriptName, scriptParams, requiredCount)}")
 
         // Required params — always convert
         scriptParams.forEach { param ->
@@ -304,7 +304,7 @@ data class FileLevelExtItem(
             val requiredCount = scriptParams.count { !it.hasDefault }
             val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
 
-            appendLine("${indent}checkArgsSize(fn = \"$scriptName\", args = args, expected = $requiredCount, location = loc)")
+            appendLine("${indent}${arityCheck(scriptName, scriptParams, requiredCount)}")
             scriptParams.forEach { param ->
                 if (!param.hasDefault) {
                     appendLine(
@@ -341,7 +341,7 @@ data class FileLevelExtItem(
             appendLine("$indent    }")
             appendLine("$indent)")
         } else {
-            appendLine("${indent}checkArgsSize(fn = \"$scriptName\", args = args, expected = ${scriptParams.size}, location = loc)")
+            appendLine("${indent}${arityCheck(scriptName, scriptParams, scriptParams.size)}")
             scriptParams.forEach { param ->
                 appendLine(
                     "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
@@ -393,3 +393,16 @@ internal fun withCallInfo(args: String, hasCallInfo: Boolean): String = when {
     args.isEmpty() -> "callInfo = callInfo"
     else -> "$args, callInfo = callInfo"
 }
+
+/**
+ * The generated arity check: a door with no script parameter refuses any argument (`checkNoArgs`),
+ * every other door checks the required count (`checkArgsSize`, which only rejects too FEW arguments
+ * because the parameter specs catch a surplus). Without the split, `3.14159.round(2)` returned 3 with
+ * the 2 silently dropped (2026-09-08).
+ */
+internal fun arityCheck(scriptName: String, scriptParams: List<Any?>, requiredCount: Int): String =
+    if (scriptParams.isEmpty()) {
+        "checkNoArgs(fn = \"$scriptName\", args = args, location = loc)"
+    } else {
+        "checkArgsSize(fn = \"$scriptName\", args = args, expected = $requiredCount, location = loc)"
+    }

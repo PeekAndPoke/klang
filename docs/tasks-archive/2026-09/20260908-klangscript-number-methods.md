@@ -153,6 +153,22 @@ reviewed in the project loop.
   an import only clears the root's caches, so a second `import` on the same engine after a lookup
   can keep serving the earlier library's method of the same name (pre-existing, unreachable in every
   host today since both imports precede user code).
+- Round 3 of the review (two Opus reviewers, at the maintainer's request): a zero-parameter native
+  method used to accept and drop arguments (`3.14159.round(2)` returned 3, `2.sqrt(9)` returned 1.41),
+  because a zero-parameter door had no arity check on either route (the builder's zero-arg
+  `registerMethod` bridge, and the KSP-generated bridge, whose `checkArgsSize(expected = 0)` is a
+  MINIMUM check that can never fire); both now emit `checkNoArgs`, language-wide, for stdlib and
+  sprudel alike (`ExtensionMethodAritySpec`, `EmissionHelpersTest`; the full song, tutorial and doc
+  corpus and sprudel's 4074 tests were rerun to measure the blast radius: nothing broke). `abs(Int.MIN_VALUE)` stays negative, so the interval
+  bound is a range check now (`"-2147483648M"` is rejected). The number `mod` (floor, Kotlin's `mod`)
+  and the IgnitorDsl signal `mod` (remainder, Kotlin's `rem`, because the engine's `ModIgnitor` is `%`)
+  differ on purpose and each KDoc now says so; the signal `pow` is signed-magnitude and the natural
+  logarithm is `ln` on a number but `log` on a signal, both recorded here as an open naming question
+  for the maintainer ("one word per concept"). The collision guard derives the shared receivers and
+  includes properties. Two `ln`/`exp` rows that no wrong delegate could fail were added.
+  Correction to an earlier note: a MISSED lookup is not cached by the child environment (`getOrPut`
+  recomputes a null), so a later import that adds a method is seen; only a same-name override goes
+  stale, and the names list cache does stick.
 - **Descending intervals are spelled `"-5P"` or `"P-5"`**, never `"-P5"`: that is what the `tones` parser
   accepts (sign before the NUMBER, tonal style; `Interval.fromSemitones(-7)` returns `"-5P"`). This file
   and the brief had it wrong; the specs pin `"-P5"` as rejected so it cannot creep back into the docs.

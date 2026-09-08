@@ -23,7 +23,7 @@ class IntervalTest : StringSpec({
         // name, and a number far beyond any music is refused before the semitone arithmetic overflows.
         // Until 2026-09-08 the first two threw (IndexOutOfBounds, NumberFormatException) and the third
         // came back non-empty with a garbage semitone count.
-        listOf("P0", "0P", "M0", "-0P", "99999999999P", "2147483647M", "1000001P").forEach { name ->
+        listOf("P0", "0P", "M0", "-0P", "99999999999P", "2147483647M", "-2147483648M", "1000001P", "-1000001P").forEach { name ->
             Interval.get(name).empty shouldBe true
         }
 

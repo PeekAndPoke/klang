@@ -644,14 +644,18 @@ object KlangScriptOscExtensions {
     /**
      * Per-sample modulo. Zero divisors substituted with `1e-30` to avoid `NaN`.
      *
+     * On a signal `mod` and `rem` are the same operation, the engine's `%`: the sign follows the LEFT
+     * operand, so a negative value stays negative. This differs from `mod` on a number, which is the
+     * floor modulo (`-1.mod(12)` is 11); to wrap a negative signal into a range, add the range and
+     * take `mod` again.
      */
     @KlangScript.Method
     fun mod(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Mod(left = self, right = other.toIgnitorDsl())
 
     /**
-     * Per-sample modulo. Alias for [mod] (matches Kotlin's `rem`).
-     *
+     * Per-sample modulo. Alias for [mod] (matches Kotlin's `rem`): on a signal the two are the same
+     * operation, unlike `mod` and `rem` on a number.
      */
     @KlangScript.Method
     fun rem(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =

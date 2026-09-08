@@ -38,4 +38,14 @@ class EmissionHelpersTest : StringSpec({
     "cast suffix for a non-null function type" {
         castSuffix("((Any) -> Any)", isNullable = false) shouldBe " as ((Any) -> Any)"
     }
+
+    "arity check: a door without script parameters refuses any argument" {
+        // `checkArgsSize` only rejects too few arguments, so `expected = 0` let 3.14159.round(2) drop the 2
+        arityCheck("round", emptyList(), 0) shouldBe "checkNoArgs(fn = \"round\", args = args, location = loc)"
+    }
+
+    "arity check: a door with parameters checks the required count" {
+        arityCheck("clamp", listOf("lo", "hi"), 2) shouldBe
+            "checkArgsSize(fn = \"clamp\", args = args, expected = 2, location = loc)"
+    }
 })

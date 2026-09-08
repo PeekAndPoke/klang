@@ -228,6 +228,9 @@ internal object KlangScriptNumberExtensions {
     /**
      * Returns the remainder of the division by n, with the sign of the divisor (floor modulo).
      *
+     * Only on numbers: `mod` on a SIGNAL (an oscillator chain) is the engine's `%`, the same as `rem`,
+     * and keeps a negative value negative.
+     *
      * This is the one no operator can express: a negative offset wraps back into the range, which is
      * what pitch classes and cycle wrapping want. Its twin is `rem`, the method form of `%`, which
      * takes the sign of the dividend: `-1.mod(12)` is 11 while `-1.rem(12)` is -1.

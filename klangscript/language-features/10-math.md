@@ -32,7 +32,7 @@ let s3 = Math.sign(0);      // 0
 let c = Math.ceil(4.3);      // 5
 let f = Math.floor(4.7);     // 4
 let r1 = Math.round(4.4);    // 4
-let r2 = Math.round(4.5);    // 5
+let r2 = Math.round(4.5);    // 4, a tie goes to the even neighbour (kotlin.math.round), see 10.9
 let t = Math.trunc(4.7);     // 4
 ```
 

@@ -12,10 +12,12 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.KlangScriptLibrary
+import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.script.stdlib.KlangStdLib
+import kotlin.reflect.KClass
 
 /**
  * Sprudel registers every pattern function as a method on strings too (`"bd sd".fast(2)`), and a
@@ -29,6 +31,11 @@ import io.peekandpoke.klang.script.stdlib.KlangStdLib
  */
 class LangStdlibStringMethodCollisionSpec : StringSpec({
 
+    // `repeat` and `slice` collided before this spec existed: in a song, sprudel's pattern versions win
+    // and the stdlib string versions are unreachable. Parked for the maintainer on 2026-09-08; a new
+    // name on the list needs the same decision, not an allowlist entry.
+    val parkedCollisions: Map<KClass<*>, Set<String>> = mapOf(StringValue::class to setOf("repeat", "slice"))
+
     fun stringMethodNames(library: KlangScriptLibrary): Set<String> =
         library.native.extensionMethods[StringValue::class]?.keys?.toSet() ?: emptySet()
 
@@ -39,13 +46,35 @@ class LangStdlibStringMethodCollisionSpec : StringSpec({
         stdlib.shouldNotBeEmptyClue()
         sprudel.shouldNotBeEmptyClue()
 
-        // `repeat` and `slice` collided before this spec existed: in a song, sprudel's pattern versions win
-        // and the stdlib string versions are unreachable. Parked for the maintainer on 2026-09-08; a new
-        // name on the list needs the same decision, not an allowlist entry.
-        val parkedCollisions = setOf("repeat", "slice")
-
         withClue("stdlib string methods that sprudel would overwrite") {
-            (stdlib.intersect(sprudel) - parkedCollisions).toList().shouldBeEmpty()
+            (stdlib.intersect(sprudel) - parkedCollisions.getValue(StringValue::class)).toList().shouldBeEmpty()
+        }
+    }
+
+    "no other receiver is shared with a colliding name, methods or properties" {
+        // Today the two libraries overlap on strings only (sprudel registers nothing on numbers), so the
+        // row above is the whole story. The day sprudel extends numbers or adds a string PROPERTY (the
+        // interpreter resolves properties before methods) the same silent overwrite returns: this row
+        // derives the shared receivers instead of naming one.
+        val stdlib = KlangStdLib.create().native
+        val sprudel = sprudelLib.native
+
+        fun names(library: KlangScriptExtension, receiver: KClass<*>): Set<String> =
+            (library.extensionMethods[receiver]?.keys ?: emptySet()) + (library.extensionProperties[receiver]?.keys ?: emptySet())
+
+        val sharedReceivers = (stdlib.extensionMethods.keys + stdlib.extensionProperties.keys)
+            .intersect(sprudel.extensionMethods.keys + sprudel.extensionProperties.keys)
+
+        // Strings are shared today; an empty set would mean the registry shape changed under this row
+        withClue("the shared receivers must include StringValue, or this row checks nothing") {
+            sharedReceivers.contains(StringValue::class) shouldBe true
+        }
+
+        sharedReceivers.forEach { receiver ->
+            withClue("names on ${receiver.simpleName} that sprudel would overwrite") {
+                val parked = parkedCollisions[receiver] ?: emptySet()
+                (names(stdlib, receiver).intersect(names(sprudel, receiver)) - parked).toList().shouldBeEmpty()
+            }
         }
     }
 

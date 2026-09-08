@@ -20,6 +20,7 @@ import io.peekandpoke.klang.script.runtime.ParamSpec
 import io.peekandpoke.klang.script.runtime.RuntimeValue
 import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.script.runtime.checkArgsSize
+import io.peekandpoke.klang.script.runtime.checkNoArgs
 import io.peekandpoke.klang.script.runtime.convertArgToKotlin
 import io.peekandpoke.klang.script.runtime.wrapAsRuntimeValue
 import kotlin.jvm.JvmName
@@ -379,7 +380,9 @@ class NativeObjectExtensionsBuilder<T : Any>(
         paramSpecs: List<ParamSpec> = emptyList(),
         noinline fn: T.(Any?) -> R,
     ) {
-        builder.registerExtensionMethodWithSpecs(cls, name, paramSpecs) { receiver, _, _ ->
+        builder.registerExtensionMethodWithSpecs(cls, name, paramSpecs) { receiver, args, loc ->
+            checkNoArgs(fn = name, args = args, location = loc)
+
             @Suppress("UNCHECKED_CAST")
             val result = (receiver as T).fn(null)
             wrapAsRuntimeValue(result)

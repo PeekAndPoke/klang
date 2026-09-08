@@ -61,7 +61,9 @@ data class NativeExtensionProperty(
 )
 
 /**
- * Check if the number of arguments matches the expected count.
+ * Checks that at least [expected] arguments were passed. A MINIMUM check only: a surplus is caught by
+ * the parameter specs in the interpreter, and a door with no parameters has none, so such a door uses
+ * [checkNoArgs] instead (`expected = 0` here can never fire).
  *
  * @param fn Function name for error reporting
  * @param args Actual arguments received
@@ -75,6 +77,25 @@ fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int, location:
             functionName = fn,
             message = "Call to function $fn expected $expected arguments but got ${args.size}",
             expected = expected,
+            actual = args.size,
+            location = location,
+        )
+    }
+}
+
+/**
+ * Refuses any argument to a function that takes none.
+ *
+ * The other arities are guarded by [checkArgsSize] and by the parameter specs, but a zero-parameter
+ * method has no specs, so `3.14159.round(2)` used to return 3 with the `2` silently dropped: a
+ * plausible number with no diagnostic, the failure class number methods exist to remove (2026-09-08).
+ */
+fun checkNoArgs(fn: String, args: List<RuntimeValue>, location: SourceLocation? = null) {
+    if (args.isNotEmpty()) {
+        throw KlangScriptArgumentError(
+            functionName = fn,
+            message = "Call to function $fn expected 0 arguments but got ${args.size}",
+            expected = 0,
             actual = args.size,
             location = location,
         )

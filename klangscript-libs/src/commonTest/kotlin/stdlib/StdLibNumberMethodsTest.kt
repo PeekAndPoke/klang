@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.RuntimeValue
@@ -146,6 +147,17 @@ class StdLibNumberMethodsTest : StringSpec({
         }
     }
 
+    "a method that takes no argument refuses one instead of dropping it" {
+        // 3.14159.round(2) used to return 3 with the 2 silently ignored: the zero-parameter bridge had no
+        // arity check. The Python and JS habit (round(x, digits), toFixed(n)) must fail loudly.
+        listOf("3.14159.round(2)", "2.sqrt(9)", "7.semitones(12)", "\"M3\".toRatio(1)").forEach { code ->
+            withClue(code) {
+                val error = shouldThrow<KlangScriptArgumentError> { eval(code) }
+                error.message shouldContain "expected 0 arguments"
+            }
+        }
+    }
+
     "clamp with the bounds the wrong way round says so" {
         val error = shouldThrow<KlangScriptTypeError> { eval("5.clamp(3, 0)") }
         error.message shouldContain "clamp"
@@ -157,6 +169,10 @@ class StdLibNumberMethodsTest : StringSpec({
 
     "tier 3: semitones, cents, decibels and named intervals" {
         listOf(
+            // ln and exp at a point where log2, log10, cos and cosh all give a different answer
+            "2.718281828459045.ln()" to 1.0,
+            "1.exp()" to 2.7183,
+            "2.log2()" to 1.0,
             // 2^(n/12)
             "0.semitones()" to 1.0,
             "12.semitones()" to 2.0,

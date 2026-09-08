@@ -167,6 +167,10 @@ all existing tests using `FunctionValue` or affected node constructors.
 **`executeBlockInChildScope()`** — always use this for any block that should not leak `let`/`const` to the outer scope
 (loop bodies, if branches). Never call bare `executeBlock()` for these.
 
+**`checkArgsSize` is a minimum check**: a surplus argument is caught by the parameter specs, and a
+door with no parameters has no specs, so it needs `checkNoArgs` (both the builder's zero-arg bridge
+and the KSP emission do that since 2026-09-08; before, `3.14159.round(2)` returned 3).
+
 **Library maps are keyed by receiver, so merge them per name**: a `putAll` on
 `Map<KClass, MutableMap<String, ...>>` replaces a whole receiver's methods with the last library's.
 Any registry of that shape needs the two-level merge.
