@@ -35,12 +35,14 @@ import kotlinx.css.Margin
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
 import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
 import kotlinx.css.border
 import kotlinx.css.color
 import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
+import kotlinx.css.flexGrow
 import kotlinx.css.flexShrink
 import kotlinx.css.fontFamily
 import kotlinx.css.fontSize
@@ -49,6 +51,7 @@ import kotlinx.css.margin
 import kotlinx.css.marginBottom
 import kotlinx.css.maxHeight
 import kotlinx.css.maxWidth
+import kotlinx.css.minHeight
 import kotlinx.css.minWidth
 import kotlinx.css.overflowX
 import kotlinx.css.overflowY
@@ -112,9 +115,14 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                 width = LinearDimension.fitContent
                 minWidth = 33.vw
                 maxWidth = 50.vw
-                // Cap at 45% viewport height; longer docs scroll INSIDE the card
+                // Cap at 45% viewport height; longer docs scroll INSIDE the card.
+                // Header, body and footer are a flex column so that ONLY the body scrolls: the name,
+                // scope and origin stay put while you read a long parameter table, and "View docs"
+                // stays reachable without scrolling to the bottom first.
                 maxHeight = 45.vh
-                overflowY = Overflow.auto
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                overflowY = Overflow.hidden
                 // !important because Fomantic's `.ui.segment` padding out-specifies
                 // the generated style class
                 put("padding-bottom", "10px !important")
@@ -123,12 +131,16 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             onClick { event -> event.stopPropagation() }
             onContextMenu { event -> event.stopPropagation() }
 
-            ui.three.column.grid {
-                noui.middle.aligned.column {
-                    ui.header { +symbol.name }
+            ui.grid {
+                css { flexShrink = 0.0 }
+
+                noui.four.wide.middle.aligned.column {
+                    ui.header {
+                        +symbol.name
+                    }
                 }
 
-                noui.middle.aligned.column {
+                noui.four.wide.middle.aligned.column {
                     if (symbol.aliases.isNotEmpty()) {
                         ui.horizontal.list {
                             noui.item { +"Alias:" }
@@ -139,34 +151,68 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                     }
                 }
 
-                noui.middle.aligned.right.aligned.column {
-                    ui.basic.label {
-                        when (val origin = symbol.origin) {
-                            null -> {
-                                +"Built-in"
+                noui.eight.wide.middle.aligned.right.aligned.column {
+                    ui.horizontal.list {
+                        symbol.scope?.let { scope ->
+                            noui.item {
+                                klangScopeLabel(laf, scope)
                             }
+                        }
 
-                            is KlangSymbol.Origin.Library -> {
-                                if (origin.name.isBlank()) {
-                                    +"Built-in"
-                                } else {
-                                    icon.book()
-                                    +origin.name.uppercase()
+                        symbol.origin?.let { origin ->
+                            noui.item {
+                                when (val origin = origin) {
+                                    is KlangSymbol.Origin.Library -> {
+                                        if (origin.name.isBlank()) {
+                                            ui.label {
+                                                css {
+                                                    backgroundColor = Color("${laf.good} !important")
+                                                    color = Color("#222 !important")
+                                                }
+
+                                                icon.book()
+                                                +"Built-in"
+                                            }
+                                        } else {
+                                            ui.label {
+                                                css {
+                                                    backgroundColor = Color("${laf.excellent} !important")
+                                                    color = Color("#222 !important")
+                                                }
+
+                                                icon.book()
+                                                +origin.name.uppercase()
+                                            }
+                                        }
+                                    }
+
+                                    is KlangSymbol.Origin.Local -> {
+                                        ui.label {
+                                            css {
+                                                backgroundColor = Color("${laf.moderate} !important")
+                                                color = Color("#222 !important")
+                                            }
+
+                                            icon.code()
+                                            +origin.kind.display
+                                        }
+                                    }
                                 }
-                            }
-
-                            is KlangSymbol.Origin.Local -> {
-                                icon.code()
-                                +origin.kind.display
                             }
                         }
                     }
                 }
             }
 
-            ui.divider()
+            ui.divider { css { flexShrink = 0.0 } }
 
             ui.relaxed.list {
+                css {
+                    // A flex child only scrolls once it is allowed to shrink below its content
+                    flexGrow = 1.0
+                    minHeight = 0.px
+                    overflowY = Overflow.auto
+                }
 
                 // ── Description ───────────────────────────────────────────────────
                 if (description != null) {
@@ -249,9 +295,11 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             // ── View docs link ────────────────────────────────────────────────
             // Suppressed for locals — there's no external library page to navigate to.
             if (symbol.origin !is KlangSymbol.Origin.Local) {
-                noui.divider {}
+                noui.divider { css { flexShrink = 0.0 } }
 
                 ui.horizontal.list {
+                    css { flexShrink = 0.0 }
+
                     noui.item {
                         css {
                             cursor = Cursor.pointer

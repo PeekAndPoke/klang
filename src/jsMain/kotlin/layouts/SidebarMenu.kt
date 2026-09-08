@@ -9,7 +9,7 @@ import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.Motoer
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
-import io.peekandpoke.klang.pages.docs.tutorials.TutorialScope
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialDepth
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 import io.peekandpoke.klang.pages.docs.tutorials.iconFn
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -400,9 +400,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     private fun DIV.renderTutorialsMenu() {
         val activeDifficulty = currentDifficultyFilter()
-        val activeScope = currentScopeFilter()
+        val activeDepth = currentDepthFilter()
         val activeCompletion = currentCompletionFilter()
-        val hasNoFilters = activeDifficulty == null && activeScope == null &&
+        val hasNoFilters = activeDifficulty == null && activeDepth == null &&
                 activeCompletion == TutorialsListPage.CompletionFilter.All
 
         menuItemsList {
@@ -421,10 +421,10 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
             menuGap()
 
-            for (scope in TutorialScope.entries) {
-                val isSelected = activeScope == scope
-                menuItem(isSelected, scope.label, scope.iconFn()) {
-                    toggleTutorialFilter(TutorialsListPage.PARAM_SCOPE, scope.name, isSelected)
+            for (depth in TutorialDepth.entries) {
+                val isSelected = activeDepth == depth
+                menuItem(isSelected, depth.label, depth.iconFn()) {
+                    toggleTutorialFilter(TutorialsListPage.PARAM_DEPTH, depth.name, isSelected)
                 }
             }
 
@@ -444,9 +444,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         return TutorialsListPage.difficultyFromParam(param)
     }
 
-    private fun currentScopeFilter(): TutorialScope? {
-        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_SCOPE]
-        return TutorialsListPage.scopeFromParam(param)
+    private fun currentDepthFilter(): TutorialDepth? {
+        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_DEPTH]
+        return TutorialsListPage.depthFromParam(param)
     }
 
     private fun currentCompletionFilter(): TutorialsListPage.CompletionFilter {

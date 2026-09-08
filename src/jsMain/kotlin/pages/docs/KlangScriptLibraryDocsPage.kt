@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.pages.docs
 
 import io.peekandpoke.klang.comp.InViewport
+import io.peekandpoke.klang.comp.klangScopeLabel
 import io.peekandpoke.klang.comp.KlangScriptReplComp
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.KlangScriptLibrary
@@ -253,6 +254,12 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
                     noui.item {
                         ui.large.header {
                             +symbol.name
+                        }
+                    }
+
+                    symbol.scope?.let { scope ->
+                        noui.item {
+                            klangScopeLabel(laf, scope)
                         }
                     }
 

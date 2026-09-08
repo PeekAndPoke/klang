@@ -12,7 +12,7 @@ enum class TutorialDifficulty(val label: String) {
     Pro("Pro"),
 }
 
-enum class TutorialScope(val label: String) {
+enum class TutorialDepth(val label: String) {
     Quick("Quick"),
     Standard("Standard"),
     DeepDive("Deep Dive"),
@@ -129,7 +129,7 @@ data class Tutorial(
     val title: String,
     val description: String,
     val difficulty: TutorialDifficulty,
-    val scope: TutorialScope,
+    val depth: TutorialDepth,
     val tags: List<TutorialTag>,
     /**
      * Vocabulary this lesson introduces: function names ("sound", "gain"),

@@ -109,6 +109,9 @@ refuses the old one). The sprudel `lang/addons/` directory, the package
 `io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag (gone 2026-09-07: sprudel is not a Strudel port,
 so "what Strudel does not have" named nothing a reader could use; every DSL file is now
 `lang_<group>_<subgroup>.kt` in `sprudel/.../lang/`, see `docs/tasks-archive/2026-09/20260907-sprudel-lang-file-reorganisation.md`).
+`TutorialScope` and the tutorial field `scope` (renamed 2026-09-08 to `TutorialDepth` / `depth`, with
+`scopeLabel`/`scopeColor` and the `?scope=` URL parameter: Quick/Standard/DeepDive is a depth ladder, and
+"scope" now means one thing only, WHERE audio runs, see `KlangScope` and the `@scope` KDoc tag).
 
 ## Available Agent
 
