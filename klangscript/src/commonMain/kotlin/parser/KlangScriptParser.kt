@@ -960,14 +960,31 @@ class KlangScriptParser private constructor(
             return
         }
 
-        // An identifier that is immediately called is the missing-dot shape
-        val hint = if (next.type == TokenType.IDENTIFIER && checkAt(1, TokenType.LEFT_PAREN)) {
-            " Did you mean '.${next.text}(...)'?"
-        } else {
-            ""
+        // A closer or a separator can never begin a statement, so a shared line says nothing about it:
+        // `stack(\n  s("bd")\n)).gain(1)` is a stray bracket, not a missing boundary. Let parseStatement()
+        // report what it actually is, instead of proposing a newline that would not help.
+        val canBeginStatement = when (next.type) {
+            TokenType.RIGHT_PAREN, TokenType.RIGHT_BRACE, TokenType.RIGHT_BRACKET,
+            TokenType.COMMA, TokenType.COLON,
+            -> false
+
+            else -> true
         }
 
-        error("Expected a newline or ';' between statements.$hint")
+        if (!canBeginStatement) {
+            return
+        }
+
+        // An identifier that is immediately called is the missing-dot shape
+        if (next.type == TokenType.IDENTIFIER && checkAt(1, TokenType.LEFT_PAREN)) {
+            // Deliberately NOT offering "a newline" here: a newline separates these two statements
+            // just fine, and then the orphan is silently dropped again exactly as before, because
+            // phase 2 (newline sensitivity) is not implemented. The dot is the fix; `;` is the escape
+            // hatch for someone who really did mean two statements.
+            error("Did you mean '.${next.text}(...)'? Otherwise put ';' between the two statements.")
+        }
+
+        error("Expected a newline or ';' between statements.")
     }
 
     private fun Token.toSourceLocation(): SourceLocation {
@@ -1882,9 +1899,9 @@ class KlangScriptParser private constructor(
         var separated = true
 
         while (!isAtEnd()) {
-            if (skipSemicolons()) {
-                separated = true
-            }
+            // Only reaches anything on the first iteration (a program may open with `;`); afterwards the
+            // trailing skip below has already eaten every semicolon, which is what sets `separated`.
+            skipSemicolons()
 
             if (isAtEnd()) break
 
@@ -1942,9 +1959,8 @@ class KlangScriptParser private constructor(
         var separated = true
 
         while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
-            if (skipSemicolons()) {
-                separated = true
-            }
+            // See parseProgram: only the first iteration can find anything here (`{ ; f() }`)
+            skipSemicolons()
 
             if (check(TokenType.RIGHT_BRACE) || isAtEnd()) break
 

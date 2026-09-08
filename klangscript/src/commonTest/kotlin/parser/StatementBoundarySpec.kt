@@ -35,8 +35,11 @@ class StatementBoundarySpec : StringSpec({
             parse("""s("bd*4")tag("drums")""")
         }
 
-        error.message shouldContain "Expected a newline or ';' between statements"
+        // The dot is offered first and a newline is NOT offered: a newline would separate these two
+        // statements and drop the orphan silently all over again
         error.message shouldContain "Did you mean '.tag(...)'?"
+        error.message shouldContain "put ';' between the two statements"
+        error.message shouldNotContain "newline"
         // The diagnostic points at the orphan, not at the end of the healthy chain
         error.location?.startLine shouldBe 1
         error.location?.startColumn shouldBe 10
@@ -47,7 +50,6 @@ class StatementBoundarySpec : StringSpec({
             parse("let a = f() g()")
         }
 
-        error.message shouldContain "Expected a newline or ';' between statements"
         error.message shouldContain "Did you mean '.g(...)'?"
     }
 
@@ -85,6 +87,44 @@ class StatementBoundarySpec : StringSpec({
         error.message shouldNotContain "Did you mean"
     }
 
+    "a token that cannot begin a statement keeps its own diagnostic" {
+        // A stray closer shares the line too, but proposing a boundary there sends the reader after a
+        // newline that cannot fix a bracket. parseStatement() reports it instead.
+        listOf(
+            "stray closing paren" to "stack(\n  f()\n)).gain(0.8)",
+            "comma between top-level statements" to "f(1), g(2)",
+        ).forEach { (name, code) ->
+            withClue(name) {
+                val error = shouldThrow<KlangScriptSyntaxError> { parse(code) }
+                error.message shouldNotContain "between statements"
+                error.message shouldNotContain "Did you mean"
+            }
+        }
+    }
+
+    // -- Tokens that span lines: the rule reads endLine, which only the lexer can get right ---------------------------
+
+    "a statement ending in a multi-line string still knows where it ended" {
+        // endLine comes from the lexer counting newlines inside the literal. If that ever regresses, the
+        // rule silently switches off for every statement ending in a multi-line pattern string, which the
+        // song corpus is full of.
+        val error = shouldThrow<KlangScriptSyntaxError> {
+            parse("let a = \"x\ny\" tag(\"t\")")
+        }
+
+        error.message shouldContain "Did you mean '.tag(...)'?"
+        error.location?.startLine shouldBe 2
+    }
+
+    "a backtick string spanning lines, then a statement on the closing line" {
+        val error = shouldThrow<KlangScriptSyntaxError> {
+            parse("let a = `x\ny` tag(\"t\")")
+        }
+
+        error.message shouldContain "Did you mean '.tag(...)'?"
+        error.location?.startLine shouldBe 2
+    }
+
     // -- Still legal -------------------------------------------------------------------------------------------------
 
     "programs that must keep parsing" {
@@ -103,6 +143,10 @@ class StatementBoundarySpec : StringSpec({
             "block with a statement per line" to "let f = x => {\n  let a = 1\n  return a\n}",
             "a chain broken across lines mid-argument" to "s(\"bd\").gain(\n  0.5\n).pan(0.3)",
             "statement after a closing brace on the next line" to "let f = x => {\n  return x\n}\nlet b = 2",
+            "a multi-line string, next statement on its own line" to "let a = \"x\ny\"\nlet b = 2",
+            "a multi-line backtick string, next statement on its own line" to "let a = `x\ny`\nlet b = 2",
+            "a program that opens with semicolons" to ";;; let a = 1",
+            "a block that opens with a semicolon" to "let f = x => { ; return x }",
         )
 
         cases.forEach { (name, code) ->
