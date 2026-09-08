@@ -234,6 +234,51 @@ Even with `pow()` shipped, `2^(7/12)` stays legal and stays silently wrong. Two 
   Narrow and low-false-positive — nobody XORs a fraction on purpose. Belongs with the intellisense
   diagnostics rather than in the parser.
 
+## Docs surfaces
+
+Three of these are hand-written and will not update themselves. Skipping them is how the original
+bug survives the fix.
+
+| Surface | What to do | Cost |
+|---|---|---|
+| Library reference (`/docs/library/...`, `KlangScriptLibraryDocsPage`) | nothing | free: it renders `generatedStdlibDocs`, so any `@KlangScript.Method` with a `@category` appears with its params and examples |
+| Editor docs popup | nothing | free, same source |
+| **Language reference**, `klangscript/src/commonMain/kotlin/docs/KlangScriptDocContent.kt` | three edits, below | hand-written |
+| `.claude/skills/klangscript-knowhow` ref files | check whether the operator/number pages need the same lines | hand-written |
+
+The language reference is 14 `DocSection`s of runnable examples, and **`KlangScriptDocContentTest`
+executes every one of them**, so anything added there is self-verifying: a wrong example fails the
+build rather than misleading a reader.
+
+1. **`Bitwise & Shift Operators` → "Bitwise basics"** (`:337`). Today it says "`&` masks bits, `|`
+   combines them, `^` toggles them" and nothing more. This is the single highest-value line in the
+   whole feature: it is where a person typing `^` for exponentiation is looking. Say plainly that `^`
+   is XOR, that it is NOT a power operator, and point at `**` and `pow`.
+2. **`Operators & Expressions` → "Arithmetic"** (`:196`). Already documents `**` correctly. Add the
+   method spelling beside it once it lexes.
+3. **`Named arguments on stdlib functions`** (`:836`) uses `Math.sqrt(16)` / `Math.pow(2, 10)`. The
+   methods are an additional spelling, not a replacement, so show both here rather than rewriting it.
+
+There is no "Number methods" section, though there are three String-method sections (`:415`, `:429`,
+`:440`). Tier 1 and 2 warrant one modelled on those; tier 3 (`semitones`, `cents`, `db`) deserves its
+own musical example rather than a list, since its whole point is reading as intent.
+
+### `**` already exists, which changes the urgency
+
+`**` is a working exponentiation operator (`Interpreter.kt:1300`, `pow`; `**=` too) and the language
+reference documents it at `:197`. Neither this task nor the declined `^` proposal mentioned it: this
+doc called `Math.pow` "the current workaround" and the `^` proposal argued exponentiation had only
+"the awkward spelling". Both were written without noticing `**`.
+
+So the original footgun already has a correct, idiomatic answer, and `2 ** (7/12)` is what a
+JavaScript or Python writer would type first. That does not cancel this task, `2.pow(x)` still reads
+well in a chain and tier 3 is where the real value is, but it does mean:
+
+- **the cheapest fix for the actual bug is documentation, not code**: one line in the bitwise section
+  pointing at `**`. That could ship today, independent of the lexer;
+- nobody should describe `pow` as the thing that makes exponentiation possible. It is a second
+  spelling of something the language has had all along.
+
 ## Tests
 
 ```javascript
