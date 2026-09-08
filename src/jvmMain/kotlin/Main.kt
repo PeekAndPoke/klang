@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.klangScriptEngine
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import kotlinx.coroutines.delay
@@ -35,12 +35,12 @@ suspend fun main() {
 
     val player = klangPlayer(options = playerOptions)
 
-    val scripting = klangScript {
+    val scripting = klangScriptEngine {
         registerLibrary(sprudelLib)
         registerBuiltInSongsAsModules()
     }
 
-    val pattern = SprudelPattern.compile(scripting, BuiltInSongs.derSchmetterling.code)!!
+    val pattern = SprudelPattern.compileRaw(BuiltInSongs.derSchmetterling.code)!!
 //    val pattern = SprudelPattern.compile(scripting, """
 //  n(`<[7 4 2 <4 -1 4 3> [0 -1 -3 -1] [0 -3] -2 <[-1 4@3] [5 6@3] [1 2@3] [2 6@3]>]!4
 //      [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [-1 -3] 0 <[4 6] [2 3]>] [<7 4> [-5 -6] -7 [-2 <3 -1>]]>/4`)
@@ -51,7 +51,7 @@ suspend fun main() {
 
     println("Starting playback...")
     val playback = player.play(pattern)
-    playback.start(KlangCyclicPlayback.Options(rpm = 34.0))
+    playback.start(KlangCyclicPlayback.Options(rpm = 32.5))
 
     delay(600.seconds)
 
