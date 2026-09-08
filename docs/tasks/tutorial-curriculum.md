@@ -221,7 +221,7 @@ stages must not carry it.
   the between-count positions. B4 inherits those terms; don't redefine.
 - **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
   literally; redeems B1's mixing promise by name in §2. ⚠️ Engine truth learned in its review
-  (recorded in the lesson's KDoc + docs/tasks/orbit-level-effect-docs.md): reverb processor is
+  (recorded in the lesson's KDoc + docs/tasks-archive/2026-09/20260908-orbit-level-effect-docs.md): reverb processor is
   per-orbit but `room(wet)` is a per-voice SEND; a bare `room(wet)` is SILENT (gate needs `size`); orbit
   bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
