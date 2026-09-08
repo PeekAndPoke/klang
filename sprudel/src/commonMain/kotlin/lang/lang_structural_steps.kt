@@ -38,19 +38,10 @@ private fun applySegment(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
         }
     }
 
-    val staticN = nArg?.asIntOrNull()
-
-    return if (staticN != null) {
-        // Static path: use original implementation with struct + fast
-        val structPat = parseMiniNotation("x") { text, _ ->
-            AtomicPattern(createSprudelVoiceData().voiceValueModifier(text))
-        }
-
-        source.struct(structPat.fast(staticN))
-    } else {
-        // Dynamic path: use SegmentPattern which properly slices each timespan
-        SegmentPattern.control(source, nPattern)
-    }
+    // One implementation for static and patterned n. (A `struct("x".fast(n))` path for static n
+    // existed until 2026-09-07; it was dead, and it read a continuous source at the query start
+    // rather than at the slice start, which SegmentPattern does on purpose.)
+    return SegmentPattern.control(source, nPattern)
 }
 
 /**

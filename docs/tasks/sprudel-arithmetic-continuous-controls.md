@@ -92,8 +92,13 @@ control with `sampleAt(onset)`, so every `.gain(saw.segment(4))`, `.late(x.seg(4
 `.lpf(q = x.seg(32).slow(32))` in the corpus read the FIRST slice for every note. The static path
 in `applySegment` (`struct("x".fast(n))`, which would have been fine) is dead code: it tests
 `nArg?.asIntOrNull()` on the `SprudelDslArg` wrapper, not on its value, so every call takes the
-`SegmentPattern` path. Fixed in `SegmentPattern` by skipping slices outside the query arc; the dead
-static path is left as it is (a separate cleanup, no behaviour behind it now).
+`SegmentPattern` path. Fixed in `SegmentPattern` by skipping slices outside the query arc.
+
+Review round 1 (both reviewers, independently) added the second half: `SegmentPattern` kept the
+SOURCE's whole, so `"0".segment(4).note()` (the KDoc example, "four evenly-spaced notes") played
+one note per cycle, and `"c e g a b c d e".seg(4)` played all eight. Strudel's `segment` is
+`struct(pure(true).fast(n))`: the slice is the whole. Now it is here too (four onsets, and the
+four notes under the slice starts), and the dead static path is gone; one implementation.
 
 Songs whose written intent now plays for the first time (by-ear entry in
 `docs/tasks/by-ear/README.md` §7): Der Schmetterling `.late(berlin….mul(drunk).seg(4))` on five
@@ -116,4 +121,12 @@ Stranger Things `bpf(freq = perlin….segment(16).slow(6))`, Tetris `lpf(q = ber
 
 - No `.add.out(...)` / `.add.mix(...)` variants (the control-structured form under another name).
   Nothing in the corpus needs it; add when asked.
-- `applySegment`'s dead static path.
+- A continuous SOURCE with a stepped control (`note(saw.range(48, 60).add("0 12"))`) plays one note
+  per cycle (it used to play one per control step, because the inner join re-queried the signal per
+  step). Strudel plays nothing there (a signal has no whole). Documented, one spec row, `seg()` the
+  source first. No song or example has the shape.
+
+Correction to the first draft of this section, from review round 1: the old inner join never gave
+the result the CONTROL's wholes (`BindPattern` preserves the inner whole); it gave it the control's
+parts, `weight` and `numSteps`. The fragments were the same as now. What changed for discrete
+controls is `numSteps`/`weight` only; the fix is about continuous controls and the segment handoff.

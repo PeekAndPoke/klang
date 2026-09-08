@@ -1156,9 +1156,11 @@ fun SprudelPattern._outerJoin(
  * Combines this pattern with a control pattern, structure from the source, values from BOTH (Strudel's `appLeft`).
  *
  * For every source event the control is queried over the part of that event that lies inside the query arc,
- * and one result event is emitted per overlapping control event: `part` is the overlap, `whole` stays the
- * source's, the value is whatever [combiner] makes of the pair. So a source event may come back as several
- * fragments that share one whole, of which only the first is an onset.
+ * and one result event is emitted per overlapping control event: `part` is the overlap of the two parts,
+ * `whole` stays the source's, the value is whatever [combiner] makes of the pair (a `null` from the combiner
+ * drops the fragment; what to do with a control event that carries no value is the combiner's call). So a
+ * source event may come back as several fragments that share one whole, of which only the first is an onset.
+ * A span of the control without any event (a rest) yields nothing there.
  *
  * This differs from [_outerJoin], which samples the control ONCE at the source onset and emits the source
  * event unchanged in shape. The two agree for everything that is played (only onsets are scheduled), and
@@ -1170,13 +1172,16 @@ fun SprudelPattern._outerJoin(
  * must answer with `1.3` for the first eighth and `0.99` afterwards, not with `1.3` for the whole cycle.
  *
  * Why the control is queried over the source part clipped to the query arc rather than over the source
- * whole: leaves answer with their full part even for a point query (an atom asked at 0.5 still reports
- * `[0, 1)`), so clipping is the only thing that keeps a point query from returning every fragment of the
- * cycle, of which `firstOrNull` would pick the wrong one. The result is the same as Strudel's whole-based
- * query followed by a part intersection, minus the discarded work.
+ * whole (Strudel queries the whole, then intersects parts): leaves answer with their full part even for a
+ * point query (an atom asked at 0.5 still reports `[0, 1)`), so clipping is the only thing that keeps a
+ * point query from returning every fragment of the cycle, of which `firstOrNull` would pick the wrong one.
+ * For a discrete control both ways pick the same control event. For a continuous control they differ:
+ * here every fragment reads the signal at its own part start, in Strudel all fragments of one whole share
+ * the signal's value at the whole's start. Ours is the reading a point query wants (`"<1>".mul(sine)`
+ * sampled by a setter at 0.5 answers `sine(0.5)`), and it is inaudible for what is played.
  *
- * A control event without a value, and a span of the control without any event (a rest), drop the source
- * fragment there.
+ * Note that the fragment's part is NOT clipped to the query arc (leaf convention): with a leaf control,
+ * `"1".add("2")` point-queried at 0.5 comes back with part `[0, 1)`.
  */
 fun SprudelPattern._appLeft(
     control: SprudelPattern,
@@ -1193,8 +1198,9 @@ fun SprudelPattern._appLeft(
         val result = createEventList()
 
         for (event in sourceEvents) {
-            val begin = maxOf(event.part.begin, from)
-            val end = minOf(event.part.end, to)
+            // coerce*, not maxOf/minOf: the generic comparators box the value class
+            val begin = event.part.begin.coerceAtLeast(from)
+            val end = event.part.end.coerceAtMost(to)
             if (end <= begin) continue
 
             for (controlEvent in control.queryArcContextual(begin, end, ctx)) {

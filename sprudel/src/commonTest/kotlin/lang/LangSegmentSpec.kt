@@ -164,6 +164,61 @@ class LangSegmentSpec : StringSpec({
         }
     }
 
+    "a point query inside a slice answers with that slice's start value | saw.segment(4).sampleAt(0.3)" {
+        val p = saw.segment(4)
+        val ctx = SprudelPattern.QueryContext()
+
+        for (cycle in 0 until 12) {
+            val t = cycle + 0.3
+            withClue("t=$t") {
+                val e = p.sampleAt(t, ctx).shouldNotBeNull()
+                e.whole.begin.toCycles() shouldBe cycle + 0.25
+                e.whole.end.toCycles() shouldBe cycle + 0.5
+                e.data.value?.asDouble shouldBe (0.25 plusOrMinus 1e-9)
+            }
+        }
+    }
+
+    "a query shorter than a cycle returns only the slices it overlaps | saw.segment(4).queryArc(c, c + 0.25)" {
+        // Without the arc check the slices after the arc would come back too, every one an onset.
+        val p = saw.segment(4)
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 0.25)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 1
+                events[0].whole.begin.toCycles() shouldBe cycle.toDouble()
+            }
+        }
+    }
+
+    "segment(n) on a discrete pattern re-births the wholes: n onsets per cycle | \"0\".segment(4).note()" {
+        // Strudel's segment is struct(pure(true).fast(n)): the slice is the whole. The KDoc example
+        // promises four notes; with the source's whole kept, only the first slice was an onset.
+        val p = "0".segment(4).note()
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 4
+                events.all { it.isOnset } shouldBe true
+                events.map { it.whole.begin.toCycles() } shouldBe listOf(0.0, 0.25, 0.5, 0.75).map { cycle + it }
+            }
+        }
+    }
+
+    "segment(n) samples a busier pattern: the notes under the slice starts play | \"c e g a b c d e\".seg(4)" {
+        val p = "c e g a b c d e".seg(4).note()
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 8
+                events.filter { it.isOnset }.map { it.data.note } shouldBe listOf("c", "g", "b", "d")
+            }
+        }
+    }
+
     "a segmented control reaches every note | note(\"c e g a\").gain(saw.segment(4))" {
         // The setter samples the control at each onset: the second note must see the second slice.
         val p = note("c e g a").gain(saw.segment(4))

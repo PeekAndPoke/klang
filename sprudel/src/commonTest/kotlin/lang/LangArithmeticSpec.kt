@@ -1378,7 +1378,7 @@ class LangArithmeticSpec : StringSpec({
 
     "source events keep their wholes and steps | seq(\"1 1\").add(\"1 2 3\")" {
         // Two source halves meet three control thirds: four fragments, two wholes, two onsets.
-        // The inner join used to answer with the control's three wholes, all of them onsets.
+        // (The inner join produced the same fragments; what it got wrong here is numSteps, 3 from the control.)
         val p = seq("1 1").add("1 2 3")
 
         p.numSteps shouldBe 2.0
@@ -1391,6 +1391,22 @@ class LangArithmeticSpec : StringSpec({
                 events.map { it.whole.end.toCycles() } shouldBe listOf(cycle + 0.5, cycle + 0.5, cycle + 1.0, cycle + 1.0)
                 events.map { it.data.value?.asInt } shouldBe listOf(2, 3, 3, 4)
                 events.filter { it.isOnset }.map { it.data.value?.asInt } shouldBe listOf(2, 3) // 1 + 1, 1 + 2
+            }
+        }
+    }
+
+    "a continuous source has no structure: one note per cycle | note(saw.range(48, 60).add(\"0 12\"))" {
+        // A continuous pattern answers a query arc with one event; the control splits it into
+        // fragments under that one whole, so only the first plays. (Strudel plays nothing here: a
+        // signal has no whole at all.) seg() the source first to get one note per step.
+        val p = note(saw.range(48.0, 60.0).add("0 12"))
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 2
+                events.count { it.isOnset } shouldBe 1
+                events.first { it.isOnset }.data.note?.toDouble() shouldBe (48.0 plusOrMinus 1e-9)
             }
         }
     }

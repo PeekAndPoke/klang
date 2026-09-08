@@ -15,11 +15,11 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 /**
  * Segments a pattern based on a control pattern that determines the number of segments per timespan.
  *
- * For each event in the control pattern, divides that timespan into n equal slices
- * and samples the source pattern at each slice.
- *
- * For static values, this is only used with control patterns since static segmentation
- * is handled via struct(x.fast(n)) in the lang layer.
+ * For each event in the control pattern, divides that timespan into n equal slices and samples the
+ * source pattern at each slice. A slice is a new event: its whole IS the slice (Strudel's
+ * `segment` = `struct(pure(true).fast(n))`), so `"0".segment(4).note()` plays four notes and
+ * `"c e g a b c d e".seg(4)` plays the four notes under the slice starts. A source event that
+ * merely overlaps a slice without starting in it comes back as a non-onset fragment.
  *
  * @param source The pattern to segment
  * @param nProvider Control value provider for the number of segments
@@ -29,10 +29,7 @@ internal class SegmentPattern(
     val nProvider: ControlValueProvider,
 ) : SprudelPattern {
     companion object {
-        /**
-         * Create a SegmentPattern with a static n value.
-         * Note: This is rarely used directly; static segmentation is usually done via struct(x.fast(n)).
-         */
+        /** Create a SegmentPattern with a static n value. */
         fun static(source: SprudelPattern, n: Int): SegmentPattern {
             return SegmentPattern(
                 source = source,
@@ -87,19 +84,13 @@ internal class SegmentPattern(
                 // start regardless of where the query arc begins.
                 val sourceEvents = source.queryArcContextual(sliceBegin, sliceEnd, ctx)
 
-                for (sourceEvent in sourceEvents) {
-                    // Clip source event to slice boundaries
-                    val sliceSpan = CycleTimeSpan(sliceBegin, sliceEnd)
-                    val clippedPart = sourceEvent.part.clipTo(sliceSpan)
+                val sliceSpan = CycleTimeSpan(sliceBegin, sliceEnd)
 
-                    if (clippedPart != null) {
-                        result.add(
-                            sourceEvent.copy(
-                                part = clippedPart
-                                // Preserve whole unchanged
-                            )
-                        )
-                    }
+                for (sourceEvent in sourceEvents) {
+                    // Clip the source event to the slice; the slice becomes the whole (see the class KDoc)
+                    val clippedPart = sourceEvent.part.clipTo(sliceSpan) ?: continue
+
+                    result.add(sourceEvent.copy(part = clippedPart, whole = sliceSpan))
                 }
             }
         }
