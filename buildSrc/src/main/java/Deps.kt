@@ -48,7 +48,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.107.2"
+        private const val ultra_version = "0.108.0"
 
         object Ultra {
             const val cache = "io.peekandpoke.ultra:cache:$ultra_version"
