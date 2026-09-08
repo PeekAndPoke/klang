@@ -102,10 +102,30 @@ Add methods in the same shape, delegating to the same `kotlin.math` calls `Klang
    `concat`), so either choice sits next to a counter-example. `clamp` is what musicians and
    shader/JS people already know; `coerceIn` is Kotlin-internal vocabulary.
 
-**One to include for a reason that is not obvious:** `mod(n)`. Kotlin's `mod` is floor-mod where `%`
-is remainder, so `(-1) % 12` is `-1` but `(-1).mod(12)` is `11`. Pitch classes and cycle wrapping are
-exactly where that bites, and a plausible wrong number with no diagnostic is the same failure class
-as the `^` bug that started this task.
+### Both remainders, decided 2026-09-08
+
+Ship `mod` AND `rem`, with Kotlin's meanings, because the difference is invisible until it bites:
+
+| Method | Meaning | `(-1)` over 12 | Twin |
+|---|---|---|---|
+| `rem(n)` | remainder, sign follows the DIVIDEND | `-1` | the method form of `%` |
+| `mod(n)` | floor-mod, sign follows the DIVISOR | `11` | no operator |
+
+`%` in KlangScript is Kotlin's `%` on `Double` (`Interpreter.kt:1314`), so `rem` is exactly the
+operator spelled as a method, and `mod` is the one the language cannot currently express at all.
+
+Why both rather than only the safe one: pitch classes and cycle wrapping want `mod` (a negative
+semitone offset should land back in the octave, not below it), while phase and time arithmetic often
+want `rem` (the signed distance past a boundary). Offering only `mod` would silently change the
+answer for anyone reaching for `%`'s behaviour, and offering only `rem` leaves the footgun in place.
+Naming them Kotlin's way means a reader who knows either language is not surprised.
+
+Document them as a pair, each naming the other, and give the negative case in both examples: a
+plausible wrong number with no diagnostic is the same failure class as the `^` bug that started this
+task, and `-1` versus `11` is exactly that shape.
+
+**Zero divisor:** `%` throws `Modulo by zero` (`Interpreter.kt:1316`). Both methods should throw the
+same way, so the method and the operator cannot disagree.
 
 **Minimum set** — the ones that read better as methods than as `Math.` calls:
 
@@ -116,6 +136,7 @@ as the `^` bug that started this task.
 | `round()`, `floor()`, `ceil()` | |
 | `min(other)`, `max(other)` | |
 | `clamp(lo, hi)` | very common in patch code, currently hand-rolled everywhere |
+| `mod(n)`, `rem(n)` | both, see the section above; `rem` is `%`, `mod` is the one nothing can express today |
 
 Everything stays available as `Math.*` too — this is an additional spelling, not a replacement.
 
