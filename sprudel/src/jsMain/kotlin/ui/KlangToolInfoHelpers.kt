@@ -92,7 +92,7 @@ internal fun FlowContent.paramInfoIcon(
     val description = ctx.symbol.variants.filterIsInstance<KlangCallable>()
         .flatMap { it.params }
         .filter { it.name == paramName }
-        .firstNotNullOfOrNull { p -> p.description?.takeIf { it.isNotBlank() } }
+        .firstNotNullOfOrNull { p -> p.description.takeIf { it.isNotBlank() } }
         ?: return
 
     infoIconWithPopup(description, popupCtrl)
