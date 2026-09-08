@@ -1,8 +1,13 @@
 # KlangScript — make `^` the power operator
 
-> **Status (2026-08-22)**: PROPOSED, not implemented. Companion to
-> `klangscript-number-methods.md`. If this ships, the `^`-lint suggested in that doc becomes
-> unnecessary.
+> **Status (2026-09-08): WON'T IMPLEMENT.** Kept for the reasoning, not as a plan.
+>
+> The problem below is real and the evidence still stands. The decision is that the fix is not to
+> re-point an operator: `2.pow(7/12)` as an ordinary number method reads as well, costs no language
+> change, and rides the extension mechanism the stdlib already has. See
+> `klangscript-number-methods.md`, which is the live task. `^` stays bitwise XOR.
+>
+> Do not re-open this without new evidence; it was weighed and declined.
 
 ## Why
 

@@ -49,7 +49,7 @@ even when they are valuable.
 | 12 | `snd*` sound-function surface redesign | [`sprudel-sound-function-surface.md`](sprudel-sound-function-surface.md), [`sprudel-sound-doors-compound.md`](sprudel-sound-doors-compound.md) | Real DSL debt (per-param patternable sound selection). Shape change. **Review 2026-09-07:** the general "compound colon-string vs named" question this doc asked is ANSWERED by the field-accessor rollout — every compound door is now an object with named slots (archived `20260907-sprudel-field-accessors.md`, `-compound-slots.md`). What remains is the `snd*` family itself (19 per-sound functions, the last surface not on objects): the follow-up doc; maintainer "not fully sure" → a design word, then a batch like the others |
 | 13 | Pipeline DSL coefficient exposure | [`pipeline-dsl-coefficient-exposure.md`](pipeline-dsl-coefficient-exposure.md) | This *is* "widen the interface": ~35 engine coefficients with no DSL home |
 | 14 | Engine tuning **Part B** | [`engine-tuning-profile.md`](engine-tuning-profile.md) | The `Double`-vs-node resolution decision gates the tuning surface |
-| 15 | KlangScript: `^`-as-power + `pow()` | [`klangscript-caret-as-power.md`](klangscript-caret-as-power.md), [`klangscript-number-methods.md`](klangscript-number-methods.md) | `^` already shipped wrong in Der Schmetterling and survived two versions. A tutorial teaching arithmetic would teach the footgun |
+| 15 | KlangScript: number methods (`2.pow(2)`) | [`klangscript-number-methods.md`](klangscript-number-methods.md) | **`^`-as-power is WON'T IMPLEMENT (2026-09-08), number methods are the replacement.** `^` already shipped wrong in Der Schmetterling and survived two versions, so the footgun is real, but the answer is an ordinary method on a number rather than re-pointing an operator. Needs the one-line lexer fix so `2.pow(x)` lexes at all |
 | 16 | KlangScript statement boundaries | [`../tasks-archive/2026-09/20260908-klangscript-statement-boundaries.md`](../tasks-archive/2026-09/20260908-klangscript-statement-boundaries.md) | **DONE 2026-09-08 (Phase 1), review round 1 clean (zero major, minors batched).** Two statements may no longer share a line without a `;`, so the dropped dot that silently ate the hats tag is now a parse error with a `Did you mean '.tag(...)'?` hint. Phase 2 (full newline sensitivity) deliberately not done: it is where every song can stop compiling |
 | 17 | `voice-takeover` **Phase 1** (`takeover`) | [`voice-takeover.md`](voice-takeover.md) | **BLOCKED on a design decision (2026-09-08): the maintainer is not sold on the current design.** Was "additive surface, cheap, ready to build"; it is not ready until the design question below is settled. Phase 2 (`glide`) additionally blocked on #12 |
 | 18 | Wire the CodeMirror linter stub | [`klangscript-intellisense.md`](klangscript-intellisense.md) | The `linterSource` is still `[]`. Wiring it once carries every diagnostic behind it |
@@ -138,7 +138,7 @@ Tracked in the order they bite. See the conversation record for the reasoning.
 2. **Engine tuning Part B**: the `Double`-vs-node resolution path (blocks #14).
 ~~3. **Track B1**~~ — done 2026-09-03 as a clock convention, no design pass needed.
 4. **`snd*` as compound objects** (#12's remainder, `sprudel-sound-doors-compound.md`): a design word.
-5. **`^` as the power operator** (#15): a language decision, still PROPOSED.
+~~5. **`^` as the power operator**~~ — settled 2026-09-08, won't implement. See below.
 6. **Editor tools rework** (the named-argument slot bug): scope.
 7. **`voice-takeover` design** (blocks #17, added 2026-09-08). The maintainer is not sold on the
    design as written in `voice-takeover.md`, so Phase 1 is no longer decision-free and must not be
@@ -149,6 +149,11 @@ Tracked in the order they bite. See the conversation record for the reasoning.
 
 ## Settled, recorded so they are not re-opened
 
+- **`^` will NOT become the power operator** (2026-09-08). The footgun is real (`2^(7/12)` evaluated
+  to `2 xor 0` in three places in Der Schmetterling and survived two versions), but re-pointing an
+  operator is a language change that buys one spelling. The answer is number methods instead:
+  `2.pow(7/12)`, in the extension mechanism the stdlib already uses for strings, arrays and booleans.
+  [`../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md`](../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md) keeps the reasoning.
 - **No sprudel `band`/`tap` in V1** (2026-08-31). C6 ships names only and is unblocked; D9 leaves
   V1 with it. Full record in `plans/filter-unification.md` §C6.
 - **Tutorials are owned by a separate session.** `tutorial-fix-and-through-line.md` and

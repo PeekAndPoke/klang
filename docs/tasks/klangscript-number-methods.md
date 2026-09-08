@@ -132,7 +132,7 @@ with the methods.
 
 Even with `pow()` shipped, `2^(7/12)` stays legal and stays silently wrong. Two ways out:
 
-- **Preferred — make `^` the power operator.** See `klangscript-caret-as-power.md`. The blast radius is
+- ~~**Preferred: make `^` the power operator.**~~ DECLINED 2026-09-08, see [the record](../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md). The blast radius is
   one test file, and it removes the trap permanently instead of warning about it. If that ships, `xor`
   joins this object as a method and the lint below is unnecessary.
 - **Otherwise — lint it.** A warning when either operand of `^` is a non-integer:
