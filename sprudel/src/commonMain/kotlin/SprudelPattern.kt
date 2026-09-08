@@ -1201,7 +1201,10 @@ fun SprudelPattern._appLeft(
             // coerce*, not maxOf/minOf: the generic comparators box the value class
             val begin = event.part.begin.coerceAtLeast(from)
             val end = event.part.end.coerceAtMost(to)
-            if (end <= begin) continue
+
+            if (end <= begin) {
+                continue
+            }
 
             for (controlEvent in control.queryArcContextual(begin, end, ctx)) {
                 val part = event.part.clipTo(controlEvent.part) ?: continue

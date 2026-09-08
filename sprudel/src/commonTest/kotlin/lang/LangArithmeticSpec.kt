@@ -1411,6 +1411,22 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
+    "every fragment owns its voice data | note(\"c\").bpf(freq = 500, q = 4).bpf(freq = mul(\"1 2\"))" {
+        // One source event fans out into two fragments. With a shallow copy they shared the filter
+        // group, and the second fragment's write (1000) landed in the played (first) fragment too.
+        val p = note("c").bpf(freq = 500, q = 4).bpf(freq = mul("1 2"))
+
+        for (cycle in 0 until 12) {
+            val events = p.queryArc(cycle.toDouble(), cycle + 1.0)
+            withClue("cycle $cycle") {
+                events shouldHaveSize 2
+                events[0].isOnset shouldBe true
+                events[0].data.bandf shouldBe 500.0
+                events[1].data.bandf shouldBe 1000.0
+            }
+        }
+    }
+
     "a rest in the control drops the source event | seq(\"1 1\").add(\"5 ~\")" {
         val p = seq("1 1").add("5 ~")
 

@@ -88,8 +88,10 @@ below.
 
 `SegmentPattern` sliced the control's event (an atom, which reports its whole cycle even for a
 point query) and returned **all** slices regardless of the query arc. Every setter samples its
-control with `sampleAt(onset)`, so every `.gain(saw.segment(4))`, `.late(x.seg(4))`,
-`.lpf(q = x.seg(32).slow(32))` in the corpus read the FIRST slice for every note. The static path
+control with `sampleAt(onset)`, so every `.gain(saw.segment(4))`, `.bpf(freq = x.seg(4)…)`,
+`.lpf(q = x.seg(32).slow(32))` in the corpus read the FIRST slice for every note. (`late`/`early`
+are not setters: `TimeShiftPattern` walks the control's events over the arc, so `.late(x.seg(4))`
+was never affected; round 2 corrected the first draft here.) The static path
 in `applySegment` (`struct("x".fast(n))`, which would have been fine) is dead code: it tests
 `nArg?.asIntOrNull()` on the `SprudelDslArg` wrapper, not on its value, so every call takes the
 `SegmentPattern` path. Fixed in `SegmentPattern` by skipping slices outside the query arc.
@@ -98,11 +100,16 @@ Review round 1 (both reviewers, independently) added the second half: `SegmentPa
 SOURCE's whole, so `"0".segment(4).note()` (the KDoc example, "four evenly-spaced notes") played
 one note per cycle, and `"c e g a b c d e".seg(4)` played all eight. Strudel's `segment` is
 `struct(pure(true).fast(n))`: the slice is the whole. Now it is here too (four onsets, and the
-four notes under the slice starts), and the dead static path is gone; one implementation.
+four notes under the slice starts), and the dead static path is gone; one implementation. Round 2
+added what the re-birth implies: `numSteps` is the slice count and `weight` is 1 (as for `struct`;
+`"0".seg(8).take(4)` was a silent no-op with the atom's 1 step), and the unreferenced
+`SegmentPattern.static()` (which sliced the QUERY arc, not the cycle) is deleted. Round 2 also made
+every arithmetic fragment own a `clone()` of its voice data: `_appLeft` is the first node that fans one
+source event out into several, and the shallow `copy` shared the mutable groups between siblings
+(`note("c").bpf(freq = 500, q = 4).bpf(freq = mul("1 2"))` wrote 1000 into the played note's filter).
 
 Songs whose written intent now plays for the first time (by-ear entry in
-`docs/tasks/by-ear/README.md` §7): Der Schmetterling `.late(berlin….mul(drunk).seg(4))` on five
-parts and both `.sub(perlin…)` humanisations, Greensleeves `bpf(freq = perlin.seg(4).range(180, 1100))`,
+`docs/tasks/by-ear/README.md` §7): Der Schmetterling's two `.sub(perlin…)` humanisations, Greensleeves `bpf(freq = perlin.seg(4).range(180, 1100))`,
 Stranger Things `bpf(freq = perlin….segment(16).slow(6))`, Tetris `lpf(q = berlin….seg(32).slow(32))`.
 
 ### Verification

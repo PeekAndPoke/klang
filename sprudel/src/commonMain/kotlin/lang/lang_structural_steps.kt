@@ -38,9 +38,10 @@ private fun applySegment(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
         }
     }
 
-    // One implementation for static and patterned n. (A `struct("x".fast(n))` path for static n
-    // existed until 2026-09-07; it was dead, and it read a continuous source at the query start
-    // rather than at the slice start, which SegmentPattern does on purpose.)
+    // One implementation for static and patterned n; see the SegmentPattern KDoc for where a
+    // patterned n departs from Strudel. (A `struct("x".fast(n))` path for static n existed until
+    // 2026-09-07; it was dead, and it read a continuous source at the query start rather than at
+    // the slice start, which SegmentPattern does on purpose.)
     return SegmentPattern.control(source, nPattern)
 }
 

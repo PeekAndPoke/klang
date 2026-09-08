@@ -31,7 +31,8 @@ a continuous control queried over a cycle yields ONE event valued at the cycle s
 `seq("1 1 1").mul(sine)` gave every note the same number, and `weight`/`numSteps` came from the control.
 
 A continuous SOURCE has no structure (one event per query arc): `note(saw.range(48, 60).add("0 12"))` plays
-one note per cycle under every join. `seg()` the source first.
+one note per cycle under both source-structured joins (the inner join re-queried the signal per control step
+and played two; Strudel plays none, a signal has no whole). `seg()` the source first.
 
 `_outerJoin` versus `_appLeft`: identical for what is played (only onsets are scheduled), different for what is
 READ by a point query. Arithmetic results are read: `"<0.9>".mul("[1.3 0.99!7]")` is an accent map that

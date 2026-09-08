@@ -156,11 +156,12 @@ Listen, deepest change first:
   centre moved once per six cycles, now sixteen times in six. This is the biggest audible delta in the set.
 - **Greensleeves** `bpf(freq = perlin.seg(4).range(180, 1100), q = 1.5)` on the pad: four centres per
   cycle instead of one.
-- **Der Schmetterling**: `.late(berlin.range(…).mul(drunk).seg(4))` on guitars, kick, snare, hats was one
-  offset per cycle, now four (a humanisation, sub-millisecond; listen for looseness, not for an effect);
-  `.clip("<[0.8 0.7 0.6 0.7]>*4".sub(perlin.range(0, 0.1)))` and
+- **Der Schmetterling**: `.clip("<[0.8 0.7 0.6 0.7]>*4".sub(perlin.range(0, 0.1)))` and
   `velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0, 0.05).slow(4)))` now vary per hit.
-  `guitarClip` / `guitarDyna` are **unchanged by design** (the accent maps were the reason for `_appLeft`).
+  `guitarClip` / `guitarDyna` are **unchanged by design** (the accent maps were the reason for `_appLeft`),
+  and so are the `.late(berlin….mul(drunk).seg(4))` humanisations: `late` walks its control's events
+  over the arc instead of point-sampling, so it already had four offsets per cycle (review round 2
+  corrected the first draft of this entry, which listed them).
 
 If something now sounds too busy, the fix is in the song (`seg(4)` was chosen when it did nothing),
 not in the engine.

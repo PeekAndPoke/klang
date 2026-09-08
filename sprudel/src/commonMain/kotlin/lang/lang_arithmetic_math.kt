@@ -37,8 +37,8 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
  * `note(saw.range(48, 60).add("0 12"))` plays one note per cycle; `seg()` the source first.
  *
  * A source span that meets no control event (a rest in the control) is dropped, as before and as
- * in Strudel; so is a control event without a value. A source event without a value passes through
- * (with its own copy of the voice data, one per fragment).
+ * in Strudel; so is a control event without a value. A source event without a value passes through.
+ * Every fragment owns its voice data (a clone, never the shallow copy).
  */
 internal fun applyArithmetic(
     source: SprudelPattern,
@@ -49,8 +49,12 @@ internal fun applyArithmetic(
 
     return source._appLeft(control) { event, controlEvent ->
         val controlVal = controlEvent.data.value ?: return@_appLeft null
-        val sourceVal = event.data.value ?: return@_appLeft event.copy(data = event.data.clone())
-        event.copy(data = event.data.copy(value = op(sourceVal, controlVal)))
+        // clone(), not copy(): one source event fans out into several fragments here, and the
+        // voice-data groups (adsr, lpf, ...) are mutated in place downstream, one owner each
+        val data = event.data.clone()
+        val sourceVal = data.value ?: return@_appLeft event.copy(data = data)
+        data.value = op(sourceVal, controlVal)
+        event.copy(data = data)
     }
 }
 

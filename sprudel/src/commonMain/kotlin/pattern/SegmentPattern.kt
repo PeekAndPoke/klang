@@ -10,16 +10,20 @@ import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 
 /**
  * Segments a pattern based on a control pattern that determines the number of segments per timespan.
  *
- * For each event in the control pattern, divides that timespan into n equal slices and samples the
- * source pattern at each slice. A slice is a new event: its whole IS the slice (Strudel's
- * `segment` = `struct(pure(true).fast(n))`), so `"0".segment(4).note()` plays four notes and
- * `"c e g a b c d e".seg(4)` plays the four notes under the slice starts. A source event that
- * merely overlaps a slice without starting in it comes back as a non-onset fragment.
+ * For each event in the control pattern, divides that event's span into n equal slices and samples
+ * the source pattern at each slice. A slice is a new event: its whole IS the slice, so
+ * `"0".segment(4).note()` plays four notes and `"c e g a b c d e".seg(4)` plays the four notes under
+ * the slice starts. A source event that merely overlaps a slice without starting in it comes back
+ * as a non-onset fragment. For a static n this is Strudel's `segment` (`struct(pure(true).fast(n))`);
+ * for a patterned n Strudel keeps n slices per CYCLE, whereas here each control event's span gets
+ * n slices (`sine.segment("2 4")` yields 2 + 4 slices, not 3).
+ *
+ * The slices are the structure, so [numSteps] is the number of slices in a cycle and [weight] is 1,
+ * as for `struct`; the source keeps only its cycle length.
  *
  * @param source The pattern to segment
  * @param nProvider Control value provider for the number of segments
@@ -29,14 +33,6 @@ internal class SegmentPattern(
     val nProvider: ControlValueProvider,
 ) : SprudelPattern {
     companion object {
-        /** Create a SegmentPattern with a static n value. */
-        fun static(source: SprudelPattern, n: Int): SegmentPattern {
-            return SegmentPattern(
-                source = source,
-                nProvider = ControlValueProvider.Static((n).asVoiceValue())
-            )
-        }
-
         /**
          * Create a SegmentPattern with a control pattern for n.
          */
@@ -48,9 +44,14 @@ internal class SegmentPattern(
         }
     }
 
-    override val weight: Double get() = source.weight
+    override val weight: Double get() = 1.0
 
-    override val numSteps: Double? get() = source.numSteps
+    /** Slices in the first cycle: the sum of n over the control events there (4 for `seg(4)`, 6 for `seg("2 4")`). */
+    override val numSteps: Double? by lazy {
+        nProvider.queryEvents(CycleTime.ZERO, CycleTime.ONE, QueryContext())
+            .sumOf { (it.data.value?.asInt ?: 1).coerceAtLeast(0) }
+            .toDouble()
+    }
 
     override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
@@ -78,7 +79,9 @@ internal class SegmentPattern(
                 // here: a point query at 0.5 into segment(2) must yield the SECOND slice, not the
                 // first one of the cycle. Without this, `sampleAt` (every source-structured join)
                 // read the first slice for every onset.
-                if (sliceEnd <= from || sliceBegin >= to) continue
+                if (sliceEnd <= from || sliceBegin >= to) {
+                    continue
+                }
 
                 // Query source for the full slice, so a continuous source is read at the slice
                 // start regardless of where the query arc begins.
