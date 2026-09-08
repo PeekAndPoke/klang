@@ -89,3 +89,31 @@ let exp = Math.exp(1);           // ~2.71828
 ```
 
 **Expected:** Results approximately as commented
+
+### 10.9 Number Methods ✅ (in current `stdlib`)
+
+Every number carries its math as a method, so a calculation reads left to right. Where a `Math.*`
+twin exists (`pow`, `abs`, `sqrt`, `round`, `floor`, `ceil`, `min`, `max`) it keeps working and the method
+is an additional spelling; `clamp`, `rem`, `mod`, the logarithms and the musical conversions exist only
+as methods.
+
+```javascript
+let fifth = 2.pow(7/12);        // 1.4983, a perfect fifth
+let c4 = 440 * 2.pow(-9/12);    // 261.63, middle C
+```
+
+**Expected:** Results approximately as commented
+
+The full set: `pow`, `abs`, `sqrt`, `round`, `floor`, `ceil`, `min`, `max`, `clamp`, `rem`, `mod`,
+`log2`, `log10`, `ln`, `exp`, `sign`, and the musical ones `semitones`, `cents`, `toSemitones`, `db`,
+`toDb`, plus `toRatio()` on an interval name such as `"P5"`.
+
+Four things worth knowing:
+
+- `^` is bitwise XOR, not exponentiation, so `2^(7/12)` is 2. Write `2.pow(7/12)` or `2 ** (7/12)`.
+- A minus in front of a number literal belongs to the literal: `-8.abs()` is 8.
+- `rem` takes the sign of the dividend (`-1.rem(12)` is -1), `mod` the sign of the divisor
+  (`-1.mod(12)` is 11). `rem` is the method form of `%`; both throw on a zero divisor.
+- `7.semitones()` is the frequency ratio 1.4983, and `"P5".toRatio()` says the same thing by name.
+
+Background and the full design: `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`.

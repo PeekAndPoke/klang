@@ -546,7 +546,6 @@ object KlangScriptOscExtensions {
      * Raises this signal to the power of [exp] (per-sample).
      * Signed-magnitude: negative bases produce `-(|base|^exp)` to avoid `NaN`.
      *
-     * @alias power
      */
     @KlangScript.Method
     fun pow(self: IgnitorDsl, exp: IgnitorDslLike): IgnitorDsl =
@@ -555,7 +554,6 @@ object KlangScriptOscExtensions {
     /**
      * Raises this signal to the power of [exp]. Alias for [pow].
      *
-     * @alias pow
      */
     @KlangScript.Method
     fun power(self: IgnitorDsl, exp: IgnitorDslLike): IgnitorDsl =
@@ -646,7 +644,6 @@ object KlangScriptOscExtensions {
     /**
      * Per-sample modulo. Zero divisors substituted with `1e-30` to avoid `NaN`.
      *
-     * @alias rem
      */
     @KlangScript.Method
     fun mod(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
@@ -655,7 +652,6 @@ object KlangScriptOscExtensions {
     /**
      * Per-sample modulo. Alias for [mod] (matches Kotlin's `rem`).
      *
-     * @alias mod
      */
     @KlangScript.Method
     fun rem(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =

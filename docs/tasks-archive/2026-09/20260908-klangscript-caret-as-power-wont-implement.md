@@ -5,7 +5,7 @@
 > The problem below is real and the evidence still stands. The decision is that the fix is not to
 > re-point an operator: `2.pow(7/12)` as an ordinary number method reads as well, costs no language
 > change, and rides the extension mechanism the stdlib already has. See
-> `klangscript-number-methods.md`, which is the live task. `^` stays bitwise XOR.
+> `20260908-klangscript-number-methods.md` (done 2026-09-08, same archive month), which was the live task. `^` stays bitwise XOR.
 >
 > Do not re-open this without new evidence; it was weighed and declined.
 

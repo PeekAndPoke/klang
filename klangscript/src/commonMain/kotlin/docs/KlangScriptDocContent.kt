@@ -194,7 +194,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "Arithmetic",
-                description = "Standard math operators, plus ** for exponentiation and % for remainder.",
+                description = "Standard math operators, plus ** for exponentiation and % for remainder. Both have a method spelling too: 2.pow(8), 17.rem(4).",
                 code = """
                     |import * from "stdlib"
                     |
@@ -203,6 +203,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("Beat length:", beatLength, "seconds")
                     |
                     |console.log("2 ** 8 =", 2 ** 8)
+                    |// As a method: 2.pow(8) is 256, and 2.pow(7/12) is 1.4983, an equal-tempered fifth
                     |console.log("17 % 4 =", 17 % 4)
                     |console.log("Halftime:", bpm / 2, "BPM")
                 """.trimMargin(),
@@ -335,7 +336,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "Bitwise basics",
-                description = "Bitwise operators work on individual bits of integer values. & masks bits, | combines them, ^ toggles them.",
+                description = "Bitwise operators work on individual bits of integer values. & masks bits, | combines them, ^ toggles them (XOR). ^ is not a power operator: use ** or .pow() for that.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -343,6 +344,11 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("0b1100 | 0b1010 =", 0b1100 | 0b1010)
                     |console.log("0b1100 ^ 0b1010 =", 0b1100 ^ 0b1010)
                     |console.log("~0b1010 =", ~0b1010)
+                    |
+                    |// ^ is XOR, not exponentiation
+                    |console.log("2 ^ 3 =", 2 ^ 3)     // 1, that is 2 xor 3
+                    |console.log("2 ** 3 =", 2 ** 3)   // 8, the power operator
+                    |// The method spelling is 2.pow(3), see "Number Methods"
                 """.trimMargin(),
                 jsCompat = JsCompat.Compatible,
             ),
@@ -459,7 +465,94 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 7. Arrays
+    // 7. Number Methods
+    // ==========================================
+    DocSection(
+        title = "Number Methods",
+        description = "Numbers carry methods, Kotlin style: `2.pow(7/12)` instead of `Math.pow(2, 7/12)`. Everyday math, the two remainders, and musical conversions that turn a magic number into a statement of intent.",
+        examples = listOf(
+            DocExample(
+                title = "Everyday math",
+                description = "The method spelling reads left to right. `abs`, `round`, `min`, `max` and `pow` also exist as `Math.*` calls; `clamp` exists only as a method. JS note: JavaScript numbers have methods too, but not these (`pow` and `clamp` are not on `Number.prototype`).",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |// Clamp a raw value into the MIDI range
+                    |const raw = 150
+                    |console.log("clamped:", raw.clamp(0, 127))    // 127
+                    |
+                    |const drift = 3 - 9
+                    |console.log("drift.abs():", drift.abs())      // 6
+                    |
+                    |console.log("1.7.round():", 1.7.round())      // 2
+                    |console.log("2.5.round():", 2.5.round())      // 2, ties go to the even neighbour
+                    |
+                    |// min takes the smaller of the two, max the larger
+                    |console.log("1.4.min(1):", 1.4.min(1))        // 1
+                    |console.log("0.2.max(0.5):", 0.2.max(0.5))    // 0.5
+                    |
+                    |console.log("2.pow(10):", 2.pow(10))          // 1024
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "rem and mod",
+                description = "Two remainders. `rem` is the % operator as a method, so its sign follows the dividend. `mod` is the floor remainder, so its sign follows the divisor. They agree on positives and part ways on negatives, which is exactly where the wrong one hides.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |console.log("13.rem(12):", 13.rem(12))    // 1
+                    |console.log("13.mod(12):", 13.mod(12))    // 1, the same for positives
+                    |
+                    |// The negative case is the one that bites: mod wraps into the octave, rem does not
+                    |console.log("-1.rem(12):", -1.rem(12))    // -1, the sign follows the dividend
+                    |console.log("-1.mod(12):", -1.mod(12))    // 11, the sign follows the divisor
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "Musical conversions",
+                description = "Intervals, semitones and decibels, converted where you write them. A call site that says what it means beats a magic number.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |// A filter cutoff a major third above the fundamental
+                    |const fundamental = 220
+                    |console.log("cutoff:", fundamental * "M3".toRatio())   // 277.18
+                    |
+                    |// A descending interval carries the minus in front of the number: "-5P", never "-P5"
+                    |console.log("a fifth down:", "-5P".toRatio())          // 0.6674
+                    |
+                    |// A mixing knob is in dB, an engine gain is linear
+                    |console.log("-6 dB as gain:", -6.db())                 // 0.5012
+                    |console.log("0.5 as dB:", 0.5.toDb())                  // -6.0206
+                    |
+                    |// A detune of a perfect fifth is the ratio 2^(7/12)
+                    |console.log("2.pow(7/12):", 2.pow(7/12))               // 1.4983
+                    |console.log("7.semitones():", 7.semitones())           // 1.4983, the same in music
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "A minus in front of a literal",
+                description = "A minus directly in front of a number literal is part of the literal, so `-8.abs()` is 8. In front of anything else it applies to the result of the call instead. JS note: JavaScript and Kotlin read `-8.abs()` the other way round, as `-(8.abs())`.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |// The minus belongs to the literal: this is (-8).abs()
+                    |console.log("-8.abs():", -8.abs())    // 8
+                    |
+                    |// In front of a variable it applies afterwards: this is -(x.abs())
+                    |const x = -8
+                    |console.log("-x.abs():", -x.abs())    // -8
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+        ),
+    ),
+
+    // ==========================================
+    // 8. Arrays
     // ==========================================
     DocSection(
         title = "Arrays",
@@ -536,7 +629,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 8. Objects
+    // 9. Objects
     // ==========================================
     DocSection(
         title = "Objects",
@@ -608,7 +701,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 9. Control Flow
+    // 10. Control Flow
     // ==========================================
     DocSection(
         title = "Control Flow",
@@ -706,7 +799,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 10. Functions & Closures
+    // 11. Functions & Closures
     // ==========================================
     DocSection(
         title = "Functions & Closures",
@@ -776,7 +869,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 11. Named Arguments
+    // 12. Named Arguments
     // ==========================================
     DocSection(
         title = "Named Arguments",
@@ -834,7 +927,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "Named arguments on stdlib functions",
-                description = "Stdlib functions expose parameter names too. Useful when a signature has several numeric parameters that would otherwise be hard to tell apart at the call site.",
+                description = "Stdlib functions expose parameter names too. Useful when a signature has several numeric parameters that would otherwise be hard to tell apart at the call site. The number methods are an additional spelling for the Math.* functions that have a twin, not a replacement.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -845,6 +938,10 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |// Named — self-documenting at the call site
                     |console.log("sqrt(x=16):", Math.sqrt(x = 16))
                     |console.log("pow(base=2, exp=10):", Math.pow(base = 2, exp = 10))
+                    |
+                    |// The method twins of the same two functions
+                    |console.log("16.sqrt():", 16.sqrt())
+                    |console.log("2.pow(10):", 2.pow(10))
                 """.trimMargin(),
                 jsCompat = JsCompat.Incompatible,
             ),
@@ -852,7 +949,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 12. Imports & the Standard Library
+    // 13. Imports & the Standard Library
     // ==========================================
     DocSection(
         title = "Imports & the Standard Library",
@@ -965,7 +1062,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 13. Method Chaining & Putting It All Together
+    // 14. Method Chaining & Putting It All Together
     // ==========================================
     DocSection(
         title = "Method Chaining & Putting It All Together",

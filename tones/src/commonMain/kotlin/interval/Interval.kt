@@ -79,6 +79,13 @@ data class Interval(
         private val cache = mutableMapOf<String, Interval>()
 
         /**
+         * The largest interval number that parses. Far beyond any music (a 1,000,000th spans about 143,000
+         * octaves), and small enough that the semitone count below stays inside an Int: past roughly 1.25e9
+         * it overflowed and a name like "2147483647M" came back non-empty with a garbage size.
+         */
+        private const val MAX_INTERVAL_NUMBER = 1_000_000
+
+        /**
          * Returns an [Interval] from a string name.
          */
         fun get(name: String): Interval = cache.getOrPut(name) { parse(name) }
@@ -314,7 +321,12 @@ data class Interval(
             if (tokens[0] == "") {
                 return NoInterval
             }
-            val num = tokens[0].toInt()
+            // No interval has the number 0 (a unison is 1), and a number that does not fit an Int is
+            // not a name either; both used to crash below instead of returning NoInterval
+            val num = tokens[0].toIntOrNull() ?: return NoInterval
+            if (num == 0 || kotlin.math.abs(num) > MAX_INTERVAL_NUMBER) {
+                return NoInterval
+            }
             val q = tokens[1]
             // Step is 0-indexed: 0=unison, 1=second, ..., 6=seventh
             val step = (kotlin.math.abs(num) - 1) % 7

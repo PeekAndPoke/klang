@@ -162,7 +162,7 @@ class KlangScriptParser private constructor(
          * only once: `2.5` is one number, `2.pow` is `2` `.` `pow`, `1.2.3` is `1.2` `.` `3` (which the parser
          * then rejects), and a trailing `2.` is `2` followed by a stray dot. Before the lookahead the scanner
          * ate every dot and no method was callable on a number literal
-         * (`docs/tasks/klangscript-number-methods.md`).
+         * (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`).
          *
          * A companion function on purpose: a local function inside `tokenize` that writes the lexer index
          * would make Kotlin box that index for the whole lexer loop.
@@ -1461,7 +1461,7 @@ class KlangScriptParser private constructor(
             // -1.0.clamp(0, 1): a minus sign in front of a number literal is part of the number, so the
             // methods apply to the negative number. Kotlin and JS read it as -(1.0.clamp(0, 1)), which is
             // a silently wrong number for a player; the maintainer chose the literal reading (2026-09-08,
-            // `docs/tasks/klangscript-number-methods.md`). Only a literal folds: `-x.abs()` stays -(x.abs()),
+            // `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`). Only a literal folds: `-x.abs()` stays -(x.abs()),
             // and a binary minus (`a -1`) never reaches this rule.
             check(TokenType.MINUS) && checkAt(1, TokenType.NUMBER) -> {
                 val minus = advance()

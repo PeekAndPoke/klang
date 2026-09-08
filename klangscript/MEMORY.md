@@ -8,6 +8,21 @@
 
 ## Recent Work (2026-09)
 
+- **Number methods, stdlib half (2026-09-08)**: `pow abs sqrt round floor ceil min max clamp rem mod
+  log2 log10 ln exp sign semitones cents toSemitones db toDb` on `KlangScriptNumberExtensions`
+  (`klangscript-libs`), `toRatio()` on strings via `Interval.get` from `tones`; the Kotlin door for the
+  five musical conversions is `common/math/PitchAndGain.kt` plus `val Interval.ratio`. No `coerce*`
+  aliases (maintainer, "add them later if we want"). Lessons: the `tones` parser spells a descending
+  interval `"-5P"` / `"P-5"`, never `"-P5"`; and a stdlib STRING method must not share a name with a
+  sprudel function, because sprudel registers every pattern function on strings too and the later
+  import wins (`ratio` became `toRatio`; guard `LangStdlibStringMethodCollisionSpec` in sprudel).
+  Task: `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md` (both halves done).
+
+- **Library registration merges per name (2026-09-08)**: `Environment.register` used a shallow
+  `putAll` on the receiver-keyed extension maps, so importing sprudel after stdlib dropped every
+  stdlib string method (`"hello".toUpperCase()` failed in every song). It now merges per receiver
+  and name; same name, later import wins. Spec: `LibraryExtensionMergeSpec`.
+
 - **Methods on number literals, parser half (2026-09-08)**: the lexer takes a `.` into a number only
   when a digit or an exponent follows it, and only once (companion `scanDecimalEnd()`, not a local
   function: a local that writes the lexer index boxes it for the whole loop), so `2.pow(7/12)`, `2.5.pow(2)`
@@ -17,7 +32,7 @@
   folds its second minus the same way. `-42` is now a `NumberLiteral`, not a `UnaryOperation`; `-x.abs()`
   stays `-(x.abs())`. Spec
   `parser/NumberLiteralMethodCallSpec`; the stdlib methods themselves are the open half of
-  `docs/tasks/klangscript-number-methods.md`.
+  `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`.
 
 - **Sine partial banks (2026-09-07)**: `Osc.sine(freq, x => x.harmonics(count, rolloff).octaves(...).suboctaves(...).fundamental(gain).analogSpread(s))`,
   five knobs on `OscSineBuilder`, same builders on the Kotlin door; parity guard `KlangScriptSineSpec`.
@@ -151,6 +166,10 @@ all existing tests using `FunctionValue` or affected node constructors.
 
 **`executeBlockInChildScope()`** — always use this for any block that should not leak `let`/`const` to the outer scope
 (loop bodies, if branches). Never call bare `executeBlock()` for these.
+
+**Library maps are keyed by receiver, so merge them per name**: a `putAll` on
+`Map<KClass, MutableMap<String, ...>>` replaces a whole receiver's methods with the last library's.
+Any registry of that shape needs the two-level merge.
 
 **A number scanner must look past the dot**: `codes[i] == C_DOT` without a digit lookahead eats `2.pow`
 into the token `2.`, and nothing downstream can tell. Lex a `.` into a number only when a digit or a complete

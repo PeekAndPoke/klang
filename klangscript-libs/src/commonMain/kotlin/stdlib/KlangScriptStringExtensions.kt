@@ -7,9 +7,12 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.runtime.ArrayValue
 import io.peekandpoke.klang.script.runtime.BooleanValue
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.StringValue
+import io.peekandpoke.klang.tones.interval.Interval
 
 /**
  * String type extensions for KlangScript.
@@ -241,6 +244,41 @@ internal object KlangScriptStringExtensions {
     @KlangScript.Method
     fun repeat(self: StringValue, count: Double): StringValue =
         StringValue(self.value.repeat(count.toInt().coerceAtLeast(0)))
+
+    /**
+     * Reads the string as an interval name and returns its frequency ratio: 2^(semitones / 12).
+     *
+     * The name says what the number means, so a call site reads as intent:
+     * `.oscp("hptrack", "M3".toRatio())` is a major third above the fundamental.
+     * A name is a quality and a number, `P5`, `M3`, `m7`. A descending interval carries the minus in
+     * front of the number, so a fifth down is `-5P` (or `P-5`), not `-P5`.
+     * On a bare number the unit goes in the method name instead, see `semitones` and `cents`.
+     *
+     * ```KlangScript(Executable)
+     * "P5".toRatio()   // 1.4983, a perfect fifth
+     * "M3".toRatio()   // 1.2599, a major third
+     * "-5P".toRatio()  // 0.6674, a fifth down
+     * ```
+     *
+     * @param self The interval name, for example "P5", "M3", "m7" or "-5P"
+     * @return The frequency ratio of the interval
+     * @category string
+     * @tags music, pitch
+     */
+    @KlangScript.Method
+    fun toRatio(self: StringValue, callInfo: CallInfo? = null): Double {
+        val interval = Interval.get(self.value)
+
+        if (interval.empty) {
+            throw KlangScriptTypeError(
+                "\"${self.value}\" is not an interval name (examples: P5, M3, m7, -5P)",
+                operation = "toRatio",
+                location = callInfo?.callLocation,
+            )
+        }
+
+        return interval.ratio
+    }
 
     /**
      * Returns the string representation.

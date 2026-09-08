@@ -89,11 +89,16 @@ class Environment(
         // Register native functions
         nativeTypes.putAll(native.types)
 
-        // Register all native extension methods
-        nativeExtensionMethods.putAll(native.extensionMethods)
-
-        // Register all native extension properties
-        nativeExtensionProperties.putAll(native.extensionProperties)
+        // Register all native extension methods and properties, merged PER NAME under each receiver.
+        // A plain putAll replaced the receiver's whole map, so importing sprudel after stdlib silently
+        // dropped every stdlib string method (found 2026-09-08, `LibraryExtensionMergeSpec`). A method
+        // of the same name and receiver still belongs to the library imported last.
+        native.extensionMethods.forEach { (receiver, methods) ->
+            nativeExtensionMethods.getOrPut(receiver) { mutableMapOf() }.putAll(methods)
+        }
+        native.extensionProperties.forEach { (receiver, properties) ->
+            nativeExtensionProperties.getOrPut(receiver) { mutableMapOf() }.putAll(properties)
+        }
 
         // Define all native objects as values.
         //

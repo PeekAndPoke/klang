@@ -48,6 +48,7 @@ kotlin {
                 api(project(":klangscript-annotations"))
                 api(project(":klangscript"))
                 api(project(":audio_bridge"))
+                api(project(":tones"))
             }
         }
 

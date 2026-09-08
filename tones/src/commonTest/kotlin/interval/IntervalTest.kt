@@ -18,6 +18,18 @@ class IntervalTest : StringSpec({
         Interval.tokenize("M-3") shouldBe listOf("-3", "M")
     }
 
+    "names that are not intervals are empty instead of crashing the parser" {
+        // Interval number 0 does not exist (a unison is 1), a number that does not fit an Int is not a
+        // name, and a number far beyond any music is refused before the semitone arithmetic overflows.
+        // Until 2026-09-08 the first two threw (IndexOutOfBounds, NumberFormatException) and the third
+        // came back non-empty with a garbage semitone count.
+        listOf("P0", "0P", "M0", "-0P", "99999999999P", "2147483647M", "1000001P").forEach { name ->
+            Interval.get(name).empty shouldBe true
+        }
+
+        Interval.get("1000000P").empty shouldBe false
+    }
+
     "interval from string has all properties" {
         val i = Interval.get("4d")
         i.empty shouldBe false

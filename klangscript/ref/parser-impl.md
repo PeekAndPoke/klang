@@ -27,7 +27,7 @@ Punctuation: `LPAREN`, `RPAREN`, `LBRACE`, `RBRACE`, `LBRACKET`, `RBRACKET`, `DO
 6. `multiplicationExpr` — `*`, `/`, `%`
 7. `unaryExpr` — `-`, `+`, `!`. **`-` directly before a `NUMBER` token folds into one negative
    literal** and then enters the postfix loop, so `-1.0.clamp(0, 1)` is `(-1.0).clamp(0, 1)` (maintainer
-   decision 2026-09-08, `docs/tasks/klangscript-number-methods.md`; Kotlin/JS would read `-(...)`).
+   decision 2026-09-08, `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`; Kotlin/JS would read `-(...)`).
    Only a literal folds: `-x.abs()` is `-(x.abs())`. The `--` token folds its second minus the same way
    (`--1.abs()` is `-((-1).abs())`, helper `negativeLiteral`).
 8. `postfixExpr` (`parsePostfix(start)`) — call `foo()` and member `.prop` — **loop pattern, any alternating order**

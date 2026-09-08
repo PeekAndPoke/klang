@@ -1,14 +1,15 @@
 # KlangScript — number methods (`2.pow(7/12)`), and the lexer change they need
 
-> **Status (2026-09-08)**: split across two sessions by the maintainer; the parser half is DONE.
+> **Status (2026-09-08)**: DONE, both halves.
 >
-> | Half | Owner | State |
-> |---|---|---|
-> | **The parser half** (`2.pow` lexes, `-1.0.clamp()` folds) | done 2026-09-08 | DONE, see "What the parser half delivered" below |
-> | **The stdlib methods** | the next session (Opus) | UNBLOCKED, to do |
+> | Half | State |
+> |---|---|
+> | **The parser half** (`2.pow` lexes, `-1.0.clamp()` folds) | DONE, commit `b7d540e1`, see "What the parser half delivered" |
+> | **The stdlib methods** (all three tiers, `toRatio` on strings, the Kotlin door) | DONE, see "What the stdlib half delivered" |
 >
-> The stdlib session starts from `klangscript-libs/src/commonTest/kotlin/stdlib/StdLibNumberMethodsTest.kt`
-> (currently `toString` only) and `KlangScriptNumberExtensions.kt`.
+> Open by choice, not by omission: the Kotlin aliases `coerceAtLeast`/`coerceAtMost` for `max`/`min`
+> were left out on 2026-09-08 ("we can easily add them later if we want"). `.5` is not a number
+> literal (write `0.5`). The `^`-lint of the section below is still unbuilt.
 >
 > `^`-as-power was the alternative and was DECLINED on 2026-09-08, see
 > `../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md`. This task is now
@@ -110,6 +111,60 @@ mean the same thing; the stdlib docs should show the bare form, `-8.abs()`, sinc
 `2.toString()` works end to end already (`StdLibNumberMethodsTest`), which proves the stdlib dispatch
 sees a call on a literal.
 
+## What the stdlib half delivered (2026-09-08)
+
+Written by two Opus workers under a coordinator (worker A the script doors, worker B the Kotlin door),
+reviewed in the project loop.
+
+- **Script doors**, `klangscript-libs/.../stdlib/KlangScriptNumberExtensions.kt`: `pow(exp)`, `abs()`,
+  `sqrt()`, `round()`, `floor()`, `ceil()`, `min(other)`, `max(other)`, `clamp(lo, hi)`, `rem(n)`, `mod(n)`,
+  `log2()`, `log10()`, `ln()`, `exp()`, `sign()`, `semitones()`, `cents()`, `toSemitones()`, `db()`, `toDb()`;
+  and `toRatio()` on strings in `KlangScriptStringExtensions.kt`. Tiers 1 and 2 delegate to the same
+  `kotlin.math` calls as `Math.*`, so `round` is ties-to-even like `Math.round`. `rem`/`mod` throw the
+  interpreter's "Modulo by zero"; `clamp` with `lo > hi` throws a `KlangScriptTypeError` naming both
+  bounds instead of letting Kotlin's IllegalArgumentException escape; `ratio` of a non-name throws
+  "... is not an interval name (examples: P5, M3, m7, -5P)".
+- **Kotlin door**, `common/src/commonMain/kotlin/math/PitchAndGain.kt`: `Double.semitones()`, `cents()`,
+  `toSemitones()`, `db()`, `toDb()`, one formula each (the engine's `applySemitoneDetuneToFrequency`
+  in `audio_be/DspUtil.kt` spells the same formula and was left alone); and `val Interval.ratio` in
+  `klangscript-libs/.../stdlib/IntervalRatio.kt`, built on the `tones` interval vocabulary as planned.
+  Tiers 1 and 2 need no Kotlin door: `kotlin.math` is that door.
+- **The string door is `toRatio()`, not `ratio()`.** The review found that sprudel registers every
+  pattern function as a string method too (`"bd sd".fast(2)`), and sprudel has a `ratio()` (its colon
+  ratio step); a song imports stdlib and then sprudel, so `"M3".ratio()` would have reached sprudel's
+  parser and yielded a null voice value, no diagnostic. `toRatio()` collides with nothing and reads
+  like its siblings `toSemitones()` / `toDb()`. Guard: `sprudel/.../LangStdlibStringMethodCollisionSpec`
+  keeps the two name sets apart (two pre-existing collisions, `repeat` and `slice`, are parked there
+  for the maintainer: in a song the sprudel versions win).
+- **A core bug came out of the same review:** `Environment.register` replaced a receiver's whole
+  method map with the map of the library imported last, so EVERY stdlib string method was unreachable
+  in a song. It now merges per name (`klangscript/.../LibraryExtensionMergeSpec`), a method of the same
+  name and receiver still belongs to the library imported last.
+- The `tones` interval parser no longer crashes on an interval number 0 (`"P0"`) or on a number that
+  overflows an Int; both are `NoInterval` now, so the door reports "not an interval name" instead of an
+  internal error. The methods that throw (`clamp`, `rem`, `mod`, `toRatio`) carry the call location.
+- Round 2 of the review: the doc-only `@alias` tags pairing the IgnitorDsl signal doors `mod`/`rem`
+  and `pow`/`power` came off, because the library reference merges aliases per symbol and the card
+  for `mod` would have shown "@rem" next to the Number method whose whole point is that they differ
+  (the signal doors keep "Alias for ..." in their prose and both names stay registered). The `tones`
+  parser also refuses interval numbers above 1,000,000, where the semitone arithmetic overflowed Int
+  and a name came back non-empty with a garbage size. `klangscript-libs` now declares `tones`.
+  Rejected, recorded as a follow-up: a reused engine's CHILD environment caches extension lookups and
+  an import only clears the root's caches, so a second `import` on the same engine after a lookup
+  can keep serving the earlier library's method of the same name (pre-existing, unreachable in every
+  host today since both imports precede user code).
+- **Descending intervals are spelled `"-5P"` or `"P-5"`**, never `"-P5"`: that is what the `tones` parser
+  accepts (sign before the NUMBER, tonal style; `Interval.fromSemitones(-7)` returns `"-5P"`). This file
+  and the brief had it wrong; the specs pin `"-P5"` as rejected so it cannot creep back into the docs.
+- `toSemitones()` and `toDb()` of 0 or a negative follow `kotlin.math` (`-Infinity`, `NaN`), documented,
+  no clamping: the Motor stays raw and `Math.sqrt(-1)` is `NaN` today as well.
+- **Specs**: `StdLibNumberMethodsTest` (values, the `%`-equals-`rem` loop, the zero divisor, the clamp
+  bounds, the interval names, the `^` footgun rows, the minus-fold rows), `StdLibNumberMethodsDoorParitySpec`
+  (script versus Kotlin, exact), `IntervalRatioSpec`, `common/.../PitchAndGainSpec`. One existing
+  analyzer test changed: the stdlib `abs` symbol now has three variants (`Math.abs`, `IgnitorDsl.abs`,
+  `Number.abs`).
+- Language docs: `klangscript/language-features/10-math.md` 10.9.
+
 ## The implementation itself is trivial
 
 The extension mechanism exists and is proven:
@@ -137,9 +192,9 @@ Add methods in the same shape, delegating to the same `kotlin.math` calls `Klang
    |---|---|
    | 1, everyday patch math | `pow(exp)`, `abs()`, `sqrt()`, `round()`, `floor()`, `ceil()`, `min(other)`, `max(other)`, `clamp(lo, hi)`, `mod(n)`, `rem(n)` |
    | 2, logarithmic | `log2()`, `log10()`, `ln()`, `exp()`, `sign()` |
-   | 3, musical | `semitones()`, `cents()`, `toSemitones()`, `db()`, `toDb()`, plus `"P5".ratio()` on String |
+   | 3, musical | `semitones()`, `cents()`, `toSemitones()`, `db()`, `toDb()`, plus `"P5".toRatio()` on String |
 
-   Tier 3 is the one that changes how a song reads: `.oscp("hptrack", "M3".ratio())` says what it
+   Tier 3 is the one that changes how a song reads: `.oscp("hptrack", "M3".toRatio())` says what it
    means where `1.2599` does not. Tiers 1 and 2 delegate to the same `kotlin.math` calls
    `KlangScriptMath` already uses, so they are close to free once the lexer lands.
 
@@ -219,10 +274,10 @@ parsing (`"P5"`, `"M3"`, `"-2m"`) — so expose that rather than inventing a sch
 `.` already lexes):
 
 ```javascript
-"P5".ratio()      // 1.4983   perfect fifth
-"M3".ratio()      // 1.2599   major third
-"P8".ratio()      // 2.0      octave
-"-P5".ratio()     // 0.6674   a fifth down
+"P5".toRatio()      // 1.4983   perfect fifth
+"M3".toRatio()      // 1.2599   major third
+"P8".toRatio()      // 2.0      octave
+"-5P".toRatio()     // 0.6674   a fifth down: the sign goes before the NUMBER, as in tones ("-P5" is not a name)
 ```
 
 **Parametric, as number methods** (needs the lexer fix above):
@@ -230,7 +285,7 @@ parsing (`"P5"`, `"M3"`, `"-2m"`) — so expose that rather than inventing a sch
 ```javascript
 7.semitones()     // 1.4983
 (-12).semitones() // 0.5
-50.cents()        // 1.0289
+50.cents()        // 1.0293
 1.5.toSemitones() // 7.02     the inverse, for analysis
 ```
 
@@ -249,7 +304,7 @@ which is what makes `7.semitones()` and `50.cents()` read correctly.
 At a call site this converts a magic number into a statement of intent:
 
 ```javascript
-.oscp("hptrack", "M3".ratio())     // a major third above the fundamental
+.oscp("hptrack", "M3".toRatio())     // a major third above the fundamental
 ```
 
 Prior art: SuperCollider `7.midiratio` / `1.5.ratiomidi` (closest ancestor; "midi" is the wrong noun
