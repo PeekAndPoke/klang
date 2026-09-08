@@ -140,7 +140,9 @@ class CompleteProgramTest : StringSpec({
     }
 
     "should parse unary expression as statement" {
-        val result = KlangScriptParser.parse("-42")
+        // `-42` is a negative literal since 2026-09-08 (see NumberLiteralMethodCallSpec); a minus on
+        // anything else is still a unary operation
+        val result = KlangScriptParser.parse("-x")
 
         result.statements.size shouldBe 1
         val stmt = result.statements[0]

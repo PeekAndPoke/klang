@@ -13,6 +13,19 @@ let f = 2.5e-3;
 
 **Expected:** All assignments succeed. Values: 42, 3.14159, -17, 0, 1000000, 0.0025
 
+**Methods on a literal** (since 2026-09-08): the lexer takes a `.` into a number only when a digit or an
+exponent follows it, so `2.pow(2)`, `2.5.pow(2)`, `2.exp()` and `2.toString()` are method calls on the
+literal while `2.5` and `2.e5` stay numbers. A trailing dot (`2.`) or a second dot (`1.2.3`) is a parse
+error. `.5` is not a number (write `0.5`).
+
+**A minus sign in front of a number literal is part of the number**, so the methods apply to the
+negative number: `-1.0.clamp(0, 1)` is `(-1.0).clamp(0, 1)` and `-7.semitones()` is `(-7).semitones()`.
+This is deliberately NOT what Kotlin or JS do (there `-7.0.pow(2)` is `-49`); for a player that
+reading is a plausible wrong number with no diagnostic. Only a literal folds: `-x.abs()` is still
+`-(x.abs())`, `-(7).abs()` is still `-(7.abs())`, and `a -1` is still a subtraction. The second minus of
+`--` folds like a lone one: `--1.abs()` and `- -1.abs()` are both `-((-1).abs())`.
+Spec: `parser/NumberLiteralMethodCallSpec.kt`.
+
 ### 1.1b Hex, Octal, Binary Number Literals ✅
 
 ```javascript

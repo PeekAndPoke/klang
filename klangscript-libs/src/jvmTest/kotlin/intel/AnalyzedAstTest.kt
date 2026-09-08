@@ -30,6 +30,7 @@ import io.peekandpoke.klang.script.ast.ReturnStatement
 import io.peekandpoke.klang.script.ast.TemplateLiteral
 import io.peekandpoke.klang.script.ast.TemplatePart
 import io.peekandpoke.klang.script.ast.TernaryExpression
+import io.peekandpoke.klang.script.ast.NumberLiteral
 import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
@@ -308,10 +309,19 @@ class AnalyzedAstTest : StringSpec({
 
     // ── Unary operation ────────────────────────────────────────────────────
 
-    "unary op: -42 — operand is typed" {
-        val a = analyze("-42")
+    "unary op: -(42) — operand is typed" {
+        // `-42` folds into one negative literal (NumberLiteralMethodCallSpec); the parentheses keep a
+        // unary operation here
+        val a = analyze("-(42)")
         val unaryOp = a.topExpr() as UnaryOperation
         a.typeOf(unaryOp.operand)?.simpleName shouldBe "Number"
+    }
+
+    "negative literal: -42 is a NumberLiteral typed Number" {
+        val a = analyze("-42")
+        val literal = a.topExpr() as NumberLiteral
+        literal.value shouldBe -42.0
+        a.typeOf(literal)?.simpleName shouldBe "Number"
     }
 
     "unary op: !true — operand is typed" {

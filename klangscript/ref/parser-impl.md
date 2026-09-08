@@ -25,8 +25,12 @@ Punctuation: `LPAREN`, `RPAREN`, `LBRACE`, `RBRACE`, `LBRACKET`, `RBRACKET`, `DO
 4. `comparisonExpr` — `==`, `!=`, `<`, `<=`, `>`, `>=`
 5. `additionExpr` — `+`, `-`
 6. `multiplicationExpr` — `*`, `/`, `%`
-7. `unaryExpr` — `-`, `+`, `!`
-8. `postfixExpr` — call `foo()` and member `.prop` — **loop pattern, any alternating order**
+7. `unaryExpr` — `-`, `+`, `!`. **`-` directly before a `NUMBER` token folds into one negative
+   literal** and then enters the postfix loop, so `-1.0.clamp(0, 1)` is `(-1.0).clamp(0, 1)` (maintainer
+   decision 2026-09-08, `docs/tasks/klangscript-number-methods.md`; Kotlin/JS would read `-(...)`).
+   Only a literal folds: `-x.abs()` is `-(x.abs())`. The `--` token folds its second minus the same way
+   (`--1.abs()` is `-((-1).abs())`, helper `negativeLiteral`).
+8. `postfixExpr` (`parsePostfix(start)`) — call `foo()` and member `.prop` — **loop pattern, any alternating order**
 9. `primaryExpr` — literals, identifiers, `(...)`, `{...}`, `[...]`
 
 ## Critical Implementation Details
@@ -51,6 +55,12 @@ while (true) {
 
 **Arrow function backtracking** — try to parse `(params) =>` first; if `=>` not found, backtrack and re-parse as
 parenthesized expression.
+
+**Number scanning** (`scanDecimalEnd(codes, from)`, a companion function so the lexer index `i` is never
+captured and boxed): digits, at most one fraction, optional exponent. A `.` joins the number only when a
+digit or a complete exponent follows it, so `2.5` and `2.e5` are one token while `2.pow(2)` lexes as `2`
+`.` `pow` and `2.exp()` as `2` `.` `exp`; a trailing `2.` or a doubled `1.2.3` reaches the parser as a stray
+dot and fails there. Spec: `parser/NumberLiteralMethodCallSpec.kt`.
 
 **Source locations** — 1-based line and column. `Token` tracks `startLine`, `endLine`, `startCol`.
 

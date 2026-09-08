@@ -676,7 +676,8 @@ enum class UnaryOperator {
  * The operator determines what operation is performed.
  *
  * Examples:
- * - -5 -> operator: NEGATE, operand: NumberLiteral(5)
+ * - -(5) -> operator: NEGATE, operand: NumberLiteral(5)
+ *   (a bare -5 is a single NumberLiteral(-5): a minus directly before a number literal is part of it)
  * - !true -> operator: NOT, operand: BooleanLiteral(true)
  * - -x -> operator: NEGATE, operand: Identifier("x")
  * - -(1 + 2) -> operator: NEGATE, operand: BinaryOperation(1 + 2)

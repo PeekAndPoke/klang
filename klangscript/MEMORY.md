@@ -8,6 +8,17 @@
 
 ## Recent Work (2026-09)
 
+- **Methods on number literals, parser half (2026-09-08)**: the lexer takes a `.` into a number only
+  when a digit or an exponent follows it, and only once (companion `scanDecimalEnd()`, not a local
+  function: a local that writes the lexer index boxes it for the whole loop), so `2.pow(7/12)`, `2.5.pow(2)`
+  and `2.exp()` are member calls, `2.e5` stays a number, and `2.` / `1.2.3` are parse errors. `parseUnary` folds `-` + `NUMBER` into one negative
+  `NumberLiteral` before the postfix loop (`parsePostfix(start)`), so `-1.0.clamp(0, 1)` is
+  `(-1.0).clamp(0, 1)`: a deliberate divergence from Kotlin/JS (maintainer, 2026-09-08). The `--` token
+  folds its second minus the same way. `-42` is now a `NumberLiteral`, not a `UnaryOperation`; `-x.abs()`
+  stays `-(x.abs())`. Spec
+  `parser/NumberLiteralMethodCallSpec`; the stdlib methods themselves are the open half of
+  `docs/tasks/klangscript-number-methods.md`.
+
 - **Sine partial banks (2026-09-07)**: `Osc.sine(freq, x => x.harmonics(count, rolloff).octaves(...).suboctaves(...).fundamental(gain).analogSpread(s))`,
   five knobs on `OscSineBuilder`, same builders on the Kotlin door; parity guard `KlangScriptSineSpec`.
   Design: `docs/plans/sine-partial-banks.md` (knobs on the sine, not separate doors; `fundamental` is a gain,
@@ -140,6 +151,10 @@ all existing tests using `FunctionValue` or affected node constructors.
 
 **`executeBlockInChildScope()`** — always use this for any block that should not leak `let`/`const` to the outer scope
 (loop bodies, if branches). Never call bare `executeBlock()` for these.
+
+**A number scanner must look past the dot**: `codes[i] == C_DOT` without a digit lookahead eats `2.pow`
+into the token `2.`, and nothing downstream can tell. Lex a `.` into a number only when a digit or a complete
+exponent (`2.e5`) follows it.
 
 **Template literal brace matching** — naive depth counter fails for `${obj.toString("{}")}`. Track `inString`/`escaped`
 state when scanning for the closing `}`.

@@ -140,6 +140,61 @@ class KlangScriptParser private constructor(
         private fun Int.isAsciiLetter(): Boolean = this in C_A..C_A + 25 || this in C_a..C_a + 25
         private fun Int.isAsciiLetterOrDigit(): Boolean = isAsciiLetter() || isAsciiDigit()
 
+        /**
+         * Is the `.` at [i] the decimal point of a number literal? Only when a digit (`2.5`) or an exponent
+         * (`2.e5`, JS spelling) follows it; `2.pow` and `2.exp()` are member accesses on the number.
+         */
+        private fun IntArray.isFractionDotAt(i: Int): Boolean =
+            this[i] == C_DOT && (i + 1 < size && this[i + 1].isAsciiDigit() || isExponentAt(i + 1))
+
+        /** Does a complete exponent start at [i]: `e` or `E`, an optional sign, at least one digit? */
+        private fun IntArray.isExponentAt(i: Int): Boolean {
+            if (i >= size || (this[i] != C_e && this[i] != C_E)) return false
+
+            val afterSign = if (i + 1 < size && (this[i + 1] == C_PLUS || this[i + 1] == C_MINUS)) i + 2 else i + 1
+
+            return afterSign < size && this[afterSign].isAsciiDigit()
+        }
+
+        /**
+         * Scans a decimal literal in [codes] from [from] and returns the index behind it: digits, at most one
+         * fraction, an optional exponent. The dot is taken only when a digit or an exponent follows it, and
+         * only once: `2.5` is one number, `2.pow` is `2` `.` `pow`, `1.2.3` is `1.2` `.` `3` (which the parser
+         * then rejects), and a trailing `2.` is `2` followed by a stray dot. Before the lookahead the scanner
+         * ate every dot and no method was callable on a number literal
+         * (`docs/tasks/klangscript-number-methods.md`).
+         *
+         * A companion function on purpose: a local function inside `tokenize` that writes the lexer index
+         * would make Kotlin box that index for the whole lexer loop.
+         */
+        private fun scanDecimalEnd(codes: IntArray, from: Int): Int {
+            var i = from
+
+            while (i < codes.size && codes[i].isAsciiDigit()) {
+                i++
+            }
+            if (i < codes.size && codes.isFractionDotAt(i)) {
+                i++
+                while (i < codes.size && codes[i].isAsciiDigit()) {
+                    i++
+                }
+            }
+            // Scientific notation: e/E, optional +/-, at least one digit. A bare `2e` or `2e+` is the number
+            // `2` followed by an identifier, which the parser reports; before, the token `2e` reached
+            // `toDouble()` and threw a NumberFormatException with no source location.
+            if (codes.isExponentAt(i)) {
+                i++
+                if (codes[i] == C_PLUS || codes[i] == C_MINUS) {
+                    i++
+                }
+                while (i < codes.size && codes[i].isAsciiDigit()) {
+                    i++
+                }
+            }
+
+            return i
+        }
+
         /** Keyword → TokenType lookup map. */
         private val keywords = mapOf(
             "true" to TokenType.TRUE,
@@ -811,44 +866,18 @@ class KlangScriptParser private constructor(
                             }
                             // Regular number starting with 0
                             else -> {
-                                while (i < source.length && (codes[i].isAsciiDigit() || codes[i] == C_DOT)) {
-                                    i++
-                                    column++
-                                }
-                                // Scientific notation
-                                if (i < source.length && (codes[i] == C_e || codes[i] == C_E)) {
-                                    i++
-                                    column++
-                                    if (i < source.length && (codes[i] == C_PLUS || codes[i] == C_MINUS)) {
-                                        i++
-                                        column++
-                                    }
-                                    while (i < source.length && codes[i].isAsciiDigit()) {
-                                        i++
-                                        column++
-                                    }
-                                }
+                                // A decimal literal never spans a line, so the column moves with the index
+                                val end = scanDecimalEnd(codes, i)
+                                column += end - i
+                                i = end
                                 addToken(TokenType.NUMBER, source.substring(start, i), startColumn)
                             }
                         }
                     } else {
-                        while (i < source.length && (codes[i].isAsciiDigit() || codes[i] == C_DOT)) {
-                            i++
-                            column++
-                        }
-                        // Scientific notation: optional e/E followed by optional +/- and digits
-                        if (i < source.length && (codes[i] == C_e || codes[i] == C_E)) {
-                            i++
-                            column++
-                            if (i < source.length && (codes[i] == C_PLUS || codes[i] == C_MINUS)) {
-                                i++
-                                column++
-                            }
-                            while (i < source.length && codes[i].isAsciiDigit()) {
-                                i++
-                                column++
-                            }
-                        }
+                        // A decimal literal never spans a line, so the column moves with the index
+                        val end = scanDecimalEnd(codes, i)
+                        column += end - i
+                        i = end
                         addToken(TokenType.NUMBER, source.substring(start, i), startColumn)
                     }
                 }
@@ -1423,11 +1452,30 @@ class KlangScriptParser private constructor(
     /**
      * Unary operators: -expr, +expr, !expr, ++x, --x
      *
-     * Note: ++ and -- are only treated as prefix increment/decrement when followed by
-     * an identifier. Otherwise (e.g. --10) they fall through to parseCallExpression.
+     * Note: ++ and -- are only treated as prefix increment/decrement when followed by an identifier.
+     * A `-` or `--` directly before a number literal folds into a negative literal (see the first branches);
+     * any other `++expr` / `--expr` is desugared to a double unary plus / minus.
      */
     private fun parseUnary(): Expression {
         when {
+            // -1.0.clamp(0, 1): a minus sign in front of a number literal is part of the number, so the
+            // methods apply to the negative number. Kotlin and JS read it as -(1.0.clamp(0, 1)), which is
+            // a silently wrong number for a player; the maintainer chose the literal reading (2026-09-08,
+            // `docs/tasks/klangscript-number-methods.md`). Only a literal folds: `-x.abs()` stays -(x.abs()),
+            // and a binary minus (`a -1`) never reaches this rule.
+            check(TokenType.MINUS) && checkAt(1, TokenType.NUMBER) -> {
+                val minus = advance()
+                return parsePostfix(negativeLiteral(startLine = minus.line, startColumn = minus.column))
+            }
+
+            // `--1.abs()`: the second minus of `--` sits directly before the literal, so it folds the same
+            // way and both spellings, `--1.abs()` and `- -1.abs()`, are -((-1).abs())
+            check(TokenType.MINUS_MINUS) && checkAt(1, TokenType.NUMBER) -> {
+                val opToken = advance()
+                val literal = negativeLiteral(startLine = opToken.line, startColumn = opToken.column + 1)
+                return UnaryOperation(UnaryOperator.NEGATE, parsePostfix(literal), opToken.toSourceLocation())
+            }
+
             match(TokenType.MINUS, TokenType.PLUS, TokenType.EXCLAMATION, TokenType.TILDE) -> {
                 val operator = when (previous().type) {
                     TokenType.MINUS -> UnaryOperator.NEGATE
@@ -1490,8 +1538,32 @@ class KlangScriptParser private constructor(
      * Also handles postfix ++ and --
      * Fixes: sine2.fromBipolar().range(0.1, 0.9)
      */
-    private fun parseCallExpression(): Expression {
-        var expr = parsePrimary()
+    private fun parseCallExpression(): Expression = parsePostfix(parsePrimary())
+
+    /**
+     * Consumes the `NUMBER` token at the cursor as a negative literal whose location starts at the minus sign
+     * that precedes it (already consumed by the caller, alone or as the tail of `--`).
+     */
+    private fun negativeLiteral(startLine: Int, startColumn: Int): NumberLiteral {
+        val number = advance()
+        val location = SourceLocation(
+            source = currentSource,
+            startLine = startLine,
+            startColumn = startColumn,
+            endLine = number.endLine,
+            endColumn = number.endColumn,
+        )
+
+        return NumberLiteral(-number.text.toDouble(), location)
+    }
+
+    /**
+     * The postfix loop on an already parsed [start] expression: `.prop`, `?.prop`, `(args)`, `[index]`,
+     * `x++`, `x--` in any order. [parseCallExpression] starts it on a primary; the negative-literal fold
+     * in [parseUnary] starts it on the folded number.
+     */
+    private fun parsePostfix(start: Expression): Expression {
+        var expr = start
 
         // Loop handles ANY sequence: .prop, (), [i], x++, x--, etc.
         while (true) {

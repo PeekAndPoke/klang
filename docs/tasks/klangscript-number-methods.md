@@ -1,14 +1,14 @@
 # KlangScript — number methods (`2.pow(7/12)`), and the lexer change they need
 
-> **Status (2026-09-08)**: NOT IMPLEMENTED, and split across two sessions by the maintainer.
+> **Status (2026-09-08)**: split across two sessions by the maintainer; the parser half is DONE.
 >
 > | Half | Owner | State |
 > |---|---|---|
-> | **The lexer fix** (`2.pow` must lex at all) | a separate session | to do FIRST |
-> | **The stdlib methods** | this session's successor | BLOCKED until the lexer lands |
+> | **The parser half** (`2.pow` lexes, `-1.0.clamp()` folds) | done 2026-09-08 | DONE, see "What the parser half delivered" below |
+> | **The stdlib methods** | the next session (Opus) | UNBLOCKED, to do |
 >
-> Do not write the methods before the lexer change is in: without it `2.pow(2)` does not parse, so
-> nothing can be tested end to end and every example in the docs would be a lie.
+> The stdlib session starts from `klangscript-libs/src/commonTest/kotlin/stdlib/StdLibNumberMethodsTest.kt`
+> (currently `toString` only) and `KlangScriptNumberExtensions.kt`.
 >
 > `^`-as-power was the alternative and was DECLINED on 2026-09-08, see
 > `../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md`. This task is now
@@ -73,10 +73,47 @@ Two details to get right:
   or example relies on the old spelling.
 - **Ranges/spreads** — if `..` or `...` is ever added, the digit lookahead already keeps `1..5` working.
 
+## What the parser half delivered (2026-09-08)
+
+Two parser-level changes, both in `KlangScriptParser.kt`, pinned by
+`klangscript/src/commonTest/kotlin/parser/NumberLiteralMethodCallSpec.kt` (24 rows, mutation-checked:
+15 of the first 21 fail against the old parser, the survivors are the regression guards; the exponent
+lookahead and the `--` fold each have their own killing mutant):
+
+1. **The lexer takes a `.` into a number only when a digit or an exponent follows it, and only once.** The
+   scan is now `scanDecimalEnd()` (a companion function, so the lexer index stays unboxed): digits, at
+   most one fraction, optional exponent. `2.5` and `0.5` and `1.5e-3` and the JS spelling `2.e5` are one
+   token; `2.pow(2)` is `2` `.` `pow` and `2.exp()` is a member call; a trailing `2.` and a doubled `1.2.3` are parse errors
+   ("Expected property name after '.'"), where `1.2.3` used to be a `NumberFormatException` from inside
+   the lexer. The corpus (builtin songs, tutorials) has neither spelling. `.5` never lexed as a number
+   (the dot has no digit-run before it), so it is not a regression and was left alone.
+2. **A minus sign in front of a number literal is part of the number** (maintainer decision, 2026-09-08,
+   "I would like to avoid that the user needs to write `(-1.0).clamp()`"). `parseUnary` folds `-` plus
+   a `NUMBER` token into one negative `NumberLiteral` before the postfix loop runs, so `-1.0.clamp(0, 1)`
+   is `(-1.0).clamp(0, 1)` and `-7.semitones()` is `(-7).semitones()`. This is a deliberate divergence
+   from Kotlin and JS, where `-7.0.pow(2)` is `-(7.0.pow(2))` = -49: for a player that is a plausible
+   wrong number with no diagnostic, the same failure class as the `^` bug.
+
+   What does NOT fold: `-x.abs()` stays `-(x.abs())` (only a literal folds), `-(7).abs()` stays a unary
+   operation, and a binary minus never reaches the rule (`a -1` and `3 -1.abs()` are subtractions).
+   `--10`, `- -10`, `-2 * 3`, `2 - -3` evaluate as before. Whitespace does not matter: `- 7.abs()` folds too,
+   and the second minus of `--` folds like a lone one, so `--1.abs()` and `- -1.abs()` are both `-((-1).abs())`.
+   The folded literal's location spans the minus and the digits.
+
+   Consequence for the AST: `-42` is a `NumberLiteral(-42.0)`, no longer a `UnaryOperation`. Two tests
+   that pinned the old shape were updated (`CompleteProgramTest`, `AnalyzedAstTest`); the analyzer,
+   interpreter and named-argument checker needed no change.
+
+The parenthesised spellings in this file, `(-8).abs()`, `(-12).semitones()`, `(-6).db()`, keep working and
+mean the same thing; the stdlib docs should show the bare form, `-8.abs()`, since that is the point.
+
+`2.toString()` works end to end already (`StdLibNumberMethodsTest`), which proves the stdlib dispatch
+sees a call on a literal.
+
 ## The implementation itself is trivial
 
 The extension mechanism exists and is proven:
-`klangscript/src/commonMain/kotlin/stdlib/KlangScriptNumberExtensions.kt`
+`klangscript-libs/src/commonMain/kotlin/stdlib/KlangScriptNumberExtensions.kt`
 
 ```kotlin
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
@@ -284,10 +321,14 @@ well in a chain and tier 3 is where the real value is, but it does mean:
 ```javascript
 2.pow(7/12)        // 1.4983…  (was a parse-level silent failure)
 2.5.pow(2)         // 6.25     — dot-digit still lexes as one number
-2.toString()       // "2"      — previously unreachable on a literal
-(-8).abs()         // 8
+2.toString()       // "2"      previously unreachable on a literal (DONE, StdLibNumberMethodsTest)
+-8.abs()           // 8        the minus is part of the literal (parser DONE)
 1.7.round()        // 2
 5.clamp(0, 3)      // 3
+-1.rem(12)         // -1       the negative case for both remainders, see above
+-1.mod(12)         // 11
 ```
 
-Plus a regression guard that `2.5`, `.5`, `1e3`, `1.5e-3` all still lex as single number tokens.
+The parse-level rows and the regression guard (`2.5`, `0.5`, `1e3`, `1.5e-3`, hex/octal/binary all still lex
+as single number tokens) are DONE in `NumberLiteralMethodCallSpec`. The stdlib session adds the value
+rows to `StdLibNumberMethodsTest`.
