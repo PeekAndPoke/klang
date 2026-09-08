@@ -16,6 +16,7 @@ import io.peekandpoke.klang.pages.NotFoundPage
 import io.peekandpoke.klang.pages.SamplesLibraryPage
 import io.peekandpoke.klang.pages.StartPage
 import io.peekandpoke.klang.pages.TourPage
+import io.peekandpoke.klang.pages.VideosPage
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
@@ -68,6 +69,8 @@ object Nav {
 
     val midiPlayground = Static("/midi-playground")
 
+    val videos = Static("/videos")
+
     val credits = Static("/credits")
 
     val tour = Static("/tour")
@@ -103,6 +106,8 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.tutorial) { TutorialPage() }
 
         mount(Nav.midiPlayground) { MidiPlaygroundPage() }
+
+        mount(Nav.videos) { VideosPage() }
 
         mount(Nav.credits) { CreditsPage() }
     }
