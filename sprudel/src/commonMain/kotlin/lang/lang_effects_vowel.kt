@@ -52,6 +52,9 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * mix, so unlike `room` and `delay` there is no per-voice amount. Give a pattern its own vowel by
  * giving it its own orbit.
  *
+ * Vowels: `a`, `e`, `i`, `o`, `u`, the umlauts `ae`/`ä`, `oe`/`ö`, `ue`/`ü`, and the diphthongs
+ * `ei`, `au`, `eu`/`äu`. A prefix picks a voice type, `tenor:a`.
+ *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`vowel(floor = mul(2))`), and the numeric slots read back as `vowel.wet`, `vowel.floor`. `vowel` is a name and has no reader.
  * With no argument at all, the pattern's own values are reinterpreted as `vowel`.
@@ -68,7 +71,7 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * note("c3 e3").s("saw").vowel("o", "0.2 0.9").room(wet = vowel.wet)       // as much reverb as vowel
  * ```
  *
- * @param vowel Vowel name: `a`, `e`, `i`, `o`, `u`. A prefix picks a voice type, `tenor:a`.
+ * @param vowel Vowel name, see the list above. A prefix picks a voice type, `tenor:a`.
  * @param wet How much of the orbit runs through the filter, 0 to 1.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
  *

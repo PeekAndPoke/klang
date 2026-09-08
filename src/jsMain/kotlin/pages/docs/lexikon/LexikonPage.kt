@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.pages.docs.lexikon
 
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
+import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
@@ -371,11 +373,17 @@ class LexikonPage(ctx: NoProps) : PureComponent(ctx) {
                                         borderBottomColor = Color("${laf.textTertiary}33")
                                     }
 
-                                    span {
+                                    // The term is the permalink: DSL KDoc links here, and a reader
+                                    // browsing the list needs the same address to share.
+                                    a(href = router.strategy.render(Nav.manualsLexikonEntry(lexEntry.slug))) {
                                         css {
                                             fontWeight = FontWeight.bold
                                             fontSize = 1.1.rem
                                             color = Color(laf.gold)
+                                        }
+                                        onClick { event ->
+                                            event.preventDefault()
+                                            router.navToUri(Nav.manualsLexikonEntry(lexEntry.slug))
                                         }
                                         +entryTerm
                                     }

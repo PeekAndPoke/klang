@@ -57,7 +57,7 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *
  * @param amount Drive, 0 is clean, 1 is heavy. Higher is allowed.
  * @param shape Transfer curve by name, for example `tube`.
- * @param oversample Oversampling factor, 1, 2 or 4.
+ * @param oversample Oversampling factor: 1, 2, 4 or 8.
  * @param-tool amount SprudelDistortEditor, SprudelDistortSequenceEditor
  * @param-tool shape SprudelDistortShapeEditor, SprudelDistortShapeSequenceEditor
  *
@@ -188,8 +188,8 @@ private fun applyCrush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * s("hh*4").crush("4 12").lpf(crush.amount.mul(500))                      // fewer bits, darker
  * ```
  *
- * @param amount Bit depth, 1 to 16. Fewer bits are harsher.
- * @param oversample Oversampling factor, 1, 2 or 4.
+ * @param amount Bit depth. Fewer bits are harsher, typically 1 to 16.
+ * @param oversample Oversampling factor: 1, 2, 4 or 8.
  *
  * @scope voice
  * @category effects
@@ -287,7 +287,7 @@ private fun applyCoarse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * @param amount Sample rate divisor, 1 is off, higher is coarser.
- * @param oversample Oversampling factor, 1, 2 or 4.
+ * @param oversample Oversampling factor: 1, 2, 4 or 8.
  *
  * @scope voice
  * @category effects

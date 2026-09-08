@@ -60,18 +60,72 @@ class KDocParserTest : StringSpec({
         // The bug this row exists for: tags used to come back as ["room", "wet @scpoe orbit"]
         kdoc.tags shouldBe listOf("room", "wet")
         kdoc.category shouldBe "effects"
-        kdoc.unknownTags shouldBe listOf("scpoe")
+        kdoc.unusableTags shouldBe listOf("scpoe")
     }
 
     "an unknown tag before any known one is reported, not silently dropped" {
         val kdoc = parse("X.\n\n@bogus something\n@category effects")
 
-        kdoc.unknownTags shouldBe listOf("bogus")
+        kdoc.unusableTags shouldBe listOf("bogus")
         kdoc.category shouldBe "effects"
     }
 
     "a known-tag-only doc reports no unknown tags" {
-        parse("X.\n\n@param a A thing.\n@category effects").unknownTags.shouldBeEmpty()
+        parse("X.\n\n@param a A thing.\n@category effects").unusableTags.shouldBeEmpty()
+    }
+
+    "a tag name that merely STARTS with a known one is not swallowed by it" {
+        // @return used to eat @returns, @alias ate @aliases, and @param ate @parameter, landing their
+        // content in the known tag. Matching now stops at a word boundary (review round 1).
+        val kdoc = parse(
+            """
+            X.
+
+            @returns The pattern.
+            @aliases rev, rm
+            @category effects
+            """
+        )
+
+        kdoc.returnDoc shouldBe ""
+        kdoc.aliases.shouldBeEmpty()
+        kdoc.category shouldBe "effects"
+        kdoc.unusableTags shouldBe listOf("returns", "aliases")
+    }
+
+    "a misspelling that starts with @param does not corrupt the tag before it" {
+        // @parameter matched startsWith("@param") but not the @param regex, so currentTag stayed on
+        // the PREVIOUS tag and every following line was appended to it.
+        val kdoc = parse(
+            """
+            X.
+
+            @category effects
+            @parameter wet Send into the reverb.
+              and more prose
+            @tags room
+            """
+        )
+
+        kdoc.category shouldBe "effects"
+        kdoc.tags shouldBe listOf("room")
+        kdoc.unusableTags shouldBe listOf("parameter")
+    }
+
+    "@param-tool still wins over @param" {
+        parse("X.\n\n@param-tool wet SprudelReverbEditor").let {
+            it.paramTools shouldBe mapOf("wet" to listOf("SprudelReverbEditor"))
+            it.params.isEmpty() shouldBe true
+            it.unusableTags.shouldBeEmpty()
+        }
+    }
+
+    "a known tag written with no value is reported, not silently dropped" {
+        val kdoc = parse("X.\n\n@scope\n@category effects")
+
+        kdoc.scope shouldBe null
+        kdoc.category shouldBe "effects"
+        kdoc.unusableTags shouldBe listOf("scope")
     }
 
     // ── the continuation behaviour the unknown-tag branch must not break ─────
@@ -120,7 +174,7 @@ class KDocParserTest : StringSpec({
         KDocParser.parse(null).let {
             it.scope shouldBe null
             it.category shouldBe null
-            it.unknownTags.shouldBeEmpty()
+            it.unusableTags.shouldBeEmpty()
             it.description shouldBe ""
         }
     }

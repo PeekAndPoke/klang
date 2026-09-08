@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.script.types.KlangScope
+import io.peekandpoke.klang.script.annotations.KlangScope
 import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.ui
@@ -27,8 +27,10 @@ import kotlinx.html.title
  * for the ride. The `title` spells that out for whoever hovers it.
  */
 fun FlowContent.klangScopeLabel(laf: KlangLookAndFeel, scope: KlangScope) {
+    // Not laf.good: that is the "Built-in" origin chip's colour, and the two sit side by side in the
+    // popup header, where two identical pills stop carrying any warning at all.
     val background = when (scope) {
-        KlangScope.VOICE -> laf.good
+        KlangScope.VOICE -> laf.accent
         KlangScope.ORBIT, KlangScope.ORBIT_SEND -> laf.gold
         KlangScope.MASTER -> laf.warning
     }

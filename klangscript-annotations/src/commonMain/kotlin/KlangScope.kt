@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.script.types
+package io.peekandpoke.klang.script.annotations
 
 /**
  * Where a setting takes effect: on the one voice, on the orbit's shared bus, or on the master.
@@ -21,10 +21,10 @@ package io.peekandpoke.klang.script.types
  *
  * Set it with `@scope voice|orbit|orbit-send|master` in the KDoc of the primary declaration.
  *
- * It lives in `klangscript-annotations`, in the `types` package it belongs to, because both sides of
- * the docs pipeline need it and this is the only module both can see: the KSP processor reads the tag
- * and emits the constant, `KlangSymbol` (in `klangscript`) carries it, and the editor renders it. One
- * definition, no new module wiring.
+ * It lives in `klangscript-annotations` because both sides of the docs pipeline need it and that is
+ * the only module both can see: the KSP processor reads the tag and emits the constant, `KlangSymbol`
+ * (in `klangscript`) carries it, and the editor renders it. One definition, no new module wiring, and
+ * it keeps its own module's package rather than splitting `script.types` across two modules.
  */
 enum class KlangScope(val tag: String, val label: String) {
     /** Every note carries its own value. Filters, levels, envelopes, distortion, unison. */
@@ -44,7 +44,7 @@ enum class KlangScope(val tag: String, val label: String) {
      * wet orbit stays dry, because only voices with a send greater than zero are summed into the
      * orbit's send buffer (`SendRenderer.kt`), while `size` or `time` are the orbit's for everyone.
      */
-    ORBIT_SEND("orbit-send", "ORBIT BUS + PER-VOICE SEND"),
+    ORBIT_SEND("orbit-send", "ORBIT BUS + SEND"),
 
     /** The whole playback, after every orbit. */
     MASTER("master", "MASTER");

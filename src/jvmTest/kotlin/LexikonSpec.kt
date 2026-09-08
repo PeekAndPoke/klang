@@ -27,9 +27,10 @@ class LexikonSpec : StringSpec({
         allLexikonEntries.forEach { entry ->
             withClue(entry.term) {
                 entry.slug.isNotBlank() shouldBe true
-                entry.slug shouldBe entry.slug.lowercase()
                 entry.slug.startsWith("-") shouldBe false
                 entry.slug.endsWith("-") shouldBe false
+                // A slug goes in a URL, so it may only hold what a URL can carry unescaped
+                entry.slug.all { it in 'a'..'z' || it in '0'..'9' || it == '-' } shouldBe true
             }
         }
     }
@@ -60,17 +61,19 @@ class LexikonSpec : StringSpec({
             .filter { it.isDirectory }
             .flatMap { it.walkTopDown().filter { file -> file.extension == "kt" } }
 
-        withClue("no sources scanned — the paths moved, this spec would pass vacuously") {
-            sources.isNotEmpty() shouldBe true
+        val found = sources.flatMap { file ->
+            linkPattern.findAll(file.readText()).map { file.path to it.groupValues[1] }.toList()
         }
 
-        val broken = sources.flatMap { file ->
-            linkPattern.findAll(file.readText())
-                .map { it.groupValues[1] }
-                .filter { slug -> lexikonEntryBySlug(slug) == null }
-                .map { slug -> "${file.path}: /manuals/lexikon/$slug" }
-                .toList()
+        // Guard the guard: if the links are gone, or the paths moved, or the link syntax changed,
+        // this row must fail rather than quietly pass with nothing to check.
+        withClue("no /manuals/lexikon/ links found in the DSL sources, so this row checked nothing") {
+            found.isNotEmpty() shouldBe true
         }
+
+        val broken = found
+            .filter { (_, slug) -> lexikonEntryBySlug(slug) == null }
+            .map { (path, slug) -> "$path: /manuals/lexikon/$slug" }
 
         broken.shouldBeEmpty()
     }

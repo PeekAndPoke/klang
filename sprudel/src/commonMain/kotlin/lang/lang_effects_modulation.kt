@@ -36,8 +36,9 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * The orbit phaser: rate, depth, centre, sweep and dry floor.
  *
  * One sweep over the summed [orbit bus](/manuals/lexikon/orbit-bus), the DAW-insert model, so every
- * knob belongs to the orbit's owning voice: a voice that sets phaser knobs without owning its orbit
- * is not phased at all. Route it to its own orbit to give it its own phaser.
+ * knob belongs to the orbit's owning voice: with the built-in pipelines, a voice that sets phaser
+ * knobs without owning its orbit is not phased at all. Route it to its own orbit to give it its own
+ * phaser. (A custom pipeline that adds a phaser stage does get a per-voice pass from its own knobs.)
  *
  * The dry signal stays untouched by default (`floor` is 1), so `wet` ADDS the swept notch on top
  * rather than crossfading into it. Lower `floor` to turn `wet` back into a crossfade.
@@ -59,7 +60,7 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * @param rate LFO rate in Hz.
- * @param wet Depth, 0 to 1. The stage is built only above 0.
+ * @param wet Depth, 0 to 1. Engages above 0.01.
  * @param center Centre frequency of the sweep, Hz.
  * @param sweep Sweep range around the centre, Hz.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
@@ -245,8 +246,8 @@ private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<An
  *
  * @param depth Depth, 0 to 1. The stage is built only above 0.
  * @param sync Rate in Hz.
- * @param shape LFO waveform by name: `sine`, `triangle`, `square`.
- * @param skew Waveform skew, 0 to 1.
+ * @param shape LFO waveform: `sine`, `triangle`, `square`, `sawtooth`, `ramp`.
+ * @param skew Waveform skew, -1 to 1, 0 is symmetric.
  * @param phase LFO start phase, 0 to 1.
  * @param-tool depth SprudelTremoloEditor, SprudelTremoloSequenceEditor
  * @param-tool shape SprudelWaveformEditor, SprudelWaveformSequenceEditor
@@ -305,6 +306,7 @@ fun PatternMapperFn.tremolo(
  * The `tremolo` object: `tremolo(...)` sets the slots, and each numeric slot reads back as a child,
  * `tremolo.depth`, `tremolo.sync`, `tremolo.skew`, `tremolo.phase`.
  *
+ * @scope voice
  * @category effects
  * @tags tremolo, accessor
  */

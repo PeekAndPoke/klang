@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.script.types
 
+import io.peekandpoke.klang.script.annotations.KlangScope
+
 /**
  * A documented KlangScript symbol (function, method, property, etc.).
  *

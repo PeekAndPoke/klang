@@ -51,7 +51,8 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * reverb by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
  *
  * A bare `room(0.4)` is silent. The reverb only runs with a room to run in, so pair the send with
- * `size` or `fade`.
+ * `size` or `fade`. `fade` is a 0 to 1 scale rather than a time: 0 is roughly 0.7 s of tail, 1 is
+ * roughly 12.5 s.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`room(size = mul(2))`), and the numeric slots read back as `room.wet`, `room.size`, `room.fade`, `room.lowpass`, `room.dim`.
@@ -71,7 +72,7 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *
  * @param wet Send into the orbit reverb, 0 to 1. Per voice.
  * @param size Room size, about 0 to 10. Orbit-wide.
- * @param fade Tail length, 0 to 1. Overrides `size`. Orbit-wide.
+ * @param fade Tail scale, 0 to 1, not a time. Overrides `size`. Orbit-wide.
  * @param lowpass Lowpass on the tail, Hz. Orbit-wide.
  * @param dim Damping frequency, Hz. Reserved, not read yet.
  * @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
@@ -234,10 +235,11 @@ private fun applyIResponse(source: SprudelPattern, args: List<SprudelDslArg<Any?
 /**
  * Sets the impulse response sample name for convolution reverb on this pattern.
  *
- * Uses a recorded impulse response to simulate the acoustics of a real space. The value
- * is the name of an IR sample loaded in the audio engine.
+ * **Reserved, not read yet.** The name is carried all the way to the orbit's reverb, but no
+ * convolution path exists in the engine, so setting it changes nothing you can hear. It is here so
+ * songs can be written against it once the engine grows one.
  *
- * @param name The name of the impulse response sample.
+ * @param name IR sample name. Reserved, not read yet.
  * @return A new pattern with the impulse response applied.
  *
  * ```KlangScript(Playable)
@@ -260,7 +262,7 @@ fun SprudelPattern.iresponse(name: PatternLike, callInfo: CallInfo? = null): Spr
 /**
  * Parses this string as a pattern and sets the impulse response sample for convolution reverb.
  *
- * @param name The name of the impulse response sample.
+ * @param name IR sample name. Reserved, not read yet.
  *
  * ```KlangScript(Playable)
  * "c3 e3 g3".iresponse("church").note()   // church reverb IR on string pattern
@@ -275,7 +277,7 @@ fun String.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPatt
  *
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
  *
- * @param name The name of the impulse response sample.
+ * @param name IR sample name. Reserved, not read yet.
  * @return A [PatternMapperFn] that sets the impulse response.
  *
  * ```KlangScript(Playable)
@@ -297,7 +299,7 @@ fun iresponse(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = 
 /**
  * Creates a chained [PatternMapperFn] that sets the impulse response after the previous mapper.
  *
- * @param name The name of the impulse response sample.
+ * @param name IR sample name. Reserved, not read yet.
  * @return A new [PatternMapperFn] chaining this impulse response after the previous mapper.
  *
  * ```KlangScript(Playable)
@@ -315,7 +317,7 @@ fun PatternMapperFn.iresponse(name: PatternLike, callInfo: CallInfo? = null): Pa
 /**
  * Alias for [iresponse]. Sets the impulse response sample name for convolution reverb on this pattern.
  *
- * @param name The name of the impulse response sample.
+ * @param name IR sample name. Reserved, not read yet.
  * @return A new pattern with the impulse response applied.
  *
  * ```KlangScript(Playable)
@@ -337,7 +339,7 @@ fun SprudelPattern.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPat
 /**
  * Alias for [iresponse]. Parses this string as a pattern and sets the impulse response sample.
  *
- * @param name The name of the impulse response sample.
+ * @param name IR sample name. Reserved, not read yet.
  *
  * ```KlangScript(Playable)
  * "c3 e3 g3".ir("church").note()   // church reverb IR on string pattern
@@ -350,7 +352,7 @@ fun String.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the impulse response sample. Alias for [iresponse].
  *
- * @param name The name of the impulse response sample.
+ * @param name IR sample name. Reserved, not read yet.
  * @return A [PatternMapperFn] that sets the impulse response.
  *
  * ```KlangScript(Playable)
@@ -368,7 +370,7 @@ fun ir(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> 
 /**
  * Creates a chained [PatternMapperFn] that sets the impulse response (alias for iresponse) after the previous mapper.
  *
- * @param name The name of the impulse response sample.
+ * @param name IR sample name. Reserved, not read yet.
  * @return A new [PatternMapperFn] chaining this impulse response after the previous mapper.
  *
  * ```KlangScript(Playable)

@@ -55,7 +55,8 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  *
  * Materials: woods `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`; bowed string
  * `violin`; voice `croon`; pipe and glass `tube`, `glass`; skin `membrane`; metals `brass`, `steel`,
- * `bell`. `none` removes the body. Two names blend (`body("wood glass")`).
+ * `bell`. `none` removes the body. One name at a time: `body("wood glass")` is mini-notation, so it
+ * is wood for the first half of the cycle and glass for the second, not a blend of the two.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`body(floor = mul(2))`), and the numeric slots read back as `body.wet`, `body.floor`. `material` is a name and has no reader.
@@ -66,14 +67,14 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").body("wood glass", 0.7).body(wet = mul("<1 0.5>"))   // half as boxy every other bar
+ * note("c3 e3").s("saw").body("wood glass", 0.7).body(wet = mul("<1 0.5>"))   // wood then glass, half as boxy every other bar
  * ```
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").body("tube", "0.2 0.9").room(wet = body.wet)      // as much reverb as body
  * ```
  *
- * @param material Material name, or two to blend. See the list above.
+ * @param material Material name. See the list above.
  * @param wet How much of the orbit runs through the body, 0 to 1.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
  * @param-tool material SprudelBodyEditor, SprudelBodySequenceEditor

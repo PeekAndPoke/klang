@@ -71,7 +71,7 @@ private fun applyUnisonPan(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * note("c3 e3").s("supersaw").unison("3 7", 0.2).gain(unison.voices.mul(0.1))   // more voices, louder
  * ```
  *
- * @param voices Voices, 1 to 16.
+ * @param voices Voices. Typically 1 to 16.
  * @param spread Detune spread in semitones.
  * @param pan Stereo spread, 0 to 1. Reserved, not read yet.
  *
@@ -180,26 +180,27 @@ private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 }
 
 /**
- * Sets the oscillator density for supersaw, or the impulse density for the dust generator.
+ * Sets the impulse rate of the `dust` generator.
  *
- * For supersaw it controls how tightly packed the oscillators are; for noise generators such as
- * `dust` it sets the impulse rate: the value is 0 to 1 and scales a 200 per second ceiling, so 0.2
- * is 40 events per second. `crackle` is a chaotic generator now, driven by `chaos`, not by `density`.
+ * The value is 0 to 1 and scales a 200 per second ceiling, so 0.2 is 40 impulses per second.
+ *
+ * `dust` is the only generator that reads it: the super oscillators take `voices`, `spread` and
+ * `analog`, so reach for `spread` to tighten a supersaw, and `crackle` is driven by `chaos`.
  *
  * ```KlangScript(Playable)
- * note("a").s("dust").density(0.2)   // 40 noise events per second
+ * note("a").s("dust").density(0.2)   // 40 impulses per second
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3").s("supersaw").unison(7).density("<0 0.5 1 2>")  // tight supersaw
+ * note("a").s("dust").density("<0.1 0.6>")   // sparse, then busy
  * ```
  *
- * @param amount The oscillator density.
+ * @param amount Impulse rate for `dust`, 0 to 1.
  *
  * @alias d
  * @scope voice
  * @category dynamics
- * @tags density, d, supersaw, dust, noise
+ * @tags density, d, dust, noise
  */
 @KlangScript.Function
 fun SprudelPattern.density(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -261,7 +262,7 @@ object density : FieldAccessor({ it.oscParams?.get("density") }) {
  * Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3").s("supersaw").apply(unison(7).density(0.5))  // unison + density chained
+ * note("a").s("dust").apply(gain(0.8).density(0.5))  // gain + density chained
  * ```
  *
  * @param amount The oscillator density.
@@ -271,22 +272,22 @@ fun PatternMapperFn.density(amount: PatternLike? = null, callInfo: CallInfo? = n
     this.chain { p -> p.density(amount, callInfo) }
 
 /**
- * Alias for [density]. Sets the oscillator density for supersaw or impulse density for dust.
+ * Alias for [density]. Sets the impulse rate of the `dust` generator.
  *
  * ```KlangScript(Playable)
- * note("a").s("dust").d(0.2)   // 40 noise events per second
+ * note("a").s("dust").d(0.2)   // 40 impulses per second
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3").s("supersaw").unison(7).d(0.5)   // tight supersaw
+ * note("a").s("dust").d("<0.1 0.6>")   // sparse, then busy
  * ```
  *
- * @param amount The oscillator density.
+ * @param amount Impulse rate for `dust`, 0 to 1.
  *
  * @alias density
  * @scope voice
  * @category dynamics
- * @tags d, density, supersaw, dust, noise
+ * @tags d, density, dust, noise
  */
 @KlangScript.Function
 fun SprudelPattern.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -320,7 +321,7 @@ val d: density = density
  * previous mapper.
  *
  * ```KlangScript(Playable)
- * note("c3").s("supersaw").apply(unison(7).d(0.5))  // unison + density chained
+ * note("a").s("dust").apply(gain(0.8).d(0.5))  // gain + density chained
  * ```
  *
  * @param amount The oscillator density.

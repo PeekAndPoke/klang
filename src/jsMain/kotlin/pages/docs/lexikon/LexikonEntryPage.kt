@@ -67,7 +67,7 @@ class LexikonEntryPage(ctx: Ctx<Props>) : Component<LexikonEntryPage.Props>(ctx)
             css { maxWidth = 52.rem }
 
             // SPA navigation, so coming back from a KDoc link does not reload the whole app
-            a(href = Nav.manualsLexikon.pattern) {
+            a(href = router.strategy.render(Nav.manualsLexikon())) {
                 css { color = Color(laf.textSecondary); cursor = Cursor.pointer }
                 onClick { event ->
                     event.preventDefault()

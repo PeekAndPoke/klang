@@ -47,13 +47,14 @@ data class ParsedKDoc(
     /** @scope tag (custom): where the thing runs, see KlangSymbol.scope */
     val scope: String?,
     /**
-     * Tags that are written like a tag but that this parser does not know.
+     * Tags this parser could not use: an unknown name, or a known one written with no value.
      *
-     * They are NOT folded into the preceding tag's content (which is what used to happen, silently:
-     * `@tags room, wet` followed by a misspelled `@scpoe orbit` produced the tag "wet @scpoe orbit").
-     * The processor warns about them, so a typo shows up at build time instead of in the docs.
+     * An unknown tag is NOT folded into the preceding tag's content, which is what used to happen,
+     * silently: `@tags room, wet` followed by a misspelled `@scpoe orbit` produced the tag
+     * "wet @scpoe orbit". The processor warns about everything collected here, so a typo shows up at
+     * build time instead of in the docs.
      */
-    val unknownTags: List<String>,
+    val unusableTags: List<String>,
 )
 
 /**
@@ -63,7 +64,7 @@ data class ParsedKDoc(
  * (@category, @tags, @alias, @scope, @param-tool) and
  * KlangScript fenced code blocks as samples.
  *
- * A tag this parser does not know is collected into [ParsedKDoc.unknownTags] instead of being
+ * A tag this parser cannot use is collected into [ParsedKDoc.unusableTags] instead of being
  * appended to whatever tag came before it.
  */
 object KDocParser {
@@ -80,7 +81,7 @@ object KDocParser {
                 aliases = emptyList(),
                 paramTools = emptyMap(),
                 scope = null,
-                unknownTags = emptyList(),
+                unusableTags = emptyList(),
             )
         }
 
@@ -150,7 +151,7 @@ object KDocParser {
         var returnDoc = ""
         var category: String? = null
         var scope: String? = null
-        val unknownTags = mutableListOf<String>()
+        val unusableTags = mutableListOf<String>()
         val tags = mutableListOf<String>()
         val aliases = mutableListOf<String>()
         val paramTools = mutableMapOf<String, MutableList<String>>()
@@ -163,7 +164,12 @@ object KDocParser {
             val content = currentContent.toString()
                 .trim()
                 .replace(Regex("\\s+"), " ")
-            if (content.isEmpty()) return
+
+            if (content.isEmpty()) {
+                // `@scope` with nothing after it would otherwise vanish: no value, no badge, no warning
+                unusableTags.add(tag.substringBefore(':'))
+                return
+            }
 
             when {
                 tag.startsWith("param:") -> {
@@ -198,10 +204,17 @@ object KDocParser {
             }
         }
 
+        // A tag matches only when the name ENDS there: `@return` must not swallow `@returns`, and
+        // `@param` must not swallow `@parameter`. Without this, a typo is parsed as its nearest known
+        // tag and its content silently lands in that tag (review round 1); `@param-tool` still needs
+        // to be tested before `@param`, since `-` is not a boundary character.
+        fun String.isTag(name: String): Boolean =
+            this == "@$name" || startsWith("@$name ") || startsWith("@$name\t")
+
         for (line in tagLines) {
             val t = line.trim()
             when {
-                t.startsWith("@param-tool") -> {
+                t.isTag("param-tool") -> {
                     saveCurrentTag()
                     val match = Regex("@param-tool\\s+(\\w+)\\s*(.*)").matchEntire(t)
                     if (match != null) {
@@ -210,7 +223,7 @@ object KDocParser {
                     }
                 }
 
-                t.startsWith("@param") -> {
+                t.isTag("param") -> {
                     saveCurrentTag()
                     val match = Regex("@param\\s+(\\w+)\\s*(.*)").matchEntire(t)
                     if (match != null) {
@@ -219,31 +232,31 @@ object KDocParser {
                     }
                 }
 
-                t.startsWith("@return") -> {
+                t.isTag("return") -> {
                     saveCurrentTag()
                     currentTag = "return"
                     currentContent = StringBuilder(t.removePrefix("@return").trim())
                 }
 
-                t.startsWith("@category") -> {
+                t.isTag("category") -> {
                     saveCurrentTag()
                     currentTag = "category"
                     currentContent = StringBuilder(t.removePrefix("@category").trim())
                 }
 
-                t.startsWith("@tags") -> {
+                t.isTag("tags") -> {
                     saveCurrentTag()
                     currentTag = "tags"
                     currentContent = StringBuilder(t.removePrefix("@tags").trim())
                 }
 
-                t.startsWith("@scope") -> {
+                t.isTag("scope") -> {
                     saveCurrentTag()
                     currentTag = "scope"
                     currentContent = StringBuilder(t.removePrefix("@scope").trim())
                 }
 
-                t.startsWith("@alias") -> {
+                t.isTag("alias") -> {
                     saveCurrentTag()
                     currentTag = "alias"
                     currentContent = StringBuilder(t.removePrefix("@alias").trim())
@@ -256,7 +269,7 @@ object KDocParser {
                     saveCurrentTag()
                     currentTag = null
                     currentContent = StringBuilder()
-                    unknownTags.add(t.substringBefore(' ').removePrefix("@"))
+                    unusableTags.add(t.substringBefore(' ').removePrefix("@"))
                 }
 
                 else -> {
@@ -278,7 +291,7 @@ object KDocParser {
             aliases = aliases,
             paramTools = paramTools,
             scope = scope,
-            unknownTags = unknownTags,
+            unusableTags = unusableTags,
         )
     }
 }

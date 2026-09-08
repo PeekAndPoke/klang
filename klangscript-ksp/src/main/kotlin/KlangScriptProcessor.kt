@@ -25,7 +25,7 @@ import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.symbol.Nullability
 import com.google.devtools.ksp.validate
 import io.peekandpoke.klang.script.annotations.KlangScript
-import io.peekandpoke.klang.script.types.KlangScope
+import io.peekandpoke.klang.script.annotations.KlangScope
 
 /**
  * KSP processor that generates registration and documentation code
@@ -534,6 +534,7 @@ class KlangScriptProcessor(
         appendLine("package $packageName")
         appendLine()
         appendLine("import io.peekandpoke.klang.script.KlangScriptLibrary")
+        appendLine("import io.peekandpoke.klang.script.annotations.KlangScope")
         appendLine("import io.peekandpoke.klang.script.ast.CallInfo")
         appendLine("import io.peekandpoke.klang.script.builder.*")
         appendLine("import io.peekandpoke.klang.script.runtime.*")
@@ -1334,7 +1335,7 @@ class KlangScriptProcessor(
                 appendLine("        category = \"$category\",")
                 appendLine("        tags = listOf($tagsString),")
                 appendLine("        aliases = listOf($aliasesString),")
-                append(scopeArgLine(propName, listOf(kdoc)))
+                append(scopeArgLine(propName, variants.map { KDocParser.parse(it.prop.docString) }))
                 appendLine("        origin = KlangSymbol.Origin.Library(\"$libraryName\"),")
                 appendLine("        variants = listOf(")
                 variants.forEachIndexed { vIdx, doc ->
@@ -1388,11 +1389,20 @@ class KlangScriptProcessor(
      * folded into the previous tag's content).
      */
     private fun scopeArgLine(symbolName: String, kdocs: List<ParsedKDoc>): String {
-        kdocs.flatMap { it.unknownTags }.distinct().forEach { unknown ->
-            logger.warn("KlangScript docs: unknown KDoc tag '@$unknown' on '$symbolName' (ignored)")
+        kdocs.flatMap { it.unusableTags }.distinct().forEach { unusable ->
+            logger.warn("KlangScript docs: KDoc tag '@$unusable' on '$symbolName' is unknown or has no value (ignored)")
         }
 
-        val tag = kdocs.firstNotNullOfOrNull { it.scope } ?: return ""
+        val declared = kdocs.mapNotNull { it.scope }.distinct()
+
+        if (declared.size > 1) {
+            logger.warn(
+                "KlangScript docs: '$symbolName' declares conflicting @scope values $declared;" +
+                        " using '${declared.first()}'"
+            )
+        }
+
+        val tag = declared.firstOrNull() ?: return ""
         val scope = KlangScope.ofTag(tag)
 
         if (scope == null) {

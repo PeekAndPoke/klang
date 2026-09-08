@@ -159,9 +159,22 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                             }
                         }
 
-                        symbol.origin?.let { origin ->
-                            noui.item {
-                                when (val origin = origin) {
+                        noui.item {
+                            when (val origin = symbol.origin) {
+                                    // No origin recorded is still built-in: a registered object and a
+                                    // blank library name both arrive here (KlangScriptLibrary)
+                                    null -> {
+                                        ui.label {
+                                            css {
+                                                backgroundColor = Color("${laf.good} !important")
+                                                color = Color("#222 !important")
+                                            }
+
+                                            icon.book()
+                                            +"Built-in"
+                                        }
+                                    }
+
                                     is KlangSymbol.Origin.Library -> {
                                         if (origin.name.isBlank()) {
                                             ui.label {
@@ -198,7 +211,6 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                                         }
                                     }
                                 }
-                            }
                         }
                     }
                 }

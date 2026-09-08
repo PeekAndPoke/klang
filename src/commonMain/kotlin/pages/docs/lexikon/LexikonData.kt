@@ -81,8 +81,10 @@ data class LexikonEntry(
      * every link to it. `LexikonSpec` guards both halves, that slugs stay unique and that every slug
      * a KDoc links to still exists.
      */
-    val slug: String get() = term.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
+    val slug: String = term.lowercase().replace(slugSeparators, "-").trim('-')
 }
+
+private val slugSeparators = Regex("[^a-z0-9]+")
 
 /** The entry with this [slug], or null. */
 fun lexikonEntryBySlug(slug: String): LexikonEntry? = allLexikonEntries.firstOrNull { it.slug == slug }

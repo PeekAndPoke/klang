@@ -217,8 +217,10 @@ private fun applyPenvAnchor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * The pitch envelope: depth in semitones, its attack, decay and release, curve and sustain anchor.
  *
  * Pitch starts `amount` semitones away and glides home along the envelope: 12 is an octave up,
- * -12 an octave down, 0 no pitch envelope at all. A curve of 1 is linear, below 1 concave (a fast
- * start), above 1 convex (a slow start); an anchor of 0 returns the note to its own pitch.
+ * -12 an octave down, 0 no pitch envelope at all. An anchor of 0 returns the note to its own pitch.
+ *
+ * `curve` and `release` are reserved: the engine stores them but its pitch ramps are linear and have
+ * no release phase, so neither changes what you hear yet.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`penv(attack = mul(2))`), and the numeric slots read back as `penv.amount`, `penv.attack`, `penv.decay`, `penv.release`, `penv.curve`, `penv.anchor`.
@@ -239,8 +241,8 @@ private fun applyPenvAnchor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * @param amount Depth in semitones.
  * @param attack Attack in seconds.
  * @param decay Decay in seconds.
- * @param release Release in seconds.
- * @param curve Curve shape, 1 is linear.
+ * @param release Reserved, not read yet.
+ * @param curve Reserved, not read yet.
  * @param anchor Sustain pitch offset, -1 to 1.
  *
  * @scope voice
@@ -439,7 +441,7 @@ private fun applyAccelerate(source: SprudelPattern, args: List<SprudelDslArg<Any
  * s("hh").accelerate("<0 -24 24>")   // alternate: no ramp, down, up per cycle
  * ```
  *
- * @param semitones Pitch bend in semitones, -24 to 24. Default 0.
+ * @param semitones Pitch bend in semitones. Typically -24 to 24.
  *
  * @scope voice
  * @category tonal
