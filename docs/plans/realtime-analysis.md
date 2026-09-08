@@ -383,3 +383,84 @@ August 2026, where the maintainer iterated the mix against offline scripts and a
 reviewer. The lesson that shaped this plan is theirs: a small set of integrated, pink-referenced,
 cycle-windowed measurements did nearly all the work, and every one of them can run live, most of
 them better than offline, because the engine knows what a WAV file does not.
+
+## 11. Analytics that travel with a tag, and the voice inspector
+
+Added 2026-09-08 from the design conversation that followed the first version of this plan. The
+maintainer's wish: when a chain carries `.tag("lead")`, every reading along the DSP path of the
+voices carrying that tag is available, for example how hard the filters and compressors work. The
+bigger wish: display the voice's graph and show the waveform at every step.
+
+Three tiers, cheapest first. Each one is useful alone.
+
+### 11.1 Tag scalars, always on
+
+Voices carry `tags` across the wire today (`VoiceData.tags`). Each tag resolves to a small integer
+slot when the voice is scheduled, so the hot path indexes an array and never hashes a string.
+
+Every stage that shapes a voice already holds the number that describes its work. The additions
+are reads, not computations:
+
+| Stage                      | Reading per block                                                  | Aggregation per tag |
+|----------------------------|--------------------------------------------------------------------|---------------------|
+| filter (lpf, hpf, bpf, notch) | effective cutoff after envelope and tracking; RMS in and out (the dB removed) | mean cutoff, energy sums |
+| voice compressor           | gain reduction                                                     | max and mean        |
+| envelope                   | current stage and level                                            | count per stage     |
+| voice output               | RMS, peak                                                          | energy sum, max     |
+
+A dozen doubles per voice per block, summed into the tag's slot, no allocation. They ride the
+`Analysis` message of section 5.5 as a `tags: List<TagScalars>` field.
+
+Orbit-level effects (the cylinder's compressor, ducking, phaser, room, delay) belong to the orbit,
+not to a tag. Their readings are published per orbit and joined to tags on the frontend through
+the voice-to-orbit map. One reading, one owner.
+
+### 11.2 Probe nodes, author-placed
+
+The natural DSL surface for "measure here" is a node in the ignitor graph: a pass-through that
+publishes RMS and peak under a name, on both doors (`probe("pre-filter")` in KlangScript, the same
+in Kotlin, with a door-parity spec). The author chooses the point of interest instead of the
+engine guessing. It is a plain node, one block pass, and the optimiser treats it as a wall it does
+not cross, which is also the right semantics: a probe pins the reading to that exact point.
+
+### 11.3 The voice inspector, on demand
+
+The graph with a waveform at every step is affordable when it is scoped to one voice under
+inspection. A voice graph of twenty nodes at 128 frames per block is 10 KB per block and under
+4 MB per second; twenty small scopes at 30 frames per second are nothing for a canvas. The
+worklet copies each node's output block only while inspect mode targets that voice, and posts
+the copies as one transferable per block.
+
+**Decision (maintainer, 2026-09-08): the inspector shows the optimised graph, not the authored
+one. A small hint of which nodes were fused is a bonus, not a requirement.**
+
+What makes that decision cheap:
+
+- The optimiser (`audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt`) is pure common code,
+  `IgnitorDsl -> IgnitorDsl`, and the engine runs it at registration
+  (`IgnitorRegistry.register`). The frontend holds the same authored tree and can run the same
+  function, so it draws exactly the graph the engine plays without asking the engine for
+  structure. `IgnitorDslWalk` gives the children of every node for the drawing.
+- Node addressing across the wire cannot use object identity, because the frontend's optimised
+  tree and the engine's are structurally equal but different instances. A post-order index over
+  the optimised tree, with shared subtrees numbered once (the optimiser already keeps sharing
+  intact, so the graph is a DAG and the numbering must memoise), names each node with one `Int`
+  on both sides.
+- The fusion hint is nearly free today: the only rewrite is serial filter fusion, and a fused
+  `Eq` node carries one section per authored filter. "This Eq was three filters" is the section
+  count. Later rewrites (the catalogue in `docs/tasks/ignitor-optimizer-followups.md`) would each
+  decide whether to keep a provenance note; none is required.
+- The optimiser's kill switch (`IgnitorDsl.OptimizerHint`) gives the inspector an authored-graph
+  view for free when someone wants to compare by eye.
+
+Cost when the inspector is off: zero, the copy loop is behind one flag. Cost when on: one
+`arraycopy` per node per block for one voice.
+
+### 11.4 Phasing addendum
+
+| Phase | Deliverable                                                   | Depends on |
+|-------|---------------------------------------------------------------|------------|
+| 1b    | tag slots and the tag scalars in the `Analysis` message       | 1          |
+| 2b    | tag rows in the level strip and the tonal balance workbench   | 2, 1b      |
+| 3b    | probe node on both doors, published like a tag scalar         | 1b         |
+| 6b    | voice inspector: optimised graph, one scope per node, fusion hint as bonus | 0, 3, 3b |
