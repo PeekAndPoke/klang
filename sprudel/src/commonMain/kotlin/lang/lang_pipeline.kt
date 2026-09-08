@@ -60,6 +60,7 @@ private fun applyPipeline(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * note("c3 e3 g3").s("supersaw").distort(0.8).pipeline("pedal")   // dynamics-responsive distortion
  * ```
  *
+ * @scope voice
  * @category effects
  * @tags pipeline, topology, modern, pedal, motor
  */
@@ -90,6 +91,7 @@ fun String.pipeline(name: PatternLike, callInfo: CallInfo? = null): SprudelPatte
  * note("c3 e3 g3").apply(pipeline("pedal"))   // selects pedal pipeline via mapper
  * ```
  *
+ * @scope voice
  * @category effects
  * @tags pipeline, topology, modern, pedal, motor
  */

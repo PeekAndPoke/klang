@@ -34,6 +34,11 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 /**
  * The orbit delay: send, time, feedback and the feedback cap.
  *
+ * One delay line per orbit, so `time`, `feedback` and `cap` are set once for everyone by the
+ * orbit's owning voice. `wet` is the exception: it is a per-voice
+ * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its
+ * own delay by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
+ *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`delay(time = mul(2))`), and the numeric slots read back as `delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`.
  * With no argument at all, the pattern's own values are reinterpreted as `wet`.
@@ -50,14 +55,15 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * s("sd sd").delay("0.1 0.4", 0.25).room(wet = delay.wet)                  // as much reverb as delay
  * ```
  *
- * @param wet Delay send, 0 to 1.
- * @param time Delay time in seconds (`pure(1/8).div(cps)` for tempo sync).
- * @param feedback Feedback, 0 to 1; above 1 builds up.
- * @param cap Feedback cap, the ceiling the repeats may not exceed.
+ * @param wet Send into the orbit delay, 0 to 1. Per voice.
+ * @param time Delay time in seconds. Orbit-wide.
+ * @param feedback Feedback, 0 to 1. Above 1 builds up. Orbit-wide.
+ * @param cap Ceiling the repeats may not exceed. Orbit-wide.
  * @param-tool wet SprudelDelayEditor, SprudelDelaySequenceEditor
  * @param-tool time SprudelDelayTimeEditor, SprudelDelayTimeSequenceEditor
  * @param-tool feedback SprudelDelayFeedbackEditor, SprudelDelayFeedbackSequenceEditor
  *
+ * @scope orbit-send
  * @category effects
  * @tags delay, wet, time, feedback, cap
  */
@@ -107,6 +113,7 @@ fun PatternMapperFn.delay(
  * The `delay` object: `delay(...)` sets the slots, and each numeric slot reads back as a child,
  * `delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`.
  *
+ * @scope orbit-send
  * @category effects
  * @tags delay, accessor
  */

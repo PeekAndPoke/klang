@@ -57,10 +57,10 @@ private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
 /**
- * Sets the four ADSR envelope parameters. Each parameter is independent and patternable;
- * omitted parameters keep their previous values.
+ * The amplitude envelope: attack, decay, sustain and release.
  *
- * attack/decay/release are seconds, sustain is a 0-1 level.
+ * The envelope shapes the loudness of one note [per voice](/manuals/lexikon/voice). Attack, decay
+ * and release are times in seconds, sustain is a level from 0 to 1.
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").s("sine").adsr(0.01, 0.2, 0.7, 0.5)          // standard ADSR
@@ -70,8 +70,9 @@ private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * note("c3*4").adsr("<0.01 0.5>", "<0.1 0.5>", "<0.5 0.8>", "<0.2 1.0>")  // alternate envelopes
  * ```
  *
- * A mapper on a slot applies to that slot and leaves the others alone; the slots can be read
- * back as `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release`:
+ * Every slot is independent and patternable: an omitted slot keeps its value, a mapper on a slot
+ * applies to that slot alone, and the slots read back as `adsr.attack`, `adsr.decay`,
+ * `adsr.sustain`, `adsr.release`.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").adsr(0.01, 0.2, 0.7, 0.5).adsr(attack = mul("1 10"))   // the second note swells
@@ -81,12 +82,13 @@ private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * note("c3 e3").s("saw").adsr("0.05 0.3", 0.2, 0.7).adsr(release = adsr.attack)   // symmetric envelope
  * ```
  *
- * @param attack Attack time in seconds — how quickly the note rises from silence to full volume.
- * @param decay Decay time in seconds — how quickly the volume falls from peak to sustain level.
- * @param sustain Sustain level (0–1) — the volume held while the note is pressed.
- * @param release Release time in seconds — how long the note takes to fade to silence after note-off.
+ * @param attack Attack in seconds, silence to full volume.
+ * @param decay Decay in seconds, peak down to the sustain level.
+ * @param sustain Sustain level, 0 to 1, held while the note is on.
+ * @param release Release in seconds, the fade after note-off.
  * @param-tool attack SprudelAdsrEditor, SprudelAdsrSequenceEditor
  *
+ * @scope voice
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope
  */
@@ -115,7 +117,7 @@ fun SprudelPattern.adsr(
  *
  * @param attack Attack time in seconds.
  * @param decay Decay time in seconds.
- * @param sustain Sustain level (0–1).
+ * @param sustain Sustain level, 0 to 1.
  * @param release Release time in seconds.
  */
 @KlangScript.Function
@@ -143,6 +145,7 @@ fun String.adsr(
  * note("c3 e3").s("saw").adsr("0.05 0.3", 0.2, 0.7, 0.4).lpf(adsr.attack.mul(8000))   // slower attack, brighter
  * ```
  *
+ * @scope voice
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope, accessor
  */
@@ -175,7 +178,7 @@ object adsr {
      *
      * @param attack Attack time in seconds.
      * @param decay Decay time in seconds.
-     * @param sustain Sustain level (0–1).
+     * @param sustain Sustain level, 0 to 1.
      * @param release Release time in seconds.
      */
     @KlangScript.Invoke
@@ -235,31 +238,31 @@ private fun applyReleaseCurve(source: SprudelPattern, args: List<SprudelDslArg<A
 }
 
 /**
- * Sets per-stage ADSR shape curves. Each stage is an independent parameter; omitted
- * stages keep their current curve — e.g. `adsrCurves(release = "scurve")` changes only
- * the release.
+ * Sets the shape of each ADSR stage. Each stage is independent; an omitted stage keeps its
+ * current curve, so `adsrCurves(release = "scurve")` changes only the release.
  *
  * Available curves (aliases in parentheses):
- *  - `linear` (`lin`) — straight ramp.
- *  - `square` (`sq`, `quad`, `quadratic`) — convex: slow-in rise / fast initial drop, long tail.
- *  - `cube` (`cb`, `cubic`) — a more pronounced `square`.
- *  - `scurve` (`s`, `smooth`, `sigmoid`) — ease-in-out, **zero slope at both ends**: no onset
+ *  - `linear` (`lin`): straight ramp.
+ *  - `square` (`sq`, `quad`, `quadratic`): convex, a slow-in rise, a fast initial drop, long tail.
+ *  - `cube` (`cb`, `cubic`): a more pronounced `square`.
+ *  - `scurve` (`s`, `smooth`, `sigmoid`): ease-in-out with **zero slope at both ends**, no onset
  *    snap and no release "plop" (smoothest).
- *  - `invsquare` (`inv`, `isquare`, `concave`) — concave mirror of `square`: strong start, eases
+ *  - `invsquare` (`inv`, `isquare`, `concave`): concave mirror of `square`, a strong start, easing
  *    gently into the endpoint.
- *  - `exponential` (`exp`, `expo`) — a true exponential (convex, long tail).
+ *  - `exponential` (`exp`, `expo`): a true exponential (convex, long tail).
  *
- * Default when unset: `exp` on EVERY stage — the engine-wide default on every door
+ * Default when unset: `exp` on EVERY stage, the engine-wide default on every door
  * (maintainer decision, 2026-08-24).
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).adsrCurves("square", "exponential", "scurve")
  * ```
  *
- * @param attack Curve name for the attack stage. Omit to keep the current curve.
- * @param decay Curve name for the decay stage. Omit to keep the current curve.
- * @param release Curve name for the release stage. Omit to keep the current curve.
+ * @param attack Curve name for the attack stage.
+ * @param decay Curve name for the decay stage.
+ * @param release Curve name for the release stage.
  *
+ * @scope voice
  * @category dynamics
  * @tags adsr, curve, envelope, shape
  */
@@ -280,10 +283,9 @@ fun SprudelPattern.adsrCurves(
 /**
  * Parses this string as a pattern and sets per-stage ADSR shape curves.
  *
- * @param attack Curve name for the attack stage — `linear` / `square` / `cube` / `scurve` /
- *   `invsquare` / `exponential`. Omit to keep the current curve.
- * @param decay Curve name for the decay stage. Omit to keep the current curve.
- * @param release Curve name for the release stage. Omit to keep the current curve.
+ * @param attack Curve name for the attack stage.
+ * @param decay Curve name for the decay stage.
+ * @param release Curve name for the release stage.
  */
 @KlangScript.Function
 fun String.adsrCurves(
@@ -303,6 +305,7 @@ fun String.adsrCurves(
  * note("c3 e3 g3").s("supersaw").adsr(0.01, 0.2, 0.7, 0.5).apply(adsrCurves("square", "exponential", "scurve"))
  * ```
  *
+ * @scope voice
  * @category dynamics
  * @tags adsr, curve, envelope, shape
  */
@@ -345,7 +348,7 @@ fun PatternMapperFn.adsrCurves(
  *
  * @param attack Attack time in seconds.
  * @param decay Decay time in seconds.
- * @param sustain Sustain level (0–1).
+ * @param sustain Sustain level, 0 to 1.
  * @param release Release time in seconds.
  */
 @KlangScript.Function
@@ -375,10 +378,10 @@ private fun applyAdsrOn(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * `.adsr(...)` shapes amplitude itself, and without this the voice envelope applies on top, so the
  * two multiply and every curve comes out twice as steep in dB.
  *
- * Switching it off does NOT throw the numbers away — `.adsr(0.005, 1.0, 1.0, 0.05).adsrOff()` keeps
- * them, so you can flip back with [adsrOn] and compare. Note lifetime is unaffected either way: the
- * engine covers an ignitor's release tail — UNLESS the ignitor's release time is itself modulated,
- * which has no single static value, in which case the voice's own `release` still governs and is
+ * Switching it off does NOT throw the numbers away: `.adsr(0.005, 1.0, 1.0, 0.05).adsrOff()` keeps
+ * them, so you can flip back with [adsrOn] and compare. Note lifetime is unaffected either way, the
+ * engine covers an ignitor's release tail. The exception is an ignitor whose release time is itself
+ * modulated, which has no single static value: there the voice's own `release` still governs and is
  * worth setting even with the envelope off.
  *
  * When unset, the engine's `Vca` stage decides (the built-in engines leave it on).
@@ -387,12 +390,13 @@ private fun applyAdsrOn(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * note("c3 e3 g3").s("supersaw").adsrOn()   // shape the note here, whatever the engine defaults to
  * ```
  *
- * The built-in sounds carry no envelope of their own, so they WANT the voice envelope — `adsrOff`
+ * The built-in sounds carry no envelope of their own, so they WANT the voice envelope. `adsrOff`
  * is for instruments you build with their own `.adsr(...)`.
  *
- * @param flag Truthy = the voice envelope shapes the note. Defaults to `true`.
+ * @param flag Truthy keeps the voice envelope. Default `true`.
  * @return A pattern with the VCA switched on.
  *
+ * @scope voice
  * @category dynamics
  * @tags adsr, envelope, vca, gate
  */
@@ -430,6 +434,7 @@ fun PatternMapperFn.adsrOn(flag: PatternLike = true, callInfo: CallInfo? = null)
  *
  * @return A pattern with the VCA switched off.
  *
+ * @scope voice
  * @category dynamics
  * @tags adsr, envelope, vca, gate
  */

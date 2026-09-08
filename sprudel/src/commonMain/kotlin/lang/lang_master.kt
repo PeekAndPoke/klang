@@ -50,6 +50,7 @@ private fun applyMaster(source: SprudelPattern, master: MasterDsl): SprudelPatte
  * @param master The master chain to apply.
  * @return A pattern emitting one control event per cycle.
  *
+ * @scope master
  * @category effects
  * @tags master, loudness, gain, limiter, bus, motor
  */
@@ -73,6 +74,7 @@ fun master(master: MasterDsl, @Suppress("unused") callInfo: CallInfo? = null): S
  * @param master The master chain to apply.
  * @return A new pattern whose events carry the master reference.
  *
+ * @scope master
  * @category effects
  * @tags master, loudness, gain, limiter, bus, motor
  */

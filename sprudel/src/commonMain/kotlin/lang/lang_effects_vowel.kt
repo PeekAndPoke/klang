@@ -43,9 +43,14 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
 }
 
 /**
- * The vowel formant filter: the vowel, its send and its dry floor.
+ * The vowel formant filter: the vowel, its mix and its dry floor.
  *
- * Shapes the sound like a mouth; the vowel is a name, `wet` how much goes through it.
+ * Shapes the orbit like a mouth. One formant filter per [orbit bus](/manuals/lexikon/orbit-bus), so
+ * ALL of it, the vowel included, is set once for everyone by the orbit's owning voice.
+ *
+ * `wet` here is a mix, not a [send](/manuals/lexikon/send): the filter processes the whole orbit
+ * mix, so unlike `room` and `delay` there is no per-voice amount. Give a pattern its own vowel by
+ * giving it its own orbit.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`vowel(floor = mul(2))`), and the numeric slots read back as `vowel.wet`, `vowel.floor`. `vowel` is a name and has no reader.
@@ -63,11 +68,11 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * note("c3 e3").s("saw").vowel("o", "0.2 0.9").room(wet = vowel.wet)       // as much reverb as vowel
  * ```
  *
- * @param vowel Vowel name (`a`, `e`, `i`, `o`, `u`; a singer prefix like `tenor:a` picks a voice type).
- * @param wet Send, 0 to 1.
- * @param floor Minimum dry share of the wet/dry law, 0 to 1.
-
+ * @param vowel Vowel name: `a`, `e`, `i`, `o`, `u`. A prefix picks a voice type, `tenor:a`.
+ * @param wet How much of the orbit runs through the filter, 0 to 1.
+ * @param floor Minimum dry share kept in the mix, 0 to 1.
  *
+ * @scope orbit
  * @category effects
  * @tags vowel, wet, floor
  */
@@ -113,6 +118,7 @@ fun PatternMapperFn.vowel(
  * The `vowel` object: `vowel(...)` sets the slots, and each numeric slot reads back as a child,
  * `vowel.wet`, `vowel.floor`.
  *
+ * @scope orbit
  * @category effects
  * @tags vowel, accessor
  */

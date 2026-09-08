@@ -46,8 +46,9 @@ private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * The orbit reverb: send, room size, tail, lowpass and damping.
  *
  * One reverb per orbit, so `size`, `fade` and `lowpass` are set once for everyone by the orbit's
- * owning voice. `wet` is the exception and the thing to remember: it is a per-voice send, so a dry
- * voice on a wet orbit stays dry. Give a pattern its own reverb by giving it its own `orbit`.
+ * owning voice. `wet` is the exception and the thing to remember: it is a per-voice
+ * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its own
+ * reverb by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
  *
  * A bare `room(0.4)` is silent. The reverb only runs with a room to run in, so pair the send with
  * `size` or `fade`.
@@ -130,6 +131,7 @@ fun PatternMapperFn.room(
  * The `room` object: `room(...)` sets the slots, and each numeric slot reads back as a child,
  * `room.wet`, `room.size`, `room.fade`, `room.lowpass`, `room.dim`.
  *
+ * @scope orbit-send
  * @category effects
  * @tags room, accessor
  */
@@ -247,6 +249,7 @@ private fun applyIResponse(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * ```
  *
  * @alias ir
+ * @scope orbit
  * @category effects
  * @tags iresponse, ir, impulse, convolution, reverb
  */
@@ -284,6 +287,7 @@ fun String.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPatt
  * ```
  *
  * @alias ir
+ * @scope orbit
  * @category effects
  * @tags iresponse, ir, impulse, convolution, reverb
  */
@@ -323,6 +327,7 @@ fun PatternMapperFn.iresponse(name: PatternLike, callInfo: CallInfo? = null): Pa
  * ```
  *
  * @alias iresponse
+ * @scope orbit
  * @category effects
  * @tags ir, iresponse, impulse, convolution, reverb
  */
@@ -353,6 +358,7 @@ fun String.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * ```
  *
  * @alias iresponse
+ * @scope orbit
  * @category effects
  * @tags ir, iresponse, impulse, convolution, reverb
  */

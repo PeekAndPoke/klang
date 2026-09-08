@@ -52,7 +52,8 @@ private fun applyUnisonPan(source: SprudelPattern, args: List<SprudelDslArg<Any?
 /**
  * Unison: voice count, detune spread and stereo spread.
  *
- * Stacks detuned copies of the oscillator; `spread` is the detune in semitones, `pan` the stereo width.
+ * Stacks detuned copies of the oscillator [per voice](/manuals/lexikon/voice); `spread` is the
+ * detune in semitones, `pan` the stereo width.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`unison(spread = mul(2))`), and the numeric slots read back as `unison.voices`, `unison.spread`, `unison.pan`.
@@ -70,11 +71,11 @@ private fun applyUnisonPan(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * note("c3 e3").s("supersaw").unison("3 7", 0.2).gain(unison.voices.mul(0.1))   // more voices, louder
  * ```
  *
- * @param voices Number of unison voices, 1 to 16.
+ * @param voices Voices, 1 to 16.
  * @param spread Detune spread in semitones.
- * @param pan Stereo spread, 0 to 1. Reserved: the engine does not read it yet.
-
+ * @param pan Stereo spread, 0 to 1. Reserved, not read yet.
  *
+ * @scope voice
  * @category dynamics
  * @tags unison, voices, spread, pan
  */
@@ -105,6 +106,7 @@ fun PatternMapperFn.unison(voices: PatternLike? = null, spread: PatternLike? = n
  * The `unison` object: `unison(...)` sets the slots, and each numeric slot reads back as a child,
  * `unison.voices`, `unison.spread`, `unison.pan`.
  *
+ * @scope voice
  * @category dynamics
  * @tags unison, accessor
  */
@@ -137,9 +139,9 @@ object unison {
  * note("c3 e3").s("supersaw").uni(5, 0.3)
  * ```
  *
+ * @scope voice
  * @category dynamics
  * @tags uni, unison
-
  */
 @KlangScript.Function
 fun SprudelPattern.uni(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -153,6 +155,7 @@ fun String.uni(voices: PatternLike? = null, spread: PatternLike? = null, pan: Pa
 /**
  * Alias of [unison]: the same object under its short name.
  *
+ * @scope voice
  * @category dynamics
  * @tags uni, unison, accessor
  */
@@ -177,11 +180,11 @@ private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 }
 
 /**
- * Sets the oscillator density for supersaw or impulse density for the dust generator.
+ * Sets the oscillator density for supersaw, or the impulse density for the dust generator.
  *
- * For supersaw: controls how tightly packed the oscillators are.
- * For noise generators (e.g. `dust`): controls the number of events per second.
- * (Note: `crackle` is a chaotic generator now — it is driven by `chaos`, not `density`.)
+ * For supersaw it controls how tightly packed the oscillators are; for noise generators such as
+ * `dust` it sets the impulse rate: the value is 0 to 1 and scales a 200 per second ceiling, so 0.2
+ * is 40 events per second. `crackle` is a chaotic generator now, driven by `chaos`, not by `density`.
  *
  * ```KlangScript(Playable)
  * note("a").s("dust").density(0.2)   // 40 noise events per second
@@ -194,6 +197,7 @@ private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @param amount The oscillator density.
  *
  * @alias d
+ * @scope voice
  * @category dynamics
  * @tags density, d, supersaw, dust, noise
  */
@@ -232,6 +236,7 @@ fun String.density(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * s("dust*2").density("0.2 0.8").gain(density)                             // denser, louder
  * ```
  *
+ * @scope voice
  * @category dynamics
  * @tags density, accessor
  */
@@ -269,16 +274,17 @@ fun PatternMapperFn.density(amount: PatternLike? = null, callInfo: CallInfo? = n
  * Alias for [density]. Sets the oscillator density for supersaw or impulse density for dust.
  *
  * ```KlangScript(Playable)
- * note("a").s("dust").d(40)   // 40 noise events per second
+ * note("a").s("dust").d(0.2)   // 40 noise events per second
  * ```
  *
  * ```KlangScript(Playable)
  * note("c3").s("supersaw").unison(7).d(0.5)   // tight supersaw
  * ```
  *
- * @param amount The oscillator density. Integer, typically 1-16. Higher values produce denser sound.
+ * @param amount The oscillator density.
  *
  * @alias density
+ * @scope voice
  * @category dynamics
  * @tags d, density, supersaw, dust, noise
  */
@@ -290,7 +296,7 @@ fun SprudelPattern.d(amount: PatternLike? = null, callInfo: CallInfo? = null): S
  * Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density.
  *
  * ```KlangScript(Playable)
- * "a".d(40).s("dust").note()   // 40 noise events per second
+ * "a".d(0.2).s("dust").note()   // 40 noise events per second
  * ```
  *
  * @param amount The oscillator density.
@@ -302,6 +308,7 @@ fun String.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPa
 /**
  * Alias of [density]: the same accessor under another name.
  *
+ * @scope voice
  * @category dynamics
  * @tags d, density, accessor
  */

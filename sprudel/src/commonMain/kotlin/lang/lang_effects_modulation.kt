@@ -35,9 +35,12 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 /**
  * The orbit phaser: rate, depth, centre, sweep and dry floor.
  *
- * The phaser is an ORBIT (bus) effect (2026-08-24: one sweep over the summed orbit, the
- * DAW-insert model) and orbit knobs are first-writer-wins: a voice that sets phaser knobs but does
- * not own its orbit's lease is not phased. Route to its own orbit for its own phaser.
+ * One sweep over the summed [orbit bus](/manuals/lexikon/orbit-bus), the DAW-insert model, so every
+ * knob belongs to the orbit's owning voice: a voice that sets phaser knobs without owning its orbit
+ * is not phased at all. Route it to its own orbit to give it its own phaser.
+ *
+ * The dry signal stays untouched by default (`floor` is 1), so `wet` ADDS the swept notch on top
+ * rather than crossfading into it. Lower `floor` to turn `wet` back into a crossfade.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`phaser(wet = mul(2))`), and the numeric slots read back as `phaser.rate`, `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`.
@@ -56,13 +59,13 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * @param rate LFO rate in Hz.
- * @param wet Depth (wet amount), 0 to 1; the stage is built only above 0. The dry stays untouched
- *   by default (`floor` = 1), so the wet ADDS the swept notch on top.
+ * @param wet Depth, 0 to 1. The stage is built only above 0.
  * @param center Centre frequency of the sweep, Hz.
  * @param sweep Sweep range around the centre, Hz.
- * @param floor Minimum dry share of the wet/dry law, 0 to 1; lower it to turn `wet` into a crossfade.
+ * @param floor Minimum dry share kept in the mix, 0 to 1.
  * @param-tool rate SprudelPhaserEditor, SprudelPhaserSequenceEditor
  *
+ * @scope orbit
  * @category effects
  * @tags phaser, rate, wet, center, sweep, floor
  */
@@ -116,6 +119,7 @@ fun PatternMapperFn.phaser(
  * The `phaser` object: `phaser(...)` sets the slots, and each numeric slot reads back as a child,
  * `phaser.rate`, `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`.
  *
+ * @scope orbit
  * @category effects
  * @tags phaser, accessor
  */
@@ -220,6 +224,9 @@ private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<An
 /**
  * The tremolo: depth, rate, waveform, skew and phase.
  *
+ * Unlike the phaser above it, the tremolo runs [per voice](/manuals/lexikon/voice): every note gets
+ * its own LFO, so two notes on one orbit can wobble at different rates.
+ *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`tremolo(sync = mul(2))`), and the numeric slots read back as `tremolo.depth`, `tremolo.sync`, `tremolo.skew`, `tremolo.phase`.
  * With no argument at all, the pattern's own values are reinterpreted as `depth`.
@@ -236,14 +243,15 @@ private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<An
  * note("c3 e3").s("saw").tremolo("0.3 0.9", 4).gain(tremolo.depth)         // deeper, louder
  * ```
  *
- * @param depth Depth, 0 to 1; the stage is built only above 0.
+ * @param depth Depth, 0 to 1. The stage is built only above 0.
  * @param sync Rate in Hz.
- * @param shape LFO waveform by name (`sine`, `triangle`, `square`, ...).
+ * @param shape LFO waveform by name: `sine`, `triangle`, `square`.
  * @param skew Waveform skew, 0 to 1.
  * @param phase LFO start phase, 0 to 1.
  * @param-tool depth SprudelTremoloEditor, SprudelTremoloSequenceEditor
  * @param-tool shape SprudelWaveformEditor, SprudelWaveformSequenceEditor
  *
+ * @scope voice
  * @category effects
  * @tags tremolo, depth, sync, shape, skew, phase
  */

@@ -87,8 +87,12 @@ private fun applyBpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
 /**
  * The bandpass filter: centre, resonance and the centre envelope.
  *
- * Only a band around the centre passes; the resonance sets its width. The envelope sweeps `freq` up by `env` semitones along attack, decay,
- * sustain and release; without `env` the filter rests at `freq`.
+ * Only a band around the centre passes, and the resonance sets its width: higher `q` is a narrower
+ * band. Every note carries its own centre, width and envelope, [per voice](/manuals/lexikon/voice).
+ *
+ * The envelope sweeps `freq` up by `env` semitones: attack is the time to reach full depth, decay
+ * the fall to the sustain share, release the fall back to `freq` after the note ends. `env = 12`
+ * doubles the centre, a negative `env` sweeps down, and without `env` the filter rests at `freq`.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`bpf(q = mul(2))`), and every slot reads back as a child: `bpf.freq`, `bpf.q`, `bpf.env`, `bpf.attack`, `bpf.decay`, `bpf.sustain`, `bpf.release`.
@@ -106,17 +110,18 @@ private fun applyBpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
  * note("c3 e3").s("saw").bpf(freq.mul(4), 3)                                 // a band two octaves above each note
  * ```
  *
- * @param freq Centre frequency, Hz.
- * @param q Resonance (Q); higher values narrow the band.
- * @param env Envelope depth in semitones above `freq` at full envelope (+12 doubles the centre, negative sweeps down).
- * @param attack Envelope attack, seconds: the time to sweep up to `env`.
- * @param decay Envelope decay, seconds: the time to fall back to the sustain share.
- * @param sustain Envelope sustain, 0 to 1: the share of `env` held while the note lasts.
- * @param release Envelope release, seconds: the time to fall back to `freq` after the note ends.
+ * @param freq Centre frequency in Hz.
+ * @param q Resonance, higher narrows the band.
+ * @param env Envelope depth in semitones.
+ * @param attack Envelope attack in seconds.
+ * @param decay Envelope decay in seconds.
+ * @param sustain Envelope sustain, 0 to 1.
+ * @param release Envelope release in seconds.
  * @param-tool freq SprudelBpFilterEditor, SprudelBpFilterSequenceEditor
  * @param-tool q SprudelBpQEditor, SprudelBpQSequenceEditor
  * @param-tool env SprudelBpEnvEditor, SprudelBpEnvSequenceEditor
  *
+ * @scope voice
  * @category effects
  * @tags bpf, freq, q, env, attack, decay, sustain, release, bandf, band pass filter, filter, envelope
  */
@@ -178,6 +183,7 @@ fun PatternMapperFn.bpf(
  * The `bpf` object: `bpf(...)` sets the slots, and each slot reads back as a child,
  * `bpf.freq`, `bpf.q`, `bpf.env`, `bpf.attack`, `bpf.decay`, `bpf.sustain`, `bpf.release`.
  *
+ * @scope voice
  * @category effects
  * @tags bpf, accessor
  */
@@ -238,6 +244,7 @@ object bpf {
  * note("c3").s("saw").bandpass(800)
  * ```
  *
+ * @scope voice
  * @category effects
  * @tags bandpass, bpf.freq, filter
  */
@@ -271,6 +278,7 @@ fun String.bandpass(
 /**
  * Alias of [bpf]: the same object under its long name.
  *
+ * @scope voice
  * @category effects
  * @tags bandpass, bpf.freq, accessor
  */

@@ -28,9 +28,11 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 }
 
 /**
- * Sets the gain (volume multiplier) for each event in the pattern.
+ * Sets the level of each event, [per voice](/manuals/lexikon/voice).
  *
- * Values below 1 reduce volume; above 1 amplify. Accepts control patterns for per-event modulation.
+ * A plain multiplier on the voice's output: below 1 is quieter, above 1 is louder. `velocity` is
+ * multiplied into it, and mute, solo and fade scale it as well. Takes a control pattern, so the
+ * level can move from event to event.
  *
  * ```KlangScript(Playable)
  * s("bd sd hh cp").gain(0.5)              // all hits at half volume
@@ -40,9 +42,10 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * s("bd*4").gain("<0.2 0.5 0.8 1.0>")    // different gain each cycle
  * ```
  *
- * @param amount The control value to use for gain.
+ * @param amount Level multiplier, 1 leaves the event as it is.
  * @param-tool amount SprudelGainEditor, SprudelGainSequenceEditor
  *
+ * @scope voice
  * @category dynamics
  * @tags gain, volume, amplitude, dynamics
  */
@@ -57,7 +60,7 @@ fun SprudelPattern.gain(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * "bd*4".gain("0.2 0.5 0.8 1.0").s()    // different gain each beat
  * ```
  *
- * @param amount The control value to use for gain.
+ * @param amount Level multiplier, 1 leaves the event as it is.
  */
 @KlangScript.Function
 fun String.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -77,6 +80,7 @@ fun String.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * note("c e g").gain("0.9 0.6 0.3").velocity(gain)                      // velocity follows gain
  * ```
  *
+ * @scope voice
  * @category dynamics
  * @tags gain, accessor
  */
@@ -91,7 +95,7 @@ object gain : FieldAccessor({ it.gain }) {
      * s("hh hh hh hh").apply(gain("1.0 0.75 0.5 0.25"))
      * ```
      *
-     * @param amount The control value to use for gain.
+     * @param amount Level multiplier, 1 leaves the event as it is.
      */
     @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -105,7 +109,7 @@ object gain : FieldAccessor({ it.gain }) {
  * s("hh*4").apply(gain("1.0 0.5").gain(0.8))  // chain gain modifiers
  * ```
  *
- * @param amount The control value to use for gain.
+ * @param amount Level multiplier, 1 leaves the event as it is.
  */
 @KlangScript.Function
 fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -124,9 +128,10 @@ private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
 }
 
 /**
- * Sets the stereo panning position for each event (0 = full left, 0.5 = centre, 1 = full right).
+ * Sets the stereo position of each event, per voice.
  *
- * Accepts control patterns or continuous patterns for animated panning effects.
+ * 0 is full left, 0.5 is centre, 1 is full right. A continuous pattern such as `sine.range(0, 1)`
+ * sweeps the position instead of stepping it.
  *
  * ```KlangScript(Playable)
  * s("bd sd").pan(0.25)                   // slightly left
@@ -140,9 +145,10 @@ private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * s("hh*8").pan(sine.range(0, 1))        // smooth left-right sweep
  * ```
  *
- * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
+ * @param amount Pan position, 0 left to 1 right.
  * @param-tool amount SprudelPanEditor, SprudelPanSequenceEditor
  *
+ * @scope voice
  * @category dynamics
  * @tags pan, stereo, panning, position
  */
@@ -157,7 +163,7 @@ fun SprudelPattern.pan(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * "bd hh sd cp".pan("0 0.33 0.66 1").s()  // left to right
  * ```
  *
- * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
+ * @param amount Pan position, 0 left to 1 right.
  */
 @KlangScript.Function
 fun String.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -177,6 +183,7 @@ fun String.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  * note("c e g").pan("0.2 0.5 0.8").gain(pan)                             // louder to the right
  * ```
  *
+ * @scope voice
  * @category dynamics
  * @tags pan, accessor
  */
@@ -203,7 +210,7 @@ object pan : FieldAccessor({ it.pan }) {
  * s("bd hh sd cp").apply(pan("0 0.33 0.66 1").gain(0.8))  // pan + gain chained
  * ```
  *
- * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
+ * @param amount Pan position, 0 left to 1 right.
  */
 @KlangScript.Function
 fun PatternMapperFn.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -222,7 +229,10 @@ private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 }
 
 /**
- * Sets the gain 'velocity'. It is multiplied with the gain of the events.
+ * Sets the velocity of each event, per voice.
+ *
+ * Velocity is multiplied into `gain`, so `gain(0.5).velocity(2)` ends up at 1. Keep `gain` for the
+ * level of the line and `velocity` for the accents inside it.
  *
  * ```KlangScript(Playable)
  * note("c d e f").gain(0.5).velocity("0.5 2.0")  // gain is multiplied by velocity
@@ -236,8 +246,9 @@ private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * note("c*4").velocity(saw.range(0.25, 1.0).slow(4))  // crescendo pattern over 4 cycles
  * ```
  *
- * @param amount The velocity value or pattern to apply to the events.
+ * @param amount Velocity, multiplied into the gain.
  *
+ * @scope voice
  * @alias vel
  * @category dynamics
  * @tags velocity, vel, volume, midi, dynamics
@@ -253,7 +264,7 @@ fun SprudelPattern.velocity(amount: PatternLike? = null, callInfo: CallInfo? = n
  * "c*4".velocity("<0.3 0.6 0.9 1.0>").note()  // crescendo pattern
  * ```
  *
- * @param amount The velocity value or pattern to apply to the events.
+ * @param amount Velocity, multiplied into the gain.
  */
 @KlangScript.Function
 fun String.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -273,6 +284,7 @@ fun String.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * note("c e g").velocity("0.9 0.6 0.3").lpf(velocity.mul(4000))          // softer notes are darker
  * ```
  *
+ * @scope voice
  * @category dynamics
  * @tags velocity, accessor
  */
@@ -287,7 +299,7 @@ object velocity : FieldAccessor({ it.velocity }) {
      * note("c*4").apply(velocity("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
      * ```
      *
-     * @param amount The velocity value or pattern to apply to the events.
+     * @param amount Velocity, multiplied into the gain.
      */
     @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -301,14 +313,14 @@ object velocity : FieldAccessor({ it.velocity }) {
  * note("c*4").apply(velocity("<0.3 0.6 0.9>").gain(0.8))  // velocity + gain chained
  * ```
  *
- * @param amount The velocity value or pattern to apply to the events.
+ * @param amount Velocity, multiplied into the gain.
  */
 @KlangScript.Function
 fun PatternMapperFn.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.velocity(amount, callInfo) }
 
 /**
- * Alias for [velocity]. Sets the gain 'velocity'. It is multiplied with the gain of the events.
+ * Alias for [velocity]: the velocity of each event, multiplied into the gain.
  *
  * ```KlangScript(Playable)
  * note("c d e f").gain(0.5).vel("0.5 2.0")   // gain is multiplied by velocity
@@ -318,8 +330,9 @@ fun PatternMapperFn.velocity(amount: PatternLike? = null, callInfo: CallInfo? = 
  * note("c*4").vel(saw.range(0.25, 1.0).slow(4))   // crescendo pattern over 4 cycles
  * ```
  *
- * @param amount The velocity value or pattern to apply to the events.
+ * @param amount Velocity, multiplied into the gain.
  *
+ * @scope voice
  * @alias velocity
  * @category dynamics
  * @tags vel, velocity, volume, midi, dynamics
@@ -335,7 +348,7 @@ fun SprudelPattern.vel(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * "c*4".vel("<0.3 0.6 0.9 1.0>").note()  // crescendo pattern
  * ```
  *
- * @param amount The velocity value or pattern to apply to the events.
+ * @param amount Velocity, multiplied into the gain.
  */
 @KlangScript.Function
 fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -344,6 +357,7 @@ fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
 /**
  * Alias of [velocity]: the same accessor under another name.
  *
+ * @scope voice
  * @category dynamics
  * @tags vel, velocity, accessor
  */
@@ -357,7 +371,7 @@ val vel: velocity = velocity
  * note("c*4").apply(vel("<0.3 0.6 0.9>").gain(0.8))  // velocity + gain chained
  * ```
  *
- * @param amount The velocity value or pattern to apply to the events.
+ * @param amount Velocity, multiplied into the gain.
  */
 @KlangScript.Function
 fun PatternMapperFn.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -376,12 +390,12 @@ private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 }
 
 /**
- * Sets the post-gain (applied after voice processing) for each event in the pattern.
+ * Sets the final level trim of each event, per voice.
  *
- * `postgain` and `gain` are both output multipliers applied at the voice output (SendRenderer),
- * so on a single voice they do the same arithmetic. The difference is what else touches them:
- * `gain` is scaled by `velocity` and by the mute/solo/fade multiplier, while `postgain` is not.
- * So `gain` is the per-note, performable level and `postgain` is the line's own final trim.
+ * `postgain` and `gain` are both output multipliers applied at the voice output, so on a single
+ * voice they do the same arithmetic. The difference is what else touches them: `gain` is scaled by
+ * `velocity` and by the mute/solo/fade multiplier, while `postgain` is not. So `gain` is the
+ * per-note, performable level and `postgain` is the line's own final trim.
  *
  * ```KlangScript(Playable)
  * s("bd sd").postgain(1.5)                    // amplify after processing
@@ -391,8 +405,9 @@ private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * s("hh*8").postgain(rand.range(0.1, 1.0))   // random post-gain per hit
  * ```
  *
- * @param amount The post-gain value or pattern to apply to the events.
+ * @param amount Final level trim, 1 leaves the event as it is.
  *
+ * @scope voice
  * @category dynamics
  * @tags postgain, gain, volume, post-processing
  */
@@ -407,7 +422,7 @@ fun SprudelPattern.postgain(amount: PatternLike? = null, callInfo: CallInfo? = n
  * "hh*8".postgain(perlin.range(0.1, 1.0).slow(4)).s()   // perlin noised post-gain
  * ```
  *
- * @param amount The post-gain value or pattern to apply to the events.
+ * @param amount Final level trim, 1 leaves the event as it is.
  */
 @KlangScript.Function
 fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -427,6 +442,7 @@ fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * note("c e").postgain("0.5 0.25").gain(postgain)                        // match the two stages
  * ```
  *
+ * @scope voice
  * @category dynamics
  * @tags postgain, accessor
  */
@@ -441,7 +457,7 @@ object postgain : FieldAccessor({ it.postGain }) {
      * "hh*8".apply(postgain(sine.range(0.1, 1.0).slow(2))).s()   // sine post-gain over two cycles
      * ```
      *
-     * @param amount The post-gain value or pattern to apply to the events.
+     * @param amount Final level trim, 1 leaves the event as it is.
      */
     @KlangScript.Invoke
     operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -455,7 +471,7 @@ object postgain : FieldAccessor({ it.postGain }) {
  * s("hh*4").apply(postgain(0.8).gain(0.5))  // postgain + gain chained
  * ```
  *
- * @param amount The post-gain value or pattern to apply to the events.
+ * @param amount Final level trim, 1 leaves the event as it is.
  */
 @KlangScript.Function
 fun PatternMapperFn.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

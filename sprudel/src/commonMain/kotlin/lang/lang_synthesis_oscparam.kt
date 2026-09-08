@@ -27,10 +27,10 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 }
 
 /**
- * Sets an arbitrary oscillator parameter by key.
+ * Sets any oscillator parameter by key, [per voice](/manuals/lexikon/voice).
  *
- * Provides direct access to the `oscParams` map for custom oscillator parameters
- * that don't have dedicated DSL functions.
+ * Direct access to the `oscParams` map, for parameters that have no dedicated door of their own.
+ * Keys used elsewhere in this library are `analog`, `onepole` and `density`.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("supersaw").oscparam("analog", 4)
@@ -40,10 +40,11 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * note("c3 e3").oscparam("onepole", "<12000 3700>") // pattern-cycle the value
  * ```
  *
- * @param key The oscillator parameter name (e.g. "analog", "onepole", "density").
+ * @param key The oscillator parameter name.
  * @param value The parameter value.
  * @return A new pattern with the oscillator parameter set.
  * @alias oscp
+ * @scope voice
  * @category tonal
  * @tags oscillator, parameter, osc
  */
@@ -151,8 +152,9 @@ private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * note("c3*4").s("sine").analog("<0 2 6>")   // cycle through drift amounts
  * ```
  *
- * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
+ * @param amount Peak drift in cents; 0 is off, 1 to 8 is usual.
  * @return A new pattern with analog drift applied.
+ * @scope voice
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco
  */
@@ -167,8 +169,9 @@ fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = nul
  * "c3 e3".analog(4).s("supersaw").note()
  * ```
  *
- * @param amount The peak analog drift in cents; `0.0` is off, `1` to `8` is the usual band.
+ * @param amount Peak drift in cents; 0 is off, 1 to 8 is usual.
  * @return A new pattern with analog drift applied.
+ * @scope voice
  * @category tonal
  * @tags analog, drift, oscillator, warmth, vco
  */
@@ -190,6 +193,7 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * note("c3 e3").s("supersaw").analog("1 4").unison(spread = analog.div(20))       // more drift, wider
  * ```
  *
+ * @scope voice
  * @category tonal
  * @tags analog, accessor
  */
@@ -251,8 +255,9 @@ private fun applyDuty(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * note("c3 e3 g3").s("pulse").duty("<0.5 0.25 0.1>")   // PWM-style duty sweep
  * ```
  *
- * @param amount The duty cycle between 0.0 and 1.0 (default 0.5).
+ * @param amount Duty cycle, 0 to 1. Default 0.5.
  * @return A new pattern with the duty cycle applied.
+ * @scope voice
  * @category tonal
  * @tags duty, pulse, square, pwm, oscillator
  */
@@ -283,6 +288,7 @@ fun String.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * note("c3 e3").s("pulze").duty("0.2 0.5").pan(duty)                      // wider pulse, further right
  * ```
  *
+ * @scope voice
  * @category tonal
  * @tags duty, accessor
  */
@@ -325,17 +331,14 @@ private fun applyOnepole(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 }
 
 /**
- * Puts a one-pole lowpass on the oscillator at [freq] Hz — the gentlest filter there is
+ * Puts a one-pole lowpass on the oscillator at [freq] Hz, the gentlest filter there is
  * (6 dB/oct, no resonance). Musically it is a "warmth" knob: lower frequencies are darker.
  * `0` (or omitting the call) means no filter.
  *
  * This is deliberately a DIFFERENT thing from [lpf]: `lpf` is the resonant 12 dB/oct SVF
- * and never secretly swaps character, `onepole` is the soft tone control. (Renamed from
- * `warmth(0..1)` in the pitch/unit unification, 2026-08-24 — the old value was the raw
- * filter coefficient, sample-rate dependent; sites were converted via
- * `freq = sr/π · atan((1−w)/w)` at 48 kHz — scalar sites sound-identical; the two
- * patterned `saw.range` sites are endpoint-exact, mid-sweep the atan curve differs
- * inaudibly.)
+ * and never secretly swaps character, `onepole` is the soft tone control. It was renamed from
+ * `warmth(0..1)` in the pitch and unit unification, 2026-08-24, when the value changed from a raw,
+ * sample-rate dependent filter coefficient to a frequency in Hz.
  *
  * ```KlangScript(Playable)
  * note("c d e f").onepole(3700)          // warm, muffled sawtooth
@@ -345,8 +348,9 @@ private fun applyOnepole(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * note("c d e f").onepole("<12000 3700 1700>")  // stepwise darker
  * ```
  *
- * @param freq The one-pole cutoff in Hz. 0 = no filter; lower = warmer/darker.
+ * @param freq Cutoff in Hz. 0 is no filter, lower is darker.
  *
+ * @scope voice
  * @category tonal
  * @tags onepole, warmth, oscillator, filter, low-pass, tone
  */
@@ -382,6 +386,7 @@ fun String.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  * note("c3 e3").s("saw").onepole("1000 4000").lpf(onepole.mul(2))         // the SVF an octave above the one-pole
  * ```
  *
+ * @scope voice
  * @category tonal
  * @tags onepole, accessor
  */

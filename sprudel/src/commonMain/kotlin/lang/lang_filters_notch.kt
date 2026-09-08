@@ -87,8 +87,13 @@ private fun applyNotchRelease(source: SprudelPattern, args: List<SprudelDslArg<A
 /**
  * The notch filter: centre, resonance and the centre envelope.
  *
- * A narrow band around the centre is cut, everything else passes: the opposite of a bandpass. The envelope sweeps `freq` up by `env` semitones along attack, decay,
- * sustain and release; without `env` the filter rests at `freq`.
+ * A narrow band around the centre is cut and everything else passes, the opposite of a bandpass.
+ * Higher `q` narrows the cut. Every note carries its own centre, width and envelope,
+ * [per voice](/manuals/lexikon/voice).
+ *
+ * The envelope sweeps `freq` up by `env` semitones: attack is the time to reach full depth, decay
+ * the fall to the sustain share, release the fall back to `freq` after the note ends. `env = 12`
+ * doubles the centre, a negative `env` sweeps down, and without `env` the filter rests at `freq`.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`notch(q = mul(2))`), and every slot reads back as a child: `notch.freq`, `notch.q`, `notch.env`, `notch.attack`, `notch.decay`, `notch.sustain`, `notch.release`.
@@ -106,13 +111,13 @@ private fun applyNotchRelease(source: SprudelPattern, args: List<SprudelDslArg<A
  * note("c3 e3").s("saw").notch("800 1600").bpf(notch.freq.mul(2), 3)           // a band an octave above the notch
  * ```
  *
- * @param freq Centre frequency, Hz.
- * @param q Resonance (Q); higher values narrow the notch.
- * @param env Envelope depth in semitones above `freq` at full envelope (+12 doubles the centre, negative sweeps down).
- * @param attack Envelope attack, seconds: the time to sweep up to `env`.
- * @param decay Envelope decay, seconds: the time to fall back to the sustain share.
- * @param sustain Envelope sustain, 0 to 1: the share of `env` held while the note lasts.
- * @param release Envelope release, seconds: the time to fall back to `freq` after the note ends.
+ * @param freq Centre frequency in Hz.
+ * @param q Resonance, higher narrows the notch.
+ * @param env Envelope depth in semitones.
+ * @param attack Envelope attack in seconds.
+ * @param decay Envelope decay in seconds.
+ * @param sustain Envelope sustain, 0 to 1.
+ * @param release Envelope release in seconds.
  * @param-tool freq SprudelNotchFilterEditor, SprudelNotchFilterSequenceEditor
  * @param-tool q SprudelNResonanceEditor, SprudelNResonanceSequenceEditor
  * @param-tool env SprudelNfEnvEditor, SprudelNfEnvSequenceEditor
@@ -121,6 +126,7 @@ private fun applyNotchRelease(source: SprudelPattern, args: List<SprudelDslArg<A
  * @param-tool sustain SprudelNfSustainEditor, SprudelNfSustainSequenceEditor
  * @param-tool release SprudelNfReleaseEditor, SprudelNfReleaseSequenceEditor
  *
+ * @scope voice
  * @category effects
  * @tags notch, freq, q, env, attack, decay, sustain, release, notch.freq, notch filter, filter, envelope
  */
@@ -182,6 +188,7 @@ fun PatternMapperFn.notch(
  * The `notch` object: `notch(...)` sets the slots, and each slot reads back as a child,
  * `notch.freq`, `notch.q`, `notch.env`, `notch.attack`, `notch.decay`, `notch.sustain`, `notch.release`.
  *
+ * @scope voice
  * @category effects
  * @tags notch, accessor
  */

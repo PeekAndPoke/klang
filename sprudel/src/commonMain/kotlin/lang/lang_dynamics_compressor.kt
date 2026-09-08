@@ -70,7 +70,12 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
 /**
  * The orbit compressor: threshold, ratio, knee, attack and release.
  *
- * Levels above the threshold are turned down by the ratio; the knee softens the onset, attack and release set how fast it moves.
+ * Levels above the threshold are turned down by the ratio, the knee softens the onset, and attack
+ * and release set how fast it moves.
+ *
+ * One compressor per [orbit bus](/manuals/lexikon/orbit-bus), so it hears the whole orbit summed
+ * and its settings come from the orbit's owning voice. That is what makes it a drum-bus compressor
+ * rather than a per-note one: give a pattern its own orbit to compress it on its own.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`compressor(ratio = mul(2))`), and the numeric slots read back as `compressor.threshold`, `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`.
@@ -88,13 +93,14 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * s("bd sd hh sd").compressor(-20, 4).postgain(compressor.threshold.mul(-0.02).add(1))   // make-up gain from the threshold
  * ```
  *
- * @param threshold Level in dB above which compression starts (for example -20).
- * @param ratio Compression ratio; 4 means 4:1 above the threshold.
- * @param knee Knee width in dB; 0 is a hard knee, 6 and above soft.
- * @param attack Attack in seconds, how fast the compression engages (for example 0.003).
- * @param release Release in seconds, how fast it lets go (for example 0.1).
+ * @param threshold Level in dB where compression starts, such as -20.
+ * @param ratio Compression ratio. 4 means 4:1 above the threshold.
+ * @param knee Knee width in dB. 0 is hard, 6 and above soft.
+ * @param attack Attack in seconds.
+ * @param release Release in seconds.
  * @param-tool threshold SprudelCompressorEditor, SprudelCompressorSequenceEditor
  *
+ * @scope orbit
  * @category dynamics
  * @tags compressor, threshold, ratio, knee, attack, release
  */
@@ -127,6 +133,7 @@ fun PatternMapperFn.compressor(threshold: PatternLike? = null, ratio: PatternLik
  * The `compressor` object: `compressor(...)` sets the slots, and each numeric slot reads back as a child,
  * `compressor.threshold`, `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`.
  *
+ * @scope orbit
  * @category dynamics
  * @tags compressor, accessor
  */
@@ -167,6 +174,7 @@ object compressor {
  * s("bd sd hh sd").comp(-20, 4, 6, 0.003, 0.1)
  * ```
  *
+ * @scope orbit
  * @category dynamics
  * @tags comp, compressor
  * @param-tool threshold SprudelCompressorEditor, SprudelCompressorSequenceEditor
@@ -183,6 +191,7 @@ fun String.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee
 /**
  * Alias of [compressor]: the same object under its short name.
  *
+ * @scope orbit
  * @category dynamics
  * @tags comp, compressor, accessor
  */
