@@ -924,11 +924,50 @@ class KlangScriptParser private constructor(
         )
     }
 
-    /** Skip any semicolons (used as optional statement terminators outside for-loop headers) */
-    private fun skipSemicolons() {
+    /**
+     * Skip any semicolons (used as optional statement terminators outside for-loop headers).
+     *
+     * @return true if at least one semicolon was consumed.
+     */
+    private fun skipSemicolons(): Boolean {
+        var consumed = false
+
         while (check(TokenType.SEMICOLON)) {
             advance()
+            consumed = true
         }
+
+        return consumed
+    }
+
+    /**
+     * Rejects a statement that begins on the line the previous one ended on without a `;` between them.
+     *
+     * Newlines are not tokens here and semicolons are optional separators, so two juxtaposed expressions are
+     * simply two statements: `velocity("<1.0 0.85>*4")tag("hats")` (a missing dot, found in Der Schmetterling)
+     * parses as a finished chain plus an orphan `tag(...)` mapper whose value nothing consumes. It compiles, it
+     * renders, it sounds identical, and the tag is silently gone. Almost every pattern method has a bare mapper
+     * overload for `apply`/`superimpose`, so a dropped dot nearly always still resolves.
+     * See `docs/tasks/klangscript-statement-boundaries.md`.
+     *
+     * The rule is deliberately narrow: only a SHARED LINE is an error. Statements on their own lines stay legal,
+     * so no multi-line chain and no leading-dot continuation line can trip over it.
+     */
+    private fun requireStatementBoundary() {
+        val next = peek()
+
+        if (next.line != previous().endLine) {
+            return
+        }
+
+        // An identifier that is immediately called is the missing-dot shape
+        val hint = if (next.type == TokenType.IDENTIFIER && checkAt(1, TokenType.LEFT_PAREN)) {
+            " Did you mean '.${next.text}(...)'?"
+        } else {
+            ""
+        }
+
+        error("Expected a newline or ';' between statements.$hint")
     }
 
     private fun Token.toSourceLocation(): SourceLocation {
@@ -1839,12 +1878,22 @@ class KlangScriptParser private constructor(
      */
     private fun parseProgram(): Program {
         val statements = mutableListOf<Statement>()
+        // Nothing precedes the first statement, so it never needs a separator
+        var separated = true
 
         while (!isAtEnd()) {
-            skipSemicolons()
+            if (skipSemicolons()) {
+                separated = true
+            }
+
             if (isAtEnd()) break
+
+            if (!separated) {
+                requireStatementBoundary()
+            }
+
             statements.add(parseStatement())
-            skipSemicolons()
+            separated = skipSemicolons()
         }
 
         return Program(statements)
@@ -1889,12 +1938,24 @@ class KlangScriptParser private constructor(
      */
     private fun parseBlockStatements(): List<Statement> {
         val statements = mutableListOf<Statement>()
+        // The `{` precedes the first statement, so it never needs a separator
+        var separated = true
+
         while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
-            skipSemicolons()
+            if (skipSemicolons()) {
+                separated = true
+            }
+
             if (check(TokenType.RIGHT_BRACE) || isAtEnd()) break
+
+            if (!separated) {
+                requireStatementBoundary()
+            }
+
             statements.add(parseStatement())
-            skipSemicolons()
+            separated = skipSemicolons()
         }
+
         return statements
     }
 

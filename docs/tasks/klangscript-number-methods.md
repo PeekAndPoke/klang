@@ -30,11 +30,13 @@ while (i < source.length && (codes[i].isAsciiDigit() || codes[i] == C_DOT)) { i+
 ```
 
 It consumes any run of digits *and dots*. So `2.pow(7/12)` tokenises as `NUMBER("2.")` followed by
-`IDENT("pow")` — two juxtaposed expressions. And because KlangScript has no statement boundaries (see
-`klangscript-statement-boundaries.md`), that parses as **two statements**, the second one's value is
-discarded, and nothing reports an error. The user gets `2.0` and no clue why.
+`IDENT("pow")` — two juxtaposed expressions, i.e. **two statements**, the second one's value discarded.
 
-So this feature has to fix the lexer first, or it will fail in the most confusing way available.
+Since 2026-09-08 that at least fails loudly: statement boundaries reject two statements on one line
+(`tasks-archive/2026-09/20260908-klangscript-statement-boundaries.md`), and the diagnostic even lands
+on the right token: "Expected a newline or ';' between statements. Did you mean '.pow(...)'?" It is
+still wrong (the user wrote one expression, not two), so this feature must fix the lexer first, but
+the failure is no longer silent.
 
 **The fix:** consume a `.` into a number literal only when the character *after* it is a digit.
 

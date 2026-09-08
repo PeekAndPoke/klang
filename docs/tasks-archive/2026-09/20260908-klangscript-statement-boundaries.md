@@ -1,7 +1,7 @@
 # KlangScript — statement boundaries: `f()g()` parses as two statements and silently discards one
 
-> **Status (2026-08-21)**: NOT IMPLEMENTED. Found in the wild in `DerSchmetterling.kt`.
-> Severity: silent wrong behavior, no diagnostic. Fix is small and well-contained.
+> **Status (2026-09-08)**: Phase 1 SHIPPED. Phase 2 deliberately not done, see the bottom of this file.
+> Found in the wild in `DerSchmetterling.kt`. Severity was: silent wrong behaviour, no diagnostic.
 
 ## The bug, as found
 
@@ -144,3 +144,59 @@ This is a diagnostics change, not a semantics change. No currently-correct progr
 programs that were silently dropping a value start failing loudly instead. That is the point.
 
 `DerSchmetterling.kt` should get its missing `.` regardless, independent of this task.
+
+---
+
+## Done 2026-09-08 (Phase 1)
+
+`KlangScriptParser`: `skipSemicolons()` now reports whether it consumed anything, and both statement
+loops (`parseProgram`, `parseBlockStatements`) carry a `separated` flag across iterations, because a
+semicolon between two statements can be eaten by either the trailing skip of the first or the leading
+skip of the second. When a statement is about to start unseparated, `requireStatementBoundary()`
+compares `peek().line` with `previous().endLine` and, on a shared line, raises
+
+```
+Expected a newline or ';' between statements. Did you mean '.tag(...)'?
+```
+
+The hint is purely syntactic: the offending token is an identifier and the next token is `(`. The
+parser has no access to the pattern-method registry (`klangscript` does not depend on `sprudel`), and
+it does not need one: identifier-immediately-called IS the missing-dot shape. The error points at the
+orphan token, not at the end of the healthy chain.
+
+The `for` header never runs through these loops, so its `;` separators are untouched, as required.
+
+### What it costs
+
+Nothing in the corpus. The full jvm suite is green across all ten modules (8176 tests), including the
+four guards that compile every builtin song, every doc example, every benchmark case and every
+tutorial level: `BuiltInSongsSmokeTest`, `DslDocExamplesSpec`, `SongBenchmarkCasesCompileSpec`,
+`TutorialCurriculumSpec`.
+
+### Verification
+
+`klangscript/src/commonTest/kotlin/parser/StatementBoundarySpec.kt`: six rejection rows (the reported
+bug with its location asserted at the orphan's column, a dropped dot in a declaration, one with a
+space before it, one inside a block body, two juxtaposed literals with no hint, an uncalled
+identifier with no hint) and fourteen must-still-parse rows (explicit and repeated semicolons, own
+lines without semicolons, leading-dot continuation, arrow chains, arrow block body on one line,
+multi-line call arguments, `if` arms on one line, the `for` header, a chain broken mid-argument, a
+statement after a closing brace). Mutation-checked, six mutants, all red:
+
+| Mutant | Killed by |
+|---|---|
+| check removed from `parseProgram` | all five top-level rejection rows |
+| check removed from `parseBlockStatements` | the block-body row |
+| fire regardless of line | the must-still-parse rows |
+| hint without the `(` check | the uncalled-identifier row |
+| `separated = true` after each statement | all five rejection rows |
+| `skipSemicolons` always reports false | the must-still-parse rows |
+
+The song's missing dot was fixed separately before this landed.
+
+## Phase 2 stays undone, on purpose
+
+Full newline sensitivity would additionally catch a dropped dot at a line break, and it is where every
+song in the repo can stop compiling (leading-dot continuation, `?.`, trailing binary operators,
+unclosed brackets). Phase 1 buys the reported failure for none of that risk. Revisit only with a real
+second occurrence to justify it; the spec above already names the shapes that must keep parsing.
