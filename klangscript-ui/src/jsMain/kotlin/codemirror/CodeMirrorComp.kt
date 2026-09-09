@@ -13,11 +13,14 @@ import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
 import io.peekandpoke.klang.codemirror.ext.Extension
 import io.peekandpoke.klang.codemirror.ext.autocompletion
 import io.peekandpoke.klang.codemirror.ext.basicSetup
+import io.peekandpoke.klang.codemirror.ext.forEachDiagnostic
+import io.peekandpoke.klang.codemirror.ext.forceLinting
 import io.peekandpoke.klang.codemirror.ext.javascript
 import io.peekandpoke.klang.codemirror.ext.lintGutter
 import io.peekandpoke.klang.codemirror.ext.linter
-import io.peekandpoke.klang.codemirror.ext.setDiagnostics
 import io.peekandpoke.klang.script.KlangScriptLibrary
+import io.peekandpoke.klang.script.intel.toCodeMirrorSeverity
+import io.peekandpoke.klang.script.intel.toOffsets
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -95,8 +98,19 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
 
     private val theme = CodeMirrorTheme()
 
-    /** (from, message) of the current diagnostics — lets the lint-panel click hook find the error position. */
-    private var lastDiagnostics: List<Pair<Int, String>> = emptyList()
+    /**
+     * Runtime errors from the last compile or play attempt, published by [setErrors].
+     *
+     * Held rather than dispatched: the linter source is the SINGLE writer of the lint state (see
+     * [lintDiagnostics]), so runtime errors and analyzer squiggles cannot overwrite each other.
+     */
+    private var runtimeErrors: List<EditorError> = emptyList()
+
+    /** Set by [setErrors], cleared by [lintDiagnostics]: tells the lint plugin a re-run is due. */
+    private var runtimeErrorsPending = false
+
+    /** The analyzer diagnostics of the last run, kept so a stale analysis changes nothing. */
+    private var analyzerCache: Array<Diagnostic> = emptyArray()
 
     /** Import-aware documentation context — owns hover docs + completion data. */
     private val docContext = EditorDocContext(
@@ -132,9 +146,13 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val updateListenerExtension = EditorView.updateListener.of(updateFn)
 
         // Create a linter extension with autoPanel
-        val linterSource: (EditorView) -> Array<Diagnostic> = { view -> analyzerDiagnostics(view) }
+        val linterSource: (EditorView) -> Array<Diagnostic> = { view -> lintDiagnostics(view) }
         val linterConfig = jsObject<dynamic> {
             autoPanel = true
+            // The source depends on more than the document: on the cached analysis, and on the
+            // runtime errors [setErrors] hands it. Without this the lint plugin would only ever
+            // schedule a run on a document change.
+            needsRefresh = { _: dynamic -> runtimeErrorsPending }
         }
         val linterExtension = linter(linterSource, linterConfig)
 
@@ -181,24 +199,26 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
 
         // Clicking an entry in the lint panel places the cursor at the START of
         // the error range and focuses the editor. The panel's own click handler
-        // selects the whole range and keeps focus in its list — the timeout runs
+        // selects the whole range and keeps focus in its list, and the timeout runs
         // after it so our cursor/focus wins.
+        //
+        // The position comes from the selection the panel just made, not from a lookup of our
+        // own: analyzer diagnostics are repetitive by construction ("unknown argument name" on
+        // ten lines), so any key built from the message text sends every one of them to the
+        // first match. The panel knows which entry was clicked; we only collapse its range.
         val panelClickListener: (Event) -> Unit = { event ->
             val diagEl = (event.target as? Element)?.closest(".cm-panel-lint .cm-diagnostic")
             if (diagEl != null) {
-                val message = diagEl.querySelector(".cm-diagnosticText")?.textContent
-                val from = lastDiagnostics.firstOrNull { it.second == message }?.first
-                if (from != null) {
-                    window.setTimeout({
-                        editor?.let { v ->
-                            v.dispatch(jsObject<dynamic> {
-                                this.selection = jsObject<dynamic> { this.anchor = from }
-                                this.scrollIntoView = true
-                            })
-                            v.asDynamic().focus()
-                        }
-                    }, 0)
-                }
+                window.setTimeout({
+                    editor?.let { v ->
+                        val from = v.state.selection.main.from
+                        v.dispatch(jsObject<dynamic> {
+                            this.selection = jsObject<dynamic> { this.anchor = from }
+                            this.scrollIntoView = true
+                        })
+                        v.asDynamic().focus()
+                    }
+                }, 0)
             }
         }
         container.addEventListener("click", panelClickListener)
@@ -265,86 +285,154 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         )
     }
 
-    // ── Analyzer Diagnostics ────────────────────────────────────────────────
+    // ── Diagnostics ─────────────────────────────────────────────────────────
 
     /**
-     * Linter source: renders the diagnostics of the cached `AnalyzedAst` as CodeMirror squiggles
-     * and gutter markers.
+     * Linter source, and the ONLY writer of the `@codemirror/lint` state.
      *
-     * CodeMirror runs this on its own delay after a document change, so it reads whatever
-     * analysis [EditorDocContext] holds at that moment: no analysis yet before the first parse,
-     * and possibly a stale one, since the parse is debounced and a failed parse keeps the last
-     * good AST on purpose. Positions are therefore clamped to the live document rather than
-     * trusted, and everything is wrapped: a linter source that throws kills the editor.
+     * `setDiagnostics` replaces the whole diagnostic set rather than merging into it, so a second
+     * writer silently deletes the first one's markers. [setErrors] used to be that second writer:
+     * pressing Play published an empty set with no document change, which wiped every analyzer
+     * squiggle, and the lint plugin only reschedules on a document change, so they stayed gone
+     * until the next keystroke. Both halves are merged here instead.
+     *
+     * CodeMirror runs this on its own delay after a document change, so it reads whatever analysis
+     * [EditorDocContext] holds at that moment: none before the first parse, and possibly a stale
+     * one, since the parse is debounced and a failed parse keeps the last good AST on purpose.
+     *
+     * Wrapped because a source that throws produces no diagnostics at all. `@codemirror/lint`
+     * hands the failure to `logException` rather than letting it escape, so the editor survives
+     * either way, but the console line here says which of our two halves broke.
      */
-    private fun analyzerDiagnostics(view: EditorView): Array<Diagnostic> {
+    private fun lintDiagnostics(view: EditorView): Array<Diagnostic> {
+        // Cleared first, so a throw below cannot leave `needsRefresh` permanently true and
+        // re-run the source on every transaction from here on.
+        runtimeErrorsPending = false
+
         return try {
-            val analysis = docContext.lastAnalysis ?: return emptyArray()
-            val doc = CodeMirrorLinterDocument(view.state.doc)
-
-            val diagnostics = analysis.diagnostics.mapNotNull { diagnostic ->
-                val offsets = diagnostic.toOffsets(doc) ?: return@mapNotNull null
-
-                jsObject<Diagnostic> {
-                    this.from = offsets.from
-                    this.to = offsets.to
-                    this.severity = diagnostic.severity.toCodeMirrorSeverity()
-                    this.message = diagnostic.message
-                }
-            }.toTypedArray()
-
-            // Keep the lint-panel click hook working for analyzer diagnostics too.
-            lastDiagnostics = diagnostics.map { d ->
-                d.asDynamic().from.unsafeCast<Int>() to d.asDynamic().message.unsafeCast<String>()
-            }
-
-            diagnostics
+            analyzerDiagnostics(view) + runtimeErrorDiagnostics(view)
         } catch (e: Throwable) {
-            console.error("Error building analyzer diagnostics:", e)
+            console.error("Error building diagnostics:", e)
             emptyArray()
         }
     }
 
-    // ── Error Diagnostics ───────────────────────────────────────────────────
+    /**
+     * The diagnostics of the cached `AnalyzedAst`, converted to offsets in the live document.
+     *
+     * `AnalyzedAst.source` is exactly the text its 1-based line/column pairs refer to. When the
+     * document has moved on, re-deriving offsets from those pairs MOVES a squiggle that the lint
+     * state has already re-mapped correctly through the change. So a stale analysis re-publishes
+     * the previous diagnostics at the positions the lint state currently holds for them, which
+     * leaves the editor looking exactly as it did.
+     */
+    private fun analyzerDiagnostics(view: EditorView): Array<Diagnostic> {
+        val analysis = docContext.lastAnalysis ?: return remapAnalyzerDiagnostics(view)
+
+        if (analysis.source != view.state.doc.toString()) {
+            return remapAnalyzerDiagnostics(view)
+        }
+
+        val doc = CodeMirrorLinterDocument(view.state.doc)
+
+        val built = analysis.diagnostics.mapNotNull { diagnostic ->
+            val offsets = diagnostic.toOffsets(doc) ?: return@mapNotNull null
+
+            jsObject<Diagnostic> {
+                this.from = offsets.from
+                this.to = offsets.to
+                this.severity = diagnostic.severity.toCodeMirrorSeverity()
+                this.message = diagnostic.message
+            }
+        }.toTypedArray()
+
+        analyzerCache = built
+
+        return built
+    }
 
     /**
-     * Set errors to display in the editor
+     * Re-publishes [analyzerCache] at the positions the lint state currently holds for it.
+     *
+     * Identity is the key: `forEachDiagnostic` walks the live lint state, which is built from the
+     * objects the last run returned, and reports where each of them sits after the document
+     * changes that followed. Anything the mapping dropped (its range fell off the end of the
+     * document) drops out of the cache with it.
+     */
+    private fun remapAnalyzerDiagnostics(view: EditorView): Array<Diagnostic> {
+        val cached = analyzerCache
+
+        if (cached.isEmpty()) {
+            return cached
+        }
+
+        val alive = mutableListOf<Diagnostic>()
+
+        forEachDiagnostic(view.state) { diagnostic, from, to ->
+            if (cached.any { it === diagnostic }) {
+                // Safe to mutate: these objects are about to be handed straight back as the new
+                // diagnostic set, replacing the state they were read from.
+                diagnostic.from = from
+                diagnostic.to = to
+                alive.add(diagnostic)
+            }
+        }
+
+        analyzerCache = alive.toTypedArray()
+
+        return analyzerCache
+    }
+
+    /** The runtime errors of the last compile or play attempt, as diagnostics. */
+    private fun runtimeErrorDiagnostics(view: EditorView): Array<Diagnostic> {
+        return runtimeErrors.mapNotNull { error ->
+            try {
+                val lineObj = view.state.doc.line(error.line)
+                val from = lineObj.from + (error.col - 1)
+                val to = from + error.len
+
+                if (from < 0 || to > view.state.doc.length) {
+                    console.warn(
+                        "Diagnostic position out of bounds: from=$from, to=$to, doc.length=${view.state.doc.length}"
+                    )
+                    return@mapNotNull null
+                }
+
+                jsObject<Diagnostic> {
+                    this.from = from
+                    this.to = to
+                    this.severity = "error"
+                    this.message = error.message
+                }
+            } catch (e: Throwable) {
+                console.error("Error converting EditorError to Diagnostic:", e)
+                null
+            }
+        }.toTypedArray()
+    }
+
+    /**
+     * Set the runtime errors to display in the editor.
+     *
+     * Stores them and asks the lint plugin to re-run; the markers appear when [lintDiagnostics]
+     * merges them with the analyzer diagnostics. Nothing is dispatched into the lint state from
+     * here, so an empty list no longer erases the analyzer squiggles along with the errors.
      */
     fun setErrors(errors: List<EditorError>) {
+        runtimeErrors = errors
+        runtimeErrorsPending = true
+
         val view = editor ?: return
 
         try {
-            val diagnostics = errors.mapNotNull { error ->
-                try {
-                    val lineObj = view.state.doc.line(error.line)
-                    val from = lineObj.from + (error.col - 1)
-                    val to = from + error.len
-
-                    if (from < 0 || to > view.state.doc.length) {
-                        console.warn(
-                            "Diagnostic position out of bounds: from=$from, to=$to, doc.length=${view.state.doc.length}"
-                        )
-                        return@mapNotNull null
-                    }
-
-                    jsObject<Diagnostic> {
-                        this.from = from
-                        this.to = to
-                        this.severity = "error"
-                        this.message = error.message
-                    }
-                } catch (e: Throwable) {
-                    console.error("Error converting EditorError to Diagnostic:", e)
-                    null
-                }
-            }.toTypedArray()
-
-            lastDiagnostics = diagnostics.map { d ->
-                d.asDynamic().from.unsafeCast<Int>() to d.asDynamic().message.unsafeCast<String>()
-            }
-
-            val transactionSpec = setDiagnostics(view.state, diagnostics)
-            view.dispatch(transactionSpec.unsafeCast<dynamic>())
+            // Two steps, and both are needed. `forceLinting` only shortcuts a run that is already
+            // scheduled, and the lint plugin schedules one on a document change or when the
+            // config's `needsRefresh` reports a change. A call here usually comes with no document
+            // change at all, so the empty transaction gives the plugin an update to inspect,
+            // `needsRefresh` answers for our pending flag, and `forceLinting` then skips the idle
+            // delay so the marker shows up now rather than in three quarters of a second.
+            view.dispatch(jsObject<dynamic> {})
+            forceLinting(view)
         } catch (e: Throwable) {
             console.error("Error updating diagnostics:", e)
         }

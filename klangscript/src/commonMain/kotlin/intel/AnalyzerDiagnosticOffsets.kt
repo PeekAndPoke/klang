@@ -3,27 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.ui.codemirror
-
-import io.peekandpoke.klang.codemirror.ext.Text
-import io.peekandpoke.klang.script.intel.AnalyzerDiagnostic
-import io.peekandpoke.klang.script.intel.DiagnosticSeverity
+package io.peekandpoke.klang.script.intel
 
 /**
- * Absolute CodeMirror document offsets for a single analyzer diagnostic.
+ * Absolute document offsets for a single analyzer diagnostic.
  *
  * [from] is inclusive, [to] is exclusive, both are valid positions in the document that was
  * measured.
  */
-internal data class DiagnosticOffsets(val from: Int, val to: Int)
+data class DiagnosticOffsets(val from: Int, val to: Int)
 
 /**
  * The line structure of the document a linter run is measured against.
  *
- * An interface (and not the CodeMirror `Text` itself) so the offset arithmetic stays plain
- * Kotlin and can be reasoned about without an editor.
+ * An interface (and not an editor document type) so the offset arithmetic stays plain Kotlin,
+ * lives in `commonMain` next to the diagnostics it converts, and can be tested without an
+ * editor. The editor side supplies the adapter.
  */
-internal interface LinterDocument {
+interface LinterDocument {
     /** Number of lines. Always at least 1: an empty document still has one empty line. */
     val lineCount: Int
 
@@ -37,21 +34,13 @@ internal interface LinterDocument {
     fun lineEnd(line: Int): Int
 }
 
-/** [LinterDocument] backed by the live CodeMirror document. */
-internal class CodeMirrorLinterDocument(private val doc: Text) : LinterDocument {
-    override val lineCount: Int get() = doc.lines
-    override val length: Int get() = doc.length
-    override fun lineStart(line: Int): Int = doc.line(line).from
-    override fun lineEnd(line: Int): Int = doc.line(line).to
-}
-
 /**
  * Maps an analyzer severity onto the CodeMirror severity strings.
  *
  * `HINT` folds into `"info"`: the CodeMirror `Diagnostic` binding documents three severities,
  * and no checker emits `HINT` today.
  */
-internal fun DiagnosticSeverity.toCodeMirrorSeverity(): String = when (this) {
+fun DiagnosticSeverity.toCodeMirrorSeverity(): String = when (this) {
     DiagnosticSeverity.ERROR -> "error"
     DiagnosticSeverity.WARNING -> "warning"
     DiagnosticSeverity.INFO -> "info"
@@ -63,19 +52,19 @@ internal fun DiagnosticSeverity.toCodeMirrorSeverity(): String = when (this) {
  * offsets, or returns `null` when the diagnostic cannot be placed at all.
  *
  * The analysis behind a diagnostic can describe a document that no longer exists: it is
- * debounced, and `EditorDocContext` deliberately keeps the last good AST when a parse fails.
- * So every coordinate is clamped instead of trusted, and nothing here throws: a linter source
- * that throws takes the whole editor down with it.
+ * debounced, and the editor deliberately keeps the last good AST when a parse fails. So every
+ * coordinate is clamped instead of trusted, and nothing here throws.
  *
  * Handled cases:
  *  - a start line past the end of the document: dropped, since any other line would underline
  *    unrelated code
- *  - an end line past the end of the document: clamped to the last line
+ *  - an end line past the end of the document: clamped to the end of the START line, for the
+ *    same reason, so a stale range cannot swallow the rest of the file
  *  - a column before or past the end of its line: clamped to the line bounds
  *  - an inverted range (end before start): collapsed onto the start
  *  - a zero-length range: widened by one character inside its own line so that it draws
  */
-internal fun AnalyzerDiagnostic.toOffsets(doc: LinterDocument): DiagnosticOffsets? {
+fun AnalyzerDiagnostic.toOffsets(doc: LinterDocument): DiagnosticOffsets? {
     val lineCount = doc.lineCount
     val docLength = doc.length
 
@@ -93,7 +82,7 @@ internal fun AnalyzerDiagnostic.toOffsets(doc: LinterDocument): DiagnosticOffset
     // exclusive end offset.
     val to = when {
         endLine < startLine -> from
-        endLine > lineCount -> doc.lineEnd(lineCount)
+        endLine > lineCount -> doc.lineEnd(startLine)
         else -> offsetOf(doc, endLine, endColumn)
     }
 

@@ -54,6 +54,26 @@ external fun linter(source: (view: EditorView) -> Array<Diagnostic>, config: dyn
 external fun lintGutter(): Extension
 
 /**
+ * Calls [f] for every diagnostic currently held by the lint state, with the positions the state
+ * has mapped them to through every document change since they were published.
+ *
+ * The `from` and `to` a linter source produced are therefore NOT what comes back here once the
+ * document has moved on: these are the live ones.
+ */
+external fun forEachDiagnostic(state: EditorState, f: (diagnostic: Diagnostic, from: Int, to: Int) -> Unit)
+
+/**
+ * Runs a lint pass that is already scheduled right away, instead of waiting for the editor to
+ * go idle.
+ *
+ * Only shortcuts a PENDING run: the lint plugin schedules a run when the document changes, when
+ * the lint configuration changes, or when the `needsRefresh` callback of the config reports that
+ * something else the sources depend on has moved. With nothing scheduled this is a no-op, so a
+ * source whose input is not the document must announce the change through `needsRefresh` first.
+ */
+external fun forceLinting(view: EditorView)
+
+/**
  * Command to open and focus the lint panel
  */
 external val openLintPanel: dynamic
