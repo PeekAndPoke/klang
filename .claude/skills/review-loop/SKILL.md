@@ -171,9 +171,11 @@ Mutation checking is the antidote: it tests the test.
   `No tests found` exit is indistinguishable from a real kill and produced three spurious RED
   verdicts (2026-08-20): every expect-red runner must grep the log for `No tests found` and
   treat it as a script error, and print the failing test names (an empty list on a "red" is the tell).
-- Before a JS/frontend build, check for a running frontend auto-compile watcher (`pgrep -f
-  jsBrowserDevelopmentRun` or similar). The maintainer often has one open; the build lock cannot
-  serialize against it. Report instead of building when one is running.
+- **A frontend watcher blocks Gradle only in CONTINUOUS mode** (maintainer, 2026-09-09). What the
+  build lock cannot serialize against is a build that keeps rebuilding on its own, which means
+  `-t` or `--continuous`. A plain `jsBrowserDevelopmentRun` is not that, so it does not block you.
+  Check `ps aux | grep gradle | grep -- "-t \|--continuous"`, not the bare process name. The old
+  rule read the process name alone and stalled a whole round of work for nothing.
 - Don't fuss over whitespace/blank-line findings — codefactor.io auto-fixes formatting.
 - **Generated batches: review the prose, trust the structure.** Across 88 script-generated accessor
   objects (2026-09-07) the reviewers found zero read/update or parameter slips; every finding was

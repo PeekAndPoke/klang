@@ -78,7 +78,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Guardrail                                                                                                                  | Since      | Detail                                     |
 |----------------------------------------------------------------------------------------------------------------------------|------------|--------------------------------------------|
 | Kotest: one unquoted `--tests` FQCN per Gradle run; treat `No tests found` as a script error in any expect-red runner.      | 2026-07-03 | `/review-loop` Gotchas                     |
-| Before a frontend/JS build, check for the maintainer's running auto-compile watcher.                                        | 2026-08    | `/review-loop` Gotchas                     |
+| A frontend watcher blocks Gradle only in continuous mode (`-t` / `--continuous`); a plain `jsBrowserDevelopmentRun` does not. | 2026-09-09 | `/review-loop` Gotchas                     |
 | Block size is pinned to 128 frames everywhere (it is a tone parameter); never raise it to speed up a render.                | 2026-08    | `audio/MEMORY.md`, `DelayLine` KDoc        |
 | Deliberate engine exceptions a reviewer must not "fix": reverb uses `+ ANTI_DENORMAL` (not `flushState`); OnePole HPF cutoff bias is documented, not corrected; BPF stays linear; the master limiter lookahead is master-only. | 2026-05 | `/review-loop` templates, `docs/tasks/audio-backend-audit.md` §7 |
 | Script-door defaults must be safe literals; a `Slots.*` default makes KSP emit no thunk and named calls that skip it fail at runtime (the KSP guard catches floatable shapes only). | 2026-09-05 | `/dsl-design` §3 |
