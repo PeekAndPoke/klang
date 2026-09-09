@@ -270,6 +270,40 @@ val klangScriptDocSections: List<DocSection> = listOf(
                 """.trimMargin(),
                 jsCompat = JsCompat.Compatible,
             ),
+            DocExample(
+                title = "Precedence",
+                description = "What binds tighter, from loosest to tightest. Two rows surprise people: unary minus binds tighter than **, so -2 ** 2 is 4 (Python says -4, JavaScript refuses it), and ^ sits below the comparisons and is XOR, not a power operator. When in doubt, parentheses cost nothing.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |// loosest
+                    |//   =  +=  -=  *=  /=          assignment, right to left
+                    |//   ?:                         ternary
+                    |//   ??                         nullish coalescing
+                    |//   ||
+                    |//   &&
+                    |//   |                          bitwise or
+                    |//   ^                          bitwise XOR (not power)
+                    |//   &                          bitwise and
+                    |//   ==  !=  ===  !==
+                    |//   <  <=  >  >=
+                    |//   <<  >>  >>>
+                    |//   +  -
+                    |//   *  /  %
+                    |//   **                         power, right to left
+                    |//   -x  +x  !x  ~x  ++x  --x   unary
+                    |//   f()  .member  [index]  x++  x--
+                    |// tightest
+                    |
+                    |console.log("1 + 2 * 3 ** 2 =", 1 + 2 * 3 ** 2)   // 19
+                    |console.log("2 ** 3 ** 2 =", 2 ** 3 ** 2)         // 512, right to left
+                    |console.log("-2 ** 2 =", -2 ** 2)                 // 4, unary minus first
+                    |console.log("10 - 4 - 3 =", 10 - 4 - 3)           // 3, left to right
+                    |console.log("2 ^ 3 =", 2 ^ 3)                     // 1, XOR; 2 ** 3 is 8
+                    |console.log("null ?? false || true:", null ?? false || true)   // true, || binds tighter than ??
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
         ),
     ),
 
