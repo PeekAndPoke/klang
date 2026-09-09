@@ -245,8 +245,8 @@ export snare_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") //.solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
-export hats_shape = x => x.gain(0.42).pan(0.40)
-  .hpf(5000).lpf(freq = "14000".add(perlin.mul(250).fast(4)), q = 0.7).adsr(0.003, 0.05, 0.80, 1.0)
+export hats_shape = x => x.gain(0.35).pan(0.40)
+  .hpf(800).lpf(freq = "14000".add(perlin.mul(250).fast(4)), q = 0.7).adsr(0.003, 0.05, 0.80, 1.0)
 export hats_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
 
@@ -256,8 +256,8 @@ export clap_arrange = x => x.orbit(8).mute("<0!128 1!32>")
 export clap = sound(clap_pat).apply(clap_shape).tag("clap")
 
 export shaker_pat = `<pink ~ pink pink>*16`
-export shaker_shape = x => x.gain(0.25).velocity("<1.0 0.90 0.95 0.90>*16") // . mute()
-  .hpf(freq = 10000, q = 0.5).lpf(freq = 15000, q = 0.7) //  . solo()
+export shaker_shape = x => x.gain(0.15).velocity("<1.0 0.90 0.95 0.90>*16") // . mute()
+  .hpf(freq = 7000, q = 0.5).lpf(freq = 14000, q = 0.7) //  . solo()
   .pan(sine.range(0.55, 0.65).slow(8)).adsr(0.010, 0.15, 0.0, 0.01)
 export shaker_arrange = x => x.orbit(9).late(berlin.range(0.0010, 0.0020).mul(drunk))
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")

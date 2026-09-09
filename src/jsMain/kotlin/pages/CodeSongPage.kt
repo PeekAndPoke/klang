@@ -32,7 +32,10 @@ import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
+import kotlinx.browser.window
 import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.Flex
 import kotlinx.css.FlexBasis
@@ -41,6 +44,8 @@ import kotlinx.css.JustifyContent
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
 import kotlinx.css.alignItems
+import kotlinx.css.color
+import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
@@ -117,6 +122,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private val codeEditorRef = ComponentRef.Tracker<KlangCodeEditorComp>()
 
+    /** Shows the check mark on the copy button for a moment after a successful copy. */
+    private var justCopied by value(false)
+
     private var highlightPerEvent by value(15) { newValue ->
         codeEditorRef { it.setMaxHighlightsPerEvent(newValue) }
         ctrl.reemitVoiceSignals()
@@ -162,6 +170,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         // Persist the current code before starting (matches original strategy of persist-on-play).
         codeStream(ctrl.state().code)
         ctrl.play()
+    }
+
+    private fun copyCode() {
+        window.asDynamic().navigator.clipboard.writeText(ctrl.state().code)
+        justCopied = true
+        window.setTimeout({ justCopied = false }, 2000)
     }
 
     private fun resetToOriginal() {
@@ -337,6 +351,28 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             }
                         }
 
+
+                        // Copy the whole editor content to the clipboard
+                        noui.item {
+                            div {
+                                css {
+                                    cursor = Cursor.pointer
+                                    display = Display.inlineBlock
+
+                                    if (justCopied) {
+                                        color = Color(laf.good)
+                                    }
+                                }
+                                onClick { copyCode() }
+                                title = if (justCopied) "Copied to clipboard" else "Copy the code to the clipboard"
+
+                                if (justCopied) {
+                                    icon.circular.check()
+                                } else {
+                                    icon.circular.copy()
+                                }
+                            }
+                        }
 
                         // Fullscreen toggle
                         noui.item {
