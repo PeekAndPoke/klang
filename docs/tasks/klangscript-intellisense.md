@@ -23,7 +23,7 @@ The receiver-aware code completion work (see `receiver-aware-editor.md` — DONE
 | `AstIndex`                                  | `klangscript/ast/`      | O(log n) cursor-to-node lookup, public API                                                                                          |
 | `KlangScriptParser`                         | `klangscript/parser/`   | Full recursive-descent parser                                                                                                       |
 | CodeMirror linter bindings                  | `klangjs/.../Lint.kt`   | `Diagnostic`, `linter()`, `setDiagnostics()`                                                                                        |
-| Linter extension                            | `CodeMirrorComp.kt:112` | Wired up but source returns `[]`                                                                                                    |
+| Linter extension                            | `CodeMirrorComp.kt`     | **DONE (step 0).** Source renders `AnalyzedAst.diagnostics`                                                                                                    |
 | `setErrors()`                               | `CodeMirrorComp.kt:228` | Converts `EditorError` → `Diagnostic` and renders                                                                                   |
 | `AnalyzerDiagnostic` / `DiagnosticSeverity` | `klangscript/intel/`    | **DONE (named-args work).** Diagnostic data types + severity enum already exist (`AnalyzerDiagnostic.kt`)                           |
 | `AnalyzedAst.build(...)` checker pipeline   | `klangscript/intel/`    | **DONE.** `build(..., computeDiagnostics)` runs checkers over the program; `NamedArgumentChecker` already occupies the checker slot |
@@ -131,13 +131,14 @@ Skip type checking — `PatternLike` accepts almost anything.
 
 ## Implementation Plan
 
-### Step 0 — Cheap unblock (wire the linter stub)
+### Step 0 — Cheap unblock (wire the linter stub): **DONE 2026-09-09**
 
-The CodeMirror `linterSource` is **still a stub** —
-`val linterSource = js("(function(view) { return []; })")` in `CodeMirrorComp.kt:129`. Wiring it to
-`AnalyzedAst.diagnostics` (already produced by the `build(...)` pipeline) is the first real step and
-**immediately surfaces the already-built `NamedArgumentChecker`** with zero new analysis code. Do this
-before any new checkers.
+The CodeMirror `linterSource` was a stub returning `[]`. It now reads `EditorDocContext.lastAnalysis`
+and renders `AnalyzedAst.diagnostics`, so the already-built `NamedArgumentChecker` reaches the editor
+with zero new analysis code. The 1-based line/column to absolute-offset conversion lives in
+`klangscript-ui/src/jsMain/kotlin/codemirror/AnalyzerDiagnostics.kt`, behind a small `LinterDocument`
+interface; it clamps every coordinate to the live document, because the analysis is debounced and a
+failed parse deliberately keeps the last good AST.
 
 ### Step 1: `KlangScriptAnalyzer` (commonMain)
 
