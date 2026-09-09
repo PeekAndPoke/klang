@@ -1000,7 +1000,7 @@ ever becomes a requirement, the answer is to **lower the ceiling, not change the
 ## 8b. Naming amendment (2026-08-11)
 
 The constants this doc describes were split when the shared limiter defaults moved to
-`audio_bridge/constants/MasterLimiterDefaults.kt` (`docs/tasks/audio-bridge-constants.md`). The rule is now:
+`audio_bridge/constants/MasterLimiterDefaults.kt` (`docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md`). The rule is now:
 
 - **no prefix** — `LIMITER_THRESHOLD_DB` / `RATIO` / `KNEE_DB` / `RELEASE_SECONDS`: shared by both limiters, declared
   once in `audio_bridge`.

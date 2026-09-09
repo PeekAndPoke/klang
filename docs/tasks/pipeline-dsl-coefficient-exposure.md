@@ -1,13 +1,13 @@
 # Pipeline DSL — give every engine coefficient a home
 
-**Status:** planned (inventory done 2026-08-11) · **Precursor:** ✅ `docs/tasks/audio-bridge-constants.md`
+**Status:** planned (inventory done 2026-08-11) · **Precursor:** ✅ `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md`
 
 **Goal (user, 2026-08-11):**
 
 > expose all the surface that we currently have to the pipeline dsl … so all the coefficients that
 > have factory defaults need a home in the dsl.
 
-`audio-bridge-constants.md` gave 5 coefficients a DSL home. This tracker covers the rest: the survey below found **~35
+`docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` gave 5 coefficients a DSL home. This tracker covers the rest: the survey below found **~35
 more tunable coefficients** that are still compile-time only, plus ~30 that are authorable but from the wrong surface
 *and* declared twice.
 
@@ -54,7 +54,7 @@ uses an ignitor-level `lowpass(analog = 3)` gives the strip filter `driveScale =
 and the ignitor filter `0.75`.
 
 Needs either an ignitor-side drive param or a way to thread the active pipeline's `StageDsl.Filter`
-into `IgnitorFilters`. Full write-up: `docs/tasks/audio-bridge-constants.md` §6.1.
+into `IgnitorFilters`. Full write-up: `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` §6.1.
 
 **Parity check:** this sub-task *is* the parity check — same param, same meaning, one conversion site.
 
@@ -164,7 +164,7 @@ changes what every existing `distort(0.8)` in every song sounds like, which is w
 ### S5 — Osc-tuning constants → `audio_bridge/constants/` (~30 duplicated literals, no new fields)
 
 **Pure de-duplication. No new DSL fields, no sound change, no wire change.** This is the same defect
-`audio-bridge-constants.md` §1.1 fixed for the filter five, still live across a 6× larger surface.
+`docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` §1.1 fixed for the filter five, still live across a 6× larger surface.
 
 `IgnitorDsl` already exposes most of `OscillatorTuning.kt` per-oscillator-instance — but as **literals**, not
 references, because `audio_be` is invisible from `audio_bridge`:
@@ -256,7 +256,7 @@ resonator coefficient with no authoring path at all, and its KDoc says it is tun
 
 ## Links
 
-- `docs/tasks/audio-bridge-constants.md` — the precursor (§6 = what was still missing; this doc is the answer)
+- `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` — the precursor (§6 = what was still missing; this doc is the answer)
 - `docs/tasks/by-ear/analog-drift-ratio-tuning.md` — owns S1 in detail
 - `docs/tasks/engine-tuning-profile.md` — Part B `EngineTuning`, which S1 starts and S5 unblocks
 - `docs/tasks/sprudel-sound-function-surface.md` — the compound-param blocker S6 would hit

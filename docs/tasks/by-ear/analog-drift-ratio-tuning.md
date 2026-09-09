@@ -1,6 +1,6 @@
 # Analog drift: is the pitch/filter ratio inverted?
 
-**Status:** planned · **Opened:** 2026-08-11 · **Precursor:** ✅ `docs/tasks/audio-bridge-constants.md`
+**Status:** planned · **Opened:** 2026-08-11 · **Precursor:** ✅ `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md`
 
 **The question (user, 2026-08-11):**
 
@@ -115,6 +115,6 @@ record, not a regression alarm. Move the bound *with* the value and say why; do 
   creates the `EngineTuning` slot the others hang off. That doc also flags `ANALOG_MEAN_REVERSION_RATIO` (0.5), a drift
   character knob neither doc had listed: decide in or out when §4's scope is finalised.
 - `docs/tasks/engine-tuning-profile.md` — Part A.3 owns the long-term home; keep these in sync.
-- `docs/tasks/audio-bridge-constants.md` §6 — the precursor, and why the filter side is already live.
+- `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` §6 — the precursor, and why the filter side is already live.
 - `docs/tasks-archive/2026-06/20260617-analog-drift-coefficient-tuning.md` — where 0.2/0.8 came from (answer: they were
   never tuned; listed under "Deferred (intentional)").
